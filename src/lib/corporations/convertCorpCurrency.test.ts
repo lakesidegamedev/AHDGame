@@ -626,4 +626,23 @@ describe("convertCorpCurrency", () => {
     ).rejects.toMatchObject({ corpCurrencyStateUncertain: true });
     expect(db.collectionMocks.corporations!.updateOne).toHaveBeenCalledTimes(2);
   });
+  it("refuses denomination changes with outstanding bank debt before reserving any assets", async () => {
+    const corp = makeCorp();
+    db.collection("bankLoans");
+    db.collectionMocks.bankLoans.findOne.mockResolvedValue({ _id: new ObjectId() });
+    const result = await convertCorpCurrency(
+      db as unknown as Db,
+      corp,
+      "GBP",
+      fxMap([
+        ["JPY", 130],
+        ["GBP", 0.8],
+      ]),
+      new Date(),
+      true,
+      []
+    );
+    expect(result.ok).toBe(false);
+    expect(db.collectionMocks.corporateSectors?.updateOne?.mock.calls.length ?? 0).toBe(0);
+  });
 });

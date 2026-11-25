@@ -1,5 +1,5 @@
+import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 import { ownerRestartFields } from "@/lib/corporations/commands/sectorOperations/ownerRestart";
-import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import {
   placeStrategyBuildSite,
@@ -27,15 +27,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type {
-  Corporation,
-  CorporateSector,
-  GameState,
-  GameConfig,
-  SectorBuildOrder,
-  State,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameState, SectorBuildOrder } from "@/lib/db/types";
 import { isStrategyBuildSite } from "@/lib/corporations/sectorLocation";
 import { getSectorTechEffects } from "@/lib/constants/techTree";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
@@ -105,7 +97,7 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
+
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -440,49 +432,46 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       // CAS: the refund below is only paid if THIS request is the one that
       // actually removed the order. A replayed or concurrent cancel of the same
       // index matches nothing and refunds nothing.
-      const cancelWrite = await corporateSectorsCollection(db).updateOne(
-        { _id: sector._id, ...queueCasFilter(sector) },
-        {
-          $set: {
-            buildQueue: nextQueue,
-            updatedAt: now,
-          },
-        }
-      );
-      if (cancelWrite.modifiedCount !== 1) {
-        return errorResponse(409, "That build queue changed while you were cancelling. Try again.");
-      }
-      if (refundInCorpCapital > 0) {
-        await corporationsCollection(db).updateOne(
-          { _id: corporation._id },
-          { $inc: { liquidCapital: refundInCorpCapital }, $set: { updatedAt: now } }
-        );
-      }
+      const cancelled = await commitSiteCashMutation(db, {
+        corporation,
+        chargeLocal: -refundInCorpCapital,
+        now,
+        record: async (tx) => {
+          if (refundAnchor > 0) {
+            await emitBuildCapexTx(
+              tx,
+              {
+                corporationId: corporation._id,
+                corporationName: corporation.name,
+                corporationSequentialId: corporation.sequentialId,
+                direction: "refund",
+                amountLocal: Math.abs(refundInCorpCapital),
+                currencyCode: corpCurrencyCode,
+                anchorAmount: refundAnchor,
+                turn: currentTurn,
+                createdAt: now,
+                sectorId: sector._id,
+                sectorType: sector.sectorType,
+                units: cancelledUnits,
+                meta: { orderStartTurn: order.startTurn, orderOnlineTurn: order.onlineTurn },
+              },
+              { atomic: true }
+            );
+          }
+        },
+        site: {
+          filter: { _id: sector._id, ...queueCasFilter(sector) },
+          update: { $set: { buildQueue: nextQueue, updatedAt: now } },
+        },
+      });
+      if (!cancelled)
+        return errorResponse(409, "The build queue or treasury changed. Get a new quote.");
 
       // Shadow-ledger credit leg. Without this the refund is a mint the
       // money-supply reconciler cannot attribute. Post-commit and best-effort:
       // the cash has already moved, so a tx-log failure must not 500 the caller
       // into retrying (which would double-refund) — same discipline as
       // `safeDistributeConversionSpread` and `logEconomicAction` here.
-      if (refundAnchor > 0) {
-        await emitBuildCapexTx(db, {
-          corporationId: corporation._id,
-          corporationName: corporation.name,
-          corporationSequentialId: corporation.sequentialId,
-          direction: "refund",
-          amountLocal: Math.abs(refundInCorpCapital),
-          currencyCode: corpCurrencyCode,
-          anchorAmount: refundAnchor,
-          turn: currentTurn,
-          createdAt: now,
-          sectorId: sector._id,
-          sectorType: sector.sectorType,
-          units: cancelledUnits,
-          meta: { orderStartTurn: order.startTurn, orderOnlineTurn: order.onlineTurn },
-        }).catch((err) => {
-          console.error("[buildCapacity] capex refund tx emit failed", err);
-        });
-      }
 
       void logEconomicAction(db, {
         characterId: corporation.ceoId,
@@ -500,7 +489,6 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
           message: `Cancelled a ${Math.round(cancelledUnits)}-unit build in ${sector.stateId}`,
         },
       }).catch(() => {});
-
       return NextResponse.json({
         success: true,
         refunded: refundInCorpCapital,
@@ -1112,8 +1100,36 @@ export async function placeCapacityBuild(
   // both pass, and both $inc down through zero. `$gte` makes the loser's
   // write match nothing.
   const costInCorpCapital = anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate);
+  const recordPurchase = async (tx: Db) => {
+    await emitBuildCapexTx(
+      tx,
+      {
+        corporationId: corporation._id,
+        corporationName: corporation.name,
+        corporationSequentialId: corporation.sequentialId,
+        direction: "build",
+        amountLocal: Math.abs(anchorToCorpLiquidCapital(cost.totalAnchor, corporation, corpFxRate)),
+        currencyCode: corpCurrencyCode,
+        anchorAmount: cost.totalAnchor,
+        turn: currentTurn,
+        createdAt: now,
+        sectorId: sector._id,
+        sectorType: sector.sectorType,
+        units,
+        meta: { onlineTurn: order.onlineTurn, spreadAnchor: spread.spreadAnchor },
+      },
+      { atomic: true }
+    );
+  };
   if (newSite) {
-    const placed = await placeStrategyBuildSite(db, sector, order, costInCorpCapital);
+    const placed = await placeStrategyBuildSite(
+      db,
+      sector,
+      order,
+      costInCorpCapital,
+      recordPurchase,
+      corporation
+    );
     if (placed === "existing") {
       return succeed(200, { success: true, newSiteId: sector._id.toHexString() });
     }
@@ -1121,54 +1137,24 @@ export async function placeCapacityBuild(
       return fail(409, "insufficient_cash", "Available corporate cash changed. Get a new quote.");
     }
   } else {
-    const debit = await corporationsCollection(db).updateOne(
-      {
-        _id: corporation._id,
-        liquidCapital: { $gte: costInCorpCapital },
-        ...corporateDiscretionaryCashGuard(),
+    const placed = await commitSiteCashMutation(db, {
+      corporation,
+      chargeLocal: costInCorpCapital,
+      now,
+      record: recordPurchase,
+      site: {
+        filter: { _id: sector._id, ...queueCasFilter(sector) },
+        update: { $set: { buildQueue: nextQueue, updatedAt: now } },
       },
-      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
-    );
-    if (debit.modifiedCount !== 1) {
-      void observe("order", "insufficient_cash");
-      return fail(
-        400,
-        "insufficient_cash",
-        insufficientCapitalMessage(
-          "This build",
-          anchorToCorpLiquidCapital(totalCostAnchor, corporation, corpFxRate),
-          corporation.liquidCapital,
-          resolveCorpLiquidCurrencyCode(corporation)
-        )
-      );
-    }
-    // Then queue the order under the same CAS the cancel path uses. If another
-    // writer (a concurrent build/cancel, or the turn processor) touched the
-    // queue since we read it, our $set would silently erase their work, so
-    // fail instead, and hand the money back rather than charging for an order
-    // that was never queued.
-    const queueWrite = await corporateSectorsCollection(db).updateOne(
-      { _id: sector._id, ...queueCasFilter(sector) },
-      {
-        $set: {
-          buildQueue: nextQueue,
-          updatedAt: now,
-        },
-      }
-    );
-    if (queueWrite.modifiedCount !== 1) {
-      await corporationsCollection(db).updateOne(
-        { _id: corporation._id },
-        { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: now } }
-      );
-      void observe("order", "concurrent_change");
+    });
+    if (!placed)
       return fail(
         409,
         "concurrent_change",
-        "That build queue changed while you were ordering. Try again."
+        "The build queue or treasury changed. Get a new quote."
       );
-    }
   }
+
   if (spread.spreadAnchor > 0 && spread.from && spread.to) {
     const feeInCorp = Math.round(
       anchorToCorpLiquidCapital(spread.spreadAnchor, corporation, corpFxRate)
@@ -1176,33 +1162,6 @@ export async function placeCapacityBuild(
     await safeDistributeConversionSpread(db, feeInCorp, spread.from, spread.to);
   }
   void observe("order", "placed");
-
-  // Shadow-ledger debit leg: the cash → CIP reclass. Logged at the CIP
-  // amount (`cost.totalAnchor`), NOT the charged total: the FX spread is a
-  // transaction fee routed to the central banks by
-  // `safeDistributeConversionSpread`, not construction spend, and it is
-  // deliberately excluded from CIP and from the refund base above. Without
-  // this row every build is an unattributed burn in the money-supply
-  // reconciler. Best-effort for the same reason as the refund leg.
-  if (cost.totalAnchor > 0) {
-    await emitBuildCapexTx(db, {
-      corporationId: corporation._id,
-      corporationName: corporation.name,
-      corporationSequentialId: corporation.sequentialId,
-      direction: "build",
-      amountLocal: Math.abs(anchorToCorpLiquidCapital(cost.totalAnchor, corporation, corpFxRate)),
-      currencyCode: corpCurrencyCode,
-      anchorAmount: cost.totalAnchor,
-      turn: currentTurn,
-      createdAt: now,
-      sectorId: sector._id,
-      sectorType: sector.sectorType,
-      units,
-      meta: { onlineTurn: order.onlineTurn, spreadAnchor: spread.spreadAnchor },
-    }).catch((err) => {
-      console.error("[buildCapacity] capex build tx emit failed", err);
-    });
-  }
 
   void logEconomicAction(db, {
     characterId: corporation.ceoId,

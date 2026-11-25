@@ -41,6 +41,7 @@ export interface CorpHistoryComparePoint {
   bondCouponFxFees?: number;
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
+  settledBankLoanInterestPaid?: number;
   currencyCode?: CurrencyCode;
   fxRateAtWrite?: number;
 }
@@ -188,6 +189,7 @@ export async function loadCorporationHistoryComparePoints(args: {
           bondCouponFxFees: 1,
           settledBondCouponIncome: 1,
           settledBondInterestPaid: 1,
+          settledBankLoanInterestPaid: 1,
           perTurnBondDragOnNetIncome: 1,
           dividendIncomeReceived: 1,
           currencyCode: 1,

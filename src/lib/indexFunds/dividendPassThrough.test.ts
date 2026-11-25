@@ -60,6 +60,7 @@ describe("dividendPassThrough", () => {
     beforeEach(async () => {
       vi.clearAllMocks();
       db = createMockDb();
+      db.collection("exchangeRates").findOne.mockResolvedValue({ currencyCode: "USD", rate: 1 });
       for (const name of [
         "indexFunds",
         "indexFundPositions",
@@ -244,6 +245,7 @@ describe("dividendPassThrough", () => {
     beforeEach(async () => {
       vi.clearAllMocks();
       db = createMockDb();
+      db.collection("exchangeRates").findOne.mockResolvedValue({ currencyCode: "USD", rate: 1 });
       for (const name of [
         "indexFunds",
         "indexFundPositions",

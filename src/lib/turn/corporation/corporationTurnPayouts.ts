@@ -26,7 +26,7 @@ import {
   emitCorporationTurnTx,
 } from "./corporationTurnPhases";
 import { processImfBailoutPayments } from "@/lib/turn/imfBailoutTurn";
-import type { State } from "@/lib/db/types/state";
+
 import { refreshNationalBudgetRevenue } from "@/lib/budget/revenue";
 import { loadExchangeRatesMap } from "@/lib/lineOfCredit/netWorth";
 import { toInternalUnits } from "@/lib/lineOfCredit/locMath";
@@ -413,9 +413,8 @@ export async function settleCorporationTurnPayouts({
   // Phase 3d: IMF facility remittances (after operating income is written to liquidCapital).
   // WHY: Payment cap uses the same per-turn `income` as corp snapshots; cash moves rescued → IMF (USD).
   if (typeof turn === "number" && corpSnapshots.length > 0) {
-    await runJournaledStep(journal, "imfBailout", "refuse", () =>
-      processImfBailoutPayments(db, turn, corpSnapshots, lookups.corporations)
-    );
+    // Its frozen payment receipts also restore snapshot balances when a completed payment is replayed.
+    await processImfBailoutPayments(db, turn, corpSnapshots, lookups.corporations);
   }
   mark("imfBailout");
 

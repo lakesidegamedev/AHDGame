@@ -1,3 +1,4 @@
+import type { SectorCrisisEffects } from "@/lib/crises/rules/sectorCrisisEffects";
 import type { LastTurnReconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
 import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
@@ -499,6 +500,7 @@ export interface CorpHistoryPoint {
   bondCouponFxFees?: number;
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
+  settledBankLoanInterestPaid?: number;
   /** Gross bond coupon expense on issued bonds this turn (before natcorp subsidy). */
   perTurnBondInterestExpense?: number;
   /** Interest drag from issued bonds this turn. */
@@ -604,6 +606,7 @@ export interface Financials {
   /** Revenue and the costs of each country's own sectors, largest revenue first. */
   byCountry?: CountryStatement[];
   bondInterestCost: number;
+  bankLoanInterestCost?: number;
   bondCouponIncome: number;
   /**
    * Dividend income (daily display units, local ccy) received last turn
@@ -688,6 +691,7 @@ export interface CommoditySupplyDemandBlendPct {
 }
 
 export interface SectorDetail {
+  crisisEffects?: SectorCrisisEffects;
   _id: string;
   /** Funded-market transition package while its window is open for this sector. */
   cutoverTransition?: {

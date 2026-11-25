@@ -457,6 +457,9 @@ export default function ChartsTab({
           currencyCode,
           fx
         );
+        const loanInterest = toAnchor(point.settledBankLoanInterestPaid ?? 0, currencyCode, fx);
+        if (loanInterest !== 0)
+          rows.push({ label: "Bank loan interest", value: fmtMoney(loanInterest) });
         if (drag !== 0) rows.push({ label: "Bond interest", value: fmtMoney(drag) });
         if (point.incomePreDividends != null) {
           rows.push({

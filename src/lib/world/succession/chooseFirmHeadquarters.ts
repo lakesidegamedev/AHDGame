@@ -153,6 +153,7 @@ export async function chooseFederationFirmHeadquarters(input: {
     throw new Error("Federation headquarters choice is not owned or pending");
   hold = await lockConversion(db, hold, corporation, destination);
   const conversion = hold.lockedConversion!;
+  let retainedDebtCurrency: CurrencyCode | undefined;
   if (corporation.federationPendingHeadquartersId === applicationId) {
     if (conversion.fromCurrency !== conversion.toCurrency) {
       const fxByCurrency = new Map<CurrencyCode, number>();
@@ -167,7 +168,10 @@ export async function chooseFederationFirmHeadquarters(input: {
         now,
         await isForexEnabled()
       );
-      if (!result.ok) throw new Error(result.error);
+      if (!result.ok) {
+        if (!result.debtCurrencyRetained) throw new Error(result.error);
+        retainedDebtCurrency = result.retainedCurrency;
+      }
       corporation = (await corporations.findOne({ _id: corporation._id }))!;
     }
     const moved = await corporations.updateOne(
@@ -178,6 +182,7 @@ export async function chooseFederationFirmHeadquarters(input: {
       {
         $set: {
           countryId: destination.countryId,
+          ...(retainedDebtCurrency ? { liquidCurrencyCode: retainedDebtCurrency } : {}),
           headquartersState: destination.stateId,
           suspended: hold.wasSuspended,
           updatedAt: now,

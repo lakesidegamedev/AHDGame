@@ -134,7 +134,9 @@ function anchorToLocal(
   fxByCurrency: Record<string, number>
 ): number {
   const rate = fxByCurrency[currency];
-  return Number.isFinite(rate) && rate && rate > 0 ? payoutAnchor * rate : payoutAnchor;
+  if (!rate || !Number.isFinite(rate) || rate <= 0)
+    throw new Error(`Exchange rate unavailable for ${currency}`);
+  return payoutAnchor * rate;
 }
 
 export function buildAcquisitionPayoutPlan(input: PayoutPlanInput): PayoutPlan {
@@ -255,7 +257,7 @@ export function buildAcquisitionPayoutPlan(input: PayoutPlanInput): PayoutPlan {
     const creditorCurrency = (creditor.liquidCurrencyCode ??
       COUNTRY_CURRENCY_MAP[creditor.countryId as CountryId] ??
       "USD") as CurrencyCode;
-    const rate = input.fxByCurrency[creditorCurrency] ?? 1;
+    const rate = input.forexEnabled ? anchorToLocal(1, creditorCurrency, input.fxByCurrency) : 1;
     const amtInCapital = Math.round(anchorToCorpLiquidCapital(row.payout, creditor, rate));
     legs.push({
       key: `holder:corporation:${row.corporationId}`,
@@ -290,7 +292,7 @@ export function buildAcquisitionPayoutPlan(input: PayoutPlanInput): PayoutPlan {
     const floatCurrency = (input.targetLiquidCurrencyCode ??
       COUNTRY_CURRENCY_MAP[input.targetCountryId as CountryId] ??
       "USD") as CurrencyCode;
-    const rate = input.fxByCurrency[floatCurrency] ?? 1;
+    const rate = input.forexEnabled ? anchorToLocal(1, floatCurrency, input.fxByCurrency) : 1;
     const floatLocal =
       Math.round(writeGovBudgetLocal(allocation.publicFloatRow.payout, floatCurrency, rate) * 100) /
       100;
@@ -315,7 +317,7 @@ export function buildAcquisitionPayoutPlan(input: PayoutPlanInput): PayoutPlan {
       const floatCurrency = (input.targetLiquidCurrencyCode ??
         COUNTRY_CURRENCY_MAP[input.targetCountryId as CountryId] ??
         "USD") as CurrencyCode;
-      const rate = input.fxByCurrency[floatCurrency] ?? 1;
+      const rate = input.forexEnabled ? anchorToLocal(1, floatCurrency, input.fxByCurrency) : 1;
       const floatLocal = Math.round(
         writeGovBudgetLocal(allocation.publicFloatRow.payout, floatCurrency, rate)
       );

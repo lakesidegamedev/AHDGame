@@ -1,3 +1,4 @@
+import { loadSectorCrisisEffects } from "@/lib/crises/queries/sectorCrisisEffects";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { recordedSectorTax } from "@/lib/corporations/rules/sectorTaxes";
 import { corpCanProspect } from "@/lib/constants/prospecting";
@@ -59,7 +60,6 @@ import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import { scaleSiteStatement } from "@/lib/corporations/rules/siteStatement";
 import {
   buildSectorAttackInfo,
-  buildSectorCrisisSection,
   buildSectorForSaleInfo,
   buildSectorStrategySection,
   computeSectorMarginSection,
@@ -413,12 +413,10 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
 
     // Dynamic crisis effects must feed the same effective margin used for
     // maintenance and profit, not only the explanatory UI.
-    const { crisisMarginPenalty, activeCrises } = await buildSectorCrisisSection(
-      db,
-      sector,
-      sectorCountryId,
-      currentTurn
-    );
+    const crisisEffectsFor = await loadSectorCrisisEffects(db, currentTurn);
+    const crisisEffects = crisisEffectsFor(sector, sectorCountryId);
+    const crisisMarginPenalty = crisisEffects.marginPoints;
+    const activeCrises = crisisEffects.rows.filter((row) => row.marginPoints !== 0);
 
     // Margin modifier stack (commodity blend, tariffs, subsidies, transition,
     // state metrics, regional conditions), see computeSectorMarginSection.
@@ -740,6 +738,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         effective: mods.effective,
         crisisMarginPenalty: Math.round(crisisMarginPenalty * 10) / 10,
         activeCrises,
+        crisisEffects,
         commoditySupplyDemandBlendPct: blendPct,
         // Raw metric values for display context
         unemploymentRate: r(metrics.unemploymentRate),

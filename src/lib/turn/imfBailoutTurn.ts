@@ -1,17 +1,9 @@
-/**
- * IMF facility remittances run after corporation sector processing so per-turn income
- * and liquidCapital already include operating results. Debits the rescued corporation
- * and credits the IMF institution corp (USD balance sheet) using anchor (₳) amounts
- * converted through each corp's home-currency rules.
- * QA: prioritize **JPY** and **GBP** home-currency rescued corps (active forex); do not
- * treat EUR as the main non-USD proxy for this path.
- */
-
-import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+/** IMF obligations and receipts use anchor principal and frozen native cash legs. */
+import { type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import {
-  anchorToCorpLiquidCapital,
-  fxRateForCorpFromMap,
+  resolveCorpLiquidCurrencyCode,
   loadFxRatesByCurrency,
 } from "@/lib/currency/corporationCapital";
 import {
@@ -21,135 +13,188 @@ import {
 import { computeImfFacilityPaymentTurn } from "@/lib/imf/imfFacilityMath";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import type { CorpSnapshot } from "@/lib/turn/corporation/types";
-import { getCorporationsCollection } from "@/lib/db/collections/corporations";
+import type { BankingTransition } from "@/lib/banking/rules/boundary";
+import { oid } from "@/lib/banking/rules/boundary";
+import { settleTransition, resumeSettlement } from "@/lib/banking/settlementJournal";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { buildTxDocs, loadTxThresholds } from "@/lib/financialTxLog/emit";
+import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 
-const PRINCIPAL_EPS = 1e-6;
-
-/**
- * Applies IMF facility principal/interest payments for all bailed-out corporations.
- */
 export async function processImfBailoutPayments(
   db: Db,
-  _turn: number,
+  turn: number,
   corpSnapshots: CorpSnapshot[],
   corporations: Corporation[]
 ): Promise<{ paymentsApplied: number }> {
-  const imfCorp = await getImfCorporation(db);
-  if (!imfCorp) {
-    return { paymentsApplied: 0 };
-  }
+  const existing = new Set(
+    (
+      await bankMoneyMovesCollection<{ _id: string }>(db)
+        .find({ kind: "imf_facility_payment", turn }, { projection: { _id: 1 } })
+        .toArray()
+    ).map((row) => row._id)
+  );
+  const borrowers = corporations.filter(
+    (corp) =>
+      (corp.imfBailoutActive && (corp.imfFacilityPrincipalOutstanding ?? 0) > 1e-6) ||
+      existing.has(`imf-service:${corp._id}:${turn}`)
+  );
+  if (!borrowers.length) return { paymentsApplied: 0 };
+  const imf = await getImfCorporation(db);
+  if (!imf) return { paymentsApplied: 0 };
+  const forexEnabled = await isForexEnabled();
+  const fx = forexEnabled ? await loadFxRatesByCurrency(db) : new Map();
+  const codeOf = (corp: Corporation) => resolveCorpLiquidCurrencyCode(corp) ?? "USD";
+  const rateOf = (corp: Corporation) => {
+    const code = resolveCorpLiquidCurrencyCode(corp);
+    return forexEnabled && code ? fx.get(code) : 1;
+  };
+  const imfRate = rateOf(imf);
 
-  const incomeByCorpId = new Map<string, number>();
-  for (const s of corpSnapshots) {
-    incomeByCorpId.set(s.corpId.toString(), s.income);
-  }
-
-  const fxByCurrency = await loadFxRatesByCurrency(db);
-  const imfFx = fxRateForCorpFromMap(imfCorp, fxByCurrency);
-
-  const ops: AnyBulkWriteOperation<Corporation>[] = [];
+  const snapshots = new Map(corpSnapshots.map((snapshot) => [String(snapshot.corpId), snapshot]));
+  const keyOf = (corp: Corporation) => `imf-service:${corp._id}:${turn}`;
+  const [thresholds, turnLengthMinutes] = await Promise.all([
+    loadTxThresholds(db),
+    loadTurnLengthMinutes(db),
+  ]);
   let paymentsApplied = 0;
-  const now = new Date();
-  const snapshotByCorpId = new Map(corpSnapshots.map((s) => [s.corpId.toString(), s]));
-
-  for (const corp of corporations) {
-    if (!corp.imfBailoutActive) continue;
-    if (imfCorp._id.equals(corp._id)) continue;
-
-    const principal = corp.imfFacilityPrincipalOutstanding ?? 0;
-    if (principal <= PRINCIPAL_EPS) continue;
-
-    const annualRate = corp.imfFacilityAnnualRate ?? 0;
-    const remainingTurns = corp.imfFacilityAmortizationTurnsRemaining ?? 48;
-    const turnIncome = incomeByCorpId.get(corp._id.toString()) ?? 0;
-
-    const incomeCapFraction = Math.min(
+  for (const corp of borrowers) {
+    if (corp._id.equals(imf._id)) continue;
+    const key = keyOf(corp);
+    if (existing.has(key)) {
+      const resumed = await resumeSettlement(db, key);
+      if (resumed.error) throw new Error(`IMF settlement remains pending: ${resumed.error}`);
+      paymentsApplied++;
+      continue;
+    }
+    const rate = rateOf(corp);
+    // An unavailable quote defers this facility, never invents a rate or aborts other companies.
+    if (
+      !rate ||
+      !Number.isFinite(rate) ||
+      rate <= 0 ||
+      !imfRate ||
+      !Number.isFinite(imfRate) ||
+      imfRate <= 0
+    )
+      continue;
+    const snapshot = snapshots.get(String(corp._id));
+    const cap = Math.min(
       IMF_BAILOUT_INCOME_FRACTION_CAP,
       corp.imfFacilityIncomeCaptureFraction ?? IMF_BAILOUT_DEFAULT_INCOME_CAPTURE_FRACTION
     );
-
+    const cashAnchor = Math.max(0, snapshot?.liquidCapital ?? corp.liquidCapital ?? 0) / rate;
     const split = computeImfFacilityPaymentTurn({
-      principalOutstanding: principal,
-      annualRatePercent: annualRate,
-      remainingTurns,
-      turnIncome,
-      incomeCapFraction,
+      principalOutstanding: corp.imfFacilityPrincipalOutstanding ?? 0,
+      annualRatePercent: corp.imfFacilityAnnualRate ?? 0,
+      remainingTurns: corp.imfFacilityAmortizationTurnsRemaining ?? 48,
+      turnIncome: Math.min(snapshot?.income ?? 0, cap > 0 ? cashAnchor / cap : 0),
+      incomeCapFraction: cap,
     });
-
-    const facilityCleared = split.newPrincipal <= PRINCIPAL_EPS;
-    const rescuedFx = fxRateForCorpFromMap(corp, fxByCurrency);
-
-    if (split.actualPayment > PRINCIPAL_EPS) {
-      paymentsApplied++;
-    }
-
-    const debitLocal =
-      split.actualPayment > PRINCIPAL_EPS
-        ? anchorToCorpLiquidCapital(split.actualPayment, corp, rescuedFx)
-        : 0;
-    const creditLocal =
-      split.actualPayment > PRINCIPAL_EPS
-        ? anchorToCorpLiquidCapital(split.actualPayment, imfCorp, imfFx)
-        : 0;
-
-    const rescuedUpdate: {
-      $inc?: { liquidCapital: number };
-      $set: Record<string, unknown>;
-      $unset?: Record<string, "" | true>;
-    } = {
+    const now = new Date();
+    const cleared = split.newPrincipal <= 1e-6;
+    const debit = split.actualPayment * rate;
+    const credit = split.actualPayment * imfRate;
+    const update = {
       $set: {
-        imfFacilityPrincipalOutstanding: facilityCleared ? 0 : split.newPrincipal,
-        imfFacilityAmortizationTurnsRemaining: facilityCleared ? 0 : split.newRemainingTurns,
+        imfFacilityPrincipalOutstanding: cleared ? 0 : split.newPrincipal,
+        imfFacilityAmortizationTurnsRemaining: cleared ? 0 : split.newRemainingTurns,
+        ...(cleared ? { imfBailoutActive: false, imfFacilityAnnualRate: 0 } : {}),
         updatedAt: now,
       },
     };
-
-    if (split.actualPayment > PRINCIPAL_EPS) {
-      rescuedUpdate.$inc = { liquidCapital: -debitLocal };
-    }
-
-    if (facilityCleared) {
-      rescuedUpdate.$set.imfBailoutActive = false;
-      rescuedUpdate.$set.imfFacilityAnnualRate = 0;
-      rescuedUpdate.$unset = {
-        imfBailoutImfCorporationId: "",
-        imfBailoutTargetOwnershipPercent: "",
-        imfFacilityIncomeCaptureFraction: "",
-      };
-    }
-
-    ops.push({
-      updateOne: {
-        filter: { _id: corp._id as ObjectId },
-        update: rescuedUpdate,
-      },
-    });
-
-    if (split.actualPayment > PRINCIPAL_EPS) {
-      const rescuedSnapshot = snapshotByCorpId.get(corp._id.toString());
-      if (rescuedSnapshot) {
-        rescuedSnapshot.liquidCapital = Math.max(0, rescuedSnapshot.liquidCapital - debitLocal);
-      }
-      const imfSnapshot = snapshotByCorpId.get(imfCorp._id.toString());
-      if (imfSnapshot) {
-        imfSnapshot.liquidCapital += creditLocal;
-      }
-
-      ops.push({
-        updateOne: {
-          filter: { _id: imfCorp._id },
-          update: {
-            $inc: { liquidCapital: creditLocal },
-            $set: { updatedAt: now },
-          },
+    const rows =
+      split.actualPayment > 0
+        ? buildTxDocs(
+            [
+              {
+                type: "bank_loan_repayment",
+                turn,
+                createdAt: now,
+                subjectType: "corporation",
+                subjectId: corp._id,
+                subjectName: corp.name,
+                amount: -debit,
+                anchorAmount: -split.actualPayment,
+                currencyCode: codeOf(corp),
+                counterpartyType: "corporation",
+                counterpartyId: imf._id,
+                counterpartyName: imf.name,
+                meta: {
+                  kind: "imf_facility",
+                  settlementId: key,
+                  principalAnchor: split.principalPortion,
+                  interestAnchor: split.interestPortion,
+                },
+              },
+            ],
+            thresholds,
+            turnLengthMinutes,
+            fx
+          )
+        : [];
+    const transition: BankingTransition = {
+      key,
+      kind: "imf_facility_payment",
+      turn,
+      currency: codeOf(corp),
+      legs:
+        split.actualPayment > 0
+          ? [
+              {
+                kind: "debit",
+                amount: debit,
+                valuation: { currencyCode: codeOf(corp), localPerAnchor: rate },
+                collection: "corporations",
+                filter: {
+                  _id: oid(String(corp._id)),
+                  ...(corp.liquidCurrencyCode
+                    ? { liquidCurrencyCode: corp.liquidCurrencyCode }
+                    : {}),
+                },
+                path: "liquidCapital",
+                note: "IMF borrower pays principal and interest",
+              },
+              {
+                kind: "credit",
+                amount: credit,
+                valuation: { currencyCode: codeOf(imf), localPerAnchor: imfRate },
+                collection: "corporations",
+                filter: { _id: oid(String(imf._id)) },
+                path: "liquidCapital",
+                note: "IMF lender receives the same anchor value",
+              },
+            ]
+          : [],
+      projections: [
+        {
+          collection: "corporations",
+          filter: { _id: oid(String(corp._id)) },
+          update,
+          note: "Advance the frozen anchor facility after its payment",
         },
-      });
-    }
+        ...rows.map((row) => ({
+          collection: "financialTxLog",
+          insert: { ...row },
+          note: "Publish the frozen IMF payment receipt",
+        })),
+      ],
+      event: { kind: "loan.paid", command: "imf.facility.service", amount: split.actualPayment },
+    };
+    const settled = await settleTransition(db, transition);
+    if (settled.error) throw new Error(`IMF settlement remains pending: ${settled.error}`);
+    if (split.actualPayment > 0) paymentsApplied++;
   }
-
-  if (ops.length > 0) {
-    await (await getCorporationsCollection(db)).bulkWrite(ops);
+  // Read the landed balances rather than subtracting a payment again on replay.
+  const balances = await corporationsCollection(db)
+    .find(
+      { _id: { $in: [imf._id, ...borrowers.map((corp) => corp._id)] } },
+      { projection: { liquidCapital: 1 } }
+    )
+    .toArray();
+  for (const row of balances) {
+    const snapshot = snapshots.get(String(row._id));
+    if (snapshot) snapshot.liquidCapital = row.liquidCapital;
   }
-
   return { paymentsApplied };
 }

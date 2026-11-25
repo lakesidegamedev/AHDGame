@@ -49,19 +49,21 @@ export async function escheatUnclaimedFundCash(
 
   const forex = await isForexEnabled();
   const rates = forex ? await loadFxRatesRecord(db) : {};
-  // Matches the dissolution route: a missing rate falls back to passthrough
-  // rather than freezing the wind-up.
-  const fxRate = forex ? (rates[currencyCode] ?? 1) : 1;
+  const fxRate = forex ? rates[currencyCode] : 1;
+  if (!fxRate || !Number.isFinite(fxRate) || fxRate <= 0)
+    throw new Error("Reserve exchange rate unavailable; wind-up remains pending");
   const amountLocal = writeGovBudgetLocal(amountAnchor, currencyCode, fxRate);
   if (!(amountLocal > 0)) return null;
 
   const bankId = getBankId(countryId);
-  await centralBanksCollection(db).updateOne(
+  const credited = await centralBanksCollection(db).updateOne(
     { _id: bankId },
     { $inc: { reserveBalance: amountLocal }, $set: { updatedAt: now } }
   );
 
-  await emitTx(db, {
+  if (credited.matchedCount !== 1) throw new Error("Fund wind-up reserve is unavailable");
+
+  const witness = await emitTx(db, {
     type: "corp_dissolution_distribution",
     turn,
     createdAt: now,
@@ -85,5 +87,6 @@ export async function escheatUnclaimedFundCash(
     },
   });
 
+  if (witness === "failed") throw new Error("Fund residual witness failed");
   return { countryId, currencyCode, amountLocal };
 }

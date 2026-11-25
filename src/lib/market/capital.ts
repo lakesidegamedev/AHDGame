@@ -186,6 +186,25 @@ export function governorAnchorTurn(
   return Math.min(sectorStartTurn, worldAnchorTurn);
 }
 
+export function plantsRampShare(
+  plantsStartTurn: number | null | undefined,
+  currentTurn: number,
+  market: {
+    plantsEnabled: boolean;
+    governorRampTurns: number;
+    worldGovernorAnchorTurn?: number | null;
+    governorGlide?: GovernorGlide | null;
+  }
+): number {
+  const anchor = governorAnchorTurn(
+    plantsStartTurn,
+    market.worldGovernorAnchorTurn,
+    market.governorGlide
+  );
+  if (!market.plantsEnabled || anchor == null || market.governorRampTurns <= 0) return 1;
+  return Math.max(0, Math.min(1, (currentTurn - anchor) / market.governorRampTurns));
+}
+
 /** Default length of the governor glide, in turns. */
 export const MARKET_GOVERNOR_GLIDE_TURNS = 24;
 

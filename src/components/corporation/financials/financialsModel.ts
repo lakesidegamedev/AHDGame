@@ -167,6 +167,7 @@ export function buildAllocation(
     ["maintenance", "Maintenance", f.maintenanceCosts],
     ["labor", "Wages", f.laborCosts],
     ["growth", "Growth", f.growthCosts],
+    ["interest", "Bank loan interest", f.bankLoanInterestCost ?? 0],
     ["freight", "Freight charges", f.freightCosts ?? 0],
     ["marketing", "Marketing", f.marketingCosts],
     ["logistics", "Logistics", f.logisticsCosts],

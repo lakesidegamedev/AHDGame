@@ -1,3 +1,4 @@
+import { loadSectorCrisisEffects } from "@/lib/crises/queries/sectorCrisisEffects";
 import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
 import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
@@ -236,6 +237,17 @@ export async function loadCorporationDetailView(args: {
       // Same test the CEO-only routes apply (requireCeo).
       viewerIsCeo: viewerOwnsCorporation,
     });
+
+  const crisisEffectsFor = await loadSectorCrisisEffects(db, currentTurn);
+  const crisisEffectsBySector = new Map(
+    sectors.map((sector) => [
+      sector._id.toString(),
+      crisisEffectsFor(
+        sector,
+        sector.countryId ?? stateCountryMap.get(sector.stateId) ?? corporation.countryId
+      ),
+    ])
+  );
 
   const portfolio = await loadPortfolioHoldings(db, corporation, currentTurn, fxByCurrency);
 
@@ -560,6 +572,7 @@ export async function loadCorporationDetailView(args: {
       const tax = income.perSectorTax.get(sd._id.toString());
       return {
         ...sd,
+        crisisEffects: crisisEffectsBySector.get(sd._id.toString()),
         federalTaxPaid: sd.recordedTax?.federalTax,
         taxAssessmentTurn: sd.recordedTax?.turn,
         federalTaxForecast: tax?.federalTaxPaid,

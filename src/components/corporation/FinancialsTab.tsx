@@ -563,7 +563,8 @@ export default function FinancialsTab({
                     </>
                   )}
 
-                  {(financials.bondInterestCost > 0 ||
+                  {((financials.bankLoanInterestCost ?? 0) > 0 ||
+                    financials.bondInterestCost > 0 ||
                     financials.governmentBondSubsidy > 0 ||
                     financials.bondCouponIncome > 0 ||
                     financials.dividendIncomeReceived > 0 ||
@@ -572,6 +573,14 @@ export default function FinancialsTab({
                     balanceSheet?.assets.bankEquity != null) && (
                     <>
                       <StatementGroup>Interest and investment income</StatementGroup>
+                      {(financials.bankLoanInterestCost ?? 0) > 0 && (
+                        <StatementLine
+                          indent
+                          label="Bank loan interest"
+                          amount={cost(financials.bankLoanInterestCost ?? 0)}
+                          pct={pctOf(financials.bankLoanInterestCost ?? 0)}
+                        />
+                      )}
                       {financials.bondInterestCost > 0 && (
                         <StatementLine
                           indent

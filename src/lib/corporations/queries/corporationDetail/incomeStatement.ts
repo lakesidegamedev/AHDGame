@@ -101,6 +101,7 @@ export interface IncomeStatementResult {
   bankIncomeLocalPerDay: number;
   bankingIncomeTurn: number | undefined;
   dailyInterestLocal: number;
+  dailyBankLoanInterestLocal: number;
   dailyCouponIncomeLocal: number;
   totalDebtLocal: number;
   totalCostsLocal: number;
@@ -293,6 +294,11 @@ export async function computeIncomeStatement(
   const corpCurrency = resolveCorpLiquidCurrencyCode(corporation);
   const corpFxRate = fxRateForCorpFromMap(corporation, fxByCurrency);
   const dailyInterestLocal = anchorToCorpCapital(dailyInterestAnchor, corpCurrency, corpFxRate);
+  const dailyBankLoanInterestLocal = anchorToCorpCapital(
+    portfolio.dailyBankLoanInterestAnchor ?? 0,
+    corpCurrency,
+    corpFxRate
+  );
   // Interest paid on the corporation's own bonds is deductible, apportioned by
   // revenue share like other overhead (as the turn charges it). National
   // enterprises have their issuer interest waived, so they deduct nothing.
@@ -465,14 +471,15 @@ export async function computeIncomeStatement(
     corpFxRate
   );
   const totalDebtLocal = anchorToCorpCapital(totalDebtAnchor, corpCurrency, corpFxRate);
-  const totalCostsLocal = operatingCosts + dailyInterestLocal;
+  const totalCostsLocal = operatingCosts + dailyInterestLocal + dailyBankLoanInterestLocal;
   const isNatcorp = !!corporation.countryOwnerId;
   const governmentBondSubsidyLocal = isNatcorp ? dailyInterestLocal : 0;
   const income =
     operatingIncome -
     corporateTax +
     dailyCouponIncomeLocal -
-    dailyInterestLocal +
+    dailyInterestLocal -
+    dailyBankLoanInterestLocal +
     governmentBondSubsidyLocal -
     imfFacilityPaymentDailyLocal +
     imfFacilityReceiptsDailyLocal +
@@ -640,6 +647,7 @@ export async function computeIncomeStatement(
     bankIncomeLocalPerDay,
     bankingIncomeTurn: activeBankCharter?.lastBankingIncomeTurn ?? undefined,
     dailyInterestLocal,
+    dailyBankLoanInterestLocal,
     dailyCouponIncomeLocal,
     totalDebtLocal,
     totalCostsLocal,

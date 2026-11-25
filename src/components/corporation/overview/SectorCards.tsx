@@ -1,3 +1,4 @@
+import { SectorCrisisEffects } from "@/components/crises/SectorCrisisEffects";
 import { sectorDisplayProfit } from "../sectorSortUtils";
 import Image from "next/image";
 import Link from "next/link";
@@ -83,6 +84,7 @@ export function SectorCards({
                 {s.mothballed && <span className="ml-1.5">mothballed</span>}
               </span>
             </div>
+            <SectorCrisisEffects effects={s.crisisEffects} />
             <div className="flex items-baseline justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
                 Revenue

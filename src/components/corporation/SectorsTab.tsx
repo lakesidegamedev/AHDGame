@@ -4,7 +4,7 @@ import {
   consolidateSiteStatements,
   reconcileSiteStatements,
 } from "@/lib/corporations/rules/siteStatement";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
@@ -104,6 +104,11 @@ interface SectorsTabProps {
   onExpandDeepLinkConsumed?: () => void;
   /** A rival viewer may plan a split of these plants from the margins drawer. */
   canSplitRivalPlants?: boolean;
+  /**
+   * Panels shown between the action row and the sector list. The page passes
+   * its product panels here so the primary action stays at the top of the tab.
+   */
+  leadPanels?: ReactNode;
 }
 
 export default function SectorsTab({
@@ -138,6 +143,7 @@ export default function SectorsTab({
   expandStateId,
   onExpandDeepLinkConsumed,
   canSplitRivalPlants = false,
+  leadPanels,
 }: SectorsTabProps) {
   const { formatAmount, toInternalFrom } = useCurrency();
   // Post-v0.2.6: sector revenue / profit / growthCost are in corp currency.
@@ -388,6 +394,8 @@ export default function SectorsTab({
           </SmallButton>
         )}
       </div>
+
+      {leadPanels}
 
       {dossierType && (
         <div className="flex flex-col gap-6">

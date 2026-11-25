@@ -1,3 +1,10 @@
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
+import { bondPoolCurrency } from "@/lib/bonds/marketPool";
+import { imfFacilityPrincipalAnchor } from "@/lib/imf/rules/facilityPrincipal";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 // GET /api/admin/corporations/[id]/imf-bailout — Preview bonds + facility + payoff estimate (query params).
 // POST — Activate or deactivate IMF restructuring.
 // PATCH — Update income capture % while bailout is active.
@@ -153,10 +160,14 @@ export async function GET(request: Request, { params }: RouteParams) {
       };
     });
 
-    let facilityPrincipal = 0;
-    for (const b of bonds) {
-      facilityPrincipal += roundFaceToBondUnits((b.totalIssued ?? 0) * retention);
-    }
+    const forexEnabled = await isForexEnabled();
+    const rates = forexEnabled ? await loadValuationFxRates(db) : new Map();
+    const facilityPrincipal = imfFacilityPrincipalAnchor(
+      bonds.map((bond) => ({
+        retainedFace: roundFaceToBondUnits((bond.totalIssued ?? 0) * retention),
+        localPerAnchor: forexEnabled ? (rates.get(bondPoolCurrency(bond)) ?? Number.NaN) : 1,
+      }))
+    );
 
     const ann = Number.isFinite(annualRate) ? Math.min(80, Math.max(0, annualRate)) : 6;
     const rem = Number.isFinite(amortTurns) ? amortTurns : 240;
@@ -265,174 +276,195 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const body = parsed.data;
-    const db = await getDb();
-
-    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
-    if (!corp) throw notFound("Corporation not found");
-
-    if (corp.imfInstitution) {
-      return errorResponse(400, "Cannot apply IMF bailout to the IMF institution itself");
-    }
-
-    if (corp.countryOwnerId) {
-      return errorResponse(400, "National corporations cannot enter IMF restructuring");
-    }
-
-    const imfCorp = await getImfCorporation(db);
-    if (!imfCorp) {
-      return errorResponse(
-        400,
-        "IMF institution corporation not found — seed it from Admin → Server Setup or Corporations (IMF form), or run scripts/seed/seed-imf-institution.ts"
+    const rootDb = await getDb();
+    return await withSessionDb(rootDb, async (db) => {
+      const busy = await rejectDuringTurn(db);
+      if (busy) return busy;
+      const state = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { updatedAt: 1 } }
       );
-    }
+      const idle = await gameStateCollection(db).updateOne(
+        { _id: "current", isProcessing: { $ne: true } },
+        {
+          $set: { updatedAt: new Date(Math.max(Date.now(), state?.updatedAt?.getTime() ?? 0) + 1) },
+        }
+      );
+      if (idle.matchedCount !== 1)
+        return errorResponse(409, "Retry after the current turn finishes");
 
-    const now = new Date();
+      const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
+      if (!corp) throw notFound("Corporation not found");
 
-    if (!body.active) {
+      if (corp.imfInstitution) {
+        return errorResponse(400, "Cannot apply IMF bailout to the IMF institution itself");
+      }
+
+      if (corp.countryOwnerId) {
+        return errorResponse(400, "National corporations cannot enter IMF restructuring");
+      }
+
+      const imfCorp = await getImfCorporation(db);
+      if (!imfCorp) {
+        return errorResponse(
+          400,
+          "IMF institution corporation not found — seed it from Admin → Server Setup or Corporations (IMF form), or run scripts/seed/seed-imf-institution.ts"
+        );
+      }
+
+      const now = new Date();
+
+      if (!body.active) {
+        await corporationsCollection(db).updateOne(
+          { _id: corp._id },
+          {
+            $set: { imfBailoutActive: false, updatedAt: now },
+            $unset: {
+              imfBailoutImfCorporationId: "",
+              imfBailoutTargetOwnershipPercent: "",
+              imfFacilityPrincipalOutstanding: "",
+              imfFacilityAnnualRate: "",
+              imfFacilityAmortizationTurnsRemaining: "",
+              imfFacilityIncomeCaptureFraction: "",
+            },
+          }
+        );
+        return NextResponse.json({ success: true, active: false });
+      }
+
+      if (corp.imfBailoutActive) {
+        return errorResponse(400, "IMF bailout is already active for this corporation");
+      }
+
+      if (
+        body.targetOwnershipPercent == null ||
+        body.annualRatePercent == null ||
+        body.amortizationTurns == null
+      ) {
+        return errorResponse(
+          400,
+          "targetOwnershipPercent, annualRatePercent, and amortizationTurns are required when activating"
+        );
+      }
+
+      const incomeFraction = incomeCapturePercentToFraction(
+        body.incomeCapturePercent ?? DEFAULT_INCOME_CAPTURE_PERCENT
+      );
+
+      const bonds = await bondsCollection(db)
+        .find({ corporationId: corp._id, matured: false })
+        .toArray();
+
+      const retention = body.bondHaircutRetention ?? 0.7;
+      const forexEnabled = await isForexEnabled();
+      const rates = forexEnabled ? await loadValuationFxRates(db) : new Map();
+      const facilityPrincipal = imfFacilityPrincipalAnchor(
+        bonds.map((bond) => ({
+          retainedFace: roundFaceToBondUnits((bond.totalIssued ?? 0) * retention),
+          localPerAnchor: forexEnabled ? (rates.get(bondPoolCurrency(bond)) ?? Number.NaN) : 1,
+        }))
+      );
+      const holderCharIds = new Set<string>();
+
+      for (const bond of bonds) {
+        for (const h of bond.holders ?? []) {
+          if (h.characterId) holderCharIds.add(h.characterId.toString());
+        }
+      }
+
+      if (facilityPrincipal <= 0) {
+        return errorResponse(400, "IMF bailout requires outstanding bond principal");
+      }
+
+      const shareholders = [...(corp.shareholders ?? [])];
+      const imfKey = imfCorp._id.toString();
+      const imfIdx = shareholders.findIndex(
+        (s) => s.corporationId && s.corporationId.toString() === imfKey
+      );
+      const currentImfShares = imfIdx >= 0 ? (shareholders[imfIdx].shares ?? 0) : 0;
+      const O = corp.totalShares ?? 10_000_000;
+      const targetImfShares = dilutionSharesForImf(O, body.targetOwnershipPercent);
+      const newShares = Math.max(0, targetImfShares - currentImfShares);
+
+      if (newShares < 1 && currentImfShares === 0) {
+        return errorResponse(400, "Diluted share issuance rounds to zero — raise target %");
+      }
+
+      if (imfIdx >= 0) {
+        shareholders[imfIdx] = {
+          ...shareholders[imfIdx],
+          shares: (shareholders[imfIdx].shares ?? 0) + newShares,
+        };
+      } else if (newShares > 0) {
+        shareholders.push({
+          corporationId: imfCorp._id,
+          shares: newShares,
+        });
+      }
+
+      const newTotal = O + newShares;
+
+      if (bonds.length > 0) {
+        if (holderCharIds.size > 0) {
+          const chars = await charactersCollection(db)
+            .find(
+              { _id: { $in: [...holderCharIds].map((x) => new ObjectId(x)) } },
+              { projection: { _id: 1, name: 1, userId: 1, sequentialId: 1 } }
+            )
+            .toArray();
+
+          for (const ch of chars) {
+            await sendSystemMail(db, {
+              toCharacterId: ch._id,
+              toCharacterName: ch.name,
+              toCharacterSequentialId: ch.sequentialId ?? 0,
+              toUserId: ch.userId,
+              senderName: "IMF Restructuring",
+              subject: `${corp.name}: bond position haircut`,
+              body: `Your bond holdings in ${corp.name} were reduced as part of an IMF restructuring. Bondholders retain approximately ${Math.round(retention * 100)}% of face value; remaining obligations are consolidated into an IMF facility. Dividends and CEO pay are suspended until the facility is repaid or the program ends.`,
+            });
+          }
+        }
+
+        const bondIds = bonds.map((b) => b._id);
+        if (bondIds.length > 0) {
+          await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
+        }
+        await bondsCollection(db).deleteMany({ _id: { $in: bondIds } });
+      }
+
       await corporationsCollection(db).updateOne(
         { _id: corp._id },
         {
-          $set: { imfBailoutActive: false, updatedAt: now },
-          $unset: {
-            imfBailoutImfCorporationId: "",
-            imfBailoutTargetOwnershipPercent: "",
-            imfFacilityPrincipalOutstanding: "",
-            imfFacilityAnnualRate: "",
-            imfFacilityAmortizationTurnsRemaining: "",
-            imfFacilityIncomeCaptureFraction: "",
+          $set: {
+            totalShares: newTotal,
+            shareholders,
+            imfBailoutActive: true,
+            imfBailoutImfCorporationId: imfCorp._id,
+            imfBailoutTargetOwnershipPercent: body.targetOwnershipPercent,
+            imfBailoutStartedAt: now,
+            imfFacilityPrincipalOutstanding: facilityPrincipal,
+            imfFacilityAnnualRate: body.annualRatePercent,
+            imfFacilityAmortizationTurnsRemaining: body.amortizationTurns,
+            imfFacilityIncomeCaptureFraction: incomeFraction,
+            dividendRate: 0,
+            ceoSalary: 0,
+            lastDividendChange: now,
+            updatedAt: now,
           },
         }
       );
-      return NextResponse.json({ success: true, active: false });
-    }
 
-    if (corp.imfBailoutActive) {
-      return errorResponse(400, "IMF bailout is already active for this corporation");
-    }
+      await afterCommit(db, () => fireImfBailoutPulse(rootDb, id));
 
-    if (
-      body.targetOwnershipPercent == null ||
-      body.annualRatePercent == null ||
-      body.amortizationTurns == null
-    ) {
-      return errorResponse(
-        400,
-        "targetOwnershipPercent, annualRatePercent, and amortizationTurns are required when activating"
-      );
-    }
-
-    const incomeFraction = incomeCapturePercentToFraction(
-      body.incomeCapturePercent ?? DEFAULT_INCOME_CAPTURE_PERCENT
-    );
-
-    const bonds = await bondsCollection(db)
-      .find({ corporationId: corp._id, matured: false })
-      .toArray();
-
-    const retention = body.bondHaircutRetention ?? 0.7;
-    let facilityPrincipal = 0;
-    const holderCharIds = new Set<string>();
-
-    for (const bond of bonds) {
-      const newIssued = roundFaceToBondUnits((bond.totalIssued ?? 0) * retention);
-      facilityPrincipal += newIssued;
-      for (const h of bond.holders ?? []) {
-        if (h.characterId) holderCharIds.add(h.characterId.toString());
-      }
-    }
-
-    if (facilityPrincipal <= 0) {
-      return errorResponse(400, "IMF bailout requires outstanding bond principal");
-    }
-
-    if (bonds.length > 0) {
-      if (holderCharIds.size > 0) {
-        const chars = await charactersCollection(db)
-          .find(
-            { _id: { $in: [...holderCharIds].map((x) => new ObjectId(x)) } },
-            { projection: { _id: 1, name: 1, userId: 1, sequentialId: 1 } }
-          )
-          .toArray();
-
-        for (const ch of chars) {
-          await sendSystemMail(db, {
-            toCharacterId: ch._id,
-            toCharacterName: ch.name,
-            toCharacterSequentialId: ch.sequentialId ?? 0,
-            toUserId: ch.userId,
-            senderName: "IMF Restructuring",
-            subject: `${corp.name}: bond position haircut`,
-            body: `Your bond holdings in ${corp.name} were reduced as part of an IMF restructuring. Bondholders retain approximately ${Math.round(retention * 100)}% of face value; remaining obligations are consolidated into an IMF facility. Dividends and CEO pay are suspended until the facility is repaid or the program ends.`,
-          });
-        }
-      }
-
-      const bondIds = bonds.map((b) => b._id);
-      if (bondIds.length > 0) {
-        await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
-      }
-      await bondsCollection(db).deleteMany({ corporationId: corp._id });
-    }
-
-    const shareholders = [...(corp.shareholders ?? [])];
-    const imfKey = imfCorp._id.toString();
-    const imfIdx = shareholders.findIndex(
-      (s) => s.corporationId && s.corporationId.toString() === imfKey
-    );
-    const currentImfShares = imfIdx >= 0 ? (shareholders[imfIdx].shares ?? 0) : 0;
-    const O = corp.totalShares ?? 10_000_000;
-    const targetImfShares = dilutionSharesForImf(O, body.targetOwnershipPercent);
-    const newShares = Math.max(0, targetImfShares - currentImfShares);
-
-    if (newShares < 1 && currentImfShares === 0) {
-      return errorResponse(400, "Diluted share issuance rounds to zero — raise target %");
-    }
-
-    if (imfIdx >= 0) {
-      shareholders[imfIdx] = {
-        ...shareholders[imfIdx],
-        shares: (shareholders[imfIdx].shares ?? 0) + newShares,
-      };
-    } else if (newShares > 0) {
-      shareholders.push({
-        corporationId: imfCorp._id,
-        shares: newShares,
+      return NextResponse.json({
+        success: true,
+        active: true,
+        facilityPrincipalAnchor: facilityPrincipal,
+        newSharesIssuedToImf: newShares,
+        newTotalShares: newTotal,
+        incomeCapturePercent: Math.round(incomeFraction * 1000) / 10,
       });
-    }
-
-    const newTotal = O + newShares;
-
-    await corporationsCollection(db).updateOne(
-      { _id: corp._id },
-      {
-        $set: {
-          totalShares: newTotal,
-          shareholders,
-          imfBailoutActive: true,
-          imfBailoutImfCorporationId: imfCorp._id,
-          imfBailoutTargetOwnershipPercent: body.targetOwnershipPercent,
-          imfBailoutStartedAt: now,
-          imfFacilityPrincipalOutstanding: facilityPrincipal,
-          imfFacilityAnnualRate: body.annualRatePercent,
-          imfFacilityAmortizationTurnsRemaining: body.amortizationTurns,
-          imfFacilityIncomeCaptureFraction: incomeFraction,
-          dividendRate: 0,
-          ceoSalary: 0,
-          lastDividendChange: now,
-          updatedAt: now,
-        },
-      }
-    );
-
-    await fireImfBailoutPulse(db, id);
-
-    return NextResponse.json({
-      success: true,
-      active: true,
-      facilityPrincipalAnchor: facilityPrincipal,
-      newSharesIssuedToImf: newShares,
-      newTotalShares: newTotal,
-      incomeCapturePercent: Math.round(incomeFraction * 1000) / 10,
     });
   } catch (error) {
     return handleRouteError(error);

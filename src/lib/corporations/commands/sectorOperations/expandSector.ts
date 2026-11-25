@@ -1,10 +1,10 @@
+import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 import { firstDeliveryTurn } from "@/lib/corporations/buildDelivery";
-import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { NextResponse } from "next/server";
-import type { ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolvePresetIdFromGameState } from "@/lib/world/presetId";
@@ -14,14 +14,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { expandSectorSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type {
-  CorporateSector,
-  GameState,
-  GameConfig,
-  SectorBuildOrder,
-  State,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import {
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_SECTOR_STARTING_REVENUE,
@@ -67,7 +60,7 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
+
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -342,7 +335,8 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       )
     );
 
-    const newSector: Omit<CorporateSector, "_id"> = {
+    const newSector: CorporateSector = {
+      _id: new ObjectId(),
       corporationId: corporation._id,
       // Sectors are keyed to where they operate, not the owner's HQ country.
       // Cross-border expansion must persist the destination state's country so
@@ -419,40 +413,57 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       }
     }
 
-    let newSectorId: ObjectId;
-    try {
-      const inserted = await corporateSectorsCollection(db).insertOne(newSector as CorporateSector);
-      newSectorId = inserted.insertedId;
-    } catch (error) {
-      if (isCorporateSectorDuplicateKey(error)) {
-        return errorResponse(
-          400,
-          "You already operate in this state. Open that sector and order more capacity there."
-        );
-      }
-      throw error;
-    }
-
-    // Deduct expansion cost incl. any cross-currency spread (convert ₳ → corp currency)
+    const newSectorId = newSector._id!;
     const costInCorpCapital = anchorToCorpLiquidCapital(
       totalExpansionCostAnchor,
       corporation,
       corpFxRate
     );
-    const debit = await corporationsCollection(db).updateOne(
-      {
-        _id: corporation._id,
-        liquidCapital: { $gte: costInCorpCapital },
-        ...corporateDiscretionaryCashGuard(),
-      },
-      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
-    );
-    if (debit.matchedCount !== 1) {
-      await corporateSectorsCollection(db).deleteOne({ _id: newSectorId });
-      return errorResponse(
-        409,
-        "Insufficient spendable corporate funds, or outstanding taxes and payables."
-      );
+    try {
+      const paid = await commitSiteCashMutation(db, {
+        corporation,
+        chargeLocal: costInCorpCapital,
+        site: { insert: newSector },
+        now,
+        record: async (tx) => {
+          if (plantsEnabled && starterUnits > 0) {
+            // Shadow-ledger debit leg for the starter build — the cash → CIP reclass,
+            // logged at the CIP amount only (the entry fee is an expense, not
+            // construction spend, and the FX spread is a routed transaction fee).
+            // Best-effort for the same reason `buildCapacity` treats its legs so: the
+            // cash has already moved, and a tx-log failure must not 500 the caller
+            // into retrying a founding that already happened.
+            if (starterBuildAnchor > 0) {
+              await emitBuildCapexTx(
+                tx,
+                {
+                  corporationId: corporation._id,
+                  corporationName: corporation.name,
+                  corporationSequentialId: corporation.sequentialId,
+                  direction: "build",
+                  amountLocal: Math.abs(
+                    anchorToCorpLiquidCapital(starterBuildAnchor, corporation, corpFxRate)
+                  ),
+                  currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
+                  anchorAmount: starterBuildAnchor,
+                  turn: currentTurn,
+                  createdAt: now,
+                  sectorId: newSectorId,
+                  sectorType,
+                  units: starterUnits,
+                  meta: { founding: true, onlineTurn: starterOnlineTurn },
+                },
+                { atomic: true }
+              );
+            }
+          }
+        },
+      });
+      if (!paid) return errorResponse(409, "Corporate funds or currency changed. Get a new quote.");
+    } catch (error) {
+      if (isCorporateSectorDuplicateKey(error))
+        return errorResponse(409, "You already operate here. Open that sector to order capacity.");
+      throw error;
     }
     // Route the cross-currency expansion spread to the CB system.
     if (expansionSpread.spreadAnchor > 0 && expansionSpread.from && expansionSpread.to) {
@@ -460,36 +471,6 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         anchorToCorpLiquidCapital(expansionSpread.spreadAnchor, corporation, corpFxRate)
       );
       await safeDistributeConversionSpread(db, feeInCorp, expansionSpread.from, expansionSpread.to);
-    }
-
-    if (plantsEnabled && starterUnits > 0) {
-      // Shadow-ledger debit leg for the starter build — the cash → CIP reclass,
-      // logged at the CIP amount only (the entry fee is an expense, not
-      // construction spend, and the FX spread is a routed transaction fee).
-      // Best-effort for the same reason `buildCapacity` treats its legs so: the
-      // cash has already moved, and a tx-log failure must not 500 the caller
-      // into retrying a founding that already happened.
-      if (starterBuildAnchor > 0) {
-        await emitBuildCapexTx(db, {
-          corporationId: corporation._id,
-          corporationName: corporation.name,
-          corporationSequentialId: corporation.sequentialId,
-          direction: "build",
-          amountLocal: Math.abs(
-            anchorToCorpLiquidCapital(starterBuildAnchor, corporation, corpFxRate)
-          ),
-          currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
-          anchorAmount: starterBuildAnchor,
-          turn: currentTurn,
-          createdAt: now,
-          sectorId: newSectorId,
-          sectorType,
-          units: starterUnits,
-          meta: { founding: true, onlineTurn: starterOnlineTurn },
-        }).catch((err) => {
-          console.error("[expandSector] founding capex tx emit failed", err);
-        });
-      }
     }
 
     return NextResponse.json(

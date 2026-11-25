@@ -175,6 +175,12 @@ export function loanServiceTransition(input: LoanServiceTransitionInput): {
         loan.borrowerType === "character"
           ? `currencyBalances.personal.${loan.currency}`
           : "liquidCapital",
+      ...(loan.borrowerType === "corporation" && decision.interestPaid > 0
+        ? {
+            inc: { [`bankLoanInterestPaidByTurn.${turn}`]: decision.interestPaid },
+            set: { [`bankLoanInterestCurrencyByTurn.${turn}`]: loan.currency },
+          }
+        : {}),
       note: "borrower pays the instalment",
     });
     legs.push({
