@@ -18,11 +18,6 @@ import type {
   FederalBudget,
   StateBudget,
 } from "@/lib/db/types";
-import type { Crisis } from "@/lib/db/types/crisis";
-import {
-  buildDisasterEffectsByState,
-  computeDisasterMarginPenalty,
-} from "@/lib/crises/disasterMarginPenalty";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { CountryId } from "@/lib/constants/countries";
@@ -60,7 +55,6 @@ import { projectStrategyRevenuePerTurn } from "@/lib/corporations/strategyRevenu
 import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { crisesCollection } from "@/lib/db/repositories/crises";
 export { buildSectorPlantsSection } from "./sectorDetailPlants";
 export { computeSectorMarketPosition, computeSectorMarginSection } from "./sectorDetailMarket";
 
@@ -162,51 +156,6 @@ export function computeSectorTaxSection(args: {
     apportionedFederalTax,
     apportionedStateTax,
   };
-}
-
-// Active-crisis margin penalty for this sector — decaying disaster /
-// infrastructure effects on sectors in this state. Mirrors the turn-engine
-// blend (buildLookups -> computeDisasterMarginPenalty) so the detail page
-// reflects the same hit, and links to the crises responsible.
-export async function buildSectorCrisisSection(
-  db: Db,
-  sector: CorporateSector,
-  sectorCountryId: string,
-  currentTurn: number
-) {
-  const activeStateCrises = await crisesCollection(db)
-    .find({
-      status: "active",
-      $or: [
-        { regionIds: sector.stateId },
-        { scope: "global" },
-        { scope: "country", countryIds: sectorCountryId },
-      ],
-    })
-    .toArray();
-  // Every fetched crisis already affects this state (by the $or above), so the
-  // resolver collapses each to this one stateId; computeDisasterMarginPenalty
-  // then applies sector/strategy filters and the linear decay.
-  const disasterEntries =
-    buildDisasterEffectsByState(activeStateCrises, () => [sector.stateId]).get(sector.stateId) ??
-    [];
-  const crisisMarginPenalty = computeDisasterMarginPenalty(
-    disasterEntries,
-    { sectorType: sector.sectorType, strategyId: sector.strategyId ?? null },
-    currentTurn
-  );
-  const activeCrises = activeStateCrises
-    .filter((c) =>
-      c.effects.some(
-        (e) =>
-          e.effectType === "decay" &&
-          e.targetType === "profitMargin" &&
-          (!e.sectorType || e.sectorType === sector.sectorType) &&
-          (!e.strategyId || e.strategyId === (sector.strategyId ?? null))
-      )
-    )
-    .map((c) => ({ id: c._id.toString(), name: c.name }));
-  return { crisisMarginPenalty, activeCrises };
 }
 
 /** Attack/split panel info for the viewer's corporation (non-null viewer). */

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectorCrisisEffects } from "@/components/crises/SectorCrisisEffects";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { abandonSectorRequest } from "@/lib/corporations/abandonSectorClient";
 import { useEffect, useCallback, useState } from "react";
@@ -869,6 +870,7 @@ export default function SectorDetailPage() {
               )}
             </div>
             <div className="space-y-6 lg:sticky lg:top-20">
+              <SectorCrisisEffects effects={margins?.crisisEffects} />
               <MarketPositionPanel
                 market={market}
                 sector={sector}

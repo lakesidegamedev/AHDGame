@@ -1,4 +1,5 @@
 "use client";
+import { SectorCrisisEffects } from "@/components/crises/SectorCrisisEffects";
 import type { ReactNode } from "react";
 import type { StateEconomyViewContext } from "./StateEconomy";
 
@@ -538,7 +539,9 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         className="flex flex-col px-4 py-2.5"
                         title="CEO-set output level (−25% to +25%); the active level trends toward the target at 1 point per turn. Sustained negative production erodes profit margins over time."
                       >
-                        <span className="text-body-sm font-medium text-muted mb-1">Production</span>
+                        <span className="text-body-sm font-medium text-muted mb-1">
+                          Production policy
+                        </span>
                         <span className="inline-flex items-center gap-1.5 leading-tight">
                           <span
                             className={`text-xs font-medium tabular-nums ${
@@ -568,6 +571,12 @@ export function renderStateEconomyView(context: StateEconomyViewContext): ReactN
                         </span>
                       </div>
                     </div>
+
+                    {owner.crisisEffects && owner.crisisEffects.rows.length > 0 && (
+                      <div className="px-4 pb-2">
+                        <SectorCrisisEffects effects={owner.crisisEffects} />
+                      </div>
+                    )}
 
                     {/* Under plants the growth slider is vestigial — capacity is
                         the growth lever — so an owned sector's row links straight
