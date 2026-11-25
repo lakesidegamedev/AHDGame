@@ -70,7 +70,7 @@ function currentChannelUpdatePostedExpression() {
   };
 }
 
-// Receipts are only worth sending while the ticket is fresh.
+// A resolution receipt is only worth sending while it is fresh.
 export const RESOLUTION_RECEIPT_CUTOVER = new Date("2026-11-25T17:52:38.000Z");
 export const RESOLUTION_RECEIPT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
 
