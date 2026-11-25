@@ -24,7 +24,7 @@ export function MixBar({ bySource, total }: { bySource: Record<string, number>; 
       </div>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
         {segs.map((s) => (
-          <span key={s.id} className="flex items-center gap-1.5 text-[11px] text-muted">
+          <span key={s.id} className="flex items-center gap-1.5 text-body-sm text-muted">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SOURCE_COLOR[s.id] }} />
             {s.label} {total > 0 ? Math.round((s.cap / total) * 100) : 0}%
           </span>

@@ -9,7 +9,7 @@ export function EuropeanTreatyProvisionEditor({
 }) {
   const t = useTranslations("worldOrganizations.maastricht");
   return (
-    <label className="block text-sm">
+    <label className="block text-body">
       {t("title")}
       <select
         className="mt-2 w-full rounded border bg-card p-2"

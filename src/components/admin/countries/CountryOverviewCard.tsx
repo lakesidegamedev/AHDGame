@@ -185,7 +185,7 @@ export default function CountryOverviewCard({ countryId }: Props) {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <CountryFlag country={countryId} size="xl" />
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-foreground truncate">{config.name}</h2>
+              <h2 className="text-heading font-semibold text-foreground truncate">{config.name}</h2>
               <p className="text-body-sm font-medium text-muted">{countryId}</p>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function CountryOverviewCard({ countryId }: Props) {
                 value={settings?.status ?? "coming-soon"}
                 onChange={(e) => handleStatusChange(e.target.value as CountryStatus)}
                 disabled={isToggleDisabled || !settings}
-                className="rounded-lg border border-card-border bg-card-elevated px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="rounded-lg border border-card-border bg-card-elevated px-3 py-1.5 text-body text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               >
                 <option value="active">Active</option>
                 <option value="beta">Beta</option>
@@ -256,7 +256,7 @@ export default function CountryOverviewCard({ countryId }: Props) {
               <div className="flex flex-col gap-1">
                 <span className="text-body-sm font-medium text-muted">&nbsp;</span>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_COLORS[settings.status]}`}
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-body-sm font-semibold ${STATUS_COLORS[settings.status]}`}
                 >
                   {STATUS_LABELS[settings.status]}
                 </span>
@@ -283,11 +283,11 @@ export default function CountryOverviewCard({ countryId }: Props) {
         ) : error ? (
           <div className="col-span-2 sm:col-span-4 rounded-xl border border-card-border bg-card p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted">Failed to load country data.</p>
+              <p className="text-body text-muted">Failed to load country data.</p>
               <button
                 type="button"
                 onClick={fetchSettings}
-                className="text-xs font-medium text-primary hover:underline"
+                className="text-body-sm font-medium text-primary hover:underline"
               >
                 Retry
               </button>
@@ -318,7 +318,7 @@ export default function CountryOverviewCard({ countryId }: Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Government info */}
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Government</h3>
+          <h3 className="mb-3 text-body-lg font-semibold text-foreground">Government</h3>
           <dl className="space-y-2">
             <DetailRow label="Type" value={displayGovernmentType} />
             <DetailRow label="Executive" value={config.executiveTitle} />
@@ -337,7 +337,9 @@ export default function CountryOverviewCard({ countryId }: Props) {
 
         {/* Legislature info */}
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">{config.legislature.name}</h3>
+          <h3 className="mb-3 text-body-lg font-semibold text-foreground">
+            {config.legislature.name}
+          </h3>
           <dl className="space-y-2">
             <DetailRow
               label={config.legislature.lowerChamber.name}
@@ -370,8 +372,8 @@ export default function CountryOverviewCard({ countryId }: Props) {
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
-      <p className="text-xs text-muted mb-1">{label}</p>
-      <p className="text-xl font-semibold text-foreground">{value}</p>
+      <p className="text-body-sm text-muted mb-1">{label}</p>
+      <p className="text-heading font-semibold text-foreground">{value}</p>
     </div>
   );
 }
@@ -379,8 +381,8 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <dt className="text-xs text-muted shrink-0">{label}</dt>
-      <dd className="text-xs font-medium text-foreground text-right capitalize">{value}</dd>
+      <dt className="text-body-sm text-muted shrink-0">{label}</dt>
+      <dd className="text-body-sm font-medium text-foreground text-right capitalize">{value}</dd>
     </div>
   );
 }
@@ -448,10 +450,10 @@ function ConfirmModal({
           aria-labelledby="confirm-title"
           className="w-full max-w-sm rounded-xl border border-card-border bg-card p-6 shadow-xl"
         >
-          <h3 id="confirm-title" className="mb-2 text-base font-semibold text-foreground">
+          <h3 id="confirm-title" className="mb-2 text-body-lg font-semibold text-foreground">
             {enabling ? "Enable" : "Disable"} {countryName} for Players?
           </h3>
-          <p className="mb-5 text-sm text-muted">
+          <p className="mb-5 text-body text-muted">
             {enabling ? (
               `This will make ${countryName} accessible to all players. Characters, NPPs, corporations, and all country data will become visible. Continue?`
             ) : (
@@ -471,14 +473,14 @@ function ConfirmModal({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg border border-card-border px-4 py-2 text-sm text-muted transition-colors hover:text-foreground"
+              className="rounded-lg border border-card-border px-4 py-2 text-body text-muted transition-colors hover:text-foreground"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={onConfirm}
-              className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
+              className={`rounded-lg px-4 py-2 text-body font-medium text-white transition-colors ${
                 enabling ? "bg-success hover:bg-success/80" : "bg-danger hover:bg-danger/80"
               }`}
             >

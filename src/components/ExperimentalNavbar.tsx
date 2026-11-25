@@ -532,7 +532,7 @@ function useExperimentalNavbarContext({
                   <span className="text-body-sm font-medium text-muted">
                     {t("menus.world.headers.leaderboard")}
                   </span>
-                  <span className="rounded-full bg-warning/15 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-warning">
+                  <span className="rounded-full bg-warning/15 px-1.5 py-px text-body-sm font-semibold uppercase tracking-wide text-warning">
                     {t("menus.world.headers.beta")}
                   </span>
                 </div>
@@ -560,7 +560,7 @@ function useExperimentalNavbarContext({
               dot={item.primary ? "bg-primary" : undefined}
               nested={item.parentId != null}
               meta={item.badge ? String(item.badge > 9 ? "9+" : item.badge) : undefined}
-              metaClass="rounded-full bg-error px-1.5 text-[10px] font-semibold text-white"
+              metaClass="rounded-full bg-error px-1.5 text-body-sm font-semibold text-white"
             >
               {t(item.labelKey)}
             </MenuRow>
@@ -627,7 +627,7 @@ function useExperimentalNavbarContext({
                     }))
                   }
                   aria-expanded={isExpanded}
-                  className="flex w-full items-center justify-between px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted/80 transition-colors hover:text-foreground"
+                  className="flex w-full items-center justify-between px-2.5 pb-1 pt-2 text-body-sm font-semibold uppercase tracking-wider text-muted/80 transition-colors hover:text-foreground"
                 >
                   {t(section.titleKey)}
                   {/* Explicit `text-muted` — same fix as CollapsibleNavSection
@@ -679,7 +679,7 @@ function useExperimentalNavbarContext({
         >
           <span className="flex min-w-0 flex-col gap-0.5">
             <span>{item.label}</span>
-            <span className="text-[12px] font-normal leading-snug text-muted">
+            <span className="text-body-sm font-normal leading-snug text-muted">
               {item.description}
             </span>
           </span>
@@ -775,7 +775,7 @@ function useExperimentalNavbarContext({
         target="_blank"
         rel="noopener noreferrer"
         onClick={closeAll}
-        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-fg-2 transition-colors hover:bg-white/5"
+        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-sm text-fg-2 transition-colors hover:bg-white/5"
       >
         Discord
       </a>
@@ -784,7 +784,7 @@ function useExperimentalNavbarContext({
         target="_blank"
         rel="noopener noreferrer"
         onClick={closeAll}
-        className="store-purchase-cta flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-fg-2 transition-colors hover:bg-white/5"
+        className="store-purchase-cta flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-sm text-fg-2 transition-colors hover:bg-white/5"
       >
         {t("help.patreon")}
       </a>
@@ -793,14 +793,14 @@ function useExperimentalNavbarContext({
         target="_blank"
         rel="noopener noreferrer"
         onClick={closeAll}
-        className="store-purchase-cta flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-fg-2 transition-colors hover:bg-white/5"
+        className="store-purchase-cta flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-sm text-fg-2 transition-colors hover:bg-white/5"
       >
         {t("help.supporterWall")}
       </a>
       <a
         href={HELP_SUPPORT_EMAIL}
         onClick={closeAll}
-        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-fg-2 transition-colors hover:bg-white/5"
+        className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-sm text-fg-2 transition-colors hover:bg-white/5"
       >
         {t("help.emailSupport")}
       </a>
@@ -812,7 +812,7 @@ function useExperimentalNavbarContext({
             onOpenFeedback();
           }}
           disabled={feedbackCapturing}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-fg-2 transition-colors hover:bg-white/5 disabled:cursor-wait disabled:opacity-70"
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-body-sm text-fg-2 transition-colors hover:bg-white/5 disabled:cursor-wait disabled:opacity-70"
         >
           {feedbackCapturing ? t("common.capturingScreenshot") : t("common.quickSuggest")}
         </button>
@@ -843,7 +843,7 @@ function useExperimentalNavbarContext({
             target="_blank"
             rel="noopener noreferrer"
             onClick={closeAll}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-fg-2 transition-colors hover:bg-white/5"
+            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-sm text-fg-2 transition-colors hover:bg-white/5"
           >
             {t(item.labelKey)}
           </a>

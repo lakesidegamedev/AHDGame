@@ -27,8 +27,8 @@ export function HealCeoVotes() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal stale CEO votes</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal stale CEO votes</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Clears CEO votes and pending CEO offers for corporations with vacant CEO positions. Use
           when a CEO cannot accept the position due to stale vote data blocking re-election.
         </p>
@@ -43,7 +43,7 @@ export function HealCeoVotes() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           <p>
             <span className="text-muted">Corporations with vacant CEO:</span>{" "}
             <span className="font-medium">{diagnostic.totalVacantCorps}</span>

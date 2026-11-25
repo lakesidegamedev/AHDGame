@@ -71,22 +71,22 @@ export function KeyInsightsPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="text-lg font-semibold mb-4">Key insights</h3>
+      <h3 className="text-body-lg font-semibold mb-4">Key insights</h3>
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Closest States */}
         <div>
-          <div className="text-sm font-medium text-muted mb-2">Closest states</div>
+          <div className="text-body font-medium text-muted mb-2">Closest states</div>
           <div className="space-y-2">
             {closestStates.map((state) => (
-              <div key={state.stateId} className="flex items-center justify-between text-sm">
+              <div key={state.stateId} className="flex items-center justify-between text-body">
                 <div className="flex items-center gap-2">
                   <div
                     className="h-2 w-2 rounded-full"
                     style={{ backgroundColor: state.winnerColor }}
                   />
                   <span className="font-medium">{state.stateName}</span>
-                  <span className="text-xs text-muted">({state.ev} EV)</span>
+                  <span className="text-body-sm text-muted">({state.ev} EV)</span>
                 </div>
                 <span className="font-semibold tabular-nums text-yellow-400">
                   +{state.margin.toFixed(1)}%
@@ -98,17 +98,17 @@ export function KeyInsightsPanel({
 
         {/* Biggest Wins */}
         <div>
-          <div className="text-sm font-medium text-muted mb-2">Biggest landslides</div>
+          <div className="text-body font-medium text-muted mb-2">Biggest landslides</div>
           <div className="space-y-2">
             {biggestWins.map((state) => (
-              <div key={state.stateId} className="flex items-center justify-between text-sm">
+              <div key={state.stateId} className="flex items-center justify-between text-body">
                 <div className="flex items-center gap-2">
                   <div
                     className="h-2 w-2 rounded-full"
                     style={{ backgroundColor: state.winnerColor }}
                   />
                   <span className="font-medium">{state.stateName}</span>
-                  <span className="text-xs text-muted">({state.ev} EV)</span>
+                  <span className="text-body-sm text-muted">({state.ev} EV)</span>
                 </div>
                 <span className="font-semibold tabular-nums" style={{ color: state.winnerColor }}>
                   +{state.margin.toFixed(1)}%
@@ -121,26 +121,26 @@ export function KeyInsightsPanel({
 
       {/* Popular Vote Margin */}
       <div className="mt-4 pt-4 border-t border-card-border">
-        <div className="text-sm font-medium text-muted mb-1">Popular vote margin</div>
-        <div className="text-2xl font-bold tabular-nums">
+        <div className="text-body font-medium text-muted mb-1">Popular vote margin</div>
+        <div className="text-heading font-bold tabular-nums">
           {formatVotes(popularVoteMargin)} votes ({popularVoteMarginPct.toFixed(2)}%)
         </div>
       </div>
 
       {/* Regional Breakdown */}
       <div className="mt-4 pt-4 border-t border-card-border">
-        <div className="text-sm font-medium text-muted mb-3">Regional performance</div>
+        <div className="text-body font-medium text-muted mb-3">Regional performance</div>
         <div className="grid gap-3 sm:grid-cols-2">
           {regionalBreakdown.map((region) => {
             const entries = Object.entries(region.statesByCandidate).sort((a, b) => b[1] - a[1]);
             return (
-              <div key={region.name} className="text-sm">
+              <div key={region.name} className="text-body">
                 <div className="font-semibold mb-1">{region.name}</div>
                 {entries.map(([candId, states]) => {
                   const candidate = candidates.find((c) => c.id === candId);
                   const ev = region.evByCandidate[candId] || 0;
                   return candidate ? (
-                    <div key={candId} className="flex items-center justify-between text-xs">
+                    <div key={candId} className="flex items-center justify-between text-body-sm">
                       <span style={{ color: colorMap.get(candId)! }}>
                         {candidate.characterName}
                       </span>

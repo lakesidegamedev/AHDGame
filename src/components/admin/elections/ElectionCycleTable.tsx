@@ -64,22 +64,22 @@ export function ElectionCycleTable({
           <div className="flex items-center justify-between border-b border-card-border bg-background/50 px-4 py-2">
             <h4 className="font-semibold">Cycle {cycle}</h4>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted">
+              <span className="text-body text-muted">
                 {cycleElections.length} election{cycleElections.length !== 1 ? "s" : ""}
               </span>
               <button
                 onClick={() => onDeleteCycle(cycle)}
                 disabled={loading}
-                className="rounded bg-red-500/20 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/30"
+                className="rounded bg-red-500/20 px-2 py-1 text-body-sm font-medium text-red-400 hover:bg-red-500/30"
               >
                 Delete cycle
               </button>
             </div>
           </div>
           <div className="max-h-96 overflow-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead className="sticky top-0 bg-card">
-                <tr className="border-b border-card-border text-left text-xs text-muted">
+                <tr className="border-b border-card-border text-left text-body-sm text-muted">
                   {[
                     "State",
                     "Type",
@@ -139,7 +139,7 @@ export function ElectionCycleTable({
                           <span className={isOff ? "text-red-400 font-medium" : "text-green-400"}>
                             {larpEnd}
                             {expectedEndTurn !== null && (
-                              <span className="ml-1 text-xs text-muted">
+                              <span className="ml-1 text-body-sm text-muted">
                                 (should be t{expectedEndTurn})
                               </span>
                             )}
@@ -153,7 +153,7 @@ export function ElectionCycleTable({
                           className={
                             formatTimeRemainingSimple(e.endTime) === "Ended"
                               ? "text-red-400"
-                              : "text-muted text-xs"
+                              : "text-muted text-body-sm"
                           }
                         >
                           {formatTimeRemainingSimple(e.endTime)}
@@ -161,7 +161,7 @@ export function ElectionCycleTable({
                       </td>
                       <td className="px-4 py-2">
                         {larpPrimary ? (
-                          <span className="text-xs text-blue-400">{larpPrimary}</span>
+                          <span className="text-body-sm text-blue-400">{larpPrimary}</span>
                         ) : (
                           <span className="text-muted">—</span>
                         )}
@@ -187,7 +187,7 @@ export function ElectionCycleTable({
                                   ? "Completed"
                                   : e.status;
                             return (
-                              <span className={`rounded-full px-2 py-0.5 text-xs ${style}`}>
+                              <span className={`rounded-full px-2 py-0.5 text-body-sm ${style}`}>
                                 {label}
                               </span>
                             );
@@ -201,7 +201,7 @@ export function ElectionCycleTable({
                           const inPrimary = isElectionInPrimaryPhase(e, currentTurn);
                           return (
                             <span
-                              className={`rounded-full px-2 py-0.5 text-xs ${
+                              className={`rounded-full px-2 py-0.5 text-body-sm ${
                                 inPrimary
                                   ? "bg-amber-500/20 text-amber-400"
                                   : "bg-green-500/20 text-green-400"
@@ -216,7 +216,7 @@ export function ElectionCycleTable({
                         {e.electionType === "president" && (
                           <Link
                             href={`/elections/${e._id}`}
-                            className="rounded px-2 py-1 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+                            className="rounded px-2 py-1 text-body-sm text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
                           >
                             Manage →
                           </Link>

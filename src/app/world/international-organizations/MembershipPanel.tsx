@@ -47,9 +47,12 @@ function PactEntryNotice({
   if (warnings.length === 0) return null;
   return (
     <div className="mb-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-left">
-      <p className="text-sm font-semibold text-warning">Mutual defence notice</p>
+      <p className="text-body font-semibold text-warning">Mutual defence notice</p>
       {warnings.map((w) => (
-        <p key={`${w.conflictId}:${w.defendingCountryId}`} className="mt-1 text-xs text-foreground">
+        <p
+          key={`${w.conflictId}:${w.defendingCountryId}`}
+          className="mt-1 text-body-sm text-foreground"
+        >
           {subject.lead} now brings {subject.object} into the{" "}
           {w.conflictNumber != null ? (
             <Link className="font-medium underline" href={`/world/conflicts/${w.conflictNumber}`}>
@@ -61,7 +64,7 @@ function PactEntryNotice({
           on {entityName(w.defendingCountryId)}&apos;s side next turn.
         </p>
       ))}
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         This does not apply to a country with no government, one already in that war, one holding a
         truce with the attacker, or one that shares a bloc or a binding alliance with the attacker.
       </p>
@@ -195,7 +198,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-foreground">Membership</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">Membership</h3>
         <div className="flex flex-col items-end gap-1">
           {viewerFmCountry && !viewerIsMember && (
             <>
@@ -209,7 +212,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                 Apply for {entityName(viewerFmCountry)} to join
               </Button>
               {viewerHasOpenProposal && (
-                <p className="text-xs text-muted">Application already pending.</p>
+                <p className="text-body-sm text-muted">Application already pending.</p>
               )}
               <div className="max-w-md">
                 <PactEntryNotice
@@ -218,7 +221,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                   entityName={entityName}
                 />
               </div>
-              <InlineError error={error} className="text-xs text-error" />
+              <InlineError error={error} className="text-body-sm text-error" />
             </>
           )}
           {viewerFmCountry && viewerIsMember && (
@@ -232,18 +235,21 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
               >
                 {hasPendingWithdrawal ? "Withdrawal pending" : "Propose withdrawal"}
               </Button>
-              <p className="max-w-xs text-right text-xs text-muted">
+              <p className="max-w-xs text-right text-body-sm text-muted">
                 Sends a withdrawal resolution to the national legislature for chamber votes.
               </p>
               {hasPendingWithdrawal && (
-                <p className="max-w-xs text-right text-xs text-muted">
+                <p className="max-w-xs text-right text-body-sm text-muted">
                   A withdrawal measure is already pending in the legislature.
                 </p>
               )}
               {leaveSuccess && (
-                <p className="max-w-xs text-right text-xs text-success">{leaveSuccess}</p>
+                <p className="max-w-xs text-right text-body-sm text-success">{leaveSuccess}</p>
               )}
-              <InlineError error={leaveError} className="max-w-xs text-right text-xs text-error" />
+              <InlineError
+                error={leaveError}
+                className="max-w-xs text-right text-body-sm text-error"
+              />
             </>
           )}
         </div>
@@ -251,7 +257,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
 
       {org.pendingMembershipProposals.length === 0 ? (
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <p className="text-sm text-muted">No pending membership applications.</p>
+          <p className="text-body text-muted">No pending membership applications.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -310,16 +316,16 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
               >
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h4 className="text-base font-semibold text-foreground">
+                    <h4 className="text-body-lg font-semibold text-foreground">
                       {proposingName} applied to join
                     </h4>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-body-sm text-muted">
                       Proposed by {p.proposedByCharacterName} on turn {p.proposedOnTurn} · voting
                       closes in {turnsLeft} turn
                       {turnsLeft === 1 ? "" : "s"} (turn {p.closesOnTurn})
                     </p>
                     {p.domesticBillId && (
-                      <p className="mt-0.5 text-xs text-muted">
+                      <p className="mt-0.5 text-body-sm text-muted">
                         Domestic ratification bill:{" "}
                         <span className="font-medium text-foreground">
                           {p.domesticApproved === true
@@ -334,7 +340,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                       </p>
                     )}
                   </div>
-                  <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                  <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
                     {isFoundingApplication ? "Awaiting ratification" : "Voting"}
                   </span>
                 </div>
@@ -359,20 +365,20 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                       key={`${warning.kind}:${warning.conflictId ?? warning.declarationBillId}`}
                       className="mb-3 rounded-lg border border-warning/30 bg-warning/10 p-3"
                     >
-                      <p className="text-sm font-semibold text-warning">Mutual defence warning</p>
+                      <p className="text-body font-semibold text-warning">Mutual defence warning</p>
                       {warning.kind === "active_conflict" ? (
                         <>
-                          <p className="mt-1 text-xs text-foreground">
+                          <p className="mt-1 text-body-sm text-foreground">
                             {proposingName} is already fighting in {warning.conflictName ?? "a war"}
                             {opponents ? ` against ${opponents}` : ""}. Admission does not invoke
                             the pact retroactively.
                           </p>
-                          <p className="mt-1 text-xs text-muted">
+                          <p className="mt-1 text-body-sm text-muted">
                             A member may table a defensive entry vote. If it passes unanimously,
                             eligible alliance members join immediately without national legislation.
                           </p>
                           {existingEntry ? (
-                            <p className="mt-2 text-xs font-medium text-foreground">
+                            <p className="mt-2 text-body-sm font-medium text-foreground">
                               {existingEntry.status === "active"
                                 ? "Collective defence entry is active."
                                 : "A defensive entry vote is already pending."}
@@ -390,7 +396,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                           ) : null}
                         </>
                       ) : (
-                        <p className="mt-1 text-xs text-foreground">
+                        <p className="mt-1 text-body-sm text-foreground">
                           {opponents || "Another country"} has a declaration of war against{" "}
                           {proposingName}
                           before its legislature. If it becomes law after admission, the pact
@@ -402,18 +408,18 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                   );
                 })}
                 {defenseEntryError && (
-                  <p className="mb-3 text-xs text-error">{defenseEntryError}</p>
+                  <p className="mb-3 text-body-sm text-error">{defenseEntryError}</p>
                 )}
 
                 {isFoundingApplication ? (
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Founding application — admission is decided by the applicant&apos;s own
                     legislature.
                   </p>
                 ) : (
                   <>
                     <div className="mb-3">
-                      <div className="mb-1 flex items-center justify-between text-xs text-muted">
+                      <div className="mb-1 flex items-center justify-between text-body-sm text-muted">
                         <span>
                           {yesCount} / {eligibleVoterCount} yes ({noCount} no), {requirement}
                         </span>

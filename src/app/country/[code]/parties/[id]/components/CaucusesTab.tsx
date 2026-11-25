@@ -103,8 +103,8 @@ export function CaucusesTab({
   if (!isNationalParty) {
     return (
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <h3 className="mb-2 text-sm font-semibold">Caucuses are a National-only feature</h3>
-        <p className="text-sm text-muted">
+        <h3 className="mb-2 text-body-lg font-semibold">Caucuses are a National-only feature</h3>
+        <p className="text-body text-muted">
           State and regional party chapters do not own caucuses. Visit the national party page to
           view and act on caucuses.
         </p>
@@ -120,7 +120,7 @@ export function CaucusesTab({
     <div className="space-y-4">
       {msg && (
         <div
-          className={`rounded-md border px-3 py-2 text-sm ${
+          className={`rounded-md border px-3 py-2 text-body ${
             msg.startsWith("Success:")
               ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
               : "border-red-500/40 bg-red-500/10 text-red-200"
@@ -133,7 +133,7 @@ export function CaucusesTab({
       {viewerInParty && (
         <div className="rounded-lg border border-card-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               Caucuses are opt-in sub-blocs within this party. Each has a chair who sets policy
               positions and a campaign-fund Tax (0-5%).
             </p>
@@ -143,7 +143,7 @@ export function CaucusesTab({
                 setShowFoundForm((value) => !value);
                 setMsg(null);
               }}
-              className="rounded-md border border-primary/50 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25"
+              className="rounded-md border border-primary/50 bg-primary/15 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/25"
             >
               {showFoundForm ? "Cancel" : "Found new caucus"}
             </button>
@@ -164,11 +164,11 @@ export function CaucusesTab({
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-card-border bg-card p-6 text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-card p-6 text-body text-muted">
           Loading caucuses...
         </div>
       ) : list.length === 0 ? (
-        <div className="rounded-lg border border-card-border bg-card p-6 text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-card p-6 text-body text-muted">
           No caucuses founded yet. {viewerInParty && "Be the first to start one."}
         </div>
       ) : (
@@ -199,7 +199,7 @@ export function CaucusesTab({
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ background: caucus.color }}
                       />
-                      <span className="truncate text-sm font-bold">{caucus.name}</span>
+                      <span className="truncate text-body font-bold">{caucus.name}</span>
                     </div>
                     <div className="text-body-sm text-muted">
                       Chair {caucus.chairName ?? "Vacant"} | {caucus.memberCounts.total} members |
@@ -232,7 +232,7 @@ export function CaucusesTab({
                 eligibleStates={eligibleStates}
               />
             ) : (
-              <div className="rounded-lg border border-card-border bg-card p-6 text-sm text-muted">
+              <div className="rounded-lg border border-card-border bg-card p-6 text-body text-muted">
                 Select a caucus to see details.
               </div>
             )}

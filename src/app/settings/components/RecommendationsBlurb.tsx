@@ -41,7 +41,7 @@ export function RecommendationsBlurb({
         <button
           type="button"
           onClick={handleClick}
-          className="flex flex-1 items-center gap-2 text-left text-sm text-foreground hover:text-primary transition-colors"
+          className="flex flex-1 items-center gap-2 text-left text-body text-foreground hover:text-primary transition-colors"
         >
           <span className="text-primary">{active.icon}</span>
           <span className="font-medium">{active.label}</span>

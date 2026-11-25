@@ -92,11 +92,11 @@ function Fact({
 }) {
   return (
     <div className="flex items-start justify-between gap-3 px-4 py-2.5">
-      <dt className="text-xs text-muted shrink-0 pt-0.5 flex items-center gap-1">
+      <dt className="text-body-sm text-muted shrink-0 pt-0.5 flex items-center gap-1">
         {label}
         {tooltip && <Tooltip content={tooltip} />}
       </dt>
-      <dd className="text-sm font-medium text-foreground text-right">{children}</dd>
+      <dd className="text-body font-medium text-foreground text-right">{children}</dd>
     </div>
   );
 }
@@ -281,7 +281,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
             <div className="absolute inset-0 flex flex-col justify-between px-5 sm:px-6 py-4 sm:py-5">
               <Link
                 href="/world/crises"
-                className="flex items-center gap-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors w-fit"
+                className="flex items-center gap-1.5 text-body-sm font-medium text-white/70 hover:text-white transition-colors w-fit"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -295,18 +295,18 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
               </Link>
               <div>
                 <p
-                  className={`text-[11px] font-semibold uppercase tracking-wider mb-1.5 ${
+                  className={`text-body-sm font-semibold uppercase tracking-wider mb-1.5 ${
                     isActive ? sev.eyebrow : "text-zinc-400"
                   }`}
                 >
                   {scopeWord} crisis{isActive ? ` · ${sev.label}` : ""}
                 </p>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight text-balance">
+                <h1 className="text-heading sm:text-display font-bold text-white leading-tight text-balance">
                   {crisis.name}
                 </h1>
                 <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                    className={`text-body-sm px-2 py-0.5 rounded-full border font-medium ${
                       isActive
                         ? "border-amber-300/40 bg-amber-500/15 text-amber-100"
                         : "border-emerald-300/40 bg-emerald-500/15 text-emerald-100"
@@ -314,17 +314,17 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                   >
                     {isActive ? "Active" : "Resolved"}
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full border border-white/25 bg-black text-zinc-100 font-medium">
+                  <span className="text-body-sm px-2 py-0.5 rounded-full border border-white/25 bg-black text-zinc-100 font-medium">
                     {scopeWord}
                   </span>
                   {isActive && (
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full border font-medium ${sev.badge}`}
+                      className={`text-body-sm px-2 py-0.5 rounded-full border font-medium ${sev.badge}`}
                     >
                       {sev.label}
                     </span>
                   )}
-                  <span className="text-xs text-white/60 ml-0.5">
+                  <span className="text-body-sm text-white/60 ml-0.5">
                     Started {rawTurnToLarpDate(crisis.startTurn, startingYear, clock)}
                   </span>
                 </div>
@@ -351,18 +351,18 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                 The situation
                 <Tooltip content={CRISIS_TOOLTIPS.wire} />
               </p>
-              <p className="text-[15px] text-foreground/85 leading-relaxed">{description}</p>
+              <p className="text-body text-foreground/85 leading-relaxed">{description}</p>
             </div>
 
             {/* Wire messages */}
             {wireOnStart && (
               <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 px-5 py-4">
-                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-1.5">
+                <p className="flex items-center gap-1.5 text-body-sm font-bold uppercase tracking-widest text-orange-400 mb-1.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" aria-hidden />
                   Breaking wire
                   <Tooltip content={CRISIS_TOOLTIPS.wire} />
                 </p>
-                <p className="text-sm italic text-foreground/80 leading-relaxed">
+                <p className="text-body italic text-foreground/80 leading-relaxed">
                   &ldquo;{wireOnStart}&rdquo;
                 </p>
               </div>
@@ -370,11 +370,11 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
             {crisis.status === "resolved" && wireOnEnd && (
               <div className="rounded-xl border border-card-border bg-card px-5 py-4">
                 {/* Same label style as the breaking wire, in the resolved colour. */}
-                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-success mb-1.5">
+                <p className="flex items-center gap-1.5 text-body-sm font-bold uppercase tracking-widest text-success mb-1.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden />
                   Resolution wire
                 </p>
-                <p className="text-sm italic text-muted leading-relaxed">
+                <p className="text-body italic text-muted leading-relaxed">
                   &ldquo;{wireOnEnd}&rdquo;
                 </p>
               </div>
@@ -390,16 +390,16 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
             {crisis.effects.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card shadow-card overflow-hidden">
                 <div className="px-5 py-4 border-b border-card-border">
-                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-1">
+                  <h2 className="text-body font-semibold text-foreground flex items-center gap-1">
                     Effects
                     <Tooltip content={CRISIS_TOOLTIPS.effects} />
-                    <span className="ml-1 text-xs font-normal text-muted">
+                    <span className="ml-1 text-body-sm font-normal text-muted">
                       {crisis.effects.length} {crisis.effects.length === 1 ? "effect" : "effects"}
                     </span>
                   </h2>
                   {crisis.durationTurns &&
                   crisis.effects.some((effect) => effect.effectType === "tick") ? (
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-body-sm text-muted">
                       Per-turn effects start at full strength and fall by the same amount each turn,
                       reaching zero at expiry. Estimated totals assume the full scheduled duration.
                     </p>
@@ -475,11 +475,11 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                             </svg>
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-foreground truncate flex items-center gap-1">
+                            <p className="text-body font-medium text-foreground truncate flex items-center gap-1">
                               {display.target}
                               <Tooltip content={tooltipForEffect(effect)} />
                             </p>
-                            <p className="text-xs text-muted flex items-center gap-1">
+                            <p className="text-body-sm text-muted flex items-center gap-1">
                               {effect.label}
                               <Tooltip
                                 content={
@@ -499,18 +499,18 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                           </div>
                           {isGdpLoss ? (
                             <div className="text-right shrink-0">
-                              <span className="block font-mono text-sm font-semibold tabular-nums text-error">
+                              <span className="block font-mono text-body font-semibold tabular-nums text-error">
                                 {pct % 1 === 0 ? pct : pct.toFixed(1)}% of GDP
                               </span>
                               {dollars && (
-                                <span className="block text-[11px] text-error/80 tabular-nums">
+                                <span className="block text-body-sm text-error/80 tabular-nums">
                                   −{dollars} lost
                                 </span>
                               )}
                             </div>
                           ) : (
                             <span
-                              className={`font-mono text-sm font-semibold tabular-nums shrink-0 text-right ${
+                              className={`font-mono text-body font-semibold tabular-nums shrink-0 text-right ${
                                 negative ? "text-error" : "text-success"
                               }`}
                             >
@@ -518,13 +518,13 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                                 ? `Starts at ${display.amount}`
                                 : display.amount}
                               {cumulativeTick != null && (
-                                <span className="block text-[11px] font-normal text-muted">
+                                <span className="block text-body-sm font-normal text-muted">
                                   ≈ {amountAt(cumulativeTick)} total over {crisis.durationTurns}{" "}
                                   turns
                                 </span>
                               )}
                               {!isTick && isActive && fades && strength < 1 && (
-                                <span className="block text-[11px] font-normal text-muted">
+                                <span className="block text-body-sm font-normal text-muted">
                                   {amountAt(effect.value * strength)} now
                                 </span>
                               )}
@@ -581,14 +581,14 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                 )}
                 <Fact label="Started" tooltip={CRISIS_TOOLTIPS.started}>
                   {rawTurnToLarpDate(crisis.startTurn, startingYear, clock)}
-                  <span className="block text-xs font-normal text-muted">
+                  <span className="block text-body-sm font-normal text-muted">
                     Turn {crisis.startTurn}
                   </span>
                 </Fact>
                 {crisis.status === "resolved" && crisis.endTurn ? (
                   <Fact label="Ended" tooltip={CRISIS_TOOLTIPS.ended}>
                     {rawTurnToLarpDate(crisis.endTurn, startingYear, clock)}
-                    <span className="block text-xs font-normal text-muted">
+                    <span className="block text-body-sm font-normal text-muted">
                       Turn {crisis.endTurn}
                     </span>
                   </Fact>
@@ -599,7 +599,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                       startingYear,
                       clock
                     )}
-                    <span className="block text-xs font-normal text-muted">
+                    <span className="block text-body-sm font-normal text-muted">
                       {crisis.durationTurns} turns total
                     </span>
                   </Fact>
@@ -625,7 +625,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
 
               {progress && (
                 <div className="px-4 py-3 border-t border-card-border">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
+                  <div className="flex items-center justify-between text-body-sm mb-1.5">
                     <span className="text-muted">Progress</span>
                     <span className="tabular-nums font-medium text-foreground">
                       {progress.elapsed} elapsed · {progress.remaining} remaining · {progress.total}{" "}

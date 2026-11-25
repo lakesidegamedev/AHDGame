@@ -53,8 +53,8 @@ export function PostResetChecklist() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
-        <h2 className="text-sm font-semibold">Post reset checklist</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-body font-semibold">Post reset checklist</h2>
+        <p className="mt-1 text-body text-muted">
           Run these top to bottom after a world reset. Step 1 (server setup, readiness checks, and
           the IMF institution corporation) runs right here; the follow-up steps deep-link to their
           tools.
@@ -67,8 +67,8 @@ export function PostResetChecklist() {
         <div className="mb-4 flex items-center gap-2.5">
           <StepBadge n={1} />
           <div>
-            <p className="text-sm font-semibold">Server setup, readiness &amp; IMF institution</p>
-            <p className="text-xs text-muted">
+            <p className="text-body font-semibold">Server setup, readiness &amp; IMF institution</p>
+            <p className="text-body-sm text-muted">
               Idempotent reference-data seed, elected officials, cycle-1 elections, and the IMF
               corporation required for bailout tools.
             </p>
@@ -84,12 +84,12 @@ export function PostResetChecklist() {
             <div key={step.title} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
               <StepBadge n={i + 2} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{step.title}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-muted">{step.desc}</p>
+                <p className="text-body font-semibold">{step.title}</p>
+                <p className="mt-0.5 text-body-sm leading-relaxed text-muted">{step.desc}</p>
               </div>
               <Link
                 href={step.href}
-                className="shrink-0 rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
+                className="shrink-0 rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
               >
                 {step.linkLabel} →
               </Link>
@@ -103,7 +103,7 @@ export function PostResetChecklist() {
 
 function StepBadge({ n }: { n: number }) {
   return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-body-sm font-bold text-primary">
       {n}
     </span>
   );

@@ -80,11 +80,11 @@ export function PipelineTab({
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Project pipeline</h2>
+        <h2 className="text-body font-semibold text-foreground">Project pipeline</h2>
         <button
           onClick={() => setStarting(true)}
           disabled={!canAct || busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-[12px] font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-body-sm font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Start project
         </button>
@@ -107,7 +107,7 @@ export function PipelineTab({
         <div className="dossier-label mb-2 text-muted">Under construction</div>
         <div className="space-y-2.5">
           {building.length === 0 && (
-            <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+            <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
               No projects under construction. Start one to begin.
             </div>
           )}
@@ -119,7 +119,7 @@ export function PipelineTab({
         <div className="dossier-label mb-2 text-muted">Operational</div>
         <div className="space-y-2.5">
           {operational.length === 0 && (
-            <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+            <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
               No operational infrastructure yet.
             </div>
           )}

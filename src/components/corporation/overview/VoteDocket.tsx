@@ -36,15 +36,15 @@ export function VoteDocket({
       {votes.map((v) => (
         <li
           key={v._id}
-          className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 border-b border-card-border/60 text-[13px] last:border-b-0"
+          className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 border-b border-card-border/60 text-body-sm last:border-b-0"
         >
-          <span className="rounded-[3px] border border-card-border px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-foreground">
+          <span className="rounded-[3px] border border-card-border px-1.5 py-0.5 font-mono text-body-sm font-semibold tabular-nums text-foreground">
             {v.deadlineAtTurn != null ? `T${v.deadlineAtTurn}` : "Open"}
           </span>
           <span className="truncate font-semibold text-foreground">
             {VOTE_LABEL[v.type] ?? v.type}
           </span>
-          <span className="font-mono text-[11px] tabular-nums text-warning">
+          <span className="font-mono text-body-sm tabular-nums text-warning">
             {timeLeft(v.deadlineAtTurn, currentTurn)}
           </span>
         </li>

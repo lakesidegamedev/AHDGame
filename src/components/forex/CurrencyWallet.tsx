@@ -114,7 +114,7 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
       <div className="flex items-center overflow-x-auto divide-x divide-card-border border-t border-card-border">
         <div className="flex flex-col px-5 py-3 min-w-max">
           <span className="text-body-sm font-medium text-muted">Campaign</span>
-          <span className="text-base font-bold tabular-nums">
+          <span className="text-body-lg font-bold tabular-nums">
             {formatCurrencyFaceAmount(wallet.campaign, wallet.homeCurrency)}
           </span>
         </div>
@@ -124,14 +124,14 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
               {currency}
               {currency === wallet.homeCurrency && (
                 <span
-                  className="ml-1 text-[9px] text-primary/70"
+                  className="ml-1 text-body-sm text-primary/70"
                   title="Your home currency — campaign funds are held in this currency"
                 >
                   HOME
                 </span>
               )}
             </span>
-            <span className="text-base font-bold tabular-nums">
+            <span className="text-body-lg font-bold tabular-nums">
               {formatCurrencyFaceAmount(balance, currency)}
             </span>
           </div>
@@ -143,11 +143,11 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-sm">
       <div className="flex flex-col gap-2 border-b border-card-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-bold text-foreground">Currency wallet</h3>
+        <h3 className="text-body-lg font-bold text-foreground">Currency wallet</h3>
         {showPnlChrome && hasLiveRates && baseRates && (
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-body-sm font-medium text-muted">FX vs base</span>
-            <div className="inline-flex rounded-md border border-card-border bg-card-elevated p-0.5 text-[11px] font-semibold">
+            <div className="inline-flex rounded-md border border-card-border bg-card-elevated p-0.5 text-body-sm font-semibold">
               <button
                 type="button"
                 onClick={() => setPnlMode("pct")}
@@ -179,10 +179,10 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
         {wallet.campaign > 0 && (
           <div className="flex items-center justify-between px-5 py-3">
             <div>
-              <span className="text-sm font-medium text-foreground">Campaign funds</span>
-              <span className="ml-2 text-xs text-muted">({wallet.homeCurrency} only)</span>
+              <span className="text-body font-medium text-foreground">Campaign funds</span>
+              <span className="ml-2 text-body-sm text-muted">({wallet.homeCurrency} only)</span>
             </div>
-            <span className="text-sm font-bold tabular-nums text-foreground">
+            <span className="text-body font-bold tabular-nums text-foreground">
               {formatCurrencyFaceAmount(wallet.campaign, wallet.homeCurrency)}
             </span>
           </div>
@@ -237,11 +237,11 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
             <div key={currency} className="border-b border-card-border last:border-b-0">
               <div className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-center gap-2 pt-0.5">
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-body font-medium text-foreground">
                     {CURRENCY_SYMBOLS[currency]} {currency}
                   </span>
                   {currency === wallet.homeCurrency && (
-                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-body-sm font-bold text-primary">
                       HOME
                     </span>
                   )}
@@ -251,7 +251,7 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
                   <div className="grid w-full gap-4 sm:max-w-md sm:grid-cols-2">
                     <div className="space-y-1 text-right sm:text-right">
                       <div className="text-body-sm font-medium text-muted">Cash (liquid)</div>
-                      <div className="text-sm font-bold tabular-nums text-foreground">
+                      <div className="text-body font-bold tabular-nums text-foreground">
                         {formatCurrencyFaceAmount(balance, currency)}
                       </div>
                       {showHomeCashEquiv && homeCashCompact && (
@@ -259,14 +259,14 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
                           <div className="text-body-sm font-medium text-muted">
                             Home ({wallet.homeCurrency})
                           </div>
-                          <div className="text-xs font-semibold tabular-nums text-foreground/90">
+                          <div className="text-body-sm font-semibold tabular-nums text-foreground/90">
                             {homeCashCompact}
                           </div>
                         </>
                       )}
                       {showPnlRow && pnl && (
                         <div
-                          className={`text-xs font-medium tabular-nums ${
+                          className={`text-body-sm font-medium tabular-nums ${
                             pnl.pct > 0 ? "text-success" : pnl.pct < 0 ? "text-error" : "text-muted"
                           }`}
                         >
@@ -278,7 +278,7 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
 
                     <div className="space-y-1 text-right sm:text-right">
                       <div className="text-body-sm font-medium text-muted">Savings</div>
-                      <div className="text-sm font-bold tabular-nums text-foreground">
+                      <div className="text-body font-bold tabular-nums text-foreground">
                         {formatCurrencyFaceAmount(savingsBal, currency)}
                       </div>
                       {showHomeSavingsEquiv && homeSavingsCompact && (
@@ -286,13 +286,13 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
                           <div className="text-body-sm font-medium text-muted">
                             Home ({wallet.homeCurrency})
                           </div>
-                          <div className="text-xs font-semibold tabular-nums text-foreground/90">
+                          <div className="text-body-sm font-semibold tabular-nums text-foreground/90">
                             {homeSavingsCompact}
                           </div>
                         </>
                       )}
                       {(savingsBal > 0 || interestLife > 0 || pendingUncredited > 0) && (
-                        <div className="space-y-0.5 text-[10px] text-muted">
+                        <div className="space-y-0.5 text-body-sm text-muted">
                           <div>
                             Interest (lifetime credited):{" "}
                             <span className="font-semibold text-success">
@@ -321,7 +321,7 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
                       )}
                       {showSavPnlRow && savPnl && (
                         <div
-                          className={`text-xs font-medium tabular-nums ${
+                          className={`text-body-sm font-medium tabular-nums ${
                             savPnl.pct > 0
                               ? "text-success"
                               : savPnl.pct < 0
@@ -342,7 +342,7 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
                     {savingsBankHref && (
                       <Link
                         href={savingsBankHref}
-                        className="rounded-md border border-primary/25 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                        className="rounded-md border border-primary/25 bg-primary/5 px-2.5 py-1 text-body-sm font-medium text-primary transition-colors hover:bg-primary/10"
                       >
                         Central bank · savings
                       </Link>
@@ -352,7 +352,7 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
                       CURRENCY_COUNTRY_MAP[currency] && (
                         <Link
                           href={`/country/${(CURRENCY_COUNTRY_MAP[currency] ?? "us").toLowerCase()}/forex?tab=trade&from=${currency}`}
-                          className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                          className="rounded-md border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:text-foreground"
                         >
                           Trade FX
                         </Link>
@@ -381,8 +381,10 @@ export function CurrencyWallet({ wallet, variant, onSavingsUpdated }: Props) {
 
         {personalEntries.length > 1 && (
           <div className="flex items-center justify-between bg-card-elevated/30 px-5 py-3">
-            <span className="text-xs font-medium text-muted">Total</span>
-            <span className="text-sm font-bold tabular-nums text-foreground">{totalFormatted}</span>
+            <span className="text-body-sm font-medium text-muted">Total</span>
+            <span className="text-body font-bold tabular-nums text-foreground">
+              {totalFormatted}
+            </span>
           </div>
         )}
       </div>

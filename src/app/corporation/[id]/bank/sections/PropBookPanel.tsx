@@ -240,14 +240,14 @@ export function PropBookPanel({
   };
 
   const inputClass =
-    "h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none";
+    "h-8 w-full rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none";
 
   return (
     <BankPanel
       kind="ceoControl"
       title="The bank's own investments"
       actions={
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           Current value{" "}
           <span className="font-mono tabular-nums text-foreground">
             {formatBankMoney(markValue, currency)}
@@ -256,7 +256,7 @@ export function PropBookPanel({
       }
     >
       <div className="space-y-1 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Positions the bank holds for its own profit, marked to market every turn. Buying moves
           vault cash into the market; the current value counts in risk assets beside the loan book,
           so the capital ratio is{" "}
@@ -266,7 +266,7 @@ export function PropBookPanel({
           with this book on it.
         </p>
         {leverage && (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Leverage{" "}
             {leverage.markValue > 0 && leverage.equityBase > 0
               ? `${((leverage.markValue / Math.max(1, leverage.equityBase)) * 100).toFixed(0)}% of equity`
@@ -280,7 +280,7 @@ export function PropBookPanel({
       {canMutate && (
         <div className="space-y-1 pb-3 pt-1">
           <div className="flex flex-wrap items-end gap-2">
-            <label className="flex w-32 flex-col gap-1 text-xs text-muted">
+            <label className="flex w-32 flex-col gap-1 text-body-sm text-muted">
               Asset
               <select
                 className={inputClass}
@@ -301,7 +301,7 @@ export function PropBookPanel({
                 ))}
               </select>
             </label>
-            <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs text-muted">
+            <label className="flex min-w-48 flex-1 flex-col gap-1 text-body-sm text-muted">
               {REF_LABEL[asset]}
               <input
                 value={ref}
@@ -311,7 +311,7 @@ export function PropBookPanel({
                 className={inputClass}
               />
             </label>
-            <label className="flex w-28 flex-col gap-1 text-xs text-muted">
+            <label className="flex w-28 flex-col gap-1 text-body-sm text-muted">
               Units
               <input
                 value={units}
@@ -332,7 +332,7 @@ export function PropBookPanel({
             </SmallButton>
           </div>
           {forexFeesEnabled && asset === "forex" && (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               {quote
                 ? t("preview", {
                     cost: formatBankMoney(quote.cost, currency),
@@ -341,7 +341,7 @@ export function PropBookPanel({
                 : t("explanation")}
             </p>
           )}
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             Opening quotes units x market price out of vault cash
             {leverage
               ? `, with ${formatBankMoney(Math.max(0, leverage.headroom), currency)} of leverage headroom`
@@ -351,7 +351,7 @@ export function PropBookPanel({
         </div>
       )}
       {positions.length === 0 ? (
-        <p className="py-1 text-xs text-muted">
+        <p className="py-1 text-body-sm text-muted">
           No investments. Open a position to start the book.
         </p>
       ) : (
@@ -373,7 +373,7 @@ export function PropBookPanel({
               {positions.map((pos) => (
                 <tr key={`${pos.asset}:${pos.ref}`}>
                   <Td className="text-muted">{pos.asset}</Td>
-                  <Td className="font-mono text-xs text-foreground">{pos.ref}</Td>
+                  <Td className="font-mono text-body-sm text-foreground">{pos.ref}</Td>
                   <Td align="right">{pos.units.toLocaleString("en-US")}</Td>
                   <Td align="right">{formatBankMoney(pos.costBasis, currency)}</Td>
                   <Td align="right">

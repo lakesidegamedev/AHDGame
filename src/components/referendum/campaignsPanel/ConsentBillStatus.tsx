@@ -38,8 +38,8 @@ export function ConsentBillStatus({
 
   return (
     <div className="rounded-2xl border border-card-border bg-card p-6 shadow-card">
-      <h2 className="mb-1 text-sm font-semibold text-muted">Consent in parliament</h2>
-      <p className="mb-4 text-xs text-muted">{explainer}</p>
+      <h2 className="mb-1 text-body font-semibold text-muted">Consent in parliament</h2>
+      <p className="mb-4 text-body-sm text-muted">{explainer}</p>
       <ul className="space-y-2">
         {bills.map((b) => {
           const meta = OUTCOME_META[b.outcome];
@@ -50,15 +50,15 @@ export function ConsentBillStatus({
                 className="group flex items-center gap-3 rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 transition-colors hover:border-primary/50"
               >
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${meta.cls}`}
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${meta.cls}`}
                 >
                   {meta.label}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
+                  <p className="truncate text-body font-medium text-foreground transition-colors group-hover:text-primary">
                     {b.title}
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     {b.countryName} · {b.votesFor}–{b.votesAgainst}
                   </p>
                 </div>
@@ -71,7 +71,7 @@ export function ConsentBillStatus({
         })}
       </ul>
       {deadlineTurn != null && (
-        <p className="mt-4 border-t border-card-border/40 pt-3 text-xs text-muted">
+        <p className="mt-4 border-t border-card-border/40 pt-3 text-body-sm text-muted">
           {turnsLeft != null && turnsLeft > 0
             ? `Consent voting is scheduled to close on turn ${deadlineTurn} (in ${turnsLeft} turns).`
             : `Consent voting is scheduled to close on turn ${deadlineTurn}.`}

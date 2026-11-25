@@ -28,17 +28,17 @@ export function StatCell({
 
   return (
     <div className="min-w-0">
-      <p className="flex items-center gap-1 text-[11px] text-muted">
+      <p className="flex items-center gap-1 text-body-sm text-muted">
         {label}
         {tooltip ? <Tooltip content={tooltip} label={t("about", { label })} /> : null}
       </p>
-      <div className={`mt-0.5 font-mono text-sm font-medium tabular-nums ${tone}`}>{value}</div>
-      {sub && <p className="mt-0.5 text-[11px] text-muted">{sub}</p>}
+      <div className={`mt-0.5 font-mono text-body font-medium tabular-nums ${tone}`}>{value}</div>
+      {sub && <p className="mt-0.5 text-body-sm text-muted">{sub}</p>}
       {action && (
         <button
           type="button"
           onClick={action.onClick}
-          className="mt-0.5 text-[11px] text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+          className="mt-0.5 text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
         >
           {action.label}
         </button>

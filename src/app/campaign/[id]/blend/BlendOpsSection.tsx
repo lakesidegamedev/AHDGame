@@ -75,7 +75,7 @@ function BranchCard({
         style={{
           margin: "4px 0 10px",
           fontFamily: FONT.sans,
-          fontSize: 13,
+          fontSize: 12,
           lineHeight: 1.5,
           color: BLEND.muted,
         }}
@@ -103,13 +103,13 @@ function BranchCard({
               gap: 8,
             }}
           >
-            <span style={{ fontFamily: FONT.sans, fontSize: 13, color: BLEND.muted }}>
+            <span style={{ fontFamily: FONT.sans, fontSize: 12, color: BLEND.muted }}>
               {branch.effect}
             </span>
             <span
               style={{
                 fontFamily: FONT.mono,
-                fontSize: 11,
+                fontSize: 12,
                 color: BLEND.muted,
                 whiteSpace: "nowrap",
               }}
@@ -122,7 +122,7 @@ function BranchCard({
               style={{
                 marginBottom: 6,
                 fontFamily: FONT.mono,
-                fontSize: 10,
+                fontSize: 12,
                 color: "rgba(234,179,8,.75)",
               }}
             >
@@ -209,13 +209,13 @@ function Tree({
                 gap: 12,
               }}
             >
-              <span style={{ fontFamily: FONT.sans, fontSize: 15, fontWeight: 600, color }}>
+              <span style={{ fontFamily: FONT.sans, fontSize: 14, fontWeight: 600, color }}>
                 Operation active
               </span>
               <span
                 style={{
                   fontFamily: FONT.mono,
-                  fontSize: 10.5,
+                  fontSize: 12,
                   letterSpacing: ".1em",
                   color: BLEND.positive,
                 }}
@@ -227,7 +227,7 @@ function Tree({
               style={{
                 margin: "4px 0 0",
                 fontFamily: FONT.sans,
-                fontSize: 13.5,
+                fontSize: 14,
                 color: BLEND.muted,
               }}
             >
@@ -244,10 +244,10 @@ function Tree({
                 gap: 12,
               }}
             >
-              <span style={{ fontFamily: FONT.sans, fontSize: 15, fontWeight: 600, color }}>
+              <span style={{ fontFamily: FONT.sans, fontSize: 14, fontWeight: 600, color }}>
                 Unlock operation
               </span>
-              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
                 {tree.starterCostText}
               </span>
             </div>
@@ -255,7 +255,7 @@ function Tree({
               style={{
                 margin: "4px 0 10px",
                 fontFamily: FONT.sans,
-                fontSize: 13.5,
+                fontSize: 14,
                 color: BLEND.muted,
               }}
             >
@@ -312,7 +312,7 @@ function Tree({
               <span
                 style={{
                   fontFamily: FONT.sans,
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: 600,
                   color: chosenTargetName ? BLEND.ink : BLEND.muted,
                   overflow: "hidden",
@@ -346,7 +346,7 @@ function Tree({
               style={{
                 margin: "6px 0 0",
                 fontFamily: FONT.sans,
-                fontSize: 12.5,
+                fontSize: 12,
                 color: BLEND.mutedDim,
               }}
             >
@@ -377,7 +377,7 @@ function Tree({
                 style={{
                   margin: "6px 0 0",
                   fontFamily: FONT.sans,
-                  fontSize: 12.5,
+                  fontSize: 12,
                   color: BLEND.mutedDim,
                 }}
               >
@@ -461,7 +461,7 @@ export function BlendOpsSection({
           style={{
             margin: "0 0 18px",
             fontFamily: FONT.sans,
-            fontSize: 14.5,
+            fontSize: 14,
             lineHeight: 1.55,
             color: BLEND.muted,
           }}
@@ -542,7 +542,7 @@ export function BlendOpsSection({
                   style={{
                     marginTop: 7,
                     fontFamily: FONT.sans,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: BLEND.muted,
                   }}
                 >
@@ -553,7 +553,7 @@ export function BlendOpsSection({
                     style={{
                       marginTop: 2,
                       fontFamily: FONT.mono,
-                      fontSize: 10.5,
+                      fontSize: 12,
                       color: BLEND.mutedDimmer,
                     }}
                   >
@@ -568,7 +568,7 @@ export function BlendOpsSection({
                     style={{
                       display: "block",
                       fontFamily: FONT.sans,
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: 600,
                     }}
                   >
@@ -579,7 +579,7 @@ export function BlendOpsSection({
                       display: "block",
                       marginTop: 2,
                       fontFamily: FONT.sans,
-                      fontSize: 13,
+                      fontSize: 12,
                       color: BLEND.mutedDim,
                     }}
                   >
@@ -591,7 +591,7 @@ export function BlendOpsSection({
                     <i key={i} style={s} />
                   ))}
                 </span>
-                <span style={{ fontFamily: FONT.sans, fontSize: 13, color: BLEND.muted }}>
+                <span style={{ fontFamily: FONT.sans, fontSize: 12, color: BLEND.muted }}>
                   {row.effect}
                   {row.nextStep ? (
                     <span
@@ -599,7 +599,7 @@ export function BlendOpsSection({
                         display: "block",
                         marginTop: 2,
                         fontFamily: FONT.mono,
-                        fontSize: 10.5,
+                        fontSize: 12,
                         color: BLEND.mutedDimmer,
                       }}
                     >
@@ -621,7 +621,7 @@ export function BlendOpsSection({
                   style={{
                     textAlign: "right",
                     fontFamily: FONT.mono,
-                    fontSize: 15,
+                    fontSize: 14,
                     color: BLEND.mutedDim,
                   }}
                 >

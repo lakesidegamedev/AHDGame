@@ -252,10 +252,10 @@ export function FomcCommitteeTab({ countryId }: { countryId: CountryId }) {
     [code, nomSeatId, nomAlignment, nomMakeChair, state, load]
   );
 
-  if (loading) return <p className="py-8 text-center text-sm text-muted">Loading committee…</p>;
+  if (loading) return <p className="py-8 text-center text-body text-muted">Loading committee…</p>;
   if (!state?.hasCommittee)
     return (
-      <p className="py-8 text-center text-sm text-muted">
+      <p className="py-8 text-center text-body text-muted">
         This central bank does not have a rate committee.
       </p>
     );

@@ -55,12 +55,12 @@ export default function MarketRewardBanner({ hasPricing, hasCapital }: MarketRew
   return (
     <div className="relative rounded-xl border border-primary/30 bg-primary/5 p-4 pr-10">
       <div className="flex items-start gap-2">
-        <span aria-hidden className="text-base leading-none">
+        <span aria-hidden className="text-body-lg leading-none">
           📣
         </span>
         <div>
-          <p className="text-sm font-semibold text-foreground">The market just got deeper</p>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="text-body font-semibold text-foreground">The market just got deeper</p>
+          <p className="mt-0.5 text-body-sm text-muted">
             {what} Look for the{" "}
             {hasPricing && <span className="font-medium text-foreground">Pricing posture</span>}
             {hasPricing && hasCapital && " and "}
@@ -76,7 +76,7 @@ export default function MarketRewardBanner({ hasPricing, hasCapital }: MarketRew
         type="button"
         onClick={dismiss}
         aria-label="Dismiss"
-        className="absolute right-2 top-2 rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
+        className="absolute right-2 top-2 rounded-md px-2 py-1 text-body-sm text-muted transition-colors hover:bg-card hover:text-foreground"
       >
         ✕
       </button>

@@ -182,7 +182,7 @@ export default function UKRegionClient({
                 </div>
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-white/80 drop-shadow italic mb-1">
+                <p className="text-body-sm text-white/80 drop-shadow italic mb-1">
                   United Kingdom · {nation?.name ?? region.nationId}
                 </p>
                 <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export default function UKRegionClient({
                     className="h-8 w-12 sm:h-10 sm:w-15 object-cover rounded shadow-sm"
                     unoptimized={bypassNextImageOptimization(getCountryFlagUrl("GB"))}
                   />
-                  <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl lg:text-4xl leading-tight">
+                  <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display lg:text-display leading-tight">
                     {region.name}
                   </h1>
                 </div>
@@ -206,19 +206,19 @@ export default function UKRegionClient({
           <div className="flex items-center overflow-x-auto divide-x divide-card-border border-t border-card-border">
             <div className="flex flex-col px-5 py-3 min-w-max">
               <span className="text-body-sm font-medium text-muted">Population</span>
-              <span className="text-base font-bold tabular-nums">
+              <span className="text-body-lg font-bold tabular-nums">
                 {formatPopulation(population)}
               </span>
             </div>
             <div className="flex flex-col px-5 py-3 min-w-max">
               <span className="text-body-sm font-medium text-muted">GDP</span>
-              <span className="text-base font-bold tabular-nums">
+              <span className="text-body-lg font-bold tabular-nums">
                 {gdp > 0 ? formatGDP(gdp, "£") : "—"}
               </span>
             </div>
             <div className="flex flex-col px-5 py-3 min-w-max">
               <span className="text-body-sm font-medium text-muted">Constituencies</span>
-              <span className="text-base font-bold tabular-nums">{constituencies}</span>
+              <span className="text-body-lg font-bold tabular-nums">{constituencies}</span>
             </div>
             {calculatedLeans && (
               <div className="flex flex-col px-5 py-3 min-w-max gap-1">
@@ -233,7 +233,7 @@ export default function UKRegionClient({
             )}
             <div className="flex flex-col px-5 py-3 min-w-max">
               <span className="text-body-sm font-medium text-muted">Government approval</span>
-              <span className="text-base font-bold tabular-nums">
+              <span className="text-body-lg font-bold tabular-nums">
                 {governmentApproval != null ? (
                   <span
                     className={
@@ -259,7 +259,7 @@ export default function UKRegionClient({
             {executiveLabel && (
               <div className="flex flex-col px-5 py-3 min-w-max">
                 <span className="text-body-sm font-medium text-muted">{executiveLabel}</span>
-                <span className="text-base font-bold tabular-nums mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-body-lg font-bold tabular-nums mt-0.5 flex flex-wrap items-center gap-2">
                   {executive && (executive.characterId || executive.nppId)
                     ? (executive.characterName ?? "Unknown")
                     : "Vacant"}

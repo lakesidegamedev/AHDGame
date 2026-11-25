@@ -43,7 +43,7 @@ export default function JusticeOfficePage() {
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-            <h2 className="text-lg font-semibold text-error">{error ?? "Failed to load"}</h2>
+            <h2 className="text-heading font-semibold text-error">{error ?? "Failed to load"}</h2>
           </div>
         </main>
       </div>
@@ -53,7 +53,7 @@ export default function JusticeOfficePage() {
   return (
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
-        <nav className="flex flex-wrap items-center gap-2 text-sm">
+        <nav className="flex flex-wrap items-center gap-2 text-body">
           <Link
             href={scotusUrl(countryId)}
             className="text-muted transition-colors hover:text-foreground"
@@ -66,9 +66,9 @@ export default function JusticeOfficePage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-body-sm font-medium text-muted">{countryName}</div>
-              <h1 className="mt-1 text-2xl font-bold text-foreground">Justice office</h1>
+              <h1 className="mt-1 text-heading font-bold text-foreground">Justice office</h1>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-card-border bg-card-muted px-2.5 py-1 text-xs font-medium text-foreground/80">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-card-border bg-card-muted px-2.5 py-1 text-body-sm font-medium text-foreground/80">
               {data.justiceActionsRemaining}/{data.actionCap} Actions
             </span>
           </div>
@@ -77,19 +77,19 @@ export default function JusticeOfficePage() {
             <div className="mt-4 space-y-2">
               <div className="flex items-center gap-3">
                 <span className="w-28 shrink-0 text-body-sm font-medium text-muted">Seat</span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-body font-medium text-foreground">
                   #{data.seat.seatNumber} - {data.seat.justiceName}
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="w-28 shrink-0 text-body-sm font-medium text-muted">Ideology</span>
-                <span className="text-sm text-muted">
+                <span className="text-body text-muted">
                   Econ {leanLabel(data.seat.economicLean)} · Social{" "}
                   {leanLabel(data.seat.socialLean)}
                 </span>
               </div>
               {data.seat.isDivergent && (
-                <p className="text-xs text-warning">
+                <p className="text-body-sm text-warning">
                   This seat has diverged from the real historical succession.
                 </p>
               )}
@@ -98,7 +98,7 @@ export default function JusticeOfficePage() {
                   <span className="w-28 shrink-0 text-body-sm font-medium text-muted">
                     Death chance
                   </span>
-                  <span className="text-sm text-warning">
+                  <span className="text-body text-warning">
                     {formatDivergentDeathChance(data.seat.deathChance, "full")} If you die in
                     office, the seat becomes vacant.
                   </span>
@@ -106,7 +106,7 @@ export default function JusticeOfficePage() {
               )}
             </div>
           ) : (
-            <p className="mt-4 text-sm text-muted">
+            <p className="mt-4 text-body text-muted">
               You are not currently serving as a Justice. A president can nominate you to a vacant
               seat on the{" "}
               <Link href={scotusUrl(countryId)} className="text-primary hover:underline">
@@ -130,20 +130,20 @@ export default function JusticeOfficePage() {
         />
 
         <section className="rounded-2xl border border-card-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">Upcoming cases</h2>
+          <h2 className="text-heading font-semibold text-foreground">Upcoming cases</h2>
           {data.upcomingCases?.length ? (
             <ul className="mt-3 divide-y divide-card-border">
               {data.upcomingCases.map((c) => (
                 <li key={c.caseKey} className="flex items-center justify-between gap-3 py-2">
-                  <span className="text-sm text-foreground">{c.title}</span>
-                  <span className="shrink-0 text-xs text-muted">
+                  <span className="text-body text-foreground">{c.title}</span>
+                  <span className="shrink-0 text-body-sm text-muted">
                     Ruling expected {c.decisionYear}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-muted">No cases are currently scheduled.</p>
+            <p className="mt-3 text-body text-muted">No cases are currently scheduled.</p>
           )}
         </section>
       </main>

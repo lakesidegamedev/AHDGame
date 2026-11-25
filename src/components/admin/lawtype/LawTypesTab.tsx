@@ -107,10 +107,10 @@ export function LawTypesTab() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Law types</h2>
+        <h2 className="text-heading font-semibold">Law types</h2>
         <button
           onClick={handleCreate}
-          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 transition-colors"
         >
           + Create new law type
         </button>
@@ -121,7 +121,7 @@ export function LawTypesTab() {
         <select
           value={domainFilter}
           onChange={(e) => setDomainFilter(e.target.value)}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         >
           <option value="all">All domains</option>
           {domains.map((d) => (
@@ -135,14 +135,14 @@ export function LawTypesTab() {
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm flex-1 min-w-[200px]"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body flex-1 min-w-[200px]"
         />
       </div>
 
       {/* Message */}
       {message && (
         <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
+          className={`rounded-lg border px-4 py-3 text-body ${
             message.startsWith("Error")
               ? "border-red-500/30 bg-red-500/10 text-red-400"
               : "border-green-500/30 bg-green-500/10 text-green-400"
@@ -154,7 +154,7 @@ export function LawTypesTab() {
 
       {/* List */}
       {loading ? (
-        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-muted text-sm">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-muted text-body">
           Loading...
         </div>
       ) : filteredTypes.length === 0 ? (

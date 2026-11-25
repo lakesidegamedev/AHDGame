@@ -377,7 +377,7 @@ export const Navbar = React.memo(function Navbar({
           />
           {/* Site name fades on sub-md displays when search is open so the search field can slide over it */}
           <span
-            className={`text-base font-semibold tracking-tight hidden sm:inline transition-opacity duration-300 ${searchOpen ? "opacity-0 md:opacity-100" : "opacity-100"} ${typedWordmark ? "font-mono" : ""}`}
+            className={`text-body-lg font-semibold tracking-tight hidden sm:inline transition-opacity duration-300 ${searchOpen ? "opacity-0 md:opacity-100" : "opacity-100"} ${typedWordmark ? "font-mono" : ""}`}
             aria-hidden={searchOpen ? "true" : undefined}
           >
             <Wordmark typed={typedWordmark} />
@@ -398,7 +398,7 @@ export const Navbar = React.memo(function Navbar({
                   onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "profile" })}
                   onPointerEnter={preloadProfileSwitcher}
                   onFocus={preloadProfileSwitcher}
-                  className={`relative flex items-center gap-2 px-2.5 py-1 text-sm transition-colors hover:text-foreground ${isNavActive(pathname, "/profile") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
+                  className={`relative flex items-center gap-2 px-2.5 py-1 text-body transition-colors hover:text-foreground ${isNavActive(pathname, "/profile") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
                   aria-expanded={profileOpen}
                   aria-haspopup="menu"
                 >
@@ -444,7 +444,7 @@ export const Navbar = React.memo(function Navbar({
               showProfile && (
                 <Link
                   href="/profile"
-                  className={`relative px-2.5 py-1 text-sm transition-colors hover:text-foreground ${isNavActive(pathname, "/profile") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
+                  className={`relative px-2.5 py-1 text-body transition-colors hover:text-foreground ${isNavActive(pathname, "/profile") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
                   aria-current={isNavActive(pathname, "/profile") ? "page" : undefined}
                 >
                   {t("common.profile")}
@@ -495,7 +495,7 @@ export const Navbar = React.memo(function Navbar({
             {!user?.singleplayer && (
               <Link
                 href="/contests"
-                className={`relative px-2.5 py-1 text-sm transition-colors hover:text-foreground ${isNavActive(pathname, "/contests") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
+                className={`relative px-2.5 py-1 text-body transition-colors hover:text-foreground ${isNavActive(pathname, "/contests") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
                 aria-current={isNavActive(pathname, "/contests") ? "page" : undefined}
               >
                 {t("common.contests")}
@@ -639,13 +639,13 @@ export const Navbar = React.memo(function Navbar({
               <div className="hidden md:flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="text-sm font-medium text-muted transition-colors hover:text-foreground"
+                  className="text-body font-medium text-muted transition-colors hover:text-foreground"
                 >
                   {t("common.signIn")}
                 </Link>
                 <Link
                   href="/register"
-                  className="inline-flex items-center justify-center rounded-lg bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground transition-all duration-150 hover:bg-primary-dark active:scale-[0.98]"
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-3.5 h-9 text-body font-semibold text-primary-foreground transition-all duration-150 hover:bg-primary-dark active:scale-[0.98]"
                 >
                   {t("common.register")}
                 </Link>

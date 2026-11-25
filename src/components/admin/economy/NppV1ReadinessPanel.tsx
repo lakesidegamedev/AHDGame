@@ -46,18 +46,20 @@ export function NppV1ReadinessPanel() {
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       <div className="border-b border-card-border bg-background/50 px-4 py-3">
-        <p className="text-sm font-semibold">V1 autonomy readiness</p>
-        <p className="text-xs text-muted mt-0.5">
+        <p className="text-body font-semibold">V1 autonomy readiness</p>
+        <p className="text-body-sm text-muted mt-0.5">
           Whether each country is seeded well enough for the V1 governing brain to produce a working
           government. Player-enabled countries are run by players (V1 does not act there).
         </p>
       </div>
 
-      <InlineError error={error} className="px-4 py-3 text-sm text-error" />
-      {!countries && !error && <p className="px-4 py-6 text-center text-sm text-muted">Loading…</p>}
+      <InlineError error={error} className="px-4 py-3 text-body text-error" />
+      {!countries && !error && (
+        <p className="px-4 py-6 text-center text-body text-muted">Loading…</p>
+      )}
 
       {countries && (
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="bg-background/30">
             <tr>
               {["Country", "Government", "V1 Ready", ""].map((h) => (
@@ -79,38 +81,40 @@ export function NppV1ReadinessPanel() {
                   >
                     <td className="px-4 py-3 font-medium">
                       {c.countryId}
-                      <span className="ml-2 text-xs text-muted">{c.name}</span>
+                      <span className="ml-2 text-body-sm text-muted">{c.name}</span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted">{c.governmentType}</td>
+                    <td className="px-4 py-3 text-body-sm text-muted">{c.governmentType}</td>
                     <td className="px-4 py-3">
                       {c.enabledForPlayers ? (
-                        <span className="rounded-full bg-muted/20 px-2 py-0.5 text-xs text-muted">
+                        <span className="rounded-full bg-muted/20 px-2 py-0.5 text-body-sm text-muted">
                           Player-run (N/A)
                         </span>
                       ) : c.ready ? (
-                        <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
+                        <span className="rounded-full bg-success/15 px-2 py-0.5 text-body-sm text-success">
                           ✓ Ready
                         </span>
                       ) : (
-                        <span className="rounded-full bg-error/15 px-2 py-0.5 text-xs text-error">
+                        <span className="rounded-full bg-error/15 px-2 py-0.5 text-body-sm text-error">
                           ✗ {failedRequired.length} missing
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted text-right">{open ? "▲" : "▼"}</td>
+                    <td className="px-4 py-3 text-body-sm text-muted text-right">
+                      {open ? "▲" : "▼"}
+                    </td>
                   </tr>
                   {open && (
                     <tr>
                       <td colSpan={4} className="bg-background/20 px-4 py-3">
                         <ul className="space-y-1.5">
                           {c.checks.map((k) => (
-                            <li key={k.id} className="flex items-center gap-2 text-xs">
+                            <li key={k.id} className="flex items-center gap-2 text-body-sm">
                               <span className={k.ok ? "text-success" : "text-error"}>
                                 {k.ok ? "✓" : "✗"}
                               </span>
                               <span className="font-medium">{k.label}</span>
                               {k.severity === "recommended" && (
-                                <span className="rounded bg-muted/20 px-1.5 py-0.5 text-[10px] text-muted">
+                                <span className="rounded bg-muted/20 px-1.5 py-0.5 text-body-sm text-muted">
                                   optional
                                 </span>
                               )}

@@ -12,7 +12,7 @@ export function DeadlineCountdown({
   const { text, expired, pending, turnLabel } = useDeadlineLabel(deadline, deadlineTurn, kind);
   return (
     <span
-      className={`text-xs tabular-nums font-mono ${expired ? "text-red-400" : pending ? "text-muted" : "text-purple-300"}`}
+      className={`text-body-sm tabular-nums font-mono ${expired ? "text-red-400" : pending ? "text-muted" : "text-purple-300"}`}
       title={turnLabel}
     >
       ⏱ {text}

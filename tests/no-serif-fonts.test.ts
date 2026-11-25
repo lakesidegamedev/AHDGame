@@ -73,7 +73,7 @@ describe("serif fonts stay confined to classic interface mode", () => {
 
   it("matches what it is meant to match", () => {
     const [serif, display, faces] = BANNED.map((b) => b.pattern);
-    expect(serif.test(`<h2 className="${FONT}-serif text-lg">`)).toBe(true);
+    expect(serif.test(`<h2 className="${FONT}-serif text-heading">`)).toBe(true);
     expect(serif.test(`fontFamily: "var(--${FONT}-serif, Georgia)"`)).toBe(true);
     expect(display.test(`<h1 className="${FONT}-display">`)).toBe(true);
     expect(display.test(`--${FONT}-display: var(--x);`)).toBe(true);

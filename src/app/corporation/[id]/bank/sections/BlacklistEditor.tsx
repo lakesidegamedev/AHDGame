@@ -84,7 +84,7 @@ export function BlacklistEditor({
 
   const column = (heading: string, count: number, control: ReactNode, list: ReactNode) => (
     <div className="min-w-0 space-y-1.5">
-      <h3 className="text-xs font-medium text-muted">
+      <h3 className="text-body-lg font-medium text-muted">
         {heading} <span className="font-mono">({count})</span>
       </h3>
       {control}
@@ -99,7 +99,7 @@ export function BlacklistEditor({
       actions={
         canMutate ? (
           <>
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               {dirty ? "Unsaved changes" : `${total} ${total === 1 ? "entry" : "entries"}`}
             </span>
             <SmallButton tone="primary" onClick={() => void save()} disabled={busy || !dirty}>
@@ -109,7 +109,7 @@ export function BlacklistEditor({
         ) : undefined
       }
     >
-      <p className="py-1.5 text-xs text-muted">
+      <p className="py-1.5 text-body-sm text-muted">
         Listed players cannot deposit here or borrow from you. Listed companies cannot borrow.
         Listing an index fund refuses every company in it. Nobody sees this list except you.
       </p>
@@ -129,7 +129,7 @@ export function BlacklistEditor({
             />
           ) : null,
           characters.length === 0 ? (
-            <p className="text-xs text-muted">No players refused.</p>
+            <p className="text-body-sm text-muted">No players refused.</p>
           ) : (
             <ul>
               {characters.map((party) => (
@@ -164,7 +164,7 @@ export function BlacklistEditor({
             />
           ) : null,
           corporations.length === 0 ? (
-            <p className="text-xs text-muted">No companies refused.</p>
+            <p className="text-body-sm text-muted">No companies refused.</p>
           ) : (
             <ul>
               {corporations.map((party) => (
@@ -190,7 +190,7 @@ export function BlacklistEditor({
           indexFunds.length,
           canMutate ? (
             <select
-              className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+              className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
               value=""
               disabled={busy}
               aria-label="Add an index fund to the blacklist"
@@ -212,7 +212,7 @@ export function BlacklistEditor({
             </select>
           ) : null,
           indexFunds.length === 0 ? (
-            <p className="text-xs text-muted">No funds refused.</p>
+            <p className="text-body-sm text-muted">No funds refused.</p>
           ) : (
             <ul>
               {indexFunds.map((fund) => (

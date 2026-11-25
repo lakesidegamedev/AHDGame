@@ -158,7 +158,7 @@ export function DiscountWindowPanel({
 
   return (
     <BankPanel kind="ceoControl" title="Discount window">
-      <p className="py-1.5 text-xs text-muted">
+      <p className="py-1.5 text-body-sm text-muted">
         Emergency central bank cash for banks that take deposits. Drawing carries a confidence
         penalty that fades once the debt is repaid, and the penalty rate prices above the market.
       </p>
@@ -191,14 +191,14 @@ export function DiscountWindowPanel({
         {canMutate && (
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-end gap-2">
-              <label className="flex flex-col gap-1 text-xs text-muted">
+              <label className="flex flex-col gap-1 text-body-sm text-muted">
                 Amount
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
                   aria-label="Discount window amount"
-                  className="h-8 w-40 rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                  className="h-8 w-40 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none"
                 />
               </label>
               <SmallButton
@@ -216,7 +216,7 @@ export function DiscountWindowPanel({
               </SmallButton>
             </div>
             {validDraw && postDrawStigma != null && postDrawInterest != null ? (
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 Drawing {formatBankMoney(entered, currency)} sets the penalty to{" "}
                 {(postDrawStigma * 100).toFixed(1)}% of confidence, costs about{" "}
                 {formatBankMoney(postDrawInterest, currency)} next turn, and leaves{" "}
@@ -225,7 +225,7 @@ export function DiscountWindowPanel({
                 (about every hour) until repaid.
               </p>
             ) : (
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 Draw against the window, or repay outstanding debt.
               </p>
             )}

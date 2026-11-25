@@ -248,14 +248,14 @@ export default function IntelligenceTab({
 
   if (error) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
         {error}
       </div>
     );
   }
   if (!view) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
         Loading the service…
       </div>
     );
@@ -301,27 +301,29 @@ export default function IntelligenceTab({
   return (
     <div className="min-w-0 space-y-4">
       <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">The service</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <h2 className="text-heading text-foreground">The service</h2>
+        <p className="mt-0.5 max-w-2xl text-body text-muted">
           Networks are slow to build and are what a compromise costs you. Coverage is perishable: it
           decays every turn, so a service that stops collecting goes blind on what it already knows.
         </p>
         <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <dt className="text-body-sm font-medium text-muted">Tradecraft</dt>
-            <dd className="text-lg font-semibold text-foreground">{view.agency.tradecraft}</dd>
+            <dd className="text-heading font-semibold text-foreground">{view.agency.tradecraft}</dd>
           </div>
           <div>
             <dt className="text-body-sm font-medium text-muted">Counter-Intelligence</dt>
-            <dd className="text-lg font-semibold text-foreground">{view.agency.counterIntel}</dd>
+            <dd className="text-heading font-semibold text-foreground">
+              {view.agency.counterIntel}
+            </dd>
           </div>
           <div>
             <dt className="text-body-sm font-medium text-muted">Operations left</dt>
-            <dd className="text-lg font-semibold text-foreground">{view.slotsRemaining}</dd>
+            <dd className="text-heading font-semibold text-foreground">{view.slotsRemaining}</dd>
           </div>
         </dl>
         {!view.agency.hasDirector && (
-          <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-foreground">
+          <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-body text-foreground">
             The service has no director. Existing networks keep running and existing files stay
             readable, but no new work can be funded until the seat is filled.
           </p>
@@ -329,53 +331,53 @@ export default function IntelligenceTab({
       </section>
 
       <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">Appropriation</h2>
+        <h2 className="text-heading text-foreground">Appropriation</h2>
         {view.funding.enactedLine <= 0 ? (
-          <p className="mt-2 max-w-2xl text-sm text-muted">
+          <p className="mt-2 max-w-2xl text-body text-muted">
             No appropriation has been voted. The service keeps its files and runs no operations
             until the legislature funds it.
           </p>
         ) : (
           <>
-            <p className="mt-0.5 max-w-2xl text-sm text-muted">
+            <p className="mt-0.5 max-w-2xl text-body text-muted">
               The enacted line accrues over the year. Networks draw on it every turn whether or not
               they are used, and an operation is paid for out of what is left.
             </p>
             <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
                 <dt className="text-body-sm font-medium text-muted">Enacted line</dt>
-                <dd className="text-lg font-semibold text-foreground">
+                <dd className="text-heading font-semibold text-foreground">
                   {fmtMoneyAbs(currencySymbol, view.funding.enactedLine)}
                 </dd>
-                <dd className="text-xs text-muted">a year</dd>
+                <dd className="text-body-sm text-muted">a year</dd>
               </div>
               <div>
                 <dt className="text-body-sm font-medium text-muted">On hand</dt>
-                <dd className="text-lg font-semibold text-foreground">
+                <dd className="text-heading font-semibold text-foreground">
                   {fmtMoneyAbs(currencySymbol, view.funding.balance)}
                 </dd>
               </div>
               <div>
                 <dt className="text-body-sm font-medium text-muted">Accrues</dt>
-                <dd className="text-lg font-semibold text-foreground">
+                <dd className="text-heading font-semibold text-foreground">
                   {fmtMoneyAbs(currencySymbol, view.funding.accrualPerTurn)}
                 </dd>
-                <dd className="text-xs text-muted">a turn</dd>
+                <dd className="text-body-sm text-muted">a turn</dd>
               </div>
               <div>
                 <dt className="text-body-sm font-medium text-muted">Committed</dt>
-                <dd className="text-lg font-semibold text-foreground">
+                <dd className="text-heading font-semibold text-foreground">
                   {fmtMoneyAbs(currencySymbol, view.funding.committedUpkeep)}
                 </dd>
-                <dd className="text-xs text-muted">a turn, to networks</dd>
+                <dd className="text-body-sm text-muted">a turn, to networks</dd>
               </div>
             </dl>
-            <p className="mt-3 text-sm text-muted">
+            <p className="mt-3 text-body text-muted">
               An operation costs {fmtMoneyAbs(currencySymbol, view.funding.collectionCost)} to
               collect, {fmtMoneyAbs(currencySymbol, view.funding.actionCost)} to act.
             </p>
             {view.funding.committedUpkeep > view.funding.accrualPerTurn && (
-              <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-foreground">
+              <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-body text-foreground">
                 Network upkeep is running ahead of the line. Once the balance is spent, the lowest
                 ranked network stops making progress first, and the rest follow as the shortfall
                 grows. Cut a network back or ask for a larger appropriation.
@@ -395,26 +397,26 @@ export default function IntelligenceTab({
 
       {canAct && (
         <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
-          <h2 className="text-lg text-foreground">Direct the service</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted">
+          <h2 className="text-heading text-foreground">Direct the service</h2>
+          <p className="mt-0.5 max-w-2xl text-body text-muted">
             Funding a network is a standing claim on the appropriation every turn. An operation is
             paid for once, and spends one of the turn&apos;s slots.
           </p>
 
           {problem && (
-            <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-foreground">
+            <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-body text-foreground">
               {problem}
             </p>
           )}
 
           <div className="mt-4 grid gap-6 lg:grid-cols-2">
             <div>
-              <h3 className="text-sm font-semibold text-muted">Fund a network</h3>
+              <h3 className="text-body-lg font-semibold text-muted">Fund a network</h3>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <label className="flex flex-col text-xs text-muted">
+                <label className="flex flex-col text-body-sm text-muted">
                   Target
                   <select
-                    className="mt-1 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+                    className="mt-1 rounded border border-card-border bg-background p-2 text-body text-foreground"
                     value={netTarget}
                     onChange={(e) => setNetTarget(e.target.value)}
                   >
@@ -426,10 +428,10 @@ export default function IntelligenceTab({
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col text-xs text-muted">
+                <label className="flex flex-col text-body-sm text-muted">
                   Funding
                   <select
-                    className="mt-1 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+                    className="mt-1 rounded border border-card-border bg-background p-2 text-body text-foreground"
                     value={netFunding}
                     onChange={(e) => setNetFunding(e.target.value as NetworkFundingLevel)}
                   >
@@ -442,7 +444,7 @@ export default function IntelligenceTab({
                 </label>
                 <button
                   type="button"
-                  className="rounded bg-accent px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="rounded bg-accent px-3 py-2 text-body font-medium text-white disabled:opacity-50"
                   disabled={busy || netTarget === ""}
                   onClick={() =>
                     submit("network", { targetCountryId: netTarget, funding: netFunding })
@@ -451,7 +453,7 @@ export default function IntelligenceTab({
                   Fund network
                 </button>
               </div>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 {spareAccrual >= 0
                   ? `${fmtMoneyAbs(currencySymbol, spareAccrual)} a turn is uncommitted.`
                   : "Upkeep already exceeds the line. Anything more will stall a network."}
@@ -459,12 +461,12 @@ export default function IntelligenceTab({
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-muted">Run an operation</h3>
+              <h3 className="text-body-lg font-semibold text-muted">Run an operation</h3>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <label className="flex flex-col text-xs text-muted">
+                <label className="flex flex-col text-body-sm text-muted">
                   Target
                   <select
-                    className="mt-1 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+                    className="mt-1 rounded border border-card-border bg-background p-2 text-body text-foreground"
                     value={opTarget}
                     onChange={(e) => setOpTarget(e.target.value)}
                   >
@@ -476,10 +478,10 @@ export default function IntelligenceTab({
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col text-xs text-muted">
+                <label className="flex flex-col text-body-sm text-muted">
                   Domain
                   <select
-                    className="mt-1 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+                    className="mt-1 rounded border border-card-border bg-background p-2 text-body text-foreground"
                     value={opDomain}
                     onChange={(e) =>
                       setOpDomain(e.target.value as "strategic" | "military" | "economic")
@@ -492,10 +494,10 @@ export default function IntelligenceTab({
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col text-xs text-muted">
+                <label className="flex flex-col text-body-sm text-muted">
                   Kind
                   <select
-                    className="mt-1 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+                    className="mt-1 rounded border border-card-border bg-background p-2 text-body text-foreground"
                     value={opKind}
                     onChange={(e) => setOpKind(e.target.value as "collect" | "action")}
                   >
@@ -505,7 +507,7 @@ export default function IntelligenceTab({
                 </label>
                 <button
                   type="button"
-                  className="rounded bg-accent px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="rounded bg-accent px-3 py-2 text-body font-medium text-white disabled:opacity-50"
                   disabled={busy || opTarget === "" || !canAffordOp || !hasSlot}
                   onClick={() =>
                     submit("operation", {
@@ -519,7 +521,7 @@ export default function IntelligenceTab({
                   Run operation
                 </button>
               </div>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 {view.networks.length === 0
                   ? "No networks yet. Fund one before ordering an operation."
                   : !canAffordOp
@@ -531,15 +533,17 @@ export default function IntelligenceTab({
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-muted">Counter-intelligence posture</h3>
+              <h3 className="text-body-lg font-semibold text-muted">
+                Counter-intelligence posture
+              </h3>
               <div className="mt-2 flex flex-wrap items-end gap-3">
-                <label className="flex flex-col text-xs text-muted">
+                <label className="flex flex-col text-body-sm text-muted">
                   Posture
                   <input
                     type="number"
                     min={0}
                     max={100}
-                    className="mt-1 w-24 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+                    className="mt-1 w-24 rounded border border-card-border bg-background p-2 text-body text-foreground"
                     value={posture}
                     placeholder={String(view.agency.counterIntel)}
                     onChange={(e) => setPosture(e.target.value)}
@@ -547,7 +551,7 @@ export default function IntelligenceTab({
                 </label>
                 <button
                   type="button"
-                  className="rounded bg-accent px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="rounded bg-accent px-3 py-2 text-body font-medium text-white disabled:opacity-50"
                   disabled={busy || posture === ""}
                   onClick={() =>
                     submit("counter-intel", { counterIntel: Math.round(Number(posture)) })
@@ -556,7 +560,7 @@ export default function IntelligenceTab({
                   Set posture
                 </button>
               </div>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 Defence needs no order and costs no slot. It sets how hard this country is to work
                 against.
               </p>
@@ -566,14 +570,14 @@ export default function IntelligenceTab({
       )}
 
       <section className="min-w-0 overflow-hidden rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">Networks</h2>
+        <h2 className="text-heading text-foreground">Networks</h2>
         {view.networks.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             No networks abroad. Fund one in a target country to begin.
           </p>
         ) : (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[42rem] text-sm">
+            <table className="w-full min-w-[42rem] text-body">
               <thead>
                 <tr className="text-left text-body-sm font-medium text-muted">
                   <th className="py-2">Country</th>
@@ -615,14 +619,14 @@ export default function IntelligenceTab({
       </section>
 
       <section className="min-w-0 rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">Nuclear assessments</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <h2 className="text-heading text-foreground">Nuclear assessments</h2>
+        <p className="mt-0.5 max-w-2xl text-body text-muted">
           What strategic coverage currently buys you. Estimates carry real error and are stable
           while the coverage is, so re-reading the page will not sharpen them. Only sustained
           coverage confirms a figure.
         </p>
         {assessments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             No strategic coverage anywhere. Run a collection operation in the strategic domain to
             begin an assessment.
           </p>
@@ -631,14 +635,14 @@ export default function IntelligenceTab({
             {assessments.map((a) => (
               <li
                 key={a.targetCountryId}
-                className="rounded-lg border border-card-border bg-background p-3 text-sm"
+                className="rounded-lg border border-card-border bg-background p-3 text-body"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{a.targetCountryId}</span>
                   <span className="text-muted">
                     {TIER_LABEL[a.assessment.tier] ?? a.assessment.tier}
                   </span>
-                  <span className="ml-auto text-xs text-muted">
+                  <span className="ml-auto text-body-sm text-muted">
                     Coverage {Math.round(a.coverage)}
                   </span>
                 </div>
@@ -663,13 +667,13 @@ export default function IntelligenceTab({
       </section>
 
       <section className="min-w-0 rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">Military assessments</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <h2 className="text-heading text-foreground">Military assessments</h2>
+        <p className="mt-0.5 max-w-2xl text-body text-muted">
           What military coverage buys you. This is what a service can read from the outside, not the
           view that a nation gives its own command staff.
         </p>
         {militaryAssessments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             No military coverage anywhere. Run a collection operation in the military domain to
             begin an assessment.
           </p>
@@ -678,14 +682,14 @@ export default function IntelligenceTab({
             {militaryAssessments.map((a) => (
               <li
                 key={a.targetCountryId}
-                className="rounded-lg border border-card-border bg-background p-3 text-sm"
+                className="rounded-lg border border-card-border bg-background p-3 text-body"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{a.targetCountryId}</span>
                   <span className="text-muted">
                     {TIER_LABEL[a.assessment.tier] ?? a.assessment.tier}
                   </span>
-                  <span className="ml-auto text-xs text-muted">
+                  <span className="ml-auto text-body-sm text-muted">
                     Coverage {Math.round(a.coverage)}
                   </span>
                 </div>
@@ -700,7 +704,7 @@ export default function IntelligenceTab({
                     : ""}
                 </p>
                 {a.assessment.fronts !== null && a.assessment.fronts.length > 0 && (
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     Supply:{" "}
                     {a.assessment.fronts.map((f) => `${f.conflictId} ${f.supply}`).join(", ")}
                   </p>
@@ -712,13 +716,13 @@ export default function IntelligenceTab({
       </section>
 
       <section className="min-w-0 rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">Economic assessments</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-muted">
+        <h2 className="text-heading text-foreground">Economic assessments</h2>
+        <p className="mt-0.5 max-w-2xl text-body text-muted">
           The national picture of a country&apos;s corporate sector. Reading one company&apos;s
           books is a separate act, and takes an operation rather than a threshold.
         </p>
         {economicAssessments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             No economic coverage anywhere. Run a collection operation in the economic domain to
             begin an assessment.
           </p>
@@ -727,14 +731,14 @@ export default function IntelligenceTab({
             {economicAssessments.map((a) => (
               <li
                 key={a.targetCountryId}
-                className="rounded-lg border border-card-border bg-background p-3 text-sm"
+                className="rounded-lg border border-card-border bg-background p-3 text-body"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{a.targetCountryId}</span>
                   <span className="text-muted">
                     {TIER_LABEL[a.assessment.tier] ?? a.assessment.tier}
                   </span>
-                  <span className="ml-auto text-xs text-muted">
+                  <span className="ml-auto text-body-sm text-muted">
                     Coverage {Math.round(a.coverage)}
                   </span>
                 </div>
@@ -754,15 +758,15 @@ export default function IntelligenceTab({
       </section>
 
       <section className="min-w-0 rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-lg text-foreground">Recent operations</h2>
+        <h2 className="text-heading text-foreground">Recent operations</h2>
         {view.incidents.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">The service has run nothing yet.</p>
+          <p className="mt-2 text-body text-muted">The service has run nothing yet.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {view.incidents.map((i, idx) => (
               <li
                 key={`${i.turn}-${i.targetCountryId}-${idx}`}
-                className="rounded-lg border border-card-border bg-background p-3 text-sm"
+                className="rounded-lg border border-card-border bg-background p-3 text-body"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{i.targetCountryId}</span>
@@ -771,7 +775,7 @@ export default function IntelligenceTab({
                   <span className="text-muted">
                     {COMPROMISE_LABEL[i.compromise] ?? i.compromise}
                   </span>
-                  <span className="ml-auto text-xs text-muted">Turn {i.turn}</span>
+                  <span className="ml-auto text-body-sm text-muted">Turn {i.turn}</span>
                 </div>
                 <p className="mt-1 text-muted">{i.effectSummary}</p>
               </li>

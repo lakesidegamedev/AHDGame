@@ -145,9 +145,9 @@ export function NotificationPreferencesPanel() {
 
   return (
     <section className="rounded-2xl border border-card-border bg-card-muted p-4 md:col-span-3 md:p-5">
-      <h3 className="text-sm font-semibold">{t("title")}</h3>
-      <p className="mt-1 text-xs leading-5 text-muted">{t("description")}</p>
-      <p className="mt-2 text-xs leading-5 text-muted">{t("turnStatusHint")}</p>
+      <h3 className="text-body-lg font-semibold">{t("title")}</h3>
+      <p className="mt-1 text-body-sm leading-5 text-muted">{t("description")}</p>
+      <p className="mt-2 text-body-sm leading-5 text-muted">{t("turnStatusHint")}</p>
       {loadingError ? (
         <p role="alert">
           {t("loadError")}{" "}
@@ -161,8 +161,8 @@ export function NotificationPreferencesPanel() {
         <>
           <div className="my-3 flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm">{t("mail")}</p>
-              <p className="text-xs text-muted">{t("mailHint")}</p>
+              <p className="text-body">{t("mail")}</p>
+              <p className="text-body-sm text-muted">{t("mailHint")}</p>
             </div>
             <SettingsSwitch
               label={t("mail")}
@@ -176,7 +176,7 @@ export function NotificationPreferencesPanel() {
             placeholder={t("search")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="my-3 w-full rounded-lg border border-card-border bg-card p-3 text-sm"
+            className="my-3 w-full rounded-lg border border-card-border bg-card p-3 text-body"
           />
           <div>
             {(() => {
@@ -188,7 +188,7 @@ export function NotificationPreferencesPanel() {
                   type !== "turn_advance" && t(`types.${type}`).toLowerCase().includes(query)
               );
               if (visible.length === 0)
-                return <p className="py-3 text-sm text-muted">{t("noMatch")}</p>;
+                return <p className="py-3 text-body text-muted">{t("noMatch")}</p>;
               // Grouped like the inbox chips so a player can find "elections"
               // without reading 140 rows, with the alerts that also reach the
               // phone marked.
@@ -206,10 +206,10 @@ export function NotificationPreferencesPanel() {
                         type="button"
                         onClick={() => toggleGroup(group)}
                         aria-expanded={open}
-                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm font-semibold text-foreground"
+                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-body font-semibold text-foreground"
                       >
                         <span>{t(`groups.${group}`)}</span>
-                        <span className="flex items-center gap-2 text-xs font-normal text-muted">
+                        <span className="flex items-center gap-2 text-body-sm font-normal text-muted">
                           {t("groupOnCount", { on: onCount, total: rows.length })}
                           <span aria-hidden>{open ? "▾" : "▸"}</span>
                         </span>
@@ -217,7 +217,7 @@ export function NotificationPreferencesPanel() {
                     </h4>
                     {open && (
                       <>
-                        <div className="flex justify-end gap-2 py-2 text-xs">
+                        <div className="flex justify-end gap-2 py-2 text-body-sm">
                           <button
                             type="button"
                             disabled={saving || onCount === rows.length}
@@ -256,13 +256,13 @@ export function NotificationPreferencesPanel() {
                                 className="flex items-center justify-between gap-3 border-b border-card-border py-2"
                               >
                                 <div>
-                                  <p className="text-sm">{t(`types.${type}`)}</p>
+                                  <p className="text-body">{t(`types.${type}`)}</p>
                                   {deliveryOf(type) === "push" && (
-                                    <p className="text-xs text-primary">{t("pushTag")}</p>
+                                    <p className="text-body-sm text-primary">{t("pushTag")}</p>
                                   )}
                                   {snooze && (
                                     <>
-                                      <p className="text-xs text-muted">
+                                      <p className="text-body-sm text-muted">
                                         {t.rich("snoozed", {
                                           time: () => <LocalTime value={snooze.until} />,
                                         })}
@@ -270,7 +270,7 @@ export function NotificationPreferencesPanel() {
                                       <button
                                         type="button"
                                         disabled={saving}
-                                        className="text-xs text-primary"
+                                        className="text-body-sm text-primary"
                                         onClick={() => void update(type, "unsnooze")}
                                       >
                                         {t("resume", { name: t(`types.${type}`) })}
@@ -297,7 +297,7 @@ export function NotificationPreferencesPanel() {
               });
             })()}
           </div>
-          <p className="mt-2 text-xs" role="status">
+          <p className="mt-2 text-body-sm" role="status">
             {message ? t(message) : ""}
           </p>
         </>

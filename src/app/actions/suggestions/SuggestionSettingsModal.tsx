@@ -38,7 +38,7 @@ export function SuggestionSettingsModal({
 }: SuggestionSettingsModalProps) {
   return (
     <Modal open={isOpen} title="Suggestion settings" onClose={onClose}>
-      <p className="text-sm text-muted mb-4">
+      <p className="text-body text-muted mb-4">
         Mute suggestion categories you don&apos;t want to see. Muted suggestions won&apos;t appear
         in your dashboard or indicator strip.
       </p>
@@ -53,11 +53,11 @@ export function SuggestionSettingsModal({
             >
               <div className="flex-1">
                 <div className="font-medium text-foreground">{category.label}</div>
-                <div className="text-xs text-muted mt-0.5">{category.description}</div>
+                <div className="text-body-sm text-muted mt-0.5">{category.description}</div>
               </div>
               <button
                 onClick={() => onMuteToggle(category.id)}
-                className={`ml-3 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                className={`ml-3 px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
                   isMuted
                     ? "bg-warning/20 text-warning hover:bg-warning/30"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"

@@ -50,10 +50,10 @@ export function CarveUpPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-muted">
+        <h3 className="text-body-lg font-semibold text-muted">
           {t("carveUp.title", { state: stateName })}
         </h3>
-        <div className="flex items-center gap-2 text-[10px]">
+        <div className="flex items-center gap-2 text-body-sm">
           <span className="text-muted">{displayCanadianRegionCode(stateId)}</span>
           {detailHref ? (
             <a href={detailHref} className="font-medium underline opacity-80 hover:opacity-100">
@@ -62,10 +62,10 @@ export function CarveUpPanel({
           ) : null}
         </div>
       </div>
-      <p className="mb-3 text-xs text-muted leading-snug">{t("carveUp.explanation")}</p>
+      <p className="mb-3 text-body-sm text-muted leading-snug">{t("carveUp.explanation")}</p>
 
       {!hasSlices ? (
-        <p className="text-xs italic text-muted">{t("carveUp.empty", { state: stateName })}</p>
+        <p className="text-body-sm italic text-muted">{t("carveUp.empty", { state: stateName })}</p>
       ) : (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div
@@ -82,7 +82,7 @@ export function CarveUpPanel({
               style={{ boxShadow: "inset 0 0 0 1px var(--card-border)" }}
             >
               <span className="text-body-sm font-medium text-muted">{t("carveUp.regBase")}</span>
-              <span className="text-lg font-bold tabular-nums">{registrationBase ?? "—"}</span>
+              <span className="text-heading font-bold tabular-nums">{registrationBase ?? "—"}</span>
             </div>
           </div>
           <div className="flex-1 min-w-0">
@@ -91,7 +91,7 @@ export function CarveUpPanel({
                 <span className="text-body-sm font-medium text-muted">
                   {t("carveUp.topDemographics")}
                 </span>
-                <span className="text-[11px]">{topDemographics.slice(0, 4).join(" · ")}</span>
+                <span className="text-body-sm">{topDemographics.slice(0, 4).join(" · ")}</span>
               </div>
             ) : null}
             <div className="flex flex-col gap-2">
@@ -102,7 +102,7 @@ export function CarveUpPanel({
                     style={{ backgroundColor: s.color }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2 text-xs">
+                    <div className="flex items-baseline justify-between gap-2 text-body-sm">
                       <span className="font-semibold truncate">{s.candidateName}</span>
                       <span className="tabular-nums font-bold" style={{ color: s.color }}>
                         {s.pct.toFixed(1)}%
@@ -110,7 +110,7 @@ export function CarveUpPanel({
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       {s.partyLabel ? (
-                        <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted">
+                        <span className="rounded-full border border-card-border px-1.5 py-0.5 text-body-sm uppercase tracking-wider text-muted">
                           {s.partyLabel}
                         </span>
                       ) : null}

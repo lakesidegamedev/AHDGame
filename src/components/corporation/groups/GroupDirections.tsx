@@ -7,7 +7,7 @@ import { CorporationLogo } from "../CorporationLogo";
 import type { GroupObjective } from "@/lib/corporations/groups/managementTypes";
 import type { GroupManagementView, useGroupManagement } from "./useGroupManagement";
 const button =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium disabled:opacity-50 enabled:hover:bg-card-elevated focus-visible:outline-2 focus-visible:outline-info";
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium disabled:opacity-50 enabled:hover:bg-card-elevated focus-visible:outline-2 focus-visible:outline-info";
 const objectives: GroupObjective[] = [
   "balanced",
   "profit",
@@ -28,19 +28,19 @@ export function GroupDirections({ data, busy, save }: Props) {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold">{t("directionUI.title")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("directionUI.subtitle")}</p>
+        <h2 className="text-heading font-semibold">{t("directionUI.title")}</h2>
+        <p className="mt-1 text-body text-muted">{t("directionUI.subtitle")}</p>
       </div>
-      <aside className="rounded-lg border border-info/25 bg-info/5 p-4 text-sm">
+      <aside className="rounded-lg border border-info/25 bg-info/5 p-4 text-body">
         <h3 className="font-semibold">{t("directionUI.operatorNote")}</h3>
         <p className="mt-1 text-muted">{t("directionNote")}</p>
       </aside>
       {!data.directionsEnabled && (
-        <p className="rounded-lg border border-gold/25 bg-gold/5 p-4 text-sm text-muted">
+        <p className="rounded-lg border border-gold/25 bg-gold/5 p-4 text-body text-muted">
           {t("directionsPending")}
         </p>
       )}
-      {!members.length && <p className="text-sm text-muted">{t("directionUI.empty")}</p>}
+      {!members.length && <p className="text-body text-muted">{t("directionUI.empty")}</p>}
       <div className="grid items-start gap-4 lg:grid-cols-2">
         {members.map((member) => (
           <DirectionCard
@@ -57,9 +57,9 @@ export function GroupDirections({ data, busy, save }: Props) {
         <div className="mt-4 grid gap-5 md:grid-cols-3">
           {["choose", "guard", "response"].map((step, i) => (
             <div key={step}>
-              <span className="text-xs text-gold">0{i + 1}</span>
-              <h4 className="mt-1 text-sm font-semibold">{t("directionUI." + step)}</h4>
-              <p className="mt-2 text-sm text-muted">{t("directionUI." + step + "Help")}</p>
+              <span className="text-body-sm text-gold">0{i + 1}</span>
+              <h4 className="mt-1 text-body font-semibold">{t("directionUI." + step)}</h4>
+              <p className="mt-2 text-body text-muted">{t("directionUI." + step + "Help")}</p>
             </div>
           ))}
         </div>
@@ -78,7 +78,7 @@ function DirectionCard({ member: m, data, busy, save }: Props & { member: Member
       <div className="flex items-start gap-3">
         <CorporationLogo logoUrl={m.logoUrl} name={m.name} size="h-10 w-10" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {m.tickerSymbol}{" "}
             {m.parentControl
               ? t("directionUI.votingControl", {
@@ -86,44 +86,46 @@ function DirectionCard({ member: m, data, busy, save }: Props & { member: Member
                 })
               : ""}
           </p>
-          <h3 className="break-words text-lg font-semibold">{m.name}</h3>
-          <span className="text-xs text-muted">
+          <h3 className="break-words text-body-lg font-semibold">{m.name}</h3>
+          <span className="text-body-sm text-muted">
             {npp ? t("nppDirection") : t("playerSuggestion")}
           </span>
         </div>
         <Compass size={18} className="shrink-0 text-gold" aria-hidden="true" />
       </div>
       <div className="border-t border-card-border pt-4">
-        <p className="text-xs uppercase tracking-wide text-muted">
+        <p className="text-body-sm uppercase tracking-wide text-muted">
           {t(npp ? "directionUI.current" : "directionUI.suggestion")}
         </p>
         <p className="mt-1 font-semibold">
           {d ? t("objectives." + d.objective) : t("noDirection")}
         </p>
         {d && (
-          <p className="mt-1 text-sm text-muted">{t("directionUI.descriptions." + d.objective)}</p>
+          <p className="mt-1 text-body text-muted">
+            {t("directionUI.descriptions." + d.objective)}
+          </p>
         )}
         <div className="mt-3 flex flex-wrap gap-2">
           {d?.regions.length ? (
             d.regions.map((id) => (
               <span
                 key={id}
-                className="max-w-full break-words rounded border border-card-border px-2 py-1 text-xs"
+                className="max-w-full break-words rounded border border-card-border px-2 py-1 text-body-sm"
               >
                 {regionNames.get(id) ?? id}
               </span>
             ))
           ) : (
-            <span className="text-xs text-muted">{t("directionUI.noRegions")}</span>
+            <span className="text-body-sm text-muted">{t("directionUI.noRegions")}</span>
           )}
         </div>
       </div>
       {d && (
-        <div className="space-y-2 rounded-lg bg-background p-3 text-sm" role="status">
+        <div className="space-y-2 rounded-lg bg-background p-3 text-body" role="status">
           <p className="font-medium">
             {t(npp ? "directionUI.saved" : "directionUI." + d.response)}
           </p>
-          <p className="text-xs text-muted">{t("directionUI.setTurn", { turn: d.setTurn })}</p>
+          <p className="text-body-sm text-muted">{t("directionUI.setTurn", { turn: d.setTurn })}</p>
           <p className="text-muted">
             {npp
               ? t("nppEffective", { turn: d.setTurn + 1 })
@@ -226,7 +228,7 @@ function DirectionEditor({
       }}
     >
       <fieldset className="min-w-0 space-y-4" disabled={busy}>
-        <label className="block text-sm">
+        <label className="block text-body">
           {t("objective")}
           <select
             aria-label={t("objective")}
@@ -250,22 +252,22 @@ function DirectionEditor({
             </optgroup>
           </select>
         </label>
-        <p id={id + "-objective"} className="text-sm text-muted">
+        <p id={id + "-objective"} className="text-body text-muted">
           {t("directionUI.descriptions." + objective)}
         </p>
-        <p className="text-xs text-muted">{t("directionUI.unavailableHelp")}</p>
+        <p className="text-body-sm text-muted">{t("directionUI.unavailableHelp")}</p>
         <fieldset className="min-w-0 space-y-2">
-          <legend className="text-sm font-medium">{t("regions")}</legend>
-          <p className="text-xs text-muted">{t("directionUI.regionHelp")}</p>
+          <legend className="text-body font-medium">{t("regions")}</legend>
+          <p className="text-body-sm text-muted">{t("directionUI.regionHelp")}</p>
           <input
             type="search"
             aria-label={t("directionUI.search")}
             placeholder={t("directionUI.search")}
-            className="w-full rounded border border-card-border bg-background p-2 text-sm"
+            className="w-full rounded border border-card-border bg-background p-2 text-body"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <p className="text-xs text-muted" aria-live="polite">
+          <p className="text-body-sm text-muted" aria-live="polite">
             {t("directionUI.selected", { count: regions.length })}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -275,7 +277,7 @@ function DirectionEditor({
                 <button
                   key={region}
                   type="button"
-                  className="max-w-full break-words rounded border border-card-border px-2 py-1 text-xs hover:bg-card-elevated"
+                  className="max-w-full break-words rounded border border-card-border px-2 py-1 text-body-sm hover:bg-card-elevated"
                   aria-label={t("directionUI.removeRegion", { region: name })}
                   onClick={() => setRegions((prev) => prev.filter((r) => r !== region))}
                 >
@@ -286,7 +288,7 @@ function DirectionEditor({
           </div>
           <div className="max-h-48 overflow-y-auto rounded border border-card-border p-2">
             {choices.map((r) => (
-              <label key={r.id} className="flex items-start gap-2 p-1 text-sm">
+              <label key={r.id} className="flex items-start gap-2 p-1 text-body">
                 <input
                   type="checkbox"
                   className="mt-1"
@@ -303,12 +305,14 @@ function DirectionEditor({
                 </span>
               </label>
             ))}
-            {!choices.length && <p className="text-sm text-muted">{t("directionUI.noMatches")}</p>}
+            {!choices.length && (
+              <p className="text-body text-muted">{t("directionUI.noMatches")}</p>
+            )}
           </div>
         </fieldset>
         {npp ? (
           <div>
-            <label className="flex items-start gap-2 text-sm font-medium">
+            <label className="flex items-start gap-2 text-body font-medium">
               <input
                 type="checkbox"
                 className="mt-1"
@@ -317,8 +321,8 @@ function DirectionEditor({
               />
               {t("investment")}
             </label>
-            <p className="mt-2 text-xs text-muted">{t("directionUI.investmentHelp")}</p>
-            <label className="mt-4 flex items-start gap-2 text-sm font-medium">
+            <p className="mt-2 text-body-sm text-muted">{t("directionUI.investmentHelp")}</p>
+            <label className="mt-4 flex items-start gap-2 text-body font-medium">
               <input
                 type="checkbox"
                 className="mt-1"
@@ -327,16 +331,16 @@ function DirectionEditor({
               />
               {t("primaryIndustryOnly")}
             </label>
-            <p className="mt-2 text-xs text-muted">{t("primaryIndustryOnlyHelp")}</p>
+            <p className="mt-2 text-body-sm text-muted">{t("primaryIndustryOnlyHelp")}</p>
           </div>
         ) : (
-          <p className="rounded-lg bg-info/5 p-3 text-sm text-muted">
+          <p className="rounded-lg bg-info/5 p-3 text-body text-muted">
             {t("directionUI.playerHelp")}
           </p>
         )}
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-error">
+        <p role="alert" className="text-body text-error">
           {error}
         </p>
       )}

@@ -5,9 +5,9 @@ import { fetchJson } from "@/lib/observability/fetchJson";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 const INPUT_CLASS =
-  "w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary";
+  "w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-body text-white placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary";
 const BUTTON_CLASS =
-  "text-sm px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+  "text-body px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
 type GeneralKey = "game" | "news" | "suggestions" | "changelog";
 
@@ -89,8 +89,8 @@ function WebhookField({
   return (
     <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
       <div>
-        <label className="block text-sm font-medium text-white mb-1">{label}</label>
-        <p className="text-xs text-muted mb-2">{description}</p>
+        <label className="block text-body font-medium text-white mb-1">{label}</label>
+        <p className="text-body-sm text-muted mb-2">{description}</p>
         <input
           type="url"
           value={value}
@@ -302,8 +302,8 @@ export function DiscordIntegrations() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-1">Discord webhooks</h3>
-        <p className="text-sm text-muted">
+        <h3 className="text-body-lg font-semibold text-white mb-1">Discord webhooks</h3>
+        <p className="text-body text-muted">
           Configure Discord webhook URLs to broadcast game events and player news posts. Leave blank
           to disable. Country channels are listed for every country enabled for players.
         </p>
@@ -366,15 +366,17 @@ export function DiscordIntegrations() {
         ))}
 
         <div className="pt-2">
-          <h4 className="text-sm font-semibold text-white mb-1">Country events</h4>
-          <p className="text-xs text-muted mb-3">
+          <h4 className="text-body font-semibold text-white mb-1">Country events</h4>
+          <p className="text-body-sm text-muted mb-3">
             One channel per player-enabled country. Enable or disable countries in Admin Panel &gt;
             Countries — a disabled country&apos;s URL is retained but its channel stops receiving
             events.
           </p>
           <div className="space-y-4">
             {countries.length === 0 ? (
-              <p className="text-xs text-muted">No countries are currently enabled for players.</p>
+              <p className="text-body-sm text-muted">
+                No countries are currently enabled for players.
+              </p>
             ) : (
               countries.map((country) => (
                 <WebhookField
@@ -399,20 +401,22 @@ export function DiscordIntegrations() {
 
         <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-white mb-1">
+            <label className="block text-body font-medium text-white mb-1">
               Test election results
             </label>
-            <p className="text-xs text-muted mb-3">
+            <p className="text-body-sm text-muted mb-3">
               Send test election result embeds using the most recent election data. Each
               country&apos;s tests go to its own webhook, with global fallback.
             </p>
           </div>
           {countries.length === 0 ? (
-            <p className="text-xs text-muted">No countries are currently enabled for players.</p>
+            <p className="text-body-sm text-muted">
+              No countries are currently enabled for players.
+            </p>
           ) : (
             countries.map((country) => (
               <div key={country.countryId} className="space-y-1">
-                <p className="text-xs font-medium text-white">
+                <p className="text-body-sm font-medium text-white">
                   {country.flagEmoji} {country.name}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -437,20 +441,22 @@ export function DiscordIntegrations() {
       </div>
 
       {loadFailed && (
-        <p className="text-sm text-red-400">
+        <p className="text-body text-red-400">
           Could not load the current webhook configuration. Saving is disabled so existing webhooks
           are not overwritten — refresh to try again.
         </p>
       )}
 
       {message && (
-        <p className={`text-sm ${message.type === "success" ? "text-green-400" : "text-red-400"}`}>
+        <p
+          className={`text-body ${message.type === "success" ? "text-green-400" : "text-red-400"}`}
+        >
           {message.text}
         </p>
       )}
 
       {ownershipConflict && (
-        <p className="text-sm text-amber-400">
+        <p className="text-body text-amber-400">
           Taking these webhooks over points this deployment&apos;s game events at the channels
           above. Do it only if this deployment is meant to be the one posting to them.
         </p>
@@ -462,7 +468,7 @@ export function DiscordIntegrations() {
         <button
           onClick={() => handleSave()}
           disabled={saving || !loaded}
-          className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+          className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-body font-medium hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
         >
           {saving ? "Saving…" : "Save webhooks"}
         </button>
@@ -471,7 +477,7 @@ export function DiscordIntegrations() {
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="px-4 py-2 rounded-md border border-amber-500 text-amber-300 text-sm font-medium hover:bg-amber-500/10 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 rounded-md border border-amber-500 text-amber-300 text-body font-medium hover:bg-amber-500/10 disabled:opacity-50 transition-colors"
           >
             Take ownership and save
           </button>

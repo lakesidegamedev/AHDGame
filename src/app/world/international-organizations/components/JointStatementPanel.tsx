@@ -84,8 +84,8 @@ export function JointStatementPanel({
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Joint statements</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Joint statements</h3>
+          <p className="text-body-sm text-muted">
             A bloc declaration about a country. An endorsement lifts that government&apos;s
             approval, a condemnation hurts it, for a limited time. Passes by a majority of the
             members that hold a vote.
@@ -104,17 +104,17 @@ export function JointStatementPanel({
 
       {showForm && proposerIsMember && proposer && canTable && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Table a joint statement</h4>
+          <h4 className="text-body font-semibold text-foreground">Table a joint statement</h4>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted" htmlFor="statement-subject">
+              <label className="text-body-sm font-medium text-muted" htmlFor="statement-subject">
                 Subject country
               </label>
               <select
                 id="statement-subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value as CountryId)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="">Select…</option>
                 {COUNTRY_ORDER.map((c) => (
@@ -125,21 +125,21 @@ export function JointStatementPanel({
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted" htmlFor="statement-stance">
+              <label className="text-body-sm font-medium text-muted" htmlFor="statement-stance">
                 Stance
               </label>
               <select
                 id="statement-stance"
                 value={stance}
                 onChange={(e) => setStance(e.target.value as Stance)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="endorse">Endorse (+ approval)</option>
                 <option value="condemn">Condemn (− approval)</option>
               </select>
             </div>
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Submit for a vote
@@ -169,11 +169,11 @@ export function JointStatementPanel({
                 }`}
               >
                 <div>
-                  <h5 className="text-sm font-semibold text-foreground">
+                  <h5 className="text-body font-semibold text-foreground">
                     {stanceLabel(l.jointStatementStance)} of{" "}
                     {name(l.jointStatementSubjectCountryId)}
                   </h5>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     {condemn
                       ? "Lowers the subject government's approval"
                       : "Raises the subject government's approval"}
@@ -186,7 +186,7 @@ export function JointStatementPanel({
                   </p>
                 </div>
                 <span
-                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                  className={`rounded-full border px-2 py-0.5 text-body-sm font-medium ${
                     condemn
                       ? "border-error/30 bg-error/10 text-error"
                       : "border-success/30 bg-success/10 text-success"
@@ -205,7 +205,7 @@ export function JointStatementPanel({
         <h4 className="text-body-sm font-medium text-muted">Awaiting a vote</h4>
         {pending.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No pending statements.</p>
+            <p className="text-body text-muted">No pending statements.</p>
           </div>
         ) : (
           pending.map((l) => {
@@ -221,10 +221,10 @@ export function JointStatementPanel({
                 votingWindowTurns={votingWindowTurns}
                 onVote={vote}
               >
-                <h5 className="text-sm font-semibold text-foreground">
+                <h5 className="text-body font-semibold text-foreground">
                   {stanceLabel(l.jointStatementStance)} of {name(l.jointStatementSubjectCountryId)}
                 </h5>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="mt-0.5 text-body-sm text-muted">
                   Tabled by {l.proposedByCharacterName} · closes in {turnsLeft} turn
                   {turnsLeft === 1 ? "" : "s"}
                 </p>

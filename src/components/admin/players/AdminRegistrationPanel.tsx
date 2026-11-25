@@ -67,7 +67,7 @@ export function AdminRegistrationPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading admin registration status...</span>
+          <span className="text-body text-muted">Loading admin registration status...</span>
         </div>
       </div>
     );
@@ -108,8 +108,8 @@ export function AdminRegistrationPanel() {
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold">Admin registration</h3>
-            <p className="text-xs text-muted">
+            <h3 className="text-body-lg font-semibold">Admin registration</h3>
+            <p className="text-body-sm text-muted">
               {isEnabled
                 ? "Anyone with the admin key can register as an admin"
                 : "Admin registration is disabled — existing admins can still sign in"}
@@ -119,7 +119,7 @@ export function AdminRegistrationPanel() {
 
         {/* Status badge */}
         <span
-          className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
+          className="rounded-full px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wider"
           style={{
             background: isEnabled ? "rgba(234, 179, 8, 0.15)" : "rgba(34, 197, 94, 0.15)",
             color: isEnabled ? "var(--warning)" : "var(--success)",
@@ -131,7 +131,7 @@ export function AdminRegistrationPanel() {
 
       {/* Disabled-by info */}
       {!isEnabled && status?.disabledBy && (
-        <div className="mb-4 rounded-lg border border-muted/20 bg-muted/5 p-3 text-xs text-muted">
+        <div className="mb-4 rounded-lg border border-muted/20 bg-muted/5 p-3 text-body-sm text-muted">
           Disabled by <span className="font-medium text-foreground">{status.disabledBy}</span>
           {status.disabledAt && (
             <>
@@ -147,7 +147,7 @@ export function AdminRegistrationPanel() {
 
       {/* Secret status warning */}
       {!status?.hasSecret && (
-        <div className="mb-4 rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
+        <div className="mb-4 rounded-lg border border-warning/30 bg-warning/5 p-3 text-body-sm text-warning">
           <span className="font-medium">ADMIN_REGISTRATION_KEY</span> environment variable is not
           set. You must set it before admins can register, even when this toggle is on.
         </div>
@@ -155,14 +155,14 @@ export function AdminRegistrationPanel() {
 
       {/* Open-state warning */}
       {isEnabled && status?.hasSecret && (
-        <div className="mb-4 rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-muted">
+        <div className="mb-4 rounded-lg border border-warning/20 bg-warning/5 p-3 text-body-sm text-muted">
           Admin registration is currently open. Anyone who knows the key can grant themselves admin
           privileges. Disable this once your admin team is set up.
         </div>
       )}
 
       {error && (
-        <div className="mb-3 rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
+        <div className="mb-3 rounded-lg border border-error/30 bg-error/10 p-2 text-body-sm text-error">
           {error}
         </div>
       )}
@@ -172,7 +172,7 @@ export function AdminRegistrationPanel() {
         type="button"
         onClick={handleToggle}
         disabled={toggling || (!isEnabled && !status?.hasSecret)}
-        className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+        className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-body font-medium text-white transition-colors disabled:opacity-50"
         style={{
           background: isEnabled ? "var(--success)" : "var(--warning)",
         }}

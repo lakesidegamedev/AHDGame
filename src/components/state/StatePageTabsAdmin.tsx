@@ -263,7 +263,7 @@ export function AdminTab({
           </svg>
           <div>
             <h3 className="font-semibold text-red-400">Admin controls</h3>
-            <p className="text-sm text-red-300/80 mt-1">
+            <p className="text-body text-red-300/80 mt-1">
               These controls allow you to manually assign or remove players and NPPs from elected
               positions. Use with caution - changes take effect immediately.
             </p>
@@ -273,7 +273,7 @@ export function AdminTab({
 
       {message && (
         <div
-          className={`rounded-lg px-4 py-3 text-sm ${
+          className={`rounded-lg px-4 py-3 text-body ${
             message.type === "success"
               ? "bg-green-500/10 border border-green-500/30 text-green-400"
               : "bg-red-500/10 border border-red-500/30 text-red-400"
@@ -285,7 +285,7 @@ export function AdminTab({
 
       {/* Assign Seats Section */}
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <h3 className="text-lg font-semibold mb-4">Vacant seats in {state.name}</h3>
+        <h3 className="text-body-lg font-semibold mb-4">Vacant seats in {state.name}</h3>
 
         {vacantSeats ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -296,7 +296,7 @@ export function AdminTab({
               .map((group) => {
                 const roman = ["I", "II", "III"];
                 const btnClass = (selected: boolean, vacant: boolean) =>
-                  `w-full flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-colors ${
+                  `w-full flex items-center justify-between rounded-lg border px-4 py-3 text-body transition-colors ${
                     selected
                       ? "border-primary bg-primary/10 text-primary"
                       : vacant
@@ -308,7 +308,7 @@ export function AdminTab({
                 if (group.kind === "classedUpper") {
                   return (
                     <div key={group.officeType} className="space-y-2">
-                      <h4 className="text-sm font-medium text-muted">
+                      <h4 className="text-body font-medium text-muted">
                         {group.groupLabel} ({group.classes?.length ?? 0} positions)
                       </h4>
                       <div className="space-y-2">
@@ -352,7 +352,7 @@ export function AdminTab({
                 const isVacant = group.vacant > 0;
                 return (
                   <div key={group.officeType} className="space-y-2">
-                    <h4 className="text-sm font-medium text-muted">{group.groupLabel}</h4>
+                    <h4 className="text-body font-medium text-muted">{group.groupLabel}</h4>
                     <button
                       onClick={() =>
                         isVacant &&
@@ -387,18 +387,18 @@ export function AdminTab({
       {/* Assignment Form */}
       {selectedSeat && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-6">
-          <h3 className="text-lg font-semibold mb-4">Assign {selectedSeat.label}</h3>
+          <h3 className="text-body-lg font-semibold mb-4">Assign {selectedSeat.label}</h3>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-muted mb-2">Politician type</label>
+              <label className="block text-body font-medium text-muted mb-2">Politician type</label>
               <div className="flex rounded-lg border border-card-border overflow-hidden">
                 <button
                   onClick={() => {
                     setEntityType("player");
                     setSelectedEntityId("");
                   }}
-                  className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`flex-1 px-4 py-2 text-body font-medium transition-colors ${
                     entityType === "player"
                       ? "bg-primary text-primary-foreground"
                       : "bg-card text-muted hover:text-foreground"
@@ -411,7 +411,7 @@ export function AdminTab({
                     setEntityType("npp");
                     setSelectedEntityId("");
                   }}
-                  className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`flex-1 px-4 py-2 text-body font-medium transition-colors ${
                     entityType === "npp"
                       ? "bg-purple-500 text-white"
                       : "bg-card text-muted hover:text-foreground"
@@ -423,13 +423,13 @@ export function AdminTab({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-muted mb-2">
+              <label className="block text-body font-medium text-muted mb-2">
                 Select {entityType === "player" ? "Player" : "NPP"}
               </label>
               <select
                 value={selectedEntityId}
                 onChange={(e) => setSelectedEntityId(e.target.value)}
-                className="w-full rounded-lg border border-card-border bg-background px-4 py-2 text-sm focus:outline-none focus:border-primary"
+                className="w-full rounded-lg border border-card-border bg-background px-4 py-2 text-body focus:outline-none focus:border-primary"
               >
                 <option value="">-- Select --</option>
                 {availableEntities.map((e) => (
@@ -442,7 +442,7 @@ export function AdminTab({
 
             {selectedSeat.multiSeat && (
               <div>
-                <label className="block text-sm font-medium text-muted mb-2">
+                <label className="block text-body font-medium text-muted mb-2">
                   Seats to Assign (max {selectedSeat.max})
                 </label>
                 <input
@@ -455,7 +455,7 @@ export function AdminTab({
                       Math.max(1, Math.min(selectedSeat.max, parseInt(e.target.value) || 1))
                     );
                   }}
-                  className="w-full rounded-lg border border-card-border bg-background px-4 py-2 text-sm focus:outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-card-border bg-background px-4 py-2 text-body focus:outline-none focus:border-primary"
                 />
               </div>
             )}
@@ -466,14 +466,14 @@ export function AdminTab({
                   setSelectedSeat(null);
                   setSelectedEntityId("");
                 }}
-                className="flex-1 rounded-lg border border-card-border bg-card py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+                className="flex-1 rounded-lg border border-card-border bg-card py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAssign}
                 disabled={loading || !selectedEntityId}
-                className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+                className="flex-1 rounded-lg bg-primary py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {loading ? "Assigning..." : "Assign seat"}
               </button>
@@ -485,8 +485,8 @@ export function AdminTab({
       {/* Remove Officials Section */}
       {vacantSeats && vacantSeats.filledOfficials.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h3 className="text-lg font-semibold mb-4">Current officials</h3>
-          <p className="text-sm text-muted mb-4">
+          <h3 className="text-body-lg font-semibold mb-4">Current officials</h3>
+          <p className="text-body text-muted mb-4">
             Click the remove button to vacate a position. This will clear the official&apos;s
             currentOffice field.
           </p>
@@ -498,8 +498,8 @@ export function AdminTab({
               >
                 <div className="flex items-center gap-3">
                   <div>
-                    <div className="font-medium text-sm">{official.characterName}</div>
-                    <div className="text-xs text-muted">
+                    <div className="font-medium text-body">{official.characterName}</div>
+                    <div className="text-body-sm text-muted">
                       {getOfficeLabel(official)}
                       {official.party && ` · ${official.party}`}
                       {official.isNPP && <span className="ml-1 text-purple-400">(NPP)</span>}
@@ -509,7 +509,7 @@ export function AdminTab({
                 <button
                   onClick={() => handleRemove(official._id)}
                   disabled={loading}
-                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
                 >
                   Remove
                 </button>

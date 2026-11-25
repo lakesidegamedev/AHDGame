@@ -363,8 +363,8 @@ export default function CountryComparePanel({ fullscreen = false }: { fullscreen
       )}
       {chartPair && (
         <div className="mt-4">
-          <h3 className="text-body-sm font-semibold">Recent path</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-semibold">Recent path</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             Both nations on one scale per series, positioned by turn.
           </p>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -479,7 +479,7 @@ function SeriesChart({
     <div className="rounded-lg border border-card-border bg-card px-3 py-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-body-sm font-medium text-muted">{title}</span>
-        <span className="text-[10px] tabular-nums text-muted">
+        <span className="text-body-sm tabular-nums text-muted">
           {chart.min.toFixed(1)} to {chart.max.toFixed(1)}%
         </span>
       </div>
@@ -509,7 +509,7 @@ function SeriesChart({
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted">
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-body-sm text-muted">
         {[chart.latestA, chart.latestB].map((latest, index) => (
           <span key={index} className="flex items-center gap-1">
             <span

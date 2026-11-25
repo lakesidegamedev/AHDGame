@@ -73,7 +73,7 @@ export function EndorseControl({
           borderRadius: 8,
           cursor: busy ? "default" : "pointer",
           fontFamily: FONT.sans,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 600,
           background: "transparent",
           color: BLEND.ink,
@@ -83,9 +83,7 @@ export function EndorseControl({
       >
         {endorsed ? t("unendorse") : t("endorse")}
       </button>
-      {endorsed ? (
-        <span style={{ fontSize: 12.5, color: BLEND.muted }}>{t("endorsed")}</span>
-      ) : null}
+      {endorsed ? <span style={{ fontSize: 12, color: BLEND.muted }}>{t("endorsed")}</span> : null}
     </div>
   );
 }

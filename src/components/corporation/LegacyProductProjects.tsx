@@ -130,19 +130,19 @@ export function LegacyProductProjects({
   return (
     <DenseSection title="Earlier product projects" meta="started before the product studio">
       {developing.length > 0 && (
-        <p className="py-1 text-sm text-warning">
+        <p className="py-1 text-body text-warning">
           {developing.length === 1
             ? `${developing[0]!.label} is still in development. Until it is paid for, it uses up to ${sharePct}% of your R&D budget each turn, and the rest goes to research. Retire it to give research the whole budget again.`
             : `${developing.length} earlier projects are still in development. Until they are paid for, they share up to ${sharePct}% of your R&D budget each turn, and the rest goes to research. Retire them to give research the whole budget again.`}
         </p>
       )}
-      <p className="py-1 text-sm text-muted">
+      <p className="py-1 text-body text-muted">
         These keep running until they retire and cannot be restarted. Start new products in the
         studio below.
       </p>
       <InlineStatus message={message} tone="error" className="py-1" />
       <TableScroll>
-        <table className="w-full text-sm" aria-label="Earlier product projects">
+        <table className="w-full text-body" aria-label="Earlier product projects">
           <thead>
             <tr>
               <Th>Project</Th>

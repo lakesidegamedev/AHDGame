@@ -24,7 +24,7 @@ export function TickChip({ tick, isHigherBetter, suffix = "" }: TickChipProps) {
   return (
     <span
       title={tooltip}
-      className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded border px-1 text-[10px] font-semibold tabular-nums ${
+      className={`inline-flex items-center gap-0.5 whitespace-nowrap rounded border px-1 text-body-sm font-semibold tabular-nums ${
         good ? "border-success/40 text-success" : "border-error/40 text-error"
       }`}
     >

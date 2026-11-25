@@ -100,14 +100,14 @@ function MechanicBlock({
   return (
     <div className="rounded-md border border-card-border bg-card-elevated/55 p-3">
       <div className="flex flex-wrap items-baseline gap-2">
-        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-[0.08em] text-primary">
           {kind}
         </span>
-        <h4 className="text-sm font-semibold text-foreground">{clean(name)}</h4>
+        <h4 className="text-body font-semibold text-foreground">{clean(name)}</h4>
       </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">{clean(description)}</p>
+      <p className="mt-1.5 text-body leading-relaxed text-muted">{clean(description)}</p>
       {lines && lines.length > 0 && (
-        <ul className="mt-2 space-y-1 text-sm text-muted">
+        <ul className="mt-2 space-y-1 text-body text-muted">
           {lines.map((l) => (
             <li key={l.title}>
               <span className="font-medium text-foreground">{clean(l.title)}:</span>{" "}
@@ -142,12 +142,12 @@ function SeatCard({
   return (
     <section className="rounded-lg border border-card-border bg-card/45 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-base font-semibold text-foreground">{clean(position.name)}</h3>
-        {m?.department && <span className="text-xs text-muted">{clean(m.department)}</span>}
+        <h3 className="text-body-lg font-semibold text-foreground">{clean(position.name)}</h3>
+        {m?.department && <span className="text-body-sm text-muted">{clean(m.department)}</span>}
       </div>
 
       {position.isHeadOfGovernment && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Head of government seat: filled through government formation, not cabinet appointment.
         </p>
       )}
@@ -159,7 +159,7 @@ function SeatCard({
               {m.nationalMetrics.map((cfg) => (
                 <span
                   key={`n-${cfg.metricId}`}
-                  className="rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-xs text-foreground"
+                  className="rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm text-foreground"
                 >
                   {cfg.label}
                 </span>
@@ -169,7 +169,7 @@ function SeatCard({
                 .map((cfg) => (
                   <span
                     key={`r-${cfg.metricId}`}
-                    className="rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-xs text-muted"
+                    className="rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm text-muted"
                   >
                     {cfg.label} (regional)
                   </span>
@@ -178,14 +178,14 @@ function SeatCard({
           )}
 
           {m.singleRegionFocus && (
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 text-body text-muted">
               Territorial seat: the office dashboard focuses on the {m.singleRegionFocus} region
               only.
             </p>
           )}
 
           {m.comingSoon ? (
-            <p className="mt-3 rounded-md border border-card-border bg-card-elevated/55 p-3 text-sm text-muted">
+            <p className="mt-3 rounded-md border border-card-border bg-card-elevated/55 p-3 text-body text-muted">
               This seat&apos;s active mechanics are coming soon. It still tracks the metrics above
               and counts as a full cabinet appointment.
             </p>
@@ -292,7 +292,7 @@ function SeatCard({
           )}
         </>
       ) : (
-        <p className="mt-3 text-sm text-muted">
+        <p className="mt-3 text-body text-muted">
           No active office mechanics for this seat yet. It still counts as a full cabinet
           appointment.
         </p>
@@ -300,8 +300,8 @@ function SeatCard({
 
       {(estateArchetypes.length > 0 || hasEnergy || hasInfra) && (
         <div className="mt-3 rounded-md border border-card-border bg-card-elevated/55 p-3">
-          <h4 className="text-sm font-semibold text-foreground">Can build</h4>
-          <ul className="mt-1.5 space-y-1 text-sm text-muted">
+          <h4 className="text-body font-semibold text-foreground">Can build</h4>
+          <ul className="mt-1.5 space-y-1 text-body text-muted">
             {estateArchetypes.map((a) => (
               <li key={a.id}>
                 <span className="font-medium text-foreground">{a.label}:</span>{" "}
@@ -324,7 +324,7 @@ function SeatCard({
               </li>
             )}
           </ul>
-          <p className="mt-1.5 text-xs text-muted">
+          <p className="mt-1.5 text-body-sm text-muted">
             See the <Link href="/wiki/cabinet-projects">Cabinet projects &amp; buildings</Link>{" "}
             guide for tiers, funding levels, and budget envelopes.
           </p>
@@ -359,7 +359,7 @@ export function CabinetGuide() {
               role="tab"
               aria-selected={active}
               onClick={() => setCountry(tab.id)}
-              className={`rounded px-3 py-1.5 text-sm font-semibold transition-colors ${
+              className={`rounded px-3 py-1.5 text-body font-semibold transition-colors ${
                 active
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground"

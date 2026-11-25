@@ -42,9 +42,9 @@ export function ProjectCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-foreground">{project.name}</span>
+              <span className="text-body-sm font-semibold text-foreground">{project.name}</span>
               <span
-                className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+                className={`rounded border px-1.5 py-0.5 text-body-sm font-semibold ${
                   isOperational
                     ? "border-success/40 bg-success/10 text-success"
                     : "border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] text-gov-soft"
@@ -53,13 +53,13 @@ export function ProjectCard({
                 {isOperational ? "Operational" : "Under construction"}
               </span>
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
+            <div className="mt-0.5 flex items-center gap-2 text-body-sm text-muted">
               <span>{regionName}</span>
             </div>
             {!isOperational && (
               <div className="mt-2">
                 <ProgressBar pct={project.progressPct} />
-                <div className="mt-1 flex justify-between text-[10px] text-muted">
+                <div className="mt-1 flex justify-between text-body-sm text-muted">
                   <span>{project.progressPct}% built</span>
                   <span>≈ {project.turnsRemaining} turns left</span>
                 </div>
@@ -86,7 +86,7 @@ export function ProjectCard({
           <button
             disabled={!canAct || busy}
             onClick={() => setConfirmDelete(true)}
-            className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-[12px] font-semibold text-error hover:bg-error/20 disabled:opacity-50"
+            className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-50"
           >
             Retire project
           </button>
@@ -102,7 +102,7 @@ export function ProjectCard({
                     onClick={() =>
                       onAction("POST", `${basePath}/${project._id}/funding`, { fundingLevel: f.id })
                     }
-                    className={`rounded-lg border px-2.5 py-1.5 text-[12px] disabled:opacity-50 ${
+                    className={`rounded-lg border px-2.5 py-1.5 text-body-sm disabled:opacity-50 ${
                       project.fundingLevel === f.id
                         ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] text-gov-soft"
                         : "border-card-border bg-card text-muted hover:text-foreground"
@@ -116,7 +116,7 @@ export function ProjectCard({
             <button
               disabled={!canAct || busy}
               onClick={() => setConfirmDelete(true)}
-              className="self-end rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-[12px] font-semibold text-error hover:bg-error/20 disabled:opacity-50"
+              className="self-end rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-50"
             >
               Cancel project
             </button>

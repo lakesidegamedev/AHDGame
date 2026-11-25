@@ -23,8 +23,8 @@ export function HealDiscordUsers() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal player account linkage</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal player account linkage</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Detects and fixes missing activeCharacterId links, broken character references, and
           characters missing countryId. Affects Discord-registered and legacy accounts.
         </p>
@@ -33,12 +33,12 @@ export function HealDiscordUsers() {
       <HealPanelActions loading={loading} onDiagnose={runDiagnostic} onHeal={runHeal} />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 text-xs space-y-1">
+        <div className="rounded-lg border border-card-border bg-background p-3 text-body-sm space-y-1">
           <p className={diagnostic.status === "ok" ? "text-success" : "text-error"}>
             {diagnostic.message}
           </p>
           {diagnostic.status !== "ok" && (
-            <div className="text-muted text-xs space-y-0.5 mt-2">
+            <div className="text-muted text-body-sm space-y-0.5 mt-2">
               <p>
                 • Missing activeCharacterId:{" "}
                 <span className="font-semibold">{diagnostic.usersWithoutActiveCharacterId}</span>

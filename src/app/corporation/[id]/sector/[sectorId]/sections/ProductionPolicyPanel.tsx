@@ -27,13 +27,13 @@ export default function ProductionPolicyPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="mb-1 text-lg font-bold text-foreground">Production policy</h2>
-      <p className="text-xs text-muted mb-4">
+      <h2 className="mb-1 text-heading font-bold text-foreground">Production policy</h2>
+      <p className="text-body-sm text-muted mb-4">
         Output intensity level. High policy favors output over input efficiency; low policy
         aggressively cuts input costs. Trends toward target at 1 point per turn.
       </p>
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-xs text-muted w-24">
+        <span className="text-body-sm text-muted w-24">
           Active:{" "}
           <span
             className={
@@ -46,7 +46,7 @@ export default function ProductionPolicyPanel({
             {sector.productionPolicyLevel}%
           </span>
         </span>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           Target:{" "}
           <span className="text-foreground font-medium">
             {sector.productionPolicy >= 0 ? "+" : ""}
@@ -57,25 +57,25 @@ export default function ProductionPolicyPanel({
       {/* Effect breakdown */}
       <div className="mb-4 grid grid-cols-3 gap-2 rounded-lg border border-card-border bg-background/50 p-3">
         <div className="text-center">
-          <div className="text-xs text-muted">Revenue</div>
+          <div className="text-body-sm text-muted">Revenue</div>
           <div
-            className={`text-sm font-semibold ${toneFor(effects.revenue.multiplier, "text-success", "text-error")}`}
+            className={`text-body font-semibold ${toneFor(effects.revenue.multiplier, "text-success", "text-error")}`}
           >
             {effects.revenue.label}
           </div>
         </div>
         <div className="text-center">
-          <div className="text-xs text-muted">Output (supply)</div>
+          <div className="text-body-sm text-muted">Output (supply)</div>
           <div
-            className={`text-sm font-semibold ${toneFor(effects.output.multiplier, "text-success", "text-error")}`}
+            className={`text-body font-semibold ${toneFor(effects.output.multiplier, "text-success", "text-error")}`}
           >
             {effects.output.label}
           </div>
         </div>
         <div className="text-center">
-          <div className="text-xs text-muted">Input (demand)</div>
+          <div className="text-body-sm text-muted">Input (demand)</div>
           <div
-            className={`text-sm font-semibold ${toneFor(effects.input.multiplier, "text-warning", "text-success")}`}
+            className={`text-body font-semibold ${toneFor(effects.input.multiplier, "text-warning", "text-success")}`}
           >
             {effects.input.label}
           </div>
@@ -100,20 +100,20 @@ export default function ProductionPolicyPanel({
               step={1}
               value={policyDraft}
               onChange={(e) => onPolicyChange(Math.max(-25, Math.min(25, Number(e.target.value))))}
-              className="w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+              className="w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
             />
-            <span className="text-sm text-muted">%</span>
+            <span className="text-body text-muted">%</span>
             <button
               onClick={onSave}
               disabled={policySaving}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {policySaving ? "Saving..." : "Set target"}
             </button>
           </div>
           {policyMessage && (
             <p
-              className={`text-xs font-medium ${
+              className={`text-body-sm font-medium ${
                 policyMessage.startsWith("Target") ? "text-success" : "text-error"
               }`}
             >

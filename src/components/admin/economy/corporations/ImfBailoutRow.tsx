@@ -43,7 +43,7 @@ export function ImfBailoutRow({
   return (
     <tr>
       <td colSpan={9} className="px-4 py-3 bg-background/40 border-t border-card-border">
-        <div className="space-y-3 text-xs">
+        <div className="space-y-3 text-body-sm">
           <p className="text-muted">
             Activate: bond haircut + IMF share issuance + facility (₳). Amounts are anchor units.
             Requires an IMF institution corp (seed form above or Server Setup). Preview uses last
@@ -138,7 +138,7 @@ export function ImfBailoutRow({
                     Outstanding bonds (pre-haircut → facility anchor)
                   </p>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-[11px]">
+                    <table className="w-full text-left border-collapse text-body-sm">
                       <thead>
                         <tr className="border-b border-card-border text-muted">
                           <th className="py-1 pr-2">Bond</th>
@@ -170,7 +170,7 @@ export function ImfBailoutRow({
                 </p>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-body-sm">
                 <p>
                   <span className="text-muted">Facility principal (₳):</span>{" "}
                   {fmt(imfPreview.facilityPrincipal)}
@@ -209,7 +209,7 @@ export function ImfBailoutRow({
                 </p>
               )}
               {imfPreview.mode === "preview" && imfPreview.note && (
-                <p className="text-muted text-[10px]">{imfPreview.note}</p>
+                <p className="text-muted text-body-sm">{imfPreview.note}</p>
               )}
             </div>
           )}
@@ -219,7 +219,7 @@ export function ImfBailoutRow({
               <button
                 onClick={() => onActivate(row.id)}
                 disabled={actionLoading === row.id}
-                className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
+                className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
               >
                 Activate IMF bailout
               </button>
@@ -228,7 +228,7 @@ export function ImfBailoutRow({
               <button
                 onClick={() => onSaveIncomeCapture(row.id)}
                 disabled={actionLoading === row.id || imfPreviewLoading}
-                className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
+                className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
               >
                 Save income capture %
               </button>
@@ -236,13 +236,13 @@ export function ImfBailoutRow({
             <button
               onClick={() => onEnd(row.id)}
               disabled={actionLoading === row.id || !row.imfBailoutActive}
-              className="text-xs px-3 py-1 rounded border border-card-border hover:bg-background/60"
+              className="text-body-sm px-3 py-1 rounded border border-card-border hover:bg-background/60"
             >
               End program (flags only)
             </button>
             <button
               onClick={() => dispatch({ type: "SET_INLINE", value: null })}
-              className="text-xs text-muted hover:text-foreground"
+              className="text-body-sm text-muted hover:text-foreground"
             >
               Close
             </button>

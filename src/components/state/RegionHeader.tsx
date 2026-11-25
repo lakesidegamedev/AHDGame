@@ -213,7 +213,7 @@ export function RegionHeader(props: RegionHeaderProps) {
               <p className="text-body text-white/75">{descriptor}</p>
               <h1
                 data-coach="nav-region"
-                className="truncate text-display font-bold leading-tight tracking-tight text-white sm:text-[2.25rem]"
+                className="truncate text-display font-bold leading-tight tracking-tight text-white sm:text-display"
               >
                 {regionName}
               </h1>

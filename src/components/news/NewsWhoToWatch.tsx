@@ -45,7 +45,7 @@ function MiniList({
   if (loading) {
     return (
       <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-muted">{title}</h4>
+        <h4 className="text-body-sm font-semibold text-muted">{title}</h4>
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-2 animate-pulse">
             <div className="h-6 w-6 rounded-lg bg-card-border shrink-0" />
@@ -59,19 +59,19 @@ function MiniList({
   if (sorted.length === 0) {
     return (
       <div>
-        <h4 className="text-xs font-semibold text-muted mb-2">{title}</h4>
-        <p className="text-[10px] text-muted">No data yet</p>
+        <h4 className="text-body-sm font-semibold text-muted mb-2">{title}</h4>
+        <p className="text-body-sm text-muted">No data yet</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h4 className="text-xs font-semibold text-muted mb-2">{title}</h4>
+      <h4 className="text-body-sm font-semibold text-muted mb-2">{title}</h4>
       <div className="space-y-2">
         {visible.map((e, i) => (
           <div key={e.characterId} className="flex items-center gap-2">
-            <span className="w-4 shrink-0 text-[10px] font-medium text-muted">{i + 1}</span>
+            <span className="w-4 shrink-0 text-body-sm font-medium text-muted">{i + 1}</span>
             <Avatar
               url={e.avatarUrl}
               name={e.characterName}
@@ -81,11 +81,11 @@ function MiniList({
             />
             <Link
               href={`/character/${e.sequentialId ?? e.characterId}`}
-              className="flex-1 min-w-0 text-xs font-medium text-foreground hover:text-primary transition-colors truncate"
+              className="flex-1 min-w-0 text-body-sm font-medium text-foreground hover:text-primary transition-colors truncate"
             >
               {e.characterName}
             </Link>
-            <span className="shrink-0 text-[10px] text-muted">
+            <span className="shrink-0 text-body-sm text-muted">
               {sortBy === "likes"
                 ? `${e.totalLikes} like${e.totalLikes !== 1 ? "s" : ""}`
                 : `${e.subscriberCount} sub${e.subscriberCount !== 1 ? "s" : ""}`}
@@ -96,7 +96,7 @@ function MiniList({
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="mt-3 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          className="mt-3 text-body-sm font-medium text-primary hover:text-primary/80 transition-colors"
         >
           View more
         </button>

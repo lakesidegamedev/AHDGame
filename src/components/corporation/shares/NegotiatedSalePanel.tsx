@@ -84,7 +84,7 @@ function RatioChip({ ratio }: { ratio: number | null }) {
       : `${ratio >= 10 ? ratio.toFixed(0) : ratio.toFixed(2)}x market`;
   return (
     <span
-      className={`inline-flex h-5 items-center rounded px-1.5 text-[11px] font-medium tabular-nums ${
+      className={`inline-flex h-5 items-center rounded px-1.5 text-body-sm font-medium tabular-nums ${
         outsideBand
           ? "border border-warning/40 bg-warning/10 text-warning"
           : "border border-card-border bg-card-elevated text-muted"
@@ -112,9 +112,9 @@ function PlayerName({ name, sequentialId }: { name: string; sequentialId?: numbe
 }
 
 const inputClass =
-  "h-7 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none";
+  "h-7 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none";
 const primaryButton =
-  "inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border";
+  "inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border";
 
 export default function NegotiatedSalePanel({
   corpId,
@@ -227,8 +227,8 @@ export default function NegotiatedSalePanel({
   };
 
   const terms = (t: NegotiatedTermsData, count: number) => (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-      <span className="text-sm font-semibold tabular-nums text-foreground">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
+      <span className="text-body font-semibold tabular-nums text-foreground">
         {money.fmtLocalFull(t.totalPrice)}
       </span>
       <span>for {count.toLocaleString("en-US")} shares</span>
@@ -245,13 +245,13 @@ export default function NegotiatedSalePanel({
           key={listing._id}
           className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2"
         >
-          <div className="text-xs text-muted">
+          <div className="text-body-sm text-muted">
             <PlayerName name={listing.sellerName} sequentialId={listing.sellerSequentialId} />{" "}
             offers you a negotiated sale
           </div>
           {terms(listing.negotiated, listing.sharesRemaining)}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <span className="text-[11px] text-muted">
+            <span className="text-body-sm text-muted">
               Market value at listing{" "}
               <span className="tabular-nums text-foreground">
                 {money.fmtLocalFull(
@@ -283,26 +283,26 @@ export default function NegotiatedSalePanel({
             <button
               type="button"
               onClick={() => setComposing(true)}
-              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated"
             >
               Sell to a specific player at an agreed price
             </button>
           ) : (
             <div className="rounded-lg border border-card-border p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-medium text-foreground">Negotiated sale</h3>
+                <h3 className="text-body-lg font-medium text-foreground">Negotiated sale</h3>
                 <button
                   type="button"
                   onClick={resetComposer}
-                  className="text-xs text-muted hover:text-foreground"
+                  className="text-body-sm text-muted hover:text-foreground"
                 >
                   Close
                 </button>
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1">Buyer</label>
+                <label className="block text-body-sm text-muted mb-1">Buyer</label>
                 {buyer ? (
-                  <div className="flex h-7 items-center gap-2 text-xs">
+                  <div className="flex h-7 items-center gap-2 text-body-sm">
                     <span className="font-medium text-foreground">{buyer.name}</span>
                     <button
                       type="button"
@@ -322,7 +322,7 @@ export default function NegotiatedSalePanel({
               </div>
               <div className="flex flex-wrap items-end gap-3">
                 <div>
-                  <label className="block text-xs text-muted mb-1">Shares</label>
+                  <label className="block text-body-sm text-muted mb-1">Shares</label>
                   <input
                     type="number"
                     value={shares || ""}
@@ -338,7 +338,7 @@ export default function NegotiatedSalePanel({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-muted mb-1">
+                  <label className="block text-body-sm text-muted mb-1">
                     Agreed total ({money.inputSymbol})
                   </label>
                   <input
@@ -358,7 +358,7 @@ export default function NegotiatedSalePanel({
               </div>
 
               {shares > 0 && totalLocal > 0 && (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md bg-card-elevated px-3 py-2 text-xs sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-md bg-card-elevated px-3 py-2 text-body-sm sm:grid-cols-4">
                   <div>
                     <div className="text-muted">Per share</div>
                     <div className="tabular-nums text-foreground">
@@ -386,7 +386,7 @@ export default function NegotiatedSalePanel({
                 </div>
               )}
 
-              <p className="text-[11px] leading-snug text-muted">
+              <p className="text-body-sm leading-snug text-muted">
                 The buyer pays the full amount in one payment and receives every share. Your shares
                 are held until they pay, you withdraw, or 24 turns pass. Everyone can see the deal
                 and its price on this company&apos;s Shares tab.
@@ -410,7 +410,7 @@ export default function NegotiatedSalePanel({
       {mine.map((listing) => (
         <div key={listing._id} className="rounded-lg border border-card-border p-3 space-y-1.5">
           <div className="flex items-start justify-between gap-2">
-            <div className="text-xs text-muted">
+            <div className="text-body-sm text-muted">
               Waiting for{" "}
               <PlayerName
                 name={listing.negotiated.buyerName}
@@ -422,13 +422,13 @@ export default function NegotiatedSalePanel({
               type="button"
               onClick={() => void cancel(listing._id)}
               disabled={busy}
-              className="text-xs text-error hover:text-error/80 disabled:opacity-50"
+              className="text-body-sm text-error hover:text-error/80 disabled:opacity-50"
             >
               Withdraw
             </button>
           </div>
           {terms(listing.negotiated, listing.sharesRemaining)}
-          <div className="text-[11px] text-muted">
+          <div className="text-body-sm text-muted">
             Expires{" "}
             <LocalTime value={listing.expiresAt} options={{ hour: "2-digit", minute: "2-digit" }} />
           </div>
@@ -438,11 +438,11 @@ export default function NegotiatedSalePanel({
       {/* Other players' pending negotiated sales, public */}
       {others.length > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-medium text-muted">Pending negotiated sales</h3>
+          <h3 className="mb-1.5 text-body-lg font-medium text-muted">Pending negotiated sales</h3>
           <div className="divide-y divide-card-border/60">
             {others.map((listing) => (
               <div key={listing._id} className="py-2 space-y-1">
-                <div className="text-xs text-muted">
+                <div className="text-body-sm text-muted">
                   <PlayerName name={listing.sellerName} sequentialId={listing.sellerSequentialId} />{" "}
                   to{" "}
                   <PlayerName
@@ -460,9 +460,9 @@ export default function NegotiatedSalePanel({
       {/* Public record */}
       {deals.length > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-medium text-muted">Completed negotiated sales</h3>
+          <h3 className="mb-1.5 text-body-lg font-medium text-muted">Completed negotiated sales</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-body-sm">
               <thead>
                 <tr className="border-b border-card-border text-left text-muted">
                   <th className="py-1 pr-3 font-normal">Seller</th>
@@ -512,8 +512,8 @@ export default function NegotiatedSalePanel({
           <div className="w-full max-w-sm rounded-2xl border border-card-border bg-card p-5 shadow-modal space-y-3">
             {confirming.kind === "propose" && buyer ? (
               <>
-                <h3 className="text-sm font-semibold text-foreground">Offer this sale?</h3>
-                <p className="text-xs leading-relaxed text-muted">
+                <h3 className="text-body-lg font-semibold text-foreground">Offer this sale?</h3>
+                <p className="text-body-sm leading-relaxed text-muted">
                   {buyer.name} can buy {shares.toLocaleString("en-US")} shares of {corpName} from
                   you for{" "}
                   <span className="font-medium text-foreground">
@@ -524,8 +524,10 @@ export default function NegotiatedSalePanel({
               </>
             ) : confirming.kind === "pay" ? (
               <>
-                <h3 className="text-sm font-semibold text-foreground">Pay and take the shares?</h3>
-                <p className="text-xs leading-relaxed text-muted">
+                <h3 className="text-body-lg font-semibold text-foreground">
+                  Pay and take the shares?
+                </h3>
+                <p className="text-body-sm leading-relaxed text-muted">
                   You pay{" "}
                   <span className="font-medium text-foreground">
                     {money.fmtLocalFull(confirming.listing.negotiated.totalPrice)}
@@ -541,7 +543,7 @@ export default function NegotiatedSalePanel({
                 type="button"
                 onClick={() => setConfirming(null)}
                 disabled={busy}
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-muted hover:bg-card-elevated disabled:opacity-50"
+                className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm text-muted hover:bg-card-elevated disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -551,7 +553,7 @@ export default function NegotiatedSalePanel({
                   void (confirming.kind === "pay" ? pay(confirming.listing) : propose())
                 }
                 disabled={busy}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {busy ? "Working" : confirming.kind === "pay" ? "Pay now" : "Offer sale"}
               </button>

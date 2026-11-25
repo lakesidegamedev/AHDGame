@@ -186,20 +186,20 @@ export function SovereignCrisisDecisionPanel({ countryCode }: Props) {
     <div className="rounded-lg border border-rose-500/60 bg-rose-500/5 p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Sovereign debt crisis</h3>
-          <p className="mt-0.5 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Sovereign debt crisis</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             Bond auctions have failed three times. Choose a resolution path.
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             Inflation:{" "}
             <span className="font-medium tabular-nums text-foreground">
               {status.inflationRate.toFixed(1)}%
             </span>
           </span>
           {remainingTurns !== null && (
-            <span className="inline-flex items-center rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-400">
+            <span className="inline-flex items-center rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-body-sm font-medium text-rose-600 dark:text-rose-400">
               Auto-action in {remainingTurns} turn{remainingTurns === 1 ? "" : "s"}
             </span>
           )}
@@ -211,10 +211,10 @@ export function SovereignCrisisDecisionPanel({ countryCode }: Props) {
           const consequences = RESOLUTION_CONSEQUENCES[choice];
           return (
             <div key={choice} className={`rounded-lg border p-3 ${accentClass}`}>
-              <div className="text-sm font-medium text-foreground mb-2">{label}</div>
+              <div className="text-body font-medium text-foreground mb-2">{label}</div>
               <ul className="space-y-1 mb-3">
                 {consequences.map((c) => (
-                  <li key={c.label} className="flex items-baseline gap-1.5 text-xs">
+                  <li key={c.label} className="flex items-baseline gap-1.5 text-body-sm">
                     <span className="text-muted shrink-0">{c.label}:</span>
                     <span
                       className={
@@ -234,7 +234,7 @@ export function SovereignCrisisDecisionPanel({ countryCode }: Props) {
                 type="button"
                 onClick={() => void submit(choice)}
                 disabled={disabled}
-                className="w-full rounded-md border border-current/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                className="w-full rounded-md border border-current/20 bg-white/10 px-3 py-1.5 text-body-sm font-medium text-foreground hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
               >
                 {submitting === choice
                   ? "Submitting…"
@@ -247,7 +247,7 @@ export function SovereignCrisisDecisionPanel({ countryCode }: Props) {
         })}
       </div>
 
-      {error ? <p className="mt-3 text-xs text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {error ? <p className="mt-3 text-body-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
     </div>
   );
 }
@@ -300,10 +300,10 @@ function LegislativeVotingPanel({
 
   return (
     <div className="rounded-lg border border-amber-500/60 bg-amber-500/5 p-4">
-      <h3 className="text-sm font-semibold text-foreground">
+      <h3 className="text-body-lg font-semibold text-foreground">
         Legislative ratification — {phase.chamberKey} chamber
       </h3>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Executive proposed: <span className="font-medium text-foreground">{executiveLabel}</span>
         {" · "}
         <span className="font-medium tabular-nums">
@@ -313,7 +313,7 @@ function LegislativeVotingPanel({
       </p>
 
       <div className="mt-3 space-y-1">
-        <div className="flex items-baseline justify-between text-xs">
+        <div className="flex items-baseline justify-between text-body-sm">
           <span className="text-muted">Vote tally</span>
           <span className="tabular-nums text-foreground">
             <span className="text-success">{phase.votesFor} for</span>
@@ -336,7 +336,7 @@ function LegislativeVotingPanel({
           type="button"
           onClick={() => void vote("for")}
           disabled={submitting !== null}
-          className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-md border border-emerald-600 bg-emerald-600 px-3 py-2 text-body font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
         >
           {submitting === "for" ? "Submitting…" : "Vote for"}
         </button>
@@ -344,12 +344,12 @@ function LegislativeVotingPanel({
           type="button"
           onClick={() => void vote("against")}
           disabled={submitting !== null}
-          className="rounded-md border border-rose-600 bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+          className="rounded-md border border-rose-600 bg-rose-600 px-3 py-2 text-body font-medium text-white hover:bg-rose-700 disabled:opacity-50"
         >
           {submitting === "against" ? "Submitting…" : "Vote against"}
         </button>
       </div>
-      {error ? <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {error ? <p className="mt-2 text-body-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
     </div>
   );
 }

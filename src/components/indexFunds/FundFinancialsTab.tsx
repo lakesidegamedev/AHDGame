@@ -89,8 +89,8 @@ function FinRow({
 }) {
   const content = (
     <div className={`flex items-center justify-between py-1 ${indent ? "pl-4" : ""}`}>
-      <span className="text-sm text-muted">{label}</span>
-      <span className={`text-sm tabular-nums ${bold ? "font-semibold" : ""} ${valueClass}`}>
+      <span className="text-body text-muted">{label}</span>
+      <span className={`text-body tabular-nums ${bold ? "font-semibold" : ""} ${valueClass}`}>
         {value}
       </span>
     </div>
@@ -166,7 +166,7 @@ export default function FundFinancialsTab({
           <button
             key={v.key}
             onClick={() => setView(v.key)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
               view === v.key
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted hover:text-foreground"
@@ -180,8 +180,8 @@ export default function FundFinancialsTab({
       {view === "income_statement" && (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden">
           <div className="border-b border-card-border bg-background/60 px-6 py-4">
-            <h2 className="text-lg font-bold text-foreground">Income statement</h2>
-            <p className="text-xs text-muted mt-0.5">
+            <h2 className="text-heading font-bold text-foreground">Income statement</h2>
+            <p className="text-body-sm text-muted mt-0.5">
               Fund-wide totals across all holders — based on the last 200 transactions
             </p>
           </div>
@@ -203,7 +203,7 @@ export default function FundFinancialsTab({
                     />
                   ))}
                 {incomeStatement.grossIncome === 0 && (
-                  <p className="text-sm text-muted pl-4">No recorded income.</p>
+                  <p className="text-body text-muted pl-4">No recorded income.</p>
                 )}
 
                 <div className="border-t border-card-border mt-3" />
@@ -221,7 +221,7 @@ export default function FundFinancialsTab({
                     />
                   ))}
                 {incomeStatement.grossExpense === 0 && (
-                  <p className="text-sm text-muted pl-4">No recorded expenses.</p>
+                  <p className="text-body text-muted pl-4">No recorded expenses.</p>
                 )}
 
                 <div className="border-t-2 border-foreground/20 mt-3 pt-2">
@@ -235,7 +235,7 @@ export default function FundFinancialsTab({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted">No transaction data available.</p>
+              <p className="text-body text-muted">No transaction data available.</p>
             )}
           </div>
         </div>
@@ -244,8 +244,8 @@ export default function FundFinancialsTab({
       {view === "balance_sheet" && bs && (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden">
           <div className="border-b border-card-border bg-background/60 px-6 py-4">
-            <h2 className="text-lg font-bold text-foreground">Balance sheet</h2>
-            <p className="text-xs text-muted mt-0.5">Assets = Liabilities + Equity</p>
+            <h2 className="text-heading font-bold text-foreground">Balance sheet</h2>
+            <p className="text-body-sm text-muted mt-0.5">Assets = Liabilities + Equity</p>
           </div>
 
           <div className="px-6 py-4 space-y-1">
@@ -323,26 +323,26 @@ export default function FundFinancialsTab({
             <div className="text-body-sm font-medium text-muted mb-3">Key metrics</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <div className="text-[11px] text-muted mb-0.5">NAV / unit</div>
-                <div className="text-sm font-semibold text-foreground tabular-nums">
+                <div className="text-body-sm text-muted mb-0.5">NAV / unit</div>
+                <div className="text-body font-semibold text-foreground tabular-nums">
                   {formatAmount(bs.quotedNav, ccy)}
                 </div>
               </div>
               <div>
-                <div className="text-[11px] text-muted mb-0.5">Units outstanding</div>
-                <div className="text-sm font-semibold text-foreground tabular-nums">
+                <div className="text-body-sm text-muted mb-0.5">Units outstanding</div>
+                <div className="text-body font-semibold text-foreground tabular-nums">
                   {bs.unitSupply.toLocaleString("en-US")}
                 </div>
               </div>
               <div>
-                <div className="text-[11px] text-muted mb-0.5">Total backing</div>
-                <div className="text-sm font-semibold text-foreground tabular-nums">
+                <div className="text-body-sm text-muted mb-0.5">Total backing</div>
+                <div className="text-body font-semibold text-foreground tabular-nums">
                   {formatAmount(bs.totalBackingAnchor, ccy)}
                 </div>
               </div>
               <div>
-                <div className="text-[11px] text-muted mb-0.5">Backing ratio</div>
-                <div className="text-sm font-semibold tabular-nums">
+                <div className="text-body-sm text-muted mb-0.5">Backing ratio</div>
+                <div className="text-body font-semibold tabular-nums">
                   {bs.backingRatio != null ? `${(bs.backingRatio * 100).toFixed(1)}%` : "—"}
                 </div>
               </div>

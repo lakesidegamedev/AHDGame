@@ -129,8 +129,8 @@ export function PrivatizeWizard({
 
   return (
     <div className="rounded-xl border border-gold/30 bg-gold/5 p-5">
-      <h3 className="text-body-sm font-semibold text-gold">Privatize a holding</h3>
-      <p className="mt-1 text-body-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-gold">Privatize a holding</h3>
+      <p className="mt-1 text-body-sm text-muted">
         Sell part of a state holding back to the private market. Tick one or more held sectors and
         set, per sector, how much of that holding to carve into a single brand-new private
         corporation; the National Corporation keeps the remainder. The new firm earns from the
@@ -158,15 +158,15 @@ export function PrivatizeWizard({
                   className="h-4 w-4"
                 />
                 <span className="capitalize text-foreground">{s.sectorType}</span>
-                <span className="text-body-xs text-muted">· {s.stateName}</span>
-                <span className="ml-auto text-body-xs text-muted">
+                <span className="text-body-sm text-muted">· {s.stateName}</span>
+                <span className="ml-auto text-body-sm text-muted">
                   {money(s.revenue, vm.currency)}/turn
                 </span>
               </label>
 
               {isSelected && (
                 <div className="mt-2 space-y-1 pl-6">
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 text-body-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 text-body-sm">
                     <span className="text-foreground">
                       Carve <span className="font-semibold">{Math.round(frac * 100)}%</span> of this
                       holding
@@ -224,7 +224,7 @@ export function PrivatizeWizard({
             aria-label="Golden share percent"
             className="mt-1"
           />
-          <span className="mt-1 text-body-xs font-normal text-muted">
+          <span className="mt-1 text-body-sm font-normal text-muted">
             The stake the state keeps in the new corp (0–{Math.round(GOLDEN_SHARE_MAX * 100)}%),
             held by the country&apos;s primary National Corporation. These shares aren&apos;t sold —
             their dividends flow to the treasury and their votes are a reserved state block, a lever
@@ -254,7 +254,7 @@ export function PrivatizeWizard({
             <option value="ipo">IPO float</option>
             <option value="auction">Auction</option>
           </select>
-          <span className="mt-1 text-body-xs font-normal text-muted">
+          <span className="mt-1 text-body-sm font-normal text-muted">
             {method === "ipo"
               ? "IPO float: the new corp lists immediately and its non-golden shares float on the exchange. The treasury is credited the float proceeds (floated shares × share price) right away, and investor confidence ticks up now."
               : `Auction: a suspended, fully state-held shell is created and a public auction opens for ${AUCTION_WINDOW_TURNS} turns. Ownership transfers to the winning bidder, and both the proceeds and the confidence boost settle at sale — not now. Set a reserve price below (defaults to the carve valuation).`}
@@ -288,7 +288,7 @@ export function PrivatizeWizard({
                 </option>
               ))}
             </select>
-            <span className="mt-1 text-body-xs font-normal text-muted">
+            <span className="mt-1 text-body-sm font-normal text-muted">
               Where the new corporation is headquartered. Defaults to the carved holding&apos;s
               region; you can place it in any region of the country.
             </span>

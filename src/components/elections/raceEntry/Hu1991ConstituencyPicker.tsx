@@ -25,14 +25,14 @@ export function Hu1991ConstituencyPicker({
   const counties = new Map(HU_1991_TERRITORIAL_DISTRICTS.map((row) => [row.id, row.label]));
   return (
     <div className="mb-4 rounded-lg border border-border bg-card p-4">
-      <label htmlFor="hu1991-constituency" className="mb-2 block text-sm font-medium">
+      <label htmlFor="hu1991-constituency" className="mb-2 block text-body font-medium">
         {t("constituencyLabel")}
       </label>
       <select
         id="hu1991-constituency"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-body"
       >
         <option value="">{t("automatic")}</option>
         {local.map((row) => (
@@ -41,7 +41,7 @@ export function Hu1991ConstituencyPicker({
           </option>
         ))}
       </select>
-      <p className="mt-2 text-sm text-muted-foreground">{t("filingNote")}</p>
+      <p className="mt-2 text-body text-muted-foreground">{t("filingNote")}</p>
     </div>
   );
 }

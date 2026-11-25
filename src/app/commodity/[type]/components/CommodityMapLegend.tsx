@@ -31,11 +31,11 @@ export default function CommodityMapLegend({
       <div className="flex items-center gap-2 bg-card px-3 py-2 rounded-lg border border-card-border shadow-sm">
         <span className="text-body-sm font-medium text-muted whitespace-nowrap">Reachable</span>
         <div className="flex items-center gap-1">
-          <span className="text-[9px] text-muted">{stops[0].label}</span>
+          <span className="text-body-sm text-muted">{stops[0].label}</span>
           <div className="h-2 w-16 rounded-full" style={{ background: gradient }} />
-          <span className="text-[9px] text-muted">{stops[4].label}</span>
+          <span className="text-body-sm text-muted">{stops[4].label}</span>
         </div>
-        <span className="hidden text-[9px] text-muted sm:inline">
+        <span className="hidden text-body-sm text-muted sm:inline">
           ({stops[2].label} at demand = supply)
         </span>
       </div>
@@ -72,11 +72,11 @@ export default function CommodityMapLegend({
     <div className="flex items-center gap-2 bg-card px-3 py-2 rounded-lg border border-card-border shadow-sm">
       <span className="text-body-sm font-medium text-muted whitespace-nowrap">{modeLabel}</span>
       <div className="flex items-center gap-1">
-        <span className="text-[9px] text-muted">{stops[0].label}</span>
+        <span className="text-body-sm text-muted">{stops[0].label}</span>
         <div className={`w-16 h-2 rounded-full bg-gradient-to-r ${gradientColors}`} />
-        <span className="text-[9px] text-muted">{stops[2]?.label}</span>
+        <span className="text-body-sm text-muted">{stops[2]?.label}</span>
       </div>
-      <span className="text-[9px] text-muted hidden sm:inline">{unitLabel}</span>
+      <span className="text-body-sm text-muted hidden sm:inline">{unitLabel}</span>
     </div>
   );
 }

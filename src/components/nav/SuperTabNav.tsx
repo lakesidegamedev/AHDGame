@@ -229,7 +229,7 @@ export function SuperTabNav({
                   onClick={() => setSuperTab(tab.id)}
                   aria-current={isActive ? "page" : undefined}
                   data-folder-tab={isActive ? "active" : "idle"}
-                  className={`flex min-h-10 items-center gap-2 px-4 text-sm font-semibold lg:px-5 ${PILL_SHAPE} ${
+                  className={`flex min-h-10 items-center gap-2 px-4 text-body font-semibold lg:px-5 ${PILL_SHAPE} ${
                     isActive ? PILL_SELECTED : ACCENT_IDLE[accent]
                   }`}
                 >
@@ -267,7 +267,7 @@ export function SuperTabNav({
                       type="button"
                       onClick={() => navigate(activeSuper, sub.id)}
                       aria-current={isActive ? "page" : undefined}
-                      className={`flex min-h-9 items-center gap-1.5 px-3 text-[13px] font-semibold ${pillClass(
+                      className={`flex min-h-9 items-center gap-1.5 px-3 text-body-sm font-semibold ${pillClass(
                         isActive
                       )}`}
                     >
@@ -305,7 +305,7 @@ export function SuperTabNav({
                 type="button"
                 onClick={() => setSuperTab(tab.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium ${PILL_SHAPE} ${
+                className={`flex items-center gap-2 px-3 py-1.5 text-body font-medium ${PILL_SHAPE} ${
                   isActive ? PILL_SELECTED : ACCENT_IDLE[accent]
                 }`}
               >
@@ -334,7 +334,7 @@ export function SuperTabNav({
                   type="button"
                   onClick={() => navigate(activeSuper, sub.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[13px] ${PILL_SHAPE} ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-body-sm ${PILL_SHAPE} ${
                     isActive ? PILL_SELECTED : ACCENT_IDLE[accent]
                   }`}
                 >

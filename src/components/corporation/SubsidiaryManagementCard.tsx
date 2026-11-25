@@ -77,7 +77,7 @@ export function SubsidiaryManagementCard({
   return (
     <section className="min-w-0 space-y-3">
       <div className="flex min-h-8 items-baseline border-b border-card-border pb-1.5">
-        <h2 className="text-sm font-semibold text-foreground">Corporate structure</h2>
+        <h2 className="text-body font-semibold text-foreground">Corporate structure</h2>
       </div>
       <GroupChart
         corporation={corporation}
@@ -86,7 +86,7 @@ export function SubsidiaryManagementCard({
       />
       {overheadPp > 0 && (
         <div className="max-w-md">
-          <h3 className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+          <h3 className="pb-1 text-body-lg font-semibold uppercase tracking-[0.1em] text-muted">
             Group effects
           </h3>
           <KVList>
@@ -99,7 +99,7 @@ export function SubsidiaryManagementCard({
         </div>
       )}
       {showBadge && parent && (
-        <div className="flex items-center gap-2 text-[13px]">
+        <div className="flex items-center gap-2 text-body-sm">
           <span className="text-muted">
             Subsidiary of{" "}
             <Link
@@ -115,14 +115,14 @@ export function SubsidiaryManagementCard({
 
       {showFormalizeAction && parent && (
         <div className="space-y-2">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Your corporation controls a majority of this company&apos;s voting power. You can
             formalize it as a managed subsidiary.
           </p>
           <button
             type="button"
             onClick={() => setShowFormalize(true)}
-            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-body-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Formalize as subsidiary
           </button>
@@ -131,13 +131,13 @@ export function SubsidiaryManagementCard({
 
       {showManage && (
         <div className="space-y-4">
-          <h3 className="text-xs font-medium text-muted">Manage subsidiary</h3>
+          <h3 className="text-body-lg font-medium text-muted">Manage subsidiary</h3>
 
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setShowAppoint(true)}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated"
             >
               Appoint CEO
             </button>
@@ -146,20 +146,20 @@ export function SubsidiaryManagementCard({
           {/* Capital injection */}
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted">Capital injection (parent currency)</label>
+              <label className="text-body-sm text-muted">Capital injection (parent currency)</label>
               <input
                 type="number"
                 min={0}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-7 w-40 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-40 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none"
               />
             </div>
             <button
               type="button"
               disabled={busy !== null || !(Number(amount) > 0)}
               onClick={() => post("capital-injection", { amount: Number(amount) }, "inject")}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-body-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === "inject" ? "Working…" : "Inject"}
             </button>
@@ -168,7 +168,7 @@ export function SubsidiaryManagementCard({
           {/* Dividend floor */}
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted">
+              <label className="text-body-sm text-muted">
                 Dividend floor (%, max {MAX_DIVIDEND_RATE})
               </label>
               <input
@@ -177,14 +177,14 @@ export function SubsidiaryManagementCard({
                 max={MAX_DIVIDEND_RATE}
                 value={floorPct}
                 onChange={(e) => setFloorPct(e.target.value)}
-                className="h-7 w-40 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-40 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none"
               />
             </div>
             <button
               type="button"
               disabled={busy !== null}
               onClick={() => post("dividend-floor", { floorPct: Number(floorPct) }, "floor")}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-body-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === "floor" ? "Working…" : "Set floor"}
             </button>
@@ -192,7 +192,7 @@ export function SubsidiaryManagementCard({
 
           {/* Release */}
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-muted">
+            <label className="flex items-center gap-1.5 text-body-sm text-muted">
               <input
                 type="checkbox"
                 checked={dismissCaretaker}
@@ -204,7 +204,7 @@ export function SubsidiaryManagementCard({
               type="button"
               disabled={busy !== null}
               onClick={() => post("release", { dismissCaretaker }, "release")}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-warning/50 px-2.5 text-xs font-medium text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-warning/50 px-2.5 text-body-sm font-medium text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === "release" ? "Working…" : "Release subsidiary"}
             </button>
@@ -212,7 +212,7 @@ export function SubsidiaryManagementCard({
         </div>
       )}
 
-      {err && <p className="text-xs text-error">{err}</p>}
+      {err && <p className="text-body-sm text-error">{err}</p>}
 
       {showSpinOff && (
         <SpinOffModal

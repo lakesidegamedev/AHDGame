@@ -437,12 +437,12 @@ export default function BulkBuildCapacityDialog({
             Preview {matched} sector{matched === 1 ? "" : "s"}
           </Button>
           {tooMany && (
-            <p className="text-body-xs text-warning">
+            <p className="text-body-sm text-warning">
               {matched} sectors match. Narrow the selection to {BULK_BUILD_MAX_SECTORS} or fewer.
             </p>
           )}
           {!rule && (
-            <p className="text-body-xs text-warning">
+            <p className="text-body-sm text-warning">
               {ruleKind === "facilities"
                 ? `Enter 1 to ${BULK_BUILD_MAX_FACILITIES} facilities.`
                 : "Enter 1 to 100 percent."}
@@ -453,7 +453,7 @@ export default function BulkBuildCapacityDialog({
         {shown && shown.rows.length > 0 && (
           <div className="overflow-x-auto rounded-lg border border-card-border">
             <table className="w-full min-w-[560px] border-collapse text-body-sm">
-              <thead className="bg-card-muted/60 text-body-xs text-muted">
+              <thead className="bg-card-muted/60 text-body-sm text-muted">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Sector</th>
                   <th className="px-3 py-2 text-right font-medium">Plants now</th>
@@ -480,7 +480,7 @@ export default function BulkBuildCapacityDialog({
                       <span className="text-muted">{typeLabel(row.sectorType)}</span>
                       {row.understaffed && (row.status === "ready" || row.status === "built") && (
                         <span
-                          className="ml-1.5 inline-flex items-center gap-0.5 text-body-xs text-warning"
+                          className="ml-1.5 inline-flex items-center gap-0.5 text-body-sm text-warning"
                           title="This sector already cannot fill all its jobs. New jobs may stay vacant unless you raise pay or the local workforce grows."
                         >
                           <AlertTriangle className="h-3 w-3" aria-hidden />
@@ -509,7 +509,7 @@ export default function BulkBuildCapacityDialog({
                     </td>
                     {corpId && preview && !result && (
                       <td
-                        className="px-3 py-2 text-right text-body-xs tabular-nums text-muted"
+                        className="px-3 py-2 text-right text-body-sm tabular-nums text-muted"
                         data-testid={`bulk-forecast-${row.sectorId}`}
                       >
                         <ForecastCell
@@ -524,7 +524,7 @@ export default function BulkBuildCapacityDialog({
                         {STATUS_LABEL[row.status]}
                       </span>
                       {row.reason && (
-                        <span className="block text-body-xs text-muted">{row.reason}</span>
+                        <span className="block text-body-sm text-muted">{row.reason}</span>
                       )}
                     </td>
                   </tr>
@@ -549,7 +549,7 @@ export default function BulkBuildCapacityDialog({
             </p>
             {preview.runCutPercent !== undefined && readyCount > 0 && (
               <p
-                className={`mt-2 text-body-xs ${preview.runCutPercent > 0 ? "text-warning" : "text-muted"}`}
+                className={`mt-2 text-body-sm ${preview.runCutPercent > 0 ? "text-warning" : "text-muted"}`}
               >
                 {runAfterBuildMessage({
                   cashAfterText: fmt(preview.cashAfterLocal ?? cash - readyCost),
@@ -561,7 +561,7 @@ export default function BulkBuildCapacityDialog({
               </p>
             )}
             {(preview.operatingReserveLocal ?? 0) > 0 && (
-              <div className="mt-2 text-body-xs text-muted">
+              <div className="mt-2 text-body-sm text-muted">
                 <p>
                   Reserve {fmt(preview.operatingReserveLocal!)} ({preview.reserveTurns} turns of
                   running costs).{" "}
@@ -620,7 +620,7 @@ export default function BulkBuildCapacityDialog({
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-card-border bg-card px-5 py-4">
         <div>
-          <p className="text-body-xs text-muted">{result ? "Spent" : "Build total"}</p>
+          <p className="text-body-sm text-muted">{result ? "Spent" : "Build total"}</p>
           <p className="text-body font-bold tabular-nums text-foreground">
             {fmt(result ? (result.spentLocal ?? 0) : readyCost)}
           </p>

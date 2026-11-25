@@ -18,7 +18,7 @@ export function LoadingBlock({ label, minHeight = 120 }: { label: string; minHei
         borderRadius: 12,
         background: BLEND.inset,
         color: BLEND.muted,
-        fontSize: 13,
+        fontSize: 12,
       }}
     >
       <span

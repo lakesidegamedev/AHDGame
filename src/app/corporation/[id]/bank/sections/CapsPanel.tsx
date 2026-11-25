@@ -35,7 +35,7 @@ export function CapsPanel({ data }: { data: ConsolePayload }) {
       actions={
         <Link
           href="/wiki/private-banking"
-          className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+          className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
         >
           How banking works
         </Link>
@@ -69,7 +69,7 @@ export function CapsPanel({ data }: { data: ConsolePayload }) {
                 />
               </Td>
               <Td align="right">{formatBankMoney(cap.value, currency)}</Td>
-              <Td wrap className="text-xs text-muted">
+              <Td wrap className="text-body-sm text-muted">
                 {cap.lever}
               </Td>
             </tr>

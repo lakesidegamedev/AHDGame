@@ -86,7 +86,7 @@ export function BalanceSheetRings({
           centreLabel="Book value"
           centreValue={fmt(sheet.equity.bookValue)}
         />
-        <p className="mt-2 flex items-center justify-between text-xs">
+        <p className="mt-2 flex items-center justify-between text-body-sm">
           {isPositive(debt) ? (
             <>
               <span className="text-muted">Total liabilities</span>

@@ -63,7 +63,7 @@ export function PublicTradeHistory() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-error/20 bg-error/5 p-6 text-center text-error text-sm">
+      <div className="rounded-xl border border-error/20 bg-error/5 p-6 text-center text-error text-body">
         {error}
       </div>
     );
@@ -72,8 +72,8 @@ export function PublicTradeHistory() {
   if (trades.length === 0) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-        <p className="text-muted text-sm">No trades in the last 48 turns.</p>
-        <p className="text-muted/60 text-xs mt-1">
+        <p className="text-muted text-body">No trades in the last 48 turns.</p>
+        <p className="text-muted/60 text-body-sm mt-1">
           All executed market and limit order trades appear here.
         </p>
       </div>
@@ -83,13 +83,13 @@ export function PublicTradeHistory() {
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border">
-        <h2 className="text-sm font-bold text-foreground">Trade feed</h2>
-        <p className="text-xs text-muted mt-0.5">
+        <h2 className="text-body font-bold text-foreground">Trade feed</h2>
+        <p className="text-body-sm text-muted mt-0.5">
           All trades in the last 48 turns — {trades.length} shown
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border bg-card-elevated">
               <th className="px-4 py-3 text-left text-body-sm font-medium text-muted">Date</th>
@@ -109,28 +109,28 @@ export function PublicTradeHistory() {
           <tbody className="divide-y divide-card-border">
             {trades.map((trade, idx) => (
               <tr key={trade._id} className={idx % 2 === 0 ? "bg-card" : "bg-card-elevated/30"}>
-                <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
+                <td className="px-4 py-3 text-body-sm text-muted whitespace-nowrap">
                   <LocalTime value={trade.createdAt} options={DATE_LABEL_OPTIONS} />
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-mono text-xs font-medium text-foreground">
+                  <span className="font-mono text-body-sm font-medium text-foreground">
                     {trade.fromCurrency} → {trade.toCurrency}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-foreground hidden sm:table-cell">
+                <td className="px-4 py-3 text-body-sm text-foreground hidden sm:table-cell">
                   {trade.buyerName ?? <span className="text-muted italic">Unknown</span>}
                 </td>
-                <td className="px-4 py-3 text-xs hidden sm:table-cell">
+                <td className="px-4 py-3 text-body-sm hidden sm:table-cell">
                   {trade.sellerName ? (
                     <span className="text-foreground">{trade.sellerName}</span>
                   ) : (
                     <span className="text-muted italic">Market</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-xs text-foreground">
+                <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm text-foreground">
                   {formatAmount(trade.amount)}
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-xs text-muted hidden md:table-cell">
+                <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm text-muted hidden md:table-cell">
                   {trade.rate >= 10 ? trade.rate.toFixed(2) : trade.rate.toFixed(4)}
                 </td>
               </tr>

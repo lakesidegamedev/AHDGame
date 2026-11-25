@@ -108,7 +108,7 @@ export function USLeadershipPanel() {
             role="tab"
             aria-selected={innerTab === t.id}
             onClick={() => setInnerTab(t.id)}
-            className={`whitespace-nowrap px-3 py-1 text-xs ${pillClass(innerTab === t.id)}`}
+            className={`whitespace-nowrap px-3 py-1 text-body-sm ${pillClass(innerTab === t.id)}`}
           >
             {t.label}
           </button>
@@ -118,7 +118,7 @@ export function USLeadershipPanel() {
       {/* Message banner */}
       {message && (
         <div
-          className={`rounded-lg border px-4 py-2 text-sm ${
+          className={`rounded-lg border px-4 py-2 text-body ${
             message.startsWith("Error")
               ? "border-red-500/30 bg-red-500/10 text-red-400"
               : "border-green-500/30 bg-green-500/10 text-green-400"
@@ -130,7 +130,7 @@ export function USLeadershipPanel() {
 
       {/* Content */}
       {loading ? (
-        <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted">
           Loading leadership elections...
         </div>
       ) : elections.length === 0 ? (
@@ -148,9 +148,9 @@ export function USLeadershipPanel() {
                 <div className="flex-1 min-w-0">
                   {/* Role label + status badge */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm">{e.roleLabel}</span>
+                    <span className="font-semibold text-body">{e.roleLabel}</span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${
                         STATUS_COLORS[e.status] ?? "bg-muted/20 text-muted"
                       }`}
                     >
@@ -160,7 +160,7 @@ export function USLeadershipPanel() {
 
                   {/* Deadline */}
                   {e.endsAt && (
-                    <p className="text-xs text-muted mt-1">
+                    <p className="text-body-sm text-muted mt-1">
                       Ends:{" "}
                       <span className="text-yellow-400">
                         <LocalTime value={e.endsAt} />
@@ -172,14 +172,17 @@ export function USLeadershipPanel() {
                   {e.candidates.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {e.candidates.map((c) => (
-                        <div key={c.id} className="text-xs text-muted flex items-center gap-1.5">
+                        <div
+                          key={c.id}
+                          className="text-body-sm text-muted flex items-center gap-1.5"
+                        >
                           <span className="text-foreground">{c.name}</span>
                           {c.party && <span>({c.party})</span>}
                           <span>&mdash;</span>
                           <span className="text-emerald-400">{c.votesFor}</span>
                           <span className="text-red-400">{c.votesAgainst}</span>
                           <span
-                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                            className={`rounded-full px-1.5 py-0.5 text-body-sm font-medium ${
                               STATUS_COLORS[c.status] ?? "bg-muted/20 text-muted"
                             }`}
                           >
@@ -199,7 +202,7 @@ export function USLeadershipPanel() {
                         <select
                           value={selectedWinner}
                           onChange={(ev) => setSelectedWinner(ev.target.value)}
-                          className="rounded-lg border border-card-border bg-card px-2 py-1 text-xs text-foreground"
+                          className="rounded-lg border border-card-border bg-card px-2 py-1 text-body-sm text-foreground"
                         >
                           <option value="">Pick winner...</option>
                           {activeElectionCandidates(e).map((c) => (
@@ -212,7 +215,7 @@ export function USLeadershipPanel() {
                         <button
                           disabled={!selectedWinner}
                           onClick={() => runAction(e.id, e.role, "pass", selectedWinner)}
-                          className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
+                          className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
                         >
                           Confirm
                         </button>
@@ -221,7 +224,7 @@ export function USLeadershipPanel() {
                             setPassTarget(null);
                             setSelectedWinner("");
                           }}
-                          className="rounded-lg border border-card-border bg-muted/10 px-2 py-1.5 text-xs font-medium text-muted hover:bg-muted/20 transition-colors"
+                          className="rounded-lg border border-card-border bg-muted/10 px-2 py-1.5 text-body-sm font-medium text-muted hover:bg-muted/20 transition-colors"
                         >
                           &#10005;
                         </button>
@@ -229,20 +232,20 @@ export function USLeadershipPanel() {
                     ) : (
                       <button
                         onClick={() => setPassTarget(e.id)}
-                        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                       >
                         Pass
                       </button>
                     )}
                     <button
                       onClick={() => runAction(e.id, e.role, "fail")}
-                      className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                      className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
                     >
                       Fail
                     </button>
                     <button
                       onClick={() => runAction(e.id, e.role, "cancel")}
-                      className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-xs font-medium text-muted hover:bg-muted/20 transition-colors"
+                      className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-body-sm font-medium text-muted hover:bg-muted/20 transition-colors"
                     >
                       Cancel
                     </button>

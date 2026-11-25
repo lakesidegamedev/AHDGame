@@ -45,10 +45,10 @@ export function GlobalResolutionsFeed({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-muted">Across all organizations</h3>
+      <h3 className="text-body-lg font-semibold text-muted">Across all organizations</h3>
       {feed.length === 0 ? (
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <p className="text-sm text-muted">No resolutions across organizations.</p>
+          <p className="text-body text-muted">No resolutions across organizations.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -62,17 +62,17 @@ export function GlobalResolutionsFeed({
                 className="card-hover flex flex-wrap items-center justify-between gap-2 rounded-lg border border-card-border bg-card p-3"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-foreground">{item.title}</div>
-                  <div className="text-[11px] text-muted">
+                  <div className="truncate text-body font-medium text-foreground">{item.title}</div>
+                  <div className="text-body-sm text-muted">
                     {item.orgShortName} · {TYPE_LABEL[item.type] ?? item.type}
                   </div>
                 </div>
                 {item.status === "pending" ? (
-                  <span className="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+                  <span className="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
                     Voting{turnsLeft != null ? ` · ${turnsLeft}t left` : ""}
                   </span>
                 ) : (
-                  <span className="shrink-0 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
+                  <span className="shrink-0 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-body-sm font-medium text-success">
                     In force
                   </span>
                 )}
@@ -81,7 +81,7 @@ export function GlobalResolutionsFeed({
           })}
 
           {pageCount > 1 && (
-            <div className="flex items-center justify-between pt-1 text-xs text-muted">
+            <div className="flex items-center justify-between pt-1 text-body-sm text-muted">
               <span>
                 {safePage * PAGE_SIZE + 1}–{safePage * PAGE_SIZE + visible.length} of {feed.length}
               </span>

@@ -364,16 +364,17 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
-        Player suggestions use the <code className="text-xs">suggestions</code> collection (legacy
-        bugs: Support &rarr; Feedback). Select rows with checkboxes for bulk merge or delete.
+      <p className="text-body text-muted">
+        Player suggestions use the <code className="text-body-sm">suggestions</code> collection
+        (legacy bugs: Support &rarr; Feedback). Select rows with checkboxes for bulk merge or
+        delete.
       </p>
 
       <div className="flex flex-wrap gap-1 rounded-xl border border-card-border bg-background p-1">
         <button
           type="button"
           onClick={() => dispatch({ type: "SET_STAGE", stage: "all" })}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-lg px-3 py-1.5 text-body font-medium transition-colors ${
             state.activeStage === "all"
               ? "bg-card text-foreground shadow-sm"
               : "text-muted hover:text-foreground"
@@ -386,7 +387,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
             key={String(s.key)}
             type="button"
             onClick={() => dispatch({ type: "SET_STAGE", stage: s.key })}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-body font-medium transition-colors ${
               state.activeStage === s.key
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted hover:text-foreground"
@@ -395,7 +396,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
             <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
             {s.label}
             {state.stageCounts[s.key as string] != null && (
-              <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-xs ${s.color}`}>
+              <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-body-sm ${s.color}`}>
                 {state.stageCounts[s.key as string]}
               </span>
             )}
@@ -404,7 +405,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
       </div>
 
       {state.error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-body text-red-400">
           {state.error}
         </div>
       )}
@@ -420,7 +421,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <thead className="sticky top-0 bg-card border-b border-card-border">
                     <tr>
                       <th className="px-2 py-3 w-8">
@@ -491,13 +492,13 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                             />
                           </td>
                           <td
-                            className="px-3 py-2.5 font-mono text-xs text-muted whitespace-nowrap"
+                            className="px-3 py-2.5 font-mono text-body-sm text-muted whitespace-nowrap"
                             onClick={() => void fetchDetail(String(item.issueNumber))}
                           >
                             S#{item.issueNumber}
                           </td>
                           <td
-                            className="px-3 py-2.5 text-xs text-muted capitalize"
+                            className="px-3 py-2.5 text-body-sm text-muted capitalize"
                             onClick={() => void fetchDetail(String(item.issueNumber))}
                           >
                             {item.category.replace(/_/g, " ")}
@@ -510,7 +511,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                             className="px-3 py-2.5 max-w-[200px]"
                             onClick={() => void fetchDetail(String(item.issueNumber))}
                           >
-                            <span className="line-clamp-2 text-sm" title={item.title}>
+                            <span className="line-clamp-2 text-body" title={item.title}>
                               {item.title}
                             </span>
                           </td>
@@ -519,9 +520,9 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                             onClick={() => void fetchDetail(String(item.issueNumber))}
                           >
                             {pl ? (
-                              <span className={`text-xs font-medium ${pc}`}>{pl}</span>
+                              <span className={`text-body-sm font-medium ${pc}`}>{pl}</span>
                             ) : (
-                              <span className="text-xs text-muted/40">&mdash;</span>
+                              <span className="text-body-sm text-muted/40">&mdash;</span>
                             )}
                           </td>
                           <td
@@ -538,7 +539,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                                   item.status
                                 )
                               }
-                              className={`max-w-[140px] rounded-md border border-card-border bg-background px-2 py-1 text-xs capitalize ${STATUS_COLORS[item.status] ?? ""}`}
+                              className={`max-w-[140px] rounded-md border border-card-border bg-background px-2 py-1 text-body-sm capitalize ${STATUS_COLORS[item.status] ?? ""}`}
                               aria-label={`Status for S#${item.issueNumber}`}
                             >
                               {STATUS_OPTIONS.map((s) => (
@@ -549,18 +550,18 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                             </select>
                           </td>
                           <td
-                            className="px-3 py-2.5 text-xs tabular-nums"
+                            className="px-3 py-2.5 text-body-sm tabular-nums"
                             onClick={() => void fetchDetail(String(item.issueNumber))}
                           >
                             <span>{item.commentCount}</span>
                             {(item.unreadCommentCount ?? 0) > 0 && (
-                              <span className="ml-1.5 inline-flex rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                              <span className="ml-1.5 inline-flex rounded-md bg-primary/15 px-1.5 py-0.5 text-body-sm font-semibold text-primary">
                                 +{item.unreadCommentCount} new
                               </span>
                             )}
                           </td>
                           <td
-                            className="px-3 py-2.5 text-xs align-top"
+                            className="px-3 py-2.5 text-body-sm align-top"
                             onClick={() => void fetchDetail(String(item.issueNumber))}
                           >
                             <div className="flex max-w-[200px] flex-col gap-1">
@@ -598,7 +599,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t border-card-border px-4 py-2">
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 {state.page * PAGE_SIZE + 1}&ndash;
                 {Math.min((state.page + 1) * PAGE_SIZE, state.total)} of {state.total}
               </span>
@@ -607,7 +608,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                   type="button"
                   onClick={() => dispatch({ type: "SET_PAGE", page: Math.max(0, state.page - 1) })}
                   disabled={state.page === 0}
-                  className="rounded border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-background disabled:opacity-40"
+                  className="rounded border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-background disabled:opacity-40"
                 >
                   &lsaquo; Prev
                 </button>
@@ -620,7 +621,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                     })
                   }
                   disabled={state.page >= totalPages - 1}
-                  className="rounded border border-card-border px-2.5 py-1 text-xs text-muted transition-colors hover:bg-background disabled:opacity-40"
+                  className="rounded border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:bg-background disabled:opacity-40"
                 >
                   Next &rsaquo;
                 </button>
@@ -637,41 +638,41 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
           ) : (
             <>
               <div>
-                <p className="font-mono text-xs text-muted">S#{state.detail.issueNumber}</p>
+                <p className="font-mono text-body-sm text-muted">S#{state.detail.issueNumber}</p>
                 <h3 className="mt-1 font-semibold">{state.detail.title}</h3>
-                <p className="mt-1 text-xs text-muted capitalize">
+                <p className="mt-1 text-body-sm text-muted capitalize">
                   {state.detail.category.replace(/_/g, " ")} &middot;{" "}
                   {state.detail.gameSystem.replace(/_/g, " ")}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {state.detail.reporterCharacterName ? (
-                    <span className="rounded-md border border-card-border bg-card-elevated px-2 py-0.5 text-xs font-medium text-foreground normal-case">
+                    <span className="rounded-md border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm font-medium text-foreground normal-case">
                       {state.detail.reporterCharacterName}
                     </span>
                   ) : null}
                   {state.detail.reporterUsername ? (
-                    <span className="rounded-md bg-muted/25 px-2 py-0.5 text-xs text-muted normal-case">
+                    <span className="rounded-md bg-muted/25 px-2 py-0.5 text-body-sm text-muted normal-case">
                       @{state.detail.reporterUsername}
                     </span>
                   ) : null}
                   {state.detail.reporterDiscordUsername ? (
-                    <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-xs text-indigo-300 normal-case">
+                    <span className="rounded-md bg-indigo-500/15 px-2 py-0.5 text-body-sm text-indigo-300 normal-case">
                       Discord: {state.detail.reporterDiscordUsername}
                     </span>
                   ) : null}
                   {!state.detail.reporterCharacterName &&
                     !state.detail.reporterUsername &&
                     !state.detail.reporterDiscordUsername && (
-                      <span className="text-xs text-muted normal-case">Anonymous</span>
+                      <span className="text-body-sm text-muted normal-case">Anonymous</span>
                     )}
                 </div>
               </div>
-              <div className="text-sm whitespace-pre-wrap">{state.detail.description}</div>
-              <label className="block text-sm font-medium text-muted">Status</label>
+              <div className="text-body whitespace-pre-wrap">{state.detail.description}</div>
+              <label className="block text-body font-medium text-muted">Status</label>
               <select
                 value={state.newStatus}
                 onChange={(e) => dispatch({ type: "SET_STATUS", status: e.target.value })}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -681,7 +682,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
               </select>
               {(state.newStatus === "completed" || state.detail.status === "completed") && (
                 <>
-                  <label className="block text-sm font-medium text-muted">
+                  <label className="block text-body font-medium text-muted">
                     What changed (posted to Discord with the reporter&apos;s name)
                   </label>
                   <textarea
@@ -692,36 +693,36 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                     rows={3}
                     maxLength={1000}
                     placeholder="Corporations can now mothball or reactivate every sector at once from the CEO office."
-                    className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                    className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                   />
                 </>
               )}
-              <label className="block text-sm font-medium text-muted">Admin notes</label>
+              <label className="block text-body font-medium text-muted">Admin notes</label>
               <textarea
                 value={state.adminNotes}
                 onChange={(e) => dispatch({ type: "SET_NOTES", notes: e.target.value })}
                 rows={3}
-                className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               />
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => void handleUpdate()}
                   disabled={state.updating}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+                  className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 >
                   {state.updating ? "Updating…" : "Update"}
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleDeleteSingle(state.detail!.issueNumber)}
-                  className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="rounded-lg border border-red-500/30 px-4 py-2 text-body font-medium text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   Delete
                 </button>
                 {state.updateMessage && (
                   <span
-                    className={`text-sm ${state.updateMessage.startsWith("✓") ? "text-green-500" : "text-red-400"}`}
+                    className={`text-body ${state.updateMessage.startsWith("✓") ? "text-green-500" : "text-red-400"}`}
                   >
                     {state.updateMessage}
                   </span>

@@ -143,7 +143,7 @@ export function PoliticalCompass({
             <div className="absolute top-0 left-1/2 h-full w-px bg-card-border" />
             <div className="absolute top-1/2 left-0 h-px w-full bg-card-border" />
 
-            <div className="pointer-events-none absolute inset-2 flex flex-col justify-between text-[9px] font-semibold tracking-wide text-foreground/45">
+            <div className="pointer-events-none absolute inset-2 flex flex-col justify-between text-body-sm font-semibold tracking-wide text-foreground/45">
               <div className="flex justify-between gap-1">
                 <span>Left · Trad.</span>
                 <span>Right · Trad.</span>
@@ -232,7 +232,7 @@ export function PoliticalCompass({
               className="relative h-full w-full rounded-full border-2 border-background shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
               style={{ backgroundColor: dotColor ?? "var(--color-primary)" }}
             />
-            <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 max-w-[min(90vw,240px)] -translate-x-1/2 rounded-lg border border-card-border bg-popover px-2.5 py-1.5 text-center text-xs font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+            <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 max-w-[min(90vw,240px)] -translate-x-1/2 rounded-lg border border-card-border bg-popover px-2.5 py-1.5 text-center text-body-sm font-medium text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
               <div className={getPolicyColor(economic)}>
                 {getEconomicPositionName(economic)} ({formatLeanValue(economic)})
               </div>
@@ -247,17 +247,17 @@ export function PoliticalCompass({
       {/* Legend */}
       {hasMarkers && (partyMarker || stateMarker) && (
         <div className="mt-3 flex gap-4 justify-center">
-          <span className="flex items-center gap-1.5 text-[10px] text-muted">
+          <span className="flex items-center gap-1.5 text-body-sm text-muted">
             <span
-              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white ring-1 ring-black/20"
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-body-sm font-bold text-white ring-1 ring-black/20"
               style={{ backgroundColor: dotColor ?? "var(--color-primary)" }}
             />
             You
           </span>
           {partyMarker && (
-            <span className="flex items-center gap-1.5 text-[10px] text-muted">
+            <span className="flex items-center gap-1.5 text-body-sm text-muted">
               <span
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white ring-1 ring-black/20"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-body-sm font-bold text-white ring-1 ring-black/20"
                 style={{ backgroundColor: partyMarker.color ?? "#a1a1aa" }}
               >
                 P
@@ -266,9 +266,9 @@ export function PoliticalCompass({
             </span>
           )}
           {stateMarker && (
-            <span className="flex items-center gap-1.5 text-[10px] text-muted">
+            <span className="flex items-center gap-1.5 text-body-sm text-muted">
               <span
-                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white ring-1 ring-black/20"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-body-sm font-bold text-white ring-1 ring-black/20"
                 style={{ backgroundColor: stateMarker.color ?? "#38bdf8" }}
               >
                 R
@@ -287,7 +287,7 @@ export function PoliticalCompass({
 
   return (
     <div className="flex flex-col items-center rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-      <h3 className="mb-6 text-sm font-bold text-muted">Political alignment</h3>
+      <h3 className="mb-6 text-body-lg font-bold text-muted">Political alignment</h3>
       {plot}
     </div>
   );

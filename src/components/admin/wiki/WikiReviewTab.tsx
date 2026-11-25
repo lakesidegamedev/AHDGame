@@ -39,7 +39,7 @@ function ReviewBody({ page }: { page: PendingPage }) {
   return (
     <div>
       {diff && (
-        <div className="mb-3 flex items-center gap-2 text-sm">
+        <div className="mb-3 flex items-center gap-2 text-body">
           <button
             onClick={() => setView("changes")}
             className={view === "changes" ? "font-semibold text-primary" : "text-muted"}
@@ -56,7 +56,7 @@ function ReviewBody({ page }: { page: PendingPage }) {
         </div>
       )}
       {diff && view === "changes" ? (
-        <div className="bg-background border border-card-border rounded p-3 max-h-[32rem] overflow-y-auto font-mono text-xs whitespace-pre-wrap">
+        <div className="bg-background border border-card-border rounded p-3 max-h-[32rem] overflow-y-auto font-mono text-body-sm whitespace-pre-wrap">
           {diff.map((line, i) =>
             line.op === "same" ? (
               <div key={i} className="text-muted">
@@ -175,7 +175,7 @@ function PendingSubmissions() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-foreground">
+        <h2 className="text-heading font-bold text-foreground">
           Pending wiki submissions ({pending.length})
         </h2>
       </div>
@@ -185,7 +185,7 @@ function PendingSubmissions() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSelected(null)}
-              className="text-sm text-primary hover:text-primary/80"
+              className="text-body text-primary hover:text-primary/80"
             >
               ← Back to list
             </button>
@@ -203,8 +203,8 @@ function PendingSubmissions() {
           </div>
 
           <div className="bg-card border border-card-border rounded-lg p-6">
-            <h3 className="text-lg font-bold text-foreground mb-2">{selected.title}</h3>
-            <p className="text-sm text-muted mb-4">
+            <h3 className="text-body-lg font-bold text-foreground mb-2">{selected.title}</h3>
+            <p className="text-body text-muted mb-4">
               By {selected.authorName} •{" "}
               <LocalTime value={selected.createdAt} options={{ dateStyle: "medium" }} />
             </p>
@@ -212,14 +212,14 @@ function PendingSubmissions() {
             <ReviewBody page={selected} />
 
             <div className="mt-4 space-y-2">
-              <p className="text-sm">
+              <p className="text-body">
                 <span className="font-medium">Description:</span> {selected.description}
               </p>
-              <p className="text-sm">
+              <p className="text-body">
                 <span className="font-medium">Tags:</span> {selected.tags.join(", ") || "None"}
               </p>
               {selected.difficulty && (
-                <p className="text-sm">
+                <p className="text-body">
                   <span className="font-medium">Difficulty:</span> {selected.difficulty}
                 </p>
               )}
@@ -237,13 +237,13 @@ function PendingSubmissions() {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-medium text-foreground">{page.title}</h3>
-                  <p className="text-sm text-muted mt-1">{page.description}</p>
-                  <p className="text-xs text-muted mt-2">
+                  <p className="text-body text-muted mt-1">{page.description}</p>
+                  <p className="text-body-sm text-muted mt-2">
                     By {page.authorName} •{" "}
                     <LocalTime value={page.createdAt} options={{ dateStyle: "medium" }} />
                   </p>
                 </div>
-                <span className="px-3 py-1 text-xs font-medium bg-warning/20 border border-warning/30 text-warning rounded-full">
+                <span className="px-3 py-1 text-body-sm font-medium bg-warning/20 border border-warning/30 text-warning rounded-full">
                   {page.isEdit ? "edit to live page" : "new page"}
                 </span>
               </div>

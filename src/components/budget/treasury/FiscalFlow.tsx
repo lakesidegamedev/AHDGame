@@ -187,10 +187,10 @@ export function FiscalFlow({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-1 flex items-center justify-between">
-        <div className="text-sm font-semibold text-foreground">
+        <div className="text-body font-semibold text-foreground">
           Fiscal flow · where the money comes from &amp; goes
         </div>
-        <div className="text-body-xs text-muted">
+        <div className="text-body-sm text-muted">
           {hover ? (
             <span className="text-gold">
               {hover.label}: {money(hover.value)}
@@ -315,10 +315,10 @@ export function FiscalFlow({
       </svg>
       {openGroup?.members && (
         <div className="mt-2 rounded-lg border border-card-border bg-background/40 p-3">
-          <div className="mb-1 text-body-xs font-semibold text-foreground">
+          <div className="mb-1 text-body-sm font-semibold text-foreground">
             {openGroup.label}: {money(openGroup.value)}
           </div>
-          <ul className="space-y-0.5 text-body-xs text-muted">
+          <ul className="space-y-0.5 text-body-sm text-muted">
             {openGroup.members.map((m, i) => (
               <li key={`${openGroup.nid}-${i}`} className="flex justify-between gap-3">
                 <span>{m.label}</span>
@@ -329,7 +329,7 @@ export function FiscalFlow({
         </div>
       )}
       {groupNodes.length > 0 && (
-        <div className="mt-1 text-body-xs text-muted">
+        <div className="mt-1 text-body-sm text-muted">
           {pinned ? (
             <>Tap or click the same bar again to close this list.</>
           ) : (
@@ -337,7 +337,7 @@ export function FiscalFlow({
           )}
         </div>
       )}
-      <div className="mt-1 flex items-center justify-between text-body-xs text-muted">
+      <div className="mt-1 flex items-center justify-between text-body-sm text-muted">
         <span>
           <span
             className="mr-1 inline-block h-2 w-2 rounded-sm align-middle"

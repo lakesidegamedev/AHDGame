@@ -38,8 +38,10 @@ export default async function CommandEconomyPage({ params }: PageProps) {
         <div className="mb-6 flex items-center gap-3">
           <BackButton iconOnly />
           <div>
-            <h1 className="text-xl font-bold text-foreground">{config.name} Command economy</h1>
-            <p className="text-sm text-muted">
+            <h1 className="text-heading font-bold text-foreground">
+              {config.name} Command economy
+            </h1>
+            <p className="text-body text-muted">
               The national plan, the state enterprises, and Gosbank credit.
             </p>
           </div>

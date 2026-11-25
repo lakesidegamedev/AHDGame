@@ -26,7 +26,7 @@ export default async function PoliticiansPage({ params }: Props) {
         aria-label="About this directory"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 pb-4">
-          <p className="text-sm text-muted leading-relaxed max-w-3xl">
+          <p className="text-body text-muted leading-relaxed max-w-3xl">
             This directory lists player characters and non-player politicians (NPPs) active in{" "}
             {countryName}. Use filters to narrow by office, party, or name. Profiles link to live
             game data—favorability, funds, and current office update as the simulation runs.

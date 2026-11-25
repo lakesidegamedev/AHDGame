@@ -30,16 +30,16 @@ export default function FreightNetworkPanel({ data }: { data: CommodityDetail })
   return (
     <section className="mb-6 overflow-hidden rounded-xl border border-card-border bg-card">
       <div className="border-b border-card-border px-5 py-4">
-        <h2 className="text-lg font-bold text-foreground">{t("title")}</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-heading font-bold text-foreground">{t("title")}</h2>
+        <p className="mt-1 text-body text-muted">
           {t("explanation")}
           {unavailableStates > 0 && t("unavailableStates", { count: unavailableStates })}
         </p>
       </div>
       <div className="overflow-x-auto px-5 pb-4">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[640px] text-body">
           <thead>
-            <tr className="border-b border-card-border text-left text-xs font-semibold text-muted">
+            <tr className="border-b border-card-border text-left text-body-sm font-semibold text-muted">
               <th className="py-2">{t("state")}</th>
               <th className="py-2 text-right">{t("oneHopEstimate")}</th>
               <th className="py-2 text-right">

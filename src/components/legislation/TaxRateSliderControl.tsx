@@ -50,11 +50,11 @@ export function TaxRateSliderControl({
 
   return (
     <div className="space-y-2 rounded-lg border border-card-border bg-background px-3 py-2">
-      <div className="flex items-baseline justify-between gap-2 text-sm">
+      <div className="flex items-baseline justify-between gap-2 text-body">
         <span className="font-medium">
           Proposed rate: <span className="tabular-nums">{proposedRate}%</span>
         </span>
-        <span className="text-xs text-muted tabular-nums">
+        <span className="text-body-sm text-muted tabular-nums">
           Now {slider.currentRate}% · bounds {slider.minRate}–{slider.maxRate}%
         </span>
       </div>
@@ -68,7 +68,7 @@ export function TaxRateSliderControl({
         variant="primary"
         className="w-full"
       />
-      <div className="flex items-center justify-between gap-2 text-xs">
+      <div className="flex items-center justify-between gap-2 text-body-sm">
         {waypointLabel ? <span className="italic text-muted">{waypointLabel}</span> : <span />}
         {isSubStep ? (
           <span className="text-muted">Move at least {slider.step} to propose a change</span>

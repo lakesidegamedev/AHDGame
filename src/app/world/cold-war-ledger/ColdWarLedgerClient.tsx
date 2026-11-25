@@ -78,13 +78,13 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
             >
               {tallies.byPole.get(pole.id) ?? 0}
             </div>
-            <div className="text-body-xs text-muted">countries where this center leads</div>
+            <div className="text-body-sm text-muted">countries where this center leads</div>
           </div>
         ))}
         <div className="rounded-lg border border-card-border bg-card p-3 shadow-card">
           <div className="text-body-sm font-medium text-muted">Non-aligned</div>
           <div className="font-mono text-heading tabular-nums text-muted">{tallies.undecided}</div>
-          <div className="text-body-xs text-muted">
+          <div className="text-body-sm text-muted">
             lead of {ALIGNMENT_GATES.nonAligned} points or less
           </div>
         </div>
@@ -200,7 +200,7 @@ function Th({
   return (
     <th
       scope="col"
-      className={`px-2 py-2 text-body-xs uppercase tracking-wide text-muted sm:px-3 ${
+      className={`px-2 py-2 text-body-sm uppercase tracking-wide text-muted sm:px-3 ${
         numeric ? "text-right" : "text-left"
       } ${className ?? ""}`}
     >
@@ -216,7 +216,7 @@ function Row({ row, view }: { row: LedgerRow; view: WorldAlignmentView }) {
       <td className="px-2 py-2 text-body-sm font-medium text-foreground sm:px-3">
         {row.name}
         {!row.isPlayable && (
-          <span className="ml-2 whitespace-nowrap text-body-xs font-normal text-muted">
+          <span className="ml-2 whitespace-nowrap text-body-sm font-normal text-muted">
             not playable
           </span>
         )}

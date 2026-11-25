@@ -54,7 +54,7 @@ export function PrimaryMapWithLinks({
       <button
         type="button"
         onClick={() => setMapMode("leader")}
-        className={`px-2.5 py-1 text-xs ${pillClass(mapMode === "leader")}`}
+        className={`px-2.5 py-1 text-body-sm ${pillClass(mapMode === "leader")}`}
         aria-pressed={mapMode === "leader"}
       >
         Leader
@@ -62,7 +62,7 @@ export function PrimaryMapWithLinks({
       <button
         type="button"
         onClick={() => setMapMode("delegates")}
-        className={`px-2.5 py-1 text-xs ${pillClass(mapMode === "delegates")}`}
+        className={`px-2.5 py-1 text-body-sm ${pillClass(mapMode === "delegates")}`}
         aria-pressed={mapMode === "delegates"}
       >
         Delegates

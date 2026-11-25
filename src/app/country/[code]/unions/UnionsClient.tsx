@@ -174,20 +174,20 @@ export function UnionsClient() {
             <div className="flex items-center justify-between gap-2">
               <BackButton iconOnly fallbackLabel="Back" fallbackHref={countryUrl(countryId)} />
               {eraYear && (
-                <span className="rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white/90">
+                <span className="rounded-full bg-black/70 px-2.5 py-1 text-body-sm font-semibold text-white/90">
                   {eraYear} era
                 </span>
               )}
             </div>
 
             <div className="min-w-0">
-              <p className="mb-1 flex items-center gap-1.5 text-xs italic text-white/70 drop-shadow">
+              <p className="mb-1 flex items-center gap-1.5 text-body-sm italic text-white/70 drop-shadow">
                 <CountryFlag country={countryId} size="sm" />
                 Organized labour across every industry in {countryName}
               </p>
               <h1
                 data-coach="nav-unions"
-                className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl"
+                className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display"
               >
                 {countryName} Unions
               </h1>
@@ -227,16 +227,16 @@ export function UnionsClient() {
           <span aria-hidden className="mt-0.5 text-error">
             ⚠
           </span>
-          <div className="min-w-0 text-sm">
+          <div className="min-w-0 text-body">
             <p className="font-semibold text-error">
               Unions are banned under current law in {countryName}.
             </p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 text-body-sm text-muted">
               Affected unions are suspended: leadership, treasuries, and membership are frozen, not
               lost, until the ban is repealed by legislation. Union actions are unavailable and
               unionization is declining while the ban holds.
             </p>
-            <p className="mt-1.5 text-xs text-foreground">
+            <p className="mt-1.5 text-body-sm text-foreground">
               To lift the ban, pass a law:{" "}
               <Link
                 href={`/country/${code}/legislature`}
@@ -253,7 +253,7 @@ export function UnionsClient() {
       )}
 
       {!notEnabled && (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Every industry in {countryName} already has a union. Vacant unions need organizers to fund
           drives and elect a president. Open a union page to organize or vote.
         </p>
@@ -261,13 +261,13 @@ export function UnionsClient() {
 
       <section className="space-y-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-muted">All unions in {countryName}</h2>
+          <h2 className="text-body font-semibold text-muted">All unions in {countryName}</h2>
           <div className="h-px flex-1 bg-card-border" />
           {!notEnabled && !isBannedHere && (
             <button
               type="button"
               onClick={() => setFoundOpen(true)}
-              className="shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+              className="shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold text-primary transition-colors hover:bg-primary/20"
             >
               Found a Union
             </button>
@@ -322,9 +322,9 @@ export function UnionsClient() {
               />
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
-                <tr className="border-b border-card-border bg-card-elevated text-left text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border bg-card-elevated text-left text-body font-semibold text-foreground">
                   <th className="hidden px-4 py-3 font-medium sm:table-cell">#</th>
                   <th className="px-4 py-3 font-medium">Union</th>
                   <th className="hidden px-4 py-3 font-medium md:table-cell">
@@ -361,7 +361,7 @@ export function UnionsClient() {
                       key={r.unionId}
                       className="border-b border-card-border transition-colors last:border-0 hover:bg-card-elevated/60"
                     >
-                      <td className="hidden px-4 py-3 text-xs font-semibold tabular-nums text-muted sm:table-cell">
+                      <td className="hidden px-4 py-3 text-body-sm font-semibold tabular-nums text-muted sm:table-cell">
                         {i + 1}
                       </td>
                       <td className="px-4 py-3">
@@ -380,18 +380,18 @@ export function UnionsClient() {
                                 {r.name}
                               </Link>
                               {abbreviation && (
-                                <span className="rounded border border-card-border bg-card-elevated px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted">
+                                <span className="rounded border border-card-border bg-card-elevated px-1.5 py-0.5 text-body-sm font-semibold tracking-wide text-muted">
                                   {abbreviation}
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-muted">{r.sectorLabel}</p>
+                            <p className="text-body-sm text-muted">{r.sectorLabel}</p>
                           </div>
                         </div>
                       </td>
                       <td className="hidden px-4 py-3 text-muted md:table-cell">
                         {r.suspended ? (
-                          <span className="text-xs font-medium uppercase tracking-wide text-error">
+                          <span className="text-body-sm font-medium uppercase tracking-wide text-error">
                             Suspended
                           </span>
                         ) : r.leader ? (
@@ -468,7 +468,7 @@ function StatCell({ label, value, hint }: { label: string; value: string; hint?:
         {label}
         {hint && <Tooltip content={hint} />}
       </span>
-      <span className="text-base font-bold tabular-nums">{value}</span>
+      <span className="text-body-lg font-bold tabular-nums">{value}</span>
     </div>
   );
 }

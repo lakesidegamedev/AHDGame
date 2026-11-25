@@ -53,12 +53,12 @@ export function ForumPost({
           {author.characterId ? (
             <Link
               href={`/character/${author.characterId}`}
-              className="block truncate text-sm font-semibold text-foreground hover:text-primary sm:max-w-[148px] sm:whitespace-normal sm:break-words"
+              className="block truncate text-body font-semibold text-foreground hover:text-primary sm:max-w-[148px] sm:whitespace-normal sm:break-words"
             >
               {name}
             </Link>
           ) : (
-            <span className="block truncate text-sm font-semibold text-foreground sm:max-w-[148px] sm:whitespace-normal">
+            <span className="block truncate text-body font-semibold text-foreground sm:max-w-[148px] sm:whitespace-normal">
               {name}
             </span>
           )}
@@ -68,14 +68,14 @@ export function ForumPost({
             countryId={author.countryId}
           />
           {role && (
-            <span className="mt-0.5 inline-block rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <span className="mt-0.5 inline-block rounded-md bg-primary/15 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-primary">
               {role}
             </span>
           )}
         </div>
       </aside>
       <div className="flex min-w-0 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-card-border px-4 py-2 text-xs text-muted sm:px-5">
+        <header className="flex items-center justify-between gap-3 border-b border-card-border px-4 py-2 text-body-sm text-muted sm:px-5">
           <div className="flex min-w-0 items-center gap-2">{meta}</div>
           {headerAction}
         </header>

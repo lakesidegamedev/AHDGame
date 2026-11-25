@@ -43,7 +43,7 @@ const STATUS_DOT: Record<NuclearNodeStatus, string> = {
 /** One entry gate in the locked-programme explainer. */
 function Gate({ met, label }: { met: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2 text-[12px]">
+    <div className="flex items-center gap-2 text-body-sm">
       <span
         className="h-2 w-2 shrink-0 rounded-full"
         style={{ background: met ? "var(--success, #4ea87a)" : "#4a4a58" }}
@@ -92,7 +92,7 @@ export function NuclearTab({
 
   if (!status) {
     return (
-      <div className="rounded-xl border border-card-border bg-card px-4 py-6 text-center text-[13px] text-muted">
+      <div className="rounded-xl border border-card-border bg-card px-4 py-6 text-center text-body-sm text-muted">
         Loading the nuclear programme...
       </div>
     );
@@ -106,8 +106,8 @@ export function NuclearTab({
         <ActingLockNote reason={actingLockReason} />
 
         <div className="border-b border-card-border px-4 py-2.5">
-          <h3 className="text-sm font-semibold text-foreground">Nuclear programme</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Nuclear programme</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             This programme is closed. Two gates open it; both must be met.
           </p>
         </div>
@@ -150,7 +150,7 @@ export function NuclearTab({
             style={{ background: STATUS_DOT[node.status] }}
           />
           <span
-            className={`text-[13px] font-semibold ${
+            className={`text-body-sm font-semibold ${
               node.status === "locked" || node.status === "future"
                 ? "text-muted"
                 : "text-foreground"
@@ -162,8 +162,8 @@ export function NuclearTab({
             {node.status === "future" ? `From ${node.yearAvailable}` : STATUS_LABEL[node.status]}
           </span>
         </div>
-        <p className="mt-1 text-[11px] leading-relaxed text-muted">{node.desc}</p>
-        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted">
+        <p className="mt-1 text-body-sm leading-relaxed text-muted">{node.desc}</p>
+        <div className="mt-1.5 flex items-center gap-3 text-body-sm text-muted">
           <span className="tabular">
             {fmtMoneyAbs(currencySymbol, node.cost)}
             {node.kind === "device" ? " test" : ""}
@@ -181,7 +181,7 @@ export function NuclearTab({
                   setConfirming(null);
                   void onConductTest(node.key);
                 }}
-                className="ml-auto rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--error)] disabled:opacity-50"
+                className="ml-auto rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] px-2.5 py-1 text-body-sm font-semibold text-[var(--error)] disabled:opacity-50"
               >
                 Confirm test
               </button>
@@ -189,7 +189,7 @@ export function NuclearTab({
               <button
                 disabled={!actionable}
                 onClick={() => setConfirming(node.key)}
-                className="ml-auto rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-gov-soft disabled:opacity-50"
+                className="ml-auto rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] px-2.5 py-1 text-body-sm font-semibold text-gov-soft disabled:opacity-50"
               >
                 Conduct test
               </button>
@@ -198,7 +198,7 @@ export function NuclearTab({
             <button
               disabled={!actionable}
               onClick={() => void onAdoptDelivery(node.key)}
-              className="ml-auto rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-gov-soft disabled:opacity-50"
+              className="ml-auto rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] px-2.5 py-1 text-body-sm font-semibold text-gov-soft disabled:opacity-50"
             >
               Adopt
             </button>
@@ -230,15 +230,15 @@ export function NuclearTab({
 
       <div className="rounded-xl border border-card-border bg-card">
         <div className="border-b border-card-border px-4 py-2.5">
-          <h3 className="text-sm font-semibold text-foreground">Warhead production</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Warhead production</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             A standing order the complex fills each turn out of the defence appropriation. A rate
             the budget cannot cover simply builds less; nothing is bought here.
           </p>
         </div>
         <div className="space-y-2 px-4 py-3">
           {status.productionCap <= 0 ? (
-            <p className="text-[13px] text-muted">
+            <p className="text-body-sm text-muted">
               No device has been proven. Conduct a test before ordering production.
             </p>
           ) : (
@@ -257,17 +257,17 @@ export function NuclearTab({
                   value={rateInput}
                   onChange={(e) => setRateInput(e.target.value)}
                   disabled={busy || !canAct}
-                  className="tabular w-24 rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none disabled:opacity-50"
+                  className="tabular w-24 rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none disabled:opacity-50"
                 />
                 <button
                   disabled={busy || !canAct || !rateValid || rateWanted === program.productionRate}
                   onClick={() => void onSetProduction(rateWanted)}
-                  className="rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] px-3 py-2 text-[12px] font-semibold text-gov-soft disabled:opacity-50"
+                  className="rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] px-3 py-2 text-body-sm font-semibold text-gov-soft disabled:opacity-50"
                 >
                   Set rate
                 </button>
               </div>
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 {fmtMoneyAbs(currencySymbol, status.warheadUnitCost)} per warhead at the current
                 device tier, up to {status.productionCap} per turn.
                 {!rateValid && rateInput !== "" && (
@@ -285,8 +285,8 @@ export function NuclearTab({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-card-border bg-card">
           <div className="border-b border-card-border px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-foreground">Device ladder</h3>
-            <p className="mt-0.5 text-[11px] text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">Device ladder</h3>
+            <p className="mt-0.5 text-body-sm text-muted">
               Each device is proven only by a test - a world event every capital sees.
             </p>
           </div>
@@ -294,8 +294,8 @@ export function NuclearTab({
         </div>
         <div className="rounded-xl border border-card-border bg-card">
           <div className="border-b border-card-border px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-foreground">Delivery legs</h3>
-            <p className="mt-0.5 text-[11px] text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">Delivery legs</h3>
+            <p className="mt-0.5 text-body-sm text-muted">
               Adopted quietly, doctrine-style. A stockpile with no way to deliver it deters nobody.
             </p>
           </div>

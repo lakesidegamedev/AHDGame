@@ -52,7 +52,7 @@ export function SharePurchaseOrdersView({
   return (
     <div className="space-y-5">
       {!hasOrders ? (
-        <p className="py-4 text-center text-sm text-muted">No open orders.</p>
+        <p className="py-4 text-center text-body text-muted">No open orders.</p>
       ) : (
         <>
           {openBuyOrders.length > 0 && (
@@ -65,7 +65,7 @@ export function SharePurchaseOrdersView({
                     className="flex items-center justify-between bg-card-elevated/30 px-4 py-3"
                   >
                     <div className="space-y-0.5">
-                      <div className="text-sm font-medium text-foreground">
+                      <div className="text-body font-medium text-foreground">
                         {o.sharesRemaining.toLocaleString("en-US")} shares
                         <span className="ml-2 font-normal text-muted">
                           @{" "}
@@ -77,7 +77,7 @@ export function SharePurchaseOrdersView({
                           )}
                         </span>
                       </div>
-                      <div className="text-xs text-muted">
+                      <div className="text-body-sm text-muted">
                         {formatAmount(
                           Math.round(
                             corpCurrencyCode
@@ -91,7 +91,7 @@ export function SharePurchaseOrdersView({
                     <button
                       onClick={() => handleCancelOrder(o._id)}
                       disabled={cancellingId === o._id}
-                      className="ml-4 text-xs text-error transition-colors hover:text-error/80 disabled:opacity-50"
+                      className="ml-4 text-body-sm text-error transition-colors hover:text-error/80 disabled:opacity-50"
                     >
                       {cancellingId === o._id ? "Cancelling…" : "Cancel"}
                     </button>
@@ -103,7 +103,7 @@ export function SharePurchaseOrdersView({
 
           {openSellOrders.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-error">
+              <p className="mb-2 text-body-sm font-semibold uppercase tracking-wider text-error">
                 Sell orders
               </p>
               <div className="divide-y divide-card-border/50 overflow-hidden rounded-lg border border-card-border">
@@ -113,7 +113,7 @@ export function SharePurchaseOrdersView({
                     className="flex items-center justify-between bg-card-elevated/30 px-4 py-3"
                   >
                     <div className="space-y-0.5">
-                      <div className="text-sm font-medium text-foreground">
+                      <div className="text-body font-medium text-foreground">
                         {o.sharesRemaining.toLocaleString("en-US")} shares
                         <span className="ml-2 font-normal text-muted">
                           @{" "}
@@ -128,7 +128,7 @@ export function SharePurchaseOrdersView({
                       {o.holdingTerms && (
                         <HoldingTermSummary terms={o.holdingTerms} turn={o.holdingTurn ?? 0} />
                       )}
-                      <div className="text-xs text-muted">
+                      <div className="text-body-sm text-muted">
                         {formatAmount(
                           Math.round(
                             corpCurrencyCode
@@ -145,7 +145,7 @@ export function SharePurchaseOrdersView({
                     <button
                       onClick={() => handleCancelOrder(o._id)}
                       disabled={cancellingId === o._id}
-                      className="ml-4 text-xs text-error transition-colors hover:text-error/80 disabled:opacity-50"
+                      className="ml-4 text-body-sm text-error transition-colors hover:text-error/80 disabled:opacity-50"
                     >
                       {cancellingId === o._id ? "Cancelling…" : "Cancel"}
                     </button>
@@ -156,7 +156,7 @@ export function SharePurchaseOrdersView({
           )}
         </>
       )}
-      <InlineError error={error} className="text-xs text-error" />
+      <InlineError error={error} className="text-body-sm text-error" />
     </div>
   );
 }

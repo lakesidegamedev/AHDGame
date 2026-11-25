@@ -68,12 +68,12 @@ export function RingChart({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
           {centreLabel && (
-            <span className="max-w-[5.5rem] text-center text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-muted">
+            <span className="max-w-[5.5rem] text-center text-body-sm font-semibold uppercase leading-tight tracking-[0.1em] text-muted">
               {centreLabel}
             </span>
           )}
           {centreValue && (
-            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+            <span className="font-mono text-heading font-semibold tabular-nums text-foreground">
               {centreValue}
             </span>
           )}
@@ -84,7 +84,7 @@ export function RingChart({
           {arcs.map(({ segment, pct }) => (
             <li
               key={segment.key}
-              className="flex min-h-8 items-center gap-2 border-b border-card-border/60 text-xs"
+              className="flex min-h-8 items-center gap-2 border-b border-card-border/60 text-body-sm"
             >
               <span
                 aria-hidden

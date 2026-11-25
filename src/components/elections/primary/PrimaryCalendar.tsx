@@ -47,7 +47,7 @@ export function PrimaryCalendar({
 
   if (waves.length === 0) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-4 text-xs text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-4 text-body-sm text-muted">
         {t("primaryCalendar.empty")}
       </div>
     );
@@ -56,8 +56,8 @@ export function PrimaryCalendar({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-muted">{t("primaryCalendar.title")}</h3>
-        <span className="text-xs text-muted">{t("primaryCalendar.subtitle")}</span>
+        <h3 className="text-body-lg font-semibold text-muted">{t("primaryCalendar.title")}</h3>
+        <span className="text-body-sm text-muted">{t("primaryCalendar.subtitle")}</span>
       </div>
       <div className="flex max-h-[560px] flex-col gap-3 overflow-y-auto pr-1">
         {waves.map((w) => {
@@ -77,8 +77,8 @@ export function PrimaryCalendar({
           return (
             <div key={w.turnsRemaining} className="flex items-start gap-3">
               <div className="min-w-[88px] text-right">
-                <div className="text-xs font-bold tabular-nums">{turnsLabel}</div>
-                <div className="mt-0.5 text-[10px] font-medium leading-tight text-muted">
+                <div className="text-body-sm font-bold tabular-nums">{turnsLabel}</div>
+                <div className="mt-0.5 text-body-sm font-medium leading-tight text-muted">
                   {w.label}
                 </div>
               </div>
@@ -95,7 +95,7 @@ export function PrimaryCalendar({
                   const winnerColor = winnerColorByState?.[stateId];
                   const showWinner = w.isPast && winnerColor;
                   const baseClasses =
-                    "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold cursor-pointer transition-colors";
+                    "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-body-sm font-semibold cursor-pointer transition-colors";
                   return (
                     <button
                       key={stateId}

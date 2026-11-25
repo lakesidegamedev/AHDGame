@@ -24,7 +24,7 @@ export function YourDelegations({
   if (!focusCountry) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Sign in as a head of government or foreign minister to see your country&apos;s
           delegations.
         </p>
@@ -47,13 +47,13 @@ export function YourDelegations({
         <CountryFlag country={focusCountry} size="lg" />
         <div>
           <p className="text-body-sm font-medium text-muted">Your delegations</p>
-          <p className="text-base font-semibold text-foreground">{countryName}</p>
+          <p className="text-body-lg font-semibold text-foreground">{countryName}</p>
         </div>
       </div>
 
       {mine.length === 0 ? (
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             {countryName} isn&apos;t a member of any organization yet. Browse the directory below to
             apply.
           </p>

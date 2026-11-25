@@ -68,7 +68,7 @@ export default function ShareStructurePanel({ corporation, trading }: ShareStruc
 
   if (!canEditShareStructureTarget) {
     return (
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         The corporation has {corporation.totalShares.toLocaleString("en-US")} shares.
       </p>
     );
@@ -77,7 +77,7 @@ export default function ShareStructurePanel({ corporation, trading }: ShareStruc
   return (
     <DenseSection title="Stock split" meta="CEO">
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Set a new total share count. Every holding and the public float scale in proportion, so
           market capitalization stays the same. Reverse splits stop at{" "}
           {minTotalShares.toLocaleString("en-US")} shares; forward splits at{" "}
@@ -85,10 +85,10 @@ export default function ShareStructurePanel({ corporation, trading }: ShareStruc
           {SHARE_STRUCTURE_COOLDOWN_TURNS} turns.
         </p>
         {!ceoEligibleForShareStructure && (
-          <p className="text-xs text-muted">Not available for state-owned corporations.</p>
+          <p className="text-body-sm text-muted">Not available for state-owned corporations.</p>
         )}
         {ceoEligibleForShareStructure && shareStructureOnCooldown && (
-          <p className="text-xs text-warning">
+          <p className="text-body-sm text-warning">
             Available again in {shareStructureCooldownTurnsRemaining} turn
             {shareStructureCooldownTurnsRemaining === 1 ? "" : "s"} (last change turn{" "}
             {corporation.lastShareStructureTurn ?? "unknown"}).
@@ -109,7 +109,7 @@ export default function ShareStructurePanel({ corporation, trading }: ShareStruc
             }}
             placeholder="New total shares"
             disabled={!canEditShareStructureTarget}
-            className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+            className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
           />
           {corporation.totalShares > minTotalShares && (
             <SmallButton
@@ -147,12 +147,12 @@ export default function ShareStructurePanel({ corporation, trading }: ShareStruc
           !shareStructurePricePreview &&
           consolidateTargetNum !== corporation.totalShares &&
           canEditShareStructureTarget && (
-            <p className="text-xs text-error">
+            <p className="text-body-sm text-error">
               Reverse: {reverseRange}. Forward: {forwardRange}.
             </p>
           )}
         {newPriceAfterShareStructure != null && (
-          <p className="text-xs tabular-nums text-muted">
+          <p className="text-body-sm tabular-nums text-muted">
             Indicative new price about{" "}
             {formatPrice(toAnchor(newPriceAfterShareStructure), liquidCode)} (market cap{" "}
             {formatAmount(toAnchor(corporation.sharePrice * corporation.totalShares), liquidCode)}

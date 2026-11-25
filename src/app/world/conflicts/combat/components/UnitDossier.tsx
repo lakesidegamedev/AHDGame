@@ -90,7 +90,7 @@ export function UnitDossier({
             style={{
               margin: 0,
               fontFamily: MIL_FONT.heading,
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 700,
               color: MIL_COLOR.textStrong,
             }}
@@ -131,7 +131,7 @@ export function UnitDossier({
               <div
                 style={{
                   fontFamily: MIL_FONT.heading,
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: 700,
                   marginTop: 2,
                   color: s.c ?? MIL_COLOR.text,
@@ -149,7 +149,7 @@ export function UnitDossier({
             <div key={label}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                 <span
-                  style={{ fontFamily: MIL_FONT.sans, fontSize: 11.5, color: MIL_COLOR.textMuted }}
+                  style={{ fontFamily: MIL_FONT.sans, fontSize: 12, color: MIL_COLOR.textMuted }}
                 >
                   {label}
                 </span>
@@ -308,7 +308,7 @@ export function UnitDossier({
               <div
                 style={{
                   fontFamily: MIL_FONT.heading,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 600,
                   color: MIL_COLOR.text,
                 }}

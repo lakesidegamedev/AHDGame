@@ -32,7 +32,7 @@ export function SinceAwayBody({
   return (
     <div className="space-y-2">
       {hasMoney ? (
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-body-sm">
           <dt className="text-muted">{t("netWorth")}</dt>
           <dd
             className={`text-right font-medium tabular-nums ${toneClass(data.netWorthChangePct)}`}
@@ -68,7 +68,7 @@ export function SinceAwayBody({
           <Link
             href="/notifications"
             onClick={onNavigate}
-            className="block rounded px-1 py-1 text-xs hover:bg-white/5"
+            className="block rounded px-1 py-1 text-body-sm hover:bg-white/5"
           >
             <span className="font-semibold text-foreground">
               {t("unread", {

@@ -125,7 +125,7 @@ export function PrivatizationVotePanel({
     }
   }
 
-  if (loading) return <div className="text-sm text-muted">Loading privatization vote…</div>;
+  if (loading) return <div className="text-body text-muted">Loading privatization vote…</div>;
   if (!vote) return null;
 
   const turnsLeft = Math.max(0, vote.deadlineAtTurn - currentTurn);
@@ -137,9 +137,9 @@ export function PrivatizationVotePanel({
   return (
     <div className="rounded-xl border border-warning/40 bg-warning/5 p-4 my-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-bold text-foreground">Privatization vote</h3>
+        <h3 className="text-body-lg font-bold text-foreground">Privatization vote</h3>
         <span
-          className={`text-xs px-2 py-0.5 rounded font-semibold border ${
+          className={`text-body-sm px-2 py-0.5 rounded font-semibold border ${
             vote.status === "open"
               ? "border-primary/40 bg-primary/10 text-primary"
               : vote.status === "passed"
@@ -151,7 +151,7 @@ export function PrivatizationVotePanel({
         </span>
       </div>
 
-      <div className="text-xs space-y-1 mb-3">
+      <div className="text-body-sm space-y-1 mb-3">
         <div className="flex justify-between">
           <span className="text-muted">Buyout price (locked)</span>
           <span className="tabular-nums font-semibold">
@@ -171,11 +171,11 @@ export function PrivatizationVotePanel({
         </div>
       </div>
 
-      {error && <div className="text-xs text-error mb-2">{error}</div>}
+      {error && <div className="text-body-sm text-error mb-2">{error}</div>}
 
       {vote.status === "open" && isCeo && (
         <div className="space-y-2">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             You opened this vote as the buyer. Non-CEO shareholders vote yes/no on accepting your
             buyout offer at the locked price; if it passes, you purchase their shares with the
             reserved cash. You can cancel to release the reservation.
@@ -183,7 +183,7 @@ export function PrivatizationVotePanel({
           <button
             onClick={cancelVote}
             disabled={submitting}
-            className="rounded-lg border border-card-border px-3 py-1.5 text-sm hover:bg-card transition-colors disabled:opacity-50"
+            className="rounded-lg border border-card-border px-3 py-1.5 text-body hover:bg-card transition-colors disabled:opacity-50"
           >
             {submitting ? "Cancelling…" : "Cancel vote"}
           </button>
@@ -195,7 +195,7 @@ export function PrivatizationVotePanel({
           <button
             onClick={() => castVote("yes")}
             disabled={submitting}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+            className={`flex-1 rounded-lg px-3 py-1.5 text-body font-medium transition-colors disabled:opacity-50 ${
               myVote?.vote === "yes"
                 ? "bg-primary text-primary-foreground"
                 : "border border-card-border hover:bg-card"
@@ -206,7 +206,7 @@ export function PrivatizationVotePanel({
           <button
             onClick={() => castVote("no")}
             disabled={submitting}
-            className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+            className={`flex-1 rounded-lg px-3 py-1.5 text-body font-medium transition-colors disabled:opacity-50 ${
               myVote?.vote === "no"
                 ? "bg-error text-white"
                 : "border border-card-border hover:bg-card"
@@ -218,7 +218,7 @@ export function PrivatizationVotePanel({
       )}
 
       {vote.status === "open" && !isCeo && !viewerHoldsShares && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           You hold no shares in this corporation, so you cannot vote.
         </p>
       )}

@@ -48,14 +48,14 @@ export function SiteFooter({ displayMode }: { displayMode?: "focused" | "classic
     <footer className="border-t border-card-border/40 bg-card/30 pb-14">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             A House Divided <span className="text-muted/70">|</span> {t("footer.tagline")}
           </p>
           <a
             href="https://lakesidegames.net"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-body-sm text-muted transition-colors hover:text-foreground"
           >
             <Image
               src="/lakeside-mark.svg"
@@ -70,37 +70,40 @@ export function SiteFooter({ displayMode }: { displayMode?: "focused" | "classic
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link
             href="/about"
-            className="text-xs text-muted transition-colors hover:text-foreground"
+            className="text-body-sm text-muted transition-colors hover:text-foreground"
           >
             {t("footer.about")}
           </Link>
           <Link
             href="/contact"
-            className="text-xs text-muted transition-colors hover:text-foreground"
+            className="text-body-sm text-muted transition-colors hover:text-foreground"
           >
             {t("footer.contact")}
           </Link>
-          <Link href="/faq" className="text-xs text-muted transition-colors hover:text-foreground">
+          <Link
+            href="/faq"
+            className="text-body-sm text-muted transition-colors hover:text-foreground"
+          >
             {t("footer.faq")}
           </Link>
           <Link
             href="/privacy"
-            className="text-xs text-muted transition-colors hover:text-foreground"
+            className="text-body-sm text-muted transition-colors hover:text-foreground"
           >
             {t("footer.privacy")}
           </Link>
           <Link
             href="/terms"
-            className="text-xs text-muted transition-colors hover:text-foreground"
+            className="text-body-sm text-muted transition-colors hover:text-foreground"
           >
             {t("footer.terms")}
           </Link>
-          <CookieSettingsLink className="text-xs text-muted transition-colors hover:text-foreground" />
+          <CookieSettingsLink className="text-body-sm text-muted transition-colors hover:text-foreground" />
           <a
             href="https://discord.gg/DmF8zJJuqN"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-muted transition-colors hover:text-foreground"
+            className="text-body-sm text-muted transition-colors hover:text-foreground"
           >
             Discord
           </a>

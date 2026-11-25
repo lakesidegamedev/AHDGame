@@ -16,7 +16,7 @@ function EffectLines({
 }) {
   if (lines.length === 0) return null;
   return (
-    <ul aria-label={label} className={`flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] ${className}`}>
+    <ul aria-label={label} className={`flex flex-wrap gap-x-3 gap-y-0.5 text-body-sm ${className}`}>
       {lines.map((line) => (
         <li key={line} className={line.startsWith("−") ? "text-warning" : "text-success"}>
           {line}

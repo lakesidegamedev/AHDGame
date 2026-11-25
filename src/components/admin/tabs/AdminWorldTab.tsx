@@ -57,15 +57,15 @@ export function AdminWorldTab({ activeSub }: AdminWorldTabProps) {
             <div className="rounded-xl border border-card-border bg-card p-4 shadow-card">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="text-lg text-foreground">Position editor</h3>
-                  <p className="mt-0.5 max-w-xl text-sm text-muted">
+                  <h3 className="text-body-lg text-foreground">Position editor</h3>
+                  <p className="mt-0.5 max-w-xl text-body text-muted">
                     Author Layer-1 demographic positions and turnout by state, then apply them as
                     global seed defaults.
                   </p>
                 </div>
                 <Link
                   href="/control/world/position-editor"
-                  className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark"
+                  className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark"
                 >
                   Open position editor →
                 </Link>

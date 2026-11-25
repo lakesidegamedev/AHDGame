@@ -38,11 +38,13 @@ export function ExperimentalFeaturesSection() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">{t("experimental.intro")}</p>
+      <p className="text-body text-muted">{t("experimental.intro")}</p>
       <div className="flex items-center justify-between gap-4 rounded-xl border border-card-border bg-card-muted px-4 py-3">
         <div>
-          <div className="text-sm font-medium text-foreground">{t("experimental.toggleLabel")}</div>
-          <div className="text-xs text-muted">
+          <div className="text-body font-medium text-foreground">
+            {t("experimental.toggleLabel")}
+          </div>
+          <div className="text-body-sm text-muted">
             {enabled ? t("experimental.toggleHintOn") : t("experimental.toggleHintOff")}
           </div>
         </div>

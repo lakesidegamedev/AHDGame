@@ -319,7 +319,7 @@ export default function PrivateSalePanel({
       {/* Create listing — only shown if you own shares */}
       {myCharacterId && myShares > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-medium text-muted">List your shares</h3>
+          <h3 className="mb-1.5 text-body-lg font-medium text-muted">List your shares</h3>
           {terms && (
             <HoldingTermSelector
               terms={terms}
@@ -333,7 +333,7 @@ export default function PrivateSalePanel({
           )}
           <div className="flex items-end gap-3 flex-wrap">
             <div>
-              <label className="block text-xs text-muted mb-1">Shares to list</label>
+              <label className="block text-body-sm text-muted mb-1">Shares to list</label>
               <input
                 type="number"
                 value={listingShares || ""}
@@ -341,25 +341,25 @@ export default function PrivateSalePanel({
                 placeholder="Quantity"
                 min={1}
                 max={availableShares}
-                className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
               />
             </div>
             <button
               onClick={() => void handleCreateListing()}
               disabled={loading || listingShares <= 0 || listingShares > availableShares}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {loading ? "Listing" : "Create listing"}
             </button>
           </div>
           {sharePrice > 0 && (
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               Current market: {fmtLocalPrice(sharePrice)} · Buyers may offer{" "}
               {fmtLocalPrice(sharePrice * 0.5)} to {fmtLocalPrice(sharePrice * 2.0)}
             </p>
           )}
           {isCeo && listingShares > 0 && listingShares === myShares && (
-            <p className="mt-2 text-xs text-error">
+            <p className="mt-2 text-body-sm text-error">
               You are the CEO. Listing all {myShares.toLocaleString("en-US")} of your remaining
               shares will remove you as CEO, and you would need to be re-appointed. You will be
               asked to confirm first.
@@ -391,16 +391,16 @@ export default function PrivateSalePanel({
 
       {corporation?.isPrivate && myCorporation && corporationShares > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-medium text-muted">
+          <h3 className="mb-1.5 text-body-lg font-medium text-muted">
             List shares held by {myCorporation.name}
           </h3>
-          <p className="mb-2 text-xs text-muted">
+          <p className="mb-2 text-body-sm text-muted">
             The company receives the proceeds. Listing shares reserves them until they sell or the
             listing expires.
           </p>
           <div className="flex items-end gap-3 flex-wrap">
             <div>
-              <label className="block text-xs text-muted mb-1">Shares to list</label>
+              <label className="block text-body-sm text-muted mb-1">Shares to list</label>
               <input
                 type="number"
                 value={corporationListingShares || ""}
@@ -410,7 +410,7 @@ export default function PrivateSalePanel({
                 placeholder="Quantity"
                 min={1}
                 max={corporationShares}
-                className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
               />
             </div>
             <button
@@ -420,12 +420,12 @@ export default function PrivateSalePanel({
                 corporationListingShares <= 0 ||
                 corporationListingShares > corporationShares
               }
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {loading ? "Listing" : "List company shares"}
             </button>
           </div>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             {myCorporation.name} holds {corporationShares.toLocaleString("en-US")} shares here.
           </p>
         </div>
@@ -434,20 +434,22 @@ export default function PrivateSalePanel({
       {ceoVacateConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-sm rounded-2xl border border-warning/40 bg-card p-5 shadow-modal space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">This will remove you as CEO</h3>
-            <p className="text-xs leading-relaxed text-muted">{ceoVacateConfirm.message}</p>
+            <h3 className="text-body-lg font-semibold text-foreground">
+              This will remove you as CEO
+            </h3>
+            <p className="text-body-sm leading-relaxed text-muted">{ceoVacateConfirm.message}</p>
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 onClick={() => setCeoVacateConfirm(null)}
                 disabled={loading}
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-muted hover:bg-card-elevated disabled:opacity-50"
+                className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm text-muted hover:bg-card-elevated disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void handleCreateListing(true)}
                 disabled={loading}
-                className="rounded-lg bg-error px-3 py-1.5 text-xs font-medium text-white hover:bg-error/90 disabled:opacity-50"
+                className="rounded-lg bg-error px-3 py-1.5 text-body-sm font-medium text-white hover:bg-error/90 disabled:opacity-50"
               >
                 {loading ? "Listing" : "List and step down"}
               </button>
@@ -459,19 +461,19 @@ export default function PrivateSalePanel({
       {/* Your active listings (seller view) */}
       {myListings.length > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-medium text-muted">Your listings</h3>
+          <h3 className="mb-1.5 text-body-lg font-medium text-muted">Your listings</h3>
           <div>
             {myListings.map((listing) => (
               <div key={listing._id} className="border-b border-card-border/60 py-2">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <span className="text-sm font-medium text-foreground">
+                    <span className="text-body font-medium text-foreground">
                       {listing.sharesRemaining.toLocaleString("en-US")} shares remaining
                     </span>
-                    <span className="text-xs text-muted ml-2">
+                    <span className="text-body-sm text-muted ml-2">
                       of {listing.sharesListed.toLocaleString("en-US")} listed
                     </span>
-                    <div className="text-xs text-muted mt-0.5">
+                    <div className="text-body-sm text-muted mt-0.5">
                       Offer range:{" "}
                       <span className="text-foreground">
                         {fmtLocalPrice(listing.priceFloor)} to {fmtLocalPrice(listing.priceCeiling)}
@@ -486,7 +488,7 @@ export default function PrivateSalePanel({
                   <button
                     onClick={() => handleCancelListing(listing._id)}
                     disabled={loading}
-                    className="text-xs text-error hover:text-error/80 transition-colors disabled:opacity-50"
+                    className="text-body-sm text-error hover:text-error/80 transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -499,7 +501,7 @@ export default function PrivateSalePanel({
                   />
                 )}
                 {listing.offers.length === 0 ? (
-                  <p className="text-xs text-muted">No offers yet</p>
+                  <p className="text-body-sm text-muted">No offers yet</p>
                 ) : (
                   <div className="divide-y divide-card-border/50">
                     {listing.offers.map((offer) => {
@@ -513,20 +515,20 @@ export default function PrivateSalePanel({
                                 {offer.buyerSequentialId ? (
                                   <Link
                                     href={`/character/${offer.buyerSequentialId}`}
-                                    className="truncate text-xs font-medium text-foreground hover:underline"
+                                    className="truncate text-body-sm font-medium text-foreground hover:underline"
                                   >
                                     {offer.buyerName}
                                   </Link>
                                 ) : (
-                                  <span className="text-xs font-medium text-foreground">
+                                  <span className="text-body-sm font-medium text-foreground">
                                     {offer.buyerName}
                                   </span>
                                 )}
-                                <span className="text-xs text-muted">
+                                <span className="text-body-sm text-muted">
                                   {offer.shares.toLocaleString("en-US")} @{" "}
                                   {fmtLocalPrice(offer.pricePerShare)}
                                 </span>
-                                <span className="text-xs font-medium tabular-nums text-foreground">
+                                <span className="text-body-sm font-medium tabular-nums text-foreground">
                                   = {fmtFull(Math.round(escrowToAnchor(offer.escrowAmount)))}
                                 </span>
                               </div>
@@ -546,12 +548,12 @@ export default function PrivateSalePanel({
                                 }
                                 min={1}
                                 max={maxAccept}
-                                className="h-6 w-24 rounded border border-card-border bg-background px-1.5 text-right text-xs tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                                className="h-6 w-24 rounded border border-card-border bg-background px-1.5 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
                               />
                               <button
                                 onClick={() => handleAcceptOffer(listing._id, offer._id, maxAccept)}
                                 disabled={loading}
-                                className="inline-flex h-6 items-center rounded border border-primary bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                                className="inline-flex h-6 items-center rounded border border-primary bg-primary px-2 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                               >
                                 Accept
                               </button>
@@ -571,7 +573,7 @@ export default function PrivateSalePanel({
       {/* Other open listings (buyer view) */}
       {otherListings.length > 0 && myCharacterId && (
         <div>
-          <h3 className="mb-1.5 text-xs font-medium text-muted">Open listings</h3>
+          <h3 className="mb-1.5 text-body-lg font-medium text-muted">Open listings</h3>
           <div>
             {otherListings.map((listing) => {
               const myExistingOffer = listing.offers.find((o) => o.isMyOffer);
@@ -582,19 +584,19 @@ export default function PrivateSalePanel({
                       {listing.sellerSequentialId ? (
                         <Link
                           href={`/character/${listing.sellerSequentialId}`}
-                          className="text-sm font-medium text-foreground hover:underline"
+                          className="text-body font-medium text-foreground hover:underline"
                         >
                           {listing.sellerName}
                         </Link>
                       ) : (
-                        <span className="text-sm font-medium text-foreground">
+                        <span className="text-body font-medium text-foreground">
                           {listing.sellerName}
                         </span>
                       )}
-                      <span className="ml-2 text-sm text-foreground">
+                      <span className="ml-2 text-body text-foreground">
                         selling {listing.sharesRemaining.toLocaleString("en-US")} shares
                       </span>
-                      <div className="text-xs text-muted mt-0.5">
+                      <div className="text-body-sm text-muted mt-0.5">
                         Offer range:{" "}
                         <span className="text-foreground">
                           {fmtLocalPrice(listing.priceFloor)} to{" "}
@@ -615,7 +617,7 @@ export default function PrivateSalePanel({
                   {/* My existing offer */}
                   {myExistingOffer && (
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-xs text-foreground">
+                      <span className="text-body-sm text-foreground">
                         Your offer: {myExistingOffer.shares.toLocaleString("en-US")} @{" "}
                         {fmtLocalPrice(myExistingOffer.pricePerShare)} (
                         {fmtFull(Math.round(escrowToAnchor(myExistingOffer.escrowAmount)))}{" "}
@@ -624,7 +626,7 @@ export default function PrivateSalePanel({
                       <button
                         onClick={() => handleWithdrawOffer(listing._id, myExistingOffer._id)}
                         disabled={loading}
-                        className="text-xs text-error hover:text-error/80 disabled:opacity-50"
+                        className="text-body-sm text-error hover:text-error/80 disabled:opacity-50"
                       >
                         Withdraw
                       </button>
@@ -635,7 +637,7 @@ export default function PrivateSalePanel({
                   {!myExistingOffer && (
                     <div className="flex items-end gap-3 flex-wrap">
                       <div>
-                        <label className="block text-xs text-muted mb-1">Shares</label>
+                        <label className="block text-body-sm text-muted mb-1">Shares</label>
                         <input
                           type="number"
                           value={offerShares[listing._id] || ""}
@@ -651,11 +653,11 @@ export default function PrivateSalePanel({
                           placeholder="Quantity"
                           min={1}
                           max={listing.sharesRemaining}
-                          className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                          className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted mb-1">
+                        <label className="block text-body-sm text-muted mb-1">
                           Price/share ({inputSymbol})
                         </label>
                         <input
@@ -687,13 +689,13 @@ export default function PrivateSalePanel({
                               : listing.priceCeiling
                           )}
                           step={0.0001}
-                          className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                          className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
                         />
                       </div>
                       <button
                         onClick={() => handleSubmitOffer(listing._id)}
                         disabled={loading || !offerShares[listing._id] || !offerPrice[listing._id]}
-                        className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                        className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         {loading ? "Submitting" : "Make offer"}
                       </button>
@@ -703,7 +705,7 @@ export default function PrivateSalePanel({
                   {(offerShares[listing._id] ?? 0) > 0 &&
                     (offerPrice[listing._id] ?? 0) > 0 &&
                     !myExistingOffer && (
-                      <div className="mt-2 text-xs text-muted">
+                      <div className="mt-2 text-body-sm text-muted">
                         Escrow:{" "}
                         <span className="text-foreground font-medium">
                           {fmtFull(
@@ -723,7 +725,9 @@ export default function PrivateSalePanel({
       )}
 
       {listings.length === 0 && negotiatedDeals.length === 0 && (
-        <p className="py-1 text-xs text-muted">No open private listings for this corporation.</p>
+        <p className="py-1 text-body-sm text-muted">
+          No open private listings for this corporation.
+        </p>
       )}
     </div>
   );
@@ -735,9 +739,9 @@ export default function PrivateSalePanel({
   return (
     <section className="min-w-0">
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-card-border pb-1.5">
-        <h2 className="flex min-w-0 items-baseline gap-2 text-sm font-semibold text-foreground">
+        <h2 className="flex min-w-0 items-baseline gap-2 text-body font-semibold text-foreground">
           Private sale
-          <span className="text-xs font-normal text-muted">
+          <span className="text-body-sm font-normal text-muted">
             listings expire after 24 hours; offers run 50% to 200% of market, negotiated sales at
             any agreed price
           </span>
@@ -746,7 +750,7 @@ export default function PrivateSalePanel({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+          className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated"
         >
           {open ? "Hide" : "Show"}
         </button>

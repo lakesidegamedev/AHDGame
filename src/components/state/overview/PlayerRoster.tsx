@@ -110,7 +110,7 @@ export function PlayerRoster({ countryId, stateId }: { countryId: CountryId; sta
       key: "position",
       header: "Position / Race",
       mobileLabel: "Position / Race",
-      render: (p) => <span className="text-sm text-muted">{p.positionLabel}</span>,
+      render: (p) => <span className="text-body text-muted">{p.positionLabel}</span>,
     },
   ];
 
@@ -121,7 +121,7 @@ export function PlayerRoster({ countryId, stateId }: { countryId: CountryId; sta
   return (
     <section aria-labelledby="overview-roster-title">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 id="overview-roster-title" className="text-heading-lg font-semibold text-foreground">
+        <h2 id="overview-roster-title" className="text-heading font-semibold text-foreground">
           Players
         </h2>
         {!loading && !error && (
@@ -135,7 +135,7 @@ export function PlayerRoster({ countryId, stateId }: { countryId: CountryId; sta
           ))}
         </div>
       ) : error ? (
-        <div className="py-8 text-center text-sm text-muted">
+        <div className="py-8 text-center text-body text-muted">
           Couldn&apos;t load the player roster. Try again shortly.
         </div>
       ) : (
@@ -152,18 +152,18 @@ export function PlayerRoster({ countryId, stateId }: { countryId: CountryId; sta
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 Page {page} of {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>

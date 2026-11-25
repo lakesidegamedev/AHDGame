@@ -35,14 +35,14 @@ export function InstrumentStrip({ tiles }: { tiles: InstrumentTile[] }) {
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-body-sm font-medium text-muted">{tile.label}</span>
             {tile.badge && (
-              <span className="rounded border border-card-border bg-card-muted px-1.5 py-px font-mono text-[8px] font-bold text-muted">
+              <span className="rounded border border-card-border bg-card-muted px-1.5 py-px font-mono text-body-sm font-bold text-muted">
                 {tile.badge}
               </span>
             )}
           </div>
           <div className="mt-1.5 flex items-baseline gap-2">
             <span
-              className={`font-mono text-base font-bold ${tile.valueClass ?? "text-foreground"}`}
+              className={`font-mono text-body-lg font-bold ${tile.valueClass ?? "text-foreground"}`}
             >
               {tile.value}
             </span>
@@ -68,7 +68,7 @@ export function InstrumentStrip({ tiles }: { tiles: InstrumentTile[] }) {
             </div>
           )}
           {tile.subline && (
-            <div className="mt-1.5 font-mono text-[9px] leading-snug text-muted/70">
+            <div className="mt-1.5 font-mono text-body-sm leading-snug text-muted/70">
               {tile.subline}
             </div>
           )}

@@ -139,7 +139,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
         <div className="flex items-center gap-3">
           <Avatar name={item.counterpartName ?? "?"} />
           <div>
-            <p className="text-sm font-semibold text-foreground">
+            <p className="text-body font-semibold text-foreground">
               {item.counterpartName ?? "Unknown"}
             </p>
           </div>
@@ -150,7 +150,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
               type="button"
               onClick={() => void handleReport()}
               disabled={reported || reporting}
-              className="text-xs text-muted transition-colors hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
+              className="text-body-sm text-muted transition-colors hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
             >
               {reported ? "Reported" : reporting ? "Reporting…" : "Report"}
             </button>
@@ -171,7 +171,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
 
       {/* Subject */}
       <div className="border-b border-card-border px-5 py-3">
-        <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{item.title}</h3>
       </div>
 
       {/* Message bubbles */}
@@ -182,7 +182,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
             <div key={i} className={`flex ${isYou ? "justify-end" : "justify-start"}`}>
               <div
                 className={[
-                  "max-w-[70%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
+                  "max-w-[70%] rounded-2xl px-3.5 py-2.5 text-body leading-relaxed",
                   isYou
                     ? "bg-primary/15 text-foreground rounded-br-sm"
                     : "bg-card-elevated text-foreground rounded-bl-sm",
@@ -193,7 +193,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
                 <p>{msg.body}</p>
                 {msg.time && (
                   <p
-                    className={`mt-1 text-[10px] ${isYou ? "text-primary/60 text-right" : "text-muted"}`}
+                    className={`mt-1 text-body-sm ${isYou ? "text-primary/60 text-right" : "text-muted"}`}
                   >
                     <LocalTime value={msg.time} options={{ hour: "2-digit", minute: "2-digit" }} />
                   </p>
@@ -207,7 +207,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
 
       {/* Rate-limit notice */}
       {rateLimited && (
-        <p className="px-5 py-1 text-xs text-warning">
+        <p className="px-5 py-1 text-body-sm text-warning">
           You can send one message per minute. Please wait a moment.
         </p>
       )}
@@ -219,7 +219,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
             key={reply}
             type="button"
             onClick={() => setDraft(reply)}
-            className="rounded-full border border-card-border bg-card px-3 py-1 text-xs text-muted transition-colors hover:border-primary/30 hover:text-foreground"
+            className="rounded-full border border-card-border bg-card px-3 py-1 text-body-sm text-muted transition-colors hover:border-primary/30 hover:text-foreground"
           >
             {reply}
           </button>
@@ -235,7 +235,7 @@ export function MailThreadView({ item, onArchive, onSent }: MailThreadViewProps)
             onKeyDown={handleKeyDown}
             rows={3}
             placeholder="Write a reply… (⌘↵ to send)"
-            className="flex-1 resize-none rounded-xl border border-card-border bg-card-elevated px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+            className="flex-1 resize-none rounded-xl border border-card-border bg-card-elevated px-3.5 py-2.5 text-body text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
           />
           <Button
             variant="primary"

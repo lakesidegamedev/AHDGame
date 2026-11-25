@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 /** Numbered section heading in a long-form guide, and the anchor the contents list links to. */
 export function SectionHeader({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <h2 id={id} className="scroll-mt-4 text-xl font-bold tracking-tight text-foreground">
+    <h2 id={id} className="scroll-mt-4 text-heading font-bold tracking-tight text-foreground">
       {children}
     </h2>
   );
@@ -38,7 +38,7 @@ export function Callout({
   const warning = kind === "warning";
   return (
     <div
-      className={`rounded-lg border border-card-border px-4 py-3 text-sm leading-relaxed text-muted ${
+      className={`rounded-lg border border-card-border px-4 py-3 text-body leading-relaxed text-muted ${
         warning ? "bg-card" : ""
       }`}
     >
@@ -52,7 +52,7 @@ export function Callout({
 
 export function FormulaBlock({ children }: { children: ReactNode }) {
   return (
-    <pre className="overflow-x-auto rounded-lg border border-card-border bg-background px-4 py-3 font-mono text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">
+    <pre className="overflow-x-auto rounded-lg border border-card-border bg-background px-4 py-3 font-mono text-body-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
       {children}
     </pre>
   );
@@ -73,7 +73,7 @@ export function Tag({
   };
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-xs font-semibold ${colors[variant]}`}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-body-sm font-semibold ${colors[variant]}`}
     >
       {children}
     </span>
@@ -87,8 +87,8 @@ export function TableOfContents({
 }) {
   return (
     <nav aria-label="Contents" className="rounded-xl border border-card-border bg-card p-5">
-      <p className="mb-3 text-sm font-semibold text-muted">Contents</p>
-      <ol className="grid gap-y-1 gap-x-4 text-sm sm:grid-cols-2">
+      <p className="mb-3 text-body font-semibold text-muted">Contents</p>
+      <ol className="grid gap-y-1 gap-x-4 text-body sm:grid-cols-2">
         {items.map((item, i) => (
           <li key={item.id}>
             <a href={`#${item.id}`} className="text-primary hover:underline">

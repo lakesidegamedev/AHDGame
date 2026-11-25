@@ -60,8 +60,8 @@ function Section({
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-foreground">{title}</div>
-          {sub && <div className="text-[11px] text-muted">{sub}</div>}
+          <div className="text-body font-semibold text-foreground">{title}</div>
+          {sub && <div className="text-body-sm text-muted">{sub}</div>}
         </div>
         {right}
       </div>
@@ -82,7 +82,7 @@ function CharterPowers({ org }: { org: OrgSummary }) {
           </Badge>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         Table and vote these resolutions from the Overview tab.
       </p>
     </Section>
@@ -98,7 +98,7 @@ function PoliticalAssembly({ org, currentTurn }: { org: OrgSummary; currentTurn?
     <div className="space-y-4">
       <Section title="Permanent council" sub="Founding members hold the permanent seats">
         {seats.length === 0 ? (
-          <p className="text-[13px] text-muted">No permanent members.</p>
+          <p className="text-body-sm text-muted">No permanent members.</p>
         ) : (
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {seats.map((m) => (
@@ -106,8 +106,8 @@ function PoliticalAssembly({ org, currentTurn }: { org: OrgSummary; currentTurn?
                 key={m.countryId}
                 className="rounded-lg border border-card-border bg-card-muted p-2.5 text-center"
               >
-                <div className="text-2xl">{m.flagEmoji}</div>
-                <div className="mt-1 truncate text-[11px] font-semibold text-foreground">
+                <div className="text-heading">{m.flagEmoji}</div>
+                <div className="mt-1 truncate text-body-sm font-semibold text-foreground">
                   {m.countryName}
                 </div>
                 <Badge color="info" variant="subtle" className="mt-1">
@@ -123,7 +123,7 @@ function PoliticalAssembly({ org, currentTurn }: { org: OrgSummary; currentTurn?
         sub={`Global programmes funded from the pooled treasury (${fundDisplay})`}
       >
         {funded.length === 0 ? (
-          <p className="text-[13px] text-muted">No agencies funded.</p>
+          <p className="text-body-sm text-muted">No agencies funded.</p>
         ) : (
           <div className="space-y-2">
             {funded.map((l) => {
@@ -138,13 +138,13 @@ function PoliticalAssembly({ org, currentTurn }: { org: OrgSummary; currentTurn?
                   className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted p-3"
                 >
                   <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-foreground">
+                    <div className="text-body-sm font-semibold text-foreground">
                       {def?.label ?? l.title}
                     </div>
-                    {def?.blurb && <div className="text-[11px] text-muted">{def.blurb}</div>}
+                    {def?.blurb && <div className="text-body-sm text-muted">{def.blurb}</div>}
                   </div>
                   {turnsLeft != null && (
-                    <span className="shrink-0 text-[11px] text-muted">
+                    <span className="shrink-0 text-body-sm text-muted">
                       Lapses in {turnsLeft} turn{turnsLeft === 1 ? "" : "s"}
                     </span>
                   )}
@@ -153,7 +153,7 @@ function PoliticalAssembly({ org, currentTurn }: { org: OrgSummary; currentTurn?
             })}
           </div>
         )}
-        <p className="mt-2 text-[11px] text-muted">Fund agencies from the Overview tab.</p>
+        <p className="mt-2 text-body-sm text-muted">Fund agencies from the Overview tab.</p>
       </Section>
     </div>
   );
@@ -194,8 +194,8 @@ function SecurityAlliance({ org }: { org: OrgSummary }) {
         title="Alert posture"
         sub="Alliance-wide footing, set by a member vote (Overview → Alert posture)"
       >
-        <p className="text-[13px] text-foreground">{POSTURE_META[org.posture].blurb}</p>
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="text-body-sm text-foreground">{POSTURE_META[org.posture].blurb}</p>
+        <p className="mt-1 text-body-sm text-muted">
           {postureWarEntryNote({
             category: org.def.category,
             posture: org.posture,
@@ -217,7 +217,7 @@ function SecurityAlliance({ org }: { org: OrgSummary }) {
             const width = Math.min(100, (pct / (target * 2)) * 100);
             return (
               <div key={m.countryId} className="flex items-center gap-3">
-                <span className="flex w-40 shrink-0 items-center gap-1.5 text-[12px] text-foreground">
+                <span className="flex w-40 shrink-0 items-center gap-1.5 text-body-sm text-foreground">
                   <span>{m.flagEmoji}</span> {m.countryName}
                 </span>
                 <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-background">
@@ -228,7 +228,7 @@ function SecurityAlliance({ org }: { org: OrgSummary }) {
                   {/* 2% target marker at the half mark. */}
                   <div className="absolute inset-y-0 left-1/2 w-px bg-card-border" />
                 </div>
-                <span className="w-14 shrink-0 text-right text-[12px] tabular-nums text-foreground">
+                <span className="w-14 shrink-0 text-right text-body-sm tabular-nums text-foreground">
                   {has ? `${pct.toFixed(1)}%` : "n/a"}
                 </span>
                 {has ? (
@@ -274,7 +274,7 @@ function EconomicMarket({ org, currentTurn }: { org: OrgSummary; currentTurn?: n
 
       <Section title="Directives in force" sub="Bloc-wide policies shifting member metrics">
         {directives.length === 0 ? (
-          <p className="text-[13px] text-muted">No directives in force.</p>
+          <p className="text-body-sm text-muted">No directives in force.</p>
         ) : (
           <div className="space-y-2">
             {directives.map((l) => {
@@ -289,13 +289,13 @@ function EconomicMarket({ org, currentTurn }: { org: OrgSummary; currentTurn?: n
                   className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted p-3"
                 >
                   <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-foreground">
+                    <div className="text-body-sm font-semibold text-foreground">
                       {def?.label ?? l.title}
                     </div>
-                    {def?.blurb && <div className="text-[11px] text-muted">{def.blurb}</div>}
+                    {def?.blurb && <div className="text-body-sm text-muted">{def.blurb}</div>}
                   </div>
                   {turnsLeft != null && (
-                    <span className="shrink-0 text-[11px] text-muted">
+                    <span className="shrink-0 text-body-sm text-muted">
                       Lifts in {turnsLeft} turn{turnsLeft === 1 ? "" : "s"}
                     </span>
                   )}
@@ -308,7 +308,7 @@ function EconomicMarket({ org, currentTurn }: { org: OrgSummary; currentTurn?: n
 
       <Section title="Free-trade agreements" sub="Active intra-bloc tariff-free pacts">
         {activeFtas.length === 0 ? (
-          <p className="text-[13px] text-muted">No active free-trade agreements.</p>
+          <p className="text-body-sm text-muted">No active free-trade agreements.</p>
         ) : (
           <div className="space-y-2">
             {activeFtas.map((l) => {
@@ -318,8 +318,8 @@ function EconomicMarket({ org, currentTurn }: { org: OrgSummary; currentTurn?: n
                   key={l._id.toString()}
                   className="rounded-lg border border-card-border bg-card-muted p-3"
                 >
-                  <div className="text-[12px] font-semibold text-foreground">{l.title}</div>
-                  {parties && <div className="text-[11px] text-muted">{parties}</div>}
+                  <div className="text-body-sm font-semibold text-foreground">{l.title}</div>
+                  {parties && <div className="text-body-sm text-muted">{parties}</div>}
                 </div>
               );
             })}
@@ -353,7 +353,7 @@ function DevelopmentFlagship({ org }: { org: OrgSummary }) {
         sub="Aid packages disbursed from the pooled fund (each gave its recipient a growth boost)"
       >
         {disbursed.length === 0 ? (
-          <p className="text-[13px] text-muted">No aid disbursed yet.</p>
+          <p className="text-body-sm text-muted">No aid disbursed yet.</p>
         ) : (
           <div className="space-y-2">
             {disbursed.map((l) => (
@@ -361,17 +361,17 @@ function DevelopmentFlagship({ org }: { org: OrgSummary }) {
                 key={l._id.toString()}
                 className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-muted p-3"
               >
-                <div className="text-[12px] font-semibold text-foreground">
+                <div className="text-body-sm font-semibold text-foreground">
                   {name(l.aidRecipientCountryId)}
                 </div>
-                <div className="text-[12px] tabular-nums text-foreground">
+                <div className="text-body-sm tabular-nums text-foreground">
                   {l.aidAmount ? fundAmount(l.aidAmount) : "—"}
                 </div>
               </div>
             ))}
           </div>
         )}
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           Table new aid packages and set dues from the Overview tab.
         </p>
       </Section>

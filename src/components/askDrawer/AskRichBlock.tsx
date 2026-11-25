@@ -34,7 +34,7 @@ export function richKind(lang: string, code: string): RichKind {
 function Skeleton({ label }: { label: string }) {
   return (
     <div
-      className="my-3 flex h-40 items-center justify-center rounded-xl border border-card-border/70 bg-card-elevated/40 text-[12px] text-muted"
+      className="my-3 flex h-40 items-center justify-center rounded-xl border border-card-border/70 bg-card-elevated/40 text-body-sm text-muted"
       role="status"
     >
       <span className="animate-pulse">{label}</span>
@@ -44,7 +44,7 @@ function Skeleton({ label }: { label: string }) {
 
 function Failed({ what, fullAskUrl }: { what: string; fullAskUrl: string }) {
   return (
-    <div className="my-3 rounded-xl border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted">
+    <div className="my-3 rounded-xl border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-body-sm text-muted">
       This {what} could not be drawn here.{" "}
       <a
         href={fullAskUrl}
@@ -63,7 +63,7 @@ function Tooltip({ tip }: { tip: { lines: string[]; x: number; y: number } | nul
   return (
     <div
       role="status"
-      className="pointer-events-none fixed z-[70] flex max-w-[260px] flex-col gap-px rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-[12px] text-foreground shadow-modal"
+      className="pointer-events-none fixed z-[70] flex max-w-[260px] flex-col gap-px rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-body-sm text-foreground shadow-modal"
       style={{ left: tip.x, top: tip.y }}
     >
       <b className="font-semibold">{tip.lines[0]}</b>
@@ -155,14 +155,14 @@ export function AskChart({
               <button
                 type="button"
                 onClick={() => setShowData(!showData)}
-                className="text-[12px] text-muted hover:text-foreground"
+                className="text-body-sm text-muted hover:text-foreground"
                 aria-expanded={showData}
               >
                 {showData ? "Hide data" : "Show data"}
               </button>
               {showData && (
                 <div className="mt-1.5 overflow-x-auto">
-                  <table className="w-full text-[12px]">
+                  <table className="w-full text-body-sm">
                     <thead>
                       <tr>
                         {result.table.head.map((h, i) => (
@@ -243,7 +243,7 @@ export function AskMap({ source, fullAskUrl }: { source: string; fullAskUrl: str
 
 export function AskDiagram({ fullAskUrl }: { fullAskUrl: string }) {
   return (
-    <div className="my-3 rounded-xl border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted">
+    <div className="my-3 rounded-xl border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-body-sm text-muted">
       This answer includes a diagram.{" "}
       <a
         href={fullAskUrl}

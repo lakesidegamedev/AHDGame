@@ -275,7 +275,7 @@ export function BillTimeline({
           return (
             <div
               key={nodeLabel}
-              className={`text-[8px] text-muted leading-none ${
+              className={`text-body-sm text-muted leading-none ${
                 isLast ? "text-right shrink-0" : "flex-1"
               } ${i === 0 ? "text-left" : isLast ? "" : "text-center"}`}
             >
@@ -285,7 +285,7 @@ export function BillTimeline({
         })}
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-muted pt-0.5">
+      <div className="flex items-center justify-between text-body-sm text-muted pt-0.5">
         <GameMonthTime value={proposedAt} />
         {failedNote && (
           <span className={`font-medium ${isVeto ? "text-foreground" : "text-error/80"}`}>

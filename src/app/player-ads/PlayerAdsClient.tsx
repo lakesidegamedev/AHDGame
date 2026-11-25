@@ -99,8 +99,8 @@ export function PlayerAdsClient() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Place a banner ad</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Place a banner ad</h1>
+          <p className="mt-2 text-body text-muted">
             Promote your party, campaign, or company on public game pages. Approved ads stay in
             rotation, with fewer-viewed ads shown first.
           </p>
@@ -108,9 +108,9 @@ export function PlayerAdsClient() {
 
         {/* Pricing card */}
         <div className="rounded-xl border border-card-border bg-card p-5 mb-6 space-y-3">
-          <h2 className="text-base font-semibold">Pricing</h2>
+          <h2 className="text-body-lg font-semibold">Pricing</h2>
           {infoError ? (
-            <p className="text-sm text-error">{infoError}</p>
+            <p className="text-body text-error">{infoError}</p>
           ) : !info ? (
             <div className="grid min-h-[62px] grid-cols-2 gap-3 sm:grid-cols-3">
               {[1, 2, 3].map((i) => (
@@ -127,29 +127,29 @@ export function PlayerAdsClient() {
             <>
               {info.isPatronActive ? (
                 <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 mb-3">
-                  <p className="text-sm font-medium text-primary">
+                  <p className="text-body font-medium text-primary">
                     {info.tier === "supporter-plus-plus"
                       ? "Champion benefits active"
                       : info.tier === "supporter-plus"
                         ? "Supporter+ benefits active"
                         : "Supporter benefits active"}
                   </p>
-                  <p className="text-xs text-muted mt-0.5">
+                  <p className="text-body-sm text-muted mt-0.5">
                     {info.isFree
                       ? `This ad is free! (${info.freeUsed}/${info.freeLimit} used)`
                       : `All free ads used. Next free ad in ${turnLabel(info.turnsUntilEligible ?? 0)}.`}
                   </p>
                 </div>
               ) : null}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-body">
                 <div className="rounded-lg border border-card-border/60 bg-background/50 px-3 py-2">
-                  <p className="text-xs text-muted mb-0.5">Ad cost</p>
+                  <p className="text-body-sm text-muted mb-0.5">Ad cost</p>
                   <p className="font-semibold text-foreground">
                     {info.isFree ? "Free" : fmt(info.cost, info.currencyCode)}
                   </p>
                 </div>
                 <div className="rounded-lg border border-card-border/60 bg-background/50 px-3 py-2">
-                  <p className="text-xs text-muted mb-0.5">Your balance</p>
+                  <p className="text-body-sm text-muted mb-0.5">Your balance</p>
                   <p
                     className={`font-semibold ${info.affordable ? "text-foreground" : "text-error"}`}
                   >
@@ -157,7 +157,7 @@ export function PlayerAdsClient() {
                   </p>
                 </div>
                 <div className="rounded-lg border border-card-border/60 bg-background/50 px-3 py-2">
-                  <p className="text-xs text-muted mb-0.5">Next eligible</p>
+                  <p className="text-body-sm text-muted mb-0.5">Next eligible</p>
                   <p className="font-semibold text-foreground">
                     {info.turnsUntilEligible && info.turnsUntilEligible > 0
                       ? `In ${turnLabel(info.turnsUntilEligible)}`
@@ -167,7 +167,7 @@ export function PlayerAdsClient() {
               </div>
             </>
           )}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Cost = 2% of average personal balance. Supporters get 1 free ad per 72 turns, Supporter+
             gets 2 free ads per 48 turns.
           </p>
@@ -176,8 +176,8 @@ export function PlayerAdsClient() {
         {/* Upload form */}
         {submitted ? (
           <div className="rounded-xl border border-card-border bg-card p-6 text-center">
-            <p className="text-lg font-semibold text-foreground mb-1">Ad submitted!</p>
-            <p className="text-sm text-muted">
+            <p className="text-heading font-semibold text-foreground mb-1">Ad submitted!</p>
+            <p className="text-body text-muted">
               Your banner is awaiting admin approval. Once approved, it will rotate across eligible
               pages alongside other ads.
             </p>
@@ -188,16 +188,18 @@ export function PlayerAdsClient() {
             className="rounded-xl border border-card-border bg-card p-5 sm:p-6 space-y-5"
           >
             <div>
-              <h2 className="text-base font-semibold">Upload your banner</h2>
-              <p className="mt-1 text-sm text-muted">An admin reviews your ad before it appears.</p>
+              <h2 className="text-body-lg font-semibold">Upload your banner</h2>
+              <p className="mt-1 text-body text-muted">
+                An admin reviews your ad before it appears.
+              </p>
             </div>
 
             {/* Image upload */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
+              <label className="block text-body font-medium text-foreground mb-1">
                 Banner image <span className="text-error">*</span>
               </label>
-              <p className="text-xs text-muted mb-2">
+              <p className="text-body-sm text-muted mb-2">
                 JPEG, PNG, WebP, or GIF · max 2 MB · resized to fit 970×250
               </p>
               <div
@@ -227,7 +229,7 @@ export function PlayerAdsClient() {
                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    <p className="text-sm text-muted">Click to select an image</p>
+                    <p className="text-body text-muted">Click to select an image</p>
                   </>
                 )}
                 <input
@@ -239,7 +241,7 @@ export function PlayerAdsClient() {
                 />
               </div>
               {file && (
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-body-sm text-muted">
                   {file.name} · {(file.size / 1024).toFixed(0)} KB
                 </p>
               )}
@@ -247,7 +249,7 @@ export function PlayerAdsClient() {
 
             {/* Optional link */}
             <div>
-              <label htmlFor="linkUrl" className="block text-sm font-medium text-foreground mb-1">
+              <label htmlFor="linkUrl" className="block text-body font-medium text-foreground mb-1">
                 Click-through URL{" "}
                 <span className="text-muted font-normal">(optional, HTTPS only)</span>
               </label>
@@ -257,13 +259,13 @@ export function PlayerAdsClient() {
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
                 placeholder="https://example.com"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder-muted outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder-muted outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
 
             {/* Alt text */}
             <div>
-              <label htmlFor="altText" className="block text-sm font-medium text-foreground mb-1">
+              <label htmlFor="altText" className="block text-body font-medium text-foreground mb-1">
                 Alt text{" "}
                 <span className="text-muted font-normal">(optional, describes the image)</span>
               </label>
@@ -274,15 +276,15 @@ export function PlayerAdsClient() {
                 onChange={(e) => setAltText(e.target.value)}
                 maxLength={200}
                 placeholder="Vote for the Liberty Party!"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder-muted outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder-muted outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
 
             <details className="rounded-lg border border-card-border p-3">
-              <summary className="cursor-pointer text-sm font-medium">
+              <summary className="cursor-pointer text-body font-medium">
                 Ad content guidelines
               </summary>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-body text-muted">
                 {GUIDELINES.map((guideline) => (
                   <li key={guideline}>{guideline}</li>
                 ))}
@@ -297,22 +299,22 @@ export function PlayerAdsClient() {
                 onChange={(e) => setAgreed(e.target.checked)}
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-card-border accent-primary"
               />
-              <span className="text-sm text-muted leading-relaxed">
+              <span className="text-body text-muted leading-relaxed">
                 My ad follows the content guidelines. Ads that break the rules may be rejected or
                 removed without a refund, and may lead to account penalties.
               </span>
             </label>
 
-            <InlineError error={submitError} className="text-sm text-error" />
+            <InlineError error={submitError} className="text-body text-error" />
 
             {info && !info.affordable && (
-              <p className="text-sm text-error">
+              <p className="text-body text-error">
                 Insufficient balance. You need {fmt(info.cost, info.currencyCode)} but have{" "}
                 {fmt(info.balance, info.currencyCode)}.
               </p>
             )}
             {info?.turnsUntilEligible != null && info.turnsUntilEligible > 0 && (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 You can submit another ad in {turnLabel(info.turnsUntilEligible)}.
               </p>
             )}
@@ -320,7 +322,7 @@ export function PlayerAdsClient() {
             <button
               type="submit"
               disabled={!file || !agreed || !info?.canSubmit || submitting}
-              className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="w-full rounded-xl bg-primary px-4 py-2.5 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {submitting
                 ? "Uploading…"

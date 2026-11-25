@@ -408,7 +408,7 @@ export function PoliticalStanding({
               <th scope="row" className="py-3 pr-3 text-left align-baseline">
                 <InfoTooltip
                   trigger={
-                    <span className="text-[15px] font-medium text-foreground underline decoration-dotted decoration-muted/60 underline-offset-4">
+                    <span className="text-body font-medium text-foreground underline decoration-dotted decoration-muted/60 underline-offset-4">
                       {row.label}
                     </span>
                   }
@@ -417,13 +417,13 @@ export function PoliticalStanding({
                 </InfoTooltip>
                 {row.note && (
                   <span
-                    className={`mt-0.5 block text-[13px] font-normal md:hidden ${TONE_CLASS[row.noteTone]}`}
+                    className={`mt-0.5 block text-body-sm font-normal md:hidden ${TONE_CLASS[row.noteTone]}`}
                   >
                     {row.note}
                   </span>
                 )}
               </th>
-              <td className="whitespace-nowrap px-3 py-3 text-right align-baseline text-heading-sm font-semibold tabular-nums text-foreground">
+              <td className="whitespace-nowrap px-3 py-3 text-right align-baseline text-heading font-semibold tabular-nums text-foreground">
                 {row.value}
               </td>
               <td
@@ -447,7 +447,7 @@ export function PoliticalStanding({
                 )}
               </td>
               <td
-                className={`hidden py-3 pl-6 align-baseline text-[13px] md:table-cell ${TONE_CLASS[row.noteTone]}`}
+                className={`hidden py-3 pl-6 align-baseline text-body-sm md:table-cell ${TONE_CLASS[row.noteTone]}`}
               >
                 {row.note}
               </td>

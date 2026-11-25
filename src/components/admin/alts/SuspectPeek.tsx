@@ -43,7 +43,7 @@ export function SuspectPeekProvider({
 
 export function SuspectNameButton({
   member,
-  className = "truncate text-sm font-semibold text-primary hover:underline",
+  className = "truncate text-body font-semibold text-primary hover:underline",
 }: {
   member: Suspect;
   className?: string;
@@ -141,7 +141,7 @@ function SuspectPeekCard({ member, onClose }: { member: Suspect; onClose: () => 
         <div className="mb-3 flex items-start gap-3">
           <SuspectMugshot member={member} size="h-14 w-14" />
           <div className="min-w-0 flex-1">
-            <div className="text-base font-semibold text-foreground">{name}</div>
+            <div className="text-body-lg font-semibold text-foreground">{name}</div>
             <div className="flex flex-wrap items-center gap-1.5 text-body-sm font-medium text-muted">
               {member.role && <span>{ROLE_LABEL[member.role]}</span>}
               {member.banned && (
@@ -173,7 +173,7 @@ function SuspectPeekCard({ member, onClose }: { member: Suspect; onClose: () => 
           </button>
         </div>
 
-        <dl className="space-y-1.5 text-xs">
+        <dl className="space-y-1.5 text-body-sm">
           <PeekField label="Username" value={member.name} />
           <PeekField label="Email" value={member.email} mono />
           <PeekField label="IP" value={ip} mono />
@@ -196,7 +196,7 @@ function SuspectPeekCard({ member, onClose }: { member: Suspect; onClose: () => 
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-sm font-medium transition-colors hover:bg-card-elevated"
+              className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body font-medium transition-colors hover:bg-card-elevated"
             >
               Open profile
             </Link>
@@ -205,7 +205,7 @@ function SuspectPeekCard({ member, onClose }: { member: Suspect; onClose: () => 
             <button
               type="button"
               onClick={() => setConfirming((v) => !v)}
-              className="inline-flex h-9 items-center rounded-lg border border-red-400/40 bg-red-500/10 px-3 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/20"
+              className="inline-flex h-9 items-center rounded-lg border border-red-400/40 bg-red-500/10 px-3 text-body font-semibold text-red-400 transition-colors hover:bg-red-500/20"
             >
               Ban
             </button>
@@ -219,13 +219,13 @@ function SuspectPeekCard({ member, onClose }: { member: Suspect; onClose: () => 
               onChange={(e) => setReason(e.target.value)}
               placeholder="Reason for ban (optional)…"
               rows={2}
-              className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm placeholder:text-muted/70 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body placeholder:text-muted/70 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-sm"
+                className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body"
               >
                 Cancel
               </button>
@@ -233,7 +233,7 @@ function SuspectPeekCard({ member, onClose }: { member: Suspect; onClose: () => 
                 type="button"
                 onClick={() => void ban()}
                 disabled={busy}
-                className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-body font-semibold text-white hover:bg-red-500 disabled:opacity-50"
               >
                 {busy ? "Banning…" : "Confirm ban"}
               </button>
@@ -261,15 +261,15 @@ function PeekField({
 }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
-      <dt className="w-20 shrink-0 text-[11px] font-medium text-muted">{label}</dt>
+      <dt className="w-20 shrink-0 text-body-sm font-medium text-muted">{label}</dt>
       <dd
-        className={`min-w-0 break-all ${mono ? "font-mono text-[11px] tracking-tight" : ""}`}
+        className={`min-w-0 break-all ${mono ? "font-mono text-body-sm tracking-tight" : ""}`}
         title={value ?? undefined}
       >
         {value ??
           (adminOnly ? (
             <span className="text-muted">
-              — <span className="text-[9px] font-semibold uppercase tracking-wide">admin</span>
+              — <span className="text-body-sm font-semibold uppercase tracking-wide">admin</span>
             </span>
           ) : (
             "—"

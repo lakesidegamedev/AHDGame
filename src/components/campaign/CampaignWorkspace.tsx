@@ -208,7 +208,7 @@ export function CampaignDeskView({
               padding: "14px 18px",
               background: "rgba(255,255,255,.02)",
               fontFamily: FONT.sans,
-              fontSize: 15,
+              fontSize: 14,
               color: BLEND.negative,
             }}
           >
@@ -375,7 +375,7 @@ export function CampaignDeskView({
                 background: "transparent",
                 padding: "8px 14px",
                 fontFamily: FONT.mono,
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: ".08em",
                 fontWeight: 700,
                 color: BLEND.muted,
@@ -395,7 +395,7 @@ export function CampaignDeskView({
           if (!resetOppoBusy) setResetOppoOpen(false);
         }}
       >
-        <div className="space-y-3 text-sm">
+        <div className="space-y-3 text-body">
           <p>
             This will set Opposition Research back to <span className="font-semibold">level 0</span>
             , clear the current target
@@ -422,7 +422,7 @@ export function CampaignDeskView({
             type="button"
             onClick={() => setResetOppoOpen(false)}
             disabled={resetOppoBusy}
-            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-card/80 disabled:opacity-50"
+            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body font-medium text-foreground hover:bg-card/80 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -430,7 +430,7 @@ export function CampaignDeskView({
             type="button"
             onClick={confirmResetOpposition}
             disabled={resetOppoBusy}
-            className="rounded-lg bg-error px-3 py-1.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+            className="rounded-lg bg-error px-3 py-1.5 text-body font-semibold text-white hover:brightness-110 disabled:opacity-60"
           >
             {resetOppoBusy ? "Resetting..." : "Reset to 0"}
           </button>

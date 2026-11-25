@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
 const BUTTON_BASE =
-  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-1.5 sm:px-2 sm:py-1 sm:text-xs";
+  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-body-sm font-bold tabular-nums transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-1.5 sm:px-2 sm:py-1 sm:text-body-sm";
 
 interface StatusChipProps {
   /** Tailwind color classes for the button: bg, text, hover:bg. Caller-owned

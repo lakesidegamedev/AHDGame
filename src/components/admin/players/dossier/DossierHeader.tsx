@@ -50,18 +50,18 @@ export function DossierHeader({ dossier, context, refreshing }: DossierHeaderPro
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className={OVERLINE_CLS}>Account dossier</div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 className="max-w-full truncate text-xl font-semibold tracking-tight">
+            <h2 className="max-w-full truncate text-heading font-semibold tracking-tight">
               {identity.username}
             </h2>
             {identity.displayName && identity.displayName !== identity.username && (
-              <span className="truncate text-sm text-muted">“{identity.displayName}”</span>
+              <span className="truncate text-body text-muted">“{identity.displayName}”</span>
             )}
-            <span className="rounded-md border border-card-border/70 bg-card-elevated/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <span className="rounded-md border border-card-border/70 bg-card-elevated/60 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-muted">
               {identity.role}
             </span>
             {identity.ban.isBanned && (
               <span
-                className="rounded-md border border-red-400/25 bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400"
+                className="rounded-md border border-red-400/25 bg-red-500/10 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-red-400"
                 title={
                   identity.ban.banReason
                     ? `${identity.ban.banReason}${identity.ban.bannedAt ? ` — ${formatDateTime(identity.ban.bannedAt)}` : ""}`
@@ -73,18 +73,18 @@ export function DossierHeader({ dossier, context, refreshing }: DossierHeaderPro
             )}
             {context === "moderator" && (
               <span
-                className="rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400"
+                className="rounded-md border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-body-sm font-medium text-blue-400"
                 title="Moderator view: raw IPs, fingerprints, device keys, and admin-category audit rows are admin-only."
               >
                 Moderator view
               </span>
             )}
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             Created {formatDateTime(identity.createdAt)}
             {identity.lastLogin && <> · last login {formatRelative(identity.lastLogin)}</>}
             {identity.lastDevice && <> · {identity.lastDevice}</>}
-            {refreshing && <span className="ml-1 text-xs">Refreshing…</span>}
+            {refreshing && <span className="ml-1 text-body-sm">Refreshing…</span>}
           </p>
 
           {/* Vital signs. */}
@@ -102,7 +102,7 @@ export function DossierHeader({ dossier, context, refreshing }: DossierHeaderPro
             <Vital label="Suspicious flags" value={flagCount} alarming={flagCount > 0} />
             <div className="flex items-baseline gap-1.5">
               <span
-                className={`text-sm font-bold tabular-nums ${
+                className={`text-body font-bold tabular-nums ${
                   dossier.money.totals.net >= 0 ? "text-green-400" : "text-red-400"
                 }`}
               >
@@ -121,7 +121,7 @@ export function DossierHeader({ dossier, context, refreshing }: DossierHeaderPro
           {activeSuspicious.map((c) => (
             <span
               key={c.characterId}
-              className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium ${SEVERITY_BADGE[c.highestSeverity]}`}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-body-sm font-medium ${SEVERITY_BADGE[c.highestSeverity]}`}
               title={c.flags.map((f) => f.detail).join("\n")}
             >
               <span aria-hidden>⚑</span>
@@ -141,7 +141,7 @@ function Vital({ label, value, alarming }: { label: string; value: number; alarm
   return (
     <div className="flex items-baseline gap-1.5">
       <span
-        className={`text-sm font-bold tabular-nums ${alarming ? "text-amber-400" : "text-foreground/85"}`}
+        className={`text-body font-bold tabular-nums ${alarming ? "text-amber-400" : "text-foreground/85"}`}
       >
         {value}
       </span>

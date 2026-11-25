@@ -96,7 +96,7 @@ function BanModal({ entry, onClose, onBanned, apiBase }: BanModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-1 font-semibold text-red-400">Ban user</h3>
-        <p className="mb-4 text-sm text-muted">
+        <p className="mb-4 text-body text-muted">
           Permanently ban <strong>{entry.characterName}</strong> ({entry.username})?
         </p>
         <textarea
@@ -104,20 +104,20 @@ function BanModal({ entry, onClose, onBanned, apiBase }: BanModalProps) {
           onChange={(e) => setReason(e.target.value)}
           placeholder="Reason for ban (optional)…"
           rows={3}
-          className="w-full rounded border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+          className="w-full rounded border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary resize-none"
         />
-        <InlineError error={error} className="mt-2 text-sm text-red-500" />
+        <InlineError error={error} className="mt-2 text-body text-red-500" />
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-sm hover:bg-card/80"
+            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-body hover:bg-card/80"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={loading}
-            className="min-h-[40px] rounded bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="min-h-[40px] rounded bg-red-600 px-4 py-2 text-body font-medium text-white disabled:opacity-50"
           >
             {loading ? "Banning…" : "Confirm ban"}
           </button>
@@ -165,7 +165,7 @@ function DismissModal({ entry, onClose, onDismissed, apiBase, isMod = false }: D
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-1 font-semibold">Dismiss flags</h3>
-        <p className="mb-4 text-sm text-muted">
+        <p className="mb-4 text-body text-muted">
           {permanent
             ? `Permanently resolve all flags for ${entry.characterName}${!isMod ? ` (${entry.username})` : ""}. This is irreversible — the character will never be re-flagged automatically.`
             : `Suppress all flags for ${entry.characterName}${!isMod ? ` (${entry.username})` : ""} for 30 days.`}
@@ -175,9 +175,9 @@ function DismissModal({ entry, onClose, onDismissed, apiBase, isMod = false }: D
           onChange={(e) => setNote(e.target.value)}
           placeholder="Investigation note (optional)…"
           rows={3}
-          className="w-full rounded border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+          className="w-full rounded border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary resize-none"
         />
-        <label className="mt-3 flex items-center gap-2 text-sm text-muted cursor-pointer">
+        <label className="mt-3 flex items-center gap-2 text-body text-muted cursor-pointer">
           <input
             type="checkbox"
             checked={permanent}
@@ -186,18 +186,18 @@ function DismissModal({ entry, onClose, onDismissed, apiBase, isMod = false }: D
           />
           Permanent — resolved, never re-flagged
         </label>
-        <InlineError error={error} className="mt-2 text-sm text-red-500" />
+        <InlineError error={error} className="mt-2 text-body text-red-500" />
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-sm hover:bg-card/80"
+            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-body hover:bg-card/80"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={loading}
-            className="min-h-[40px] rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+            className="min-h-[40px] rounded bg-primary px-4 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {loading ? "Working…" : permanent ? "Resolve permanently" : "Dismiss (30 days)"}
           </button>
@@ -305,7 +305,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
       <div className="space-y-4">
         <button
           onClick={() => setDrillCharacterId(null)}
-          className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-body text-muted hover:text-foreground transition-colors"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -344,11 +344,11 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold sm:text-lg">Suspicious activity</h2>
+        <h2 className="text-body-lg font-semibold sm:text-heading">Suspicious activity</h2>
         <button
           onClick={() => fetchEntries(null, false)}
           disabled={loading}
-          className="min-h-[40px] rounded border border-card-border px-3 py-2 text-sm hover:bg-card/80 disabled:opacity-50"
+          className="min-h-[40px] rounded border border-card-border px-3 py-2 text-body hover:bg-card/80 disabled:opacity-50"
         >
           Refresh
         </button>
@@ -360,7 +360,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
           <button
             key={sev}
             onClick={() => setFilters((f) => ({ ...f, severity: f.severity === sev ? "" : sev }))}
-            className={`min-h-[40px] rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+            className={`min-h-[40px] rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
               severityFilter === sev
                 ? `${SEVERITY_BG[sev]} ${SEVERITY_COLORS[sev]}`
                 : "border-card-border text-muted hover:text-foreground"
@@ -372,7 +372,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
         ))}
         <button
           onClick={() => setFilters((f) => ({ ...f, automationOnly: !f.automationOnly }))}
-          className={`min-h-[40px] rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+          className={`min-h-[40px] rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
             automationOnly
               ? "border-red-500/40 bg-red-500/15 text-red-400"
               : "border-card-border text-muted hover:text-foreground"
@@ -382,7 +382,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
         </button>
         <button
           onClick={() => setFilters((f) => ({ ...f, showDeleted: !f.showDeleted }))}
-          className={`min-h-[40px] rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+          className={`min-h-[40px] rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
             showDeleted
               ? "border-gray-400/40 bg-gray-500/15 text-gray-300"
               : "border-card-border text-muted hover:text-foreground"
@@ -392,7 +392,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
         </button>
         <button
           onClick={() => setFilters((f) => ({ ...f, showResolved: !f.showResolved }))}
-          className={`min-h-[40px] rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+          className={`min-h-[40px] rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
             showResolved
               ? "border-green-500/40 bg-green-500/15 text-green-400"
               : "border-card-border text-muted hover:text-foreground"
@@ -400,7 +400,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
         >
           Resolved <span className="font-bold">({counts.resolved})</span>
         </button>
-        <label className="flex items-center gap-2 min-h-[40px] px-3 text-sm text-muted cursor-pointer">
+        <label className="flex items-center gap-2 min-h-[40px] px-3 text-body text-muted cursor-pointer">
           <input
             type="checkbox"
             checked={showDismissed}
@@ -411,12 +411,12 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
         </label>
       </div>
 
-      <InlineError error={error} className="text-sm text-red-500" />
+      <InlineError error={error} className="text-body text-red-500" />
 
       {/* Entry list */}
       <div className="space-y-3">
         {!loading && entries.length === 0 && (
-          <div className="rounded-xl border border-card-border bg-card px-4 py-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card px-4 py-8 text-center text-body text-muted">
             {showResolved
               ? "No permanently resolved characters."
               : "No suspicious characters detected."}
@@ -438,7 +438,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
           <div className="rounded-xl border border-card-border bg-card/50">
             <button
               onClick={() => setShowNetworkOnly((p) => !p)}
-              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm"
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-body"
             >
               <svg
                 className={`h-3.5 w-3.5 flex-shrink-0 text-muted transition-transform ${showNetworkOnly ? "rotate-90" : ""}`}
@@ -457,7 +457,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
                 {networkOnlyAccountCount} account{networkOnlyAccountCount === 1 ? "" : "s"} in{" "}
                 {networkOnlyGroups.length} IP-only match{networkOnlyGroups.length === 1 ? "" : "es"}
               </span>
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 — shared IP with no device or session match; commonly CGNAT, VPNs, or shared
                 networks
               </span>
@@ -490,7 +490,7 @@ export function SuspiciousActivityTab({ context = "admin" }: SuspiciousActivityT
       {hasMore && !loading && (
         <button
           onClick={() => fetchEntries(cursor, true)}
-          className="min-h-[40px] w-full rounded border border-card-border py-2 text-sm hover:bg-card/80"
+          className="min-h-[40px] w-full rounded border border-card-border py-2 text-body hover:bg-card/80"
         >
           Load more
         </button>
@@ -516,21 +516,24 @@ function FlagList({ flags, muted }: { flags: SuspiciousFlag[]; muted: boolean })
         // evidence first.
         const isWeakFlag = NETWORK_ONLY_FLAG_TYPES.has(flag.type);
         return (
-          <div key={i} className={`space-y-1 text-sm ${isWeakFlag && !muted ? "opacity-60" : ""}`}>
+          <div
+            key={i}
+            className={`space-y-1 text-body ${isWeakFlag && !muted ? "opacity-60" : ""}`}
+          >
             <div className="flex items-start gap-2">
               <span className="text-muted">▸</span>
               <span>
-                <span className="font-mono text-xs font-medium">{flag.type}</span>
+                <span className="font-mono text-body-sm font-medium">{flag.type}</span>
                 {" — "}
                 <span className="text-muted">{flag.detail}</span>
               </span>
             </div>
             {events && events.length > 0 && (
               <details className="ml-5">
-                <summary className="cursor-pointer text-xs text-muted hover:text-foreground">
+                <summary className="cursor-pointer text-body-sm text-muted hover:text-foreground">
                   {events.length} flagging actions
                 </summary>
-                <ul className="mt-1 space-y-0.5 font-mono text-[11px] text-muted">
+                <ul className="mt-1 space-y-0.5 font-mono text-body-sm text-muted">
                   {events.map((ev, j) => (
                     <li key={j}>
                       <LocalTime value={ev.time} /> · {ev.actionType}
@@ -588,7 +591,7 @@ function SuspiciousEntryCard({
           }`}
         />
         <span
-          className={`text-xs font-bold uppercase tracking-wider ${
+          className={`text-body-sm font-bold uppercase tracking-wider ${
             isResolved
               ? "text-green-400"
               : muted
@@ -601,13 +604,13 @@ function SuspiciousEntryCard({
         <span className="font-semibold">
           {isModeratorContext ? entry.characterName : `${entry.username} / ${entry.characterName}`}
         </span>
-        <span className="text-xs text-muted">({entry.countryId})</span>
+        <span className="text-body-sm text-muted">({entry.countryId})</span>
         {entry.accountDeleted && (
-          <span className="rounded bg-gray-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
+          <span className="rounded bg-gray-500/20 px-1.5 py-0.5 text-body-sm font-medium uppercase tracking-wide text-gray-300">
             Deleted account
           </span>
         )}
-        <span className="ml-auto text-xs text-muted">
+        <span className="ml-auto text-body-sm text-muted">
           Updated <LocalTime value={entry.lastUpdated} />
         </span>
       </div>
@@ -615,26 +618,28 @@ function SuspiciousEntryCard({
       {/* Flags - show "none" for resolved */}
       {!isResolved && entry.flags.length > 0 && <FlagList flags={entry.flags} muted={muted} />}
       {isResolved && (
-        <div className="text-xs text-muted italic">No active flags — permanently resolved.</div>
+        <div className="text-body-sm text-muted italic">
+          No active flags — permanently resolved.
+        </div>
       )}
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2 pt-1">
         <button
           onClick={onDrill}
-          className="min-h-[36px] rounded border border-card-border px-3 py-1.5 text-xs font-medium hover:bg-card/80 transition-colors"
+          className="min-h-[36px] rounded border border-card-border px-3 py-1.5 text-body-sm font-medium hover:bg-card/80 transition-colors"
         >
           View activity log
         </button>
         <button
           onClick={onDismiss}
-          className="min-h-[36px] rounded border border-card-border px-3 py-1.5 text-xs font-medium hover:bg-card/80 transition-colors"
+          className="min-h-[36px] rounded border border-card-border px-3 py-1.5 text-body-sm font-medium hover:bg-card/80 transition-colors"
         >
           Dismiss
         </button>
         <button
           onClick={onBan}
-          className="min-h-[36px] rounded border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+          className="min-h-[36px] rounded border border-red-500/30 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
         >
           Ban user
         </button>
@@ -695,7 +700,7 @@ function MatchGroupCard({
           }`}
         />
         <span
-          className={`text-xs font-bold uppercase tracking-wider ${
+          className={`text-body-sm font-bold uppercase tracking-wider ${
             muted ? "text-muted" : SEVERITY_COLORS[group.highestSeverity]
           }`}
         >
@@ -706,7 +711,7 @@ function MatchGroupCard({
           {group.flagTypes.map((type) => (
             <span
               key={type}
-              className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+              className={`rounded px-1.5 py-0.5 font-mono text-body-sm ${
                 NETWORK_ONLY_FLAG_TYPES.has(type)
                   ? "bg-gray-500/15 text-muted"
                   : "bg-primary/15 text-primary"
@@ -716,16 +721,16 @@ function MatchGroupCard({
             </span>
           ))}
         </div>
-        <span className="ml-auto text-xs text-muted">
+        <span className="ml-auto text-body-sm text-muted">
           Updated <LocalTime value={group.lastUpdated} />
         </span>
       </div>
 
       {/* Member table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-card-border text-left text-xs text-muted">
+            <tr className="border-b border-card-border text-left text-body-sm text-muted">
               <th className="py-1.5 pr-3 font-medium">Account</th>
               {!isModeratorContext && <th className="py-1.5 pr-3 font-medium">Country</th>}
               <th className="py-1.5 pr-3 font-medium">Severity</th>
@@ -773,7 +778,7 @@ function MemberRow({ entry, isModeratorContext, onDrill, onDismiss, onBan }: Mem
               : `${entry.username} / ${entry.characterName}`}
           </div>
           {entry.accountDeleted && (
-            <span className="rounded bg-gray-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
+            <span className="rounded bg-gray-500/20 px-1.5 py-0.5 text-body-sm font-medium uppercase tracking-wide text-gray-300">
               Deleted
             </span>
           )}
@@ -781,7 +786,7 @@ function MemberRow({ entry, isModeratorContext, onDrill, onDismiss, onBan }: Mem
         {!isModeratorContext && <td className="py-2 pr-3 text-muted">{entry.countryId}</td>}
         <td className="py-2 pr-3">
           <span
-            className={`text-xs font-bold uppercase ${
+            className={`text-body-sm font-bold uppercase ${
               isResolved ? "text-green-400" : SEVERITY_COLORS[entry.highestSeverity]
             }`}
           >
@@ -790,11 +795,11 @@ function MemberRow({ entry, isModeratorContext, onDrill, onDismiss, onBan }: Mem
         </td>
         <td className="py-2 pr-3">
           {isResolved || entry.flags.length === 0 ? (
-            <span className="text-xs italic text-muted">none</span>
+            <span className="text-body-sm italic text-muted">none</span>
           ) : (
             <button
               onClick={() => setExpanded((p) => !p)}
-              className="text-xs text-muted underline hover:text-foreground"
+              className="text-body-sm text-muted underline hover:text-foreground"
             >
               {entry.flags.length} flag{entry.flags.length === 1 ? "" : "s"} {expanded ? "▲" : "▼"}
             </button>
@@ -804,19 +809,19 @@ function MemberRow({ entry, isModeratorContext, onDrill, onDismiss, onBan }: Mem
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={onDrill}
-              className="rounded border border-card-border px-2 py-1 text-[11px] font-medium hover:bg-card/80 transition-colors"
+              className="rounded border border-card-border px-2 py-1 text-body-sm font-medium hover:bg-card/80 transition-colors"
             >
               Log
             </button>
             <button
               onClick={onDismiss}
-              className="rounded border border-card-border px-2 py-1 text-[11px] font-medium hover:bg-card/80 transition-colors"
+              className="rounded border border-card-border px-2 py-1 text-body-sm font-medium hover:bg-card/80 transition-colors"
             >
               Dismiss
             </button>
             <button
               onClick={onBan}
-              className="rounded border border-red-500/30 px-2 py-1 text-[11px] font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+              className="rounded border border-red-500/30 px-2 py-1 text-body-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
             >
               Ban
             </button>

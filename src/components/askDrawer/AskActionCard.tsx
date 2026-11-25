@@ -37,7 +37,7 @@ function safeUrl(url: string | undefined): string | null {
 export function AskReceipt({ receipt }: { receipt: AskActionReceipt }) {
   if (receipt.kind === "suggestion") {
     return (
-      <p className="text-[13px] text-foreground">
+      <p className="text-body-sm text-foreground">
         <a href={`/feedback/${receipt.number}`} className="font-semibold text-primary underline">
           Suggestion #{receipt.number}
         </a>{" "}
@@ -47,7 +47,7 @@ export function AskReceipt({ receipt }: { receipt: AskActionReceipt }) {
   }
   const url = safeUrl(receipt.url);
   return (
-    <p className="text-[13px] text-foreground">
+    <p className="text-body-sm text-foreground">
       {url ? (
         <a
           href={url}
@@ -126,24 +126,24 @@ export function AskActionCard({
     );
   }
   if (state === "cancelled") {
-    return <p className="text-[13px] text-muted">Not filed.</p>;
+    return <p className="text-body-sm text-muted">Not filed.</p>;
   }
 
   const field =
-    "w-full rounded-lg border border-card-border bg-background px-2.5 py-1.5 text-base text-foreground focus:border-primary focus:outline-none disabled:opacity-60 sm:text-[13px]";
+    "w-full rounded-lg border border-card-border bg-background px-2.5 py-1.5 text-body-lg text-foreground focus:border-primary focus:outline-none disabled:opacity-60 sm:text-body-sm";
   return (
     <section
       aria-label={isSuggestion ? "Suggestion draft" : "Ticket draft"}
       className="space-y-2 rounded-xl border border-primary/30 bg-card-elevated/40 p-3"
     >
       <div className="flex items-center gap-2">
-        <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+        <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-[0.12em] text-primary">
           {isSuggestion ? "Suggestion" : "Support ticket"}
         </span>
-        <span className="text-[11px] text-muted">Free. Nothing is sent until you press Send.</span>
+        <span className="text-body-sm text-muted">Free. Nothing is sent until you press Send.</span>
       </div>
       <label className="block">
-        <span className="mb-1 block text-[11px] text-muted">Title</span>
+        <span className="mb-1 block text-body-sm text-muted">Title</span>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
@@ -152,7 +152,7 @@ export function AskActionCard({
         />
       </label>
       <label className="block">
-        <span className="mb-1 block text-[11px] text-muted">Details</span>
+        <span className="mb-1 block text-body-sm text-muted">Details</span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_MAX))}
@@ -162,10 +162,10 @@ export function AskActionCard({
         />
       </label>
       {stale && (
-        <p className="text-[12px] text-muted">This draft expired. Ask again to make a new one.</p>
+        <p className="text-body-sm text-muted">This draft expired. Ask again to make a new one.</p>
       )}
       {error && (
-        <p className="text-[12px] text-amber-400" role="alert">
+        <p className="text-body-sm text-amber-400" role="alert">
           {error}
           {needsDiscordLink && (
             <>
@@ -182,7 +182,7 @@ export function AskActionCard({
           type="button"
           onClick={cancel}
           disabled={state === "sending"}
-          className="min-h-[44px] rounded-lg px-3 text-[13px] text-muted hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
+          className="min-h-[44px] rounded-lg px-3 text-body-sm text-muted hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
         >
           Cancel
         </button>
@@ -190,7 +190,7 @@ export function AskActionCard({
           type="button"
           onClick={() => void send()}
           disabled={state === "sending" || stale || !title.trim() || !description.trim()}
-          className="min-h-[44px] rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:bg-card-elevated disabled:text-muted sm:min-h-0 sm:py-1.5"
+          className="min-h-[44px] rounded-lg bg-primary px-3 text-body-sm font-semibold text-primary-foreground disabled:bg-card-elevated disabled:text-muted sm:min-h-0 sm:py-1.5"
         >
           {state === "sending" ? "Sending…" : "Send"}
         </button>

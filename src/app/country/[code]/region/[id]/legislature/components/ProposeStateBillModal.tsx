@@ -277,7 +277,7 @@ function LegacyProposeStateBillModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto py-8">
       <div className="w-full max-w-lg rounded-2xl border border-card-border bg-card p-6 space-y-5 shadow-modal my-auto">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-heading font-semibold">
             {adminOverride
               ? `Propose ${billScope} Bill (Admin)`
               : `Propose ${billScope} Legislation`}
@@ -299,41 +299,41 @@ function LegacyProposeStateBillModal({
         </div>
 
         {error && (
-          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-2 text-sm text-error">
+          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-2 text-body text-error">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-muted mb-1">Bill title</label>
+            <label className="block text-body-sm text-muted mb-1">Bill title</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. State Tax Reform Act"
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs text-muted mb-1">Summary</label>
+            <label className="block text-body-sm text-muted mb-1">Summary</label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Brief description of what this bill does..."
               rows={3}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary resize-none"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs text-muted mb-1">Category</label>
+            <label className="block text-body-sm text-muted mb-1">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm capitalize"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body capitalize"
             >
               {STATE_BILL_CATEGORIES.map((c) => (
                 <option key={c} value={c} className="capitalize">
@@ -345,14 +345,14 @@ function LegacyProposeStateBillModal({
 
           {isCustomCat ? (
             /* ── Custom (flavor) bill: no provisions, no in-game effect ── */
-            <p className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted">
+            <p className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted">
               Custom bills have no in-game effect — for flavor / roleplay only. Just give it a title
               and summary.
             </p>
           ) : isSubsidyCat ? (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs text-muted">Subsidy provisions</label>
+                <label className="block text-body-sm text-muted">Subsidy provisions</label>
                 {subsidyProvisions.length < MAX_PROVISIONS && (
                   <button
                     type="button"
@@ -368,7 +368,7 @@ function LegacyProposeStateBillModal({
                         },
                       ])
                     }
-                    className="text-xs text-primary hover:underline"
+                    className="text-body-sm text-primary hover:underline"
                   >
                     + Add provision
                   </button>
@@ -381,14 +381,14 @@ function LegacyProposeStateBillModal({
                     className="rounded-lg border border-card-border bg-background/50 p-3 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-muted">Provision {i + 1}</span>
+                      <span className="text-body-sm font-medium text-muted">Provision {i + 1}</span>
                       {subsidyProvisions.length > 1 && (
                         <button
                           type="button"
                           onClick={() =>
                             setSubsidyProvisions((prev) => prev.filter((_, j) => j !== i))
                           }
-                          className="text-xs text-error hover:underline"
+                          className="text-body-sm text-error hover:underline"
                         >
                           Remove
                         </button>
@@ -407,7 +407,7 @@ function LegacyProposeStateBillModal({
                             return next;
                           })
                         }
-                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                       >
                         <option value="subsidy">Grant Subsidy (+7.5% margin)</option>
                         <option value="end_subsidy">End subsidy</option>
@@ -425,7 +425,7 @@ function LegacyProposeStateBillModal({
                             return next;
                           })
                         }
-                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                       >
                         <option value="economy_wide">Economy-Wide</option>
                         <option value="sector">Specific sector</option>
@@ -441,7 +441,7 @@ function LegacyProposeStateBillModal({
                             })
                           }
                           placeholderLabel="All sectors"
-                          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                         />
                       )}
                       <input
@@ -455,10 +455,10 @@ function LegacyProposeStateBillModal({
                           })
                         }
                         placeholder="Strategy filter (optional, e.g. wind)"
-                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                       />
                       {sp.type === "subsidy" && (
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <label className="flex items-center gap-2 text-body cursor-pointer">
                           <input
                             type="checkbox"
                             checked={sp.domesticOnly}
@@ -482,12 +482,12 @@ function LegacyProposeStateBillModal({
           ) : (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs text-muted">Provisions (type + policy)</label>
+                <label className="block text-body-sm text-muted">Provisions (type + policy)</label>
                 {provisions.length < MAX_PROVISIONS && (
                   <button
                     type="button"
                     onClick={addProvision}
-                    className="text-xs text-primary hover:underline"
+                    className="text-body-sm text-primary hover:underline"
                   >
                     + Add provision
                   </button>
@@ -503,12 +503,14 @@ function LegacyProposeStateBillModal({
                       className="rounded-lg border border-card-border bg-background/50 p-3 space-y-2"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-muted">Provision {i + 1}</span>
+                        <span className="text-body-sm font-medium text-muted">
+                          Provision {i + 1}
+                        </span>
                         {provisions.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeProvision(i)}
-                            className="text-xs text-error hover:underline"
+                            className="text-body-sm text-error hover:underline"
                           >
                             Remove
                           </button>
@@ -524,7 +526,7 @@ function LegacyProposeStateBillModal({
                               effectDirection: 0,
                             })
                           }
-                          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                         >
                           <option value="">Select type...</option>
                           {legislationTypes.map((lt) => (
@@ -563,7 +565,7 @@ function LegacyProposeStateBillModal({
                                   social: opt?.social ?? 0,
                                 });
                               }}
-                              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                             >
                               {options.map((opt, optIdx) => {
                                 const econ = opt.economic ?? 0;
@@ -603,7 +605,7 @@ function LegacyProposeStateBillModal({
                               onChange={(e) =>
                                 setProvision(i, { effectDirection: Number(e.target.value) })
                               }
-                              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                             >
                               <option value={-1}>Decrease</option>
                               <option value={0}>Neutral</option>
@@ -613,7 +615,7 @@ function LegacyProposeStateBillModal({
                       </div>
                       {/* Explanation text below provision */}
                       {p.legislationTypeId && (
-                        <div className="text-xs pt-1 border-t border-card-border/50 mt-2">
+                        <div className="text-body-sm pt-1 border-t border-card-border/50 mt-2">
                           {(() => {
                             const selectedOpt = options.find((o) => o.id === p.policyOptionId);
                             if (type?.politicalMetricTargets?.length) {
@@ -684,7 +686,7 @@ function LegacyProposeStateBillModal({
             </div>
           )}
 
-          <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted">
+          <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted">
             {adminOverride ? (
               <span>Cost waived (admin override)</span>
             ) : (
@@ -718,14 +720,14 @@ function LegacyProposeStateBillModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !canAfford}
-              className={`flex-1 rounded-lg py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+              className={`flex-1 rounded-lg py-2 text-body font-medium text-white transition-colors disabled:opacity-50 ${
                 adminOverride ? "bg-error hover:bg-error/90" : "bg-primary hover:bg-primary/90"
               }`}
             >

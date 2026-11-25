@@ -29,7 +29,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "up
     <div>
       <span className="block text-body-sm font-medium text-muted">{label}</span>
       <span
-        className={`text-sm font-bold tabular-nums ${
+        className={`text-body font-bold tabular-nums ${
           tone === "up" ? "text-success" : tone === "down" ? "text-error" : "text-foreground"
         }`}
       >
@@ -81,7 +81,7 @@ export function LivePopulationPanel({
     <div className="space-y-3">
       {/* census/reapportionment notice */}
       {seat && (
-        <div className="rounded-lg border border-primary/25 bg-primary/10 px-4 py-2.5 text-xs text-foreground">
+        <div className="rounded-lg border border-primary/25 bg-primary/10 px-4 py-2.5 text-body-sm text-foreground">
           <span className="font-semibold">{seat.year} Census:</span> this region{" "}
           {seat.delta > 0 ? "gained" : "lost"} {seatMag} House seat
           {seatMag === 1 ? "" : "s"} ({seat.from} &rarr; {seat.to}).

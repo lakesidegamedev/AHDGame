@@ -100,11 +100,11 @@ export function FounderSlotReplace({
   return (
     <div className="mt-2 w-full space-y-2 rounded-md border border-card-border bg-background/60 p-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">Replace this founder</span>
+        <span className="text-body-sm font-semibold">Replace this founder</span>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-[10px] uppercase tracking-wide text-muted hover:underline"
+          className="text-body-sm uppercase tracking-wide text-muted hover:underline"
         >
           Cancel
         </button>
@@ -113,9 +113,9 @@ export function FounderSlotReplace({
         value={query}
         onChange={(e) => runSearch(e.target.value)}
         placeholder="Search by character or player name…"
-        className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
       />
-      {searching && <p className="text-xs text-muted">Searching…</p>}
+      {searching && <p className="text-body-sm text-muted">Searching…</p>}
       {results.length > 0 && (
         <ul className="space-y-1">
           {results.map((r) => (
@@ -124,7 +124,7 @@ export function FounderSlotReplace({
                 type="button"
                 disabled={submitting}
                 onClick={() => replaceWith(r.id)}
-                className="flex w-full items-center justify-between rounded-md border border-card-border bg-card px-3 py-2 text-left text-sm hover:border-primary/50 disabled:opacity-50"
+                className="flex w-full items-center justify-between rounded-md border border-card-border bg-card px-3 py-2 text-left text-body hover:border-primary/50 disabled:opacity-50"
               >
                 <span className="font-medium">{r.name}</span>
                 <span className="text-body-sm font-medium text-muted">
@@ -136,7 +136,7 @@ export function FounderSlotReplace({
         </ul>
       )}
       {error && (
-        <div className="rounded-md border border-error/40 bg-error/10 p-2 text-xs text-error">
+        <div className="rounded-md border border-error/40 bg-error/10 p-2 text-body-sm text-error">
           {error}
         </div>
       )}

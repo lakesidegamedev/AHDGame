@@ -112,7 +112,7 @@ export default function PricingPanel({
 
   if (!isCeo) {
     return (
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         {pricing.posture == null
           ? "This sector prices its output automatically."
           : pricingMode === "costPlus"
@@ -125,12 +125,12 @@ export default function PricingPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h2 className="text-lg font-bold text-foreground">Pricing posture</h2>
+        <h2 className="text-heading font-bold text-foreground">Pricing posture</h2>
         {sold != null && (
           <InfoTooltip
             trigger={
               <span
-                className={`text-xs font-semibold tabular-nums underline decoration-dotted underline-offset-2 ${
+                className={`text-body-sm font-semibold tabular-nums underline decoration-dotted underline-offset-2 ${
                   used >= 0.995 ? "text-success" : used >= 0.7 ? "text-warning" : "text-error"
                 }`}
               >
@@ -141,7 +141,7 @@ export default function PricingPanel({
             }
             width={260}
           >
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               Share of the units this sector offered that found a buyer last turn, blended across
               every commodity it makes and weighted by the amount offered. The corporation page
               instead counts sold units against what the sector produced. Cheaper sellers fill
@@ -157,14 +157,14 @@ export default function PricingPanel({
           </InfoTooltip>
         )}
       </div>
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         {pricingMode === "costPlus"
           ? costPlusText("explanation")
           : "Automatic asks a steady market price that moves at most 6% a turn, and a set posture is measured from the same price, so undercutting cannot drag it down 20% a turn. Unsold stock is marked down the next turn. When one price sells out and a higher one does not, the next ask lands halfway between them, so the price narrows in on the best level instead of swinging every other turn. Demand fills the cheapest sellers first. Undercut to sell out ahead of rivals, or skim for margin and risk holding unsold output."}
       </p>
 
       {pricing.asks && pricing.asks.length > 0 && (
-        <ul className="mb-3 space-y-0.5 text-xs" aria-label="Asking prices last turn">
+        <ul className="mb-3 space-y-0.5 text-body-sm" aria-label="Asking prices last turn">
           {pricing.asks.map((a) => (
             <li key={a.commodity} className="flex justify-between gap-3 tabular-nums">
               <span className="text-muted">
@@ -207,7 +207,7 @@ export default function PricingPanel({
         </ul>
       )}
 
-      <p className="mb-3 text-xs text-muted">
+      <p className="mb-3 text-body-sm text-muted">
         {supplyText("pricingHint")}{" "}
         <Link className="underline" href={`/corporation/${corporationId}?tab=ceo`}>
           {supplyText("pricingLink")}
@@ -221,7 +221,7 @@ export default function PricingPanel({
               disabled={saving}
               onClick={() => void save(draft, "market")}
               aria-pressed={pricingMode === "market"}
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs disabled:opacity-50"
+              className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm disabled:opacity-50"
             >
               {costPlusText("marketMode")}
             </button>
@@ -231,7 +231,7 @@ export default function PricingPanel({
                 disabled={saving}
                 onClick={() => void save(draft ?? 0.1, "costPlus")}
                 aria-pressed={pricingMode === "costPlus"}
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs disabled:opacity-50"
+                className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm disabled:opacity-50"
               >
                 {costPlusText("costPlusMode")}
               </button>
@@ -256,7 +256,7 @@ export default function PricingPanel({
                       ? "Premium: more revenue per unit sold, but you sell last, so in a glut this output can go unsold."
                       : "Sell at the market price."
                 }
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium tabular-nums transition-colors disabled:opacity-50 ${
+                className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium tabular-nums transition-colors disabled:opacity-50 ${
                   active
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-card-border bg-background hover:bg-card"
@@ -272,7 +272,7 @@ export default function PricingPanel({
             disabled={saving}
             onClick={() => void save(null, "market")}
             title="Let the sector position itself: skim mild premiums into shortages, undercut into gluts."
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+            className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
               draft === null
                 ? "border-primary/40 bg-primary/10 text-primary"
                 : "border-card-border bg-background hover:bg-card"
@@ -284,14 +284,14 @@ export default function PricingPanel({
       </div>
 
       {message ? (
-        <p className={`text-xs mb-2 ${isError ? "text-error" : "text-success"}`} role="status">
+        <p className={`text-body-sm mb-2 ${isError ? "text-error" : "text-success"}`} role="status">
           {message}
         </p>
       ) : null}
 
       {brandWarning ? (
         <p
-          className={`text-xs mb-2 ${brandWarning === "gouge" ? "text-warning" : "text-muted"}`}
+          className={`text-body-sm mb-2 ${brandWarning === "gouge" ? "text-warning" : "text-muted"}`}
           role="status"
         >
           {brandWarning === "gouge"
@@ -300,7 +300,7 @@ export default function PricingPanel({
         </p>
       ) : null}
 
-      <div className="pt-3 border-t border-card-border flex items-center justify-between text-sm">
+      <div className="pt-3 border-t border-card-border flex items-center justify-between text-body">
         <InfoTooltip
           trigger={
             <span className="text-muted border-b border-dotted border-muted/40 cursor-default">
@@ -312,7 +312,7 @@ export default function PricingPanel({
           width={300}
         >
           {settled ? (
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               What this plant was paid last turn, against what the units it offered for outside sale
               would have earned at its asking price. Output sent to your own sites is left out.
               {sold != null ? ` ${Math.round(sold * 100)}% of what it offered sold.` : ""} Units
@@ -321,7 +321,7 @@ export default function PricingPanel({
               plant was paid, so it can differ from this figure.
             </p>
           ) : (
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               Realized revenue = sold share × your posted price × the market price level, faded in
               over 5 game years so repositioning never causes a revenue cliff.
               {pricing.effectivePosture != null && (
@@ -351,7 +351,7 @@ export default function PricingPanel({
       </div>
 
       {pricing.clearingFactor == null && (
-        <p className="mt-2 text-[11px] italic text-muted">
+        <p className="mt-2 text-body-sm italic text-muted">
           {settled
             ? "Nothing was offered for outside sale last turn."
             : "Clearing figures appear after the next turn."}

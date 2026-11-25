@@ -7,11 +7,11 @@ import type { ReactNode } from "react";
 
 /** Page title: 30px on phones, 36px from the small breakpoint up. */
 export const PARTY_PAGE_TITLE_CLASS =
-  "break-words text-display font-bold leading-tight tracking-tight text-foreground sm:text-[2.25rem]";
+  "break-words text-display font-bold leading-tight tracking-tight text-foreground sm:text-display";
 
 /** Main section heading, 24px. Sections are separated by spacing, not rules. */
 export const PARTY_SECTION_HEADING_CLASS =
-  "text-heading-lg font-semibold tracking-tight text-foreground";
+  "text-heading font-semibold tracking-tight text-foreground";
 
 /** Heading for a block inside a section, 16px. */
 export const PARTY_SUBHEADING_CLASS = "text-body-lg font-semibold text-foreground";

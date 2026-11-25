@@ -31,7 +31,7 @@ export function LeanMapLegend({
 
   return (
     <div className="mt-3 w-full max-w-md">
-      <div className="flex items-center justify-between text-xs text-muted">
+      <div className="flex items-center justify-between text-body-sm text-muted">
         <span>{copy.negative}</span>
         <span className="font-medium text-foreground">{copy.title}</span>
         <span>{copy.positive}</span>
@@ -40,12 +40,12 @@ export function LeanMapLegend({
         className="mt-1 h-2.5 rounded-full border border-card-border/60"
         style={{ background: gradient }}
       />
-      <div className="mt-1 flex items-center justify-between text-[10px] text-muted tabular-nums">
+      <div className="mt-1 flex items-center justify-between text-body-sm text-muted tabular-nums">
         <span>−{range}</span>
         <span>0 · center</span>
         <span>+{range}</span>
       </div>
-      <p className="mt-1 text-[10px] text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Scale fitted to the current spread across regions on the −5…+5 position ruler. Hover a
         region for exact values; click one for its demographic breakdown.
       </p>

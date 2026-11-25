@@ -101,9 +101,9 @@ export function ProductStudio({
 
   if (!studio) {
     return message ? (
-      <p className="text-sm text-muted">{message}</p>
+      <p className="text-body text-muted">{message}</p>
     ) : (
-      <div className="flex items-center gap-2 text-sm text-muted">
+      <div className="flex items-center gap-2 text-body text-muted">
         <LoadingSpinner />
         <span>Loading product studio</span>
       </div>
@@ -194,7 +194,7 @@ function FundingTable({
   const withTarget = rows.some((row) => row.shareOfTarget !== undefined);
   return (
     <TableScroll>
-      <table className="w-full text-sm" aria-label="Spend per turn">
+      <table className="w-full text-body" aria-label="Spend per turn">
         <thead>
           <tr>
             <Th>
@@ -290,8 +290,8 @@ function DomainPanel({
     <DenseSection id={`studio-${domain.domain}`} title={copy.title}>
       {showIntro && (
         <div className="my-1 space-y-1.5 border-l-2 border-info/60 py-0.5 pl-3">
-          <p className="text-sm text-muted">{copy.intro}</p>
-          <details className="text-xs text-muted">
+          <p className="text-body text-muted">{copy.intro}</p>
+          <details className="text-body-sm text-muted">
             <summary className="cursor-pointer font-semibold hover:text-foreground">
               How quality and odds work
             </summary>
@@ -314,12 +314,15 @@ function DomainPanel({
         <div className="space-y-3 py-2">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor={`line-${domain.domain}`} className="mb-1 block text-xs text-muted">
+              <label
+                htmlFor={`line-${domain.domain}`}
+                className="mb-1 block text-body-sm text-muted"
+              >
                 Product line
               </label>
               <select
                 id={`line-${domain.domain}`}
-                className="block h-9 w-full rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-card px-2 text-sm"
+                className="block h-9 w-full rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-card px-2 text-body"
                 value={selected?.id ?? ""}
                 onChange={(event) => setLineId(event.target.value)}
               >
@@ -331,14 +334,17 @@ function DomainPanel({
               </select>
             </div>
             <div>
-              <label htmlFor={`name-${domain.domain}`} className="mb-1 block text-xs text-muted">
+              <label
+                htmlFor={`name-${domain.domain}`}
+                className="mb-1 block text-body-sm text-muted"
+              >
                 {copy.nameLabel}
               </label>
               <Input
                 id={`name-${domain.domain}`}
                 value={name}
                 maxLength={60}
-                className="!h-9 !rounded-[calc(var(--corp-rad,6px)-2px)] !px-2 !py-1 !text-sm"
+                className="!h-9 !rounded-[calc(var(--corp-rad,6px)-2px)] !px-2 !py-1 !text-body"
                 placeholder={copy.namePlaceholder}
                 onChange={(event) => setName(event.target.value)}
               />
@@ -363,14 +369,14 @@ function DomainPanel({
                 baseline={selected.baselineRevenueAnchor}
                 money={money}
               />
-              <p className="text-xs text-muted" data-testid="studio-line-target">
+              <p className="text-body-sm text-muted" data-testid="studio-line-target">
                 Target for this line: {money(selected.targetAnchor)}, set at 1.5 turns of the
                 revenue of the {selected.liftedSectorCount === 1 ? copy.liftedOne : copy.lifted} it
                 lifts ({money(selected.baselineRevenueAnchor)} per turn, with a floor of{" "}
                 {money(1000)}). Every line uses the same quality curve against its own target, so
                 lines that lift the same {copy.lifted} show the same figures.
               </p>
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 {selected.liftedSectorCount === 0
                   ? `No ${copy.lifted} would be lifted by this line yet.`
                   : `A hit lifts your ${selected.liftedSectorCount} ${
@@ -391,7 +397,7 @@ function DomainPanel({
                   {busy ? "Starting" : "Start development"}
                 </SmallButton>
                 {name.trim().length === 0 && (
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     Name your {copy.noun} to start. It costs{" "}
                     {tierOdds ? money(tierOdds.fundingPerTurnAnchor) : "n/a"} per turn.
                   </span>
@@ -404,7 +410,7 @@ function DomainPanel({
 
       {hasPast && (
         <div className="pt-4">
-          <h3 className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+          <h3 className="pb-1 text-body-lg font-semibold uppercase tracking-[0.1em] text-muted">
             Past {copy.noun}s
           </h3>
           <PastTable ventures={domain.recent} money={money} noun={copy.noun} />
@@ -457,9 +463,9 @@ function ActiveVenture({
       aria-label="Product in development"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-base font-semibold text-foreground">{venture.name}</span>
+        <span className="text-body-lg font-semibold text-foreground">{venture.name}</span>
         <Badge color="info">{venture.lineLabel}</Badge>
-        <span className="ml-auto font-mono text-xs tabular-nums text-muted">
+        <span className="ml-auto font-mono text-body-sm tabular-nums text-muted">
           {done} of {total} turns done
         </span>
       </div>
@@ -499,7 +505,7 @@ function ActiveVenture({
       )}
 
       {!studio.isCeo && venture.pendingEvents.length > 0 && (
-        <p className="text-xs text-muted">The product is awaiting a decision from the CEO.</p>
+        <p className="text-body-sm text-muted">The product is awaiting a decision from the CEO.</p>
       )}
       {studio.isCeo &&
         venture.pendingEvents.map((event) => (
@@ -509,9 +515,9 @@ function ActiveVenture({
             role="group"
             aria-label={event.title}
           >
-            <h4 className="text-sm font-semibold text-foreground">{event.title}</h4>
-            <p className="mt-1 text-sm">{event.body}</p>
-            <p className="mt-1 text-xs text-muted">
+            <h4 className="text-body font-semibold text-foreground">{event.title}</h4>
+            <p className="mt-1 text-body">{event.body}</p>
+            <p className="mt-1 text-body-sm text-muted">
               {`Answer by turn ${event.deadlineTurn}. If you do not, the marked default applies.`}
             </p>
             <ul className="mt-2 divide-y divide-card-border/60">
@@ -520,12 +526,12 @@ function ActiveVenture({
                   key={choice.id}
                   className="flex flex-wrap items-center justify-between gap-2 py-1.5"
                 >
-                  <div className="min-w-0 text-sm">
+                  <div className="min-w-0 text-body">
                     <span className="font-medium">
                       {choice.label}
                       {choice.isDefault ? " (default)" : ""}
                     </span>
-                    <span className="block text-xs text-muted">
+                    <span className="block text-body-sm text-muted">
                       {choice.detail}
                       {choice.chargeAnchor ? ` About ${money(choice.chargeAnchor)}.` : ""}
                     </span>
@@ -552,7 +558,7 @@ function ActiveVenture({
         ))}
 
       {venture.resolvedEvents.length > 0 && (
-        <ul className="text-xs text-muted">
+        <ul className="text-body-sm text-muted">
           {venture.resolvedEvents.map((event) => (
             <li key={event.title}>
               {event.title}: {event.choiceLabel}
@@ -636,7 +642,7 @@ function PastTable({
 }) {
   return (
     <TableScroll>
-      <table className="w-full text-sm" aria-label={`Past ${noun}s`}>
+      <table className="w-full text-body" aria-label={`Past ${noun}s`}>
         <thead>
           <tr>
             <Th>Product</Th>
@@ -656,7 +662,7 @@ function PastTable({
               <tr key={venture.id}>
                 <Td numeric={false} wrap>
                   <span className="font-medium">{venture.name}</span>
-                  <span className="block text-xs text-muted">{venture.lineLabel}</span>
+                  <span className="block text-body-sm text-muted">{venture.lineLabel}</span>
                 </Td>
                 <Td numeric={false}>
                   <Badge color={hit ? "success" : "default"}>
@@ -679,7 +685,7 @@ function PastTable({
                       )}`
                     : "n/a"}
                 </Td>
-                <Td numeric={false} wrap className="text-xs text-muted">
+                <Td numeric={false} wrap className="text-body-sm text-muted">
                   {hit
                     ? `${pct(venture.boostFraction ?? 0)}${
                         running

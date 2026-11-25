@@ -60,7 +60,7 @@ export function GermanQuestionClient({ initialView }: { initialView: DossierView
       <SeatSwitcher view={view} mode={mode} onModeChange={setMode} />
 
       {refreshError && (
-        <p role="alert" className="font-mono text-body-xs text-error">
+        <p role="alert" className="font-mono text-body-sm text-error">
           {refreshError}
         </p>
       )}
@@ -68,10 +68,10 @@ export function GermanQuestionClient({ initialView }: { initialView: DossierView
       {mode === "seat" && view.settlementPlays.length > 0 && (
         <section className="flex flex-wrap items-center gap-4 rounded-xl border border-gold/35 bg-gold/[0.05] px-4 py-3.5">
           <div className="min-w-[200px] shrink-0">
-            <h2 className="font-mono text-body-xs font-bold tracking-widest text-gold">
+            <h2 className="font-mono text-body-sm font-bold tracking-widest text-gold">
               ◆ SETTLEMENT-LEVEL PLAYS
             </h2>
-            <p className="mt-1 max-w-[250px] font-mono text-body-xs leading-relaxed text-gold-muted">
+            <p className="mt-1 max-w-[250px] font-mono text-body-sm leading-relaxed text-gold-muted">
               Bypasses the institutions — moves the weighted index directly.
             </p>
           </div>

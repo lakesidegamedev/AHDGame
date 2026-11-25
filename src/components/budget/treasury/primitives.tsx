@@ -43,14 +43,12 @@ export function StatTile({
       </span>
       <div className="flex flex-col">
         <div className="flex items-baseline gap-2">
-          <span
-            className={`text-heading-sm font-bold leading-tight tabular-nums ${VALUE_TONE[tone]}`}
-          >
+          <span className={`text-heading font-bold leading-tight tabular-nums ${VALUE_TONE[tone]}`}>
             {value}
           </span>
           {delta}
         </div>
-        {sub && <span className="text-body-xs tabular-nums text-muted">{sub}</span>}
+        {sub && <span className="text-body-sm tabular-nums text-muted">{sub}</span>}
       </div>
     </div>
   );
@@ -78,7 +76,7 @@ export function Delta({
 }) {
   if (prev == null) return null;
   const d = now - prev;
-  if (Math.abs(d) < 1e-9) return <span className={`text-body-xs text-muted ${className}`}>—</span>;
+  if (Math.abs(d) < 1e-9) return <span className={`text-body-sm text-muted ${className}`}>—</span>;
   const good = invert ? d < 0 : d > 0;
   const text =
     kind === "pct"
@@ -86,7 +84,7 @@ export function Delta({
       : `${d >= 0 ? "+" : "−"}${formatFundsCompact(Math.abs(d), sym)}`;
   return (
     <span
-      className={`tabular-nums text-body-xs font-semibold ${good ? "text-success" : "text-error"} ${className}`}
+      className={`tabular-nums text-body-sm font-semibold ${good ? "text-success" : "text-error"} ${className}`}
     >
       {text}
     </span>
@@ -176,7 +174,7 @@ export function StackBar({
         return (
           <div
             key={s.key}
-            className="flex h-full items-center justify-center overflow-hidden text-[10px] font-semibold text-black/80 transition-opacity hover:opacity-80"
+            className="flex h-full items-center justify-center overflow-hidden text-body-sm font-semibold text-black/80 transition-opacity hover:opacity-80"
             style={{ width: `${pct}%`, background: s.color }}
             title={`${s.label}: ${formatValue(s.value)} (${pct.toFixed(1)}%)`}
             onMouseEnter={() => onHover?.(s)}

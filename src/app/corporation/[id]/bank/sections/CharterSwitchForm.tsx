@@ -99,22 +99,22 @@ export function CharterSwitchForm({
   return (
     <BankPanel kind="ceoControl" title="Change charter type" className="max-w-2xl">
       <div className="space-y-2 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Change what kind of bank you run without re-chartering or re-posting capital. Switching to
           an investment charter returns your whole deposit book. A {turnsToHours(24)} cooldown
           applies after any switch.
         </p>
 
         {options.length === 0 ? (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             No other charter type is legal in this jurisdiction to switch to.
           </p>
         ) : (
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-muted">
+            <label className="flex flex-col gap-1 text-body-sm text-muted">
               Switch to
               <select
-                className="h-8 min-w-40 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-8 min-w-40 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                 value={type}
                 onChange={(e) => update({ type: e.target.value as BankCharterType })}
                 disabled={!canMutate || onCooldown}
@@ -129,7 +129,7 @@ export function CharterSwitchForm({
             </label>
 
             {onCooldown ? (
-              <p className="pb-1.5 text-xs text-muted">
+              <p className="pb-1.5 text-body-sm text-muted">
                 Charter type is locked for {turnsToHours(turnsRemaining)} after your last switch.
               </p>
             ) : canMutate ? (
@@ -137,7 +137,7 @@ export function CharterSwitchForm({
                 {busy ? "Switching..." : `Switch to ${charterLabel(type)}`}
               </SmallButton>
             ) : (
-              <p className="pb-1.5 text-xs text-muted">
+              <p className="pb-1.5 text-body-sm text-muted">
                 Only the bank&apos;s CEO can change the charter type.
               </p>
             )}

@@ -76,7 +76,7 @@ export function Tooltip({ content, label = "More information", variant = "info" 
           setOpen(true);
         }}
         onBlur={() => setOpen(false)}
-        className={`relative inline-flex h-3.5 w-3.5 items-center justify-center font-bold text-muted transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-10 after:w-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${variant === "footnote" ? "align-super text-xs" : "ml-1 rounded-full border border-muted/40 bg-card-elevated text-[9px] hover:border-primary/50"}`}
+        className={`relative inline-flex h-3.5 w-3.5 items-center justify-center font-bold text-muted transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-10 after:w-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${variant === "footnote" ? "align-super text-body-sm" : "ml-1 rounded-full border border-muted/40 bg-card-elevated text-body-sm hover:border-primary/50"}`}
         aria-label={label}
         aria-expanded={open}
         aria-describedby={open ? tooltipId : undefined}
@@ -94,7 +94,7 @@ export function Tooltip({ content, label = "More information", variant = "info" 
           }}
           role="tooltip"
           id={tooltipId}
-          className="pointer-events-none w-48 whitespace-normal rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-xs font-normal normal-case tracking-normal text-foreground shadow-lg"
+          className="pointer-events-none w-48 whitespace-normal rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-body-sm font-normal normal-case tracking-normal text-foreground shadow-lg"
         >
           {content}
           <span

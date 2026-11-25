@@ -45,7 +45,7 @@ export function SubsidiesTab({ countryId }: { countryId: CountryId }) {
 
   if (subsidies.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/60 p-6 text-center text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-card/60 p-6 text-center text-body text-muted-foreground">
         No active sector subsidies.
       </div>
     );
@@ -59,7 +59,7 @@ export function SubsidiesTab({ countryId }: { countryId: CountryId }) {
           className="flex items-center justify-between rounded-lg border border-border bg-card/60 px-4 py-3"
         >
           <div className="space-y-0.5">
-            <p className="text-sm font-medium">
+            <p className="text-body font-medium">
               {s.scope === "state" ? `${regionLabel} — ${s.stateId}` : "National"}
               {" · "}
               {s.scopeType === "economy_wide"
@@ -67,13 +67,13 @@ export function SubsidiesTab({ countryId }: { countryId: CountryId }) {
                 : `Sector: ${OPERATING_SECTOR_TYPE_LABELS[s.targetSectorType as OperatingSectorType] ?? s.targetSectorType}`}
               {s.targetStrategyId ? ` (${s.targetStrategyId})` : ""}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body-sm text-muted-foreground">
               {s.domesticOnly ? "Domestic corps only" : "All corps"}
               {" · "}updated <GameMonthTime value={s.updatedAt} />
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-semibold text-emerald-400">+7.5% margin</p>
+            <p className="text-body font-semibold text-emerald-400">+7.5% margin</p>
           </div>
         </div>
       ))}

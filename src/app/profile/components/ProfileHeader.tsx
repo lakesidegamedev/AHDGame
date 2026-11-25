@@ -140,10 +140,10 @@ export function ProfileHeader({
 
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
-            <h1 className="break-words font-sans text-[1.75rem] font-bold leading-tight tracking-tight text-foreground sm:text-[2.25rem]">
+            <h1 className="break-words font-sans text-display font-bold leading-tight tracking-tight text-foreground sm:text-display">
               {character.name}
             </h1>
-            <p className="mt-1 text-heading-sm font-medium text-foreground">
+            <p className="mt-1 text-heading font-medium text-foreground">
               {officeLabels.map((officeLabel, index) => (
                 <Fragment key={officeLabel}>
                   {index > 0 && ", "}

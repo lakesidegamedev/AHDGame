@@ -202,7 +202,7 @@ function ActionsTab({
         >
           <span>{flash === "raise" ? t("supported") : t("support")}</span>
           <span
-            className={`text-body-xs font-normal ${favorabilityMaxed ? "text-muted" : "text-success"}`}
+            className={`text-body-sm font-normal ${favorabilityMaxed ? "text-muted" : "text-success"}`}
           >
             {favorabilityMaxed
               ? info.targetMediaSustainedAtCap
@@ -230,13 +230,13 @@ function ActionsTab({
           {flash === "failed" ? (
             <>
               <span>{t("blocked")}</span>
-              <span className="text-body-xs font-normal text-warning">{t("infamyBlocked")}</span>
+              <span className="text-body-sm font-normal text-warning">{t("infamyBlocked")}</span>
             </>
           ) : (
             <>
               <span>{flash === "lower" ? t("attacked") : t("attack")}</span>
               <span
-                className={`text-body-xs font-normal ${favorabilityFloored ? "text-muted" : "text-error"}`}
+                className={`text-body-sm font-normal ${favorabilityFloored ? "text-muted" : "text-error"}`}
               >
                 {favorabilityFloored
                   ? t("atFloor")
@@ -263,7 +263,7 @@ function ActionsTab({
         }`}
       >
         <span>{flash === "barnstorm" ? t("barnstormed") : t("barnstorm")}</span>
-        <span className="text-body-xs font-normal text-muted">
+        <span className="text-body-sm font-normal text-muted">
           {influenceMaxed
             ? t("influenceMaxed")
             : t("barnstormEffect", {
@@ -275,9 +275,9 @@ function ActionsTab({
       </button>
 
       {info.myActions < minAvailableActionCost && (
-        <p className="text-center text-body-xs text-error">{t("notEnoughActions")}</p>
+        <p className="text-center text-body-sm text-error">{t("notEnoughActions")}</p>
       )}
-      <InlineError error={actionError} className="text-center text-body-xs text-error" />
+      <InlineError error={actionError} className="text-center text-body-sm text-error" />
     </div>
   );
 }

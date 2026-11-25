@@ -75,7 +75,7 @@ export function ActionsHeroBanner({
         aria-hidden
       />
       <div className="absolute inset-0 flex flex-col justify-end px-5 pb-5 sm:px-8 sm:pb-7">
-        <h1 className="text-display font-bold leading-tight tracking-tight text-white sm:text-[2.25rem]">
+        <h1 className="text-display font-bold leading-tight tracking-tight text-white sm:text-display">
           Campaign operations
           {eraLabel && (
             <span className="ml-3 font-normal tabular-nums text-white/70">{eraLabel}</span>

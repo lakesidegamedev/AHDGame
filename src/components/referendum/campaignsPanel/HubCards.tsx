@@ -55,10 +55,10 @@ export function HubCards({
                 <CountryFlag country={countryId} size="md" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[17px] font-extrabold leading-tight tracking-tight">
+                <div className="text-body-lg font-extrabold leading-tight tracking-tight">
                   {c.regionName}
                 </div>
-                <div className="mt-0.5 text-[11.5px] font-semibold text-muted">
+                <div className="mt-0.5 text-body-sm font-semibold text-muted">
                   {kindLabel(c.kind)}
                 </div>
               </div>
@@ -71,12 +71,12 @@ export function HubCards({
               <span className="flex items-center gap-1.5">
                 <MomentumIndicator momentum={computeReferendumMomentum(c.pollHistory)} />
               </span>
-              <span className="text-[11.5px] font-semibold text-muted">
+              <span className="text-body-sm font-semibold text-muted">
                 {closeInLabel(c.closeInTurns)}
               </span>
             </div>
 
-            <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold text-muted">
+            <div className="mt-2 flex items-center gap-2 text-body-sm font-semibold text-muted">
               <span className="text-[var(--ref-yes)]">● {c.positionCounts.for} For</span>
               <span className="text-[var(--ref-no)]">● {c.positionCounts.against} Against</span>
               <span>· {c.positionCounts.undeclared} undeclared</span>

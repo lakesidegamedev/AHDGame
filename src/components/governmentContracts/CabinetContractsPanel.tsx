@@ -24,7 +24,7 @@ export function CabinetContractsPanel({
     <div className="space-y-5">
       <div className="rounded-xl border border-card-border bg-card p-5">
         <h2 className="font-semibold">{t("officeResponsibilities")}</h2>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-body text-muted">
           {type === "defence"
             ? t("defenceOffice")
             : type === "extraction"

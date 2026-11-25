@@ -17,7 +17,7 @@ export function RegimeChangeHistory({ entries }: { entries: readonly Entry[] }) 
     .sort((a, b) => b.turn - a.turn || b.index - a.index)
     .slice(0, 12);
   return (
-    <details className="rounded-lg border border-card-border p-3 text-xs">
+    <details className="rounded-lg border border-card-border p-3 text-body-sm">
       <summary className="cursor-pointer font-semibold">{t("title")}</summary>
       <p className="mt-2 text-muted">{t("description")}</p>
       {recent.length === 0 ? (

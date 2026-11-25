@@ -106,7 +106,7 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
         name={item.icon ?? pixelIconForLink(item.id)}
         className="h-4 w-4 shrink-0 text-muted"
       />
-      <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{item.label}</span>
+      <span className="min-w-0 flex-1 truncate text-body-sm text-foreground">{item.label}</span>
     </>
   );
 
@@ -123,10 +123,10 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
       >
         <header className="flex items-start justify-between gap-4 border-b border-card-border px-5 py-4">
           <div>
-            <h2 id="nav-customize-title" className="text-base font-semibold text-foreground">
+            <h2 id="nav-customize-title" className="text-body-lg font-semibold text-foreground">
               {t("title")}
             </h2>
-            <p className="mt-1 text-xs text-muted">{t("hint")}</p>
+            <p className="mt-1 text-body-sm text-muted">{t("hint")}</p>
           </div>
           <button type="button" onClick={onClose} className={iconButton} aria-label={t("done")}>
             ✕
@@ -135,14 +135,14 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
 
         {/* Pinned strip */}
         <section className="border-b border-card-border bg-background/40 px-5 py-3">
-          <div className="mb-2 flex items-center justify-between text-xs text-muted">
+          <div className="mb-2 flex items-center justify-between text-body-sm text-muted">
             <span className="font-medium">{t("pinnedTitle")}</span>
             <span>
               {pinned.length}/{MAX_NAV_PINS} · {t("pinnedWideHint")}
             </span>
           </div>
           {pinned.length === 0 ? (
-            <p className="text-xs text-muted">{t("pinnedEmpty")}</p>
+            <p className="text-body-sm text-muted">{t("pinnedEmpty")}</p>
           ) : (
             <ul className="flex flex-wrap gap-1.5">
               {pinned.map((key, index) => {
@@ -201,7 +201,7 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
                 type="button"
                 aria-pressed={entry.id === selected.id}
                 onClick={() => setMenuId(entry.id)}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] ${entry.id === selected.id ? "bg-card font-medium text-foreground" : "text-muted hover:bg-card hover:text-foreground"}`}
+                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-body-sm ${entry.id === selected.id ? "bg-card font-medium text-foreground" : "text-muted hover:bg-card hover:text-foreground"}`}
               >
                 <span className="truncate">{entry.menu.title}</span>
                 <span aria-hidden="true">›</span>
@@ -219,7 +219,7 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
               const rootIds = roots.map((item) => item.id);
               return (
                 <section key={group.id}>
-                  <h3 className="mb-1.5 text-xs font-medium text-muted">{group.label}</h3>
+                  <h3 className="mb-1.5 text-body-lg font-medium text-muted">{group.label}</h3>
                   <ol className="space-y-1">
                     {items.map((item) => {
                       const rootIndex = rootIds.indexOf(item.id);
@@ -289,7 +289,7 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
 
             {selected.menu.shortcuts.length > 0 && (
               <section>
-                <h3 className="mb-1.5 text-xs font-medium text-muted">{t("shortcuts")}</h3>
+                <h3 className="mb-1.5 text-body-lg font-medium text-muted">{t("shortcuts")}</h3>
                 <ul className="space-y-1">
                   {selected.menu.shortcuts.map((item) => (
                     <li
@@ -310,14 +310,14 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
           <button
             type="button"
             onClick={() => onChange(EMPTY_NAV_CUSTOMIZATION)}
-            className="text-xs text-muted hover:text-foreground hover:underline"
+            className="text-body-sm text-muted hover:text-foreground hover:underline"
           >
             {t("reset")}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 items-center rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-8 items-center rounded-lg bg-primary px-4 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             {t("done")}
           </button>

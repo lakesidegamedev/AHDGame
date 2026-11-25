@@ -73,8 +73,8 @@ export default async function SupporterWallPage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Supporter wall</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Supporter wall</h1>
+          <p className="mt-2 text-body text-muted">
             The players who keep A House Divided online. Thank you.
           </p>
         </div>
@@ -87,10 +87,10 @@ export default async function SupporterWallPage() {
                 key={section.tier}
                 className="rounded-xl border border-card-border bg-card p-6"
               >
-                <h2 className="text-xl font-semibold text-foreground">{section.label}</h2>
-                <p className="mt-1 text-sm text-muted">{section.blurb}</p>
+                <h2 className="text-heading font-semibold text-foreground">{section.label}</h2>
+                <p className="mt-1 text-body text-muted">{section.blurb}</p>
                 {entries.length === 0 ? (
-                  <p className="mt-4 text-sm text-muted">
+                  <p className="mt-4 text-body text-muted">
                     No names on this part of the wall yet. Supporters choose a wall name from their
                     settings.
                   </p>
@@ -99,7 +99,7 @@ export default async function SupporterWallPage() {
                     {entries.map((entry, i) => (
                       <li
                         key={`${entry.name}-${i}`}
-                        className="rounded-full border border-card-border bg-background px-3 py-1 text-sm text-foreground"
+                        className="rounded-full border border-card-border bg-background px-3 py-1 text-body text-foreground"
                       >
                         {entry.name}
                       </li>
@@ -111,7 +111,7 @@ export default async function SupporterWallPage() {
           })}
         </div>
 
-        <p className="mt-8 text-sm text-muted">
+        <p className="mt-8 text-body text-muted">
           Want your name here?{" "}
           <Link href="/settings" className="text-primary hover:text-primary/80">
             Set a wall name in your settings

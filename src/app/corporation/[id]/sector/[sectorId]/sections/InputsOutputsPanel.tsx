@@ -187,7 +187,7 @@ export default function InputsOutputsPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-      <h2 className="text-heading-sm font-bold text-foreground">What goes in, what comes out</h2>
+      <h2 className="text-heading font-bold text-foreground">What goes in, what comes out</h2>
       <p className="mb-4 mt-1 text-body-sm text-muted">
         Your plants buy the things on the left and make the things on the right. Amounts are daily.
         Prices are per unit, in {currencyCode}: what you were charged for inputs
@@ -212,7 +212,7 @@ export default function InputsOutputsPanel({
         <section aria-labelledby="io-inputs" className="min-w-0">
           <h3
             id="io-inputs"
-            className="mb-2 flex items-center gap-1.5 text-body-sm font-medium text-muted"
+            className="mb-2 flex items-center gap-1.5 text-body-lg font-medium text-muted"
           >
             <ArrowDownToLine className="h-3.5 w-3.5" aria-hidden /> Things you buy
           </h3>
@@ -249,7 +249,7 @@ export default function InputsOutputsPanel({
                       <InfoTooltip
                         width={280}
                         trigger={
-                          <span className="cursor-help border-b border-dotted border-warning/40 text-body-xs font-semibold tabular-nums text-warning">
+                          <span className="cursor-help border-b border-dotted border-warning/40 text-body-sm font-semibold tabular-nums text-warning">
                             {fmtPct(f.inputAvailability)} on the world market
                           </span>
                         }
@@ -324,7 +324,7 @@ export default function InputsOutputsPanel({
         <section aria-labelledby="io-outputs" className="min-w-0">
           <h3
             id="io-outputs"
-            className="mb-2 flex items-center gap-1.5 text-body-sm font-medium text-muted"
+            className="mb-2 flex items-center gap-1.5 text-body-lg font-medium text-muted"
           >
             <ArrowUpFromLine className="h-3.5 w-3.5" aria-hidden /> Things you make
           </h3>
@@ -363,7 +363,7 @@ export default function InputsOutputsPanel({
                       return (
                         <InfoTooltip
                           trigger={
-                            <span className="border-b border-dotted border-muted/40 text-body-xs text-muted">
+                            <span className="border-b border-dotted border-muted/40 text-body-sm text-muted">
                               {settled.ownSites >= settled.offered - 1e-6
                                 ? "Supplied your own sites"
                                 : `${fmtPct(settled.sold / settled.offered)} of offers sold`}
@@ -397,13 +397,13 @@ export default function InputsOutputsPanel({
                       ? `${ownSiteLabel(ownSite.share)}: ${fmtUnits(ownSite.units)} used by your company (worth about ${price(ownSite.valueAnchor)} ${currencyCode} to your sites)`
                       : null;
                     if (share == null)
-                      return <span className="text-body-xs text-muted">{ownSiteText}</span>;
+                      return <span className="text-body-sm text-muted">{ownSiteText}</span>;
                     return (
                       <InfoTooltip
                         width={280}
                         trigger={
                           <span
-                            className={`cursor-help border-b border-dotted border-muted/40 text-body-xs tabular-nums ${
+                            className={`cursor-help border-b border-dotted border-muted/40 text-body-sm tabular-nums ${
                               share < 0.9 ? "text-warning" : "text-muted"
                             }`}
                           >
@@ -461,7 +461,7 @@ export default function InputsOutputsPanel({
       {/* Deposits (extraction only) ─────────────────────────────────────────*/}
       {isExtraction && capacityRows && capacityRows.length > 0 && (
         <div className="mt-5 border-t border-card-border pt-4">
-          <h3 className="mb-2 flex items-center gap-1.5 text-body-sm font-medium text-muted">
+          <h3 className="mb-2 flex items-center gap-1.5 text-body-lg font-medium text-muted">
             <Pickaxe className="h-3.5 w-3.5" aria-hidden /> What is left in the ground here
           </h3>
           <ul className="space-y-1.5">
@@ -485,7 +485,7 @@ export default function InputsOutputsPanel({
                     />
                   </div>
                   {row.headroom < 0 && (
-                    <p className="mt-1.5 text-body-xs text-error">
+                    <p className="mt-1.5 text-body-sm text-error">
                       Everyone here wants more than the ground holds. Your output is cut to fit.
                     </p>
                   )}
@@ -638,7 +638,7 @@ function ShortageDetail({
 }) {
   const unit = flow.unit ? `${flow.unit}/day` : "per day";
   return (
-    <p data-short-detail={flow.commodity} className="w-full text-body-xs text-muted">
+    <p data-short-detail={flow.commodity} className="w-full text-body-sm text-muted">
       Last settled turn (turn {reading.turn}): needed {fmtUnits(reading.neededPerDay, 1)}, arrived{" "}
       {fmtUnits(reading.arrivedPerDay, 1)}, missing {fmtUnits(reading.missingPerDay, 1)} {unit}.
       {reading.blocker ? ` ${inputBlockerText(reading.blocker)}` : ""}
@@ -741,7 +741,7 @@ function FlowRow({
       <div className="flex w-full min-w-0 items-center gap-2">
         <Link
           href={`/commodity/${flow.commodity}`}
-          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-body-xs font-bold transition-opacity hover:opacity-80 ${flow.colors}`}
+          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-body-sm font-bold transition-opacity hover:opacity-80 ${flow.colors}`}
           aria-label={`Open the ${flow.label} market`}
         >
           {flow.icon}
@@ -776,7 +776,7 @@ function FlowRow({
         </InfoTooltip>
       </div>
       {short && (
-        <span className="shrink-0 rounded bg-warning/20 px-1.5 py-0.5 text-body-xs font-semibold text-warning">
+        <span className="shrink-0 rounded bg-warning/20 px-1.5 py-0.5 text-body-sm font-semibold text-warning">
           Ran short
         </span>
       )}
@@ -796,7 +796,7 @@ function FlowRow({
         )}
       </span>
       {split && (
-        <span data-own-site-split className="w-full text-body-xs text-muted">
+        <span data-own-site-split className="w-full text-body-sm text-muted">
           From your own sites: {fmtUnits(split.ownSitePerDay, 1)} a day, no charge
           {split.allOwnSite ? (
             <> · worth about {priceText} each at market</>

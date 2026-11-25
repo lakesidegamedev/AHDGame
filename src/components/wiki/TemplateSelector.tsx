@@ -134,7 +134,7 @@ Add a price chart with {{stock:1}} on its own line, using your corporation numbe
 export function TemplateSelector({ selectedTemplate, onSelectTemplate }: TemplateSelectorProps) {
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-foreground">Template (optional)</label>
+      <label className="block text-body font-medium text-foreground">Template (optional)</label>
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {templates.map((template) => (
           <button
@@ -148,7 +148,7 @@ export function TemplateSelector({ selectedTemplate, onSelectTemplate }: Templat
             }`}
           >
             <h3 className="font-medium text-foreground">{template.name}</h3>
-            <p className="mt-1 text-sm text-muted">{template.description}</p>
+            <p className="mt-1 text-body text-muted">{template.description}</p>
           </button>
         ))}
       </div>
@@ -156,7 +156,7 @@ export function TemplateSelector({ selectedTemplate, onSelectTemplate }: Templat
         <button
           type="button"
           onClick={() => onSelectTemplate("", "")}
-          className="text-sm text-muted hover:text-foreground"
+          className="text-body text-muted hover:text-foreground"
         >
           Clear template
         </button>

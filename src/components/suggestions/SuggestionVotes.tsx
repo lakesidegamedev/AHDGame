@@ -69,7 +69,7 @@ export function SuggestionVotes({
     }
   }
 
-  const pad = size === "md" ? "px-3 py-1.5 text-sm" : "px-2 py-1 text-xs";
+  const pad = size === "md" ? "px-3 py-1.5 text-body" : "px-2 py-1 text-body-sm";
   const icon = size === "md" ? "h-4 w-4" : "h-3.5 w-3.5";
   const button = (kind: Reaction, count: number, path: string, active: string, hover: string) => (
     <button

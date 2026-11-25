@@ -105,7 +105,7 @@ export function TreasuryTransferControls({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
           </svg>
-          <div className="text-xs font-semibold text-muted">
+          <div className="text-body-sm font-semibold text-muted">
             Transfer to{" "}
             {countryConfig.regionLabel === "Nation"
               ? "regional"
@@ -119,7 +119,7 @@ export function TreasuryTransferControls({
             onChange={(e) =>
               dispatch({ type: "SET_TRANSFER", field: "state", value: e.target.value })
             }
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">Select {regionLabel}…</option>
             {regions.map(([id, name]) => (
@@ -135,21 +135,21 @@ export function TreasuryTransferControls({
             onChange={(e) =>
               dispatch({ type: "SET_TRANSFER", field: "amount", value: e.target.value })
             }
-            className="w-32 bg-background py-2 text-sm"
+            className="w-32 bg-background py-2 text-body"
           />
           <button
             onClick={onTransfer}
             disabled={transferForm.transferring}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {transferForm.transferring ? "…" : "Transfer"}
           </button>
         </div>
-        <div className="mt-1 text-xs text-muted">
+        <div className="mt-1 text-body-sm text-muted">
           Available: {fmt(party.treasury, party.countryId)} · Min. {fmt(1000, party.countryId)}
         </div>
         {selectedMemberId && recipientRemaining != null && (
-          <div className="mt-1 text-xs">
+          <div className="mt-1 text-body-sm">
             {recipientRemaining === 0 ? (
               <span className="text-error">
                 This member has already received their full {fmt(payoutCap, party.countryId)} this
@@ -187,7 +187,7 @@ export function TreasuryTransferControls({
               d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
             />
           </svg>
-          <div className="text-xs font-semibold text-muted">Send to member</div>
+          <div className="text-body-sm font-semibold text-muted">Send to member</div>
         </div>
         <p className="text-body-sm text-muted mb-3">
           A member can receive up to {fmt(payoutCap, party.countryId)} per turn from party funds.
@@ -203,7 +203,7 @@ export function TreasuryTransferControls({
             onChange={(e) =>
               dispatch({ type: "SET_SEND", field: "memberId", value: e.target.value })
             }
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">Select member…</option>
             {sortedMembers
@@ -219,17 +219,17 @@ export function TreasuryTransferControls({
             placeholder="Amount"
             value={sendForm.amount}
             onChange={(e) => dispatch({ type: "SET_SEND", field: "amount", value: e.target.value })}
-            className="w-32 bg-background py-2 text-sm"
+            className="w-32 bg-background py-2 text-body"
           />
           <button
             onClick={onSendToMember}
             disabled={sendForm.sending}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {sendForm.sending ? "…" : "Send"}
           </button>
         </div>
-        <div className="mt-1 text-xs text-muted">
+        <div className="mt-1 text-body-sm text-muted">
           Available: {fmt(party.treasury, party.countryId)} · Min. {fmt(1000, party.countryId)}
         </div>
       </div>

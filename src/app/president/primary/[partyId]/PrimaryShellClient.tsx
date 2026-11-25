@@ -102,7 +102,7 @@ export function PrimaryShellClient({
             }
           />
         ) : (
-          <div className="rounded-xl border border-card-border bg-card p-4 text-xs text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-4 text-body-sm text-muted">
             Select a state in the calendar to see its carve-up.
           </div>
         )}

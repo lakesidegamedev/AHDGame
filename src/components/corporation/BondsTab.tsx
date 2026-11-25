@@ -183,7 +183,7 @@ export default function BondsTab({
         {bondInfo ? (
           <BondHistoryPanel corpId={corpId} refreshKey={bondInfo} />
         ) : !bondLoading ? (
-          <p className="py-2 text-xs text-muted">Bond data not available.</p>
+          <p className="py-2 text-body-sm text-muted">Bond data not available.</p>
         ) : null}
       </div>
     );
@@ -205,7 +205,7 @@ export default function BondsTab({
     return (
       <div className="space-y-4">
         {viewToggle}
-        <p className="py-2 text-xs text-muted">Bond data not available.</p>
+        <p className="py-2 text-body-sm text-muted">Bond data not available.</p>
       </div>
     );
   }
@@ -237,7 +237,7 @@ export default function BondsTab({
 
       {bondInfo.imfFacility && (
         <DenseSection title="IMF restructuring facility" meta="replaces the retired bonds">
-          <p className="py-1 text-xs text-muted">
+          <p className="py-1 text-body-sm text-muted">
             This corporation&apos;s previous corporate bonds were retired and consolidated into this
             IMF facility as part of the bailout, so the debt is tracked here instead of as tradable
             bonds. New corporate bonds cannot be issued until the IMF program ends.
@@ -364,7 +364,7 @@ export default function BondsTab({
             >
               <div className="grid gap-x-8 gap-y-4 pt-1 md:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="min-w-0 space-y-3">
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     The bond market pool buys part of the issue with its own cash at issuance, and
                     you are credited for exactly those units. The rest stays unsold and places as
                     the pool has cash; unsold units carry no coupon and are not debt until they
@@ -375,7 +375,7 @@ export default function BondsTab({
                       said out loud. `bondTurn` folds the maturity debit into
                       the same negative-liquid-capital test as the coupon, so a
                       repayment a CEO has not saved for is itself the default. */}
-                  <p className="text-xs text-foreground">
+                  <p className="text-body-sm text-foreground">
                     <span className="font-semibold text-warning">
                       Keep liquid capital positive.
                     </span>{" "}
@@ -385,16 +385,16 @@ export default function BondsTab({
                     score is pinned to CCC for {BOND_DEFAULT_CREDIT_PENALTY_TURNS} turns.
                   </p>
                   {cooldown > 0 && (
-                    <p className="text-xs text-warning">
+                    <p className="text-body-sm text-warning">
                       Cooldown: {cooldown} turns remaining before the next issue.
                     </p>
                   )}
 
                   <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-                    <label className="flex min-w-0 flex-1 basis-64 flex-col gap-1 text-xs text-muted">
+                    <label className="flex min-w-0 flex-1 basis-64 flex-col gap-1 text-body-sm text-muted">
                       <span className="flex items-baseline justify-between gap-2">
                         <span>Face value</span>
-                        <span className="font-mono text-[13px] font-medium tabular-nums text-foreground">
+                        <span className="font-mono text-body-sm font-medium tabular-nums text-foreground">
                           {nativeDisplay}
                           {showParens && (
                             <span className="ml-1 font-normal text-muted">({userPrefDisplay})</span>
@@ -415,17 +415,17 @@ export default function BondsTab({
                         disabled={sliderDisabled}
                         className="w-full accent-primary disabled:opacity-40"
                       />
-                      <span className="flex justify-between font-mono text-[11px] tabular-nums">
+                      <span className="flex justify-between font-mono text-body-sm tabular-nums">
                         <span>0</span>
                         <span>{inLiquid(sliderMax)}</span>
                       </span>
                     </label>
-                    <label className="flex flex-col gap-1 text-xs text-muted">
+                    <label className="flex flex-col gap-1 text-body-sm text-muted">
                       Maturity
                       <select
                         value={bondIssueMaturity}
                         onChange={(e) => setBondIssueMaturity(Number(e.target.value))}
-                        className="h-7 rounded-md border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none"
+                        className="h-7 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                       >
                         {MATURITIES.map((m) => {
                           const coupon = couponFor(m.turns);
@@ -448,13 +448,13 @@ export default function BondsTab({
                   </div>
 
                   {bondsUnavailable ? (
-                    <p className="text-xs text-error">
+                    <p className="text-body-sm text-error">
                       {limitedByExitEquity
                         ? "No borrowing capacity yet. Build capacity this corporation could sell."
                         : "Too small to issue bonds yet. Build more equity headroom."}
                     </p>
                   ) : parsedFaceValue < effectiveMin ? (
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       Minimum{" "}
                       <span className="font-mono tabular-nums">
                         {anchorRuleText(effectiveMin, both(effectiveMin))}
@@ -468,7 +468,7 @@ export default function BondsTab({
                   ) : null}
 
                   {fundableNow !== null && !bondsUnavailable && (
-                    <p className="text-[11px] text-muted">
+                    <p className="text-body-sm text-muted">
                       The bond market pool, shared by every issuer, has about{" "}
                       <span className="font-mono tabular-nums">{inLiquid(fundableNow)}</span> of
                       cash for new bonds now. That is a market limit, not your borrowing limit.
@@ -540,7 +540,7 @@ export default function BondsTab({
                   </KVList>
 
                   {limitedByExitEquity && bondInfo.exitEquity !== undefined && (
-                    <p className="text-[11px] text-muted">
+                    <p className="text-body-sm text-muted">
                       Your headroom is set by what this corporation could realize by selling up (
                       {formatFull(bondInfo.exitEquity)}), not by what it is worth as a going
                       concern. Debt beyond that could not be repaid out of assets, so it is not
@@ -556,7 +556,7 @@ export default function BondsTab({
                       cheap half of the debt and hid the expensive half. */}
                   {preview && (
                     <div>
-                      <h3 className="border-b border-card-border pb-1 text-xs font-medium text-muted">
+                      <h3 className="border-b border-card-border pb-1 text-body-lg font-medium text-muted">
                         If issued
                       </h3>
                       <KVList>
@@ -626,7 +626,7 @@ export default function BondsTab({
             : undefined
         }
       >
-        <p className="py-1 text-xs text-muted">
+        <p className="py-1 text-body-sm text-muted">
           Tradable corporate bonds issued by this corporation. Each unit has a face value of{" "}
           {fmtMoney(BOND_UNIT_FACE_VALUE)}, and the face value below is repaid in full on the
           maturity turn, out of liquid capital, in one payment.
@@ -634,13 +634,13 @@ export default function BondsTab({
         </p>
         {bondInfo.bonds.length === 0 ? (
           bondInfo.imfFacility ? (
-            <p className="py-2 text-xs text-muted">
+            <p className="py-2 text-body-sm text-muted">
               No tradable bonds on issue. Outstanding debt from the old bond issues is now the IMF
               facility. New tradable bonds may appear here if the company issues them later; the
               facility is separate from this table.
             </p>
           ) : (
-            <p className="py-2 text-xs text-muted">No bonds issued yet.</p>
+            <p className="py-2 text-body-sm text-muted">No bonds issued yet.</p>
           )
         ) : (
           <>

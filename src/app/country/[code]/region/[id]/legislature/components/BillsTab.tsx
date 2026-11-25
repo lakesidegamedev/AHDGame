@@ -134,7 +134,7 @@ export function BillsTab({
                 setPartyProposal(false);
                 setShowPropose(true);
               }}
-              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-body font-medium transition-colors ${
                 adminOverride && !canPropose
                   ? "bg-error text-white hover:bg-error/90"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -159,16 +159,16 @@ export function BillsTab({
                   setPartyProposal(true);
                   setShowPropose(true);
                 }}
-                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {t("proposeViaPartyNpp")}
               </button>
               {partyNppUnavailable && (
-                <p className="text-sm text-muted">{t("regionalPartyBillUnavailable")}</p>
+                <p className="text-body text-muted">{t("regionalPartyBillUnavailable")}</p>
               )}
             </div>
           )}
-          <div className="flex min-w-0 max-w-full flex-1 rounded-lg border border-card-border text-sm overflow-x-auto">
+          <div className="flex min-w-0 max-w-full flex-1 rounded-lg border border-card-border text-body overflow-x-auto">
             {[
               { key: "all", label: "All" },
               { key: "active", label: "Voting" },
@@ -189,7 +189,7 @@ export function BillsTab({
               </button>
             ))}
           </div>
-          <span className="shrink-0 text-xs text-muted sm:ml-auto">
+          <span className="shrink-0 text-body-sm text-muted sm:ml-auto">
             {filteredBills.length} bill{filteredBills.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -208,7 +208,7 @@ export function BillsTab({
               canPropose || adminOverride ? (
                 <button
                   onClick={() => setShowPropose(true)}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   {adminOverride && !canPropose
                     ? "Propose a Bill (Admin override)"
@@ -231,7 +231,7 @@ export function BillsTab({
                 <BillListItem key={raw.id}>
                   {raw.hasVetoMessage && (
                     <span
-                      className="absolute right-3 top-4 z-10 text-base sm:top-5"
+                      className="absolute right-3 top-4 z-10 text-body-lg sm:top-5"
                       title="Veto message attached — click into the bill to read it"
                       aria-label="Veto message"
                     >

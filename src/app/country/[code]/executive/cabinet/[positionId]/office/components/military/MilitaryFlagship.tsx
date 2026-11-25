@@ -170,7 +170,7 @@ export function MilitaryFlagship({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-md px-3 py-1.5 text-[12px] font-semibold ${
+            className={`rounded-md px-3 py-1.5 text-body-sm font-semibold ${
               tab === t.id
                 ? "bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] text-gov-soft"
                 : "text-muted hover:text-foreground"
@@ -209,7 +209,7 @@ export function MilitaryFlagship({
         />
       )}
       {contractError && (
-        <div className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-2.5 text-[12px] text-foreground">
+        <div className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-2.5 text-body-sm text-foreground">
           {contractError}
         </div>
       )}
@@ -231,7 +231,7 @@ export function MilitaryFlagship({
       {tab === "nuclear" && (nuclearCapable || covertCapable) && (
         <>
           {nuclearError && (
-            <div className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-2.5 text-[12px] text-foreground">
+            <div className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-2.5 text-body-sm text-foreground">
               {nuclearError}
             </div>
           )}

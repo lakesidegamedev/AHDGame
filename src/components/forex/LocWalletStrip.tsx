@@ -53,11 +53,11 @@ export function LocWalletStrip({ countryId }: { countryId: CountryId }) {
   const policySpread = data.policySpreadAdjustmentPercentPoints;
 
   return (
-    <div className="rounded-lg border border-card-border p-3 text-sm">
+    <div className="rounded-lg border border-card-border p-3 text-body">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-sm font-semibold text-foreground">Line of credit ({ccy})</div>
-          <div className="text-xs text-muted">
+          <div className="text-body font-semibold text-foreground">Line of credit ({ccy})</div>
+          <div className="text-body-sm text-muted">
             {primeLabel ? <>Home policy prime {primeLabel} · </> : null}
             Composite {(data.composite ?? 0).toFixed(0)} · spread{" "}
             {(data.spreadPercentPoints ?? 0) >= 0 ? "+" : ""}
@@ -69,14 +69,14 @@ export function LocWalletStrip({ countryId }: { countryId: CountryId }) {
               <span className="ml-2 font-semibold text-warning"> · Draws frozen</span>
             ) : null}
           </div>
-          <div className="mt-1 text-xs tabular-nums text-foreground/90">
+          <div className="mt-1 text-body-sm tabular-nums text-foreground/90">
             Outstanding {formatAmount(data.outstandingInternal)} · headroom{" "}
             {formatAmount(data.availableBorrowInternal)}
           </div>
         </div>
         <Link
           href={href}
-          className="shrink-0 rounded-md border border-card-border px-3 py-1.5 text-xs font-semibold text-foreground hover:border-muted/40 hover:bg-card"
+          className="shrink-0 rounded-md border border-card-border px-3 py-1.5 text-body-sm font-semibold text-foreground hover:border-muted/40 hover:bg-card"
         >
           Manage loan
         </Link>

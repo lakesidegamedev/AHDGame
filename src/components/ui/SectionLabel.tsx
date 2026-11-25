@@ -13,7 +13,7 @@ export function SectionLabel({ children, as: Tag = "h2", className }: SectionLab
   const margin = className && MARGIN_OVERRIDE.test(className) ? "" : "mb-3";
   return (
     <Tag
-      className={`section-label text-sm font-semibold text-muted ${margin} ${className ?? ""}`.trim()}
+      className={`section-label ${Tag === "h3" ? "text-body-lg" : "text-body"} font-semibold text-muted ${margin} ${className ?? ""}`.trim()}
     >
       <span className="interface-section-accent shrink-0" aria-hidden />
       {children}

@@ -60,8 +60,8 @@ export function StrategicSectorPanel({
 
   return (
     <div className="rounded-xl border border-gold/30 bg-gold/5 p-5">
-      <h3 className="text-body-sm font-semibold text-gold">Strategic sectors</h3>
-      <p className="mt-1 text-body-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-gold">Strategic sectors</h3>
+      <p className="mt-1 text-body-sm text-muted">
         Designating a sector type arms the strategic nationalization trigger for corporations in it.{" "}
         <span className="text-gold/80">
           {designated.length} of {MAX_STRATEGIC_SECTOR_DESIGNATIONS} designated.
@@ -75,7 +75,7 @@ export function StrategicSectorPanel({
           designated.map((t) => (
             <span
               key={t}
-              className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-body-xs capitalize text-gold"
+              className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-body-sm capitalize text-gold"
             >
               {OPERATING_SECTOR_TYPE_LABELS[t] ?? t}
               <button

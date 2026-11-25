@@ -79,8 +79,8 @@ export default function InventoryPanel({
     <div className="mb-6 rounded-xl border border-border bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Unsold output</h3>
-          <p className="mt-0.5 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Unsold output</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             {enabled
               ? "Unsold storable goods go into inventory and sell when the market has room. The pile spoils a little each turn and costs money to hold."
               : "Unsold output is lost at the end of each turn. Turn stockpiling on to keep storable goods and sell them when the market has room."}
@@ -93,7 +93,7 @@ export default function InventoryPanel({
             disabled={saving}
             aria-pressed={enabled}
             aria-busy={saving}
-            className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`shrink-0 rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
               enabled
                 ? "border-primary/40 bg-primary/10 text-foreground"
                 : "border-border bg-background text-muted hover:text-foreground"
@@ -104,12 +104,12 @@ export default function InventoryPanel({
         )}
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-xs text-red-500">
+        <p role="alert" className="mt-2 text-body-sm text-red-500">
           {error}
         </p>
       )}
       {inventory.heldUnits > 0 && (
-        <div className="mt-3 text-xs text-muted">
+        <div className="mt-3 text-body-sm text-muted">
           <p>
             Holding <span className="font-medium text-foreground">{fmt(inventory.heldUnits)}</span>{" "}
             units worth{" "}

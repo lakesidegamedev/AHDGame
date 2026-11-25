@@ -29,7 +29,7 @@ export function TickerBody({
               // The side tray is about 215px inside its card. In compact mode every
               // fixed part is trimmed so a long price ("CA$86.71") and the change
               // still fit, instead of the change spilling past the card edge.
-              className={`flex items-center rounded px-1 py-1 text-xs hover:bg-white/5 ${
+              className={`flex items-center rounded px-1 py-1 text-body-sm hover:bg-white/5 ${
                 compact ? "gap-1.5" : "gap-2"
               }`}
             >

@@ -90,15 +90,15 @@ export function SingleplayerEndTurnButton() {
   return (
     <div className="relative ml-1 flex items-center gap-1">
       {navData?.user?.singleplayerMode === "head-of-state" && (
-        <span className="text-xs text-muted">{t("headOfState")}</span>
+        <span className="text-body-sm text-muted">{t("headOfState")}</span>
       )}
-      {worldsim && <span className="text-xs text-muted">{t("worldsim")}</span>}
+      {worldsim && <span className="text-body-sm text-muted">{t("worldsim")}</span>}
       <button
         type="button"
         onClick={() => void endTurn()}
         disabled={busy || !canAdvance}
         title={!canAdvance ? t("needsCharacter") : (error ?? t("advanceHint"))}
-        className="inline-flex items-center gap-2 rounded border border-primary/60 bg-primary/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary transition hover:bg-primary/20 disabled:cursor-wait disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded border border-primary/60 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold uppercase tracking-wide text-primary transition hover:bg-primary/20 disabled:cursor-wait disabled:opacity-60"
       >
         {busy ? (
           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -106,10 +106,10 @@ export function SingleplayerEndTurnButton() {
         {busy ? t("running") : t("endTurn")}
       </button>
       <details className="group relative">
-        <summary className="cursor-pointer list-none rounded border border-card-border px-2 py-1.5 text-xs text-muted transition hover:text-foreground">
+        <summary className="cursor-pointer list-none rounded border border-card-border px-2 py-1.5 text-body-sm text-muted transition hover:text-foreground">
           {t("timer")}
         </summary>
-        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded border border-card-border bg-background p-3 text-xs shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded border border-card-border bg-background p-3 text-body-sm shadow-lg">
           <label className="block font-medium text-foreground" htmlFor="singleplayer-turn-timer">
             {t("advanceEvery")}
           </label>
@@ -143,10 +143,10 @@ export function SingleplayerEndTurnButton() {
       </details>
       {briefing && !busy && (
         <details className="relative">
-          <summary className="cursor-pointer text-xs text-muted">
+          <summary className="cursor-pointer text-body-sm text-muted">
             {t("briefingTitle", { turn: briefing.turn })}
           </summary>
-          <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border border-card-border bg-card p-3 text-sm shadow-lg">
+          <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-lg border border-card-border bg-card p-3 text-body shadow-lg">
             <p>{t("briefingFunds", { delta: briefing.fundsDelta })}</p>
             <p>{t("briefingActions", { delta: briefing.actionsDelta })}</p>
             <a className="mt-2 block text-primary" href="/profile">
@@ -158,7 +158,7 @@ export function SingleplayerEndTurnButton() {
       {error ? (
         <div
           role="alert"
-          className="absolute right-0 top-full z-50 mt-1 w-64 rounded border border-red-500/40 bg-background p-2 text-xs text-red-400 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-1 w-64 rounded border border-red-500/40 bg-background p-2 text-body-sm text-red-400 shadow-lg"
         >
           {error}
         </div>

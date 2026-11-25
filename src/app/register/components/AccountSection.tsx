@@ -159,7 +159,7 @@ export function AccountSection({
                 type="text"
                 value={formData.referralCode}
                 onChange={(e) => onChange({ referralCode: e.target.value })}
-                className="bg-card font-mono text-sm tracking-wider"
+                className="bg-card font-mono text-body tracking-wider"
                 placeholder={t("referralPlaceholder")}
                 maxLength={36}
                 autoComplete="off"
@@ -391,7 +391,7 @@ export function AccountSection({
                 type="text"
                 value={formData.referralCode}
                 onChange={(e) => onChange({ referralCode: e.target.value })}
-                className="bg-card-muted font-mono text-sm tracking-wider"
+                className="bg-card-muted font-mono text-body tracking-wider"
                 placeholder={t("referralEmailPlaceholder")}
                 maxLength={36}
                 autoComplete="off"
@@ -422,7 +422,7 @@ export function AccountSection({
             setGateDraft(e.target.value);
             if (gateError) setGateError("");
           }}
-          className="font-mono text-sm tracking-wider"
+          className="font-mono text-body tracking-wider"
           placeholder={t("gatePlaceholder")}
           maxLength={36}
           autoComplete="off"

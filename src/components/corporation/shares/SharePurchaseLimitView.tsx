@@ -131,7 +131,7 @@ export function SharePurchaseLimitView({
   return (
     <div className="space-y-4">
       {/* Buy / Sell toggle */}
-      <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+      <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
         <button
           type="button"
           onClick={() => onSwitchSide("buy")}
@@ -158,7 +158,7 @@ export function SharePurchaseLimitView({
 
       {/* Corp / Personal toggle (CEOs of other corporations only) */}
       {myCorporation && (
-        <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+        <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
           <button
             type="button"
             onClick={() => {
@@ -216,7 +216,7 @@ export function SharePurchaseLimitView({
       )}
 
       {/* Auto-execution explanation */}
-      <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 text-xs text-muted space-y-1">
+      <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 text-body-sm text-muted space-y-1">
         {orderSide === "buy" ? (
           <>
             <p>
@@ -247,7 +247,7 @@ export function SharePurchaseLimitView({
       {/* Inputs */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1.5 block text-xs text-muted">
+          <label className="mb-1.5 block text-body-sm text-muted">
             {orderSide === "buy"
               ? "Shares to buy"
               : `Shares to sell · ${limitSellSharesAvail.toLocaleString("en-US")} available`}
@@ -263,25 +263,25 @@ export function SharePurchaseLimitView({
               setQuantity(parseShareQuantity(raw));
             }}
             placeholder="Quantity"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
           />
           {quantityDraft !== null && quantityDraft.trim() !== "" && quantity === 0 && (
-            <p className="mt-1 text-xs text-error" role="alert">
+            <p className="mt-1 text-body-sm text-error" role="alert">
               Enter a whole number of shares greater than zero.
             </p>
           )}
           {orderSide === "buy" && quantity > maxLimitBuyShares && (
-            <p className="mt-1 text-xs text-error" role="alert">
+            <p className="mt-1 text-body-sm text-error" role="alert">
               This order is limited to {maxLimitBuyShares.toLocaleString("en-US")} shares.
             </p>
           )}
           {orderSide === "buy" && limitBuyFundsShort && (
-            <p className="mt-1 text-xs text-error" role="alert">
+            <p className="mt-1 text-body-sm text-error" role="alert">
               Insufficient funds for this order.
             </p>
           )}
           {limitSellInsufficient && (
-            <p className="mt-1 text-xs text-error">
+            <p className="mt-1 text-body-sm text-error">
               {limitAsCorp
                 ? `Corporation holds only ${myCorporationShares.toLocaleString("en-US")} shares.`
                 : `The selected holding contains ${myShares.toLocaleString("en-US")} shares.`}
@@ -289,7 +289,7 @@ export function SharePurchaseLimitView({
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-xs text-muted">
+          <label className="mb-1.5 block text-body-sm text-muted">
             {orderSide === "buy"
               ? `Max price (${inputSymbol}/share)`
               : `Min price (${inputSymbol}/share)`}
@@ -300,7 +300,7 @@ export function SharePurchaseLimitView({
             onChange={(e) => setLimitPrice(Math.max(0, Number(e.target.value)))}
             step={0.01}
             min={0.01}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
           />
         </div>
       </div>
@@ -308,7 +308,7 @@ export function SharePurchaseLimitView({
       {/* Immediate fill indicator */}
       {quantityAllowed && limitPrice > 0 && (
         <div
-          className={`rounded-lg border px-3 py-2 text-xs ${
+          className={`rounded-lg border px-3 py-2 text-body-sm ${
             (orderSide === "buy" && limitBuyFillsNow) || (orderSide === "sell" && limitSellFillsNow)
               ? "border-success/30 bg-success/5 text-success"
               : "border-card-border bg-card-elevated/40 text-muted"
@@ -343,7 +343,7 @@ export function SharePurchaseLimitView({
 
       {/* Cost / proceeds summary */}
       {quantityAllowed && limitPrice > 0 && (
-        <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+        <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-body">
           {orderSide === "buy" ? (
             <>
               <div className="flex justify-between">
@@ -381,7 +381,7 @@ export function SharePurchaseLimitView({
                 </div>
               )}
               {ratesNeededButMissing && (
-                <p className="text-xs text-muted border-t border-card-border pt-2">
+                <p className="text-body-sm text-muted border-t border-card-border pt-2">
                   Loading market rates…
                 </p>
               )}
@@ -414,7 +414,7 @@ export function SharePurchaseLimitView({
       {/* Existing orders for this side */}
       {orderSide === "buy" && openBuyOrders.length > 0 && (
         <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3 space-y-2">
-          <p className="text-xs font-medium text-muted">
+          <p className="text-body-sm font-medium text-muted">
             {openBuyOrders.length} open buy order{openBuyOrders.length !== 1 ? "s" : ""}
             {" · "}
             <button onClick={onSwitchToOrders} className="text-primary hover:underline">
@@ -422,7 +422,7 @@ export function SharePurchaseLimitView({
             </button>
           </p>
           {openBuyOrders.map((o) => (
-            <div key={o._id} className="flex items-center justify-between text-xs text-muted">
+            <div key={o._id} className="flex items-center justify-between text-body-sm text-muted">
               <span>
                 {o.sharesRemaining.toLocaleString("en-US")} @{" "}
                 {formatPriceOrder(
@@ -454,7 +454,7 @@ export function SharePurchaseLimitView({
       )}
       {orderSide === "sell" && openSellOrders.length > 0 && (
         <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3 space-y-2">
-          <p className="text-xs font-medium text-muted">
+          <p className="text-body-sm font-medium text-muted">
             {openSellOrders.length} open sell order{openSellOrders.length !== 1 ? "s" : ""}
             {" · "}
             <button onClick={onSwitchToOrders} className="text-primary hover:underline">
@@ -462,7 +462,7 @@ export function SharePurchaseLimitView({
             </button>
           </p>
           {openSellOrders.map((o) => (
-            <div key={o._id} className="flex items-center justify-between text-xs text-muted">
+            <div key={o._id} className="flex items-center justify-between text-body-sm text-muted">
               <span>
                 {o.sharesRemaining.toLocaleString("en-US")} @{" "}
                 {formatPriceOrder(
@@ -495,7 +495,7 @@ export function SharePurchaseLimitView({
 
       {/* Success message (modal stays open to place more) */}
       {successMsg && (
-        <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-xs text-success">
+        <div className="rounded-lg border border-success/30 bg-success/5 px-3 py-2.5 text-body-sm text-success">
           {successMsg}
         </div>
       )}

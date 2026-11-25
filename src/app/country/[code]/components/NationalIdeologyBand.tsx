@@ -102,7 +102,7 @@ export function NationalIdeologyBand({
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <h2 className="text-heading-lg font-semibold tracking-tight text-foreground">
+        <h2 className="text-heading font-semibold tracking-tight text-foreground">
           National ideology
         </h2>
         <Link

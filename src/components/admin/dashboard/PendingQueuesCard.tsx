@@ -37,7 +37,7 @@ export function PendingQueuesCard({ counts, onNavigate }: PendingQueuesCardProps
               >
                 {count ?? "—"}
               </span>
-              <span className="text-body-xs text-muted" aria-hidden>
+              <span className="text-body-sm text-muted" aria-hidden>
                 →
               </span>
             </button>

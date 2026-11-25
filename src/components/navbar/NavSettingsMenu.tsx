@@ -24,7 +24,7 @@ interface Props {
 }
 
 const rowClass =
-  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-fg-2 transition-colors hover:bg-white/5 hover:text-foreground disabled:cursor-wait disabled:opacity-50";
+  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-body-sm text-fg-2 transition-colors hover:bg-white/5 hover:text-foreground disabled:cursor-wait disabled:opacity-50";
 
 export function NavSettingsMenu({
   anchorRef,

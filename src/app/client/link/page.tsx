@@ -17,7 +17,7 @@ export default async function ClientLinkPage() {
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
         <section className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-sm">
           <p className="text-body-sm font-medium text-muted">A House Divided</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+          <h1 className="mt-3 text-display font-semibold tracking-tight">
             {t("signInTitle", { device })}
           </h1>
           <p className="mt-4 text-muted">{t("signInDescription", { device })}</p>

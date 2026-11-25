@@ -52,11 +52,11 @@ export function EconomicIndicators({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <div className="text-sm font-semibold text-foreground">Economic indicators</div>
+        <div className="text-body font-semibold text-foreground">Economic indicators</div>
         {countryId && (
           <Link
             href={economyUrl(countryId)}
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-body-sm font-semibold text-primary hover:underline"
           >
             Full economic outlook &rarr;
           </Link>
@@ -67,11 +67,11 @@ export function EconomicIndicators({
           <div key={ind.label}>
             <div className="text-body-sm font-medium text-muted">{ind.label}</div>
             <div
-              className={`mt-0.5 text-[15px] font-bold tabular-nums ${ind.bad ? "text-error" : "text-foreground"}`}
+              className={`mt-0.5 text-body font-bold tabular-nums ${ind.bad ? "text-error" : "text-foreground"}`}
             >
               {ind.value}
             </div>
-            {ind.note && <div className="text-[10px] text-muted">{ind.note}</div>}
+            {ind.note && <div className="text-body-sm text-muted">{ind.note}</div>}
           </div>
         ))}
       </div>

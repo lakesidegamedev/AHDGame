@@ -52,7 +52,7 @@ export function MobileNationalDetails({
         href={item.href}
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
-        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 hover:text-foreground ${
+        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 hover:text-foreground ${
           active ? "bg-white/5 font-medium text-foreground" : "text-muted"
         }`}
       >
@@ -73,7 +73,7 @@ export function MobileNationalDetails({
           // by default rather than reading as a hidden dropdown.
           defaultOpen={section.title === "Economy"}
           className="mt-2"
-          labelClassName="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted/70"
+          labelClassName="px-3 pb-1 text-body-sm font-medium uppercase tracking-wider text-muted/70"
         >
           {section.items.map(renderLink)}
         </CollapsibleNavSection>

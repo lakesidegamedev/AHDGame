@@ -88,7 +88,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">State budget - FY{budget.fiscalYear}</h2>
+      <h2 className="text-heading font-semibold">State budget - FY{budget.fiscalYear}</h2>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -113,7 +113,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-xl border border-card-border bg-card p-4">
           <h3 className="font-medium mb-3">Revenue sources</h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-body">
             {revenueLines.map(({ key, value }) => {
               const taxRate = getNumericField(budget.taxRates, key);
               // Use stored tax base if available, otherwise derive from revenue/rate
@@ -142,11 +142,11 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
                     </span>
                     {taxRate !== undefined && (
                       <span
-                        className="text-xs text-muted bg-card-muted px-1.5 py-0.5 rounded cursor-help relative group"
+                        className="text-body-sm text-muted bg-card-muted px-1.5 py-0.5 rounded cursor-help relative group"
                         title={`${baseLabel}: ${formatMoney(taxBase)} × ${taxRate.toFixed(1)}%${check.matches ? ` = ${formatMoney(value)}` : `. Booked ${formatMoney(value)}. ${lagNote}`}`}
                       >
                         {taxRate.toFixed(1)}%
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background border border-card-border rounded-lg shadow-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background border border-card-border rounded-lg shadow-lg text-body-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                           <span className="block font-medium text-foreground mb-1">
                             Revenue calculation
                           </span>
@@ -175,7 +175,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
         </div>
         <div className="rounded-xl border border-card-border bg-card p-4">
           <h3 className="font-medium mb-3">Spending by category</h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-body">
             <div className="flex justify-between">
               <span>Interest payments</span>
               <span className="font-mono">
@@ -197,7 +197,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
         <h3 className="font-medium mb-3">
           {getCountryClientConfig(countryId as CountryId).centralGovernmentLabel} Received
         </h3>
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-body">
           {grantBreakdown.map((grant) => (
             <div key={grant.program} className="flex justify-between">
               <span>{grant.program}</span>
@@ -205,7 +205,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
             </div>
           ))}
           {data.grantBreakdownNote && (
-            <p className="text-xs text-muted">{data.grantBreakdownNote}</p>
+            <p className="text-body-sm text-muted">{data.grantBreakdownNote}</p>
           )}
         </div>
       </div>

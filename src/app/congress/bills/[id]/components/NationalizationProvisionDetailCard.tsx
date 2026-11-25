@@ -16,7 +16,7 @@ export function NationalizationProvisionDetailCard({
   if (detail.kind === "sector") {
     const s = detail.sector;
     return (
-      <div className="mt-1.5 rounded-lg border border-card-border bg-card-muted p-3 text-xs">
+      <div className="mt-1.5 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm">
         {detail.approximate && <ApproximateNote />}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold text-foreground">
@@ -30,7 +30,7 @@ export function NationalizationProvisionDetailCard({
           </span>
         </div>
         {detail.actualPayoutLocal !== undefined && (
-          <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
+          <div className="mt-1 flex items-center justify-between gap-2 text-body-sm">
             <span className="text-muted">Actual payout</span>
             <span className="font-semibold text-success">
               {natMoney(detail.actualPayoutLocal, s.currency)}
@@ -43,7 +43,7 @@ export function NationalizationProvisionDetailCard({
               <li key={c.corporationId} className="flex items-center justify-between gap-3">
                 <span className="truncate text-foreground">
                   {c.name}{" "}
-                  <span className="text-[10px] text-muted">
+                  <span className="text-body-sm text-muted">
                     · {c.sectorCount} in {c.regionCount} region{c.regionCount === 1 ? "" : "s"}
                   </span>
                 </span>
@@ -55,7 +55,7 @@ export function NationalizationProvisionDetailCard({
           </ul>
         )}
         {s.affectedCount === 0 && s.scope !== "unowned" && (
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             No corporation currently holds this sector type.
           </p>
         )}
@@ -65,18 +65,18 @@ export function NationalizationProvisionDetailCard({
 
   const c = detail.corp;
   return (
-    <div className="mt-1.5 rounded-lg border border-card-border bg-card-muted p-3 text-xs">
+    <div className="mt-1.5 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm">
       {detail.approximate && <ApproximateNote />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold text-foreground">{c.name}</span>
         <span className="flex items-center gap-1.5">
-          <span className="rounded-full border border-card-border px-1.5 py-0.5 text-[10px] text-muted capitalize">
+          <span className="rounded-full border border-card-border px-1.5 py-0.5 text-body-sm text-muted capitalize">
             {c.ownerKind}-owned
           </span>
           {c.triggers.map((t) => (
             <span
               key={t}
-              className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400 capitalize"
+              className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-body-sm text-amber-400 capitalize"
             >
               {t}
             </span>
@@ -107,7 +107,7 @@ export function NationalizationProvisionDetailCard({
             <li key={i} className="flex items-center justify-between gap-3">
               <span className="truncate text-foreground">
                 {OPERATING_SECTOR_TYPE_LABELS[sec.sectorType as CorporationType] ?? sec.sectorType}{" "}
-                <span className="text-[10px] text-muted">· {sec.stateName}</span>
+                <span className="text-body-sm text-muted">· {sec.stateName}</span>
               </span>
               <span className="shrink-0 font-mono text-muted">
                 {natMoney(sec.revenuePerTurn, c.currency)}/turn
@@ -122,7 +122,7 @@ export function NationalizationProvisionDetailCard({
 
 function ApproximateNote() {
   return (
-    <div className="mb-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-1 text-[10px] text-amber-400">
+    <div className="mb-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-1 text-body-sm text-amber-400">
       Approximate — reconstructed from a backup near passage (a gap in backup coverage means the
       exact passage-time figures weren&apos;t recoverable).
     </div>

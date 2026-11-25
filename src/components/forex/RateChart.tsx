@@ -188,7 +188,7 @@ export function RateChart({ rates, defaultCurrencyCodes }: Props) {
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2 min-w-0">
-          <h2 className="text-sm font-bold text-foreground">Rate history</h2>
+          <h2 className="text-body font-bold text-foreground">Rate history</h2>
           <ForexChartTimeframeTabs
             value={timeframe}
             onChange={(tf: ForexChartTimeframe) => {
@@ -198,11 +198,11 @@ export function RateChart({ rates, defaultCurrencyCodes }: Props) {
             idPrefix="rate-chart"
           />
           {usePercent ? (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Strength change from start of visible range. Positive = stronger, negative = weaker.
             </p>
           ) : (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Raw rate history in currency per ₳. Higher = weaker currency, lower = stronger.
             </p>
           )}
@@ -219,7 +219,7 @@ export function RateChart({ rates, defaultCurrencyCodes }: Props) {
                   key={r.currencyCode}
                   type="button"
                   onClick={() => toggleSeries(r.currencyCode)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-body-sm font-bold transition-all ${
                     isActive ? "" : "opacity-40 hover:opacity-70"
                   }`}
                   style={
@@ -240,7 +240,7 @@ export function RateChart({ rates, defaultCurrencyCodes }: Props) {
           </div>
           {moreRates.length > 0 && (
             <details className="group w-full sm:w-auto sm:max-w-md">
-              <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-end gap-1.5 text-xs text-muted hover:text-foreground transition-colors">
+              <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-end gap-1.5 text-body-sm text-muted hover:text-foreground transition-colors">
                 <span
                   className="select-none transition-transform duration-200 group-open:rotate-90"
                   aria-hidden
@@ -259,7 +259,7 @@ export function RateChart({ rates, defaultCurrencyCodes }: Props) {
                       key={r.currencyCode}
                       type="button"
                       onClick={() => toggleSeries(r.currencyCode)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-body-sm font-bold transition-all ${
                         isActive ? "" : "opacity-40 hover:opacity-70"
                       }`}
                       style={
@@ -403,7 +403,7 @@ export function RateChart({ rates, defaultCurrencyCodes }: Props) {
 
         {/* Hover tooltip */}
         {hoverIdx !== null && (
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-1 text-xs text-muted">
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-1 text-body-sm text-muted">
             {activeRates.map((r, seriesIdx) => {
               const turn = turns[hoverIdx];
               const normalizedVal = seriesValues[seriesIdx]?.[hoverIdx];

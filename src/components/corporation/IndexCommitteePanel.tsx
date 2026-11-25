@@ -152,7 +152,7 @@ export default function IndexCommitteePanel({
 
   return (
     <DenseSection title="Index fund listing">
-      <div className="space-y-2 py-1 text-xs">
+      <div className="space-y-2 py-1 text-body-sm">
         {showIssuer && (
           <p className="text-muted">
             Index funds only buy companies above a minimum size with enough shares on the open
@@ -203,7 +203,7 @@ export default function IndexCommitteePanel({
                     aria-label={
                       money.code ? `Lobbying contribution, ${money.code}` : "Lobbying contribution"
                     }
-                    className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                    className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none"
                   />
                   <SmallButton
                     tone="primary"
@@ -229,7 +229,7 @@ export default function IndexCommitteePanel({
                   <tr key={petition.id}>
                     <Td>
                       <span className="text-foreground">{petition.corporationName}</span>
-                      <span className="ml-2 text-xs text-muted">
+                      <span className="ml-2 text-body-sm text-muted">
                         filed turn {petition.filedAtTurn}, decide by {petition.deadlineAtTurn},
                         contribution {formatAnchor(petition.contributionAnchor)}
                       </span>

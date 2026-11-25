@@ -16,7 +16,7 @@ export function chipStyle(on: boolean, extra: CSSProperties = {}): CSSProperties
     borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
     background: on ? "var(--primary)" : BLEND.field,
     color: on ? "var(--primary-foreground)" : BLEND.ink,
@@ -32,7 +32,7 @@ export function segmentStyle(on: boolean): CSSProperties {
     borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
     background: on ? "var(--primary)" : "transparent",
     color: on ? "var(--primary-foreground)" : BLEND.muted,
@@ -41,14 +41,14 @@ export function segmentStyle(on: boolean): CSSProperties {
 
 export const EYEBROW: CSSProperties = {
   fontFamily: FONT.sans,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
   color: BLEND.muted,
 };
 
-export const MONO_COUNT: CSSProperties = { fontFamily: FONT.mono, fontSize: 11, opacity: 0.75 };
+export const MONO_COUNT: CSSProperties = { fontFamily: FONT.mono, fontSize: 12, opacity: 0.75 };
 
 /** A party's shade at a tier on this ground, with an ink that reads on it. */
 export function tierShade(
@@ -65,7 +65,7 @@ export function ratingChipStyle(fill: string, ink: string): CSSProperties {
     flex: "none",
     alignSelf: "flex-start",
     fontFamily: FONT.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     padding: "3px 8px",
     borderRadius: 6,

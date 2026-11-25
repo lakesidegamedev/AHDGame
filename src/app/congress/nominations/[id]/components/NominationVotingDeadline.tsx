@@ -24,7 +24,7 @@ export function NominationVotingDeadline({
     : legacyCountdown;
   return (
     <span
-      className={`text-xs tabular-nums font-mono ${!hasTurn && legacyCountdown === "Expired" ? "text-error" : pending ? "text-muted" : "text-yellow-400"}`}
+      className={`text-body-sm tabular-nums font-mono ${!hasTurn && legacyCountdown === "Expired" ? "text-error" : pending ? "text-muted" : "text-yellow-400"}`}
       title={hasTurn ? `Voting closes turn ${votingEndsOnTurn}` : undefined}
     >
       ⏱ {label}

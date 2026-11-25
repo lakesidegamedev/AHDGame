@@ -37,7 +37,7 @@ export function VpnGateBanner() {
   return (
     <div className="border-b border-amber-700 bg-amber-600 text-white" role="alert">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2">
-        <p className="text-sm">
+        <p className="text-body">
           <span className="font-semibold">You&apos;re connected through a VPN.</span> Turn it off to
           play. If you need a VPN, open a ticket on Discord to ask for VPN access.
         </p>
@@ -45,7 +45,7 @@ export function VpnGateBanner() {
           href={COMMUNITY_DISCORD_URL}
           target="_blank"
           rel="noreferrer"
-          className="rounded bg-white/15 px-3 py-1 text-xs font-medium hover:bg-white/25"
+          className="rounded bg-white/15 px-3 py-1 text-body-sm font-medium hover:bg-white/25"
         >
           Request VPN access
         </a>

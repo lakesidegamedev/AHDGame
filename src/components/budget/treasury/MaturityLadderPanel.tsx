@@ -52,8 +52,8 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
-      <div className="text-sm font-semibold text-foreground">Refinancing ladder</div>
-      <p className="mt-0.5 text-[11px] tabular-nums text-muted">{repricingHeadline(ladder)}</p>
+      <div className="text-body font-semibold text-foreground">Refinancing ladder</div>
+      <p className="mt-0.5 text-body-sm tabular-nums text-muted">{repricingHeadline(ladder)}</p>
 
       <div className="mt-2 space-y-1.5">
         {years.map((year) => {
@@ -75,7 +75,7 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
                   style={{ width: `${Math.max(1, (year.principal / maxPrincipal) * 100)}%` }}
                 />
               </div>
-              <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[10px] text-muted">
+              <div className="mt-0.5 flex items-baseline justify-between gap-2 text-body-sm text-muted">
                 <span>
                   coupons {formatFundsCompact(year.couponCost, sym)}/yr at{" "}
                   {year.averageCouponPct.toFixed(2)}% average
@@ -106,12 +106,12 @@ export function MaturityLadderPanel({ ladder, sym }: MaturityLadderPanelProps) {
           <span className="text-muted">({ladder.averageCouponPct.toFixed(2)}% average)</span>
         </span>
       </div>
-      <p className="mt-1 text-[11px] text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         These coupons, rows above plus later maturities, are the debt interest the budget charges. A
         thin row is simply a bond that happens to mature that year, not a gap in the data.
       </p>
 
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         Maturing face moves to the new borrowing rate at rollover; the trajectory premium lands
         through these coupons, not on the whole stock at once.
       </p>

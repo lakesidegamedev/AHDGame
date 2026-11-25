@@ -43,9 +43,9 @@ export function PlantCard({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-foreground">{plant.name}</span>
+              <span className="text-body-sm font-semibold text-foreground">{plant.name}</span>
               <span
-                className="rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                className="rounded border px-1.5 py-0.5 text-body-sm font-semibold"
                 style={{
                   borderColor: TIER_COLOR[plant.tier] + "66",
                   color: TIER_COLOR[plant.tier],
@@ -55,7 +55,7 @@ export function PlantCard({
                 {TIER_LABELS[plant.tier]}
               </span>
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
+            <div className="mt-0.5 flex items-center gap-2 text-body-sm text-muted">
               <span>{fmtCapacity(plant.capacityBase)} base</span>
               <span>·</span>
               <span>{regionName}</span>
@@ -70,7 +70,7 @@ export function PlantCard({
 
         <button
           onClick={() => setOpen(!open)}
-          className="shrink-0 self-start rounded-lg border border-card-border bg-card-muted px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground lg:self-auto"
+          className="shrink-0 self-start rounded-lg border border-card-border bg-card-muted px-3 py-1.5 text-body-sm font-semibold text-muted hover:text-foreground lg:self-auto"
         >
           {open ? "Close" : "Manage"}
         </button>
@@ -82,14 +82,14 @@ export function PlantCard({
             <div>
               <div className="dossier-label mb-2 text-muted">Expand capacity</div>
               {plant.tier >= 3 ? (
-                <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-[12px] text-success">
+                <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-success">
                   ✓ Maximum capacity
                 </div>
               ) : (
                 <button
                   disabled={!canAct || busy}
                   onClick={() => onAction("POST", `${basePath}/${plant._id}/upgrade`)}
-                  className="w-full rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-[12px] font-semibold text-success hover:bg-success/20 disabled:opacity-50"
+                  className="w-full rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-body-sm font-semibold text-success hover:bg-success/20 disabled:opacity-50"
                 >
                   Upgrade → {TIER_LABELS[plant.tier + 1]} · 1 action
                 </button>
@@ -101,7 +101,7 @@ export function PlantCard({
               <button
                 disabled={!canAct || busy}
                 onClick={() => setConfirmRetire(true)}
-                className="w-full rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-[12px] font-semibold text-error hover:bg-error/20 disabled:opacity-50"
+                className="w-full rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-50"
               >
                 Retire plant
               </button>

@@ -44,8 +44,8 @@ export function HealPartyLeadershipElections() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal party leadership elections member left</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal party leadership elections member left</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Finds and withdraws candidates from party leadership elections (Chair, Vice Chair,
           Treasurer, National Committee) who are no longer members of that party. This can happen if
           a player leaves a party while registered for an election.
@@ -62,7 +62,7 @@ export function HealPartyLeadershipElections() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           {diagnostic.status === "ok" ? (
             <p className="text-success">{diagnostic.message}</p>
           ) : (
@@ -70,7 +70,7 @@ export function HealPartyLeadershipElections() {
               <p className="font-medium text-warning">{diagnostic.message}</p>
               {diagnostic.candidates.length > 0 && (
                 <div className="mt-2 max-h-48 overflow-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-body-sm">
                     <thead>
                       <tr className="text-left text-muted border-b border-card-border">
                         <th className="pb-1">Name</th>

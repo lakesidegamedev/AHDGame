@@ -27,8 +27,8 @@ export function HealCorporationCeoVacant() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal missing CEO vacant field</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal missing CEO vacant field</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Finds corporations with an active CEO but missing the ceoVacant field. Sets ceoVacant:
           false and creates a CEO self-vote so the field is properly initialized.
         </p>
@@ -42,7 +42,7 @@ export function HealCorporationCeoVacant() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           <p>
             <span className="text-muted">Corps missing ceoVacant field:</span>{" "}
             <span className="font-medium">{diagnostic.totalAffected}</span>

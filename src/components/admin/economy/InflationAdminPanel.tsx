@@ -167,7 +167,7 @@ function BreakdownBars({ breakdown }: { breakdown: InflationBreakdown }) {
   }));
   const totalAbs = entries.reduce((sum, e) => sum + Math.abs(e.value), 0) || 1;
   return (
-    <div className="space-y-1 text-[11px] leading-tight">
+    <div className="space-y-1 text-body-sm leading-tight">
       {entries
         .filter((e) => Math.abs(e.value) > 0.01)
         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
@@ -266,8 +266,8 @@ export function InflationAdminPanel() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Inflation diagnostics</h2>
-          <p className="text-xs text-muted">
+          <h2 className="text-heading font-semibold">Inflation diagnostics</h2>
+          <p className="text-body-sm text-muted">
             Per-country stored vs. recomputed inflation, with the signed contribution of every
             driver. Use to identify which channel is pushing a country to the floor.
           </p>
@@ -275,20 +275,20 @@ export function InflationAdminPanel() {
         <button
           type="button"
           onClick={fetchData}
-          className="rounded-md border border-card-border bg-card-elevated px-3 py-1.5 text-xs font-medium hover:bg-card"
+          className="rounded-md border border-card-border bg-card-elevated px-3 py-1.5 text-body-sm font-medium hover:bg-card"
         >
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-300">
+        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-body-sm text-red-600 dark:text-red-300">
           {error}
         </div>
       )}
 
       {data && (
-        <div className="rounded-md border border-card-border bg-card-elevated px-3 py-2 text-xs">
+        <div className="rounded-md border border-card-border bg-card-elevated px-3 py-2 text-body-sm">
           <span className="text-muted">Turn </span>
           <span className="font-mono font-semibold">{data.currentTurn}</span>
           <span className="ml-3 text-muted">Floor </span>
@@ -311,7 +311,7 @@ export function InflationAdminPanel() {
       )}
 
       <div className="overflow-x-auto rounded-md border border-card-border">
-        <table className="min-w-full divide-y divide-card-border text-sm">
+        <table className="min-w-full divide-y divide-card-border text-body">
           <thead className="bg-card-elevated text-left text-body-sm font-medium text-muted">
             <tr>
               <th className="px-3 py-2">Country</th>
@@ -345,7 +345,7 @@ export function InflationAdminPanel() {
                   >
                     <td className="px-3 py-2">
                       <div className="font-medium">{row.countryName}</div>
-                      <div className="text-xs text-muted">{row.countryId}</div>
+                      <div className="text-body-sm text-muted">{row.countryId}</div>
                     </td>
                     <td className="px-3 py-2 text-right font-mono">
                       <span
@@ -373,7 +373,7 @@ export function InflationAdminPanel() {
                         {fmtPct(row.computedRate)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs text-muted">
+                    <td className="px-3 py-2 text-right font-mono text-body-sm text-muted">
                       {delta == null ? "—" : fmtSigned(delta)}
                     </td>
                     <td className="px-3 py-2">
@@ -383,7 +383,7 @@ export function InflationAdminPanel() {
                         maxInflation={data!.maxInflation}
                       />
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-3 py-2 text-body-sm">
                       {drag ? (
                         <span>
                           <span className="text-muted">{drag.label}:</span>{" "}
@@ -395,25 +395,25 @@ export function InflationAdminPanel() {
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs">
+                    <td className="px-3 py-2 text-right font-mono text-body-sm">
                       {fmtPct(row.inputs.primeRate)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs">
+                    <td className="px-3 py-2 text-right font-mono text-body-sm">
                       {fmtPct(row.inputs.effectiveRate)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs">
+                    <td className="px-3 py-2 text-right font-mono text-body-sm">
                       {row.inputs.fxRate != null && row.inputs.fxBaseRate != null
                         ? `${fmtNum(row.inputs.fxRate, 4)} / ${fmtNum(row.inputs.fxBaseRate, 4)}`
                         : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs">
+                    <td className="px-3 py-2 text-right font-mono text-body-sm">
                       {fmtPct(row.inputs.surplusToGdp * 100)}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <button
                         type="button"
                         onClick={() => toggleExpanded(row.countryId)}
-                        className="text-xs text-primary underline-offset-2 hover:underline"
+                        className="text-body-sm text-primary underline-offset-2 hover:underline"
                       >
                         {isExpanded ? "Hide" : "Details"}
                       </button>
@@ -424,14 +424,14 @@ export function InflationAdminPanel() {
                       <td colSpan={11} className="bg-card-elevated px-4 py-3">
                         <div className="grid gap-4 lg:grid-cols-2">
                           <div>
-                            <h3 className="mb-2 text-sm font-semibold text-muted">
+                            <h3 className="mb-2 text-body-lg font-semibold text-muted">
                               Driver breakdown (pp)
                             </h3>
                             <BreakdownBars breakdown={row.breakdown} />
                           </div>
                           <div>
-                            <h3 className="mb-2 text-sm font-semibold text-muted">Inputs</h3>
-                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-xs">
+                            <h3 className="mb-2 text-body-lg font-semibold text-muted">Inputs</h3>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-body-sm">
                               <dt className="text-muted">Unemployment</dt>
                               <dd className="text-right">{fmtPct(row.inputs.unemployment)}</dd>
                               <dt className="text-muted">GDP growth</dt>
@@ -479,14 +479,14 @@ export function InflationAdminPanel() {
             })}
             {!loading && data && data.rows.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-6 text-center text-sm text-muted">
+                <td colSpan={11} className="px-3 py-6 text-center text-body text-muted">
                   No central banks found.
                 </td>
               </tr>
             )}
             {loading && !data && (
               <tr>
-                <td colSpan={11} className="px-3 py-6 text-center text-sm text-muted">
+                <td colSpan={11} className="px-3 py-6 text-center text-body text-muted">
                   Loading…
                 </td>
               </tr>

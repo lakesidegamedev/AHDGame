@@ -56,20 +56,20 @@ export function CapacityChain({
   const deliveryClass = sector.deliveryLimitedFreightClass ?? null;
   const deliveryClassLabel = deliveryClass ? FREIGHT_CLASS_LABELS[deliveryClass] : "Delivery";
   const block = variant === "block";
-  const row = `flex justify-between gap-3 ${block ? "py-1 text-[12px]" : ""}`;
-  const note = `mt-1.5 leading-snug text-muted ${block ? "text-[11px]" : "text-[10px]"}`;
+  const row = `flex justify-between gap-3 ${block ? "py-1 text-body-sm" : ""}`;
+  const note = `mt-1.5 leading-snug text-muted ${block ? "text-body-sm" : "text-body-sm"}`;
   const heading = "Plants → net profit";
 
   const body = (
     <>
       {block ? (
-        <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+        <h4 className="mb-2 text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
           {heading}
         </h4>
       ) : (
         <p className="font-semibold text-foreground mb-1">{heading}</p>
       )}
-      <div className={`text-muted ${block ? "" : "space-y-0.5 text-xs"}`}>
+      <div className={`text-muted ${block ? "" : "space-y-0.5 text-body-sm"}`}>
         <div className={row}>
           <span>Plants</span>
           <span className="tabular-nums">

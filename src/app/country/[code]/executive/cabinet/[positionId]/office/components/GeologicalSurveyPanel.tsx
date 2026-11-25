@@ -30,18 +30,18 @@ export function GeologicalSurveyPanel({
   return (
     <section className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Geological surveys</h2>
+        <h2 className="text-heading font-semibold">Geological surveys</h2>
         {canAct && stateOptions.length > 0 && (
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-dark transition-colors"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary-dark transition-colors"
           >
             Fund geological survey
           </button>
         )}
       </div>
-      <p className="mb-4 text-sm text-muted">
+      <p className="mb-4 text-body text-muted">
         Fund a state survey crew from the federal treasury to search for new extraction capacity
         anywhere in the country.
       </p>

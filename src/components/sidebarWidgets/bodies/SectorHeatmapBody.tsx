@@ -89,7 +89,7 @@ export function SectorHeatmapBody({
                 onClick={onNavigate}
                 title={summary}
                 aria-label={summary}
-                className="flex h-full w-full flex-col justify-between overflow-hidden rounded px-1.5 py-1 text-[11px] leading-tight text-foreground outline-offset-1 hover:outline hover:outline-1 hover:outline-foreground/40"
+                className="flex h-full w-full flex-col justify-between overflow-hidden rounded px-1.5 py-1 text-body-sm leading-tight text-foreground outline-offset-1 hover:outline hover:outline-1 hover:outline-foreground/40"
                 style={{ background: heatColor(tile.change) }}
               >
                 {showName && <span className="truncate font-medium">{label}</span>}
@@ -103,7 +103,7 @@ export function SectorHeatmapBody({
           );
         })}
       </ul>
-      <div className="flex items-center gap-1.5 text-[10px] text-muted" aria-hidden="true">
+      <div className="flex items-center gap-1.5 text-body-sm text-muted" aria-hidden="true">
         <span>{t("legendDown")}</span>
         <span
           className="h-1.5 flex-1 rounded-full"
@@ -113,7 +113,7 @@ export function SectorHeatmapBody({
         />
         <span>{t("legendUp")}</span>
       </div>
-      {!compact && <p className="text-[10px] text-muted">{t("hint")}</p>}
+      {!compact && <p className="text-body-sm text-muted">{t("hint")}</p>}
     </div>
   );
 }

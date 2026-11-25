@@ -140,7 +140,7 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
   };
 
   const inputCls =
-    "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed pr-10";
+    "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-body focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed pr-10";
 
   if (accountFieldsMode !== "off") {
     return <AccountFieldsNotice kind="password" mode={accountFieldsMode} />;
@@ -148,14 +148,14 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
 
   return (
     <>
-      <p className="text-sm text-muted mb-6">
+      <p className="text-body text-muted mb-6">
         {hasPassword ? t("security.introChange") : t("security.introSet")}
       </p>
-      <p className="text-xs text-muted mb-6">{t("security.notAvailable")}</p>
+      <p className="text-body-sm text-muted mb-6">{t("security.notAvailable")}</p>
       <form onSubmit={handlePasswordSubmit} className="space-y-4">
         {hasPassword && (
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium mb-1.5">
+            <label htmlFor="currentPassword" className="block text-body font-medium mb-1.5">
               {t("security.currentPassword")}
             </label>
             <div className="relative">
@@ -181,7 +181,7 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
           </div>
         )}
         <div>
-          <label htmlFor="newPassword" className="block text-sm font-medium mb-1.5">
+          <label htmlFor="newPassword" className="block text-body font-medium mb-1.5">
             {hasPassword ? t("security.newPassword") : t("security.password")}
           </label>
           <div className="relative">
@@ -221,7 +221,7 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
                 ))}
               </div>
               <span
-                className={`text-xs ${
+                className={`text-body-sm ${
                   passwordValidation.strength === 1
                     ? "text-error"
                     : passwordValidation.strength === 2
@@ -235,7 +235,7 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
           )}
         </div>
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5">
+          <label htmlFor="confirmPassword" className="block text-body font-medium mb-1.5">
             {hasPassword ? t("security.confirmNewPassword") : t("security.confirmPassword")}
           </label>
           <div className="relative">
@@ -260,7 +260,7 @@ export function SecuritySection({ hasPassword, onPasswordSet }: Props) {
           </div>
           {confirmPassword && (
             <p
-              className={`mt-1 text-xs flex items-center gap-1 ${passwordValidation.matches ? "text-success" : "text-error"}`}
+              className={`mt-1 text-body-sm flex items-center gap-1 ${passwordValidation.matches ? "text-success" : "text-error"}`}
             >
               {passwordValidation.matches ? (
                 <>

@@ -100,14 +100,14 @@ function ProviderCard({
             />
           )}
           <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">{displayName}</p>
-            <p className="text-xs text-muted">{subtitle}</p>
+            <p className="text-body font-medium text-foreground">{displayName}</p>
+            <p className="text-body-sm text-muted">{subtitle}</p>
           </div>
           <button
             onClick={handleUnlink}
             disabled={unlinking || !!unlinkBlockedReason}
             title={unlinkBlockedReason}
-            className="rounded-xl bg-error/10 border border-error/20 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-xl bg-error/10 border border-error/20 px-4 py-2 text-body font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {unlinking ? (
               <span className="flex items-center gap-2">
@@ -124,7 +124,7 @@ function ProviderCard({
           {expectedUserId && <input type="hidden" name="expectedUserId" value={expectedUserId} />}
           <button
             type="submit"
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white transition-colors ${brandColor}`}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-body font-medium text-white transition-colors ${brandColor}`}
           >
             {icon}
             {t("identity.link", { provider })}
@@ -132,7 +132,7 @@ function ProviderCard({
         </form>
       )}
       {isLinked && unlinkBlockedReason && (
-        <p className="text-sm text-muted" role="status">
+        <p className="text-body text-muted" role="status">
           {unlinkBlockedReason}
         </p>
       )}
@@ -198,7 +198,7 @@ export function IdentitySection({ character, onCharacterUpdate, expectedUserId }
 
   return (
     <>
-      <p className="text-sm text-muted mb-6">{t("identity.intro")}</p>
+      <p className="text-body text-muted mb-6">{t("identity.intro")}</p>
 
       <div className="space-y-4">
         {/* Google — in development, show disabled card */}
@@ -208,12 +208,12 @@ export function IdentitySection({ character, onCharacterUpdate, expectedUserId }
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-muted">Google</p>
-              <span className="rounded-full bg-warning/20 border border-warning/30 px-2 py-0.5 text-[10px] font-semibold text-warning">
+              <p className="text-body font-medium text-muted">Google</p>
+              <span className="rounded-full bg-warning/20 border border-warning/30 px-2 py-0.5 text-body-sm font-semibold text-warning">
                 {t("identity.comingSoon")}
               </span>
             </div>
-            <p className="text-xs text-muted/70">{t("identity.googleDev")}</p>
+            <p className="text-body-sm text-muted/70">{t("identity.googleDev")}</p>
           </div>
         </div>
 

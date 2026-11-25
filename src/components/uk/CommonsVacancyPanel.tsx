@@ -112,22 +112,22 @@ function VacancyCard({
   return (
     <li className="rounded-xl border border-card-border/60 bg-card px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-body font-medium text-foreground">
           {displayCanadianRegionCode(vacancy.constituency ?? vacancy.state)} · {vacancy.seats} seat
           {vacancy.seats === 1 ? "" : "s"}
         </p>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {VACANCY_STATUS_LABELS[vacancy.status] ?? vacancy.status}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         Vacated by {VACANCY_REASON_LABELS[vacancy.reason] ?? vacancy.reason} on turn{" "}
         {vacancy.vacatedTurn}
         {vacancy.priorCharacterName ? ` · formerly ${vacancy.priorCharacterName}` : ""}
         {vacancy.priorParty ? ` (${vacancy.priorParty})` : ""}
       </p>
       {election ? (
-        <div className="mt-2 rounded-lg bg-background/60 px-3 py-2 text-xs">
+        <div className="mt-2 rounded-lg bg-background/60 px-3 py-2 text-body-sm">
           <p className="text-muted">
             {byElectionProgressText(election, currentTurn)}
             {typeof election.carve === "number"
@@ -158,7 +158,7 @@ function VacancyCard({
           )}
         </div>
       ) : (
-        <p className="mt-2 text-xs text-muted">{pendingByElectionText(vacancy)}</p>
+        <p className="mt-2 text-body-sm text-muted">{pendingByElectionText(vacancy)}</p>
       )}
     </li>
   );
@@ -177,27 +177,27 @@ function PetitionCard({
   return (
     <li className="rounded-xl border border-card-border/60 bg-card px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-body font-medium text-foreground">
           {petition.targetCharacterName} · {displayCanadianRegionCode(petition.state)}
         </p>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {PETITION_STATUS_LABELS[petition.status] ?? petition.status}
         </span>
       </div>
       {petition.status === "open" && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           {petition.signatures} of {petition.signaturesRequired} signatures
           {petition.openedTurn != null ? ` · closes turn ${petition.openedTurn + 12}` : ""}
         </p>
       )}
       {petition.status === "check" && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Remove {petition.removeDeclarations} · Retain {petition.retainDeclarations}
           {petition.turnsRemaining != null ? ` · resolves in ${petition.turnsRemaining} turns` : ""}
         </p>
       )}
       {petition.status === "watch" && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Approval watch: a petition opens after sustained low approval or high infamy.
         </p>
       )}
@@ -207,7 +207,7 @@ function PetitionCard({
             type="button"
             disabled={busy}
             onClick={() => onAction(petition, "sign")}
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {busy ? "Signing" : "Sign recall petition"}
           </button>
@@ -218,7 +218,7 @@ function PetitionCard({
               type="button"
               disabled={busy}
               onClick={() => onAction(petition, "remove")}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {busy ? "Recording" : "Declare: remove"}
             </button>
@@ -226,7 +226,7 @@ function PetitionCard({
               type="button"
               disabled={busy}
               onClick={() => onAction(petition, "retain")}
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium disabled:opacity-50"
             >
               {busy ? "Recording" : "Declare: retain"}
             </button>
@@ -363,7 +363,7 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm">
+      <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-body">
         <p>Vacancies failed to load: {error}</p>
         <button type="button" onClick={() => void load()} className="mt-1 underline">
           Retry
@@ -380,11 +380,11 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
       <div role="status" aria-live="polite" className="sr-only">
         {feedback ?? ""}
       </div>
-      {feedback && <p className="mb-3 text-sm text-foreground">{feedback}</p>}
+      {feedback && <p className="mb-3 text-body text-foreground">{feedback}</p>}
 
       {holdsSeat && (
         <div className="mb-4 rounded-xl border border-card-border/60 bg-card px-4 py-3">
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-body font-medium text-foreground">
             Your seat · {displayCanadianRegionCode(status?.viewer.state)}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -392,7 +392,7 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
               type="button"
               disabled={pending === "resign"}
               onClick={() => void handleResign()}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {pending === "resign" ? "Resigning" : "Resign seat"}
             </button>
@@ -402,13 +402,13 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
               onChange={(e) => setDefectParty(e.target.value)}
               placeholder="New party"
               aria-label="Party to defect to"
-              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-xs"
+              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-sm"
             />
             <button
               type="button"
               disabled={pending === "defect"}
               onClick={() => void handleDefect()}
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium disabled:opacity-50"
             >
               {pending === "defect" ? "Defecting" : "Defect"}
             </button>
@@ -417,14 +417,14 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
       )}
 
       {!hasContent && (
-        <p className="py-8 text-center text-sm text-muted">
+        <p className="py-8 text-center text-body text-muted">
           No open vacancies or recall petitions. Every Commons seat is filled.
         </p>
       )}
 
       {(status?.vacancies.length ?? 0) > 0 && (
         <>
-          <h3 className="mb-2 text-sm font-semibold text-foreground">Open vacancies</h3>
+          <h3 className="mb-2 text-body-lg font-semibold text-foreground">Open vacancies</h3>
           <ul className="mb-4 space-y-2">
             {status?.vacancies.map((v) => (
               <VacancyCard
@@ -440,7 +440,7 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
 
       {(status?.petitions.length ?? 0) > 0 && (
         <>
-          <h3 className="mb-2 text-sm font-semibold text-foreground">Recall petitions</h3>
+          <h3 className="mb-2 text-body-lg font-semibold text-foreground">Recall petitions</h3>
           <ul className="space-y-2">
             {status?.petitions.map((p) => (
               <PetitionCard

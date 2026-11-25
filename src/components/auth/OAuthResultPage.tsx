@@ -130,7 +130,7 @@ export function OAuthResultPage({ provider }: { provider: "Google" | "Discord" |
           height={36}
           className="object-contain"
         />
-        <span className="text-base font-semibold tracking-tight">A House Divided</span>
+        <span className="text-body-lg font-semibold tracking-tight">A House Divided</span>
       </Link>
 
       <div
@@ -173,14 +173,14 @@ export function OAuthResultPage({ provider }: { provider: "Google" | "Discord" |
             </svg>
           )}
         </div>
-        <h1 className="text-xl font-bold">{info.title}</h1>
+        <h1 className="text-heading font-bold">{info.title}</h1>
         <p className="mt-2 text-muted">{info.message}</p>
         {!info.ok && (
-          <p className="mt-4 text-sm text-muted">{t("redirecting", { seconds: countdown })}</p>
+          <p className="mt-4 text-body text-muted">{t("redirecting", { seconds: countdown })}</p>
         )}
         <Link
           href={next}
-          className="mt-6 inline-block rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="mt-6 inline-block rounded-xl bg-primary px-6 py-2.5 text-body font-medium text-primary-foreground hover:bg-primary/90"
         >
           {t("continueNow")}
         </Link>

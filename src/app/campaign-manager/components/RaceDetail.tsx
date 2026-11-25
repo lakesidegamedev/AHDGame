@@ -85,7 +85,7 @@ export function RaceDetail({
       {open ? (
         <>
           {turnout != null && electorate ? (
-            <p style={{ margin: 0, fontSize: 13 }}>
+            <p style={{ margin: 0, fontSize: 12 }}>
               {t("turnout", {
                 pct: turnout.toFixed(1),
                 basis: electorate.basis,

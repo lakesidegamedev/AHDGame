@@ -38,7 +38,7 @@ export function GeneralResultsSection({
       <SectionLabel as="h3">
         {electionType === "president" ? "Popular vote summary" : "General election results"}
       </SectionLabel>
-      <p className="mb-4 text-sm text-muted">
+      <p className="mb-4 text-body text-muted">
         {electionType === "president"
           ? "National popular vote totals aggregated across all states and districts."
           : "Final vote totals and seat allocation by candidate."}
@@ -47,7 +47,7 @@ export function GeneralResultsSection({
       <div className="mb-5 space-y-3">
         {rows.slice(0, 6).map((row, index) => (
           <div key={`bar-${row.candId}`}>
-            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+            <div className="mb-1 flex items-center justify-between gap-3 text-body-sm">
               <span className="truncate font-medium text-foreground">
                 {row.name} ({row.party})
               </span>
@@ -67,24 +67,24 @@ export function GeneralResultsSection({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border text-left">
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Candidate
               </th>
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Party
               </th>
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Votes
               </th>
-              <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Share
               </th>
               {generalResults.seatsEstimate &&
                 Object.keys(generalResults.seatsEstimate).length > 0 && (
-                  <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                  <th className="border-b border-card-border py-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                     Seats
                   </th>
                 )}
@@ -137,11 +137,11 @@ export function GeneralResultsSection({
       </div>
 
       <div className="mt-4 rounded-lg bg-card-elevated/40 p-3">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           <span className="font-medium text-foreground">Total votes cast:</span>{" "}
           {totalVotes.toLocaleString("en-US")}
           {generalResults.finalized && (
-            <span className="ml-3 inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success border border-success/20">
+            <span className="ml-3 inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-body-sm font-medium text-success border border-success/20">
               Finalized
             </span>
           )}

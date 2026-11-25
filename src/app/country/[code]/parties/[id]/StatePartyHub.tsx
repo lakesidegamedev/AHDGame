@@ -263,7 +263,7 @@ export function PartyHubChrome({
         </header>
 
         {msg ? (
-          <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(msg)}`}>{msg}</div>
+          <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(msg)}`}>{msg}</div>
         ) : null}
         {defunctBanner}
         <div className="mb-8 empty:hidden">{agendaBanner}</div>

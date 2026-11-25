@@ -109,12 +109,12 @@ export function CampaignerPicker({
       {/* Slot summary */}
       <div className="flex flex-wrap gap-2">
         {staged.length === 0 ? (
-          <span className="text-muted italic text-sm">No campaigners assigned</span>
+          <span className="text-muted italic text-body">No campaigners assigned</span>
         ) : (
           staged.map((s) => (
             <span
               key={s.id}
-              className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-card px-3 py-1 text-xs font-medium"
+              className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-card px-3 py-1 text-body-sm font-medium"
             >
               {s.name}
               {canAssign && (
@@ -131,7 +131,7 @@ export function CampaignerPicker({
             </span>
           ))
         )}
-        <span className="text-xs text-muted self-center">
+        <span className="text-body-sm text-muted self-center">
           {staged.length} / {max} slot{max === 1 ? "" : "s"}
         </span>
       </div>
@@ -146,7 +146,7 @@ export function CampaignerPicker({
             placeholder={
               filterStateId ? `Search party members in ${filterStateId}…` : "Search party members…"
             }
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
           {trimmed && suggestions.length > 0 && (
             <div className="absolute z-10 mt-1 w-full rounded-lg border border-card-border bg-card shadow-md max-h-56 overflow-y-auto">
@@ -155,11 +155,11 @@ export function CampaignerPicker({
                   key={m.id}
                   type="button"
                   onClick={() => handleAdd(m)}
-                  className="block w-full text-left px-3 py-2 text-sm hover:bg-background border-b border-card-border/40 last:border-b-0"
+                  className="block w-full text-left px-3 py-2 text-body hover:bg-background border-b border-card-border/40 last:border-b-0"
                 >
                   {m.name}
                   {m.homeState && (
-                    <span className="ml-2 text-xs text-muted">
+                    <span className="ml-2 text-body-sm text-muted">
                       {displayCanadianRegionCode(m.homeState)}
                     </span>
                   )}
@@ -168,7 +168,7 @@ export function CampaignerPicker({
             </div>
           )}
           {trimmed && suggestions.length === 0 && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-muted">
+            <div className="absolute z-10 mt-1 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-muted">
               No matching {filterStateId ? `${filterStateId} ` : ""}party members
             </div>
           )}
@@ -182,12 +182,12 @@ export function CampaignerPicker({
             type="button"
             onClick={handleSave}
             disabled={!dirty || saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {saving ? "Saving…" : "Save"}
           </button>
           {msg && (
-            <span className={`text-xs ${msg.startsWith("✓") ? "text-success" : "text-error"}`}>
+            <span className={`text-body-sm ${msg.startsWith("✓") ? "text-success" : "text-error"}`}>
               {msg}
             </span>
           )}

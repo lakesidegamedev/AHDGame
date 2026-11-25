@@ -123,7 +123,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
   if (loadError)
     return (
       <div role="alert" className="rounded-lg border border-error/30 p-4">
-        <p className="text-sm text-error">{loadError}</p>
+        <p className="text-body text-error">{loadError}</p>
         <button className="mt-2 text-primary" onClick={() => setRefreshKey((k) => k + 1)}>
           {t("retry")}
         </button>
@@ -132,13 +132,15 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-sm text-muted animate-pulse">Loading resources...</div>
+      <div className="py-12 text-center text-body text-muted animate-pulse">
+        Loading resources...
+      </div>
     );
   }
 
   if (!data || data.summary.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-muted">
+      <div className="py-12 text-center text-body text-muted">
         No significant extractable resources in this state.
       </div>
     );
@@ -158,27 +160,27 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
     <div className="space-y-6">
       <div className="rounded-xl border border-card-border bg-card p-4">
         <ContractBoardLink countryId={countryId} type="extraction" />
-        <p className="mt-3 text-sm text-muted">{t("allocationHint")}</p>
-        <p className="mt-2 text-sm text-muted">{t("reservationHint")}</p>
+        <p className="mt-3 text-body text-muted">{t("allocationHint")}</p>
+        <p className="mt-2 text-body text-muted">{t("reservationHint")}</p>
       </div>
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-card-border bg-card p-3.5">
           <span className="text-body-sm font-medium text-muted">Resources</span>
-          <span className="text-lg font-bold tabular-nums text-foreground">
+          <span className="text-heading font-bold tabular-nums text-foreground">
             {data.summary.length}
           </span>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-3.5">
           <span className="text-body-sm font-medium text-muted">Total output</span>
-          <span className="text-lg font-bold tabular-nums text-success">
+          <span className="text-heading font-bold tabular-nums text-success">
             {totalOutput.toLocaleString("en-US", { maximumFractionDigits: 0 })}
           </span>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-3.5">
           <span className="text-body-sm font-medium text-muted">Avg utilization</span>
           <span
-            className={`text-lg font-bold tabular-nums ${
+            className={`text-heading font-bold tabular-nums ${
               avgUtilization >= 1
                 ? "text-error"
                 : avgUtilization >= 0.8
@@ -191,24 +193,26 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
         </div>
         <div className="rounded-xl border border-card-border bg-card p-3.5">
           <span className="text-body-sm font-medium text-muted">Active contracts</span>
-          <span className="text-lg font-bold tabular-nums text-primary">{activeContracts}</span>
+          <span className="text-heading font-bold tabular-nums text-primary">
+            {activeContracts}
+          </span>
         </div>
       </div>
 
       <section className="rounded-xl border border-card-border bg-card p-5 shadow-card">
         <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
-          <h3 className="text-sm font-semibold text-muted">Resource capacity</h3>
+          <h3 className="text-body-lg font-semibold text-muted">Resource capacity</h3>
           {data.prospectingEnabled && canGovern && (
             <button
               onClick={() => setShowSurveyModal(true)}
-              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-card-elevated transition-colors"
+              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body font-medium hover:bg-card-elevated transition-colors"
             >
               Commission geological survey
             </button>
           )}
         </div>
         <div className="overflow-x-auto rounded-lg border border-card-border">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr className="border-b border-card-border bg-card-elevated">
                 <th className="px-4 py-3 text-left font-medium text-muted">Resource</th>
@@ -269,12 +273,12 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                               style={{ width: `${Math.min(100, utilization * 100)}%` }}
                             />
                           </div>
-                          <span className="min-w-[36px] tabular-nums text-xs text-muted">
+                          <span className="min-w-[36px] tabular-nums text-body-sm text-muted">
                             {(utilization * 100).toFixed(0)}%
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs text-muted">n/a</span>
+                        <span className="text-body-sm text-muted">n/a</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -288,7 +292,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                             style={{ width: `${headroomUsedPct * 100}%` }}
                           />
                         </div>
-                        <span className="min-w-[36px] tabular-nums text-xs text-muted">
+                        <span className="min-w-[36px] tabular-nums text-body-sm text-muted">
                           {Math.max(
                             0,
                             GOVT_CONTRACT_MAX_TOTAL_SHARE * 100 -
@@ -300,11 +304,11 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {row.overAllocated ? (
-                        <span className="rounded-full bg-error/15 px-2 py-0.5 text-xs text-error">
+                        <span className="rounded-full bg-error/15 px-2 py-0.5 text-body-sm text-error">
                           Over-allocated
                         </span>
                       ) : (
-                        <span className="text-xs text-muted">n/a</span>
+                        <span className="text-body-sm text-muted">n/a</span>
                       )}
                     </td>
                   </tr>
@@ -330,12 +334,12 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
 
       <section className="rounded-xl border border-card-border bg-card p-5 shadow-card">
         <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
-          <h3 className="text-sm font-semibold text-muted">Active contracts</h3>
+          <h3 className="text-body-lg font-semibold text-muted">Active contracts</h3>
           <div className="flex gap-2">
             {data.contractIssuanceEnabled && canGovern && (
               <button
                 onClick={() => setShowIssueModal(true)}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-dark transition-colors"
+                className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary-dark transition-colors"
               >
                 Publish tender
               </button>
@@ -343,7 +347,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
             {isAdmin && (
               <button
                 onClick={() => setShowGrantModal(true)}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-card-elevated transition-colors"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body font-medium hover:bg-card-elevated transition-colors"
               >
                 Admin grant
               </button>
@@ -352,16 +356,16 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
         </div>
 
         {revokeError && (
-          <p className="mb-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+          <p className="mb-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body text-error">
             {revokeError}
           </p>
         )}
 
         {data.contracts.length === 0 ? (
-          <p className="text-sm text-muted">No active extraction contracts.</p>
+          <p className="text-body text-muted">No active extraction contracts.</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-card-border">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="border-b border-card-border bg-card-elevated">
                   <th className="px-4 py-3 text-left font-medium text-muted">Company</th>
@@ -378,7 +382,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                   <tr key={c._id} className="border-b border-card-border last:border-0">
                     <td className="px-4 py-3">
                       {c.corporationName ?? (
-                        <span className="font-mono text-xs text-muted">{c.corporationId}</span>
+                        <span className="font-mono text-body-sm text-muted">{c.corporationId}</span>
                       )}
                     </td>
                     <td className="px-4 py-3">{COMMODITY_LABELS[c.resource]}</td>
@@ -390,7 +394,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                         ? `${(c.royaltyRatePerTurn * 100).toFixed(2)}%`
                         : "n/a"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted">
+                    <td className="px-4 py-3 text-body-sm text-muted">
                       {c.grantedByLevel === "national"
                         ? t("nationalGovernment")
                         : t("regionalGovernment")}
@@ -407,7 +411,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                           <button
                             onClick={() => handleRevoke(c._id)}
                             disabled={revoking !== null}
-                            className="rounded px-2 py-1 text-xs text-error hover:bg-error/10 disabled:opacity-50 transition-colors"
+                            className="rounded px-2 py-1 text-body-sm text-error hover:bg-error/10 disabled:opacity-50 transition-colors"
                           >
                             {revoking === c._id ? "Revoking…" : "Revoke"}
                           </button>

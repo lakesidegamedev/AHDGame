@@ -58,12 +58,12 @@ export function ElectionPhaseStatusStrip({
       <div className="space-y-1">
         <div className="text-body-sm font-medium text-muted">{t("phaseStrip.primaryElection")}</div>
         {isUpcoming ? (
-          <div className="text-sm font-medium text-blue-400">
+          <div className="text-body font-medium text-blue-400">
             {t("phaseStrip.opensIn", { time: primaryOpensTimer.text })}
           </div>
         ) : (
           <div
-            className={`text-sm font-medium ${
+            className={`text-body font-medium ${
               primaryTimer.urgency === "paused"
                 ? "text-purple-400"
                 : primaryEnded
@@ -76,7 +76,7 @@ export function ElectionPhaseStatusStrip({
               : t("phaseStrip.endsIn", { time: primaryTimer.text })}
           </div>
         )}
-        <div className="text-[10px] text-muted/60">
+        <div className="text-body-sm text-muted/60">
           {isUpcoming && phaseStatus.startTime
             ? absoluteDeadline(phaseStatus.startTime)
             : absoluteDeadline(phaseStatus.primaryEndTime)}
@@ -85,10 +85,10 @@ export function ElectionPhaseStatusStrip({
 
       <div className="space-y-1 border-l border-card-border/40 pl-4">
         <div className="text-body-sm font-medium text-muted">{t("phaseStrip.generalElection")}</div>
-        <div className={`text-sm font-medium ${getTimerUrgencyStyle(electionTimer.urgency)}`}>
+        <div className={`text-body font-medium ${getTimerUrgencyStyle(electionTimer.urgency)}`}>
           {t("phaseStrip.endsIn", { time: electionTimer.text })}
         </div>
-        <div className="text-[10px] text-muted/60">{absoluteDeadline(phaseStatus.endTime)}</div>
+        <div className="text-body-sm text-muted/60">{absoluteDeadline(phaseStatus.endTime)}</div>
       </div>
     </div>
   );

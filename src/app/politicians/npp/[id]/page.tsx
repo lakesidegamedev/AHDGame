@@ -214,7 +214,7 @@ export default async function NppProfilePage({ params }: PageProps) {
           <div className="h-1.5 w-full" style={{ backgroundColor: partyHex }} />
 
           <div className="px-6 py-6 flex flex-col sm:flex-row gap-6 sm:items-start">
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-700 to-zinc-900 text-3xl font-bold flex items-center justify-center">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-700 to-zinc-900 text-display font-bold flex items-center justify-center">
               {npp.avatarUrl ? (
                 <Image
                   src={npp.avatarUrl}
@@ -230,30 +230,30 @@ export default async function NppProfilePage({ params }: PageProps) {
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h1 className="text-2xl font-bold tracking-tight truncate">{npp.name}</h1>
-                <span className="rounded-full border border-slate-500/40 bg-slate-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                <h1 className="text-heading font-bold tracking-tight truncate">{npp.name}</h1>
+                <span className="rounded-full border border-slate-500/40 bg-slate-500/20 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-slate-400">
                   Non-player politician
                 </span>
                 {npp.retiredAt && (
-                  <span className="rounded-full border border-zinc-600 bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                  <span className="rounded-full border border-zinc-600 bg-zinc-800 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-zinc-400">
                     Retired
                   </span>
                 )}
               </div>
 
-              <p className="text-sm text-zinc-400 mb-3">{officeLabel}</p>
+              <p className="text-body text-zinc-400 mb-3">{officeLabel}</p>
 
               <div className="flex flex-wrap gap-2 mb-4">
                 {npp.party === "independent" ? (
                   <span
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${getPartyColor(npp.party)}`}
+                    className={`rounded-full border px-3 py-1 text-body-sm font-medium ${getPartyColor(npp.party)}`}
                   >
                     Independent
                   </span>
                 ) : party ? (
                   <Link
                     href={partyUrl(party.countryId, party.sequentialId)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-opacity hover:opacity-75 ${getPartyColor(npp.party, partyColor ?? undefined)}`}
+                    className={`rounded-full border px-3 py-1 text-body-sm font-medium transition-opacity hover:opacity-75 ${getPartyColor(npp.party, partyColor ?? undefined)}`}
                     style={
                       partyColor
                         ? {
@@ -268,7 +268,7 @@ export default async function NppProfilePage({ params }: PageProps) {
                   </Link>
                 ) : (
                   <span
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${getPartyColor(npp.party)}`}
+                    className={`rounded-full border px-3 py-1 text-body-sm font-medium ${getPartyColor(npp.party)}`}
                   >
                     {npp.party.charAt(0).toUpperCase() + npp.party.slice(1)}
                   </span>
@@ -276,13 +276,13 @@ export default async function NppProfilePage({ params }: PageProps) {
 
                 <Link
                   href={regionUrl(npp.countryId ?? "US", npp.homeState)}
-                  className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:border-zinc-500 transition-colors"
+                  className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-body-sm text-zinc-300 hover:border-zinc-500 transition-colors"
                 >
                   {displayCanadianRegionCode(homeState?.name || npp.homeState)}
                 </Link>
               </div>
 
-              <p className="text-sm text-zinc-400 leading-relaxed italic border-l-2 border-zinc-700 pl-3 max-w-prose">
+              <p className="text-body text-zinc-400 leading-relaxed italic border-l-2 border-zinc-700 pl-3 max-w-prose">
                 {bio}
               </p>
             </div>
@@ -300,12 +300,12 @@ export default async function NppProfilePage({ params }: PageProps) {
         {/* Political Standing + Details */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 className="text-sm font-semibold text-zinc-500 mb-4">Political standing</h2>
+            <h2 className="text-body font-semibold text-zinc-500 mb-4">Political standing</h2>
 
             <div className="space-y-5">
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-zinc-400">Favorability</span>
+                  <span className="text-body text-zinc-400">Favorability</span>
                   <span className="font-bold tabular-nums">{favorability.toFixed(1)} / 100</span>
                 </div>
                 <StatMeter
@@ -323,7 +323,7 @@ export default async function NppProfilePage({ params }: PageProps) {
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-zinc-400">Political influence</span>
+                  <span className="text-body text-zinc-400">Political influence</span>
                   <span className="font-bold tabular-nums">{influence.toFixed(1)} / 100</span>
                 </div>
                 <StatMeter value={influence} max={100} fillClass="bg-cyan-400" />
@@ -332,8 +332,8 @@ export default async function NppProfilePage({ params }: PageProps) {
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 className="text-sm font-semibold text-zinc-500 mb-4">Details</h2>
-            <table className="w-full text-sm">
+            <h2 className="text-body font-semibold text-zinc-500 mb-4">Details</h2>
+            <table className="w-full text-body">
               <tbody>
                 <tr>
                   <td className="py-1.5 pr-2 align-top text-zinc-500 font-medium">Office</td>
@@ -383,33 +383,33 @@ export default async function NppProfilePage({ params }: PageProps) {
 
         {/* Economic Data */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="text-sm font-semibold text-zinc-500 mb-4">Economic data</h2>
+          <h2 className="text-body font-semibold text-zinc-500 mb-4">Economic data</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg bg-zinc-950/40 border border-zinc-800 p-4">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+              <p className="text-body-sm font-semibold text-zinc-500 uppercase tracking-wider mb-1">
                 Campaign funds
               </p>
-              <p className="text-xl font-bold tabular-nums text-emerald-400">
+              <p className="text-heading font-bold tabular-nums text-emerald-400">
                 {formatMoney(funds, nppCurrencySymbol ?? "$")}
               </p>
             </div>
 
             <div className="rounded-lg bg-zinc-950/40 border border-zinc-800 p-4">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+              <p className="text-body-sm font-semibold text-zinc-500 uppercase tracking-wider mb-1">
                 Donor base level
               </p>
-              <p className="text-xl font-bold tabular-nums">
+              <p className="text-heading font-bold tabular-nums">
                 {donorBaseLevel} / {NPP_MAX_DONOR_BASE_LEVEL}
               </p>
             </div>
 
             <div className="rounded-lg bg-zinc-950/40 border border-zinc-800 p-4">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+              <p className="text-body-sm font-semibold text-zinc-500 uppercase tracking-wider mb-2">
                 Action points
               </p>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xl font-bold tabular-nums">{actionPoints}</span>
-                <span className="text-xs text-zinc-500">/ 100</span>
+                <span className="text-heading font-bold tabular-nums">{actionPoints}</span>
+                <span className="text-body-sm text-zinc-500">/ 100</span>
               </div>
               <StatMeter value={actionPoints} max={100} fillClass="bg-amber-400" />
             </div>
@@ -418,11 +418,11 @@ export default async function NppProfilePage({ params }: PageProps) {
 
         {/* Personality Traits */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="text-sm font-semibold text-zinc-500 mb-4">Personality traits</h2>
+          <h2 className="text-body font-semibold text-zinc-500 mb-4">Personality traits</h2>
           <div className="space-y-5">
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Loyalty</span>
+                <span className="text-body text-zinc-400">Loyalty</span>
                 <span className="font-bold tabular-nums">{loyalty} / 100</span>
               </div>
               <StatMeter value={loyalty} max={100} fillClass="bg-blue-400" />
@@ -430,7 +430,7 @@ export default async function NppProfilePage({ params }: PageProps) {
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Ambition</span>
+                <span className="text-body text-zinc-400">Ambition</span>
                 <span className="font-bold tabular-nums">{ambition} / 100</span>
               </div>
               <StatMeter value={ambition} max={100} fillClass="bg-violet-400" />
@@ -438,7 +438,7 @@ export default async function NppProfilePage({ params }: PageProps) {
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Stubbornness</span>
+                <span className="text-body text-zinc-400">Stubbornness</span>
                 <span className="font-bold tabular-nums">{stubbornness} / 100</span>
               </div>
               <StatMeter value={stubbornness} max={100} fillClass="bg-orange-400" />
@@ -448,7 +448,7 @@ export default async function NppProfilePage({ params }: PageProps) {
 
         {/* Policy Positions */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="text-sm font-semibold text-zinc-500 mb-4">Policy positions</h2>
+          <h2 className="text-body font-semibold text-zinc-500 mb-4">Policy positions</h2>
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="rounded-lg bg-zinc-950/40 p-4">
               <PolicyDisplay label="Economic" axis="economic" value={npp.policies?.economic ?? 0} />
@@ -461,13 +461,13 @@ export default async function NppProfilePage({ params }: PageProps) {
 
         {/* Footer note */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-5 py-3 text-center">
-          <p className="text-xs text-zinc-500">AI-controlled politician</p>
+          <p className="text-body-sm text-zinc-500">AI-controlled politician</p>
         </div>
 
         <div>
           <Link
             href="/politicians"
-            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="text-body text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             ← Back to politicians
           </Link>

@@ -231,21 +231,21 @@ export function CoalitionPrioritiesPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="text-lg font-semibold">{priority.title}</span>
+              <span className="text-heading font-semibold">{priority.title}</span>
               <span
-                className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSNAME[priority.status]}`}
+                className={`inline-flex rounded-full border px-2 py-0.5 text-body-sm font-medium ${STATUS_CLASSNAME[priority.status]}`}
               >
                 {priority.status}
               </span>
-              <span className="inline-flex rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-xs text-muted">
+              <span className="inline-flex rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-body-sm text-muted">
                 {priority.visibility}
               </span>
-              <span className="inline-flex rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-xs text-muted">
+              <span className="inline-flex rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-body-sm text-muted">
                 {priority.type.replaceAll("_", " ")}
               </span>
             </div>
-            <p className="text-sm text-muted">{priority.description}</p>
-            <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
+            <p className="text-body text-muted">{priority.description}</p>
+            <div className="mt-2 flex flex-wrap gap-3 text-body-sm text-muted">
               {priority.policyThemeLabel && <span>Theme: {priority.policyThemeLabel}</span>}
               {priority.billTitle && <span>Bill: {priority.billTitle}</span>}
               {priority.leadershipGoalLabel && (
@@ -265,11 +265,11 @@ export function CoalitionPrioritiesPanel({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-muted font-medium">Support</div>
-            <div className="text-lg font-semibold text-foreground">
+            <div className="text-body-sm text-muted font-medium">Support</div>
+            <div className="text-heading font-semibold text-foreground">
               {priority.tally.support}/{priority.tally.requiredToPass}
             </div>
-            <div className="text-xs text-muted">
+            <div className="text-body-sm text-muted">
               {priority.tally.oppose} oppose • {priority.tally.abstain} abstain
             </div>
           </div>
@@ -283,7 +283,7 @@ export function CoalitionPrioritiesPanel({
                 type="button"
                 disabled={submitting}
                 onClick={() => void mutatePriority(priority.id, "vote", vote)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                   viewerPartyVote === vote
                     ? vote === "support"
                       ? "bg-success text-white border-success"
@@ -302,7 +302,7 @@ export function CoalitionPrioritiesPanel({
                   type="button"
                   disabled={submitting}
                   onClick={() => void mutatePriority(priority.id, "archive")}
-                  className="rounded-lg border border-warning/40 px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning/10 transition-colors"
+                  className="rounded-lg border border-warning/40 px-3 py-1.5 text-body-sm font-medium text-warning hover:bg-warning/10 transition-colors"
                 >
                   Archive
                 </button>
@@ -311,7 +311,7 @@ export function CoalitionPrioritiesPanel({
         )}
 
         <div className="rounded-lg border border-card-border bg-background p-3">
-          <div className="text-xs text-muted font-medium mb-2">Party stances</div>
+          <div className="text-body-sm text-muted font-medium mb-2">Party stances</div>
           <div className="grid gap-2 md:grid-cols-2">
             {priority.partyStances.map((stance) => (
               <div
@@ -324,14 +324,14 @@ export function CoalitionPrioritiesPanel({
                       className="inline-block h-2.5 w-2.5 rounded-full"
                       style={{ backgroundColor: stance.color }}
                     />
-                    <span className="truncate text-sm font-medium">{stance.partyName}</span>
+                    <span className="truncate text-body font-medium">{stance.partyName}</span>
                   </div>
-                  <div className="text-xs text-muted">
+                  <div className="text-body-sm text-muted">
                     {stance.abbreviation}
                     {stance.chairName ? ` • ${stance.chairName}` : ""}
                   </div>
                 </div>
-                <span className="text-xs font-medium text-muted capitalize">
+                <span className="text-body-sm font-medium text-muted capitalize">
                   {stance.vote ?? "no vote"}
                 </span>
               </div>
@@ -347,8 +347,8 @@ export function CoalitionPrioritiesPanel({
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold mb-1">Coalition priorities</h2>
-            <p className="text-sm text-muted">
+            <h2 className="text-heading font-semibold mb-1">Coalition priorities</h2>
+            <p className="text-body text-muted">
               Coalitions can hold up to three active priorities at once. Member party chairs vote to
               activate proposals, and cohesion reflects how much support those active goals still
               hold.
@@ -356,26 +356,28 @@ export function CoalitionPrioritiesPanel({
           </div>
           <div className="grid min-w-[240px] gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-card-border bg-background p-4">
-              <div className="text-xs text-muted font-medium">Cohesion</div>
-              <div className="mt-1 text-xl font-semibold">{data.cohesion.label}</div>
-              <div className="text-sm text-muted">{data.cohesion.score}/100 alignment</div>
+              <div className="text-body-sm text-muted font-medium">Cohesion</div>
+              <div className="mt-1 text-heading font-semibold">{data.cohesion.label}</div>
+              <div className="text-body text-muted">{data.cohesion.score}/100 alignment</div>
             </div>
             <div className="rounded-xl border border-card-border bg-background p-4">
-              <div className="text-xs text-muted font-medium">Active priorities</div>
-              <div className="mt-1 text-xl font-semibold">{data.priorities.active.length}/3</div>
-              <div className="text-sm text-muted">
+              <div className="text-body-sm text-muted font-medium">Active priorities</div>
+              <div className="mt-1 text-heading font-semibold">
+                {data.priorities.active.length}/3
+              </div>
+              <div className="text-body text-muted">
                 {data.cohesion.supportVotes} support • {data.cohesion.opposeVotes} oppose
               </div>
             </div>
           </div>
         </div>
         {!data.viewer.canViewInternal && (
-          <div className="mt-4 rounded-lg border border-secondary/30 bg-secondary/10 p-3 text-sm text-secondary">
+          <div className="mt-4 rounded-lg border border-secondary/30 bg-secondary/10 p-3 text-body text-secondary">
             Internal coalition priorities are only visible to coalition member parties and admins.
           </div>
         )}
         {error && (
-          <div className="mt-4 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+          <div className="mt-4 rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error">
             {error}
           </div>
         )}
@@ -384,26 +386,26 @@ export function CoalitionPrioritiesPanel({
       {data.viewer.canPropose && (
         <div className="rounded-xl border border-card-border bg-card p-6 space-y-4">
           <div>
-            <h3 className="text-lg font-semibold">Propose priority</h3>
-            <p className="text-sm text-muted">
+            <h3 className="text-body-lg font-semibold">Propose priority</h3>
+            <p className="text-body text-muted">
               The coalition chair proposes agenda items here. Member party chairs then vote them
               into the active slate.
             </p>
           </div>
 
           {!canAddMoreActive && (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-body text-warning">
               Three priorities are already active. Archive one before activating another.
             </div>
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs text-muted font-medium">Type</span>
+              <span className="mb-1 block text-body-sm text-muted font-medium">Type</span>
               <select
                 value={draftType}
                 onChange={(event) => setDraftType(event.target.value as DraftType)}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               >
                 <option value="policy_theme">Policy theme</option>
                 <option value="bill">Bill</option>
@@ -411,24 +413,24 @@ export function CoalitionPrioritiesPanel({
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs text-muted font-medium">Visibility</span>
+              <span className="mb-1 block text-body-sm text-muted font-medium">Visibility</span>
               <select
                 value={draftVisibility}
                 onChange={(event) =>
                   setDraftVisibility(event.target.value as "public" | "internal")
                 }
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               >
                 <option value="public">Public</option>
                 <option value="internal">Internal</option>
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs text-muted font-medium">Stance</span>
+              <span className="mb-1 block text-body-sm text-muted font-medium">Stance</span>
               <select
                 value={draftStance}
                 onChange={(event) => setDraftStance(event.target.value as "support" | "oppose")}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               >
                 <option value="support">Support</option>
                 <option value="oppose">Oppose</option>
@@ -436,11 +438,11 @@ export function CoalitionPrioritiesPanel({
             </label>
             {draftType === "policy_theme" && (
               <label className="block">
-                <span className="mb-1 block text-xs text-muted font-medium">Theme</span>
+                <span className="mb-1 block text-body-sm text-muted font-medium">Theme</span>
                 <select
                   value={draftPolicyTheme}
                   onChange={(event) => setDraftPolicyTheme(event.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                 >
                   {data.options.policyThemes.map((theme) => (
                     <option key={theme.key} value={theme.key}>
@@ -452,11 +454,11 @@ export function CoalitionPrioritiesPanel({
             )}
             {draftType === "bill" && (
               <label className="block md:col-span-2">
-                <span className="mb-1 block text-xs text-muted font-medium">Bill</span>
+                <span className="mb-1 block text-body-sm text-muted font-medium">Bill</span>
                 <select
                   value={draftBillId}
                   onChange={(event) => setDraftBillId(event.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                 >
                   {data.options.bills.length === 0 ? (
                     <option value="">No active bills available</option>
@@ -473,11 +475,11 @@ export function CoalitionPrioritiesPanel({
             {draftType === "leadership_goal" && (
               <>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-muted font-medium">Goal</span>
+                  <span className="mb-1 block text-body-sm text-muted font-medium">Goal</span>
                   <select
                     value={draftLeadershipGoal}
                     onChange={(event) => setDraftLeadershipGoal(event.target.value)}
-                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                   >
                     {data.options.leadershipGoals.map((goal) => (
                       <option key={goal.key} value={goal.key}>
@@ -487,11 +489,13 @@ export function CoalitionPrioritiesPanel({
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs text-muted font-medium">Goal window</span>
+                  <span className="mb-1 block text-body-sm text-muted font-medium">
+                    Goal window
+                  </span>
                   <select
                     value={draftLeadershipDurationHours}
                     onChange={(event) => setDraftLeadershipDurationHours(event.target.value)}
-                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                   >
                     <option value="24">24 hours</option>
                     <option value="48">48 hours</option>
@@ -500,31 +504,33 @@ export function CoalitionPrioritiesPanel({
                   </select>
                 </label>
                 <label className="block md:col-span-2">
-                  <span className="mb-1 block text-xs text-muted font-medium">Target name</span>
+                  <span className="mb-1 block text-body-sm text-muted font-medium">
+                    Target name
+                  </span>
                   <input
                     value={draftTargetName}
                     onChange={(event) => setDraftTargetName(event.target.value)}
-                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                     placeholder="Optional candidate or officeholder name"
                   />
                 </label>
               </>
             )}
             <label className="block md:col-span-2">
-              <span className="mb-1 block text-xs text-muted font-medium">Title</span>
+              <span className="mb-1 block text-body-sm text-muted font-medium">Title</span>
               <input
                 value={draftTitle}
                 onChange={(event) => setDraftTitle(event.target.value)}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                 placeholder="Short coalition priority title"
               />
             </label>
             <label className="block md:col-span-2">
-              <span className="mb-1 block text-xs text-muted font-medium">Description</span>
+              <span className="mb-1 block text-body-sm text-muted font-medium">Description</span>
               <textarea
                 value={draftDescription}
                 onChange={(event) => setDraftDescription(event.target.value)}
-                className="min-h-[96px] w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="min-h-[96px] w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                 placeholder="Why this coalition priority matters"
               />
             </label>
@@ -541,7 +547,7 @@ export function CoalitionPrioritiesPanel({
                 (draftType === "leadership_goal" && !draftLeadershipGoal)
               }
               onClick={() => void handleCreate()}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+              className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
             >
               {submitting ? "Saving…" : "Propose priority"}
             </button>
@@ -551,8 +557,8 @@ export function CoalitionPrioritiesPanel({
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold">Active priorities</h3>
-          <span className="text-sm text-muted">{data.priorities.active.length}/3 slots used</span>
+          <h3 className="text-body-lg font-semibold">Active priorities</h3>
+          <span className="text-body text-muted">{data.priorities.active.length}/3 slots used</span>
         </div>
         {data.priorities.active.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-12">
@@ -567,7 +573,7 @@ export function CoalitionPrioritiesPanel({
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-lg font-semibold">Proposals awaiting votes</h3>
+        <h3 className="text-body-lg font-semibold">Proposals awaiting votes</h3>
         {data.priorities.proposed.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-12">
             <EmptyState
@@ -581,7 +587,7 @@ export function CoalitionPrioritiesPanel({
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-lg font-semibold">Recent history</h3>
+        <h3 className="text-body-lg font-semibold">Recent history</h3>
         {visibleArchived.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-12">
             <EmptyState

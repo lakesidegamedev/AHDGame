@@ -116,13 +116,13 @@ export function NominationCard({ nom }: { nom: NominationDisplay }) {
           </div>
           <h3
             className="m-0 text-foreground transition-colors group-hover:text-primary"
-            style={{ fontSize: 21, lineHeight: 1.15, fontWeight: 600 }}
+            style={{ fontSize: 16, lineHeight: 1.15, fontWeight: 600 }}
           >
             <PersonLink person={nominee} className="hover:underline underline-offset-2">
               {nomineeName}
             </PersonLink>
           </h3>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             for <span className="font-medium text-foreground/90">{office}</span>
             {nominee?.partyName && (
               <>
@@ -141,7 +141,7 @@ export function NominationCard({ nom }: { nom: NominationDisplay }) {
             )}
           </p>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px] text-muted">
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-body-sm text-muted">
             <PersonLink person={nominator} className="shrink-0" decorative>
               <Avatar url={nominator?.avatarUrl} name={nominatorName} size="h-6 w-6" />
             </PersonLink>
@@ -162,7 +162,7 @@ export function NominationCard({ nom }: { nom: NominationDisplay }) {
             )}
             {nom.myVote && (
               <span
-                className={`ml-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold ${VOTE_CLASS[nom.myVote]}`}
+                className={`ml-1 rounded-full border px-2 py-0.5 text-body-sm font-semibold ${VOTE_CLASS[nom.myVote]}`}
               >
                 You voted {VOTE_LABEL[nom.myVote]}
               </span>
@@ -175,7 +175,7 @@ export function NominationCard({ nom }: { nom: NominationDisplay }) {
         <TheCountRail votes={votes} eligible={cast || 1} />
         {nom.votingEndsAt && (
           <p
-            className={`mt-2 text-[11px] font-medium ${
+            className={`mt-2 text-body-sm font-medium ${
               closed
                 ? "text-muted"
                 : remaining.urgency === "critical"
@@ -184,7 +184,7 @@ export function NominationCard({ nom }: { nom: NominationDisplay }) {
             }`}
           >
             {closed ? "Voting closed" : `Closes in ${remaining.text}`}
-            <span className="block text-[10px] font-normal text-muted/70">
+            <span className="block text-body-sm font-normal text-muted/70">
               <LocalTime value={nom.votingEndsAt} />
             </span>
           </p>

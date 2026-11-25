@@ -57,10 +57,10 @@ export function StatReallocateControl() {
       <button
         type="button"
         onClick={openModal}
-        className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/40 hover:text-primary"
+        className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-background px-2.5 py-1.5 text-body-sm font-medium text-muted transition-colors hover:border-primary/40 hover:text-primary"
       >
         <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-        Reallocate <span className="text-[10px] opacity-70">(1 free)</span>
+        Reallocate <span className="text-body-sm opacity-70">(1 free)</span>
       </button>
 
       {open && (
@@ -78,8 +78,8 @@ export function StatReallocateControl() {
           />
           <div className="relative z-10 w-full max-w-lg rounded-xl border border-card-border bg-card shadow-2xl">
             <div className="relative px-5 pt-5 pb-4">
-              <h2 className="text-lg font-semibold text-foreground">Reallocate your stats</h2>
-              <p className="mt-1 text-xs text-muted">
+              <h2 className="text-heading font-semibold text-foreground">Reallocate your stats</h2>
+              <p className="mt-1 text-body-sm text-muted">
                 This is your <span className="font-semibold text-foreground">one free change</span>.
                 It rewrites your stat sheet from scratch and{" "}
                 <span className="font-semibold text-foreground">resets any growth</span> you&apos;ve
@@ -91,7 +91,7 @@ export function StatReallocateControl() {
               <StatPointAllocator value={stats} onChange={setStats} />
 
               {error && (
-                <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-xs text-error">
+                <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-body-sm text-error">
                   {error}
                 </p>
               )}
@@ -101,7 +101,7 @@ export function StatReallocateControl() {
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={submitting}
-                  className="text-xs text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                  className="text-body-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
                 >
                   Cancel
                 </button>

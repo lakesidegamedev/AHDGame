@@ -39,7 +39,7 @@ export function LiveRefreshBanner() {
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
       <button
         onClick={() => window.location.reload()}
-        className="flex items-center gap-2 rounded-full border border-primary/30 bg-card px-5 py-2.5 text-sm font-medium text-foreground shadow-lg transition-colors hover:border-primary/60"
+        className="flex items-center gap-2 rounded-full border border-primary/30 bg-card px-5 py-2.5 text-body font-medium text-foreground shadow-lg transition-colors hover:border-primary/60"
       >
         <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />
         New turn processed — click to refresh

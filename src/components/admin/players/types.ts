@@ -119,6 +119,6 @@ export interface RetiredCharacterEntry {
   homeState: string;
 }
 
-export const ACTION_BTN = "min-h-[44px] rounded px-3 py-2 text-sm font-medium transition-colors";
+export const ACTION_BTN = "min-h-[44px] rounded px-3 py-2 text-body font-medium transition-colors";
 
 export const getLatestNoteText = (user: UserData) => user.latestModNote ?? user.modNote ?? null;

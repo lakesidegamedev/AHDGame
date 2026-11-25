@@ -160,13 +160,13 @@ export function PresidentialMapWithStateDetail({
   return (
     <div>
       <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-        {showHeading ? <h3 className="text-sm font-semibold">Electoral map</h3> : <span />}
+        {showHeading ? <h3 className="text-body-lg font-semibold">Electoral map</h3> : <span />}
         <div className="flex items-center gap-2">
           {/* EV/Popular vote toggle */}
           <div className="flex items-center rounded-lg border border-card-border bg-card">
             <button
               onClick={() => setViewMode("ev")}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors rounded-l-lg ${
+              className={`px-3 py-1.5 text-body font-medium transition-colors rounded-l-lg ${
                 viewMode === "ev"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted hover:text-foreground"
@@ -176,7 +176,7 @@ export function PresidentialMapWithStateDetail({
             </button>
             <button
               onClick={() => setViewMode("popular")}
-              className={`px-3 py-1.5 text-sm font-medium transition-colors rounded-r-lg ${
+              className={`px-3 py-1.5 text-body font-medium transition-colors rounded-r-lg ${
                 viewMode === "popular"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted hover:text-foreground"
@@ -189,7 +189,7 @@ export function PresidentialMapWithStateDetail({
           {/* Competitive filter */}
           <button
             onClick={() => setFilterCompetitive((v) => !v)}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-body font-medium transition-colors ${
               filterCompetitive
                 ? "border-yellow-500/60 bg-yellow-500/15 text-yellow-400"
                 : "border-card-border bg-card text-muted hover:text-foreground"
@@ -211,7 +211,7 @@ export function PresidentialMapWithStateDetail({
             </svg>
             Competitive
             {filterCompetitive && (
-              <span className="rounded-full bg-yellow-500/30 px-1.5 py-0.5 text-[10px] leading-none">
+              <span className="rounded-full bg-yellow-500/30 px-1.5 py-0.5 text-body-sm leading-none">
                 ON
               </span>
             )}

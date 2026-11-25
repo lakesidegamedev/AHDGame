@@ -53,7 +53,7 @@ export function RunningMateInvitationPanel({
     <div className="mb-4 space-y-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
       {invitations.map((c) => (
         <div key={c.id} className="space-y-2">
-          <p className="text-sm text-foreground">
+          <p className="text-body text-foreground">
             <span className="font-medium">{c.characterName}</span> has invited you to be their
             running mate. You join the ticket only if you accept. If the ticket wins, its running
             mate becomes Vice President.
@@ -79,7 +79,7 @@ export function RunningMateInvitationPanel({
           </div>
         </div>
       ))}
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <p className="text-body text-error">{error}</p>}
     </div>
   );
 }

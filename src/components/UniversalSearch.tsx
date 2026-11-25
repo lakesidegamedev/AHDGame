@@ -307,9 +307,9 @@ export function UniversalSearch({ open, onNavigate }: UniversalSearchProps = {})
             isOpen && focusedIndex >= 0 ? `${resultListId}-result-${focusedIndex}` : undefined
           }
           aria-autocomplete="list"
-          // text-base (16px) on mobile prevents iOS Safari from auto-zooming
-          // into the input on focus; text-sm (14px) keeps the desktop density.
-          className={`w-full rounded-lg border bg-card pl-9 pr-9 py-1.5 text-base md:text-sm text-foreground placeholder:text-muted focus:outline-none transition-all ${
+          // text-body-lg (16px) on mobile prevents iOS Safari from auto-zooming
+          // into the input on focus; text-body (14px) keeps the desktop density.
+          className={`w-full rounded-lg border bg-card pl-9 pr-9 py-1.5 text-body-lg md:text-body text-foreground placeholder:text-muted focus:outline-none transition-all ${
             hasAdminResults
               ? "admin-search-glow"
               : "border-card-border focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -361,14 +361,16 @@ export function UniversalSearch({ open, onNavigate }: UniversalSearchProps = {})
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground truncate">{result.title}</p>
+                    <p className="text-body font-semibold text-foreground truncate">
+                      {result.title}
+                    </p>
                     <span
-                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${TYPE_BADGE[result.type]}`}
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-body-sm font-medium uppercase tracking-wide ${TYPE_BADGE[result.type]}`}
                     >
                       {t(TYPE_LABEL_KEY[result.type])}
                     </span>
                   </div>
-                  <p className="text-xs text-muted truncate">{result.subtitle}</p>
+                  <p className="text-body-sm text-muted truncate">{result.subtitle}</p>
                 </div>
               </button>
             ))}
@@ -392,7 +394,7 @@ export function UniversalSearch({ open, onNavigate }: UniversalSearchProps = {})
             }}
             className="rounded-xl border border-card-border bg-card shadow-modal z-[60] px-4 py-5 text-center"
           >
-            <p className="text-sm text-muted">{t("search.noResults", { query })}</p>
+            <p className="text-body text-muted">{t("search.noResults", { query })}</p>
           </div>,
           portalContainer
         )}
@@ -414,7 +416,7 @@ export function UniversalSearch({ open, onNavigate }: UniversalSearchProps = {})
             className="rounded-xl border border-card-border bg-card shadow-modal z-[60] px-4 py-6 text-center space-y-5"
           >
             <div>
-              <p className="example-title text-xs font-semibold text-muted">
+              <p className="example-title text-body-sm font-semibold text-muted">
                 {t("search.trySearchingFor")}
               </p>
             </div>
@@ -438,7 +440,7 @@ export function UniversalSearch({ open, onNavigate }: UniversalSearchProps = {})
                   style={{
                     animation: `fade-in-text 0.6s ease-out ${0.1 + idx * 0.05}s both`,
                   }}
-                  className="group relative px-3 py-2 rounded-lg bg-card-muted/30 hover:bg-card-muted/60 transition-colors border border-card-border/40 hover:border-card-border/60 text-xs font-medium text-foreground hover:text-primary"
+                  className="group relative px-3 py-2 rounded-lg bg-card-muted/30 hover:bg-card-muted/60 transition-colors border border-card-border/40 hover:border-card-border/60 text-body-sm font-medium text-foreground hover:text-primary"
                 >
                   {example}
                 </button>

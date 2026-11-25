@@ -48,12 +48,12 @@ export function HoverCard({ data }: { data: BattlegroundHoverCardData }) {
   const TIER_LABEL = tierLabels(t);
   return (
     <div className="min-w-[200px]">
-      <div className="text-xs font-semibold text-slate-100">{data.stateName}</div>
+      <div className="text-body-sm font-semibold text-slate-100">{data.stateName}</div>
       <ul className="mt-1.5 space-y-0.5">
         {data.candidates.map((c) => (
           <li
             key={`${c.partyAbbr}-${c.name}`}
-            className="flex items-center gap-2 text-[11px] text-slate-200"
+            className="flex items-center gap-2 text-body-sm text-slate-200"
           >
             <span
               className="inline-block h-2 w-2 rounded-full shrink-0"
@@ -65,7 +65,7 @@ export function HoverCard({ data }: { data: BattlegroundHoverCardData }) {
           </li>
         ))}
       </ul>
-      <div className="mt-1.5 border-t border-slate-700 pt-1 text-[10px] uppercase tracking-wider text-slate-400">
+      <div className="mt-1.5 border-t border-slate-700 pt-1 text-body-sm uppercase tracking-wider text-slate-400">
         {data.candidates[0]?.partyAbbr ?? "?"} +{data.marginPp.toFixed(1)}pp ·{" "}
         {TIER_LABEL[data.tier]}
       </div>
@@ -113,7 +113,7 @@ export function BattlegroundMap({
   return (
     <div className="rounded-xl border border-card-border bg-card p-3 sm:p-6 overflow-hidden shadow-panel">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-muted">{t("battleground.title")}</h3>
+        <h3 className="text-body-lg font-semibold text-muted">{t("battleground.title")}</h3>
         <span className="text-body-sm font-medium text-muted">{t("battleground.subtitle")}</span>
       </div>
       <div
@@ -128,9 +128,9 @@ export function BattlegroundMap({
       </div>
 
       {!hasData ? (
-        <p className="mt-3 text-xs text-muted">{t("battleground.emptyHint")}</p>
+        <p className="mt-3 text-body-sm text-muted">{t("battleground.emptyHint")}</p>
       ) : (
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-body-sm">
           <span className="text-body-sm font-medium text-muted">
             {t("battleground.marginTiers")}
           </span>
@@ -149,7 +149,7 @@ export function BattlegroundMap({
           {highlightedStates && highlightedStates.length > 0 ? (
             <span className="flex items-center gap-1.5 text-purple-400">
               <span className="inline-block h-3 w-3 rounded-sm border-2 border-purple-400" />
-              <span className="text-xs">
+              <span className="text-body-sm">
                 {t("battleground.battlegroundCount", { count: highlightedStates.length })}
               </span>
             </span>

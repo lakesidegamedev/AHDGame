@@ -25,8 +25,8 @@ export function ElectoralCollegeBar({
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
       <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-lg font-semibold">Electoral College</h3>
-        <span className="text-sm text-muted">
+        <h3 className="text-body-lg font-semibold">Electoral College</h3>
+        <span className="text-body text-muted">
           {totalEV} votes · {evNeeded} to win
         </span>
       </div>
@@ -45,7 +45,9 @@ export function ElectoralCollegeBar({
                 className="h-full flex items-center justify-center relative group"
                 style={{ width: `${pct}%`, backgroundColor: color }}
               >
-                {pct > 8 && <span className="text-white font-bold text-sm tabular-nums">{ev}</span>}
+                {pct > 8 && (
+                  <span className="text-white font-bold text-body tabular-nums">{ev}</span>
+                )}
                 <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
               </div>
             );
@@ -56,7 +58,7 @@ export function ElectoralCollegeBar({
             className="absolute top-0 bottom-0 w-0.5 bg-foreground/40 pointer-events-none"
             style={{ left: `${(evNeeded / totalEV) * 100}%` }}
           >
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-foreground/60 whitespace-nowrap">
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-body-sm font-bold text-foreground/60 whitespace-nowrap">
               270
             </div>
           </div>
@@ -80,7 +82,7 @@ export function ElectoralCollegeBar({
                 <span className="font-bold tabular-nums" style={{ color }}>
                   {ev}
                 </span>
-                {isWinner && <span className="text-yellow-400 text-sm">★</span>}
+                {isWinner && <span className="text-yellow-400 text-body">★</span>}
               </div>
             );
           })}

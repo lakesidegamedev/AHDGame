@@ -23,7 +23,7 @@ export default async function RegimeOverridePage({ params }: Props) {
   return (
     <section className="space-y-4">
       <div>
-        <h1 className="text-heading-sm font-semibold text-foreground">
+        <h1 className="text-heading font-semibold text-foreground">
           Regime override: {COUNTRY_CONFIGS[countryId].name}
         </h1>
         <p className="mt-1 text-body-sm text-muted">

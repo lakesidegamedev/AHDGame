@@ -203,7 +203,7 @@ export function renderMarkdownText(text: string): (string | React.ReactElement)[
       parts.push(
         <code
           key={match.index}
-          className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs font-mono text-emerald-400"
+          className="rounded bg-zinc-800 px-1.5 py-0.5 text-body-sm font-mono text-emerald-400"
         >
           {match[3]}
         </code>

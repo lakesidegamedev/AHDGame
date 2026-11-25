@@ -166,11 +166,11 @@ export function NationalHistoryPanel({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <div className="min-w-0">
-          <h3 className="text-sm font-bold text-foreground">
+          <h3 className="text-body-lg font-bold text-foreground">
             {t("title")} <span className="font-normal text-muted">· {t("recorded")}</span>
           </h3>
           {!compact && (
-            <p className="mt-0.5 text-[11px] text-muted">
+            <p className="mt-0.5 text-body-sm text-muted">
               {t("blurb", { currency: data?.currencyCode ?? t("unit.localCurrency") })}
             </p>
           )}
@@ -179,14 +179,14 @@ export function NationalHistoryPanel({
           <div className="flex items-baseline gap-2">
             <span
               className={`font-mono font-bold tabular-nums text-foreground ${
-                compact ? "text-base" : "text-lg"
+                compact ? "text-body-lg" : "text-heading"
               }`}
             >
               {formatMetricValue(headlineValue ?? latest.value, metric, prefix, t("unit.people"))}
             </span>
             {change !== null && (
               <span
-                className={`text-[11px] font-semibold tabular-nums ${
+                className={`text-body-sm font-semibold tabular-nums ${
                   change >= 0 ? "text-success" : "text-error"
                 }`}
               >
@@ -198,7 +198,7 @@ export function NationalHistoryPanel({
       </div>
 
       {latest && (
-        <p className="mt-0.5 text-[11px] text-muted">
+        <p className="mt-0.5 text-body-sm text-muted">
           {t("latestNote", { turn: latest.point.turn })}
         </p>
       )}
@@ -214,7 +214,7 @@ export function NationalHistoryPanel({
               onClick={() => setMetric(id)}
               aria-pressed={active}
               className={`${
-                compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+                compact ? "px-2.5 py-1 text-body-sm" : "px-3 py-1.5 text-body-sm"
               } ${pillClass(active)}`}
             >
               <span
@@ -229,7 +229,7 @@ export function NationalHistoryPanel({
           );
         })}
         {!compact && (
-          <span className="ml-auto text-[10px] text-muted">
+          <span className="ml-auto text-body-sm text-muted">
             {metric === "population" ? t("unit.people") : t("unit.localCurrency")}
           </span>
         )}
@@ -238,7 +238,7 @@ export function NationalHistoryPanel({
       {state.status === "error" ? (
         <div
           className={`rounded-lg border border-card-border bg-card-muted/40 text-center text-muted ${
-            compact ? "mt-3 px-4 py-4 text-xs" : "mt-4 px-4 py-6 text-sm"
+            compact ? "mt-3 px-4 py-4 text-body-sm" : "mt-4 px-4 py-6 text-body"
           }`}
         >
           {t("error")}
@@ -259,7 +259,7 @@ export function NationalHistoryPanel({
       ) : plotted.length < 2 ? (
         <div
           className={`flex items-center justify-center rounded-lg border border-dashed border-card-border text-center text-muted ${
-            compact ? "mt-3 h-24 px-4 text-xs" : "mt-4 h-40 px-6 text-sm"
+            compact ? "mt-3 h-24 px-4 text-body-sm" : "mt-4 h-40 px-6 text-body"
           }`}
         >
           {t("empty")}
@@ -439,7 +439,7 @@ function MacroChart({
       </svg>
 
       {/* The plot has no value axis, so its range is printed under it. */}
-      <div className="flex justify-between px-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+      <div className="flex justify-between px-1 pt-1 text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
         <span>
           {t("span", {
             from: entries[0].point.turn,
@@ -455,7 +455,7 @@ function MacroChart({
       </div>
 
       {hoveredEntry && (
-        <div className="pointer-events-none absolute right-2 top-1 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs shadow-card">
+        <div className="pointer-events-none absolute right-2 top-1 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-body-sm shadow-card">
           <span className="text-muted">
             {t("turn", { turn: hoveredEntry.point.turn })}
             {hoveredEntry.point.year !== null ? ` · ${hoveredEntry.point.year}` : ""} ·{" "}

@@ -52,8 +52,8 @@ export default function SupplyPriorityPanel({
     <div className="mb-6 rounded-xl border border-border bg-surface p-4">
       <label className="flex items-start justify-between gap-3">
         <span>
-          <span className="block text-sm font-semibold text-foreground">{t("label")}</span>
-          <span className="mt-0.5 block text-xs text-muted">{t("help")}</span>
+          <span className="block text-body font-semibold text-foreground">{t("label")}</span>
+          <span className="mt-0.5 block text-body-sm text-muted">{t("help")}</span>
         </span>
         <input
           type="checkbox"
@@ -65,7 +65,7 @@ export default function SupplyPriorityPanel({
         />
       </label>
       {error && (
-        <p role="alert" className="mt-2 text-xs text-red-500">
+        <p role="alert" className="mt-2 text-body-sm text-red-500">
           {error}
         </p>
       )}

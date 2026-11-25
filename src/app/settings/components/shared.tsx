@@ -210,7 +210,7 @@ export function MessageBanner({
   const t = useTranslations("settings");
   return (
     <div
-      className={`flex items-center justify-between gap-3 rounded-xl p-4 text-sm ${
+      className={`flex items-center justify-between gap-3 rounded-xl p-4 text-body ${
         ok
           ? "bg-success/15 text-success border border-success/30"
           : "bg-error/15 text-error border border-error/30"

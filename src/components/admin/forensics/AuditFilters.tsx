@@ -11,7 +11,7 @@ import { type AuditFilterState, CATEGORY_OPTIONS } from "./types";
 import { fetchAdminDirectoryUsers } from "../userDirectory";
 
 const INPUT_CLS =
-  "h-10 rounded-lg border border-card-border bg-background px-3 text-sm transition-colors placeholder:text-muted/70 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none";
+  "h-10 rounded-lg border border-card-border bg-background px-3 text-body transition-colors placeholder:text-muted/70 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none";
 
 interface UserOption {
   id: string;
@@ -158,9 +158,9 @@ function ActorSearch({
       {open && query.trim() && (
         <div className="absolute z-30 mt-1.5 w-72 overflow-hidden rounded-lg border border-card-border bg-card shadow-panel">
           {loading && !users ? (
-            <div className="px-3 py-2.5 text-xs text-muted">Loading players…</div>
+            <div className="px-3 py-2.5 text-body-sm text-muted">Loading players…</div>
           ) : matches.length === 0 ? (
-            <div className="px-3 py-2.5 text-xs text-muted">No matching players.</div>
+            <div className="px-3 py-2.5 text-body-sm text-muted">No matching players.</div>
           ) : (
             <ul className="max-h-64 overflow-y-auto py-1">
               {matches.map((u) => (
@@ -170,9 +170,9 @@ function ActorSearch({
                     onClick={() => pick(u)}
                     className="flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-card-elevated motion-reduce:transition-none"
                   >
-                    <span className="text-sm font-medium">{u.username}</span>
+                    <span className="text-body font-medium">{u.username}</span>
                     {u.characterName && (
-                      <span className="text-xs text-muted">{u.characterName}</span>
+                      <span className="text-body-sm text-muted">{u.characterName}</span>
                     )}
                   </button>
                 </li>
@@ -267,7 +267,7 @@ export function AuditFilters({
           type="button"
           onClick={() => set({ flaggedOnly: !filters.flaggedOnly })}
           aria-pressed={filters.flaggedOnly}
-          className={`h-10 rounded-lg border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none ${
+          className={`h-10 rounded-lg border px-4 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none ${
             filters.flaggedOnly
               ? "border-red-400/40 bg-red-500/15 text-red-400"
               : "border-card-border text-muted hover:border-muted/50 hover:text-foreground"
@@ -280,7 +280,7 @@ export function AuditFilters({
           type="button"
           onClick={() => setShowMore((v) => !v)}
           aria-expanded={showMore}
-          className="h-10 rounded-lg border border-card-border px-3 text-sm text-muted transition-colors hover:border-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+          className="h-10 rounded-lg border border-card-border px-3 text-body text-muted transition-colors hover:border-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
         >
           {showMore ? "Fewer filters" : "More filters"}
         </button>
@@ -289,7 +289,7 @@ export function AuditFilters({
       {/* Advanced row */}
       {showMore && (
         <div className="flex flex-wrap items-end gap-3 rounded-xl border border-card-border bg-card/60 p-4">
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             Subject type
             <input
               type="text"
@@ -299,7 +299,7 @@ export function AuditFilters({
               className={`${INPUT_CLS} w-40`}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             Subject id
             <input
               type="text"
@@ -308,7 +308,7 @@ export function AuditFilters({
               className={`${INPUT_CLS} w-44`}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             Action verb
             <input
               type="text"
@@ -318,7 +318,7 @@ export function AuditFilters({
               className={`${INPUT_CLS} w-44`}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             Flag
             <select
               value={filters.flag}
@@ -333,7 +333,7 @@ export function AuditFilters({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             Turn from
             <input
               type="number"
@@ -342,7 +342,7 @@ export function AuditFilters({
               className={`${INPUT_CLS} w-24`}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             Turn to
             <input
               type="number"
@@ -351,7 +351,7 @@ export function AuditFilters({
               className={`${INPUT_CLS} w-24`}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             From date
             <input
               type="date"
@@ -360,7 +360,7 @@ export function AuditFilters({
               className={INPUT_CLS}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1.5 text-body-sm font-medium text-muted">
             To date
             <input
               type="date"
@@ -381,7 +381,7 @@ export function AuditFilters({
               type="button"
               onClick={() => clearChip(c.key)}
               title="Remove this filter"
-              className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-card px-2.5 py-1 text-xs text-foreground/80 transition-colors hover:border-red-400/40 hover:text-red-400 motion-reduce:transition-none"
+              className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-card px-2.5 py-1 text-body-sm text-foreground/80 transition-colors hover:border-red-400/40 hover:text-red-400 motion-reduce:transition-none"
             >
               {c.label}
               <span aria-hidden className="text-muted">
@@ -392,7 +392,7 @@ export function AuditFilters({
           <button
             type="button"
             onClick={onReset}
-            className="ml-1 rounded text-xs text-muted underline underline-offset-2 transition-colors hover:text-foreground motion-reduce:transition-none"
+            className="ml-1 rounded text-body-sm text-muted underline underline-offset-2 transition-colors hover:text-foreground motion-reduce:transition-none"
           >
             Clear all
           </button>

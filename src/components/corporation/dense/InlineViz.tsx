@@ -139,7 +139,7 @@ export function Delta({
   return (
     <span className={TEXT_TONE[tone]}>
       {glyph && (
-        <span aria-hidden className="mr-0.5 text-[9px]">
+        <span aria-hidden className="mr-0.5 text-body-sm">
           {glyph}
         </span>
       )}

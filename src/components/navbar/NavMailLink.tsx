@@ -27,7 +27,7 @@ export function NavMailLink({ className }: { className: string }) {
       {count > 0 && (
         <span
           aria-hidden="true"
-          className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground"
+          className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-body-sm font-bold leading-4 text-primary-foreground"
         >
           {count > 9 ? "9+" : count}
         </span>

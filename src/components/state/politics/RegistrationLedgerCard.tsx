@@ -12,10 +12,10 @@ export function RegistrationLedgerCard({ regLedger }: { regLedger: StateRegLedge
   if (!regLedger.seeded || !regLedger.headline) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-5 opacity-90">
-        <h3 className="text-body text-muted">Registration ledger</h3>
+        <h3 className="text-body-lg text-muted">Registration ledger</h3>
         <div className="mt-3 flex items-center gap-3">
-          <div className="text-2xl font-bold tabular-nums opacity-50">—</div>
-          <p className="text-xs leading-snug">
+          <div className="text-heading font-bold tabular-nums opacity-50">—</div>
+          <p className="text-body-sm leading-snug">
             Registration data is not yet seeded for this state.
           </p>
         </div>
@@ -26,7 +26,7 @@ export function RegistrationLedgerCard({ regLedger }: { regLedger: StateRegLedge
   const { headline, movement } = regLedger;
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="text-body text-muted">Registration ledger</h3>
+      <h3 className="text-body-lg text-muted">Registration ledger</h3>
       <div className="mt-3 flex items-center gap-2">
         <span
           className="inline-flex items-center gap-1.5 text-body font-semibold"
@@ -39,7 +39,7 @@ export function RegistrationLedgerCard({ regLedger }: { regLedger: StateRegLedge
           />
           {headline.abbr}
         </span>
-        <span className="text-heading-lg font-semibold tabular-nums">
+        <span className="text-heading font-semibold tabular-nums">
           {headline.regPct.toFixed(1)}%
         </span>
         <span className="text-body-sm text-muted">registration</span>

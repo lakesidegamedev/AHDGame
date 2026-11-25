@@ -21,7 +21,7 @@ export function CommonsCarveUpPanel({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted leading-snug px-0.5">
+      <p className="text-body-sm text-muted leading-snug px-0.5">
         Commons carve-up for {regionName}: how candidates split the regional electorate by
         demographic affinity — not a US primary wave map.
       </p>

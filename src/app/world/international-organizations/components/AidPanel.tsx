@@ -90,8 +90,8 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Aid packages</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Aid packages</h3>
+          <p className="text-body-sm text-muted">
             A member funds a transfer to another member. Passes by a majority of the members that
             hold a vote.
           </p>
@@ -109,20 +109,20 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
 
       {showForm && proposerIsMember && proposer && canTable && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Table an aid package</h4>
-          <p className="mt-1 text-xs text-muted">
+          <h4 className="text-body font-semibold text-foreground">Table an aid package</h4>
+          <p className="mt-1 text-body-sm text-muted">
             Funded from the organization&apos;s pooled treasury.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted" htmlFor="aid-recipient">
+              <label className="text-body-sm font-medium text-muted" htmlFor="aid-recipient">
                 Recipient
               </label>
               <select
                 id="aid-recipient"
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value as CountryId)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="">Select…</option>
                 {/* Aid lands in a treasury, so a macro-tier member has nowhere
@@ -138,7 +138,7 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted" htmlFor="aid-amount">
+              <label className="text-body-sm font-medium text-muted" htmlFor="aid-amount">
                 Amount ({org.fund.currencyCode})
               </label>
               <input
@@ -148,11 +148,11 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="1000000"
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </div>
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Submit for a vote
@@ -174,12 +174,12 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
               className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-success/30 bg-success/5 p-5"
             >
               <div>
-                <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                <p className="mt-1 text-xs text-muted">
+                <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                <p className="mt-1 text-body-sm text-muted">
                   {name(l.aidRecipientCountryId)} · {fundAmt(l.aidAmount)}
                 </p>
               </div>
-              <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+              <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-body-sm font-medium text-success">
                 Disbursed
               </span>
             </div>
@@ -192,7 +192,7 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
         <h4 className="text-body-sm font-medium text-muted">Awaiting a vote</h4>
         {pending.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No pending aid packages.</p>
+            <p className="text-body text-muted">No pending aid packages.</p>
           </div>
         ) : (
           pending.map((l) => {
@@ -209,11 +209,11 @@ export function AidPanel({ org, viewer, currentTurn, votingWindowTurns, onChange
                 onVote={vote}
                 progressClassName="bg-success"
               >
-                <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                <p className="mt-0.5 text-xs text-muted">
+                <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                <p className="mt-0.5 text-body-sm text-muted">
                   {name(l.aidRecipientCountryId)} · {fundAmt(l.aidAmount)}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="mt-0.5 text-body-sm text-muted">
                   Tabled by {l.proposedByCharacterName} · closes in {turnsLeft} turn
                   {turnsLeft === 1 ? "" : "s"}
                 </p>

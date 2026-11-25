@@ -15,7 +15,7 @@ export function GroupSupplyForecast({
   const t = useTranslations("corporations.group"),
     { formatAmount } = useCurrency();
   const forecast = data.forecast;
-  if (!forecast) return <p className="text-sm text-muted">{t("forecastPending")}</p>;
+  if (!forecast) return <p className="text-body text-muted">{t("forecastPending")}</p>;
   const coordinated = policy === "members";
   const policyName = t("policies." + policy);
   const rows = forecast.corporations.map((r) => ({
@@ -69,41 +69,41 @@ export function GroupSupplyForecast({
         <h3 className="font-semibold">{t("estimates")}</h3>
         <button
           type="button"
-          className="rounded-lg border border-card-border px-3 py-2 text-sm disabled:opacity-50 hover:bg-card-elevated"
+          className="rounded-lg border border-card-border px-3 py-2 text-body disabled:opacity-50 hover:bg-card-elevated"
           disabled={!rows.length}
           onClick={exportEstimates}
         >
           {t("supplyUI.export")}
         </button>
       </div>
-      <p className="text-xs text-muted">{t("supplyUI.counterfactual")}</p>
+      <p className="text-body-sm text-muted">{t("supplyUI.counterfactual")}</p>
       {summary && (
         <div className="grid gap-4 rounded-lg bg-background p-4 sm:grid-cols-3">
           <div>
-            <p className="text-xs text-muted">{t("supplyUI.sales")}</p>
-            <strong className="mt-2 block text-xl">
+            <p className="text-body-sm text-muted">{t("supplyUI.sales")}</p>
+            <strong className="mt-2 block text-heading">
               {formatAmount(coordinated ? summary.coordinatedRevenue : summary.independentRevenue)}
             </strong>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               {signed(coordinated ? summary.revenueDifference : 0)} {t("supplyUI.vsIndependence")}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted">{t("supplyUI.profit")}</p>
+            <p className="text-body-sm text-muted">{t("supplyUI.profit")}</p>
             <strong
               className={
                 (coordinated && summary.operatingProfitDifference < 0
                   ? "text-error"
-                  : "text-foreground") + " mt-2 block text-xl"
+                  : "text-foreground") + " mt-2 block text-heading"
               }
             >
               {signed(coordinated ? summary.operatingProfitDifference : 0)}
             </strong>
-            <p className="mt-1 text-xs text-muted">{t("supplyUI.vsIndependence")}</p>
+            <p className="mt-1 text-body-sm text-muted">{t("supplyUI.vsIndependence")}</p>
           </div>
           <div>
-            <p className="text-xs text-muted">{t("supplyUI.internal")}</p>
-            <strong className="mt-2 block text-xl">
+            <p className="text-body-sm text-muted">{t("supplyUI.internal")}</p>
+            <strong className="mt-2 block text-heading">
               {formatAmount(
                 coordinated
                   ? "internalTradingValue" in summary
@@ -112,21 +112,21 @@ export function GroupSupplyForecast({
                   : 0
               )}
             </strong>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               {forecast.total ? t("groupTotal") : t("supplyUI.privateSummary")}
             </p>
           </div>
         </div>
       )}
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {t("forecastBasis", { turn: forecast.basisTurn, effective: forecast.appliesTurn })}
       </p>
 
       <h4 className="font-semibold">{t("selectedEstimate", { policy: policyName })}</h4>
-      <p className="text-xs text-muted">{t("selectedEstimateNote")}</p>
+      <p className="text-body-sm text-muted">{t("selectedEstimateNote")}</p>
       <div className="overflow-x-auto">
         <table
-          className="w-full text-sm"
+          className="w-full text-body"
           aria-label={t("selectedEstimate", { policy: policyName })}
         >
           <thead>
@@ -167,9 +167,9 @@ export function GroupSupplyForecast({
         </table>
       </div>
       <details className="space-y-3">
-        <summary className="cursor-pointer text-sm underline">{t("comparePolicies")}</summary>
+        <summary className="cursor-pointer text-body underline">{t("comparePolicies")}</summary>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" aria-label={t("comparePolicies")}>
+          <table className="w-full text-body" aria-label={t("comparePolicies")}>
             <thead>
               <tr>
                 {[
@@ -213,8 +213,8 @@ export function GroupSupplyForecast({
           </table>
         </div>
       </details>
-      <p className="text-xs text-muted">{t("combinedForecastNote")}</p>
-      <p className="text-xs text-muted">{t("supplyUI.exportNote")}</p>
+      <p className="text-body-sm text-muted">{t("combinedForecastNote")}</p>
+      <p className="text-body-sm text-muted">{t("supplyUI.exportNote")}</p>
     </section>
   );
 }

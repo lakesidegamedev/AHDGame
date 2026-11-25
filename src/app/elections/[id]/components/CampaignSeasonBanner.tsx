@@ -30,7 +30,7 @@ export function CampaignSeasonBanner({
   return (
     <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
       <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-warning" />
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         <span className="font-semibold text-warning">Campaign season is open.</span> {turnsLeft}{" "}
         turn
         {turnsLeft === 1 ? "" : "s"} left. Campaign passive effects are doubled, and the closing

@@ -63,26 +63,26 @@ function TraceNode({
         }`}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-card-muted px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-muted">
+          <span className="rounded-md bg-card-muted px-1.5 py-0.5 font-mono text-body-sm tabular-nums text-muted">
             #{record.seq ?? "—"}
           </span>
           <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cat.badge}`}
+            className={`rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${cat.badge}`}
           >
             {cat.label}
           </span>
-          <span className="font-mono text-xs">{record.action}</span>
+          <span className="font-mono text-body-sm">{record.action}</span>
           <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${OUTCOME_META[record.outcome].badge}`}
+            className={`rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${OUTCOME_META[record.outcome].badge}`}
           >
             {OUTCOME_META[record.outcome].label}
           </span>
-          <span className="ml-auto text-[11px] tabular-nums text-muted">
+          <span className="ml-auto text-body-sm tabular-nums text-muted">
             {formatTimestamp(record.ts)}
           </span>
         </div>
-        <p className="mt-1.5 text-sm">{summarizeRecord(record)}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+        <p className="mt-1.5 text-body">{summarizeRecord(record)}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-body-sm text-muted">
           <span>{humanizeAction(record.action)}</span>
           {record.subject && <span>· {describeParty(record.subject)}</span>}
           {isFiniteNumber(record.amount) && (
@@ -140,7 +140,7 @@ export function TraceTimeline({
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+          className="flex items-center gap-1.5 rounded-md text-body text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
         >
           <svg
             className="h-4 w-4"
@@ -159,25 +159,25 @@ export function TraceTimeline({
           Back to results
         </button>
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold tracking-tight">Trace timeline</h2>
+          <h2 className="text-heading font-semibold tracking-tight">Trace timeline</h2>
           <p
-            className="mt-0.5 max-w-full truncate rounded-md border border-card-border/60 bg-card-muted px-1.5 py-0.5 font-mono text-[11px] text-muted"
+            className="mt-0.5 max-w-full truncate rounded-md border border-card-border/60 bg-card-muted px-1.5 py-0.5 font-mono text-body-sm text-muted"
             title={traceId}
           >
             {traceId}
           </p>
         </div>
         {!loading && rows.length > 0 && (
-          <span className="ml-auto rounded-md border border-card-border/70 bg-card-elevated/60 px-2 py-1 text-xs tabular-nums text-muted">
+          <span className="ml-auto rounded-md border border-card-border/70 bg-card-elevated/60 px-2 py-1 text-body-sm tabular-nums text-muted">
             {rows.length} step{rows.length === 1 ? "" : "s"} · turn {rows[0].turn}
           </span>
         )}
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-body text-red-400">
           <p>{error}</p>
-          <button onClick={load} className="mt-1 text-xs underline hover:text-red-300">
+          <button onClick={load} className="mt-1 text-body-sm underline hover:text-red-300">
             Retry
           </button>
         </div>
@@ -193,7 +193,7 @@ export function TraceTimeline({
           ))}
         </div>
       ) : rows.length === 0 && !error ? (
-        <div className="rounded-xl border border-card-border bg-card px-4 py-10 text-center text-sm text-muted shadow-card">
+        <div className="rounded-xl border border-card-border bg-card px-4 py-10 text-center text-body text-muted shadow-card">
           No records found for this trace. It may have expired out of the audit window.
         </div>
       ) : (

@@ -14,7 +14,7 @@ export function ContractOpportunityBanner({
 }) {
   const t = useTranslations("corporations.governmentContracts");
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body">
       <span className="text-muted">{t("corporationOpportunities")}</span>
       <Link
         className="font-semibold text-primary"

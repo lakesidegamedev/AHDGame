@@ -19,8 +19,10 @@ export function RateCards({ m }: { m: MonetaryView }) {
             : "Set by the Central Bank"
         }
       >
-        <div className="text-2xl font-bold tabular-nums text-foreground">{pct(m.primeRate)}</div>
-        <p className="mt-1 text-[12px] text-muted">
+        <div className="text-heading font-bold tabular-nums text-foreground">
+          {pct(m.primeRate)}
+        </div>
+        <p className="mt-1 text-body-sm text-muted">
           Read-only — this seat cannot set the prime rate.
         </p>
       </MonetaryCard>
@@ -38,7 +40,7 @@ export function RateCards({ m }: { m: MonetaryView }) {
           />
           <Stat label="Effective" value={pct(sovereignPct)} />
         </div>
-        <p className="mt-2 text-[12px] text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           {belowBaseline
             ? `Confidence ${m.investorConfidence?.toFixed(0)} / ${m.confidenceBaseline} — a Debt Management Operation can lower the premium.`
             : "Premium already 0 — an operation would not lower your rate."}

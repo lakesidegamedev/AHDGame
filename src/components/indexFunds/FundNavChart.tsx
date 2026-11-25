@@ -94,7 +94,7 @@ export function FundNavChart({ history }: { history: Point[] }) {
 
   if (history.length < 2) {
     return (
-      <div className="flex h-32 items-center justify-center text-sm text-muted">
+      <div className="flex h-32 items-center justify-center text-body text-muted">
         Not enough NAV history yet — check back after the next turn.
       </div>
     );
@@ -109,8 +109,11 @@ export function FundNavChart({ history }: { history: Point[] }) {
     <div>
       <div className="flex items-center justify-between gap-3 px-5 pt-5">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-sm font-semibold">Net asset value</h2>
-          <span className="font-mono tabular-nums text-xs font-semibold" style={{ color: stroke }}>
+          <h2 className="text-body font-semibold">Net asset value</h2>
+          <span
+            className="font-mono tabular-nums text-body-sm font-semibold"
+            style={{ color: stroke }}
+          >
             {(changePct >= 0 ? "+" : "") + changePct.toFixed(2)}% · {range}
           </span>
         </div>
@@ -123,7 +126,7 @@ export function FundNavChart({ history }: { history: Point[] }) {
                 setRange(r);
                 setHoverIdx(null);
               }}
-              className={`rounded-md border px-2.5 py-1 font-mono text-[10px] font-bold transition-all ${
+              className={`rounded-md border px-2.5 py-1 font-mono text-body-sm font-bold transition-all ${
                 range === r
                   ? "border-primary/45 bg-primary/14 text-primary"
                   : "border-transparent text-muted hover:text-foreground"
@@ -215,10 +218,10 @@ export function FundNavChart({ history }: { history: Point[] }) {
                 className="pointer-events-none absolute top-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-card-border bg-card-elevated px-2.5 py-1.5 shadow-panel"
                 style={{ left: `${points[hoverIdx].x}%` }}
               >
-                <div className="font-mono tabular-nums text-[13px] font-bold">
+                <div className="font-mono tabular-nums text-body-sm font-bold">
                   {fmt(points[hoverIdx].display.value)}
                 </div>
-                <div className="mt-0.5 text-[10px] text-muted">
+                <div className="mt-0.5 text-body-sm text-muted">
                   Turn {points[hoverIdx].p.turn.toLocaleString("en-US")}
                 </div>
               </div>
@@ -227,19 +230,19 @@ export function FundNavChart({ history }: { history: Point[] }) {
         </div>
 
         <div className="ml-3 flex h-[250px] flex-shrink-0 flex-col justify-between py-0 text-right">
-          <span className="font-mono tabular-nums text-[10px] text-muted">{fmt(maxVal)}</span>
-          <span className="font-mono tabular-nums text-[10px] text-muted">
+          <span className="font-mono tabular-nums text-body-sm text-muted">{fmt(maxVal)}</span>
+          <span className="font-mono tabular-nums text-body-sm text-muted">
             {fmt((maxVal + minVal) / 2)}
           </span>
-          <span className="font-mono tabular-nums text-[10px] text-muted">{fmt(minVal)}</span>
+          <span className="font-mono tabular-nums text-body-sm text-muted">{fmt(minVal)}</span>
         </div>
       </div>
 
       <div className="flex justify-between px-5 pb-3.5 pt-2">
-        <span className="font-mono text-[10px] text-muted">
+        <span className="font-mono text-body-sm text-muted">
           {firstTurn != null ? `Turn ${firstTurn.toLocaleString("en-US")}` : ""}
         </span>
-        <span className="font-mono text-[10px] text-muted">
+        <span className="font-mono text-body-sm text-muted">
           {lastTurn != null ? `Turn ${lastTurn.toLocaleString("en-US")} · now` : ""}
         </span>
       </div>

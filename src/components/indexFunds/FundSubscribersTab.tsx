@@ -84,7 +84,7 @@ export default function FundSubscribersTab({
   return (
     <div className="space-y-6">
       {queuedRedemptions.length > 0 && (
-        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-body text-warning">
           {queuedRedemptions.length} queued redemption
           {queuedRedemptions.length === 1 ? "" : "s"} awaiting fund cash (
           {formatAmount(
@@ -167,11 +167,11 @@ function HolderTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       <div className="bg-card-elevated px-4 py-3 border-b border-card-border">
-        <h3 className="text-sm font-semibold">{title}</h3>
+        <h3 className="text-body-lg font-semibold">{title}</h3>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-sm font-semibold text-foreground border-b border-card-border">
+        <table className="w-full text-left text-body">
+          <thead className="text-body font-semibold text-foreground border-b border-card-border">
             <tr>
               <th className="px-4 py-2">Holder</th>
               <th className="px-4 py-2 text-right">Units</th>
@@ -185,9 +185,13 @@ function HolderTable({
                 <tr key={`${row.holderKind}-${row.holderId}`}>
                   <td className="px-4 py-2.5">
                     <span className="font-medium">{row.displayName}</span>
-                    {row.party && <span className="ml-2 text-xs text-muted">({row.party})</span>}
+                    {row.party && (
+                      <span className="ml-2 text-body-sm text-muted">({row.party})</span>
+                    )}
                     {row.countryId && (
-                      <span className="ml-1 text-[10px] text-muted uppercase">{row.countryId}</span>
+                      <span className="ml-1 text-body-sm text-muted uppercase">
+                        {row.countryId}
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums">

@@ -71,8 +71,8 @@ export function WikiReportsPanel() {
   return (
     <section className="space-y-4" aria-label="Wiki reports">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-foreground">Wiki reports ({openCount} open)</h2>
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <h2 className="text-heading font-bold text-foreground">Wiki reports ({openCount} open)</h2>
+        <label className="flex items-center gap-2 text-body text-muted">
           <input
             type="checkbox"
             checked={showResolved}
@@ -83,9 +83,9 @@ export function WikiReportsPanel() {
       </div>
 
       {loading && <p className="text-muted">Loading reports...</p>}
-      {failed && <p className="text-sm text-error">Could not load reports.</p>}
+      {failed && <p className="text-body text-error">Could not load reports.</p>}
       {!loading && !failed && groups.length === 0 && (
-        <p className="text-sm text-muted">No reports to show.</p>
+        <p className="text-body text-muted">No reports to show.</p>
       )}
 
       {groups.map(([slug, rows]) => (
@@ -94,17 +94,17 @@ export function WikiReportsPanel() {
             <a href={`/wiki/${slug}`} className="font-medium text-primary hover:underline">
               {slug}
             </a>
-            <span className="text-xs text-muted">{rows.length} report(s)</span>
+            <span className="text-body-sm text-muted">{rows.length} report(s)</span>
           </div>
           <ul className="divide-y divide-card-border">
             {rows.map((r) => (
-              <li key={r.id} className="space-y-1 px-4 py-3 text-sm">
+              <li key={r.id} className="space-y-1 px-4 py-3 text-body">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     {REASON_LABELS[r.reason] ?? r.reason} •{" "}
                     <LocalTime value={r.createdAt} options={{ dateStyle: "medium" }} />
                   </span>
-                  <label className="flex items-center gap-2 text-xs text-muted">
+                  <label className="flex items-center gap-2 text-body-sm text-muted">
                     <input type="checkbox" checked={r.resolved} onChange={() => toggle(r)} />
                     Resolved
                   </label>

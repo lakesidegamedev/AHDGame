@@ -260,7 +260,7 @@ function AdvertisingAgreementsContent({
   const list = (
     <TableScroll>
       <table
-        className="w-full text-sm"
+        className="w-full text-body"
         aria-label={
           supplierSide ? "Advertising deals with your media sectors" : "Advertising agreements"
         }
@@ -288,7 +288,7 @@ function AdvertisingAgreementsContent({
                   <span className="font-medium">
                     {agreement.counterparty?.name ?? "Unnamed corporation"}
                   </span>
-                  <span className="block text-xs text-muted">
+                  <span className="block text-body-sm text-muted">
                     {earns ? "Buys from you" : "You buy from them"}
                   </span>
                 </Td>
@@ -355,12 +355,12 @@ function AdvertisingAgreementsContent({
       mediaSectorModelCounts !== null && mediaSectorModelCounts.withoutModel > 0;
     return (
       <DenseSection title="Coverage advertising" meta="deals from buyers">
-        <p className="py-1 text-sm text-muted">
+        <p className="py-1 text-body text-muted">
           Other corporations can direct part of their marketing budget to your media sectors.
           Proposals appear here. Accept one and it pays you advertising revenue each turn.
         </p>
         {hasMediaSectorsWithoutModels && (
-          <p className="py-1 text-sm text-muted">
+          <p className="py-1 text-body text-muted">
             Media sectors using the default count as newspapers for advertising. Unsupported or
             unavailable selections add no model reach; choose an available model to change the
             reach.
@@ -368,7 +368,7 @@ function AdvertisingAgreementsContent({
         )}
         {status}
         {agreements.length === 0 ? (
-          <p className="py-1 text-sm text-muted">
+          <p className="py-1 text-body text-muted">
             No deals yet. Buyers propose them from their own Operations tab.
           </p>
         ) : (
@@ -394,19 +394,19 @@ function AdvertisingAgreementsContent({
   const noSuppliers = !!suppliers && suppliers.suppliers.length === 0;
   const form = (
     <>
-      <p className="py-1 text-sm text-muted">
+      <p className="py-1 text-body text-muted">
         Direct part of your existing marketing budget to a media corporation. This is not a second
         expense. Coverage they deliver makes your advertising work better.
       </p>
       {status}
       <form className="grid gap-3 py-2 sm:grid-cols-3" onSubmit={(event) => void propose(event)}>
         <div className="sm:col-span-3">
-          <label htmlFor="ad-supplier" className="mb-1 block text-xs text-muted">
+          <label htmlFor="ad-supplier" className="mb-1 block text-body-sm text-muted">
             Media corporation
           </label>
           <select
             id="ad-supplier"
-            className="block h-9 w-full rounded-md border border-card-border bg-card px-2 text-sm"
+            className="block h-9 w-full rounded-md border border-card-border bg-card px-2 text-body"
             value={supplierId}
             onChange={(event) => setSupplierId(event.target.value)}
             disabled={!suppliers || noSuppliers}
@@ -421,13 +421,13 @@ function AdvertisingAgreementsContent({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Only media corporations with a human CEO and an eligible advertising model are listed.
             Media sectors using the default count as newspapers.
             {noSuppliers ? " None are available right now." : ""}
           </p>
           {selected && (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Runs {selected.models.join(", ")}.
               {selected.editorialStance
                 ? ` Editorial position: economic ${selected.editorialStance.economic}, social ${selected.editorialStance.social} (each from -5 to +5).`
@@ -436,7 +436,7 @@ function AdvertisingAgreementsContent({
           )}
         </div>
         <div>
-          <label htmlFor="ad-share" className="mb-1 block text-xs text-muted">
+          <label htmlFor="ad-share" className="mb-1 block text-body-sm text-muted">
             Share of your marketing budget (%)
           </label>
           <Input
@@ -445,12 +445,12 @@ function AdvertisingAgreementsContent({
             min="1"
             max="100"
             value={sharePct}
-            className="!h-9 !rounded-md !px-2 !py-1 !text-sm"
+            className="!h-9 !rounded-md !px-2 !py-1 !text-body"
             onChange={(event) => setSharePct(event.target.value)}
           />
         </div>
         <div>
-          <label htmlFor="ad-turns" className="mb-1 block text-xs text-muted">
+          <label htmlFor="ad-turns" className="mb-1 block text-body-sm text-muted">
             Length of agreement (turns)
           </label>
           <Input
@@ -459,10 +459,10 @@ function AdvertisingAgreementsContent({
             min="4"
             max="192"
             value={durationTurns}
-            className="!h-9 !rounded-md !px-2 !py-1 !text-sm"
+            className="!h-9 !rounded-md !px-2 !py-1 !text-body"
             onChange={(event) => setDurationTurns(event.target.value)}
           />
-          <p className="mt-1 text-xs text-muted">4 to 192 turns. 24 turns is one day.</p>
+          <p className="mt-1 text-body-sm text-muted">4 to 192 turns. 24 turns is one day.</p>
         </div>
         <div className="flex flex-col justify-end gap-1">
           <SmallButton
@@ -473,11 +473,11 @@ function AdvertisingAgreementsContent({
           >
             {busy ? "Sending" : "Propose agreement"}
           </SmallButton>
-          {blocker && <span className="text-xs text-muted">{blocker}</span>}
+          {blocker && <span className="text-body-sm text-muted">{blocker}</span>}
         </div>
       </form>
       {shareValid && turnsValid && suppliers && (
-        <p className="pb-2 text-sm" aria-label="Agreement preview">
+        <p className="pb-2 text-body" aria-label="Agreement preview">
           {share}% of your marketing budget is about {money(perTurn)} per turn, or{" "}
           {money(perTurn * turns)} over {turns} turns, directed to{" "}
           {selected?.name ?? "the media corporation you choose"}. It ends after {turns} turns, or
@@ -492,7 +492,7 @@ function AdvertisingAgreementsContent({
     return (
       <section className="min-w-0 border-b border-card-border pb-1.5">
         <details>
-          <summary className="cursor-pointer py-1.5 text-sm font-semibold text-foreground">
+          <summary className="cursor-pointer py-1.5 text-body font-semibold text-foreground">
             Buy coverage advertising from a media corporation
           </summary>
           <div className="pt-1">{form}</div>

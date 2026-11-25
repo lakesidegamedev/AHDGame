@@ -313,4 +313,4 @@ export function moneyEdgeKey(edge: MoneyGraphEdge): string {
 // ─── Shared panel chrome (identical to ClusterDetail's) ────────────────────
 
 export const PANEL_CLS = "rounded-xl border border-card-border bg-card p-4 shadow-card";
-export const OVERLINE_CLS = "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted";
+export const OVERLINE_CLS = "text-body-sm font-semibold uppercase tracking-[0.14em] text-muted";

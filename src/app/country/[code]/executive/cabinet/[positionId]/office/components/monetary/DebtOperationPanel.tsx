@@ -69,16 +69,16 @@ export function DebtOperationPanel({
       <ActingLockNote reason={actingLockReason} />
 
       {m.debtOp.active ? (
-        <p className="text-sm text-success">Active — concludes on turn {m.debtOp.expiresTurn}.</p>
+        <p className="text-body text-success">Active — concludes on turn {m.debtOp.expiresTurn}.</p>
       ) : inCooldown ? (
-        <p className="text-sm text-muted">On cooldown until turn {m.debtOp.cooldownUntilTurn}.</p>
+        <p className="text-body text-muted">On cooldown until turn {m.debtOp.cooldownUntilTurn}.</p>
       ) : atBaseline ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Confidence is at baseline — the premium is already 0, so an operation would have no
           effect.
         </p>
       ) : (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Launch to add accelerated confidence recovery each turn over the operation window.
         </p>
       )}
@@ -88,7 +88,7 @@ export function DebtOperationPanel({
         </Button>
         {feedback && (
           <span
-            className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+            className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
           >
             {feedback.message}
           </span>

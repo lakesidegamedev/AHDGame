@@ -111,7 +111,10 @@ export default async function NewsPostPermalinkPage({ params }: Props) {
       <article className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <BackButton fallbackHref="/news" fallbackLabel="News feed" />
-          <Link href="/news" className="text-xs text-muted hover:text-foreground transition-colors">
+          <Link
+            href="/news"
+            className="text-body-sm text-muted hover:text-foreground transition-colors"
+          >
             All news →
           </Link>
         </div>
@@ -125,9 +128,11 @@ export default async function NewsPostPermalinkPage({ params }: Props) {
                 : "Player post"}
           </p>
           {post.title && (
-            <h1 className="mt-1 text-xl font-semibold text-foreground sm:text-2xl">{post.title}</h1>
+            <h1 className="mt-1 text-heading font-semibold text-foreground sm:text-heading">
+              {post.title}
+            </h1>
           )}
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             <span className="font-medium text-foreground">{post.authorName}</span>
             <span className="mx-2">·</span>
             <time dateTime={post.createdAt.toISOString()}>{postedGameMonth}</time>
@@ -151,7 +156,7 @@ export default async function NewsPostPermalinkPage({ params }: Props) {
           </div>
         )}
 
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+        <p className="whitespace-pre-wrap text-body leading-relaxed text-foreground">
           {post.content}
         </p>
       </article>

@@ -95,7 +95,7 @@ export default function MetricDetailPage({
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-3 text-center">
           <p className="text-error">{error ?? "Metric not found"}</p>
-          <Link href={metricsHomeHref} className="text-sm text-primary hover:underline">
+          <Link href={metricsHomeHref} className="text-body text-primary hover:underline">
             ← Back to metrics
           </Link>
         </div>
@@ -110,7 +110,7 @@ export default function MetricDetailPage({
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-3 text-center">
           <p className="text-muted">Not tracked in this era.</p>
-          <Link href={metricsHomeHref} className="text-sm text-primary hover:underline">
+          <Link href={metricsHomeHref} className="text-body text-primary hover:underline">
             ← Back to metrics
           </Link>
         </div>
@@ -167,7 +167,7 @@ export default function MetricDetailPage({
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-10">
         {/* Breadcrumb */}
-        <nav className="flex flex-wrap items-center gap-2 text-sm text-muted">
+        <nav className="flex flex-wrap items-center gap-2 text-body text-muted">
           <Link href={rootHref} className="transition-colors hover:text-primary">
             {stateName}
           </Link>
@@ -190,16 +190,16 @@ export default function MetricDetailPage({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div
-                  className="text-[10px] font-bold uppercase tracking-[0.16em]"
+                  className="text-body-sm font-bold uppercase tracking-[0.16em]"
                   style={{ color: "color-mix(in srgb, var(--stat-soft) 80%, transparent)" }}
                 >
                   {CATEGORY_LABELS[category] ?? category} · {stateName} · {countryId}
                 </div>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                <h1 className="mt-1 text-heading font-bold tracking-tight text-white sm:text-display">
                   {def.name}
                 </h1>
                 {def.description && (
-                  <p className="mt-1 max-w-2xl text-[13px] text-white/70">{def.description}</p>
+                  <p className="mt-1 max-w-2xl text-body-sm text-white/70">{def.description}</p>
                 )}
               </div>
               {score !== null && badge && (
@@ -207,7 +207,7 @@ export default function MetricDetailPage({
                   <ScoreBadge
                     score={score}
                     label={badge.label}
-                    className="!px-2 !py-1 !text-[12px]"
+                    className="!px-2 !py-1 !text-body-sm"
                   />
                 </div>
               )}
@@ -218,17 +218,19 @@ export default function MetricDetailPage({
           <div className="grid grid-cols-1 divide-y divide-card-border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <div className="px-6 py-4">
               <p className="text-body-sm font-medium text-muted">Current value</p>
-              <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">{fmt(value)}</p>
+              <p className="mt-1 text-display font-bold tabular-nums text-foreground">
+                {fmt(value)}
+              </p>
             </div>
             {comparisonValue !== undefined && (
               <div className="px-6 py-4">
                 <p className="text-body-sm font-medium text-muted">{comparisonLabel}</p>
-                <p className="mt-1 text-3xl font-bold tabular-nums text-muted">
+                <p className="mt-1 text-display font-bold tabular-nums text-muted">
                   {fmt(comparisonValue)}
                 </p>
                 {comparisonPct !== undefined && (
                   <p
-                    className={`mt-1 text-xs font-medium ${
+                    className={`mt-1 text-body-sm font-medium ${
                       isPositiveComparison
                         ? "text-success"
                         : isPositiveComparison === false
@@ -247,22 +249,22 @@ export default function MetricDetailPage({
               {hasTickRate ? (
                 <>
                   <p
-                    className={`mt-1 text-3xl font-bold tabular-nums ${tickIsGood ? "text-success" : "text-error"}`}
+                    className={`mt-1 text-display font-bold tabular-nums ${tickIsGood ? "text-success" : "text-error"}`}
                   >
                     {tickRate! > 0 ? "+" : "−"}
                     {tickAbs.toFixed(tickDecimals)}
                     {def.formatSuffix ?? ""}/turn
                   </p>
                   <p
-                    className={`mt-1 text-xs font-medium ${tickIsGood ? "text-success/70" : "text-error/70"}`}
+                    className={`mt-1 text-body-sm font-medium ${tickIsGood ? "text-success/70" : "text-error/70"}`}
                   >
                     {tickIsGood ? "Improving" : "Worsening"}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="mt-1 text-3xl font-bold tabular-nums text-muted">Stable</p>
-                  <p className="mt-1 text-xs text-muted/60">No direct policy push</p>
+                  <p className="mt-1 text-display font-bold tabular-nums text-muted">Stable</p>
+                  <p className="mt-1 text-body-sm text-muted/60">No direct policy push</p>
                 </>
               )}
             </div>
@@ -272,10 +274,10 @@ export default function MetricDetailPage({
         {/* Chart */}
         <div className="rounded-2xl border border-card-border bg-card p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">
+            <h2 className="text-body font-semibold">
               {hasHistory ? "Historical + projected trend" : "48-Turn forward projection"}
             </h2>
-            <div className="flex items-center gap-3 text-xs text-muted">
+            <div className="flex items-center gap-3 text-body-sm text-muted">
               {hasHistory && <span>{history.length} turns of history</span>}
               {hasTickRate && (
                 <span>
@@ -297,7 +299,7 @@ export default function MetricDetailPage({
               decimals={def.decimals ?? 1}
             />
           </div>
-          <p className="mt-2 text-center text-[10px] text-muted/50">
+          <p className="mt-2 text-center text-body-sm text-muted/50">
             {hasHistory
               ? "Blue = actual recorded values. Dashed = projection assuming current policies unchanged."
               : "No history recorded yet — chart shows forward projection only. History accumulates each game turn."}
@@ -307,7 +309,7 @@ export default function MetricDetailPage({
         {/* Trend analysis */}
         {hasTickRate && (
           <div className="space-y-4 rounded-2xl border border-card-border bg-card p-6">
-            <h2 className="text-sm font-semibold">Trend analysis</h2>
+            <h2 className="text-body font-semibold">Trend analysis</h2>
             <div className="grid grid-cols-2 gap-3">
               {[
                 {
@@ -332,11 +334,11 @@ export default function MetricDetailPage({
                   className="rounded-xl border border-card-border/30 bg-card-muted px-4 py-3"
                 >
                   <p className="mb-1 text-body-sm font-medium text-muted">{label}</p>
-                  <p className={`text-lg font-bold tabular-nums ${color}`}>{v}</p>
+                  <p className={`text-heading font-bold tabular-nums ${color}`}>{v}</p>
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-card-border/20 bg-card-muted px-4 py-3 text-xs leading-relaxed text-muted">
+            <div className="rounded-lg border border-card-border/20 bg-card-muted px-4 py-3 text-body-sm leading-relaxed text-muted">
               <p className="mb-1 font-medium text-foreground/70">How this works</p>
               <p>
                 Active legislation is directly pushing this metric by {tickRate! > 0 ? "+" : ""}
@@ -353,7 +355,7 @@ export default function MetricDetailPage({
         {/* Affecting Policies */}
         {affectingPolicies && affectingPolicies.length > 0 && (
           <div className="space-y-4 rounded-2xl border border-card-border bg-card p-6">
-            <h2 className="text-sm font-semibold">Policies influencing this metric</h2>
+            <h2 className="text-body font-semibold">Policies influencing this metric</h2>
             <ul className="space-y-2">
               {affectingPolicies.map((p, i) => {
                 const isGoodPush = def.isHigherBetter ? p.pushesMetricUp : !p.pushesMetricUp;
@@ -363,18 +365,18 @@ export default function MetricDetailPage({
                     className="flex items-start justify-between gap-3 rounded-xl border border-card-border/30 bg-card-muted px-4 py-3"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground">{p.name}</div>
+                      <div className="text-body font-medium text-foreground">{p.name}</div>
                       {p.policyOptionName && (
-                        <div className="mt-0.5 text-xs text-muted">
+                        <div className="mt-0.5 text-body-sm text-muted">
                           Stance: <span className="text-foreground/80">{p.policyOptionName}</span>
                         </div>
                       )}
-                      <div className="mt-0.5 text-[10px] capitalize text-muted/60">
+                      <div className="mt-0.5 text-body-sm capitalize text-muted/60">
                         {p.scope} policy
                       </div>
                     </div>
                     <span
-                      className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-body-sm font-semibold ${
                         isGoodPush ? "bg-success/15 text-success" : "bg-error/15 text-error"
                       }`}
                     >
@@ -385,7 +387,7 @@ export default function MetricDetailPage({
                 );
               })}
             </ul>
-            <p className="text-[10px] text-muted/50">
+            <p className="text-body-sm text-muted/50">
               Shows policies with a declared effect on this metric via the decay system. Direction
               reflects the policy&apos;s current stance.
             </p>
@@ -393,7 +395,7 @@ export default function MetricDetailPage({
         )}
 
         {/* Back */}
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-4 text-body">
           <Link
             href={metricsHomeHref}
             className="flex items-center gap-1.5 text-muted transition-colors hover:text-primary"

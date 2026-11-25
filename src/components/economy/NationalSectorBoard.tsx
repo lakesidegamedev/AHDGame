@@ -37,11 +37,11 @@ export function NationalSectorBoard({
       {sorted.map((entry) => {
         const body = (
           <>
-            <div className="truncate text-xs font-semibold text-foreground">{entry.label}</div>
-            <div className="mt-1 font-mono text-[13px] font-bold tabular-nums text-foreground">
+            <div className="truncate text-body-sm font-semibold text-foreground">{entry.label}</div>
+            <div className="mt-1 font-mono text-body-sm font-bold tabular-nums text-foreground">
               {entry.totalMarketAnchor > 0 ? formatMarket(entry.totalMarketAnchor) : "—"}
             </div>
-            <div className="text-[9.5px] text-muted">market /day</div>
+            <div className="text-body-sm text-muted">market /day</div>
             <div
               className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-track"
               title={`Owned share ${Math.round(entry.ownedPercent)}%`}
@@ -51,7 +51,7 @@ export function NationalSectorBoard({
                 style={{ width: `${Math.max(0, Math.min(100, entry.ownedPercent))}%` }}
               />
             </div>
-            <div className="mt-1 flex items-center justify-between gap-1 text-[9.5px]">
+            <div className="mt-1 flex items-center justify-between gap-1 text-body-sm">
               <span className="truncate text-muted">
                 {entry.largestState ? `↳ ${entry.largestState.stateName}` : "no market"}
               </span>

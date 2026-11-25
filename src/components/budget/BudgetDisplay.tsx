@@ -103,7 +103,7 @@ function BarSegment({
   if (pctWidth < 0.5) return null;
   return (
     <div
-      className={`${color} h-full flex items-center justify-center overflow-hidden text-[10px] font-medium`}
+      className={`${color} h-full flex items-center justify-center overflow-hidden text-body-sm font-medium`}
       style={{ width: `${pctWidth}%` }}
       title={`${label}: ${formatValue(value)}`}
     >
@@ -176,7 +176,7 @@ export function BudgetDisplay({
   }
   if (error) {
     return (
-      <div className="text-sm text-error bg-error/10 rounded-lg px-4 py-3">Error: {error}</div>
+      <div className="text-body text-error bg-error/10 rounded-lg px-4 py-3">Error: {error}</div>
     );
   }
   if (!budget) return null;
@@ -311,13 +311,13 @@ export function BudgetDisplay({
       {/* Header */}
       {(title || turnsUntilFY > 0 || isSnapshot) && (
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          {title && <h2 className="text-lg font-semibold">{title}</h2>}
+          {title && <h2 className="text-heading font-semibold">{title}</h2>}
           {isSnapshot ? (
-            <span className="text-xs text-muted bg-card border border-card-border rounded px-2 py-1">
+            <span className="text-body-sm text-muted bg-card border border-card-border rounded px-2 py-1">
               FY{snapshotFiscalYear} — Historical snapshot
             </span>
           ) : turnsUntilFY > 0 ? (
-            <span className="text-xs text-muted bg-card border border-card-border rounded px-2 py-1">
+            <span className="text-body-sm text-muted bg-card border border-card-border rounded px-2 py-1">
               FY{budget.fiscalYear} — Next FY in {turnsUntilFY}t
             </span>
           ) : null}
@@ -363,11 +363,11 @@ export function BudgetDisplay({
           >
             <p className="text-body-sm font-medium text-muted">{card.label}</p>
             <p
-              className={`text-lg font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
+              className={`text-heading font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
             >
               {card.value}
             </p>
-            {card.sub && <p className="text-xs text-muted">{card.sub}</p>}
+            {card.sub && <p className="text-body-sm text-muted">{card.sub}</p>}
           </div>
         ))}
       </div>
@@ -378,7 +378,7 @@ export function BudgetDisplay({
 
       {/* Revenue breakdown bar */}
       <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
-        <p className="text-sm font-medium">Revenue breakdown</p>
+        <p className="text-body font-medium">Revenue breakdown</p>
         <div className="h-7 w-full flex rounded overflow-hidden">
           {revenueSegments.map((seg) => (
             <BarSegment
@@ -391,7 +391,7 @@ export function BudgetDisplay({
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-3 text-xs text-muted">
+        <div className="flex flex-wrap gap-3 text-body-sm text-muted">
           {revenueSegments
             .filter((s) => s.value > 0)
             .map((seg) => (
@@ -404,7 +404,7 @@ export function BudgetDisplay({
       </div>
 
       {(revenue.automationLevy ?? 0) > 0 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Automation levy: {f(revenue.automationLevy ?? 0)} a year, paid by automating companies
           straight into Treasury cash and not counted in the revenue total above.
         </p>
@@ -412,7 +412,7 @@ export function BudgetDisplay({
 
       {/* Spending breakdown bar */}
       <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
-        <p className="text-sm font-medium">Spending breakdown</p>
+        <p className="text-body font-medium">Spending breakdown</p>
         <div className="h-7 w-full flex rounded overflow-hidden">
           {spendingCategories.map(([cat, amount], i) => (
             <BarSegment
@@ -443,7 +443,7 @@ export function BudgetDisplay({
             />
           )}
         </div>
-        <div className="flex flex-wrap gap-3 text-xs text-muted">
+        <div className="flex flex-wrap gap-3 text-body-sm text-muted">
           {[
             ...spendingCategories.map(([cat, amount], i) => ({
               key: cat,
@@ -485,29 +485,29 @@ export function BudgetDisplay({
 
       {/* Debt & Credit panel */}
       <div className="rounded-xl border border-card-border bg-card p-4 space-y-4">
-        <p className="text-sm font-medium">Debt &amp; Credit</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <p className="text-body font-medium">Debt &amp; Credit</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-body">
           <div>
-            <p className="text-xs text-muted mb-0.5">Debt principal</p>
+            <p className="text-body-sm text-muted mb-0.5">Debt principal</p>
             <p className="font-semibold">{f(debt.principal)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Debt-to-GDP</p>
+            <p className="text-body-sm text-muted mb-0.5">Debt-to-GDP</p>
             <p className="font-semibold">{(debtToGdp * 100).toFixed(1)}%</p>
             {ratioGdp > 0 ? (
-              <p className="text-[11px] text-muted">of smoothed budget GDP {f(ratioGdp)}</p>
+              <p className="text-body-sm text-muted">of smoothed budget GDP {f(ratioGdp)}</p>
             ) : null}
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Credit rating</p>
+            <p className="text-body-sm text-muted mb-0.5">Credit rating</p>
             <span
-              className={`text-xs font-semibold px-2 py-0.5 rounded ${creditRatingColor(budget.creditRating)}`}
+              className={`text-body-sm font-semibold px-2 py-0.5 rounded ${creditRatingColor(budget.creditRating)}`}
             >
               {budget.creditRating}
             </span>
           </div>
           <div>
-            <p className="text-xs text-muted mb-0.5">Effective rate</p>
+            <p className="text-body-sm text-muted mb-0.5">Effective rate</p>
             <p className="font-semibold">{(debt.interestRate * 100).toFixed(2)}%</p>
           </div>
         </div>
@@ -526,7 +526,7 @@ export function BudgetDisplay({
               style={{ width: `${dgBarFill * 100}%` }}
             />
           </div>
-          <div className="relative flex text-[10px] text-muted" style={{ height: "1rem" }}>
+          <div className="relative flex text-body-sm text-muted" style={{ height: "1rem" }}>
             {DEBT_RATING_THRESHOLDS.map((t) => (
               <span
                 key={t.label}
@@ -537,7 +537,7 @@ export function BudgetDisplay({
               </span>
             ))}
           </div>
-          <p className="text-[10px] text-muted pt-2">D/G scale: 0–200%</p>
+          <p className="text-body-sm text-muted pt-2">D/G scale: 0–200%</p>
         </div>
       </div>
 
@@ -545,12 +545,12 @@ export function BudgetDisplay({
       {scope === "national" && (
         <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">Foreign debt ownership</p>
-            <span className="text-[10px] font-semibold bg-muted/20 text-muted px-1.5 py-0.5 rounded">
+            <p className="text-body font-medium">Foreign debt ownership</p>
+            <span className="text-body-sm font-semibold bg-muted/20 text-muted px-1.5 py-0.5 rounded">
               Planned
             </span>
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Breakdown of domestic vs. foreign holders of sovereign debt, including foreign reserve
             accumulation by trade partners. Coming in a future update.
           </p>
@@ -559,8 +559,8 @@ export function BudgetDisplay({
 
       {/* Economic Indicators */}
       <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
-        <p className="text-sm font-medium">Economic indicators</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+        <p className="text-body font-medium">Economic indicators</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-body">
           {[
             {
               label: "Inflation rate",
@@ -594,13 +594,13 @@ export function BudgetDisplay({
             },
           ].map((ind) => (
             <div key={ind.label}>
-              <p className="text-xs text-muted mb-0.5">{ind.label}</p>
+              <p className="text-body-sm text-muted mb-0.5">{ind.label}</p>
               <p
-                className={`font-semibold text-sm ${ind.highlight ? "text-error" : "text-foreground"}`}
+                className={`font-semibold text-body ${ind.highlight ? "text-error" : "text-foreground"}`}
               >
                 {ind.value}
               </p>
-              {ind.note && <p className="text-[10px] text-muted">{ind.note}</p>}
+              {ind.note && <p className="text-body-sm text-muted">{ind.note}</p>}
             </div>
           ))}
         </div>

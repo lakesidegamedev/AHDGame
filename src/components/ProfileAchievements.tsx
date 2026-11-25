@@ -56,15 +56,15 @@ function AchievementTile({ achievement }: { achievement: AchievementItem }) {
         <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 hidden w-48 max-w-[calc(100vw-2rem)] -translate-x-1/2 group-hover:block">
           <div className="rounded-md border border-card-border bg-card-elevated px-3 py-2.5 text-center shadow-lg">
             <p className="mb-0.5 text-body-sm font-semibold text-foreground">{achievement.name}</p>
-            <p className="text-body-xs leading-relaxed text-muted">{achievement.description}</p>
+            <p className="text-body-sm leading-relaxed text-muted">{achievement.description}</p>
             {!locked && (
-              <p className="mt-1.5 text-body-xs text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 {rarity.label}
                 {achievement.rarity > 0 && <span> · {achievement.rarity.toFixed(1)}%</span>}
               </p>
             )}
             {achievement.earnedAt && (
-              <p className="mt-0.5 text-body-xs text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 <LocalTime
                   value={achievement.earnedAt}
                   options={{ month: "short", day: "numeric", year: "numeric" }}
@@ -92,7 +92,7 @@ function AchievementTile({ achievement }: { achievement: AchievementItem }) {
 
       {/* Name */}
       <p
-        className={`line-clamp-2 w-full text-center text-body-xs font-medium leading-tight ${
+        className={`line-clamp-2 w-full text-center text-body-sm font-medium leading-tight ${
           locked ? "text-muted/60" : "text-foreground"
         }`}
       >
@@ -100,7 +100,7 @@ function AchievementTile({ achievement }: { achievement: AchievementItem }) {
       </p>
 
       {/* Rarity label, only for earned */}
-      {!locked && <p className="text-body-xs text-muted">{rarity.label}</p>}
+      {!locked && <p className="text-body-sm text-muted">{rarity.label}</p>}
     </div>
   );
 }
@@ -219,7 +219,7 @@ export function ProfileAchievements({
                 <div key={group.category}>
                   <div className="mb-2 flex items-baseline justify-between gap-2 border-b border-card-border/60 pb-1">
                     <span className="text-body-sm font-medium text-foreground">{group.label}</span>
-                    <span className="text-body-xs tabular-nums text-muted">
+                    <span className="text-body-sm tabular-nums text-muted">
                       {group.earnedCount}/{group.totalCount}
                     </span>
                   </div>
@@ -243,7 +243,7 @@ export function ProfileAchievements({
                 {earnedShown}/{totalAchievements}
               </span>
               {accountTotalEarned > earnedShown && (
-                <span className="text-body-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {t("scopeNote", { account: accountTotalEarned })}
                 </span>
               )}

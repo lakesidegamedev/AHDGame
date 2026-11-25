@@ -62,7 +62,7 @@ export function LabourAdminPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading labour settings…</span>
+          <span className="text-body text-muted">Loading labour settings…</span>
         </div>
       </div>
     );
@@ -73,8 +73,8 @@ export function LabourAdminPanel() {
       {/* ─── Labour system mode ─── */}
       {/* ─── Minimum wage (per country) ─── */}
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-        <h3 className="mb-1 text-sm font-semibold">Minimum wage</h3>
-        <p className="mb-4 text-xs leading-relaxed text-muted">
+        <h3 className="mb-1 text-body-lg font-semibold">Minimum wage</h3>
+        <p className="mb-4 text-body-sm leading-relaxed text-muted">
           Per-country Kaitz ratio (minimum wage ÷ median wage), 0–1. Floors low-pay sectors&apos;
           labor cost. 0 = no floor.
         </p>
@@ -84,7 +84,7 @@ export function LabourAdminPanel() {
             {Object.entries(ratios).map(([cid, r]) => (
               <span
                 key={cid}
-                className="rounded-md border border-card-border bg-background px-2.5 py-1 text-xs"
+                className="rounded-md border border-card-border bg-background px-2.5 py-1 text-body-sm"
               >
                 <span className="font-semibold">{cid}</span>: {Math.round(r * 100)}%
               </span>
@@ -93,16 +93,16 @@ export function LabourAdminPanel() {
         ) : null}
 
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs text-muted">
+          <label className="text-body-sm text-muted">
             Country
             <input
               type="text"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="mt-1 block w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-sm uppercase focus:border-primary/60 focus:outline-none"
+              className="mt-1 block w-20 rounded-lg border border-card-border bg-background px-3 py-2 text-body uppercase focus:border-primary/60 focus:outline-none"
             />
           </label>
-          <label className="text-xs text-muted">
+          <label className="text-body-sm text-muted">
             Kaitz ratio
             <input
               type="number"
@@ -111,21 +111,21 @@ export function LabourAdminPanel() {
               step={0.05}
               value={kaitz}
               onChange={(e) => setKaitz(Math.max(0, Math.min(1, Number(e.target.value))))}
-              className="mt-1 block w-24 rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+              className="mt-1 block w-24 rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
             />
           </label>
           <button
             type="button"
             onClick={() => void handleSetMinWage()}
             disabled={mwSaving || !country.trim()}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {mwSaving ? "Saving…" : "Set"}
           </button>
         </div>
         {mwMessage ? (
           <p
-            className="mt-3 text-xs"
+            className="mt-3 text-body-sm"
             role="status"
             style={{
               color: mwMessage.startsWith("Error") ? "var(--destructive)" : "var(--success)",

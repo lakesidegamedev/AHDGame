@@ -64,14 +64,14 @@ export function LiveResultsShell({
 
   const simBanner = simulating ? (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-warning/50 bg-warning/10 px-4 py-2.5">
-      <span className="inline-flex items-center gap-2 text-sm font-semibold text-warning">
+      <span className="inline-flex items-center gap-2 text-body font-semibold text-warning">
         <span className="h-2 w-2 rounded-full bg-warning" aria-hidden />
         SIMULATION — test data, not real results
       </span>
       <button
         type="button"
         onClick={onStopSimulation}
-        className="rounded-lg border border-warning/50 px-3 py-1 text-xs font-medium text-warning transition-colors hover:bg-warning/20"
+        className="rounded-lg border border-warning/50 px-3 py-1 text-body-sm font-medium text-warning transition-colors hover:bg-warning/20"
       >
         Exit simulation
       </button>
@@ -94,7 +94,7 @@ export function LiveResultsShell({
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-body">
           <BackButton fallbackLabel="Back to Election" fallbackHref={`/elections/${election.id}`} />
           <span className="text-card-border">/</span>
           <span className="font-medium">Live results</span>
@@ -102,7 +102,7 @@ export function LiveResultsShell({
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold sm:text-3xl">{title}</h1>
+            <h1 className="text-heading font-bold sm:text-display">{title}</h1>
             <LiveTurnBadge
               status={election.status}
               currentTurn={election.currentTurn}
@@ -112,13 +112,13 @@ export function LiveResultsShell({
           </div>
           <div className="flex items-center gap-3">
             {updatedAgo && !simulating && (
-              <span className="text-xs text-muted">Updated {updatedAgo}</span>
+              <span className="text-body-sm text-muted">Updated {updatedAgo}</span>
             )}
             {data.isAdmin && !simulating && (
               <button
                 type="button"
                 onClick={onStartSimulation}
-                className="rounded-lg border border-warning/50 bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning transition-colors hover:bg-warning/20"
+                className="rounded-lg border border-warning/50 bg-warning/10 px-3 py-1.5 text-body-sm font-medium text-warning transition-colors hover:bg-warning/20"
                 title="Admin only: replay a simulated election night with test data"
               >
                 ▶ Simulate results
@@ -131,17 +131,17 @@ export function LiveResultsShell({
 
         {election.status === "upcoming" && !simulating ? (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-            <p className="text-sm font-medium">This election has not begun.</p>
+            <p className="text-body font-medium">This election has not begun.</p>
             {election.startTurn != null && (
-              <p className="mt-1 text-xs text-muted tabular-nums">
+              <p className="mt-1 text-body-sm text-muted tabular-nums">
                 Voting opens on turn {election.startTurn} (now turn {election.currentTurn}).
               </p>
             )}
           </div>
         ) : summary.totalVotes === 0 && !simulating ? (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-            <p className="text-sm font-medium">Votes are being counted…</p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="text-body font-medium">Votes are being counted…</p>
+            <p className="mt-1 text-body-sm text-muted">
               Results will appear here as the first returns come in.
             </p>
           </div>

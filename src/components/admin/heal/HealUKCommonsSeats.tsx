@@ -28,8 +28,8 @@ export function HealUKCommonsSeats() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal UK Commons seats</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal UK Commons seats</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Recreates UK Commons electedOfficials from the most recent resolved election results.
           Fixes missing seats after elections that failed to populate officials.
         </p>
@@ -38,7 +38,7 @@ export function HealUKCommonsSeats() {
       <HealPanelActions loading={loading} onDiagnose={runDiagnostic} onHeal={runHeal} />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 text-xs space-y-2">
+        <div className="rounded-lg border border-card-border bg-background p-3 text-body-sm space-y-2">
           <p className={diagnostic.status === "ok" ? "text-success" : "text-error"}>
             {diagnostic.message}
           </p>

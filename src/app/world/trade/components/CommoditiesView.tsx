@@ -16,15 +16,15 @@ export default function CommoditiesView({ ledger }: { ledger: WorldTradeLedger }
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-bold text-foreground">
+        <h3 className="text-body-lg font-bold text-foreground">
           Commodity flows{" "}
           <span className="font-normal text-muted">· who the world is long &amp; short</span>
         </h3>
-        <span className="text-[10px] text-muted">top net importer ◀ · ▶ top net exporter</span>
+        <span className="text-body-sm text-muted">top net importer ◀ · ▶ top net exporter</span>
       </div>
 
       {ledger.commodities.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">No commodities are trading yet.</p>
+        <p className="py-6 text-center text-body text-muted">No commodities are trading yet.</p>
       )}
 
       {ledger.commodities.map((c) => {
@@ -38,22 +38,22 @@ export default function CommoditiesView({ ledger }: { ledger: WorldTradeLedger }
             key={c.key}
             className="flex items-center gap-3 border-t border-card-border py-3 first:border-t-0"
           >
-            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-card-border bg-card-elevated font-mono text-[11px] font-bold text-primary">
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-card-border bg-card-elevated font-mono text-body-sm font-bold text-primary">
               {c.icon}
             </span>
             <div className="w-44 min-w-0">
-              <div className="truncate text-sm font-semibold text-foreground">{c.label}</div>
-              <div className="font-mono text-[10.5px] text-muted">
+              <div className="truncate text-body font-semibold text-foreground">{c.label}</div>
+              <div className="font-mono text-body-sm text-muted">
                 traded {formatAmountChip(c.worldVolume)}
               </div>
             </div>
             <div className="flex w-20 items-center justify-end gap-1.5">
-              <span className="font-mono text-[11.5px] font-bold text-error">
+              <span className="font-mono text-body-sm font-bold text-error">
                 {im ? formatAmountChip(im.net) : "—"}
               </span>
               {im && (
                 <span
-                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-mono text-[9px] font-bold"
+                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-mono text-body-sm font-bold"
                   style={{ border: `1.5px solid ${hueOf(im.code)}`, color: hueOf(im.code) }}
                 >
                   {im.code}
@@ -72,13 +72,13 @@ export default function CommoditiesView({ ledger }: { ledger: WorldTradeLedger }
             <div className="flex w-20 items-center justify-start gap-1.5">
               {ex && (
                 <span
-                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-mono text-[9px] font-bold"
+                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-mono text-body-sm font-bold"
                   style={{ border: `1.5px solid ${hueOf(ex.code)}`, color: hueOf(ex.code) }}
                 >
                   {ex.code}
                 </span>
               )}
-              <span className="font-mono text-[11.5px] font-bold text-success">
+              <span className="font-mono text-body-sm font-bold text-success">
                 {ex ? formatAmountChip(ex.net) : "—"}
               </span>
             </div>

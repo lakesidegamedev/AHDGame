@@ -63,7 +63,7 @@ export default function BackButton({
       type="button"
       onClick={handleClick}
       aria-label={iconOnly ? label || "Back" : undefined}
-      className={`transition-colors inline-flex items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${iconOnly ? "relative text-white hover:text-white/80 after:absolute after:left-1/2 after:top-1/2 after:h-10 after:w-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']" : "text-sm text-muted hover:text-foreground gap-1.5"}`}
+      className={`transition-colors inline-flex items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${iconOnly ? "relative text-white hover:text-white/80 after:absolute after:left-1/2 after:top-1/2 after:h-10 after:w-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']" : "text-body text-muted hover:text-foreground gap-1.5"}`}
       title={label || undefined}
     >
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

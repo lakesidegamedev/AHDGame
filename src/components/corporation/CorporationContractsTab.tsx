@@ -102,7 +102,7 @@ export default function CorporationContractsTab({
       {resource(c)}
       {c.tenderId && (
         <Link
-          className="mt-1 block text-xs text-primary"
+          className="mt-1 block text-body-sm text-primary"
           href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
         >
           {t("awardRecord")}
@@ -133,26 +133,26 @@ export default function CorporationContractsTab({
   return (
     <div className="space-y-6">
       <DenseSection title={t("heading")}>
-        <p className="mb-3 text-sm text-muted">{t("intro")}</p>
+        <p className="mb-3 text-body text-muted">{t("intro")}</p>
         <ContractBoardLink
           countryId={countryId}
           type="extraction"
           corporationId={isCeo ? corpId : undefined}
         />
-        <p className="mt-3 text-xs text-muted">{t("allocationHint")}</p>
-        <p className="mt-2 text-xs text-muted">{t("royaltyHint")}</p>
+        <p className="mt-3 text-body-sm text-muted">{t("allocationHint")}</p>
+        <p className="mt-2 text-body-sm text-muted">{t("royaltyHint")}</p>
       </DenseSection>
       {error ? (
         <div role="alert" className="rounded-lg border border-error/30 p-4">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-body text-error">{error}</p>
           <SmallButton onClick={() => setRefreshKey((k) => k + 1)}>{t("retry")}</SmallButton>
         </div>
       ) : loading ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-body text-muted">
           {t("loading")}
         </p>
       ) : contracts.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <p className="text-body text-muted">{t("empty")}</p>
       ) : null}
       {!error && !loading && offers.length > 0 && (
         <DenseSection title={t("pending")} meta={`${offers.length}`}>
@@ -257,7 +257,7 @@ export default function CorporationContractsTab({
                               pct={term.pct}
                               tone={term.used >= term.term ? "warning" : "info"}
                             />
-                            <span className="mt-0.5 block text-[10px] text-muted">
+                            <span className="mt-0.5 block text-body-sm text-muted">
                               {t("termUsed", { used: term.used, term: term.term })}
                             </span>
                           </span>

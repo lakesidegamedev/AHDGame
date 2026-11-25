@@ -132,7 +132,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
   return (
     <DenseSection id="operator-policy" title="What the NPP may do" meta={attitude ?? "Custom"}>
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Choose how the NPP running this corporation behaves, or set each action yourself.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -148,7 +148,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
           ))}
         </div>
         {attitude && (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {OPERATOR_PRESETS.find((preset) => preset.id === attitude)?.blurb}
           </p>
         )}
@@ -163,7 +163,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
                 value={
                   <select
                     aria-label={ACTION_LABEL[action]}
-                    className="rounded border border-card-border bg-transparent px-1 py-0.5 text-xs"
+                    className="rounded border border-card-border bg-transparent px-1 py-0.5 text-body-sm"
                     value={current}
                     disabled={busy}
                     onChange={(e) => setAction(action, e.target.value as CorpOperatorPermission)}
@@ -188,7 +188,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
             value={
               <select
                 aria-label="Auto-accept CEO raises up to"
-                className="rounded border border-card-border bg-transparent px-1 py-0.5 text-xs"
+                className="rounded border border-card-border bg-transparent px-1 py-0.5 text-body-sm"
                 value={String(payShare)}
                 disabled={busy}
                 onChange={(e) =>
@@ -206,8 +206,8 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
         </div>
         {confirmDivest && (
           <div className="space-y-2 border-y border-card-border py-2" role="alert">
-            <p className="text-sm font-medium">Allow the NPP to sell or close plants?</p>
-            <p className="text-xs text-muted">
+            <p className="text-body font-medium">Allow the NPP to sell or close plants?</p>
+            <p className="text-body-sm text-muted">
               A plant it sells or closes is removed and you receive nothing for it. Money spent
               building it is lost. Only allow this if you accept that.
             </p>

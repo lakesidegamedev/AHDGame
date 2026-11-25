@@ -19,7 +19,7 @@ function pagerButtonStyle(enabled: boolean): React.CSSProperties {
     background: "transparent",
     padding: "5px 11px",
     font: "inherit",
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: 600,
     color: enabled ? BLEND.ink : BLEND.mutedDimmer,
     cursor: enabled ? "pointer" : "not-allowed",
@@ -47,7 +47,7 @@ function chipStyle(active: boolean): React.CSSProperties {
     padding: "3px 10px",
     font: "inherit",
     fontFamily: FONT.mono,
-    fontSize: 10.5,
+    fontSize: 12,
     color: active ? BLEND.ink : BLEND.mutedDim,
     cursor: "pointer",
   };
@@ -158,11 +158,11 @@ export function BlendLedger({
                 style={{ padding: "11px 0", borderBottom: "1px solid rgba(42,42,61,.6)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                  <span style={{ fontFamily: FONT.sans, fontSize: 14.5 }}>{r.name}</span>
+                  <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>{r.name}</span>
                   <span
                     style={{
                       fontFamily: FONT.mono,
-                      fontSize: 10.5,
+                      fontSize: 12,
                       color: BLEND.mutedDimmer,
                       whiteSpace: "nowrap",
                     }}
@@ -183,10 +183,10 @@ export function BlendLedger({
                   borderBottom: "1px solid rgba(42,42,61,.6)",
                 }}
               >
-                <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: BLEND.mutedDimmer }}>
+                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDimmer }}>
                   {r.kindLabel}
                 </span>
-                <span style={{ fontFamily: FONT.sans, fontSize: 15 }}>{r.name}</span>
+                <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>{r.name}</span>
               </div>
             )
           )
@@ -197,7 +197,7 @@ export function BlendLedger({
                 style={{ padding: "11px 0", borderBottom: "1px solid rgba(42,42,61,.6)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                  <span style={{ fontFamily: FONT.sans, fontSize: 14.5 }}>{r.label}</span>
+                  <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>{r.label}</span>
                   <span
                     style={{
                       fontFamily: FONT.mono,
@@ -213,7 +213,7 @@ export function BlendLedger({
                   style={{
                     marginTop: 3,
                     fontFamily: FONT.mono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: BLEND.mutedDimmer,
                   }}
                 >
@@ -244,17 +244,17 @@ export function BlendLedger({
                   borderBottom: "1px solid rgba(42,42,61,.6)",
                 }}
               >
-                <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: BLEND.mutedDimmer }}>
+                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDimmer }}>
                   {r.turnTag}
                 </span>
-                <span style={{ fontFamily: FONT.sans, fontSize: 15 }}>
+                <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>
                   {r.label}
                   {r.reason ? (
                     <span
                       style={{
                         display: "block",
                         marginTop: 2,
-                        fontSize: 13,
+                        fontSize: 12,
                         color: BLEND.caution,
                       }}
                     >
@@ -265,7 +265,7 @@ export function BlendLedger({
                 <span
                   style={{
                     fontFamily: FONT.mono,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     color: r.demoted ? BLEND.caution : BLEND.muted,
                     whiteSpace: "nowrap",
                   }}
@@ -286,11 +286,11 @@ export function BlendLedger({
             gap: 12,
           }}
         >
-          <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: BLEND.mutedDim }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDim }}>
             {ledger.rangeText}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: BLEND.mutedDim }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDim }}>
               {ledger.pageText}
             </span>
             <button

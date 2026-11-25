@@ -75,8 +75,8 @@ export function MetricsCategoryDisplay({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{categoryName}</h3>
-        <span className="text-sm text-muted">{renderList.length} metrics</span>
+        <h3 className="text-body-lg font-semibold">{categoryName}</h3>
+        <span className="text-body text-muted">{renderList.length} metrics</span>
       </div>
 
       {useRedesign ? (

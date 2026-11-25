@@ -61,7 +61,7 @@ export default function DossierTab({
         <button
           type="button"
           onClick={() => setSelected(null)}
-          className="text-sm text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-1"
+          className="text-body text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-1"
         >
           ← Look up another player
         </button>
@@ -78,21 +78,21 @@ export default function DossierTab({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search a player by username…"
-        className="h-10 w-full rounded-lg border border-card-border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="h-10 w-full rounded-lg border border-card-border bg-card px-3 text-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       />
       {query.trim() && (
         <ul className="overflow-hidden rounded-lg border border-card-border bg-card">
           {users === null ? (
-            <li className="px-3 py-2 text-xs text-muted">Loading players…</li>
+            <li className="px-3 py-2 text-body-sm text-muted">Loading players…</li>
           ) : matches.length === 0 ? (
-            <li className="px-3 py-2 text-xs text-muted">No matching players.</li>
+            <li className="px-3 py-2 text-body-sm text-muted">No matching players.</li>
           ) : (
             matches.map((u) => (
               <li key={u.id}>
                 <button
                   type="button"
                   onClick={() => setSelected(u)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-card-elevated focus-visible:outline-none focus-visible:bg-card-elevated"
+                  className="w-full px-3 py-2 text-left text-body hover:bg-card-elevated focus-visible:outline-none focus-visible:bg-card-elevated"
                 >
                   {u.username}
                 </button>

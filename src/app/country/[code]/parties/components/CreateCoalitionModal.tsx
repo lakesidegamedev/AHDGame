@@ -32,7 +32,7 @@ export function CreateCoalitionModal({
 
   return (
     <Modal open title="Create a coalition" onClose={onClose}>
-      <div className="mb-4 rounded-lg bg-warning/10 border border-warning/30 p-3 text-sm">
+      <div className="mb-4 rounded-lg bg-warning/10 border border-warning/30 p-3 text-body">
         <p className="font-medium text-warning mb-1">Requirements</p>
         <ul className="text-muted space-y-0.5">
           <li>• 25 actions (you have {userActions})</li>
@@ -54,7 +54,7 @@ export function CreateCoalitionModal({
               type="text"
               value={formName}
               onChange={(e) => onFormNameChange(e.target.value)}
-              className="bg-background py-2 text-sm"
+              className="bg-background py-2 text-body"
               placeholder="e.g., Grand Alliance"
               required
               minLength={3}
@@ -68,7 +68,7 @@ export function CreateCoalitionModal({
               type="text"
               value={formAbbrev}
               onChange={(e) => onFormAbbrevChange(e.target.value.toUpperCase())}
-              className="bg-background py-2 text-sm uppercase"
+              className="bg-background py-2 text-body uppercase"
               placeholder="e.g., GA"
               required
               minLength={2}
@@ -91,7 +91,7 @@ export function CreateCoalitionModal({
               type="text"
               value={formColor}
               onChange={(e) => onFormColorChange(e.target.value)}
-              className="w-28 bg-background py-2 text-sm font-mono"
+              className="w-28 bg-background py-2 text-body font-mono"
               pattern="^#[0-9A-Fa-f]{6}$"
             />
             <div
@@ -105,7 +105,7 @@ export function CreateCoalitionModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card-elevated transition-colors"
+            className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card-elevated transition-colors"
           >
             Cancel
           </button>
@@ -114,7 +114,7 @@ export function CreateCoalitionModal({
             variant="primary"
             isLoading={creating}
             disabled={!canSubmit}
-            className="px-6 py-2 text-sm"
+            className="px-6 py-2 text-body"
           >
             Create coalition (25 actions)
           </Button>

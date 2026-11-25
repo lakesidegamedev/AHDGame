@@ -51,8 +51,8 @@ export function HealConfidenceVotes() {
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-      <h3 className="text-sm font-semibold text-white">Heal confidence votes</h3>
-      <p className="text-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-white">Heal confidence votes</h3>
+      <p className="text-body-sm text-muted">
         Fix active confidence votes where NPP MPs failed to auto-vote YES. Diagnoses missing NPP
         votes and records them.
       </p>
@@ -60,20 +60,20 @@ export function HealConfidenceVotes() {
         <button
           onClick={handleDiagnose}
           disabled={loading}
-          className="text-sm px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 transition-colors"
+          className="text-body px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 transition-colors"
         >
           {loading ? "Checking…" : "Diagnose"}
         </button>
         <button
           onClick={handleFix}
           disabled={fixing}
-          className="text-sm px-3 py-1.5 rounded border border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 transition-colors"
+          className="text-body px-3 py-1.5 rounded border border-amber-500/50 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 transition-colors"
         >
           {fixing ? "Fixing…" : "Fix missing NPP votes"}
         </button>
       </div>
       {diagnostic !== null && (
-        <div className="text-xs space-y-2">
+        <div className="text-body-sm space-y-2">
           {diagnostic.length === 0 ? (
             <p className="text-muted">No active confidence votes.</p>
           ) : (
@@ -103,7 +103,7 @@ export function HealConfidenceVotes() {
           )}
         </div>
       )}
-      {message && <p className="text-xs text-green-400">{message}</p>}
+      {message && <p className="text-body-sm text-green-400">{message}</p>}
     </div>
   );
 }

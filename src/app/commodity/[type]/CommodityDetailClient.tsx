@@ -174,7 +174,10 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
   return (
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <nav className="mb-4 flex items-center gap-1.5 text-sm text-muted" aria-label="Breadcrumb">
+        <nav
+          className="mb-4 flex items-center gap-1.5 text-body text-muted"
+          aria-label="Breadcrumb"
+        >
           <Link
             href="/country/us/stockmarket?tab=commodities"
             className="hover:text-foreground transition-colors"
@@ -213,14 +216,17 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
         />
         {drillDownCountry && stateOptions.length > 0 && (
           <div className="mb-4 flex items-center gap-2">
-            <label htmlFor="commodity-state-select" className="text-xs font-semibold text-muted">
+            <label
+              htmlFor="commodity-state-select"
+              className="text-body-sm font-semibold text-muted"
+            >
               State
             </label>
             <select
               id="commodity-state-select"
               value={drillDownState ?? ""}
               onChange={(event) => setDrillDownState(event.target.value || null)}
-              className="rounded-lg border border-card-border bg-card px-3 py-1 text-xs font-bold text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="rounded-lg border border-card-border bg-card px-3 py-1 text-body-sm font-bold text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <option value="">Whole country</option>
               {stateOptions.map((stateId) => (

@@ -59,17 +59,17 @@ export function MyOrders({ orders, onOrderCancelled }: Props) {
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       {error && (
-        <div className="mb-4 rounded-lg border border-error/20 bg-error/5 px-4 py-2 text-sm text-error">
+        <div className="mb-4 rounded-lg border border-error/20 bg-error/5 px-4 py-2 text-body text-error">
           {error}
         </div>
       )}
       <div className="px-5 py-4 border-b border-card-border">
-        <h2 className="text-sm font-bold text-foreground">My orders</h2>
-        <p className="text-xs text-muted mt-0.5">Open and partially filled orders</p>
+        <h2 className="text-body font-bold text-foreground">My orders</h2>
+        <p className="text-body-sm text-muted mt-0.5">Open and partially filled orders</p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border bg-card-elevated">
               <th className="px-4 py-3 text-left text-body-sm font-medium text-muted">Placed</th>
@@ -104,28 +104,30 @@ export function MyOrders({ orders, onOrderCancelled }: Props) {
                   o.amount > 0 ? ((o.filledAmount / o.amount) * 100).toFixed(0) : "0";
                 return (
                   <tr key={o._id} className={idx % 2 === 0 ? "bg-card" : "bg-card-elevated/50"}>
-                    <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
+                    <td className="px-4 py-3 text-body-sm text-muted whitespace-nowrap">
                       {formatDate(o.createdAt)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-card-elevated border border-card-border px-2 py-0.5 text-[10px] font-bold uppercase">
+                      <span className="rounded-full bg-card-elevated border border-card-border px-2 py-0.5 text-body-sm font-bold uppercase">
                         {o.type}
                       </span>
                       {o.type === "direct" && o.targetCharacterName && (
-                        <span className="ml-1.5 text-xs text-muted">→ {o.targetCharacterName}</span>
+                        <span className="ml-1.5 text-body-sm text-muted">
+                          → {o.targetCharacterName}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-medium">
+                      <span className="font-mono text-body-sm font-medium">
                         {o.fromCurrency} → {o.toCurrency}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-xs">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm">
                       {formatAmount(o.amount)}
-                      <span className="ml-1 text-[10px] text-muted">{o.fromCurrency}</span>
+                      <span className="ml-1 text-body-sm text-muted">{o.fromCurrency}</span>
                     </td>
                     <td className="px-4 py-3 text-right hidden sm:table-cell">
-                      <span className="text-xs tabular-nums">
+                      <span className="text-body-sm tabular-nums">
                         {o.filledAmount > 0 ? (
                           <span className="text-success">{formatAmount(o.filledAmount)}</span>
                         ) : (
@@ -134,22 +136,22 @@ export function MyOrders({ orders, onOrderCancelled }: Props) {
                         <span className="text-muted ml-1">({filledPct}%)</span>
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-xs">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm">
                       {o.limitRate != null ? (
                         formatRate(o.limitRate)
                       ) : (
                         <span className="text-muted">market</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-xs text-muted hidden md:table-cell">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm text-muted hidden md:table-cell">
                       {o.spreadCharged > 0 ? `-${formatAmount(o.spreadCharged)}` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right text-xs text-muted hidden lg:table-cell">
+                    <td className="px-4 py-3 text-right text-body-sm text-muted hidden lg:table-cell">
                       {o.expiresAtTurn != null ? `T${o.expiresAtTurn}` : "—"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${STATUS_STYLES[o.status] ?? ""}`}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-body-sm font-bold capitalize ${STATUS_STYLES[o.status] ?? ""}`}
                       >
                         {o.status}
                       </span>
@@ -159,12 +161,12 @@ export function MyOrders({ orders, onOrderCancelled }: Props) {
                         <button
                           onClick={() => handleCancel(o._id)}
                           disabled={cancelling === o._id}
-                          className="rounded-md border border-error/30 px-3 py-1 text-xs font-bold text-error hover:bg-error/10 transition-colors disabled:opacity-50"
+                          className="rounded-md border border-error/30 px-3 py-1 text-body-sm font-bold text-error hover:bg-error/10 transition-colors disabled:opacity-50"
                         >
                           {cancelling === o._id ? "..." : "Cancel"}
                         </button>
                       ) : (
-                        <span className="text-xs text-muted">—</span>
+                        <span className="text-body-sm text-muted">—</span>
                       )}
                     </td>
                   </tr>

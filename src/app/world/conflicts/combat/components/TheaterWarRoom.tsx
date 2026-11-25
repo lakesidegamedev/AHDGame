@@ -174,7 +174,7 @@ export function TheaterWarRoom({
                 <span
                   style={{
                     fontFamily: MIL_FONT.heading,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: MIL_COLOR.text,
                   }}
@@ -294,7 +294,7 @@ export function TheaterWarRoom({
                   <div
                     style={{
                       fontFamily: MIL_FONT.heading,
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: 700,
                       marginTop: 2,
                       color: s.c,
@@ -419,7 +419,7 @@ export function TheaterWarRoom({
                   style={{
                     flex: "1 1 140px",
                     fontFamily: MIL_FONT.sans,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: MIL_COLOR.text,
                     background: MIL_COLOR.panel,
                     border: `1px solid ${MIL_COLOR.border}`,
@@ -444,7 +444,7 @@ export function TheaterWarRoom({
                     flex: "2 1 200px",
                     fontFamily: MIL_FONT.sans,
                     fontWeight: 700,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: "#fff",
                     background: MIL_COLOR.red,
                     border: "none",

@@ -67,7 +67,7 @@ export function campaignFigures(
           <span
             style={{
               display: "block",
-              fontSize: 10.5,
+              fontSize: 12,
               color: campaign.budget.netIncome >= 0 ? BLEND.positive : BLEND.negative,
             }}
           >
@@ -93,7 +93,7 @@ function YouChip() {
         background: "rgba(220,38,38,.12)",
         color: BLEND.accentInk,
         fontFamily: FONT.mono,
-        fontSize: 9,
+        fontSize: 12,
         letterSpacing: ".1em",
         textTransform: "uppercase",
         borderRadius: 99,
@@ -207,7 +207,7 @@ const TH: CSSProperties = {
   padding: "0 8px 8px",
   textAlign: "right",
   fontFamily: FONT.mono,
-  fontSize: 9.5,
+  fontSize: 12,
   fontWeight: 400,
   letterSpacing: ".12em",
   textTransform: "uppercase",
@@ -222,7 +222,7 @@ const TD: CSSProperties = {
   verticalAlign: "middle",
   borderBottom: "1px solid rgba(42,42,61,.6)",
   fontFamily: FONT.mono,
-  fontSize: 13,
+  fontSize: 12,
   whiteSpace: "nowrap",
 };
 
@@ -289,7 +289,7 @@ export function TicketsTable({
                             alignItems: "center",
                             gap: 8,
                             fontFamily: FONT.sans,
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: 600,
                           }}
                         >
@@ -310,15 +310,15 @@ export function TicketsTable({
                       textAlign: "left",
                       whiteSpace: "normal",
                       fontFamily: FONT.sans,
-                      fontSize: 12.5,
+                      fontSize: 12,
                       color: BLEND.muted,
                     }}
                   >
                     <MateAndManager ticket={c} campaign={campaign} size={12} />
                   </td>
-                  <td style={{ ...TD, fontSize: 17, color: c.color }}>{c.ev}</td>
+                  <td style={{ ...TD, fontSize: 16, color: c.color }}>{c.ev}</td>
                   <td style={TD}>{c.pct}%</td>
-                  <td style={{ ...TD, fontSize: 12.5, color: BLEND.muted }}>{c.votes}</td>
+                  <td style={{ ...TD, fontSize: 12, color: BLEND.muted }}>{c.votes}</td>
                   <td style={TD}>{figures.funds}</td>
                   <td style={TD}>{figures.actions}</td>
                   <td style={TD}>{figures.levels}</td>
@@ -346,7 +346,7 @@ function Figure({ label, children }: { label: string; children: ReactNode }) {
       <div
         style={{
           fontFamily: FONT.mono,
-          fontSize: 9,
+          fontSize: 12,
           letterSpacing: ".12em",
           textTransform: "uppercase",
           color: BLEND.mutedDim,
@@ -358,7 +358,7 @@ function Figure({ label, children }: { label: string; children: ReactNode }) {
         style={{
           marginTop: 2,
           fontFamily: FONT.mono,
-          fontSize: 13,
+          fontSize: 12,
           overflowWrap: "anywhere",
         }}
       >
@@ -418,7 +418,7 @@ export function TicketCards({
               style={{
                 marginTop: 6,
                 fontFamily: FONT.sans,
-                fontSize: 12.5,
+                fontSize: 12,
                 color: BLEND.muted,
               }}
             >

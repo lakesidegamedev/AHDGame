@@ -106,7 +106,7 @@ export default function OwnershipHistoryPanel({
       title={t("historyTitle")}
       meta={t("turnSnapshots")}
       actions={
-        <label className="flex items-center gap-2 text-xs text-muted">
+        <label className="flex items-center gap-2 text-body-sm text-muted">
           {t("range")}
           <select
             aria-label={t("range")}
@@ -128,21 +128,21 @@ export default function OwnershipHistoryPanel({
     >
       {failed ? (
         <div className="flex items-center gap-3 py-6">
-          <p role="alert" className="text-sm text-error">
+          <p role="alert" className="text-body text-error">
             {t("loadError")}
           </p>
           <SmallButton onClick={() => setAttempt((n) => n + 1)}>{t("retry")}</SmallButton>
         </div>
       ) : !data ? (
-        <p role="status" className="py-8 text-sm text-muted">
+        <p role="status" className="py-8 text-body text-muted">
           {t("loading")}
         </p>
       ) : !data.snapshots.length ? (
-        <p className="py-8 text-sm text-muted">{t("empty")}</p>
+        <p className="py-8 text-body text-muted">{t("empty")}</p>
       ) : (
         <div className="space-y-4 py-3">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <label className="min-w-0 text-xs text-muted">
+            <label className="min-w-0 text-body-sm text-muted">
               {t("trackHolder")}
               <select
                 aria-label={t("trackHolder")}
@@ -151,7 +151,7 @@ export default function OwnershipHistoryPanel({
                   setSelectedKey(e.target.value);
                   setSelectedIndex(null);
                 }}
-                className="mt-1 block w-full max-w-72 rounded-sm border border-card-border bg-background px-2 py-1.5 text-sm text-foreground"
+                className="mt-1 block w-full max-w-72 rounded-sm border border-card-border bg-background px-2 py-1.5 text-body text-foreground"
               >
                 {options.map((owner) => (
                   <option key={owner.key} value={owner.key}>
@@ -167,13 +167,13 @@ export default function OwnershipHistoryPanel({
               aria-live="polite"
               className="text-right"
             >
-              <div className="text-xs text-muted">
+              <div className="text-body-sm text-muted">
                 {point ? t("turn", { turn: point.turn }) : t("noSnapshot")}
               </div>
-              <div className="font-mono text-xl tabular-nums">
+              <div className="font-mono text-heading tabular-nums">
                 {point?.percent == null ? t("noSnapshot") : percent(point.percent)}
               </div>
-              <div className="text-xs text-muted">
+              <div className="text-body-sm text-muted">
                 {point?.shares == null ? "" : t("shares", { count: point.shares })}
               </div>
             </div>
@@ -268,19 +268,19 @@ export default function OwnershipHistoryPanel({
               />
             </>
           ) : (
-            <p className="py-4 text-sm text-muted">{t("missingRegisters")}</p>
+            <p className="py-4 text-body text-muted">{t("missingRegisters")}</p>
           )}
-          <p className="text-[11px] leading-relaxed text-muted">{t("historyExplanation")}</p>
+          <p className="text-body-sm leading-relaxed text-muted">{t("historyExplanation")}</p>
           {changes && (
             <div>
               <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-card-border pb-2">
-                <h3 className="text-xs font-semibold">{t("largestChanges")}</h3>
-                <span className="text-[11px] text-muted">
+                <h3 className="text-body-lg font-semibold">{t("largestChanges")}</h3>
+                <span className="text-body-sm text-muted">
                   {t("comparison", { first: changes.firstTurn, last: changes.lastTurn })}
                 </span>
               </div>
               <TableScroll>
-                <table className="w-full text-xs">
+                <table className="w-full text-body-sm">
                   <thead>
                     <tr>
                       <Th>{t("holder")}</Th>
@@ -304,7 +304,7 @@ export default function OwnershipHistoryPanel({
                           >
                             {names.get(change.key)}
                             {change.after === 0 && change.before > 0 && (
-                              <span className="ml-2 text-[10px] text-muted">{t("exited")}</span>
+                              <span className="ml-2 text-body-sm text-muted">{t("exited")}</span>
                             )}
                           </button>
                         </Td>

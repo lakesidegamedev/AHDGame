@@ -64,12 +64,12 @@ export function MergerReviewCard({ review, onDecide, busy = false }: Props) {
   return (
     <li className="rounded-lg border border-card-border bg-card p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-semibold text-foreground">
+        <span className="text-body font-semibold text-foreground">
           {review.acquirerName} to {review.targetName}
         </span>
-        <span className="text-xs text-muted">{MERGER_STATUS_LABEL[review.status]}</span>
+        <span className="text-body-sm text-muted">{MERGER_STATUS_LABEL[review.status]}</span>
       </div>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         {review.reason === "foreignScreening" ? (
           <>
             A takeover by a group controlled from abroad, screened under the {review.countryId}{" "}
@@ -84,7 +84,7 @@ export function MergerReviewCard({ review, onDecide, busy = false }: Props) {
         )}
       </p>
       {review.status === "pending" && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           A decision is due by turn {review.decideByTurn}. If the seat says nothing, this deal is{" "}
           <span className="font-semibold text-foreground">
             {MERGER_DECISION_LABEL[review.defaultDecision]?.toLowerCase() ?? review.defaultDecision}
@@ -93,14 +93,14 @@ export function MergerReviewCard({ review, onDecide, busy = false }: Props) {
         </p>
       )}
       {review.remedySectorType && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Condition: the combined firm must fall back below {review.thresholdPercent}% of the{" "}
           {review.remedySectorType} market. Spinning it into a wholly-owned subsidiary does not
           count; selling it down does.
         </p>
       )}
       {review.decisionNote && (
-        <p className="mt-1 text-xs italic text-muted">&ldquo;{review.decisionNote}&rdquo;</p>
+        <p className="mt-1 text-body-sm italic text-muted">&ldquo;{review.decisionNote}&rdquo;</p>
       )}
       {onDecide && review.status === "pending" && (
         <div className="mt-3 space-y-2">
@@ -110,7 +110,7 @@ export function MergerReviewCard({ review, onDecide, busy = false }: Props) {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Reasons (optional, shown to both parties)"
             maxLength={500}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
           />
           <div className="flex flex-wrap gap-2">
             {(["cleared", "clearedWithRemedy", "blocked"] as const).map((decision) => (
@@ -119,7 +119,7 @@ export function MergerReviewCard({ review, onDecide, busy = false }: Props) {
                 type="button"
                 disabled={busy}
                 onClick={() => void onDecide(review.id, decision, note.trim() || undefined)}
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-card-elevated disabled:opacity-50"
+                className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold text-foreground hover:bg-card-elevated disabled:opacity-50"
               >
                 {MERGER_DECISION_LABEL[decision]}
               </button>

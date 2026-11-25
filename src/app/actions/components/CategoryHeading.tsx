@@ -31,7 +31,7 @@ export default function CategoryHeading({
       <div className="min-w-0">
         <h2
           id={`actions-${category}-title`}
-          className="text-heading-lg font-semibold tracking-tight text-foreground"
+          className="text-heading font-semibold tracking-tight text-foreground"
         >
           {CATEGORY_LABELS[category] ?? category}
           <span className="ml-2 text-body font-normal tabular-nums text-muted">{count}</span>

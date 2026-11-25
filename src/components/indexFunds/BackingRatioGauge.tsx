@@ -72,13 +72,13 @@ export function BackingRatioGauge({ ratio }: { ratio: number | null }) {
       </svg>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 text-center">
         <div
-          className="font-mono tabular-nums text-[26px] font-bold leading-none"
+          className="font-mono tabular-nums text-display font-bold leading-none"
           style={{ color: tone }}
         >
           {pct}
           {hasData && "%"}
         </div>
-        <div className="mt-1 text-[10px] text-muted">of unit liability backed</div>
+        <div className="mt-1 text-body-sm text-muted">of unit liability backed</div>
       </div>
     </div>
   );

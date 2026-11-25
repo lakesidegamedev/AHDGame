@@ -50,17 +50,17 @@ function WarRow({ conflict }: { conflict: Conflict }) {
   return (
     <Link
       href={`/world/conflicts/${conflict.conflictId}`}
-      className="flex items-center gap-2 rounded-lg border border-card-border bg-card p-3 text-sm hover:border-foreground/30"
+      className="flex items-center gap-2 rounded-lg border border-card-border bg-card p-3 text-body hover:border-foreground/30"
     >
       <span className="min-w-0 flex-1">
         <span className="block font-semibold text-foreground">{conflict.name}</span>
-        <span className="block text-xs text-muted">
+        <span className="block text-body-sm text-muted">
           {conflict.region} · {conflict.west} vs {conflict.east} · {conflict.deaths}
         </span>
       </span>
-      {conflict.escalating && <span className="text-xs text-warning">Escalating</span>}
+      {conflict.escalating && <span className="text-body-sm text-warning">Escalating</span>}
       <span
-        className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${CONFLICT_SEVERITY_BADGE[conflict.sev]}`}
+        className={`shrink-0 rounded-full border px-2 py-0.5 text-body-sm ${CONFLICT_SEVERITY_BADGE[conflict.sev]}`}
       >
         {conflict.sev === "WINDING DOWN" ? "Winding down" : conflict.sev.toLowerCase()}
       </span>
@@ -130,11 +130,11 @@ function CrisisBoardPage() {
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <Link href="/world" className="text-xs text-muted hover:text-foreground">
+            <Link href="/world" className="text-body-sm text-muted hover:text-foreground">
               World
             </Link>
-            <h1 className="text-2xl font-bold text-foreground">Crises</h1>
-            <p className="text-sm text-muted">
+            <h1 className="text-heading font-bold text-foreground">Crises</h1>
+            <p className="text-body text-muted">
               {board
                 ? `${activeCount} active, ${severeCount} severe (score ${HIGH_SEVERITY_SCORE}+) · ${board.actionCount} need your response`
                 : "Loading"}
@@ -143,7 +143,7 @@ function CrisisBoardPage() {
           {isAdmin && (
             <Link
               href="/control/world/crises"
-              className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-muted hover:text-foreground"
+              className="rounded-lg border border-card-border bg-card px-3 py-2 text-body text-muted hover:text-foreground"
             >
               Manage crises (admin)
             </Link>
@@ -155,7 +155,7 @@ function CrisisBoardPage() {
             <button
               key={v.id}
               onClick={() => setView(v.id)}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-body font-medium transition-colors ${
                 view === v.id
                   ? "border border-card-border bg-card-elevated text-foreground"
                   : "text-muted hover:text-foreground"
@@ -168,10 +168,10 @@ function CrisisBoardPage() {
 
         {error ? (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-            <p className="mb-3 text-sm text-muted">{error}</p>
+            <p className="mb-3 text-body text-muted">{error}</p>
             <button
               onClick={load}
-              className="rounded-lg border border-card-border px-4 py-2 text-sm text-foreground"
+              className="rounded-lg border border-card-border px-4 py-2 text-body text-foreground"
             >
               Retry
             </button>
@@ -200,11 +200,11 @@ function CrisisBoardPage() {
               return (
                 <section key={section} className="space-y-2">
                   <div className="flex items-baseline gap-2">
-                    <h2 className="text-base font-semibold text-foreground">
+                    <h2 className="text-body-lg font-semibold text-foreground">
                       {SECTION_META[section].title}
                     </h2>
-                    <span className="text-xs tabular-nums text-muted">{rows.length}</span>
-                    <span className="hidden text-xs text-muted sm:inline">
+                    <span className="text-body-sm tabular-nums text-muted">{rows.length}</span>
+                    <span className="hidden text-body-sm text-muted sm:inline">
                       {SECTION_META[section].hint}
                     </span>
                   </div>
@@ -224,7 +224,7 @@ function CrisisBoardPage() {
             })}
 
             {visible.length === 0 && (
-              <p className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+              <p className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
                 Nothing matches this filter.
               </p>
             )}
@@ -232,17 +232,17 @@ function CrisisBoardPage() {
             {showWars && (
               <section className="space-y-2">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-base font-semibold text-foreground">Wars</h2>
-                  <span className="text-xs tabular-nums text-muted">{conflicts.length}</span>
+                  <h2 className="text-body-lg font-semibold text-foreground">Wars</h2>
+                  <span className="text-body-sm tabular-nums text-muted">{conflicts.length}</span>
                   <Link
                     href="/world/conflicts/coldwar"
-                    className="ml-auto text-xs text-muted hover:text-foreground"
+                    className="ml-auto text-body-sm text-muted hover:text-foreground"
                   >
                     Cold War console
                   </Link>
                 </div>
                 {conflicts.length === 0 ? (
-                  <p className="text-sm text-muted">No wars are being fought.</p>
+                  <p className="text-body text-muted">No wars are being fought.</p>
                 ) : (
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                     {conflicts.map((c) => (

@@ -16,7 +16,7 @@ export function SectorCrisisEffects({ effects }: { effects?: Effects }) {
   if (!effects?.rows.length) return null;
 
   return (
-    <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-xs">
+    <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm">
       <p className="font-semibold text-foreground">Current crisis effects</p>
       <ul className="mt-1 space-y-1 text-muted">
         {effects.rows.map((row) => (

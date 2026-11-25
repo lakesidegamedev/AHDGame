@@ -28,10 +28,10 @@ export function MobileSummary({
               className="flex min-w-0 flex-col gap-1 bg-background px-3 py-2.5"
               title={c.title}
             >
-              <dt className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+              <dt className="truncate text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
                 {c.label}
               </dt>
-              <dd className="m-0 truncate font-mono text-[17px] font-semibold tabular-nums text-foreground">
+              <dd className="m-0 truncate font-mono text-body-lg font-semibold tabular-nums text-foreground">
                 {c.value}
               </dd>
             </div>
@@ -43,7 +43,7 @@ export function MobileSummary({
         aria-expanded={open}
         aria-controls={controlsId}
         onClick={onToggle}
-        className="inline-flex min-h-9 items-center justify-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-3 text-xs font-semibold text-foreground hover:bg-card-elevated"
+        className="inline-flex min-h-9 items-center justify-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-3 text-body-sm font-semibold text-foreground hover:bg-card-elevated"
       >
         {open ? "Fewer figures" : `All ${total} figures`}
       </button>

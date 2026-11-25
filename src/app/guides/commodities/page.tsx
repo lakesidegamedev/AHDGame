@@ -35,7 +35,7 @@ export default function CommoditiesGuidePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -44,8 +44,8 @@ export default function CommoditiesGuidePage() {
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Commodities</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Commodities</h1>
+          <p className="mt-2 text-body text-muted">
             Supply and demand, margin effects, sector chains, and operating strategy
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function CommoditiesGuidePage() {
           {/* ── 1. Overview ── */}
           <section className="space-y-4">
             <SectionHeader id="overview">1. How the market works</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The commodity market connects corporations through 28 goods and services. Sectors that
               produce certain goods <strong className="text-foreground">add to supply</strong>;
               sectors that consume them <strong className="text-foreground">add to demand</strong>.
@@ -101,8 +101,8 @@ export default function CommoditiesGuidePage() {
                   key={name}
                   className="rounded-lg border border-card-border bg-card p-3 space-y-0.5"
                 >
-                  <p className="text-xs font-semibold text-foreground">{name}</p>
-                  <p className="text-xs text-muted">{source}</p>
+                  <p className="text-body-sm font-semibold text-foreground">{name}</p>
+                  <p className="text-body-sm text-muted">{source}</p>
                 </div>
               ))}
             </div>
@@ -111,7 +111,7 @@ export default function CommoditiesGuidePage() {
           {/* ── 2. Pricing ── */}
           <section className="space-y-4">
             <SectionHeader id="pricing">2. Pricing formula</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Commodity prices update every turn from the global supply/demand balance, blended with
               country-aggregate (national) and state-level conditions. (In planned economies the
               national leg may be administered rather than S/D-cleared; see{" "}
@@ -120,7 +120,7 @@ export default function CommoditiesGuidePage() {
               </Link>
               .)
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               In short: prices rise when demand outstrips supply and fall when supply outstrips
               demand, but the curve is logarithmic, so the first bit of shortage moves price a lot
               and each further bit moves it less. No ratio sends price to infinity.
@@ -144,12 +144,12 @@ Examples:
   demand/supply = 2.0 (severe)    → price = basePrice × 1.49  (+49%)
   demand/supply = 5.0 (acute)     → effective 3.41×, price × 1.86 (+86%)
   demand/supply = 0.5 (oversupply)→ price = basePrice × 0.67  (−33%)`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Raw D/S stays visible on market screens. Prices use the effective ratio, so extreme
               ratios continue to push prices without turning every imbalance above 3x into a runaway
               shock.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Global trends still anchor most of the price, but a state with unusual local
               production or demand, and a country whose national S/D diverges from the world, both
               tilt the blend. Corporations operating in states with heavy local supply, or in
@@ -160,7 +160,7 @@ Examples:
           {/* ── 3. Margin Effects ── */}
           <section className="space-y-4">
             <SectionHeader id="margin-effects">3. Margin effects</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Commodity shortages and surpluses feed directly into your corporation&apos;s profit
               margin through a <strong className="text-foreground">logarithmic modifier</strong>:
             </p>
@@ -174,12 +174,12 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
                    surplus  → positive modifier (cheaper inputs boost margins)
   Sellers (outputs): shortage → positive modifier (your goods are more valuable)
                      surplus  → negative modifier (your goods are worth less)`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Reference table for a single commodity at demand rate 0.25 (typical for a heavy
               input):
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">
@@ -276,12 +276,12 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
           {/* ── 4. Sector Supply ── */}
           <section className="space-y-4">
             <SectionHeader id="sector-supply">4. What each sector supplies</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Supply rates are fractions of sector daily revenue. A sector generating $1M/day at
               supply rate 0.4 pushes $400k worth of that commodity into the market every day.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Sector</th>
@@ -329,13 +329,13 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
           {/* ── 5. Sector Demand ── */}
           <section className="space-y-4">
             <SectionHeader id="sector-demand">5. What each sector demands</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               These are the inputs each sector type consumes. The rates shown are per-unit fractions
               of daily revenue. Higher rates mean the sector is more sensitive to that
               commodity&apos;s price swings.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Sector</th>
@@ -394,7 +394,7 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
           {/* ── 6. Retail ── */}
           <section className="space-y-4">
             <SectionHeader id="retail-hub">6. Retail and household demand</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Retail supplies the Consumer Goods commodity. Its customers come from the household
               consumption ledger, independently of how much Retail capacity exists. Population,
               income, employment, consumer confidence, and prices determine what households buy.
@@ -407,7 +407,7 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
   × relative-income factor
   × commodity basket share
   × bounded price elasticity`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Consumer purchases also create final demand for food, energy, vehicles, electronics,
               healthcare, and other household goods and services. Those purchases are counted once
               by households, not duplicated as a Retail-sector input proxy.
@@ -424,7 +424,7 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
             <SectionHeader id="financial-rate">
               7. Financial services &amp; interest rates
             </SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Financial Services commodity demand has a built-in sensitivity to the central bank
               prime rate. Cheap money means more borrowing, M&amp;A activity, and mortgage
               refinancing, all of which drive demand for financial sector output.
@@ -438,7 +438,7 @@ Examples:
   Prime rate 2.75%: multiplier = 1.00 → neutral
   Prime rate 5%:   multiplier ≈ 0.73 → −27% financial services demand
   Prime rate 8%:   multiplier = 0.60 → −40% demand (floor)`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Additionally, government debt issuance drives latent financial services demand: more
               bond issuance means more underwriting activity, which feeds into Financial Services
               commodity demand. A country running large deficits and issuing heavy bond supply will
@@ -449,7 +449,7 @@ Examples:
           {/* ── 8. Operating Strategies ── */}
           <section className="space-y-4">
             <SectionHeader id="strategies">8. Operating strategies</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Each sector can switch between 2-3 operating strategies that change its commodity
               supply and demand rates. Strategies have no direct margin modifier; all effects come
               through commodity market prices. Choose a strategy based on which commodities are in
@@ -474,8 +474,8 @@ Examples:
                   key={title}
                   className="rounded-xl border border-card-border bg-card p-4 space-y-1.5"
                 >
-                  <p className="text-sm font-semibold text-foreground">{title}</p>
-                  <p className="text-sm text-muted leading-relaxed">{body}</p>
+                  <p className="text-body font-semibold text-foreground">{title}</p>
+                  <p className="text-body text-muted leading-relaxed">{body}</p>
                 </div>
               ))}
             </div>
@@ -490,7 +490,7 @@ Examples:
           {/* ── 9. Strategy Reference ── */}
           <section className="space-y-4">
             <SectionHeader id="strategy-list">9. Strategy reference</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Each sector&apos;s available strategies and how they shift commodity flows:
             </p>
 
@@ -883,7 +883,7 @@ Examples:
               <div key={sector} className="space-y-2">
                 <SubHeader>{sector}</SubHeader>
                 <div className="overflow-x-auto rounded-xl border border-card-border">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-body">
                     <thead>
                       <tr className="border-b border-card-border bg-card">
                         <th className="px-3 py-2 text-left font-semibold text-muted">Strategy</th>
@@ -913,7 +913,7 @@ Examples:
           {/* ── 10. Tips ── */}
           <section className="space-y-4">
             <SectionHeader id="tips">10. Operating tips</SectionHeader>
-            <ul className="space-y-3 text-sm text-muted">
+            <ul className="space-y-3 text-body text-muted">
               {[
                 [
                   "Check the commodity page before switching strategy.",

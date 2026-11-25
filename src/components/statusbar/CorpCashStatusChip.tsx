@@ -37,7 +37,7 @@ export function CorpCashStatusChip({
       trigger={
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[11px] font-bold text-sky-400 tabular-nums transition-colors hover:bg-sky-500/20 sm:gap-1.5 sm:px-2 sm:py-1 sm:text-xs"
+          className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-1.5 py-0.5 text-body-sm font-bold text-sky-400 tabular-nums transition-colors hover:bg-sky-500/20 sm:gap-1.5 sm:px-2 sm:py-1 sm:text-body-sm"
           aria-label={`${corp.name} cash`}
         >
           <svg
@@ -61,7 +61,9 @@ export function CorpCashStatusChip({
       <BreakdownRow label="Cash on hand" value={cashBreakdownValue} valueClass="text-sky-400" />
       {cashHistory.length >= 2 && (
         <div className="mt-2 mb-1">
-          <p className="text-[10px] text-muted mb-1">Corp cash (last {cashHistory.length} turns)</p>
+          <p className="text-body-sm text-muted mb-1">
+            Corp cash (last {cashHistory.length} turns)
+          </p>
           <Sparkline data={cashHistory} color="#38bdf8" width={188} height={30} />
         </div>
       )}

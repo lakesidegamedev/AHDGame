@@ -19,5 +19,5 @@ export function observedDirection(delta: number): string {
 }
 
 export function metricDirectionClass(indicator: string): string {
-  return indicator === "▲" || indicator === "▼" ? "inline-block text-sm leading-none" : "";
+  return indicator === "▲" || indicator === "▼" ? "inline-block text-body leading-none" : "";
 }

@@ -29,7 +29,7 @@ export function CentralBankSection({
         <h2
           className={
             level === "main"
-              ? "break-words text-heading-lg font-semibold tracking-tight text-foreground"
+              ? "break-words text-heading font-semibold tracking-tight text-foreground"
               : "break-words text-body-lg font-semibold text-foreground"
           }
         >

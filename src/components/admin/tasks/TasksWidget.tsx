@@ -27,25 +27,25 @@ function getPriorityBadge(priority: TaskPriority) {
   switch (priority) {
     case "critical":
       return (
-        <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           Crit
         </span>
       );
     case "high":
       return (
-        <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-1.5 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           High
         </span>
       );
     case "medium":
       return (
-        <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           Med
         </span>
       );
     case "low":
       return (
-        <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-1.5 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           Low
         </span>
       );
@@ -85,7 +85,7 @@ export function TasksWidget() {
   if (loading) {
     return (
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <p className="text-sm text-muted">Loading tasks...</p>
+        <p className="text-body text-muted">Loading tasks...</p>
       </div>
     );
   }
@@ -93,7 +93,7 @@ export function TasksWidget() {
   if (!data) {
     return (
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <p className="text-sm text-muted">Failed to load tasks</p>
+        <p className="text-body text-muted">Failed to load tasks</p>
       </div>
     );
   }
@@ -105,37 +105,41 @@ export function TasksWidget() {
         <div className="grid grid-cols-4 divide-x divide-card-border border-b border-card-border">
           <div className="p-4 bg-red-500/5">
             <p className="text-body-sm font-medium text-red-500">Critical</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{data.byPriority.critical}</p>
+            <p className="text-heading font-bold mt-1 text-foreground">
+              {data.byPriority.critical}
+            </p>
           </div>
           <div className="p-4 bg-orange-500/5">
-            <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">High</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{data.byPriority.high}</p>
+            <p className="text-body-sm text-orange-500 font-bold uppercase tracking-wider">High</p>
+            <p className="text-heading font-bold mt-1 text-foreground">{data.byPriority.high}</p>
           </div>
           <div className="p-4 bg-blue-500/5">
             <p className="text-body-sm font-medium text-blue-500">Active</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{data.byStatus.in_progress}</p>
+            <p className="text-heading font-bold mt-1 text-foreground">
+              {data.byStatus.in_progress}
+            </p>
           </div>
           <div className="p-4 bg-card-muted/30">
             <p className="text-body-sm font-medium text-muted">Pending</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{data.byStatus.pending}</p>
+            <p className="text-heading font-bold mt-1 text-foreground">{data.byStatus.pending}</p>
           </div>
         </div>
 
         {/* Active Tasks List */}
         <div className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">Top priority</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Top priority</h3>
             <button
               onClick={() => setShowForm(true)}
-              className="text-xs font-medium text-primary hover:text-primary-dark transition-colors flex items-center gap-1"
+              className="text-body-sm font-medium text-primary hover:text-primary-dark transition-colors flex items-center gap-1"
             >
-              <span className="text-lg leading-none">+</span> New task
+              <span className="text-heading leading-none">+</span> New task
             </button>
           </div>
 
           <div className="space-y-2">
             {data.topPriority.length === 0 ? (
-              <div className="text-sm text-muted py-6 text-center bg-card-muted/20 rounded-lg border border-dashed border-card-border">
+              <div className="text-body text-muted py-6 text-center bg-card-muted/20 rounded-lg border border-dashed border-card-border">
                 No active tasks pending
               </div>
             ) : (
@@ -143,9 +147,9 @@ export function TasksWidget() {
                 <Link
                   key={task._id.toString()}
                   href={`/control/overview/tasks?task=${task._id}`}
-                  className="group flex items-center gap-3 text-sm border border-card-border bg-card-elevated/50 rounded-lg p-2.5 hover:bg-card-elevated hover:border-primary/20 transition-all shadow-sm"
+                  className="group flex items-center gap-3 text-body border border-card-border bg-card-elevated/50 rounded-lg p-2.5 hover:bg-card-elevated hover:border-primary/20 transition-all shadow-sm"
                 >
-                  <div className="shrink-0 w-8 flex justify-center text-lg" title={task.type}>
+                  <div className="shrink-0 w-8 flex justify-center text-heading" title={task.type}>
                     {getTypeIcon(task.type)}
                   </div>
 
@@ -159,7 +163,7 @@ export function TasksWidget() {
                         />
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted">
+                    <div className="flex items-center gap-2 text-body-sm text-muted">
                       {getPriorityBadge(task.priority)}
                       <span>•</span>
                       <span className="capitalize">{task.type}</span>
@@ -176,13 +180,13 @@ export function TasksWidget() {
       {data.completedTasks.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card/50 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-muted flex items-center gap-2">
+            <h3 className="text-body-lg font-semibold text-muted flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Recently completed
             </h3>
             <Link
               href="/control/overview/tasks?status=completed"
-              className="text-xs text-muted hover:text-foreground transition-colors"
+              className="text-body-sm text-muted hover:text-foreground transition-colors"
             >
               View all
             </Link>
@@ -193,13 +197,13 @@ export function TasksWidget() {
               <Link
                 key={task._id.toString()}
                 href={`/control/overview/tasks?task=${task._id}`}
-                className="flex items-center gap-3 text-sm p-2 rounded hover:bg-card-muted/50 transition-colors"
+                className="flex items-center gap-3 text-body p-2 rounded hover:bg-card-muted/50 transition-colors"
               >
                 <div className="shrink-0 text-green-500">✓</div>
                 <span className="flex-1 truncate text-muted line-through decoration-muted/50">
                   {task.title}
                 </span>
-                <span className="text-xs text-muted/60">
+                <span className="text-body-sm text-muted/60">
                   <LocalTime value={task.updatedAt} options={{ dateStyle: "medium" }} />
                 </span>
               </Link>
@@ -211,7 +215,7 @@ export function TasksWidget() {
       <div className="text-center">
         <Link
           href="/control/overview/tasks"
-          className="text-xs font-medium text-muted hover:text-foreground transition-colors border-b border-transparent hover:border-muted inline-block pb-0.5"
+          className="text-body-sm font-medium text-muted hover:text-foreground transition-colors border-b border-transparent hover:border-muted inline-block pb-0.5"
         >
           Open task board →
         </Link>

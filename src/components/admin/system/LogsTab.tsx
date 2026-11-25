@@ -253,7 +253,7 @@ export function LogsTab() {
         <button
           onClick={refreshActiveTab}
           disabled={loading}
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
@@ -310,12 +310,12 @@ export function LogsTab() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`font-semibold ${config.color}`}>{config.label}</span>
                           {log.adminUsername && (
-                            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">
+                            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-body-sm font-medium text-amber-400">
                               by {asText(log.adminUsername)}
                             </span>
                           )}
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted">
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-body text-muted">
                           <span className="font-medium text-foreground">
                             {asText(log.username)}
                           </span>
@@ -327,10 +327,10 @@ export function LogsTab() {
                           )}
                         </div>
                         {log.details && (
-                          <p className="mt-2 text-sm text-muted">{asText(log.details)}</p>
+                          <p className="mt-2 text-body text-muted">{asText(log.details)}</p>
                         )}
                       </div>
-                      <time className="flex-shrink-0 text-xs text-muted">
+                      <time className="flex-shrink-0 text-body-sm text-muted">
                         {formatDate(log.createdAt)}
                       </time>
                     </div>
@@ -343,7 +343,7 @@ export function LogsTab() {
       )}
 
       {activeSubTab !== "hourly" && !loading && !error && filteredLogs.length > 0 && (
-        <div className="rounded-lg border border-card-border bg-card px-4 py-2.5 text-center text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-card px-4 py-2.5 text-center text-body text-muted">
           Showing {filteredLogs.length} {activeSubTab} log{filteredLogs.length !== 1 ? "s" : ""}
         </div>
       )}
@@ -351,7 +351,7 @@ export function LogsTab() {
       {/* Hourly Logs Tab Content */}
       {activeSubTab === "hourly" && (
         <>
-          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-300">
+          <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-body text-blue-300">
             Verbose turn processing logs from the last 24 hours. Each entry shows all phase results
             from a single turn. Logs auto-delete after 24 hours.
           </div>
@@ -400,25 +400,25 @@ export function LogsTab() {
                               : "bg-warning/20 text-warning"
                           }`}
                         >
-                          <span className="text-sm font-bold">#{log.turn}</span>
+                          <span className="text-body font-bold">#{log.turn}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold">Turn {log.turn}</span>
-                            <span className="text-sm text-muted">Year {log.year}</span>
+                            <span className="text-body text-muted">Year {log.year}</span>
                             {log.warnings.length > 0 && (
-                              <span className="rounded-full bg-warning/20 px-2 py-0.5 text-xs font-medium text-warning">
+                              <span className="rounded-full bg-warning/20 px-2 py-0.5 text-body-sm font-medium text-warning">
                                 {log.warnings.length} warning{log.warnings.length !== 1 ? "s" : ""}
                               </span>
                             )}
                             {phaseStatusEntries.length > 0 && (
-                              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-xs font-medium text-secondary">
+                              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-body-sm font-medium text-secondary">
                                 {phaseStatusEntries.length} phase
                                 {phaseStatusEntries.length !== 1 ? "s" : ""}
                               </span>
                             )}
                           </div>
-                          <div className="mt-0.5 flex items-center gap-3 text-xs text-muted">
+                          <div className="mt-0.5 flex items-center gap-3 text-body-sm text-muted">
                             <span>Duration: {log.durationMs}ms</span>
                             <span>
                               Game: <LocalTime value={log.gameTime} />
@@ -427,7 +427,7 @@ export function LogsTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <time className="text-xs text-muted">{formatDate(log.realTime)}</time>
+                        <time className="text-body-sm text-muted">{formatDate(log.realTime)}</time>
                         <svg
                           className={`h-5 w-5 text-muted transition-transform ${
                             expandedTurn === log.id ? "rotate-180" : ""
@@ -450,8 +450,8 @@ export function LogsTab() {
                       <div className="border-t border-card-border p-4">
                         {log.warnings.length > 0 && (
                           <div className="mb-4">
-                            <h4 className="mb-2 text-sm font-semibold text-warning">Warnings</h4>
-                            <ul className="space-y-1 text-sm text-warning">
+                            <h4 className="mb-2 text-body font-semibold text-warning">Warnings</h4>
+                            <ul className="space-y-1 text-body text-warning">
                               {log.warnings.map((w, i) => (
                                 <li
                                   key={i}
@@ -466,16 +466,16 @@ export function LogsTab() {
 
                         <div className="mb-4">
                           <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <h4 className="text-sm font-semibold">Phase status</h4>
+                            <h4 className="text-body font-semibold">Phase status</h4>
                             {phaseStatusEntries.length > 0 && (
                               <>
-                                <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                                <span className="rounded-full bg-success/10 px-2 py-0.5 text-body-sm font-medium text-success">
                                   {completedPhases} completed
                                 </span>
-                                <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                                <span className="rounded-full bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
                                   {skippedPhases} skipped
                                 </span>
-                                <span className="rounded-full bg-error/10 px-2 py-0.5 text-xs font-medium text-error">
+                                <span className="rounded-full bg-error/10 px-2 py-0.5 text-body-sm font-medium text-error">
                                   {failedPhases} failed
                                 </span>
                               </>
@@ -483,11 +483,11 @@ export function LogsTab() {
                           </div>
 
                           {phaseStatusEntries.length === 0 ? (
-                            <div className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs text-muted">
+                            <div className="rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm text-muted">
                               Phase-status telemetry is unavailable for this older turn log.
                             </div>
                           ) : (
-                            <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-2 text-body-sm sm:grid-cols-2 lg:grid-cols-3">
                               {phaseStatusEntries.map(([phase, telemetry]) => (
                                 <div
                                   key={phase}
@@ -498,7 +498,7 @@ export function LogsTab() {
                                       {formatPhaseLabel(phase)}
                                     </div>
                                     <span
-                                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${PHASE_STATUS_BADGE_CLASSES[telemetry.status]}`}
+                                      className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${PHASE_STATUS_BADGE_CLASSES[telemetry.status]}`}
                                     >
                                       {telemetry.status}
                                     </span>
@@ -546,8 +546,8 @@ export function LogsTab() {
                           )}
                         </div>
 
-                        <h4 className="mb-2 text-sm font-semibold">Phase results</h4>
-                        <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+                        <h4 className="mb-2 text-body font-semibold">Phase results</h4>
+                        <div className="grid gap-2 text-body-sm sm:grid-cols-2 lg:grid-cols-3">
                           {Object.entries(log.phases).map(([phase, data]) => {
                             if (!data) return null;
                             const phaseData = data as Record<string, unknown>;
@@ -582,7 +582,7 @@ export function LogsTab() {
           )}
 
           {!loading && !error && hourlyLogs.length > 0 && (
-            <div className="rounded-lg border border-card-border bg-card px-4 py-2.5 text-center text-sm text-muted">
+            <div className="rounded-lg border border-card-border bg-card px-4 py-2.5 text-center text-body text-muted">
               Showing {hourlyLogs.length} turn log{hourlyLogs.length !== 1 ? "s" : ""} from the last
               24 hours
             </div>

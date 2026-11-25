@@ -188,20 +188,24 @@ export function KeirPetBody({
           {asleep && (
             <span
               aria-hidden="true"
-              className="absolute -right-1 top-1 animate-pulse font-mono text-xs font-bold text-fg-2"
+              className="absolute -right-1 top-1 animate-pulse font-mono text-body-sm font-bold text-fg-2"
             >
               z Z
             </span>
           )}
         </button>
         <div className="relative mb-3 min-w-0 flex-1 rounded-lg rounded-bl-none border border-card-border bg-card/95 p-2 shadow-sm">
-          <p className="text-xs font-semibold leading-snug text-foreground">{pet.advice.title}</p>
-          {!compact && <p className="mt-1 text-[11px] leading-snug text-muted">{pet.advice.why}</p>}
+          <p className="text-body-sm font-semibold leading-snug text-foreground">
+            {pet.advice.title}
+          </p>
+          {!compact && (
+            <p className="mt-1 text-body-sm leading-snug text-muted">{pet.advice.why}</p>
+          )}
           {pet.advice.link && (
             <Link
               href={pet.advice.link}
               onClick={onNavigate}
-              className="mt-1.5 inline-block text-[11px] font-medium text-primary hover:underline"
+              className="mt-1.5 inline-block text-body-sm font-medium text-primary hover:underline"
             >
               {t("showMe")} ›
             </Link>
@@ -229,7 +233,9 @@ export function KeirPetBody({
             style={{ width: `${progress * 100}%` }}
           />
         </div>
-        <span className="shrink-0 text-[11px] text-muted">{t("streak", { days: pet.streak })}</span>
+        <span className="shrink-0 text-body-sm text-muted">
+          {t("streak", { days: pet.streak })}
+        </span>
       </div>
 
       {!compact && (
@@ -237,7 +243,7 @@ export function KeirPetBody({
           <button
             type="button"
             onClick={() => void care("pat")}
-            className="rounded-md border border-card-border px-2 py-1.5 text-xs font-medium text-foreground hover:bg-white/5"
+            className="rounded-md border border-card-border px-2 py-1.5 text-body-sm font-medium text-foreground hover:bg-white/5"
           >
             {asleep ? t("wake") : t("pat")}
           </button>
@@ -245,7 +251,7 @@ export function KeirPetBody({
             type="button"
             onClick={() => void care("tea")}
             disabled={teaMinutes > 0 || busy}
-            className="rounded-md border border-card-border px-2 py-1.5 text-xs font-medium text-foreground hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-card-border px-2 py-1.5 text-body-sm font-medium text-foreground hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {teaMinutes > 0
               ? t("teaIn", {

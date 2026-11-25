@@ -127,7 +127,7 @@ export default function GovernmentVotePanel({
 
   const subjectLine =
     vote.type === "pmAppointment" ? (
-      <p className="text-sm text-foreground">
+      <p className="text-body text-foreground">
         <span className="font-semibold">{vote.nomineeName}</span>
         {" — "}
         <span className="capitalize text-muted">
@@ -137,7 +137,7 @@ export default function GovernmentVotePanel({
         </span>
       </p>
     ) : (
-      <p className="text-sm text-foreground">
+      <p className="text-body text-foreground">
         Target: <span className="font-semibold">{vote.targetPmName}</span>
         {" · Proposed by "}
         <span className="font-semibold">{vote.proposedByName}</span>
@@ -148,22 +148,22 @@ export default function GovernmentVotePanel({
     <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between gap-4">
-        <Heading className="text-base font-semibold">{headerLabel}</Heading>
-        {isActive && <span className="text-xs text-muted">{timeRemaining}</span>}
+        <Heading className="text-body-lg font-semibold">{headerLabel}</Heading>
+        {isActive && <span className="text-body-sm text-muted">{timeRemaining}</span>}
       </div>
 
       {/* Subject line */}
       <div className="mb-4">{subjectLine}</div>
 
       {/* Tallies */}
-      <div className="mb-4 flex gap-4 text-sm">
+      <div className="mb-4 flex gap-4 text-body">
         <span className="font-bold text-success">{vote.votesFor} Aye</span>
         <span className="font-bold text-error">{vote.votesAgainst} Nay</span>
       </div>
 
       {vote.voteByParty.length > 0 && (
         <div className="mb-4 rounded-xl border border-card-border/60 bg-card-muted/20 p-3">
-          <p className="mb-2 text-xs font-medium text-muted">Breakdown by party</p>
+          <p className="mb-2 text-body-sm font-medium text-muted">Breakdown by party</p>
           <VoteTallyTable
             voteByParty={vote.voteByParty}
             chamberLabel={
@@ -184,7 +184,7 @@ export default function GovernmentVotePanel({
             type="button"
             onClick={() => handleVote("aye").catch(() => {})}
             disabled={submitting}
-            className={`rounded-lg border px-4 py-1.5 text-sm font-semibold text-success disabled:opacity-50 ${
+            className={`rounded-lg border px-4 py-1.5 text-body font-semibold text-success disabled:opacity-50 ${
               viewerVote === "aye"
                 ? "border-success bg-success/30"
                 : "border-success/30 bg-success/10 hover:bg-success/20"
@@ -196,7 +196,7 @@ export default function GovernmentVotePanel({
             type="button"
             onClick={() => handleVote("nay").catch(() => {})}
             disabled={submitting}
-            className={`rounded-lg border px-4 py-1.5 text-sm font-semibold text-error disabled:opacity-50 ${
+            className={`rounded-lg border px-4 py-1.5 text-body font-semibold text-error disabled:opacity-50 ${
               viewerVote === "nay"
                 ? "border-error bg-error/30"
                 : "border-error/30 bg-error/10 hover:bg-error/20"
@@ -225,18 +225,18 @@ export default function GovernmentVotePanel({
       {/* Result when vote is closed */}
       {!isActive && (
         <div className="space-y-1">
-          <p className="text-sm text-muted capitalize">
+          <p className="text-body text-muted capitalize">
             Result: <span className="font-semibold text-foreground">{vote.status}</span>
           </p>
           {vote.type === "noConfidence" && vote.status === "failed" && (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               A 48-turn cooldown is now in effect before another motion can be proposed.
             </p>
           )}
         </div>
       )}
 
-      <InlineError error={error} className="mt-2 text-sm text-error" />
+      <InlineError error={error} className="mt-2 text-body text-error" />
     </div>
   );
 }

@@ -54,16 +54,16 @@ export function PortfolioShell<K extends string>({
             <div className="min-w-0">
               <h1
                 data-coach="nav-portfolio"
-                className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate"
+                className="text-heading sm:text-heading font-bold text-foreground tracking-tight truncate"
               >
                 {title}
               </h1>
-              <p className="text-xs sm:text-sm text-muted mt-0.5">{subtitle}</p>
+              <p className="text-body-sm sm:text-body text-muted mt-0.5">{subtitle}</p>
               {mastheadAside && <div className="mt-3">{mastheadAside}</div>}
             </div>
             <div className="flex items-baseline gap-3 sm:flex-col sm:items-end sm:gap-0 shrink-0">
               <span className="text-body-sm font-medium text-muted">{netWorthLabel}</span>
-              <span className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums tracking-tight">
+              <span className="text-heading sm:text-display font-bold text-foreground tabular-nums tracking-tight">
                 {netWorth}
               </span>
             </div>
@@ -125,19 +125,19 @@ function RailButton<K extends string>({
         </span>
         <div className="min-w-0 flex-1">
           <div
-            className={`truncate text-sm font-semibold ${active ? "text-primary-foreground" : "text-foreground"}`}
+            className={`truncate text-body font-semibold ${active ? "text-primary-foreground" : "text-foreground"}`}
           >
             {item.label}
           </div>
           <div className="flex items-baseline gap-2">
             <span
-              className={`truncate text-xs tabular-nums ${active ? "text-primary-foreground" : "text-muted"}`}
+              className={`truncate text-body-sm tabular-nums ${active ? "text-primary-foreground" : "text-muted"}`}
             >
               {item.value}
             </span>
             {item.delta !== null && (
               <span
-                className={`text-[10px] font-bold tabular-nums shrink-0 ${
+                className={`text-body-sm font-bold tabular-nums shrink-0 ${
                   active
                     ? "text-primary-foreground"
                     : item.delta >= 0
@@ -193,7 +193,7 @@ function MobileRail<K extends string>({
               className={`flex shrink-0 flex-col items-start gap-0.5 px-3 py-2 ${pillClass(isActive)}`}
             >
               <span
-                className={`text-[10px] font-bold uppercase tracking-wider ${
+                className={`text-body-sm font-bold uppercase tracking-wider ${
                   isActive ? "text-primary-foreground" : "text-muted"
                 }`}
               >
@@ -201,7 +201,7 @@ function MobileRail<K extends string>({
               </span>
               <span className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-xs font-semibold tabular-nums ${
+                  className={`text-body-sm font-semibold tabular-nums ${
                     isActive ? "text-primary-foreground" : "text-foreground"
                   }`}
                 >
@@ -209,7 +209,7 @@ function MobileRail<K extends string>({
                 </span>
                 {item.delta !== null && (
                   <span
-                    className={`text-[10px] font-bold tabular-nums ${
+                    className={`text-body-sm font-bold tabular-nums ${
                       isActive
                         ? "text-primary-foreground"
                         : item.delta >= 0
@@ -397,12 +397,12 @@ export function OwnerToggle({ options, active, onChange }: OwnerToggleProps) {
                 : "text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >
-            <span className="text-xs font-semibold truncate max-w-[160px] sm:max-w-none">
+            <span className="text-body-sm font-semibold truncate max-w-[160px] sm:max-w-none">
               {opt.label}
             </span>
             {opt.subtitle && (
               <span
-                className={`text-[10px] truncate max-w-[160px] sm:max-w-none ${
+                className={`text-body-sm truncate max-w-[160px] sm:max-w-none ${
                   isActive ? "text-white/80" : "text-muted"
                 }`}
               >
@@ -439,7 +439,7 @@ export function ChartPill({
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+      className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
         active ? toneClass : "bg-card-elevated text-muted hover:text-foreground"
       }`}
     >
@@ -469,7 +469,7 @@ export function StatCard({
     <div className="rounded-xl border border-card-border bg-card px-4 py-4 shadow-sm">
       <span className="block text-body-sm font-medium text-muted mb-1">{label}</span>
       <span
-        className={`block text-lg sm:text-xl font-bold tabular-nums ${
+        className={`block text-heading sm:text-heading font-bold tabular-nums ${
           tone ? toneText(tone) : accent === "success" ? "text-success" : "text-foreground"
         }`}
       >

@@ -30,18 +30,18 @@ export function PanelState({
 }) {
   if (loading)
     return (
-      <p role="status" className="py-6 text-sm text-muted">
+      <p role="status" className="py-6 text-body text-muted">
         Loading...
       </p>
     );
   if (error) {
     return (
-      <p role="alert" className="py-6 text-sm text-error">
+      <p role="alert" className="py-6 text-body text-error">
         {error}
       </p>
     );
   }
-  if (empty) return <p className="py-6 text-sm text-muted">{emptyText ?? "Nothing here yet."}</p>;
+  if (empty) return <p className="py-6 text-body text-muted">{emptyText ?? "Nothing here yet."}</p>;
   return <>{children}</>;
 }
 
@@ -66,12 +66,12 @@ export function PreviewCard({
   return (
     <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-heading-sm font-bold text-foreground">{title}</h2>
-        <Link href={href} className="text-xs font-medium text-primary hover:underline">
+        <h2 className="text-heading font-bold text-foreground">{title}</h2>
+        <Link href={href} className="text-body-sm font-medium text-primary hover:underline">
           See all
         </Link>
       </div>
-      {detail && <p className="mt-0.5 text-[11px] text-muted">{detail}</p>}
+      {detail && <p className="mt-0.5 text-body-sm text-muted">{detail}</p>}
       <div className="mt-2">
         <PanelState loading={loading} error={error} empty={empty} emptyText="None right now.">
           {children}
@@ -96,12 +96,12 @@ export function PreviewRow({
 }) {
   const inner = (
     <>
-      <span className="min-w-0 text-sm text-foreground">
+      <span className="min-w-0 text-body text-foreground">
         <span className="block truncate">{left}</span>
-        {note && <span className="block text-xs text-muted">{note}</span>}
+        {note && <span className="block text-body-sm text-muted">{note}</span>}
       </span>
       <span
-        className={`shrink-0 text-sm font-medium tabular-nums ${rightTone ?? "text-foreground"}`}
+        className={`shrink-0 text-body font-medium tabular-nums ${rightTone ?? "text-foreground"}`}
       >
         {right}
       </span>

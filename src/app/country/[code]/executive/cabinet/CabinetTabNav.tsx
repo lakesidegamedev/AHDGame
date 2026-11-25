@@ -25,7 +25,7 @@ export function CabinetTabNav({
     >
       <button
         onClick={() => onChange("overview")}
-        className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(active === "overview")}`}
+        className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${pillClass(active === "overview")}`}
         aria-current={active === "overview" ? "page" : undefined}
       >
         Overview
@@ -33,7 +33,7 @@ export function CabinetTabNav({
       {showAdmin && (
         <button
           onClick={() => onChange("admin")}
-          className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${PILL_SHAPE} ${
+          className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${PILL_SHAPE} ${
             active === "admin" ? PILL_SELECTED : "text-error/70 hover:text-error"
           }`}
           aria-current={active === "admin" ? "page" : undefined}

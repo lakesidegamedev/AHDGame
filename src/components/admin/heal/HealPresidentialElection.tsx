@@ -36,8 +36,8 @@ export function HealPresidentialElection() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal presidential election</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal presidential election</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Fixes presidential elections with wrong durations. Resets timers to 24h primary + 24h
           general and withdraws candidates so they can re-enter the fresh primary.
         </p>
@@ -53,7 +53,7 @@ export function HealPresidentialElection() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           {diagnostic.status === "no_live_election" ? (
             <p className="text-muted">{diagnostic.message}</p>
           ) : diagnostic.status === "ok" ? (

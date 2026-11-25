@@ -2,5 +2,5 @@
 export const LANDING_ISLANDS = {
   countdown: "/landing/js/countdown.f77c93e117.js",
   consent: "/landing/js/consent.199cfc5b8d.js",
-  globe: "/landing/js/globe.6173e5f581.js",
+  globe: "/landing/js/globe.704fe5936e.js",
 };

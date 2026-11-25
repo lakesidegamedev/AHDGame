@@ -11,9 +11,9 @@ import { clamp01, confidenceHex, confidenceLabel, confidenceTextClass } from "./
 type MeterSize = "sm" | "md" | "lg";
 
 const DIMS: Record<MeterSize, { box: number; stroke: number; font: string; sub: string }> = {
-  sm: { box: 68, stroke: 5, font: "text-base", sub: "text-[8px]" },
-  md: { box: 96, stroke: 7, font: "text-2xl", sub: "text-[10px]" },
-  lg: { box: 136, stroke: 9, font: "text-4xl", sub: "text-[11px]" },
+  sm: { box: 68, stroke: 5, font: "text-body-lg", sub: "text-body-sm" },
+  md: { box: 96, stroke: 7, font: "text-heading", sub: "text-body-sm" },
+  lg: { box: 136, stroke: 9, font: "text-display", sub: "text-body-sm" },
 };
 
 interface ConfidenceMeterProps {
@@ -114,7 +114,7 @@ export function ConfidenceBar({
         />
       </span>
       <span
-        className={`min-w-[2.25rem] text-right text-xs font-semibold tabular-nums ${confidenceTextClass(v)}`}
+        className={`min-w-[2.25rem] text-right text-body-sm font-semibold tabular-nums ${confidenceTextClass(v)}`}
       >
         {Math.round(v * 100)}%
       </span>

@@ -139,7 +139,7 @@ export default function RegionalShortagesClient({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <nav
-              className="mb-1 flex items-center gap-1.5 text-sm text-muted"
+              className="mb-1 flex items-center gap-1.5 text-body text-muted"
               aria-label="Breadcrumb"
             >
               <Link
@@ -153,8 +153,8 @@ export default function RegionalShortagesClient({
                 {showAll ? "Regional demand" : "Regional shortages"}
               </span>
             </nav>
-            <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-            <p className="mt-1 text-sm text-muted">
+            <h1 className="text-heading font-bold text-foreground">{title}</h1>
+            <p className="mt-1 text-body text-muted">
               {showAll
                 ? "Supply and demand for every commodity in the chosen country or state."
                 : "Every commodity where demand exceeds local supply in the chosen country or state."}
@@ -163,7 +163,7 @@ export default function RegionalShortagesClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-card-border bg-card p-4 shadow-card">
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2 text-body-sm text-muted">
             <span>Country</span>
             <select
               aria-label="Country"
@@ -172,7 +172,7 @@ export default function RegionalShortagesClient({
                 setCountryId(e.target.value);
                 setStateId("all");
               }}
-              className="h-8 rounded-md border border-card-border bg-background px-2 text-sm text-foreground focus:border-foreground focus:outline-none"
+              className="h-8 rounded-md border border-card-border bg-background px-2 text-body text-foreground focus:border-foreground focus:outline-none"
             >
               {countries.map((code) => (
                 <option key={code} value={code}>
@@ -182,14 +182,14 @@ export default function RegionalShortagesClient({
             </select>
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2 text-body-sm text-muted">
             <span>State / Region</span>
             <select
               aria-label="State or region"
               value={stateId}
               onChange={(e) => setStateId(e.target.value)}
               disabled={states.length === 0}
-              className="h-8 rounded-md border border-card-border bg-background px-2 text-sm text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+              className="h-8 rounded-md border border-card-border bg-background px-2 text-body text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
             >
               <option value="all">All states (national)</option>
               {states.map((st) => (
@@ -200,12 +200,12 @@ export default function RegionalShortagesClient({
             </select>
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2 text-body-sm text-muted">
             <span>Show</span>
             <select
               value={showAll ? "all" : "shortages"}
               onChange={(e) => setShowAll(e.target.value === "all")}
-              className="h-8 rounded-md border border-card-border bg-background px-2 text-sm text-foreground focus:border-foreground focus:outline-none"
+              className="h-8 rounded-md border border-card-border bg-background px-2 text-body text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="all">All commodities</option>
               <option value="shortages">Shortages only</option>
@@ -213,7 +213,7 @@ export default function RegionalShortagesClient({
           </label>
 
           {!loading && !error && (
-            <span className="ml-auto text-xs text-muted">
+            <span className="ml-auto text-body-sm text-muted">
               {rows.length} {rows.length === 1 ? "commodity" : "commodities"}
               {!showAll && " short"}
             </span>
@@ -221,19 +221,19 @@ export default function RegionalShortagesClient({
         </div>
 
         {loading && (
-          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
             Loading regional commodity data…
           </div>
         )}
 
         {error && (
-          <div className="rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error">
+          <div className="rounded-xl border border-error/30 bg-error/10 p-4 text-body text-error">
             {error}
           </div>
         )}
 
         {!loading && !error && rows.length === 0 && (
-          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
             {showAll
               ? "Commodity data is unavailable for this market."
               : "No commodities are short in this market right now."}
@@ -242,9 +242,9 @@ export default function RegionalShortagesClient({
 
         {!loading && !error && rows.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
-            <table className="w-full min-w-[600px] text-sm">
+            <table className="w-full min-w-[600px] text-body">
               <thead>
-                <tr className="border-b border-card-border text-left text-xs text-muted">
+                <tr className="border-b border-card-border text-left text-body-sm text-muted">
                   <th className="px-4 py-2.5 font-medium">Commodity</th>
                   <th className="px-4 py-2.5 text-right font-medium">Supply</th>
                   <th className="px-4 py-2.5 text-right font-medium">Demand</th>
@@ -279,7 +279,7 @@ export default function RegionalShortagesClient({
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                       {formatPrice(row.price)}
-                      <span className="text-xs text-muted"> /{row.unit}</span>
+                      <span className="text-body-sm text-muted"> /{row.unit}</span>
                     </td>
                     <td
                       className={`px-4 py-2.5 text-right tabular-nums ${
@@ -294,7 +294,7 @@ export default function RegionalShortagesClient({
                         ? "—"
                         : `${row.vsBasePct > 0 ? "+" : ""}${row.vsBasePct.toFixed(0)}%`}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-xs">
+                    <td className="px-4 py-2.5 text-right text-body-sm">
                       <Link
                         href={`/commodity/${row.commodity}`}
                         className="text-primary hover:underline"

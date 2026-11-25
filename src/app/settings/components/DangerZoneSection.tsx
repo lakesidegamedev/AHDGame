@@ -147,8 +147,8 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
     <>
       {/* ── Resign Positions ─────────────────────────────────────────────────── */}
       <div className="mb-8">
-        <h4 className="text-sm font-semibold text-foreground mb-1">{t("danger.resignTitle")}</h4>
-        <p className="text-sm text-muted mb-4">{t("danger.resignDesc")}</p>
+        <h4 className="text-body font-semibold text-foreground mb-1">{t("danger.resignTitle")}</h4>
+        <p className="text-body text-muted mb-4">{t("danger.resignDesc")}</p>
         {resignResult && (
           <div className="mb-4">
             <MessageBanner
@@ -162,7 +162,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
           {!showResignConfirm && (
             <button
               onClick={() => setShowResignConfirm(true)}
-              className="rounded-xl border border-warning/50 bg-warning/10 px-4 py-2.5 text-sm font-medium text-warning transition-colors hover:bg-warning/20"
+              className="rounded-xl border border-warning/50 bg-warning/10 px-4 py-2.5 text-body font-medium text-warning transition-colors hover:bg-warning/20"
             >
               {t("danger.resignTitle")}
             </button>
@@ -170,7 +170,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
           {!showSpecificPositions && (
             <button
               onClick={() => setShowSpecificPositions(true)}
-              className="rounded-xl border border-card-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-card-elevated"
+              className="rounded-xl border border-card-border px-4 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-card-elevated"
             >
               {t("danger.resignSpecificTitle")}
             </button>
@@ -179,7 +179,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
 
         {showResignConfirm && (
           <div className="rounded-xl border border-warning/40 bg-warning/5 p-4">
-            <p className="text-sm text-foreground mb-3">
+            <p className="text-body text-foreground mb-3">
               {t.rich("danger.resignPrompt", {
                 strong: (chunks) => <strong>{chunks}</strong>,
               })}
@@ -188,7 +188,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
               <button
                 onClick={handleResignAll}
                 disabled={resigning}
-                className="rounded-xl bg-warning px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-warning/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="rounded-xl bg-warning px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-warning/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {resigning && <SpinnerIcon />}
                 {resigning ? t("danger.resigning") : t("danger.confirmResign")}
@@ -196,7 +196,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
               <button
                 onClick={() => setShowResignConfirm(false)}
                 disabled={resigning}
-                className="rounded-xl border border-card-border px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                className="rounded-xl border border-card-border px-4 py-2.5 text-body text-muted transition-colors hover:text-foreground disabled:opacity-50"
               >
                 {t("common.cancel")}
               </button>
@@ -207,7 +207,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
         {showSpecificPositions && (
           <div className="mt-4 rounded-xl border border-card-border bg-card-muted p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-body font-medium text-foreground">
                 {t("danger.resignSpecificTitle")}
               </p>
               <button
@@ -216,18 +216,18 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                   setShowSpecificPositions(false);
                   setShowSpecificConfirm(false);
                 }}
-                className="text-xs text-muted transition-colors hover:text-foreground"
+                className="text-body-sm text-muted transition-colors hover:text-foreground"
               >
                 {t("common.cancel")}
               </button>
             </div>
             {positionsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted">
+              <div className="flex items-center gap-2 text-body text-muted">
                 <SpinnerIcon />
                 {t("danger.loadingPositions")}
               </div>
             ) : positions.length === 0 ? (
-              <p className="text-sm text-muted">{t("danger.noPositions")}</p>
+              <p className="text-body text-muted">{t("danger.noPositions")}</p>
             ) : (
               <>
                 <select
@@ -236,7 +236,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                     setSelectedPositionId(event.target.value);
                     setShowSpecificConfirm(false);
                   }}
-                  className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-warning focus:outline-none focus:ring-1 focus:ring-warning/30"
+                  className="w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-body text-foreground focus:border-warning focus:outline-none focus:ring-1 focus:ring-warning/30"
                   aria-label={t("danger.resignSpecificTitle")}
                 >
                   <option value="">{t("danger.selectPosition")}</option>
@@ -250,14 +250,14 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowSpecificConfirm(true)}
-                    className="mt-3 rounded-xl border border-warning/50 bg-warning/10 px-4 py-2.5 text-sm font-medium text-warning transition-colors hover:bg-warning/20"
+                    className="mt-3 rounded-xl border border-warning/50 bg-warning/10 px-4 py-2.5 text-body font-medium text-warning transition-colors hover:bg-warning/20"
                   >
                     {t("danger.resignSelected")}
                   </button>
                 )}
                 {selectedPosition && showSpecificConfirm && (
                   <div className="mt-3 rounded-xl border border-warning/40 bg-warning/5 p-3">
-                    <p className="text-sm text-foreground mb-3">
+                    <p className="text-body text-foreground mb-3">
                       {t("danger.resignSpecificPrompt", { position: selectedPosition.label })}
                     </p>
                     <div className="flex gap-3">
@@ -265,7 +265,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                         type="button"
                         onClick={handleResignSpecific}
                         disabled={resigningSpecific}
-                        className="rounded-xl bg-warning px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-warning/90 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
+                        className="rounded-xl bg-warning px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-warning/90 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-2"
                       >
                         {resigningSpecific && <SpinnerIcon />}
                         {resigningSpecific
@@ -276,7 +276,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                         type="button"
                         onClick={() => setShowSpecificConfirm(false)}
                         disabled={resigningSpecific}
-                        className="rounded-xl border border-card-border px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                        className="rounded-xl border border-card-border px-4 py-2.5 text-body text-muted transition-colors hover:text-foreground disabled:opacity-50"
                       >
                         {t("common.cancel")}
                       </button>
@@ -293,11 +293,11 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
       <hr className="border-card-border mb-8" />
 
       {/* ── Delete Account ───────────────────────────────────────────────────── */}
-      <h4 className="text-sm font-semibold text-foreground mb-1">{t("danger.deleteTitle")}</h4>
-      <p className="text-sm text-muted mb-6">{t("danger.deleteDesc")}</p>
+      <h4 className="text-body font-semibold text-foreground mb-1">{t("danger.deleteTitle")}</h4>
+      <p className="text-body text-muted mb-6">{t("danger.deleteDesc")}</p>
       <button
         onClick={() => setShowDeleteConfirm(true)}
-        className="rounded-xl border border-error/50 bg-error/10 px-4 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error/20"
+        className="rounded-xl border border-error/50 bg-error/10 px-4 py-2.5 text-body font-medium text-error transition-colors hover:bg-error/20"
       >
         {t("danger.deleteButton")}
       </button>
@@ -333,16 +333,16 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                     />
                   </svg>
                 </div>
-                <h3 id="delete-dialog-title" className="text-base font-bold text-error">
+                <h3 id="delete-dialog-title" className="text-body-lg font-bold text-error">
                   {t("danger.deleteTitle")}
                 </h3>
               </div>
-              <p className="text-sm text-muted mb-4">
+              <p className="text-body text-muted mb-4">
                 {t.rich("danger.modalWarning", {
                   strong: (chunks) => <strong className="text-foreground">{chunks}</strong>,
                 })}
               </p>
-              <p className="mb-3 text-sm text-foreground">
+              <p className="mb-3 text-body text-foreground">
                 {t.rich("danger.typeToConfirm", {
                   code: (chunks) => (
                     <span className="font-bold font-mono bg-error/10 px-1.5 py-0.5 rounded text-error">
@@ -362,7 +362,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                   }
                 }}
                 placeholder={t("danger.deletePlaceholder")}
-                className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-background ${
+                className={`w-full rounded-xl border px-4 py-2.5 text-body focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-background ${
                   deleteConfirmText === "DELETE"
                     ? "border-success/60 ring-2 ring-success/20 focus:ring-success/30"
                     : deleteShake
@@ -392,7 +392,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
                 <button
                   onClick={closeDeleteDialog}
                   disabled={deleting}
-                  className="rounded-xl border border-card-border px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                  className="rounded-xl border border-card-border px-4 py-2.5 text-body text-muted transition-colors hover:text-foreground disabled:opacity-50"
                 >
                   {t("common.cancel")}
                 </button>

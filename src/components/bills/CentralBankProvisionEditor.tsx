@@ -25,8 +25,8 @@ export function CentralBankProvisionEditor({
 }) {
   return (
     <div className="rounded-lg border border-dashed border-amber-500/35 bg-amber-500/5 p-3 space-y-3">
-      <p className="text-xs font-medium text-muted">Central bank (optional)</p>
-      <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+      <p className="text-body-sm font-medium text-muted">Central bank (optional)</p>
+      <label className="flex cursor-pointer items-center gap-2 text-body-sm text-muted">
         <input
           type="checkbox"
           checked={include}
@@ -35,7 +35,7 @@ export function CentralBankProvisionEditor({
         />
         Change who sets the policy rate
       </label>
-      <div className="flex items-center gap-3 text-xs text-muted">
+      <div className="flex items-center gap-3 text-body-sm text-muted">
         <label className="flex cursor-pointer items-center gap-1.5">
           <input
             type="radio"
@@ -57,7 +57,7 @@ export function CentralBankProvisionEditor({
           Return rate-setting to the government
         </label>
       </div>
-      <p className="text-[11px] italic text-muted/60">
+      <p className="text-body-sm italic text-muted/60">
         {!include
           ? "No central-bank provision will be included in this bill."
           : action === "grant"

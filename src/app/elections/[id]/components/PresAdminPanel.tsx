@@ -28,7 +28,7 @@ interface PlaceOptions {
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 text-xs font-semibold text-muted">{children}</p>;
+  return <p className="mb-2 text-body-sm font-semibold text-muted">{children}</p>;
 }
 
 function AdminBtn({
@@ -56,7 +56,7 @@ function AdminBtn({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]}`}
+      className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]}`}
     >
       {children}
     </button>
@@ -215,12 +215,12 @@ export function PresAdminPanel({
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 divide-y divide-amber-500/10 text-sm">
+    <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 divide-y divide-amber-500/10 text-body">
       {/* ── Section: Phase Controls ───────────────────────────────────────── */}
       <div className="px-4 py-3 space-y-2.5">
         <div className="flex items-center justify-between">
           <SectionLabel>Phase controls</SectionLabel>
-          <span className="flex items-center gap-1.5 text-[11px] text-muted">
+          <span className="flex items-center gap-1.5 text-body-sm text-muted">
             <span className={`h-1.5 w-1.5 rounded-full ${phaseDot}`} />
             {phaseLabel}
           </span>
@@ -288,7 +288,7 @@ export function PresAdminPanel({
         </div>
 
         {msgs.phase && (
-          <p className={`rounded-md px-2.5 py-1.5 text-xs ${getMessageStyle(msgs.phase)}`}>
+          <p className={`rounded-md px-2.5 py-1.5 text-body-sm ${getMessageStyle(msgs.phase)}`}>
             {msgs.phase}
           </p>
         )}
@@ -303,7 +303,7 @@ export function PresAdminPanel({
             {candidates.map((c) => (
               <span
                 key={c.id}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-body-sm"
               >
                 <span className="font-medium text-foreground">{c.characterName}</span>
                 <span className="text-muted">{c.partyName ?? c.party}</span>
@@ -312,7 +312,7 @@ export function PresAdminPanel({
                     type="button"
                     onClick={() => handleRemoveCandidate(c.id, c.party)}
                     disabled={removingId !== null}
-                    className="ml-0.5 rounded px-1 py-0.5 text-[10px] text-error hover:bg-error/20 disabled:opacity-50"
+                    className="ml-0.5 rounded px-1 py-0.5 text-body-sm text-error hover:bg-error/20 disabled:opacity-50"
                     title="Remove and optionally replace"
                   >
                     {removingId === c.id ? "…" : "✕"}
@@ -322,14 +322,16 @@ export function PresAdminPanel({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted">No candidates placed.</p>
+          <p className="text-body-sm text-muted">No candidates placed.</p>
         )}
 
         {/* Place candidate form */}
         {!isEnded &&
           (placeOpen ? (
             <div className="rounded-lg border border-card-border bg-card p-3 space-y-2.5">
-              {placeOptionsLoading ? <p className="text-xs text-muted">Loading options…</p> : null}
+              {placeOptionsLoading ? (
+                <p className="text-body-sm text-muted">Loading options…</p>
+              ) : null}
               <div
                 className="flex flex-wrap gap-2 items-end"
                 style={{ opacity: placeOptionsLoading ? 0.4 : 1 }}
@@ -342,7 +344,7 @@ export function PresAdminPanel({
                       setPlaceType(e.target.value as "character" | "npp");
                       setPlaceId("");
                     }}
-                    className="rounded border border-card-border bg-background px-2.5 py-1.5 text-xs"
+                    className="rounded border border-card-border bg-background px-2.5 py-1.5 text-body-sm"
                   >
                     <option value="character">Character</option>
                     <option value="npp">NPP</option>
@@ -355,7 +357,7 @@ export function PresAdminPanel({
                   <select
                     value={placeId}
                     onChange={(e) => setPlaceId(e.target.value)}
-                    className="rounded border border-card-border bg-background px-2.5 py-1.5 text-xs min-w-[180px]"
+                    className="rounded border border-card-border bg-background px-2.5 py-1.5 text-body-sm min-w-[180px]"
                   >
                     <option value="">Select…</option>
                     {(placeType === "character" ? availableChars : availableNpps).map((opt) => (
@@ -370,7 +372,7 @@ export function PresAdminPanel({
                   <select
                     value={placeParty}
                     onChange={(e) => setPlaceParty(e.target.value)}
-                    className="rounded border border-card-border bg-background px-2.5 py-1.5 text-xs"
+                    className="rounded border border-card-border bg-background px-2.5 py-1.5 text-body-sm"
                   >
                     {(placeOptions?.parties ?? []).map((p) => (
                       <option key={p.id} value={p.id} disabled={partiesWithCandidate.has(p.id)}>
@@ -411,7 +413,9 @@ export function PresAdminPanel({
           ))}
 
         {msgs.candidates && (
-          <p className={`rounded-md px-2.5 py-1.5 text-xs ${getMessageStyle(msgs.candidates)}`}>
+          <p
+            className={`rounded-md px-2.5 py-1.5 text-body-sm ${getMessageStyle(msgs.candidates)}`}
+          >
             {msgs.candidates}
           </p>
         )}
@@ -438,7 +442,7 @@ export function PresAdminPanel({
           </AdminBtn>
         </div>
         {msgs.timers && (
-          <p className={`rounded-md px-2.5 py-1.5 text-xs ${getMessageStyle(msgs.timers)}`}>
+          <p className={`rounded-md px-2.5 py-1.5 text-body-sm ${getMessageStyle(msgs.timers)}`}>
             {msgs.timers}
           </p>
         )}
@@ -447,7 +451,7 @@ export function PresAdminPanel({
       {/* ── Section: Danger Zone ─────────────────────────────────────────── */}
       <div className="px-4 py-3 space-y-2.5">
         <SectionLabel>Danger zone</SectionLabel>
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           Full reinitialize wipes all candidates, vote tallies, and campaign data, then restarts the
           election from NOW with the correct LARP year.
         </p>
@@ -467,7 +471,7 @@ export function PresAdminPanel({
           {busy === "danger" ? "…" : "🗑 Full reinitialize"}
         </AdminBtn>
         {msgs.danger && (
-          <p className={`rounded-md px-2.5 py-1.5 text-xs ${getMessageStyle(msgs.danger)}`}>
+          <p className={`rounded-md px-2.5 py-1.5 text-body-sm ${getMessageStyle(msgs.danger)}`}>
             {msgs.danger}
           </p>
         )}

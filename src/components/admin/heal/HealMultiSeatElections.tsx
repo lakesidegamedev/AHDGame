@@ -44,8 +44,8 @@ export function HealMultiSeatElections() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal House & state Senate elections</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal House & state Senate elections</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Fixes multi-seat elections where seats were incorrectly allocated (e.g., all seats going
           to one candidate due to vote threshold issues). Recalculates seat distribution and updates
           electedOfficials.
@@ -61,7 +61,7 @@ export function HealMultiSeatElections() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-3 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-3 text-body-sm">
           {diagnostic.status === "no_elections" ? (
             <p className="text-muted">{diagnostic.message}</p>
           ) : diagnostic.status === "ok" ? (
@@ -92,7 +92,7 @@ export function HealMultiSeatElections() {
                     </div>
                     <div className="mt-2 space-y-1">
                       {e.candidates.map((c, i) => (
-                        <div key={i} className="flex items-center justify-between text-[10px]">
+                        <div key={i} className="flex items-center justify-between text-body-sm">
                           <span className="truncate max-w-[150px]">
                             {c.name} ({c.party})
                           </span>

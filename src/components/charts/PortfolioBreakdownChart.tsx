@@ -52,7 +52,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
 
   if (history.length < 2) {
     return (
-      <div className="flex h-24 items-center justify-center text-sm text-muted">
+      <div className="flex h-24 items-center justify-center text-body text-muted">
         Not enough data yet — check back after the next turn.
       </div>
     );
@@ -83,7 +83,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
 
   if (allValues.length === 0) {
     return (
-      <div className="flex h-24 items-center justify-center text-sm text-muted">
+      <div className="flex h-24 items-center justify-center text-body text-muted">
         No data available for selected series.
       </div>
     );
@@ -161,7 +161,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
       <div className="flex items-center gap-4 mb-3">
         <button
           onClick={() => setVisibleSeries((s) => ({ ...s, stocks: !s.stocks }))}
-          className={`flex items-center gap-1.5 text-xs transition-opacity ${
+          className={`flex items-center gap-1.5 text-body-sm transition-opacity ${
             visibleSeries.stocks ? "opacity-100" : "opacity-40"
           }`}
         >
@@ -170,7 +170,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
         </button>
         <button
           onClick={() => setVisibleSeries((s) => ({ ...s, bonds: !s.bonds }))}
-          className={`flex items-center gap-1.5 text-xs transition-opacity ${
+          className={`flex items-center gap-1.5 text-body-sm transition-opacity ${
             visibleSeries.bonds ? "opacity-100" : "opacity-40"
           }`}
         >
@@ -179,7 +179,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
         </button>
         <button
           onClick={() => setVisibleSeries((s) => ({ ...s, funds: !s.funds }))}
-          className={`flex items-center gap-1.5 text-xs transition-opacity ${
+          className={`flex items-center gap-1.5 text-body-sm transition-opacity ${
             visibleSeries.funds ? "opacity-100" : "opacity-40"
           }`}
         >
@@ -189,7 +189,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
         {!hideCashSeries && (
           <button
             onClick={() => setVisibleSeries((s) => ({ ...s, cash: !s.cash }))}
-            className={`flex items-center gap-1.5 text-xs transition-opacity ${
+            className={`flex items-center gap-1.5 text-body-sm transition-opacity ${
               visibleSeries.cash ? "opacity-100" : "opacity-40"
             }`}
           >
@@ -355,7 +355,7 @@ export function PortfolioBreakdownChart({ history, hideCashSeries = false }: Pro
 
       {/* Tooltip */}
       {hoveredPoint && hovered !== null && (
-        <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs shadow-card">
+        <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-body-sm shadow-card">
           <div className="text-muted mb-1">Turn {hoveredPoint.turn}</div>
           {visibleSeries.stocks && seriesByPoint[hovered]?.stocks !== undefined && (
             <div className="flex items-center justify-between gap-3">

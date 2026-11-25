@@ -91,7 +91,7 @@ export function ManpowerPanel({
             value={mode}
             disabled={saving}
             onChange={(e) => void save(e.target.value as ManpowerView["mode"])}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-[13px] text-foreground"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground"
           >
             <option value="off">{MODE_LABEL.off}</option>
             <option value="trained">{MODE_LABEL.trained}</option>
@@ -101,14 +101,14 @@ export function ManpowerPanel({
             </option>
           </select>
         ) : (
-          <p className="text-[13px] text-foreground">{MODE_LABEL[mode]}</p>
+          <p className="text-body-sm text-foreground">{MODE_LABEL[mode]}</p>
         )}
         {!manpower.conscriptAllowed && (
-          <p className="mt-1.5 text-[11px] text-muted">
+          <p className="mt-1.5 text-body-sm text-muted">
             Conscription requires a reserve law that permits it.
           </p>
         )}
-        <InlineError error={error} className="mt-1.5 text-[11px] text-error" />
+        <InlineError error={error} className="mt-1.5 text-body-sm text-error" />
       </div>
     </SectionCard>
   );

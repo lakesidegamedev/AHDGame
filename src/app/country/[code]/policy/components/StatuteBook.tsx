@@ -146,10 +146,10 @@ export function StatuteBook({
               aria-expanded={!isCollapsed}
               className="flex w-full items-baseline justify-between gap-3 bg-card-muted px-5 py-3 text-left transition-colors hover:bg-card-elevated/40"
             >
-              <span className="text-heading-sm font-semibold">
+              <span className="text-heading font-semibold">
                 Title {romanNumeral(index)} — {getDomainLabel(domain)}
               </span>
-              <span className="shrink-0 font-mono text-[11px]">
+              <span className="shrink-0 font-mono text-body-sm">
                 <span className="text-muted">
                   {records.filter(isLawRecord).length}{" "}
                   {records.filter(isLawRecord).length === 1 ? "statute" : "statutes"}
@@ -188,7 +188,7 @@ export function StatuteBook({
                           <span className="text-muted"> — {row.policyOptionName}</span>
                         )}
                       </div>
-                      <div className="mt-1 font-mono text-[11px] text-muted">
+                      <div className="mt-1 font-mono text-body-sm text-muted">
                         {provenance
                           ? `enacted ${formatEnactedStamp(provenance.enactedYear, provenance.enactedAt)} · by bill “${provenance.title}”`
                           : row.recordType === "tariff"
@@ -205,7 +205,7 @@ export function StatuteBook({
                           {row.metricEffects.map((effect) => {
                             const isPositive = effect.ratePerTurn > 0;
                             const perYear = effect.ratePerTurn * 48;
-                            const pillClass = `inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[10px] font-medium ${
+                            const pillClass = `inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-body-sm font-medium ${
                               isPositive
                                 ? "border-success/20 bg-success/10 text-success"
                                 : "border-error/20 bg-error/10 text-error"
@@ -256,7 +256,7 @@ export function StatuteBook({
                                     </span>
                                   </div>
                                   {metricHref && (
-                                    <p className="pt-1 text-[9px] text-muted/60">
+                                    <p className="pt-1 text-body-sm text-muted/60">
                                       Click to view in your home state
                                     </p>
                                   )}
@@ -270,7 +270,7 @@ export function StatuteBook({
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {row.weightedEffects!.map((effect) => {
                             const label = METRIC_NAMES[effect.metricId] ?? effect.metricId;
-                            const pillClass = `inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[10px] font-medium opacity-70 ${
+                            const pillClass = `inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-body-sm font-medium opacity-70 ${
                               effect.isPositive
                                 ? "border-success/20 bg-success/10 text-success"
                                 : "border-error/20 bg-error/10 text-error"
@@ -304,11 +304,11 @@ export function StatuteBook({
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
                       {row.recordType === "tariff" ? (
-                        <span className="rounded-full border border-error/30 bg-error/10 px-2.5 py-0.5 text-xs font-semibold text-error">
+                        <span className="rounded-full border border-error/30 bg-error/10 px-2.5 py-0.5 text-body-sm font-semibold text-error">
                           {row.tariffRate}% active
                         </span>
                       ) : row.recordType === "subsidy" ? (
-                        <span className="rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
+                        <span className="rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-body-sm font-semibold text-success">
                           +7.5% margin active
                         </span>
                       ) : (
@@ -318,7 +318,7 @@ export function StatuteBook({
                             social={row.hasSocial ? row.social : undefined}
                           />
                           {provenance?.annualCost != null && provenance.annualCost > 0 && (
-                            <span className="rounded border border-error/20 bg-error/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-error">
+                            <span className="rounded border border-error/20 bg-error/10 px-1.5 py-0.5 font-mono text-body-sm font-semibold text-error">
                               −{formatPartyCountryMoney(provenance.annualCost, countryId)}/yr
                             </span>
                           )}

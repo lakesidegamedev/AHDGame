@@ -48,15 +48,15 @@ export function CountryProfileReadinessCard({ readiness }: { readiness: CountryP
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 id="readiness-title" className="text-sm font-semibold text-foreground">
+          <h3 id="readiness-title" className="text-body-lg font-semibold text-foreground">
             Readiness
           </h3>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Evaluated against the latest reset preset. The current in-game year does not change the
             authored era profile.
           </p>
         </div>
-        <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted">
+        <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted">
           {presetLabel(readiness.presetId)}
         </span>
       </div>
@@ -75,9 +75,9 @@ export function CountryProfileReadinessCard({ readiness }: { readiness: CountryP
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-medium text-muted">{profile.label}</p>
+                  <p className="text-body-sm font-medium text-muted">{profile.label}</p>
                   <p
-                    className={`mt-1 flex items-center gap-1.5 text-sm font-semibold ${
+                    className={`mt-1 flex items-center gap-1.5 text-body font-semibold ${
                       ready ? "text-success" : "text-danger"
                     }`}
                   >
@@ -90,12 +90,12 @@ export function CountryProfileReadinessCard({ readiness }: { readiness: CountryP
                 </div>
                 <div className="flex flex-wrap justify-end gap-1">
                   {isActive && (
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-semibold text-primary">
                       Current
                     </span>
                   )}
                   {isPreset && readiness.presetLevel !== readiness.activeLevel && (
-                    <span className="rounded-full bg-muted/15 px-2 py-0.5 text-[10px] font-semibold text-muted">
+                    <span className="rounded-full bg-muted/15 px-2 py-0.5 text-body-sm font-semibold text-muted">
                       Preset
                     </span>
                   )}
@@ -103,13 +103,13 @@ export function CountryProfileReadinessCard({ readiness }: { readiness: CountryP
               </div>
 
               {profile.level === "background" && readiness.backgroundMode && (
-                <p className="mt-2 text-xs text-muted">
+                <p className="mt-2 text-body-sm text-muted">
                   Preset mode: {MODE_LABELS[readiness.backgroundMode]}
                 </p>
               )}
 
               {!ready && profile.blockers.length > 0 && (
-                <details className="mt-3 text-xs">
+                <details className="mt-3 text-body-sm">
                   <summary className="cursor-pointer font-medium text-danger">
                     {profile.blockers.length}{" "}
                     {profile.blockers.length === 1 ? "blocker" : "blockers"}
@@ -129,7 +129,7 @@ export function CountryProfileReadinessCard({ readiness }: { readiness: CountryP
         })}
       </div>
 
-      <div className="mt-3 rounded-lg border border-card-border/70 bg-card-elevated p-3 text-xs">
+      <div className="mt-3 rounded-lg border border-card-border/70 bg-card-elevated p-3 text-body-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-medium text-foreground">Content and era fidelity</span>
           <span

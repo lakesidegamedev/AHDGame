@@ -187,7 +187,7 @@ export function MobileRaceStrip({
       </div>
       {filter.stage === "final" ? (
         years.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("finder.noFinished")}</p>
+          <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("finder.noFinished")}</p>
         ) : (
           <BlendSelect
             aria-label={t("finder.finishedYear")}
@@ -228,7 +228,7 @@ export function MobileRaceStrip({
                 fontFamily: FONT.sans,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
                 {raceTitle(race, t, countryId, filter.regionNames)}
               </span>
               <span style={{ ...MONO_COUNT, opacity: 1, color: BLEND.muted }}>
@@ -292,7 +292,7 @@ export function BottomSheet({
             marginBottom: 10,
           }}
         >
-          <strong style={{ fontSize: 15 }}>{title}</strong>
+          <strong style={{ fontSize: 14 }}>{title}</strong>
           <button
             type="button"
             onClick={onClose}

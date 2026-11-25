@@ -95,7 +95,7 @@ export function SettingsAchievementsSection({ characterId }: SettingsAchievement
     return (
       <section className="scroll-mt-24 rounded-2xl border border-card-border bg-card p-6 md:p-8 shadow-card">
         <SectionLabel>{t("achievements.title")}</SectionLabel>
-        <p className="text-sm text-muted">{t("achievements.empty")}</p>
+        <p className="text-body text-muted">{t("achievements.empty")}</p>
       </section>
     );
   }
@@ -103,7 +103,7 @@ export function SettingsAchievementsSection({ characterId }: SettingsAchievement
   return (
     <section className="scroll-mt-24 rounded-2xl border border-card-border bg-card p-6 md:p-8 shadow-card">
       <SectionLabel className="mb-1">{t("achievements.title")}</SectionLabel>
-      <p className="mb-4 text-sm text-muted">{t("achievements.intro")}</p>
+      <p className="mb-4 text-body text-muted">{t("achievements.intro")}</p>
       <form onSubmit={handleSave} className="space-y-3">
         <div className="flex flex-wrap gap-2">
           {achievements.map((a) => (
@@ -127,18 +127,18 @@ export function SettingsAchievementsSection({ characterId }: SettingsAchievement
                 />
               )}
               <AchievementIcon name={a.icon} className="h-5 w-5 text-muted" />
-              <span className="text-sm font-medium">{a.name}</span>
+              <span className="text-body font-medium">{a.name}</span>
             </label>
           ))}
         </div>
         {characterId && (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {t("achievements.selectedCount", { count: selected.size, max: MAX_HIGHLIGHTS })}
           </p>
         )}
         {msg && (
           <div
-            className={`flex items-center gap-2.5 rounded-xl p-4 text-sm ${msg.ok ? "bg-success/15 text-success border border-success/30" : "bg-error/15 text-error border border-error/30"}`}
+            className={`flex items-center gap-2.5 rounded-xl p-4 text-body ${msg.ok ? "bg-success/15 text-success border border-success/30" : "bg-error/15 text-error border border-error/30"}`}
           >
             {msg.ok ? (
               <svg
@@ -176,7 +176,7 @@ export function SettingsAchievementsSection({ characterId }: SettingsAchievement
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-xl bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {saving ? t("common.saving") : t("achievements.save")}
           </button>

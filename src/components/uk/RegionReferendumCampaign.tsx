@@ -68,26 +68,26 @@ export function RegionReferendumCampaign({
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
-          <span className="inline-flex rounded-full bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+          <span className="inline-flex rounded-full bg-amber-500/20 px-2.5 py-1 text-body-sm font-semibold text-amber-600 dark:text-amber-400">
             {t("activeCampaign")}
           </span>
           <h2
             id={`referendum-campaign-${regionId.toLowerCase()}`}
-            className="text-lg font-semibold"
+            className="text-heading font-semibold"
           >
             {t("campaignTitle", { kind: ref.kind })}
           </h2>
-          <p className="text-sm text-muted">{t("campaignLinkHelp")}</p>
+          <p className="text-body text-muted">{t("campaignLinkHelp")}</p>
         </div>
         <Link
           href={referendumDetailUrl(countryId, regionId)}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber-700 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-amber-700 px-5 py-3 text-body font-semibold text-white transition-colors hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
         >
           {t("viewCampaign")} <span aria-hidden="true">→</span>
         </Link>
       </div>
       <div className="mt-5 space-y-2">
-        <div className="flex justify-between text-xs text-muted">
+        <div className="flex justify-between text-body-sm text-muted">
           <span>{t("campaignYesSupport", { value: yes })}</span>
           <span>{t("campaignNoSupport", { value: 100 - yes })}</span>
         </div>
@@ -102,7 +102,7 @@ export function RegionReferendumCampaign({
           <div className="h-full bg-primary" style={{ width: `${ref.yesShare}%` }} />
         </div>
         {ref.campaignCloseTurn != null && (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {t("campaignVoteOnTurn", { turn: ref.campaignCloseTurn })}
             {turnsLeft != null &&
               turnsLeft > 0 &&
@@ -110,7 +110,7 @@ export function RegionReferendumCampaign({
           </p>
         )}
         {ref.kind !== "peace_agreement" && (
-          <p className="text-xs text-muted">{t("campaignBaselineHelp")}</p>
+          <p className="text-body-sm text-muted">{t("campaignBaselineHelp")}</p>
         )}
       </div>
     </section>

@@ -43,7 +43,7 @@ export function EstatesBudgetTab({
           <div>
             <div className="dossier-label text-muted">Estate upkeep / committed</div>
             <div
-              className={`tabular mt-1 text-2xl font-bold ${over ? "text-error" : "text-foreground"}`}
+              className={`tabular mt-1 text-heading font-bold ${over ? "text-error" : "text-foreground"}`}
             >
               {fmtMoneyM(currencySymbol, estateSummary.totalUpkeep)}
             </div>
@@ -51,7 +51,7 @@ export function EstatesBudgetTab({
           <div className="text-right">
             <div className="dossier-label text-muted">{over ? "Over budget" : "Unallocated"}</div>
             <div
-              className={`tabular mt-1 text-2xl font-bold ${over ? "text-error" : "text-success"}`}
+              className={`tabular mt-1 text-heading font-bold ${over ? "text-error" : "text-success"}`}
             >
               {fmtMoneyAbs(currencySymbol, Math.abs(remaining))}
             </div>
@@ -64,7 +64,7 @@ export function EstatesBudgetTab({
             height={10}
           />
         </div>
-        <div className="mt-1 flex justify-between text-[11px] text-muted">
+        <div className="mt-1 flex justify-between text-body-sm text-muted">
           <span>{Math.round(use * 100)}% committed</span>
           {over ? (
             <span className="font-semibold text-error">Overspend → budget-balance penalty</span>
@@ -77,15 +77,15 @@ export function EstatesBudgetTab({
       <SectionCard title="Cost of estates · by location" sub="Annual upkeep share">
         <div className="space-y-2.5">
           {siteCosts.length === 0 && (
-            <div className="text-[12px] text-muted">No facilities in service.</div>
+            <div className="text-body-sm text-muted">No facilities in service.</div>
           )}
           {siteCosts.map((s) => (
             <div key={s.id} className="flex items-center gap-3">
-              <span className="w-28 shrink-0 truncate text-[12px] text-foreground">{s.name}</span>
+              <span className="w-28 shrink-0 truncate text-body-sm text-foreground">{s.name}</span>
               <div className="flex-1">
                 <Meter value={(s.cost / maxCost) * 100} height={6} />
               </div>
-              <span className="mono w-16 shrink-0 text-right text-[12px] font-semibold tabular text-foreground">
+              <span className="mono w-16 shrink-0 text-right text-body-sm font-semibold tabular text-foreground">
                 {fmtMoneyM(currencySymbol, s.cost)}
               </span>
             </div>

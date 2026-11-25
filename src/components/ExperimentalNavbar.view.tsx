@@ -167,7 +167,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
               </span>
               <Wordmark
                 typed={typedWordmark}
-                className={`whitespace-nowrap text-base font-bold tracking-tight text-foreground ${
+                className={`whitespace-nowrap text-body-lg font-bold tracking-tight text-foreground ${
                   typedWordmark ? "font-mono" : ""
                 }`}
               />
@@ -342,7 +342,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                       country: countryName(pageCountry as CountryId),
                     })}
                     title={t("countrySwitcher.switchNationView")}
-                    className="flex h-9 items-center gap-2 rounded-lg border border-card-border bg-card px-2.5 text-xs font-medium text-fg-2 transition-colors hover:border-muted/50 hover:text-foreground"
+                    className="flex h-9 items-center gap-2 rounded-lg border border-card-border bg-card px-2.5 text-body-sm font-medium text-fg-2 transition-colors hover:border-muted/50 hover:text-foreground"
                   >
                     <CountryFlag country={pageCountry} size="sm" />
                     <span>{COUNTRY_DISPLAY_CODES[pageCountry] ?? pageCountry}</span>
@@ -369,13 +369,13 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                           >
                             <CountryFlag country={c} size="sm" />
                             <span
-                              className={`text-[13px] ${isCurrent ? "font-semibold text-foreground" : "text-fg-2"}`}
+                              className={`text-body-sm ${isCurrent ? "font-semibold text-foreground" : "text-fg-2"}`}
                             >
                               {countryName(c)}
                             </span>
                             <span className="ml-auto flex items-center gap-1.5">
                               {isHome && (
-                                <span className="text-[10px] font-medium text-muted">
+                                <span className="text-body-sm font-medium text-muted">
                                   {t("countrySwitcher.homeBadge")}
                                 </span>
                               )}
@@ -513,13 +513,13 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                     <div className="flex items-center gap-2">
                       <Link
                         href="/login"
-                        className="text-[13px] font-medium text-muted transition-colors hover:text-foreground"
+                        className="text-body-sm font-medium text-muted transition-colors hover:text-foreground"
                       >
                         {t("common.signIn")}
                       </Link>
                       <Link
                         href="/register"
-                        className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+                        className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
                       >
                         {t("common.register")}
                       </Link>
@@ -546,7 +546,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
               </span>
               <Wordmark
                 typed={typedWordmark}
-                className={`min-w-0 truncate text-[15px] font-bold tracking-tight text-foreground ${
+                className={`min-w-0 truncate text-body font-bold tracking-tight text-foreground ${
                   typedWordmark ? "font-mono" : ""
                 }`}
               />
@@ -575,7 +575,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                 >
                   <PixelNavIcon name="bell" className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground">
+                    <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-body-sm font-bold leading-4 text-primary-foreground">
                       {unreadBadgeLabel(unreadCount)}
                     </span>
                   )}
@@ -744,7 +744,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
               {!mobileProfileOpen && (
                 <div className="flex h-14 shrink-0 items-center justify-between border-b border-card-border px-4">
                   <span
-                    className={`text-base font-semibold text-foreground ${
+                    className={`text-body-lg font-semibold text-foreground ${
                       typedWordmark ? "font-mono" : ""
                     }`}
                   >
@@ -754,7 +754,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                     type="button"
                     aria-label={t("common.closeMenu")}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-lg px-2 py-1 text-xl text-muted hover:bg-white/5 hover:text-foreground"
+                    className="rounded-lg px-2 py-1 text-heading text-muted hover:bg-white/5 hover:text-foreground"
                   >
                     ×
                   </button>

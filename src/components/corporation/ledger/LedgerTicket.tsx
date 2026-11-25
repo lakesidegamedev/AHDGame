@@ -13,7 +13,7 @@ export function LedgerTicket({
   return (
     <section className="rounded-[var(--corp-rad,6px)] border border-card-border bg-card-muted">
       <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-3.5">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{title}</h3>
         {action}
       </div>
       <div className="relative border-t border-dashed border-card-border px-4 pb-4 pt-3.5">

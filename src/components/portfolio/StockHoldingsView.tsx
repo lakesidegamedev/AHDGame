@@ -26,7 +26,7 @@ export function StockHoldingValues({ holdings }: { holdings: Holding[] }) {
     <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {(["all", "short", "long"] as const).map((term) => (
         <div key={term} className="rounded-lg border border-card-border bg-card p-3">
-          <dt className="text-xs text-muted">{t(term)}</dt>
+          <dt className="text-body-sm text-muted">{t(term)}</dt>
           <dd className="font-semibold tabular-nums">{formatAmount(totals[term])}</dd>
         </div>
       ))}
@@ -46,7 +46,7 @@ export function StockHoldingsView({ holdings }: { holdings: Holding[] }) {
             key={value}
             aria-pressed={value === term}
             onClick={() => setTerm(value)}
-            className={`px-3 py-1 text-sm ${pillClass(value === term)}`}
+            className={`px-3 py-1 text-body ${pillClass(value === term)}`}
           >
             {t(value)}
           </button>

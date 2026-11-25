@@ -16,7 +16,7 @@ export function OverrideChamberBar({
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between text-body-sm">
         <span className="text-muted font-medium">{label}</span>
         <span className="tabular-nums">
           <span className={met ? "text-success" : "text-amber-400"}>{votesFor}</span>

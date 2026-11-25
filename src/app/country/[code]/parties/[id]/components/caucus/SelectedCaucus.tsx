@@ -153,41 +153,43 @@ export function SelectedCaucus({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-bold">{caucus.name}</h2>
+              <h2 className="text-heading font-bold">{caucus.name}</h2>
             </div>
             {caucus.motto && (
-              <p className="mt-0.5 text-xs italic text-muted">&ldquo;{caucus.motto}&rdquo;</p>
+              <p className="mt-0.5 text-body-sm italic text-muted">&ldquo;{caucus.motto}&rdquo;</p>
             )}
-            <div className="mt-2 max-w-prose space-y-1 text-sm text-muted">
+            <div className="mt-2 max-w-prose space-y-1 text-body text-muted">
               <p>Chair: {caucus.chairName ?? "Vacant"}</p>
               {caucus.description && <p>{caucus.description}</p>}
             </div>
           </div>
           <div className="flex flex-wrap items-start justify-end gap-3">
             <DiscordInviteButton inviteUrl={caucus.discordInviteUrl} entityName={caucus.name} />
-            <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 text-body-sm sm:grid-cols-4">
               <div>
                 <div className="text-body-sm text-muted">Members</div>
-                <div className="text-base font-bold tabular-nums">{caucus.memberCounts.total}</div>
+                <div className="text-body-lg font-bold tabular-nums">
+                  {caucus.memberCounts.total}
+                </div>
                 <div className="text-body-sm text-muted">
                   {caucus.memberCounts.players}p | {caucus.memberCounts.npps}n
                 </div>
               </div>
               <div>
                 <div className="text-body-sm text-muted">Treasury</div>
-                <div className="text-base font-bold tabular-nums">
+                <div className="text-body-lg font-bold tabular-nums">
                   ${caucus.treasury.toLocaleString("en-US")}
                 </div>
                 <div className="text-body-sm text-muted">Caucus funds</div>
               </div>
               <div>
                 <div className="text-body-sm text-muted">Tax</div>
-                <div className="text-base font-bold tabular-nums">{caucus.taxRate}%</div>
+                <div className="text-body-lg font-bold tabular-nums">{caucus.taxRate}%</div>
                 <div className="text-body-sm text-muted">Campaign levy</div>
               </div>
               <div>
                 <div className="text-body-sm text-muted">Positions</div>
-                <div className="text-base font-bold tabular-nums">{detail.positions.length}</div>
+                <div className="text-body-lg font-bold tabular-nums">{detail.positions.length}</div>
               </div>
             </div>
           </div>
@@ -200,7 +202,7 @@ export function SelectedCaucus({
                 key={tab}
                 type="button"
                 onClick={() => setSubtab(tab)}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                   activeSubtab === tab
                     ? "border-primary bg-primary/15 text-primary"
                     : "border-transparent text-muted hover:text-foreground"
@@ -221,7 +223,7 @@ export function SelectedCaucus({
               <button
                 type="button"
                 onClick={handleJoin}
-                className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+                className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20"
               >
                 Join caucus
               </button>
@@ -230,7 +232,7 @@ export function SelectedCaucus({
               <button
                 type="button"
                 onClick={handleLeave}
-                className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition-colors hover:bg-amber-500/20"
+                className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-body-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/20"
               >
                 Leave caucus
               </button>
@@ -239,7 +241,7 @@ export function SelectedCaucus({
               <button
                 type="button"
                 onClick={handleDisband}
-                className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/20"
+                className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-body-sm font-semibold text-red-300 transition-colors hover:bg-red-500/20"
               >
                 Disband
               </button>

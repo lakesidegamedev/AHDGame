@@ -64,19 +64,19 @@ function RaceCard({
   return (
     <section className="rounded-lg border border-border bg-card p-4" aria-label={race.label}>
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">{race.label}</h2>
-        <span className="text-sm text-muted-foreground">
+        <h2 className="text-heading font-semibold">{race.label}</h2>
+        <span className="text-body text-muted-foreground">
           {race.status === "pending" && `Opens ${race.opensYear}`}
           {race.status === "open" && "Open"}
           {race.status === "won" && "Won"}
         </span>
       </header>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-body text-muted-foreground">
         Prize: {race.method}. {race.threshold.toLocaleString()} points to win.
       </p>
 
       {race.winner && (
-        <p className="mt-2 text-sm font-medium text-success">
+        <p className="mt-2 text-body font-medium text-success">
           {race.winner.name} finished first and holds the method. Rivals with a real stake get a
           weaker licence {SUNSET_TURNS} turns later, at {pct(LICENCE_STRENGTH)} strength.
         </p>
@@ -85,11 +85,11 @@ function RaceCard({
       {race.leaderboard.length > 0 ? (
         <ol className="mt-3 space-y-1.5">
           {race.leaderboard.map((row) => (
-            <li key={`${row.kind}:${row.id}`} className="text-sm">
+            <li key={`${row.kind}:${row.id}`} className="text-body">
               <div className="flex justify-between gap-2">
                 <span>
                   {row.rank}. {row.name}{" "}
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-body-sm text-muted-foreground">
                     {row.kind === "country" ? "nation" : "corporation"}
                   </span>
                 </span>
@@ -107,13 +107,13 @@ function RaceCard({
           ))}
         </ol>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">Nobody has funded this yet.</p>
+        <p className="mt-3 text-body text-muted-foreground">Nobody has funded this yet.</p>
       )}
 
       {race.status === "open" &&
         options &&
         (options.country || options.corporations.length > 0) && (
-          <div className="mt-4 space-y-2 border-t border-border pt-3 text-sm">
+          <div className="mt-4 space-y-2 border-t border-border pt-3 text-body">
             <label className="flex items-center gap-2">
               Points
               <input
@@ -190,15 +190,15 @@ export function FrontierRacesClient() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-4">
-      <h1 className="text-2xl font-bold">Frontier programme races</h1>
-      <p className="text-sm text-muted-foreground">
+      <h1 className="text-heading font-bold">Frontier programme races</h1>
+      <p className="text-body text-muted-foreground">
         Nations fund programmes from the treasury and corporations from research points. The first
         to reach a programme&apos;s threshold takes the method and the national credit. Rivals that
         funded at least a quarter of the threshold lose some approval at home, then receive a weaker
         licence once the sunset period ends.
       </p>
-      {failed && <p className="text-sm text-destructive">Could not load the races.</p>}
-      {!data && !failed && <p className="text-sm text-muted-foreground">Loading.</p>}
+      {failed && <p className="text-body text-destructive">Could not load the races.</p>}
+      {!data && !failed && <p className="text-body text-muted-foreground">Loading.</p>}
       {data?.races.map((race) => (
         <RaceCard key={race.id} race={race} options={data.options} onFunded={load} />
       ))}

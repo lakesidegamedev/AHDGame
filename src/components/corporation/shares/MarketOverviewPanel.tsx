@@ -307,7 +307,7 @@ export default function MarketOverviewPanel({
               >
                 Prev
               </SmallButton>
-              <span className="text-xs tabular-nums text-muted">
+              <span className="text-body-sm tabular-nums text-muted">
                 {page + 1} / {pageCount}
               </span>
               <SmallButton
@@ -338,7 +338,7 @@ export default function MarketOverviewPanel({
           </div>
         )}
         {sorted.length === 0 && !hasFloat ? (
-          <p className="py-2 text-xs text-muted">No shareholders on record.</p>
+          <p className="py-2 text-body-sm text-muted">No shareholders on record.</p>
         ) : (
           <TableScroll>
             <table className="w-full min-w-[560px] border-collapse">
@@ -387,7 +387,7 @@ export default function MarketOverviewPanel({
                         <button
                           type="button"
                           onClick={onTrade}
-                          className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+                          className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
                         >
                           Buy
                         </button>
@@ -413,16 +413,16 @@ export default function MarketOverviewPanel({
                           <span className="text-foreground">{sh.name}</span>
                         )}
                         {holderIdentityTag(sh) && (
-                          <span className="ml-1.5 text-[11px] text-muted">
+                          <span className="ml-1.5 text-body-sm text-muted">
                             {holderIdentityTag(sh)}
                           </span>
                         )}
                         {sh.characterId != null && sh.characterId === myCharacterId && (
-                          <span className="ml-1.5 text-[11px] text-muted">you</span>
+                          <span className="ml-1.5 text-body-sm text-muted">you</span>
                         )}
                         {sh.characterId != null &&
                           sh.characterId === corporation.ceoCharacterId && (
-                            <span className="ml-1.5 text-[11px] text-muted">CEO</span>
+                            <span className="ml-1.5 text-body-sm text-muted">CEO</span>
                           )}
                       </Td>
                       <Td className="hidden text-muted sm:table-cell">{holderKind(sh)}</Td>
@@ -475,7 +475,7 @@ export default function MarketOverviewPanel({
 
       {votesLoaded && tallies.length > 0 && (
         <DenseSection title="CEO election" meta="weighted by voting power">
-          <p className="py-1 text-xs text-muted">
+          <p className="py-1 text-body-sm text-muted">
             The leading candidate is offered the seat. To become CEO, a candidate must live in the
             HQ region. You can change or withdraw your vote at any time.
           </p>
@@ -502,14 +502,14 @@ export default function MarketOverviewPanel({
                       {t.name}
                     </Link>
                     {corporation.pendingCeoCharacterId === t.characterId && (
-                      <span className="ml-1.5 text-[11px] text-warning">offered</span>
+                      <span className="ml-1.5 text-body-sm text-warning">offered</span>
                     )}
                   </Td>
                   <Td align="right">{t.votes.toLocaleString("en-US")}</Td>
                   <Td align="right" numeric={false}>
                     {myVote === t.characterId && (
                       <span className="inline-flex items-center gap-2">
-                        <span className="text-xs text-muted">your vote</span>
+                        <span className="text-body-sm text-muted">your vote</span>
                         <SmallButton
                           onClick={() => void handleWithdrawVote()}
                           disabled={voteLoading}

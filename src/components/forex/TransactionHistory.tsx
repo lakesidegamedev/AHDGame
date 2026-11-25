@@ -128,8 +128,8 @@ export function TransactionHistory({ currency }: Props) {
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-b border-card-border">
         <div>
-          <h3 className="text-sm font-semibold">Transaction history</h3>
-          <p className="text-xs text-muted mt-0.5">
+          <h3 className="text-body-lg font-semibold">Transaction history</h3>
+          <p className="text-body-sm text-muted mt-0.5">
             {scope === "mine"
               ? "Currency trades each turn that affect your character, across every pair, not just this page."
               : `Currency trades each turn involving ${currency ?? "any currency"}. Dividend and coupon conversions are rolled up into a single line for each pair each turn, instead of one line per player.`}
@@ -138,7 +138,7 @@ export function TransactionHistory({ currency }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-lg bg-card-elevated p-1 border border-card-border text-xs">
+          <div className="flex items-center rounded-lg bg-card-elevated p-1 border border-card-border text-body-sm">
             {(
               [
                 { key: "all", label: "All" },
@@ -168,7 +168,7 @@ export function TransactionHistory({ currency }: Props) {
               setOffset(0);
               setSourceFilter(e.target.value as SourceFilterUI);
             }}
-            className="rounded-md border border-card-border bg-card-elevated px-2 py-1 text-xs"
+            className="rounded-md border border-card-border bg-card-elevated px-2 py-1 text-body-sm"
           >
             <option value="">All types</option>
             <option value="manual">Manual</option>
@@ -200,21 +200,21 @@ export function TransactionHistory({ currency }: Props) {
           ))}
         </div>
       ) : turns.length === 0 || turns.every((t) => t.items.length === 0) ? (
-        <div className="p-6 text-center text-sm text-muted">No transactions in this window.</div>
+        <div className="p-6 text-center text-body text-muted">No transactions in this window.</div>
       ) : (
         <div>
           {turns.map((bucket) => (
             <section key={bucket.turn} className="border-b border-card-border last:border-b-0">
               <header className="flex items-center justify-between bg-card-elevated px-6 py-2 text-body-sm font-medium text-muted">
                 <span>Turn {bucket.turn}</span>
-                <span className="text-[10px] font-normal normal-case">
+                <span className="text-body-sm font-normal normal-case">
                   {bucket.items.length === 0
                     ? "No activity"
                     : `${bucket.items.length} ${bucket.items.length === 1 ? "entry" : "entries"}`}
                 </span>
               </header>
               {bucket.items.length === 0 ? (
-                <div className="px-6 py-4 text-xs text-muted">No trades this turn.</div>
+                <div className="px-6 py-4 text-body-sm text-muted">No trades this turn.</div>
               ) : (
                 <ul className="divide-y divide-card-border">
                   {bucket.items.map((item, idx) => {
@@ -226,19 +226,19 @@ export function TransactionHistory({ currency }: Props) {
                           className="flex flex-wrap items-center gap-x-4 gap-y-1 px-6 py-3 bg-info/5"
                         >
                           <span
-                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${SOURCE_COLOR[item.source]}`}
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-body-sm font-medium ${SOURCE_COLOR[item.source]}`}
                           >
                             Σ {SOURCE_LABEL[item.source]}
                           </span>
-                          <span className="font-mono text-xs">
+                          <span className="font-mono text-body-sm">
                             {item.fromCurrency} → {item.toCurrency}
                           </span>
-                          <span className="font-mono text-xs tabular-nums">
+                          <span className="font-mono text-body-sm tabular-nums">
                             {formatInCurrency(item.totalAmount, item.fromCurrency)}
                             <span className="mx-1 text-muted">→</span>
                             {formatInCurrency(toAmount, item.toCurrency)}
                           </span>
-                          <span className="ml-auto text-[11px] text-muted">
+                          <span className="ml-auto text-body-sm text-muted">
                             {item.participantCount}{" "}
                             {item.participantCount === 1 ? "holder" : "holders"} · avg rate{" "}
                             {item.avgRate.toFixed(4)}
@@ -258,24 +258,24 @@ export function TransactionHistory({ currency }: Props) {
                         className="flex flex-wrap items-center gap-x-4 gap-y-1 px-6 py-3"
                       >
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${SOURCE_COLOR[item.source]}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-body-sm font-medium ${SOURCE_COLOR[item.source]}`}
                         >
                           {SOURCE_LABEL[item.source]}
                         </span>
                         <span
-                          className={`text-xs ${item.isBuyer ? "font-semibold" : "text-muted"}`}
+                          className={`text-body-sm ${item.isBuyer ? "font-semibold" : "text-muted"}`}
                         >
                           {traderLabel}
                         </span>
-                        <span className="font-mono text-xs">
+                        <span className="font-mono text-body-sm">
                           {item.fromCurrency} → {item.toCurrency}
                         </span>
-                        <span className="font-mono text-xs tabular-nums">
+                        <span className="font-mono text-body-sm tabular-nums">
                           {formatInCurrency(item.amount, item.fromCurrency)}
                           <span className="mx-1 text-muted">→</span>
                           {formatInCurrency(toAmount, item.toCurrency)}
                         </span>
-                        <span className="ml-auto text-[11px] text-muted">
+                        <span className="ml-auto text-body-sm text-muted">
                           rate {item.rate.toFixed(4)}
                         </span>
                       </li>
@@ -288,7 +288,7 @@ export function TransactionHistory({ currency }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between px-6 py-3 border-t border-card-border text-xs text-muted">
+      <div className="flex items-center justify-between px-6 py-3 border-t border-card-border text-body-sm text-muted">
         <span>
           Showing last {turns.length} {turns.length === 1 ? "turn" : "turns"}
         </span>
@@ -296,14 +296,14 @@ export function TransactionHistory({ currency }: Props) {
           <button
             onClick={() => setOffset((o) => Math.max(0, o - TURNS_PER_PAGE))}
             disabled={offset === 0 || loading}
-            className="rounded-md border border-card-border px-3 py-1 text-xs hover:bg-card-elevated disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-md border border-card-border px-3 py-1 text-body-sm hover:bg-card-elevated disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Newer
           </button>
           <button
             onClick={() => setOffset((o) => Math.min(MAX_OFFSET, o + TURNS_PER_PAGE))}
             disabled={!hasMore || offset >= MAX_OFFSET || loading}
-            className="rounded-md border border-card-border px-3 py-1 text-xs hover:bg-card-elevated disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-md border border-card-border px-3 py-1 text-body-sm hover:bg-card-elevated disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Older
           </button>

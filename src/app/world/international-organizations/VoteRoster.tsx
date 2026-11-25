@@ -65,21 +65,21 @@ export function VoteRoster({ votes: rawVotes, expectedVoters }: Props) {
   return (
     <div className="mt-3 space-y-1.5 border-t border-card-border pt-3">
       <p className="text-body-sm font-medium text-muted">Votes cast</p>
-      <p className="text-xs text-muted" data-testid="vote-roster-summary">
+      <p className="text-body-sm text-muted" data-testid="vote-roster-summary">
         {summarizeVotes(
           votes,
           pendingVoters.map((c) => entityName(c))
         )}
       </p>
       {votes.length === 0 ? (
-        <p className="text-xs italic text-muted">No votes cast yet.</p>
+        <p className="text-body-sm italic text-muted">No votes cast yet.</p>
       ) : (
         <ul className="flex flex-wrap gap-1.5">
           {votes.map((v) => {
             return (
               <li
                 key={v.countryId}
-                className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${VOTE_STYLE[v.vote]}`}
+                className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-body-sm ${VOTE_STYLE[v.vote]}`}
                 title={`${v.characterName} cast ${VOTE_LABEL[v.vote]} on turn ${v.castOnTurn}`}
               >
                 <CountryFlag country={v.countryId.toUpperCase()} size="sm" />
@@ -94,7 +94,7 @@ export function VoteRoster({ votes: rawVotes, expectedVoters }: Props) {
         </ul>
       )}
       {pendingVoters.length > 0 && (
-        <p className="pt-1 text-xs text-muted">
+        <p className="pt-1 text-body-sm text-muted">
           A member votes through its foreign minister. A member with no foreign minister (a vacant
           seat) cannot vote until the seat is filled. Members run by the game vote by their
           alignment with the proposer and the subject, so close allies often vote alike.
@@ -106,7 +106,7 @@ export function VoteRoster({ votes: rawVotes, expectedVoters }: Props) {
             return (
               <li
                 key={c}
-                className="flex items-center gap-1.5 rounded-md border border-dashed border-card-border bg-card px-2 py-1 text-xs text-muted"
+                className="flex items-center gap-1.5 rounded-md border border-dashed border-card-border bg-card px-2 py-1 text-body-sm text-muted"
                 title={`${entityName(c)} has not voted yet: its foreign minister seat is empty or has not acted`}
               >
                 <CountryFlag country={c} size="sm" />

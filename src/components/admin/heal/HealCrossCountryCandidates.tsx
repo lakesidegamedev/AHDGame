@@ -24,8 +24,8 @@ export function HealCrossCountryCandidates() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal cross-country candidates</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal cross-country candidates</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Finds and withdraws NPP candidates who are in elections from a different country than
           their home country.
         </p>
@@ -41,7 +41,7 @@ export function HealCrossCountryCandidates() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           <p className="font-medium">
             Found{" "}
             <span className={diagnostic.crossCountryCandidates > 0 ? "text-error" : "text-success"}>

@@ -166,9 +166,7 @@ export function BlendHeader({
         >
           {kicker}
         </div>
-        <div style={{ fontFamily: FONT.mono, fontSize: 10.5, color: BLEND.mutedDim }}>
-          {readout}
-        </div>
+        <div style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDim }}>{readout}</div>
       </div>
       <h1
         style={{
@@ -187,7 +185,7 @@ export function BlendHeader({
           style={{
             marginTop: 7,
             fontFamily: FONT.sans,
-            fontSize: 15,
+            fontSize: 14,
             color: BLEND.muted,
           }}
         >
@@ -220,7 +218,7 @@ export function BlendSection({ title, lede, children, ruled = true }: BlendSecti
         style={{
           margin: lede ? "0 0 4px" : "0 0 16px",
           fontFamily: FONT.sans,
-          fontSize: 23,
+          fontSize: 20,
           fontWeight: 600,
         }}
       >
@@ -231,7 +229,7 @@ export function BlendSection({ title, lede, children, ruled = true }: BlendSecti
           style={{
             margin: "0 0 18px",
             fontFamily: FONT.sans,
-            fontSize: 14.5,
+            fontSize: 14,
             lineHeight: 1.55,
             color: BLEND.muted,
           }}

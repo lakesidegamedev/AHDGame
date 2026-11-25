@@ -92,9 +92,9 @@ export function UnitCard({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-foreground">{unit.name}</span>
+              <span className="text-body-sm font-semibold text-foreground">{unit.name}</span>
               <span
-                className="rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                className="rounded border px-1.5 py-0.5 text-body-sm font-semibold"
                 style={{
                   borderColor: TECH_COLOR[unit.techTier] + "66",
                   color: TECH_COLOR[unit.techTier],
@@ -104,7 +104,7 @@ export function UnitCard({
                 {TECH_TIERS[unit.techTier]}
               </span>
               <span
-                className="rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                className="rounded border px-1.5 py-0.5 text-body-sm font-semibold"
                 style={{
                   borderColor: VET_COLOR[unit.vet] + "66",
                   color: VET_COLOR[unit.vet],
@@ -114,7 +114,7 @@ export function UnitCard({
                 {VET_LABEL[unit.vet]}
               </span>
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
+            <div className="mt-0.5 flex items-center gap-2 text-body-sm text-muted">
               <span>{POSTURES.find((p) => p.id === unit.posture)?.label}</span>
               <span>·</span>
               <span className={strengthTone}>
@@ -144,7 +144,7 @@ export function UnitCard({
 
         <button
           onClick={() => setOpen(!open)}
-          className="shrink-0 self-start rounded-lg border border-card-border bg-card-muted px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground lg:self-auto"
+          className="shrink-0 self-start rounded-lg border border-card-border bg-card-muted px-3 py-1.5 text-body-sm font-semibold text-muted hover:text-foreground lg:self-auto"
         >
           {open ? "Close" : "Manage"}
         </button>
@@ -163,7 +163,7 @@ export function UnitCard({
                   assignedGeneralId: e.target.value || null,
                 })
               }
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-[12px] text-foreground disabled:opacity-50"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground disabled:opacity-50"
             >
               <option value="">General Staff (unassigned)</option>
               {commanders.map((c) => (
@@ -172,7 +172,7 @@ export function UnitCard({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               The unit deploys wherever its general is posted.
             </p>
           </div>
@@ -195,14 +195,14 @@ export function UnitCard({
                       onClick={() =>
                         onAction("POST", `${basePath}/${unit._id}/posture`, { posture: p.id })
                       }
-                      className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-[12px] disabled:opacity-50 ${
+                      className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-body-sm disabled:opacity-50 ${
                         unit.posture === p.id
                           ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] text-gov-soft"
                           : "border-card-border bg-card text-muted hover:text-foreground"
                       }`}
                     >
                       <span className="font-medium">{p.label}</span>
-                      <span className="text-[10px] opacity-70">{p.upkeepMult}× cost</span>
+                      <span className="text-body-sm opacity-70">{p.upkeepMult}× cost</span>
                     </button>
                   );
                 })}
@@ -212,7 +212,7 @@ export function UnitCard({
             <div>
               <div className="dossier-label mb-2 text-muted">Modernize</div>
               {unit.techTier >= 3 ? (
-                <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-[12px] text-success">
+                <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-success">
                   ✓ Cutting-edge
                 </div>
               ) : (
@@ -225,14 +225,14 @@ export function UnitCard({
                         : undefined
                     }
                     onClick={() => onAction("POST", `${basePath}/${unit._id}/upgrade`)}
-                    className="w-full rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-[12px] font-semibold text-success hover:bg-success/20 disabled:opacity-50"
+                    className="w-full rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-body-sm font-semibold text-success hover:bg-success/20 disabled:opacity-50"
                   >
                     Upgrade → {TECH_TIERS[unit.techTier + 1]} ·{" "}
                     {upgradePrice == null ? "price unavailable" : fmtMoney(upgradePrice)} · 1 action
                   </button>
                   {/* Modernising is not free to keep, either — say so before the click,
                       not after the next turn's budget report. */}
-                  <p className="mt-1.5 text-[11px] text-muted">
+                  <p className="mt-1.5 text-body-sm text-muted">
                     Upkeep{" "}
                     {fmtUpkeepMoney(currencySymbol, unit.effectiveUpkeep, upkeepPerIndexUnit)} →{" "}
                     {fmtUpkeepMoney(currencySymbol, nextTierUpkeep, upkeepPerIndexUnit)}/turn
@@ -246,7 +246,7 @@ export function UnitCard({
               <button
                 disabled={!canAct || busy}
                 onClick={() => setConfirmDisband(true)}
-                className="w-full rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-[12px] font-semibold text-error hover:bg-error/20 disabled:opacity-50"
+                className="w-full rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-50"
               >
                 Disband unit
               </button>

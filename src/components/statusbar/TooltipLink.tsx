@@ -8,7 +8,7 @@ export function TooltipLink({ href, children }: { href: string; children: ReactN
   return (
     <Link
       href={href}
-      className="flex items-center justify-between gap-1 pt-2 mt-1 border-t border-card-border/60 text-[11px] font-medium text-primary hover:underline"
+      className="flex items-center justify-between gap-1 pt-2 mt-1 border-t border-card-border/60 text-body-sm font-medium text-primary hover:underline"
     >
       <span>{children}</span>
       <svg

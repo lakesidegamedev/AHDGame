@@ -554,15 +554,15 @@ function useSettingsPageContentContext() {
         return (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">
+              <label className="block text-body-sm font-medium text-muted mb-1">
                 {t("page.username")}
               </label>
-              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
+              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-body text-foreground">
                 {username || "..."}
               </div>
-              {formerName && <p className="mt-1 text-xs text-muted">formerly {formerName}</p>}
+              {formerName && <p className="mt-1 text-body-sm text-muted">formerly {formerName}</p>}
               {usernameMode === "central" && (
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-body-sm text-muted">
                   <a href={ACCOUNT_URL} className="underline">
                     {USERNAME_ACTION}
                   </a>
@@ -570,7 +570,7 @@ function useSettingsPageContentContext() {
               )}
             </div>
             <EmailSection email={email} hasPassword={hasPassword} />
-            <p className="text-xs text-muted">{t("page.contactAdmin")}</p>
+            <p className="text-body-sm text-muted">{t("page.contactAdmin")}</p>
           </div>
         );
       case "identity":
@@ -654,14 +654,16 @@ function useSettingsPageContentContext() {
         return imperialChar ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">{t("page.name")}</label>
-              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
+              <label className="block text-body-sm font-medium text-muted mb-1">
+                {t("page.name")}
+              </label>
+              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-body text-foreground">
                 {imperialChar.name}
               </div>
-              <p className="mt-1 text-xs text-muted">{t("page.imperialContactAdmin")}</p>
+              <p className="mt-1 text-body-sm text-muted">{t("page.imperialContactAdmin")}</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">
+              <label className="block text-body-sm font-medium text-muted mb-1">
                 {t("page.avatar")}
               </label>
               <ProfilePictureUpload
@@ -680,18 +682,18 @@ function useSettingsPageContentContext() {
         return imperialChar ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">
+              <label className="block text-body-sm font-medium text-muted mb-1">
                 {t("page.royalHouse")}
               </label>
-              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
+              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-body text-foreground">
                 {imperialChar.royalHouse}
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted mb-1">
+              <label className="block text-body-sm font-medium text-muted mb-1">
                 {t("page.coatOfArms")}
               </label>
-              <p className="text-xs text-muted mb-2">{t("page.coatOfArmsHint")}</p>
+              <p className="text-body-sm text-muted mb-2">{t("page.coatOfArmsHint")}</p>
               <ProfilePictureUpload
                 size="compact"
                 currentUrl={rawUser?.imperialCharacter?.coatOfArmsUrl}
@@ -708,7 +710,7 @@ function useSettingsPageContentContext() {
       case "royal-anthem":
         return imperialChar ? (
           <div className="space-y-4">
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               {t.rich("page.royalAnthemHint", {
                 link: (chunks) => (
                   <Link
@@ -820,14 +822,16 @@ function useSettingsPageContentContext() {
               <SectionIcon id={section.id} />
             </span>
             <span className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-foreground">{t(section.labelKey)}</span>
+              <span className="text-body font-semibold text-foreground">{t(section.labelKey)}</span>
               <ChevronDown
                 className={`h-4 w-4 shrink-0 text-muted transition-transform ${
                   activeSection === section.id ? "rotate-180 text-primary" : ""
                 }`}
               />
             </span>
-            <span className="mt-1 block text-xs leading-5 text-muted">{t(section.summaryKey)}</span>
+            <span className="mt-1 block text-body-sm leading-5 text-muted">
+              {t(section.summaryKey)}
+            </span>
           </button>
         );
       })}

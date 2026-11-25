@@ -21,7 +21,7 @@ import type { GroupManagementView } from "./useGroupManagement";
 import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
 import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 const button =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium hover:bg-card-elevated disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-info";
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium hover:bg-card-elevated disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-info";
 const tones = ["text-gold", "text-info", "text-secondary", "text-success"];
 const columns: ComparisonSort[] = ["name", "revenue", "costs", "income", "cash", "debt"];
 export function GroupFinancialComparison({
@@ -91,8 +91,8 @@ export function GroupFinancialComparison({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">{t("financials")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("comparisonIntro")}</p>
+          <h2 className="text-heading font-semibold">{t("financials")}</h2>
+          <p className="mt-1 text-body text-muted">{t("comparisonIntro")}</p>
         </div>
         <button type="button" className={button} disabled={!selected.length} onClick={download}>
           <Download size={15} aria-hidden="true" />
@@ -100,10 +100,10 @@ export function GroupFinancialComparison({
         </button>
       </div>
       <div className="flex flex-wrap gap-4">
-        <label className="text-xs text-muted">
+        <label className="text-body-sm text-muted">
           {t("financialBasis")}
           <select
-            className="ml-2 rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+            className="ml-2 rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
             aria-label={t("financialBasis")}
             value={basis}
             onChange={(e) => setBasis(e.target.value as FinancialBasis)}
@@ -112,10 +112,10 @@ export function GroupFinancialComparison({
             <option value="day">{t("perGameDay")}</option>
           </select>
         </label>
-        <label className="text-xs text-muted">
+        <label className="text-body-sm text-muted">
           {t("comparisonCurrency")}
           <select
-            className="ml-2 rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+            className="ml-2 rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
             aria-label={t("comparisonCurrency")}
             value={currency}
             onChange={(e) => setCurrency(e.target.value as "preferred" | "anchor")}
@@ -127,7 +127,7 @@ export function GroupFinancialComparison({
       </div>
       {currency === "anchor" && <AnchorUnitNote />}
       {data.members.some((m) => m.history === null) && (
-        <p className="rounded-lg border border-info/25 bg-info/5 p-4 text-sm text-muted">
+        <p className="rounded-lg border border-info/25 bg-info/5 p-4 text-body text-muted">
           {t("comparisonPrivate")}
         </p>
       )}
@@ -139,7 +139,7 @@ export function GroupFinancialComparison({
           {data.members.map((m) => (
             <label
               key={m.id}
-              className={`flex min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm ${ids.has(m.id) ? "border-gold/50 bg-gold/5" : "border-card-border text-muted"}`}
+              className={`flex min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-body ${ids.has(m.id) ? "border-gold/50 bg-gold/5" : "border-card-border text-muted"}`}
             >
               <input
                 className="h-4 w-4 accent-primary"
@@ -178,7 +178,7 @@ export function GroupFinancialComparison({
           </button>
         </div>
       </section>
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {t("selectionCount", { count: selected.length, total: data.members.length })}
         {totals.latest
           ? " · " + t("observationTurn", { turn: totals.latest.turn })
@@ -206,17 +206,17 @@ export function GroupFinancialComparison({
           { title: t("selectedCash"), value: amount(totals.cash) },
         ].map((m) => (
           <div key={m.title} className="min-w-0 border-l-2 border-card-border pl-4">
-            <dt className="text-xs text-muted">{m.title}</dt>
-            <dd className="mt-1 break-words font-mono text-2xl font-semibold tabular-nums">
+            <dt className="text-body-sm text-muted">{m.title}</dt>
+            <dd className="mt-1 break-words font-mono text-heading font-semibold tabular-nums">
               {m.value}
             </dd>
           </div>
         ))}
       </dl>
-      <p className="text-xs text-muted">{t("comparisonBasisNote")}</p>
+      <p className="text-body-sm text-muted">{t("comparisonBasisNote")}</p>
       <section className="min-w-0 overflow-hidden rounded-xl border border-card-border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <caption className="sr-only">{t("comparisonTable")}</caption>
             <thead>
               <tr>
@@ -263,7 +263,7 @@ export function GroupFinancialComparison({
                     <tr key={row.id}>
                       <th
                         scope="row"
-                        className="min-w-48 !bg-transparent !text-foreground !text-sm !font-normal"
+                        className="min-w-48 !bg-transparent !text-foreground !text-body !font-normal"
                       >
                         <Link
                           href={"/corporation/" + m.pathId}
@@ -336,7 +336,7 @@ export function GroupFinancialComparison({
             )}
           </table>
         </div>
-        <p className="border-t border-card-border p-4 text-xs text-muted">
+        <p className="border-t border-card-border p-4 text-body-sm text-muted">
           {t("comparisonCombinedNote")}
         </p>
       </section>
@@ -352,7 +352,7 @@ export function GroupFinancialComparison({
                 type="button"
                 key={k}
                 aria-pressed={metric === k}
-                className={`px-3 py-1 text-xs ${pillClass(metric === k)}`}
+                className={`px-3 py-1 text-body-sm ${pillClass(metric === k)}`}
                 onClick={() => setMetric(k)}
               >
                 {t("chartMetrics." + k)}
@@ -365,7 +365,7 @@ export function GroupFinancialComparison({
                 type="button"
                 key={n}
                 aria-pressed={range === n}
-                className={`px-2.5 py-1 text-xs ${pillClass(range === n)}`}
+                className={`px-2.5 py-1 text-body-sm ${pillClass(range === n)}`}
                 onClick={() => setRange(n)}
               >
                 {t("turnRange", { count: n })}
@@ -397,17 +397,19 @@ export function GroupFinancialComparison({
             )}
           />
         ) : (
-          <p className="flex min-h-40 items-center justify-center text-sm text-muted">
+          <p className="flex min-h-40 items-center justify-center text-body text-muted">
             {selected.length ? t("comparisonHistoryUnavailable") : t("noComparisonMembers")}
           </p>
         )}
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {t("comparisonHistoryNote", { count: history.all.length, range })}
         </p>
         <details>
-          <summary className="cursor-pointer text-xs text-info">{t("viewComparisonData")}</summary>
+          <summary className="cursor-pointer text-body-sm text-info">
+            {t("viewComparisonData")}
+          </summary>
           <div className="mt-3 overflow-x-auto">
-            <table className="text-xs">
+            <table className="text-body-sm">
               <caption className="sr-only">{t("comparisonHistoryTable")}</caption>
               <thead>
                 <tr>

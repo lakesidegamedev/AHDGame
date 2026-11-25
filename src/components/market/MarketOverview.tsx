@@ -107,7 +107,7 @@ export function MarketOverview({
                   )}
                 </span>
                 <span
-                  className={`min-w-[4.5rem] text-right text-xs ${toneClass(l.priceChange24h)}`}
+                  className={`min-w-[4.5rem] text-right text-body-sm ${toneClass(l.priceChange24h)}`}
                 >
                   {pctText(l.priceChange24h)}
                 </span>

@@ -124,8 +124,8 @@ export function PrimaryCampaignControls({
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 space-y-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Your primary campaign</h3>
-          <p className="text-xs text-muted mt-0.5">
+          <h3 className="text-body-lg font-semibold text-foreground">Your primary campaign</h3>
+          <p className="text-body-sm text-muted mt-0.5">
             Camp in a state to boost your projection there. Ticks accrue each turn while camped (cap
             +{tickCap}). Ticks reset on state change.
           </p>
@@ -138,7 +138,7 @@ export function PrimaryCampaignControls({
           <div className="text-body-sm font-medium text-muted">Campaigning in</div>
           {currentCampaignState ? (
             <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-sm font-semibold text-amber-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-body font-semibold text-amber-400">
                 📍 {currentCampaignState}
               </span>
               <div
@@ -152,12 +152,12 @@ export function PrimaryCampaignControls({
                   />
                 ))}
               </div>
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 {currentTicks}/{tickCap} ticks
               </span>
             </div>
           ) : (
-            <div className="text-sm text-muted mt-1">No state selected</div>
+            <div className="text-body text-muted mt-1">No state selected</div>
           )}
         </div>
         {focusState && focusCost !== undefined && !campedHere ? (
@@ -166,7 +166,7 @@ export function PrimaryCampaignControls({
             disabled={busy !== null || playerActions < focusCost}
             onClick={() => void selectState(focusState.id)}
             title={playerActions < focusCost ? `Needs ${focusCost} actions` : undefined}
-            className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-body-sm font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Camp in {focusState.name} ({focusCost} {focusCost === 1 ? "action" : "actions"})
           </button>
@@ -174,7 +174,7 @@ export function PrimaryCampaignControls({
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors"
+          className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-body-sm font-medium text-amber-300 hover:bg-amber-500/25 transition-colors"
         >
           {focusState && !campedHere
             ? "Another state"
@@ -189,7 +189,7 @@ export function PrimaryCampaignControls({
         <div className="flex items-center flex-wrap gap-3 border-t border-card-border pt-3">
           <div className="flex-1 min-w-[200px]">
             <div className="text-body-sm font-medium text-muted">Home-state surge</div>
-            <div className="text-sm text-foreground mt-1">
+            <div className="text-body text-foreground mt-1">
               {surgeUsed ? (
                 <span className="text-muted">Used this cycle ✓</span>
               ) : (
@@ -205,7 +205,7 @@ export function PrimaryCampaignControls({
             type="button"
             disabled={!canSurge || busy !== null}
             onClick={triggerSurge}
-            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             title={
               surgeUsed
                 ? "Already used this primary cycle"
@@ -221,7 +221,7 @@ export function PrimaryCampaignControls({
 
       {message && (
         <div
-          className={`rounded-md px-2.5 py-1.5 text-xs ${
+          className={`rounded-md px-2.5 py-1.5 text-body-sm ${
             message.startsWith("✓") ? "bg-success/10 text-success" : "bg-error/10 text-error"
           }`}
         >

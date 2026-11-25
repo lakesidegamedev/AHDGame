@@ -63,8 +63,8 @@ export function AdvocacyTogglePanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">{config.name}</h2>
-        <p className="text-sm text-muted mt-1">{config.description}</p>
+        <h2 className="text-heading font-semibold text-foreground">{config.name}</h2>
+        <p className="text-body text-muted mt-1">{config.description}</p>
       </div>
 
       <div className="flex items-center gap-4">
@@ -92,7 +92,7 @@ export function AdvocacyTogglePanel({
           />
         </button>
 
-        <span className={`text-sm font-medium ${toggled ? "text-foreground" : "text-muted"}`}>
+        <span className={`text-body font-medium ${toggled ? "text-foreground" : "text-muted"}`}>
           {toggled ? "Active" : "Inactive"}
         </span>
       </div>
@@ -108,7 +108,7 @@ export function AdvocacyTogglePanel({
         </Button>
         {feedback && (
           <span
-            className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+            className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
           >
             {feedback.message}
           </span>

@@ -117,7 +117,7 @@ export function topMarginDrivers(margins: Margins): { label: string; value: numb
 
 function GroupHeader({ label }: { label: string }) {
   return (
-    <div className="mb-2 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
+    <div className="mb-2 border-b border-card-border pb-1 text-body font-semibold text-foreground">
       {label}
     </div>
   );
@@ -202,8 +202,8 @@ export default function MarginsPanel({
         className="flex w-full items-center justify-between px-6 py-4 text-left"
       >
         <div>
-          <h2 className="text-lg font-bold text-foreground">Profit margin breakdown</h2>
-          <p className="text-xs text-muted">
+          <h2 className="text-heading font-bold text-foreground">Profit margin breakdown</h2>
+          <p className="text-body-sm text-muted">
             {pnl
               ? "Revenue less all costs"
               : `Base ${formatPercent(margins.base)} · state, corporate & national modifiers`}
@@ -211,7 +211,7 @@ export default function MarginsPanel({
         </div>
         <div className="flex items-center gap-3">
           <span
-            className={`text-lg font-bold tabular-nums ${
+            className={`text-heading font-bold tabular-nums ${
               (pnl ? (netMargin ?? 0) >= 0 : margins.effective >= margins.base)
                 ? "text-success"
                 : "text-error"
@@ -234,15 +234,15 @@ export default function MarginsPanel({
         <div className="border-t border-card-border px-6 pb-6 pt-4">
           {pnl && (
             <div className="mb-4 rounded-lg border border-card-border p-3">
-              <h3 className="mb-2 text-sm font-semibold">Revenue less all costs</h3>
-              <p className="mb-3 text-xs text-muted">
+              <h3 className="mb-2 text-body-lg font-semibold">Revenue less all costs</h3>
+              <p className="mb-3 text-body-sm text-muted">
                 Net margin comes from sales revenue less the cost of everything produced, including
                 unsold output. Internal transfer income allocates results between sites and is not
                 company cash revenue. Positive modifiers can still leave a loss when costs exceed
                 sales.
               </p>
               {marginRevenue > 0 ? (
-                <div className="space-y-1.5 text-xs">
+                <div className="space-y-1.5 text-body-sm">
                   <div className="flex justify-between">
                     <span>
                       {pnl.freightIncomeAnchor ? "Sales and freight revenue" : "Sales revenue"}
@@ -308,7 +308,7 @@ export default function MarginsPanel({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted">
+                <p className="text-body-sm text-muted">
                   No sales revenue was recorded, so a percentage margin is unavailable. See the
                   operating profit and loss for cash costs.
                 </p>
@@ -319,7 +319,7 @@ export default function MarginsPanel({
             <button
               type="button"
               onClick={() => setConditionsExpanded((v) => !v)}
-              className="mb-3 flex w-full items-center justify-between text-left text-sm font-semibold text-foreground"
+              className="mb-3 flex w-full items-center justify-between text-left text-body font-semibold text-foreground"
             >
               <span>Condition details</span>
               <ChevronRight
@@ -329,7 +329,7 @@ export default function MarginsPanel({
               />
             </button>
           ) : null}
-          <p className="mb-4 text-xs text-muted">
+          <p className="mb-4 text-body-sm text-muted">
             {pnl
               ? "The readings behind the policy, tax and support line above, in margin points. One point is one percent of sales revenue. Commodity prices are not listed here: they act through your input bill and your sale price."
               : "State conditions affect operating costs. Margin determines what share of revenue becomes profit."}
@@ -340,9 +340,9 @@ export default function MarginsPanel({
               {/* Base margin (the modifier model only: under plants nothing is a
               percentage of a 35% starting point, so showing one misleads). */}
               {!pnl && (
-                <div className="mb-4 flex items-center justify-between border-b border-card-border pb-3 text-sm">
+                <div className="mb-4 flex items-center justify-between border-b border-card-border pb-3 text-body">
                   <span className="text-body-sm font-medium text-muted">Base margin</span>
-                  <span className="text-base font-bold tabular-nums text-foreground">
+                  <span className="text-body-lg font-bold tabular-nums text-foreground">
                     {formatPercent(margins.base)}
                   </span>
                 </div>
@@ -362,7 +362,7 @@ export default function MarginsPanel({
                       );
                       return (
                         <div key={d.label} className="flex items-center gap-2">
-                          <span className="w-40 shrink-0 truncate text-[11px] text-muted">
+                          <span className="w-40 shrink-0 truncate text-body-sm text-muted">
                             {d.label}
                           </span>
                           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card-border">
@@ -372,7 +372,7 @@ export default function MarginsPanel({
                             />
                           </div>
                           <span
-                            className={`w-14 shrink-0 text-right text-[11px] font-semibold tabular-nums ${
+                            className={`w-14 shrink-0 text-right text-body-sm font-semibold tabular-nums ${
                               d.value > 0 ? "text-success" : "text-error"
                             }`}
                           >
@@ -383,7 +383,7 @@ export default function MarginsPanel({
                       );
                     })}
                   </div>
-                  <p className="mt-2 text-[10px] leading-snug text-muted">
+                  <p className="mt-2 text-body-sm leading-snug text-muted">
                     Ranked by size, largest first. Everything else is below and is moving your
                     margin by less than these.
                   </p>
@@ -492,7 +492,7 @@ export default function MarginsPanel({
                     <button
                       type="button"
                       onClick={() => setMetricEffectsExpanded((v) => !v)}
-                      className="flex w-full items-center justify-between py-2 text-left text-xs font-semibold text-foreground"
+                      className="flex w-full items-center justify-between py-2 text-left text-body-sm font-semibold text-foreground"
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         <Activity className="h-3.5 w-3.5 shrink-0 text-muted" />
@@ -519,7 +519,7 @@ export default function MarginsPanel({
                         {visibleMetricEffects.map((effect) => (
                           <div
                             key={`${effect.category}.${effect.metricId}.${effect.channel}`}
-                            className="grid gap-1 text-xs"
+                            className="grid gap-1 text-body-sm"
                           >
                             <div className="flex items-center justify-between gap-3">
                               <span className="min-w-0 truncate font-medium text-foreground">
@@ -534,7 +534,7 @@ export default function MarginsPanel({
                                 {effect.modifier.toFixed(2)}pp
                               </span>
                             </div>
-                            <div className="text-[11px] leading-snug text-muted">
+                            <div className="text-body-sm leading-snug text-muted">
                               {effect.rationale}
                             </div>
                           </div>
@@ -658,7 +658,7 @@ export default function MarginsPanel({
                       tooltip={`Supply-chain friction cost for domestic corporations when tariffs are active in this country. Reflects higher input costs from trade barriers${inputLabels.length > 0 ? ` on imported inputs: ${inputLabels.join(", ")}` : ""}.`}
                       icon={PackageX}
                     />
-                    <p className="-mt-1 pl-8 text-[11px] leading-snug text-muted">
+                    <p className="-mt-1 pl-8 text-body-sm leading-snug text-muted">
                       via imported inputs
                       {inputLabels.length > 0 ? `: ${inputLabels.join(", ")}` : ""}. A domestic-only
                       seller still pays tariffs through its imported inputs.
@@ -755,7 +755,7 @@ export default function MarginsPanel({
                     icon={AlertTriangle}
                   />
                   {margins.activeCrises && margins.activeCrises.length > 0 && (
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 pl-1 text-xs">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 pl-1 text-body-sm">
                       {margins.activeCrises.map((c) => (
                         <Link
                           key={c.id}
@@ -780,9 +780,9 @@ export default function MarginsPanel({
           {pnl ? null : fillAdjustedMarginPct != null ? (
             <>
               <div className="mt-2 flex items-center justify-between rounded-lg border border-card-border bg-card-elevated px-3 py-2.5">
-                <span className="text-sm font-semibold text-foreground">Net margin</span>
+                <span className="text-body font-semibold text-foreground">Net margin</span>
                 <span
-                  className={`text-base font-bold tabular-nums ${
+                  className={`text-body-lg font-bold tabular-nums ${
                     fillAdjustedMarginPct >= 0 ? "text-success" : "text-error"
                   }`}
                 >
@@ -793,19 +793,19 @@ export default function MarginsPanel({
                 className="mt-1.5 flex items-center justify-between px-3"
                 title="The engine operating margin excludes upkeep, compliance, growth and inventory carry. Net margin includes all costs."
               >
-                <span className="text-xs text-muted">
+                <span className="text-body-sm text-muted">
                   Operating margin before upkeep and other costs
                 </span>
-                <span className="text-xs tabular-nums text-muted">
+                <span className="text-body-sm tabular-nums text-muted">
                   {formatPercent(margins.effective)}
                 </span>
               </div>
             </>
           ) : (
             <div className="mt-2 flex items-center justify-between rounded-lg border border-card-border bg-card-elevated px-3 py-2.5">
-              <span className="text-sm font-semibold text-foreground">Effective margin</span>
+              <span className="text-body font-semibold text-foreground">Effective margin</span>
               <span
-                className={`text-base font-bold tabular-nums ${
+                className={`text-body-lg font-bold tabular-nums ${
                   margins.effective >= margins.base ? "text-success" : "text-error"
                 }`}
               >

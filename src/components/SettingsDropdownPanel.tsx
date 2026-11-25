@@ -85,7 +85,7 @@ export function SettingsDropdownPanel({
           <div className="flex items-center gap-2 border-b border-card-border/60 px-3 py-2.5">
             <button
               onClick={() => onShowNationPicker(false)}
-              className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-body-sm text-muted hover:text-foreground transition-colors"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -118,11 +118,11 @@ export function SettingsDropdownPanel({
                   }`}
                 >
                   <CountryFlag country={id} size="lg" />
-                  <span className="text-xs leading-tight text-foreground truncate w-full">
+                  <span className="text-body-sm leading-tight text-foreground truncate w-full">
                     {countryName(id)}
                   </span>
                   {isHome && (
-                    <span className="text-[10px] text-muted leading-none">
+                    <span className="text-body-sm text-muted leading-none">
                       {t("countrySwitcher.homeBadge")}
                     </span>
                   )}
@@ -137,7 +137,7 @@ export function SettingsDropdownPanel({
             <AvatarInitial name={user.username} size="sm" />
             <div className="min-w-0">
               <p className="text-body-sm font-medium text-muted">{t("userMenu.signedInAs")}</p>
-              <p className="truncate text-sm font-semibold text-foreground">{user.username}</p>
+              <p className="truncate text-body font-semibold text-foreground">{user.username}</p>
             </div>
           </div>
           <div className="px-1.5 pb-1.5">
@@ -239,7 +239,7 @@ export function SettingsDropdownPanel({
             <Link
               href="/changelog"
               onClick={() => onClose()}
-              className="block rounded-lg px-2.5 py-1.5 text-center text-xs text-muted/70 hover:text-foreground transition-colors"
+              className="block rounded-lg px-2.5 py-1.5 text-center text-body-sm text-muted/70 hover:text-foreground transition-colors"
             >
               v{process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"} ·{" "}
               {process.env.NEXT_PUBLIC_GIT_COMMIT ?? "dev"}

@@ -138,7 +138,7 @@ export function ManifestoFlavorBar({
             >
               <span className="flex items-center gap-2">
                 <span
-                  className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
+                  className={`flex h-4 w-4 items-center justify-center rounded-full border text-body-sm ${
                     active
                       ? "border-foreground bg-foreground text-background"
                       : "border-card-border"

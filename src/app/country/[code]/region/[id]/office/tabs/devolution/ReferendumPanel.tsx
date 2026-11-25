@@ -132,14 +132,14 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
 
   return (
     <div className="mt-6 rounded-xl border border-card-border bg-card p-5">
-      <h3 className="text-base font-semibold">{noun} Referendum</h3>
+      <h3 className="text-body-lg font-semibold">{noun} Referendum</h3>
 
       {ref && (
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-muted">{statusLine(ref, currentTurn, stateId)}</p>
+          <p className="text-body text-muted">{statusLine(ref, currentTurn, stateId)}</p>
           {showCampaignBar && (
             <div>
-              <div className="flex justify-between text-xs text-muted">
+              <div className="flex justify-between text-body-sm text-muted">
                 <span>Yes {Math.round(ref.yesShare)}%</span>
                 <span>No {Math.round(100 - ref.yesShare)}%</span>
               </div>
@@ -156,10 +156,10 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
             </div>
           )}
           {showCampaignBar && ref.kind !== "peace_agreement" && (
-            <p className="text-xs text-muted">{t("campaignBaselineHelp")}</p>
+            <p className="text-body-sm text-muted">{t("campaignBaselineHelp")}</p>
           )}
           {cooldownTurnsLeft > 0 && (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Cooldown remaining: {cooldownTurnsLeft} {cooldownTurnsLeft === 1 ? "turn" : "turns"}
             </p>
           )}
@@ -169,7 +169,7 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
       {!hasActiveReferendum && (
         <div className="mt-3 space-y-3">
           {!ref && (
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               With sufficient {noun.toLowerCase()} desire, the{" "}
               {getSovereigntyGovernmentNames(stateId).regional} may formally request a referendum.
               The {getSovereigntyGovernmentNames(stateId).decisionMaker} then grants or declines the
@@ -180,10 +180,10 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
           {/* The cooldown line above already explains a cooldown block, so only
               surface other ineligibility reasons (e.g. insufficient desire) here. */}
           {!data.eligible && data.eligibilityReason && cooldownTurnsLeft === 0 && (
-            <p className="text-xs text-amber-500">{data.eligibilityReason}</p>
+            <p className="text-body-sm text-amber-500">{data.eligibilityReason}</p>
           )}
           {error && (
-            <div className="rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+            <div className="rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-body text-rose-500">
               {error}
             </div>
           )}
@@ -191,12 +191,14 @@ export function ReferendumPanel({ countryId, stateId, currentTurn, viewerCanMana
             type="button"
             onClick={handleRequest}
             disabled={!viewerCanManage || !data.eligible || submitting}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Requesting…" : `Request ${noun} Referendum`}
           </button>
           {!viewerCanManage && (
-            <p className="text-xs text-muted">Only the office-holder may request a referendum.</p>
+            <p className="text-body-sm text-muted">
+              Only the office-holder may request a referendum.
+            </p>
           )}
         </div>
       )}

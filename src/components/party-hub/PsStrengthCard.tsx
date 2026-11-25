@@ -36,11 +36,11 @@ export function PsStrengthCard({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-muted flex items-center gap-1.5">
+        <span className="text-body text-muted flex items-center gap-1.5">
           Political strength
           <PsHelpTooltip />
         </span>
-        <span className="text-lg font-bold tabular-nums">
+        <span className="text-heading font-bold tabular-nums">
           {Math.round(current)} / {cap}
         </span>
       </div>
@@ -53,14 +53,14 @@ export function PsStrengthCard({
           style={{ width: `${pct * 100}%` }}
         />
       </div>
-      <div className="mt-1.5 text-xs text-muted flex items-center justify-between gap-2">
+      <div className="mt-1.5 text-body-sm text-muted flex items-center justify-between gap-2">
         <span>
           +{passive} free per turn
           {treasuryGainPerTurn != null && treasuryGainPerTurn > 0
             ? ` + ${treasuryGainPerTurn.toFixed(2)} bought`
             : null}
         </span>
-        <span className="text-[10px] uppercase tracking-wider opacity-70">
+        <span className="text-body-sm uppercase tracking-wider opacity-70">
           {bandLabel} · {scope}
         </span>
       </div>

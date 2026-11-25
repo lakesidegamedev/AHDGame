@@ -56,18 +56,18 @@ function PartyGlanceRow({
         countryId={group.countryId}
         size="h-4 w-4"
       />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium">{group.partyName}</span>
+      <span className="min-w-0 flex-1 truncate text-body font-medium">{group.partyName}</span>
       {youAreHere && (
-        <span className="shrink-0 rounded-full border border-primary/40 bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">
+        <span className="shrink-0 rounded-full border border-primary/40 bg-primary/20 px-1.5 py-0.5 text-body-sm text-primary">
           You
         </span>
       )}
       {leader && (
-        <span className="hidden min-w-0 shrink truncate text-xs text-muted sm:inline">
+        <span className="hidden min-w-0 shrink truncate text-body-sm text-muted sm:inline">
           {leader.characterName}
         </span>
       )}
-      <span className="shrink-0 text-xs tabular-nums text-muted">
+      <span className="shrink-0 text-body-sm tabular-nums text-muted">
         {group.candidates.length} filed
       </span>
     </button>
@@ -104,7 +104,7 @@ export function PrimaryPhaseView({
           <button
             onClick={onEnter}
             disabled={actionLoading}
-            className="mt-4 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="mt-4 rounded-lg bg-primary px-5 py-2.5 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             Be the first — Enter race
           </button>

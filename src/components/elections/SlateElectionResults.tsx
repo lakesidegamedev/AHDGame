@@ -231,7 +231,7 @@ export function SlateElectionResults({ election }: { election: ElectionDisplay }
                           {href ? (
                             <Link
                               href={href}
-                              className={`block truncate text-xs font-medium transition-colors hover:text-primary ${
+                              className={`block truncate text-body-sm font-medium transition-colors hover:text-primary ${
                                 isLeader ? "text-foreground" : "text-muted"
                               }`}
                             >
@@ -239,7 +239,7 @@ export function SlateElectionResults({ election }: { election: ElectionDisplay }
                             </Link>
                           ) : (
                             <span
-                              className={`block truncate text-xs font-medium ${
+                              className={`block truncate text-body-sm font-medium ${
                                 isLeader ? "text-foreground" : "text-muted"
                               }`}
                             >
@@ -257,7 +257,7 @@ export function SlateElectionResults({ election }: { election: ElectionDisplay }
                             size="h-3 w-3"
                             countryId={election.countryId as CountryId}
                           />
-                          <span className="text-[10px] text-muted">{partyDisplayName}</span>
+                          <span className="text-body-sm text-muted">{partyDisplayName}</span>
                         </Link>
                         <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-card-border">
                           <div
@@ -268,7 +268,7 @@ export function SlateElectionResults({ election }: { election: ElectionDisplay }
                             }}
                           />
                         </div>
-                        <div className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
+                        <div className="flex shrink-0 items-center gap-2 text-body-sm tabular-nums">
                           {votes !== null && (
                             <span className="w-8 text-right text-muted">
                               {formatVotesCompact(votes)}

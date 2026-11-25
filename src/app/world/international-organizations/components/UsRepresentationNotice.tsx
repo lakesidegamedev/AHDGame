@@ -6,7 +6,7 @@ export function UsRepresentationNotice({ status }: { status: OrgViewerInfo["usRe
   if (!status) return null;
 
   return (
-    <aside className="space-y-1 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm">
+    <aside className="space-y-1 rounded-xl border border-warning/30 bg-warning/5 p-4 text-body">
       <h2 className="font-semibold text-foreground">
         {status === "vacant"
           ? "U.S. Secretary of State is vacant"

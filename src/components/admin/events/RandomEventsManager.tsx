@@ -102,7 +102,7 @@ const STATUS_STYLES: Record<string, string> = {
 function StatusPill({ status }: { status: string }) {
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[status] ?? "bg-muted/15 text-muted"}`}
+      className={`rounded-full px-2 py-0.5 text-body-sm font-semibold ${STATUS_STYLES[status] ?? "bg-muted/15 text-muted"}`}
     >
       {status}
     </span>
@@ -299,24 +299,24 @@ export function RandomEventsManager() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-foreground">Player random events</h3>
+              <h3 className="text-body-lg font-bold text-foreground">Player random events</h3>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                className={`rounded-full px-2 py-0.5 text-body-sm font-semibold ${
                   flagEnabled ? "bg-amber-500/15 text-amber-500" : "bg-muted/15 text-muted"
                 }`}
               >
                 {flagEnabled === null ? "…" : flagEnabled ? "Enabled" : "Disabled"}
               </span>
             </div>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Master switch. Disabling stops new offers; pending events still sweep to their default
               option. Per-turn results are logged to the turn log under{" "}
-              <code className="text-[11px]">phaseResults.playerRandomEvents</code>.
+              <code className="text-body-sm">phaseResults.playerRandomEvents</code>.
             </p>
             {flagEnabled === true &&
               definitions.length > 0 &&
               definitions.every((d) => d.status !== "approved") && (
-                <p className="mt-2 text-xs font-semibold text-amber-500">
+                <p className="mt-2 text-body-sm font-semibold text-amber-500">
                   ⚠ Events are enabled but no templates are approved — nothing will fire until at
                   least one template below is approved.
                 </p>
@@ -325,7 +325,7 @@ export function RandomEventsManager() {
           <button
             onClick={toggleFlag}
             disabled={busy || flagEnabled === null}
-            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-35 ${
+            className={`rounded-lg border px-4 py-2 text-body font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-35 ${
               flagEnabled
                 ? "border-red-500/50 text-red-400 hover:bg-red-500/10"
                 : "border-primary/50 text-primary hover:bg-primary/10"
@@ -334,49 +334,49 @@ export function RandomEventsManager() {
             {flagEnabled ? "Disable events" : "Enable events"}
           </button>
         </div>
-        {message && <p className="mt-3 text-sm text-foreground">{message}</p>}
+        {message && <p className="mt-3 text-body text-foreground">{message}</p>}
       </div>
 
       {/* Template catalog */}
       <div className="rounded-xl border border-card-border bg-card p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-foreground">Event templates</h3>
+          <h3 className="text-body-lg font-bold text-foreground">Event templates</h3>
           <div className="flex items-center gap-2">
             <button
               onClick={seedDrafts}
               disabled={busy}
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:text-foreground disabled:opacity-35"
+              className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold text-muted transition-colors hover:text-foreground disabled:opacity-35"
             >
               Seed PREE drafts
             </button>
             <button
               onClick={approveAll}
               disabled={busy || definitions.every((d) => d.status !== "draft")}
-              className="rounded-lg border border-green-500/50 px-3 py-1.5 text-xs font-semibold text-green-500 transition-colors hover:bg-green-500/10 disabled:opacity-35"
+              className="rounded-lg border border-green-500/50 px-3 py-1.5 text-body-sm font-semibold text-green-500 transition-colors hover:bg-green-500/10 disabled:opacity-35"
             >
               Enable all events
             </button>
             <button
               onClick={reseedAndApproveAll}
               disabled={busy}
-              className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
             >
               Reseed &amp; approve all
             </button>
           </div>
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Click any row to see its description, country scope, options, and every possible outcome.
         </p>
         {definitions.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             No definitions yet — seed the PREE drafts to get started.
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
-                <tr className="border-b border-card-border text-left text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border text-left text-body font-semibold text-foreground">
                   <th className="py-2 pr-3">Template</th>
                   <th className="py-2 pr-3">Kind</th>
                   <th className="py-2 pr-3">Status</th>
@@ -405,11 +405,11 @@ export function RandomEventsManager() {
                           </span>
                           {def.title}
                         </td>
-                        <td className="py-2 pr-3 font-mono text-xs text-muted">{def.kind}</td>
+                        <td className="py-2 pr-3 font-mono text-body-sm text-muted">{def.kind}</td>
                         <td className="py-2 pr-3">
                           <StatusPill status={def.status} />
                         </td>
-                        <td className="py-2 pr-3 text-xs text-muted">
+                        <td className="py-2 pr-3 text-body-sm text-muted">
                           {def.eligibility.join(", ")}
                         </td>
                         <td className="py-2 pr-3 text-muted">{def.baseWeight}</td>
@@ -419,7 +419,7 @@ export function RandomEventsManager() {
                             <button
                               onClick={() => approveOrRetire(def._id, "approve")}
                               disabled={busy}
-                              className="rounded border border-green-500/50 px-2 py-1 text-xs font-semibold text-green-500 hover:bg-green-500/10 disabled:opacity-35"
+                              className="rounded border border-green-500/50 px-2 py-1 text-body-sm font-semibold text-green-500 hover:bg-green-500/10 disabled:opacity-35"
                             >
                               Approve
                             </button>
@@ -428,7 +428,7 @@ export function RandomEventsManager() {
                             <button
                               onClick={() => approveOrRetire(def._id, "retire")}
                               disabled={busy}
-                              className="rounded border border-red-500/50 px-2 py-1 text-xs font-semibold text-red-400 hover:bg-red-500/10 disabled:opacity-35"
+                              className="rounded border border-red-500/50 px-2 py-1 text-body-sm font-semibold text-red-400 hover:bg-red-500/10 disabled:opacity-35"
                             >
                               Retire
                             </button>
@@ -438,8 +438,10 @@ export function RandomEventsManager() {
                       {expanded && (
                         <tr className="border-b border-card-border/50 bg-card-elevated/20">
                           <td colSpan={7} className="px-4 py-3">
-                            <p className="text-sm font-semibold text-foreground">{def.headline}</p>
-                            <p className="mt-1 text-sm text-muted">{def.body}</p>
+                            <p className="text-body font-semibold text-foreground">
+                              {def.headline}
+                            </p>
+                            <p className="mt-1 text-body text-muted">{def.body}</p>
                             <p className="mt-2 text-body-sm font-medium text-muted">
                               Scope: <span className="text-foreground">{scope}</span>
                             </p>
@@ -449,21 +451,21 @@ export function RandomEventsManager() {
                                   key={opt.id}
                                   className="rounded-lg border border-card-border bg-card px-3 py-2"
                                 >
-                                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                  <div className="flex items-center gap-2 text-body font-semibold text-foreground">
                                     {opt.label}
                                     {opt.isDefault && (
-                                      <span className="rounded-full bg-muted/15 px-2 py-0.5 text-[10px] font-medium text-muted">
+                                      <span className="rounded-full bg-muted/15 px-2 py-0.5 text-body-sm font-medium text-muted">
                                         Default
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-muted">{opt.description}</p>
+                                  <p className="text-body-sm text-muted">{opt.description}</p>
                                   {opt.outcomes && opt.outcomes.length > 0 ? (
                                     <div className="mt-2 space-y-1">
                                       {opt.outcomes.map((t, i) => (
                                         <div
                                           key={i}
-                                          className="flex flex-wrap items-baseline gap-x-2 text-xs"
+                                          className="flex flex-wrap items-baseline gap-x-2 text-body-sm"
                                         >
                                           <span className="font-semibold text-amber-600">
                                             {rollBandLabel(t)} ({t.minRoll}–{t.maxRoll})
@@ -475,7 +477,7 @@ export function RandomEventsManager() {
                                               : "no effect"}
                                           </span>
                                           {t.newsWire && (
-                                            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                                            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-body-sm font-semibold text-primary">
                                               📰 wire
                                             </span>
                                           )}
@@ -483,7 +485,7 @@ export function RandomEventsManager() {
                                       ))}
                                     </div>
                                   ) : (
-                                    <p className="mt-1 text-[11px] italic text-muted">
+                                    <p className="mt-1 text-body-sm italic text-muted">
                                       No registered handler — outcomes unavailable.
                                     </p>
                                   )}
@@ -504,8 +506,8 @@ export function RandomEventsManager() {
 
       {/* Event debugger */}
       <div className="rounded-xl border border-card-border bg-card p-5">
-        <h3 className="text-sm font-bold text-foreground">Event debugger</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="text-body-lg font-bold text-foreground">Event debugger</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Look up a character to inspect their active event and full event history (choice, roll,
           outcome).
         </p>
@@ -521,23 +523,23 @@ export function RandomEventsManager() {
 
         {selected && (
           <div className="mt-4 space-y-4">
-            <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3 text-body">
               <span className="font-semibold text-foreground">{selected.name}</span>
               {cooldown && (
-                <span className="rounded-full bg-card-elevated px-2.5 py-1 text-xs text-muted">
+                <span className="rounded-full bg-card-elevated px-2.5 py-1 text-body-sm text-muted">
                   Next eligible turn: {cooldown.nextEligibleTurn} (last event turn{" "}
                   {cooldown.lastExpiredAtTurn})
                 </span>
               )}
               {history && !activeInstance && (
-                <span className="text-xs text-muted">No active event</span>
+                <span className="text-body-sm text-muted">No active event</span>
               )}
             </div>
 
             {/* Manual trigger */}
             <div className="rounded-lg border border-card-border bg-card-elevated px-4 py-3">
               <div className="text-body-sm font-medium text-muted">Manual trigger</div>
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 Force-offer any template to {selected.name}, bypassing weight, cooldown, and
                 eligibility. Outcome roll is random. Fails if they already have a pending event.
               </p>
@@ -545,7 +547,7 @@ export function RandomEventsManager() {
                 <select
                   value={triggerKind}
                   onChange={(e) => setTriggerKind(e.target.value)}
-                  className="min-w-[16rem] rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+                  className="min-w-[16rem] rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground"
                 >
                   <option value="">Select an event…</option>
                   {triggerableDefinitions.map((def) => (
@@ -558,26 +560,26 @@ export function RandomEventsManager() {
                 <button
                   onClick={triggerEvent}
                   disabled={busy || !triggerKind || !!activeInstance}
-                  className="rounded-lg border border-primary/50 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="rounded-lg border border-primary/50 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   Trigger event
                 </button>
               </div>
               {activeInstance && (
-                <p className="mt-2 text-xs text-amber-500">
+                <p className="mt-2 text-body-sm text-amber-500">
                   Resolve or expire the active event before triggering a new one.
                 </p>
               )}
             </div>
 
-            {historyLoading && <p className="text-sm text-muted">Loading…</p>}
+            {historyLoading && <p className="text-body text-muted">Loading…</p>}
 
             {activeInstance && (
               <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3">
                 <div className="text-body-sm font-medium text-amber-600">Active event</div>
-                <div className="mt-1 flex flex-wrap items-center gap-3 text-sm">
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-body">
                   <span className="font-semibold text-foreground">{activeInstance.title}</span>
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     offered turn {activeInstance.offeredAtTurn} · roll {activeInstance.roll} ·
                     expires <LocalTime value={activeInstance.expiresAtRealtimeMs} />
                   </span>
@@ -586,14 +588,14 @@ export function RandomEventsManager() {
             )}
 
             {history && history.length === 0 && !historyLoading && (
-              <p className="text-sm text-muted">No event history for this character.</p>
+              <p className="text-body text-muted">No event history for this character.</p>
             )}
 
             {history && history.length > 0 && (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <thead>
-                    <tr className="border-b border-card-border text-left text-sm font-semibold text-foreground">
+                    <tr className="border-b border-card-border text-left text-body font-semibold text-foreground">
                       <th className="py-2 pr-3">Turn</th>
                       <th className="py-2 pr-3">Event</th>
                       <th className="py-2 pr-3">Status</th>
@@ -614,12 +616,12 @@ export function RandomEventsManager() {
                         <td className="py-2 pr-3 text-foreground">
                           {row.resolvedOptionLabel ?? "—"}
                           {row.resolveReason === "timeout" && (
-                            <span className="ml-1.5 text-[10px] text-red-400">(timeout)</span>
+                            <span className="ml-1.5 text-body-sm text-red-400">(timeout)</span>
                           )}
                         </td>
                         <td className="py-2 pr-3 text-muted">{row.resolvedTierLabel ?? "—"}</td>
                         <td className="py-2 pr-3 text-muted">{row.roll}</td>
-                        <td className="py-2 text-xs text-muted">
+                        <td className="py-2 text-body-sm text-muted">
                           {row.resolvedAt ? <LocalTime value={row.resolvedAt} /> : "—"}
                         </td>
                       </tr>

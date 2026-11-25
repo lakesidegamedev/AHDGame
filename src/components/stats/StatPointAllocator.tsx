@@ -89,8 +89,8 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-card-border bg-background/50 px-4 py-3">
         <div>
-          <span className="block text-sm font-medium text-foreground">Points remaining</span>
-          <span className="block text-body-xs text-muted">
+          <span className="block text-body font-medium text-foreground">Points remaining</span>
+          <span className="block text-body-sm text-muted">
             Spend all {STAT_FREE_POINTS} to continue
           </span>
         </div>
@@ -101,7 +101,7 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
             type="button"
             onClick={spendRemainingEvenly}
             disabled={remaining <= 0}
-            className="rounded-md border border-card-border bg-background px-2.5 py-1.5 text-body-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-card-border bg-background px-2.5 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
           >
             Spread evenly
           </button>
@@ -109,12 +109,12 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
             type="button"
             onClick={resetBuild}
             disabled={remaining >= STAT_FREE_POINTS}
-            className="rounded-md border border-card-border bg-background px-2.5 py-1.5 text-body-xs font-semibold text-muted transition-colors hover:border-error/40 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-card-border bg-background px-2.5 py-1.5 text-body-sm font-semibold text-muted transition-colors hover:border-error/40 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
           >
             Reset
           </button>
           <span
-            className={`text-2xl font-bold tabular-nums ${
+            className={`text-heading font-bold tabular-nums ${
               remaining === 0 ? "text-success" : "text-primary"
             }`}
           >
@@ -171,15 +171,15 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
               <div className="relative flex items-center gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2">
-                    <p className="text-sm font-semibold text-foreground">{meta.label}</p>
+                    <p className="text-body font-semibold text-foreground">{meta.label}</p>
                     <span
-                      className="rounded border border-card-border bg-background/70 px-1.5 font-mono text-body-xs font-semibold text-foreground"
+                      className="rounded border border-card-border bg-background/70 px-1.5 font-mono text-body-sm font-semibold text-foreground"
                       title={bonus.detail}
                     >
                       {bonus.label}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs leading-snug text-muted">{meta.blurb}</p>
+                  <p className="mt-0.5 text-body-sm leading-snug text-muted">{meta.blurb}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
@@ -187,11 +187,11 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
                     aria-label={`Lower ${meta.label}`}
                     onClick={() => adjust(key, -1)}
                     disabled={val <= STAT_MIN}
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-card-border bg-background text-lg font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-card-border bg-background text-heading font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     −
                   </button>
-                  <span className="w-6 text-center text-lg font-bold tabular-nums text-foreground">
+                  <span className="w-6 text-center text-heading font-bold tabular-nums text-foreground">
                     {val}
                   </span>
                   <button
@@ -199,7 +199,7 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
                     aria-label={`Raise ${meta.label}`}
                     onClick={() => adjust(key, 1)}
                     disabled={val >= STAT_MAX || remaining <= 0}
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-card-border bg-background text-lg font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-card-border bg-background text-heading font-bold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     +
                   </button>

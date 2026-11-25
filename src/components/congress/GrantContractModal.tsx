@@ -80,18 +80,18 @@ export function GrantContractModal({
   return (
     <Modal open title="Grant resource contract" onClose={onClose}>
       {formState.awaitingConfirmation && (
-        <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+        <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body text-warning">
           Warning: this contract over-allocates the state&apos;s capacity for this resource.
           Open-access extraction will be reduced to zero. Grant anyway?
           <div className="mt-2 flex gap-2">
             <button
               onClick={() => submit(true)}
               disabled={formState.submitting}
-              className="rounded bg-warning px-3 py-1 text-xs font-medium text-black disabled:opacity-50"
+              className="rounded bg-warning px-3 py-1 text-body-sm font-medium text-black disabled:opacity-50"
             >
               {formState.submitting ? "Granting..." : "Grant anyway"}
             </button>
-            <button onClick={onClose} className="text-xs text-muted hover:text-foreground">
+            <button onClick={onClose} className="text-body-sm text-muted hover:text-foreground">
               Cancel
             </button>
           </div>
@@ -102,9 +102,9 @@ export function GrantContractModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {!stateId && (
             <div>
-              <label className="mb-1 block text-sm font-medium">State</label>
+              <label className="mb-1 block text-body font-medium">State</label>
               <input
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                 placeholder="e.g. TX"
                 value={formState.stateId}
                 onChange={(e) =>
@@ -116,9 +116,9 @@ export function GrantContractModal({
           )}
 
           <div>
-            <label className="mb-1 block text-sm font-medium">Corporation ID</label>
+            <label className="mb-1 block text-body font-medium">Corporation ID</label>
             <input
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 font-mono text-sm"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 font-mono text-body"
               placeholder="24-character ObjectId"
               value={formState.corporationId}
               onChange={(e) => setFormState((s) => ({ ...s, corporationId: e.target.value }))}
@@ -128,9 +128,9 @@ export function GrantContractModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">Resource</label>
+            <label className="mb-1 block text-body font-medium">Resource</label>
             <select
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
               value={formState.resource}
               onChange={(e) =>
                 setFormState((s) => ({ ...s, resource: e.target.value as ExtractableResource }))
@@ -145,7 +145,7 @@ export function GrantContractModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">
+            <label className="mb-1 block text-body font-medium">
               Share: {(formState.share * 100).toFixed(0)}%
             </label>
             <input
@@ -159,20 +159,20 @@ export function GrantContractModal({
             />
           </div>
 
-          {formState.error && <p className="text-sm text-error">{formState.error}</p>}
+          {formState.error && <p className="text-body text-error">{formState.error}</p>}
 
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
               disabled={formState.submitting}
-              className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="flex-1 rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {formState.submitting ? "Granting..." : "Grant contract"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium"
+              className="rounded-lg border border-card-border px-4 py-2 text-body font-medium"
             >
               Cancel
             </button>

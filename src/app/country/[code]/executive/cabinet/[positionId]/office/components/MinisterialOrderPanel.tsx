@@ -111,20 +111,20 @@ export function MinisterialOrderPanel({
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{panelTitle}</h2>
-          <p className="mt-0.5 text-sm text-muted">
+          <h2 className="text-heading font-semibold text-foreground">{panelTitle}</h2>
+          <p className="mt-0.5 text-body text-muted">
             Issue standing orders that apply department effects each turn.
           </p>
         </div>
         <div className="shrink-0 text-right">
           <span
-            className={`text-sm font-semibold ${actionsRemaining > 0 ? "text-foreground" : "text-muted"}`}
+            className={`text-body font-semibold ${actionsRemaining > 0 ? "text-foreground" : "text-muted"}`}
           >
             {actionsRemaining} {actionsRemaining !== 1 ? actionCopy.plural : actionCopy.singular}{" "}
             remaining
           </span>
           {actionsRemaining < MINISTERIAL_ACTION_CAP && (
-            <p className="mt-1 text-xs text-muted">{MINISTERIAL_ACTION_RESET_HINT}</p>
+            <p className="mt-1 text-body-sm text-muted">{MINISTERIAL_ACTION_RESET_HINT}</p>
           )}
           {canAct && (
             <OfficePoolTopUpButton
@@ -147,9 +147,9 @@ export function MinisterialOrderPanel({
             {activeOrders.map((order) => {
               const remaining = formatRemainingTurns(order.expiresTurn);
               return (
-                <li key={order.orderId} className="flex items-center justify-between text-sm">
+                <li key={order.orderId} className="flex items-center justify-between text-body">
                   <span className="font-medium text-foreground">{order.orderName}</span>
-                  <span className="text-xs text-muted">{remaining.text}</span>
+                  <span className="text-body-sm text-muted">{remaining.text}</span>
                 </li>
               );
             })}
@@ -158,7 +158,7 @@ export function MinisterialOrderPanel({
       )}
 
       {orders.length === 0 ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           No {actionCopy.title === "Cabinet Actions" ? "cabinet orders" : "ministerial orders"}{" "}
           available for this position.
         </p>
@@ -190,10 +190,10 @@ export function MinisterialOrderPanel({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">{order.name}</h3>
+                      <h3 className="text-body-lg font-semibold text-foreground">{order.name}</h3>
                       <span
                         className={[
-                          "rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                          "rounded border px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide",
                           isRegional
                             ? "border-primary/40 bg-primary/10 text-primary"
                             : "border-card-border bg-card-muted text-muted",
@@ -210,8 +210,8 @@ export function MinisterialOrderPanel({
                         <span className="text-body-sm font-medium text-primary">Active</span>
                       )}
                     </div>
-                    <p className="mt-1 text-xs leading-snug text-muted">{order.description}</p>
-                    <p className="mt-1 text-xs text-muted">Duration: {order.duration} turns</p>
+                    <p className="mt-1 text-body-sm leading-snug text-muted">{order.description}</p>
+                    <p className="mt-1 text-body-sm text-muted">Duration: {order.duration} turns</p>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
@@ -226,7 +226,7 @@ export function MinisterialOrderPanel({
                           }))
                         }
                         className={[
-                          "rounded-lg border border-card-border bg-card px-2 py-1 text-xs text-foreground",
+                          "rounded-lg border border-card-border bg-card px-2 py-1 text-body-sm text-foreground",
                           "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
                           !canIssue ? "cursor-not-allowed opacity-50" : "",
                         ]
@@ -257,7 +257,7 @@ export function MinisterialOrderPanel({
 
                 {orderFeedback && (
                   <p
-                    className={`mt-2 text-xs ${orderFeedback.type === "success" ? "text-success" : "text-error"}`}
+                    className={`mt-2 text-body-sm ${orderFeedback.type === "success" ? "text-success" : "text-error"}`}
                   >
                     {orderFeedback.message}
                   </p>

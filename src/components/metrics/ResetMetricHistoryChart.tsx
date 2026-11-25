@@ -88,11 +88,11 @@ export function ResetMetricHistoryChart({
           y2={height - padY}
           className="stroke-card-border"
         />
-        <text x={padX - 6} y={yOf(high) + 4} textAnchor="end" className="fill-muted text-[11px]">
+        <text x={padX - 6} y={yOf(high) + 4} textAnchor="end" className="fill-muted text-body-sm">
           {axisLabel(high)}
         </text>
         {high !== low && (
-          <text x={padX - 6} y={yOf(low) + 4} textAnchor="end" className="fill-muted text-[11px]">
+          <text x={padX - 6} y={yOf(low) + 4} textAnchor="end" className="fill-muted text-body-sm">
             {axisLabel(low)}
           </text>
         )}
@@ -109,7 +109,7 @@ export function ResetMetricHistoryChart({
               x={xOf(turn)}
               y={height - padY + 16}
               textAnchor="middle"
-              className="fill-muted text-[11px]"
+              className="fill-muted text-body-sm"
             >
               T{turn}
             </text>
@@ -142,7 +142,7 @@ export function ResetMetricHistoryChart({
           </g>
         ))}
       </svg>
-      <details className="mt-2 text-body-xs">
+      <details className="mt-2 text-body-sm">
         <summary className="cursor-pointer text-muted">View sampled turn values</summary>
         <table className="mt-2 w-full text-left tabular-nums">
           <thead>
@@ -161,7 +161,7 @@ export function ResetMetricHistoryChart({
           </tbody>
         </table>
       </details>
-      <div className="flex justify-between gap-4 text-body-xs text-muted">
+      <div className="flex justify-between gap-4 text-body-sm text-muted">
         <span>
           Turn {first.turn}: {historyValueLabel(metric, countryId, first.value)}
         </span>

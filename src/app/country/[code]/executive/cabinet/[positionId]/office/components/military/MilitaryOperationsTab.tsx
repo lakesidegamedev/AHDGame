@@ -43,8 +43,8 @@ export function MilitaryOperationsTab({
           return (
             <div key={p.id} className="rounded-xl border border-card-border bg-card p-3.5">
               <div className="dossier-label text-muted">{p.label}</div>
-              <div className="tabular mt-1 text-2xl font-bold text-foreground">{n}</div>
-              <div className="text-[11px] text-muted">units</div>
+              <div className="tabular mt-1 text-heading font-bold text-foreground">{n}</div>
+              <div className="text-body-sm text-muted">units</div>
             </div>
           );
         })}
@@ -54,14 +54,14 @@ export function MilitaryOperationsTab({
         <div className="gov-panel rounded-xl p-4">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-warning" aria-hidden />
-            <span className="text-[13px] font-semibold text-gov-soft">
+            <span className="text-body-sm font-semibold text-gov-soft">
               {forward.length} unit{forward.length === 1 ? "" : "s"} forward-deployed or on high
               alert
             </span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {forward.map((u) => (
-              <Badge key={u._id} tone="warning" className="!text-[10px]">
+              <Badge key={u._id} tone="warning" className="!text-body-sm">
                 {u.name.split(" ").slice(0, 2).join(" ")} · {theaterLabel(u.theaterId)}
               </Badge>
             ))}
@@ -69,7 +69,7 @@ export function MilitaryOperationsTab({
         </div>
       )}
 
-      <p className="text-[12px] text-muted">
+      <p className="text-body-sm text-muted">
         Theater deployment is directed from the Conflicts &rsaquo; Combat Command board. This tab
         reflects force posture and readiness; the roster manages recruitment, modernization, and
         upkeep.

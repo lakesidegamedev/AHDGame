@@ -64,7 +64,7 @@ export function FoundCaucusForm({
             required
             minLength={2}
             maxLength={80}
-            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+            className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
             placeholder="e.g. Main Street Republicans"
           />
         </label>
@@ -77,7 +77,7 @@ export function FoundCaucusForm({
               onChange={(e) => setColor(e.target.value)}
               className="h-9 w-12 rounded border border-card-border bg-background"
             />
-            <span className="font-mono text-xs normal-case tracking-normal">{color}</span>
+            <span className="font-mono text-body-sm normal-case tracking-normal">{color}</span>
           </div>
         </label>
       </div>
@@ -88,7 +88,7 @@ export function FoundCaucusForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           maxLength={500}
-          className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm normal-case tracking-normal"
+          className="mt-1 w-full rounded-md border border-card-border bg-background px-3 py-2 text-body normal-case tracking-normal"
           rows={2}
           placeholder="Pragmatic, business-friendly, socially moderate."
         />
@@ -113,7 +113,7 @@ export function FoundCaucusForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+          className="rounded-md border border-primary/60 bg-primary/15 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
         >
           {submitting ? "Founding..." : "Found caucus"}
         </button>

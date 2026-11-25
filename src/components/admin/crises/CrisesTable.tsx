@@ -24,7 +24,7 @@ export function CrisesTable({
 }: CrisesTableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-body border-collapse">
         <thead>
           <tr className="text-left text-muted border-b border-border">
             <th className="py-2 pr-4">Name</th>

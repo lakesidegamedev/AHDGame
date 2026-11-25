@@ -203,7 +203,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 overflow-x-hidden">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-4 text-xs text-muted">
+        <div className="flex items-center gap-2 mb-4 text-body-sm text-muted">
           <Link
             href={`/country/${countryCode.toLowerCase()}`}
             className="hover:text-foreground transition-colors"
@@ -214,8 +214,8 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
           <span>Approval &amp; active effects</span>
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">{countryName} Approval &amp; active effects</h1>
-        <p className="text-sm text-muted mb-8">
+        <h1 className="text-heading font-bold mb-1">{countryName} Approval &amp; active effects</h1>
+        <p className="text-body text-muted mb-8">
           National approval and the named conditions that adjust it — plus their knock-on effects on
           in-state sector profit margins.
         </p>
@@ -228,10 +228,10 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
 
         {error && !loading && (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-            <p className="text-sm text-error mb-4">{error}</p>
+            <p className="text-body text-error mb-4">{error}</p>
             <button
               onClick={load}
-              className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               Retry
             </button>
@@ -245,17 +245,17 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
               <div className="rounded-xl border border-card-border bg-card p-6 shadow-panel">
                 <p className="text-body-sm font-medium text-muted mb-1">Government approval</p>
                 <p
-                  className={`text-5xl font-bold tabular-nums ${approvalColor(governmentApproval)}`}
+                  className={`text-display font-bold tabular-nums ${approvalColor(governmentApproval)}`}
                 >
                   {governmentApproval.toFixed(1)}%
                 </p>
-                <p className="text-xs text-muted mt-2">
+                <p className="text-body-sm text-muted mt-2">
                   {hasBreakdown
                     ? `Approval across the whole population, not a sample: a population-weighted average of ${regionLabel.toLowerCase()} approval, plus the national adjustments below, as of the latest turn.`
                     : `Approval across the whole population, not a sample: a population-weighted average of ${regionLabel.toLowerCase()} approval, as of the latest turn.`}
                 </p>
                 {hasBreakdown && (
-                  <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-sm">
+                  <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-body">
                     <div className="flex justify-between gap-4">
                       <dt className="text-muted">
                         {listed
@@ -312,11 +312,11 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
             <div className="rounded-xl border border-card-border bg-card p-6 shadow-panel">
               <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
-                  <h2 className="text-sm font-semibold text-muted">
+                  <h2 className="text-body font-semibold text-muted">
                     {hasBreakdown ? "Regional conditions" : "Active effects"}
                   </h2>
                   {hasBreakdown && (
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-body-sm text-muted">
                       Already included in the {regionLabel.toLowerCase()} approval numbers, so not
                       added again at national level.
                     </p>
@@ -332,7 +332,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
               </div>
               <ModifierList modifiers={chipModifiers} emptyText="No active effects." />
               {chipMarginSum != null && (
-                <p className="mt-3 text-xs text-muted">
+                <p className="mt-3 text-body-sm text-muted">
                   Margin shown on each condition is its average across the{" "}
                   {regionLabel.toLowerCase()}. They add up to {chipMarginSum > 0 ? "+" : ""}
                   {chipMarginSum}pp
@@ -343,8 +343,8 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
               )}
               {hasBreakdown && nationalAdjustments.length > 0 && (
                 <div className="mt-5 border-t border-card-border/40 pt-4">
-                  <h3 className="text-sm font-semibold text-muted">National adjustments</h3>
-                  <p className="mt-1 mb-3 text-xs text-muted">
+                  <h3 className="text-body-lg font-semibold text-muted">National adjustments</h3>
+                  <p className="mt-1 mb-3 text-body-sm text-muted">
                     Applied to the {regionLabel.toLowerCase()} average to give the national figure.
                   </p>
                   <ModifierList modifiers={nationalAdjustments} />
@@ -355,7 +355,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
             {/* Turn history */}
             {history.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-6 shadow-panel">
-                <h2 className="text-sm font-semibold text-muted mb-4">
+                <h2 className="text-body font-semibold text-muted mb-4">
                   History (last {history.length} turns)
                 </h2>
                 <div className="flex items-end gap-1 h-16">
@@ -374,12 +374,12 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                     );
                   })}
                 </div>
-                <div className="flex justify-between mt-1 text-[10px] text-muted">
+                <div className="flex justify-between mt-1 text-body-sm text-muted">
                   <span>Turn {history[0]?.turn}</span>
                   <span>Turn {history[history.length - 1]?.turn}</span>
                 </div>
                 {history.some((h) => h.note) && (
-                  <ul className="mt-3 space-y-1 text-xs text-muted">
+                  <ul className="mt-3 space-y-1 text-body-sm text-muted">
                     {history
                       .filter((h) => h.note)
                       .map((h) => (
@@ -396,8 +396,8 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
             {/* State/region rankings */}
             {sortedStates.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-6 shadow-panel">
-                <h2 className="text-sm font-semibold text-muted mb-4">{regionLabel} rankings</h2>
-                <p className="text-xs text-muted mb-4">{t("rankingTargets")}</p>
+                <h2 className="text-body font-semibold text-muted mb-4">{regionLabel} rankings</h2>
+                <p className="text-body-sm text-muted mb-4">{t("rankingTargets")}</p>
                 <div className="space-y-1">
                   {sortedStates.map((s, i) => {
                     const stateHref = regionApprovalUrl(country, s.stateId);
@@ -407,18 +407,20 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
                         href={stateHref}
                         className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-card-muted/40 hover:bg-card-elevated/60 transition-colors"
                       >
-                        <span className="text-xs text-muted w-6 text-right shrink-0">#{i + 1}</span>
-                        <span className="text-sm flex-1">{s.stateName}</span>
-                        <span className="text-xs text-muted tabular-nums">
+                        <span className="text-body-sm text-muted w-6 text-right shrink-0">
+                          #{i + 1}
+                        </span>
+                        <span className="text-body flex-1">{s.stateName}</span>
+                        <span className="text-body-sm text-muted tabular-nums">
                           base {s.baseApproval.toFixed(0)}%
                         </span>
                         <span
-                          className={`text-sm font-semibold tabular-nums ${approvalColor(s.approval)}`}
+                          className={`text-body font-semibold tabular-nums ${approvalColor(s.approval)}`}
                         >
                           {s.approval.toFixed(1)}%
                         </span>
                         {s.modifiers.length > 0 && (
-                          <span className="text-[10px] text-muted">
+                          <span className="text-body-sm text-muted">
                             {s.modifiers.length} effect{s.modifiers.length !== 1 ? "s" : ""}
                           </span>
                         )}
@@ -435,7 +437,7 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
         <div className="mt-8 flex items-center gap-3 pt-4 border-t border-card-border/40">
           <Link
             href={`/country/${countryCode.toLowerCase()}`}
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
           >
             ← {countryName} Overview
           </Link>
@@ -443,14 +445,14 @@ export default function ApprovalClient({ initialMetrics, initialApproval }: Appr
             // SP6: playables' metrics product is the political registry.
             <Link
               href={politicalMetricsUrl(country)}
-              className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               Political metrics
             </Link>
           ) : (
             <Link
               href={`/country/${countryCode.toLowerCase()}/metrics`}
-              className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               National metrics
             </Link>

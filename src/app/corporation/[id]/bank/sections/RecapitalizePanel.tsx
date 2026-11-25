@@ -99,13 +99,13 @@ export function RecapitalizePanel({
   return (
     <BankPanel kind="ceoControl" title="Capital adequacy">
       <div className="space-y-2 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           The supervisor requires your own cash, after every borrowed claim on it, to cover at least{" "}
           {minPercent}% of the loan book plus your own investments. Money moved here crosses into
           the bank and stands behind the depositors. It can only come back out of reserves the bank
           holds above its requirement, and only while the supervisor rates it adequate.
         </p>
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           Falling below {minPercent}% starts a {turnsToHours(RECAP_GRACE_TURNS)} clock to post
           capital. Missing it revokes the charter: the bank is wound up in an orderly way and
           remaining capital is returned. That is not a bank failure: depositors are paid out, they
@@ -140,19 +140,19 @@ export function RecapitalizePanel({
             />
           </div>
           {shortfall > 0 ? (
-            <p className="text-xs text-error">
+            <p className="text-body-sm text-error">
               Below the {minPercent}% minimum. Post {formatBankMoney(shortfall, currency)} to clear
               it, within {turnsToHours(RECAP_GRACE_TURNS)} of the breach starting, or the charter is
               revoked.
             </p>
           ) : position.standing === "stressed" ? (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Capital {(position.capitalRatio * 100).toFixed(1)}%, above the {minPercent}% minimum
               but failing the supervisor&apos;s shock scenario: payouts stay barred until the
               stressed ratio clears. No capital shortfall at current book values.
             </p>
           ) : (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Capital {(position.capitalRatio * 100).toFixed(1)}%, above the {minPercent}% minimum
               and clearing the shock scenario. No capital shortfall at current book values.
             </p>
@@ -162,7 +162,7 @@ export function RecapitalizePanel({
           <div className="space-y-2">
             {withdrawable > 0 && (
               <p
-                className={`text-xs ${
+                className={`text-body-sm ${
                   Number(amount) > withdrawable * 0.75 ? "text-warning" : "text-muted"
                 }`}
               >
@@ -173,14 +173,14 @@ export function RecapitalizePanel({
               </p>
             )}
             <div className="flex flex-wrap items-end gap-2">
-              <label className="flex flex-col gap-1 text-xs text-muted">
+              <label className="flex flex-col gap-1 text-body-sm text-muted">
                 Amount
                 <input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
                   aria-label="Capital transfer amount"
-                  className="h-8 w-40 rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                  className="h-8 w-40 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none"
                 />
               </label>
               <SmallButton tone="primary" onClick={() => void move("in")} disabled={busy}>

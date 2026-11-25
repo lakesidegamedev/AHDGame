@@ -74,7 +74,7 @@ export function NewsTab({
             <button
               type="button"
               onClick={() => onActiveFeedChange("article")}
-              className={`flex-1 min-w-[120px] rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 min-w-[120px] rounded-lg px-3 py-2 text-body font-semibold transition-colors ${
                 activeFeed === "article"
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground hover:bg-card-muted/60"
@@ -85,7 +85,7 @@ export function NewsTab({
             <button
               type="button"
               onClick={() => onActiveFeedChange("advertisement")}
-              className={`flex-1 min-w-[120px] rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              className={`flex-1 min-w-[120px] rounded-lg px-3 py-2 text-body font-semibold transition-colors ${
                 activeFeed === "advertisement"
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground hover:bg-card-muted/60"
@@ -143,8 +143,8 @@ export function NewsTab({
 
           {currentUser === null && (
             <div className="rounded-xl border border-card-border bg-card p-5">
-              <h3 className="mb-2 text-sm font-semibold">Join the conversation</h3>
-              <p className="text-xs text-muted">
+              <h3 className="mb-2 text-body-lg font-semibold">Join the conversation</h3>
+              <p className="text-body-sm text-muted">
                 Create a character and log in to post free news (12h cooldown), place sponsored
                 posts (5 AP + $100k personal cash), and react to the feed.
               </p>

@@ -112,7 +112,7 @@ export function FundHoldingsPanel({
 
   if (error) {
     return (
-      <div className="rounded-xl border border-error/20 bg-error/5 p-6 text-center text-error text-sm">
+      <div className="rounded-xl border border-error/20 bg-error/5 p-6 text-center text-error text-body">
         {error}
       </div>
     );
@@ -127,8 +127,8 @@ export function FundHoldingsPanel({
     <div className="space-y-6">
       <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
         <p className="text-body-sm font-medium text-muted">Total fund holdings</p>
-        <p className="text-2xl font-bold tabular-nums mt-1">{formatAmount(totalValue)}</p>
-        <p className="text-xs text-muted mt-1">
+        <p className="text-heading font-bold tabular-nums mt-1">{formatAmount(totalValue)}</p>
+        <p className="text-body-sm text-muted mt-1">
           Browse and subscribe on the{" "}
           <Link href={stockMarketHref} className="text-primary hover:underline">
             stock market Funds tab
@@ -138,13 +138,13 @@ export function FundHoldingsPanel({
       </div>
 
       {positions.length === 0 ? (
-        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
           You do not hold any index fund units yet.
         </div>
       ) : (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-card-elevated border-b border-card-border text-sm font-semibold text-foreground">
+          <table className="w-full text-left text-body">
+            <thead className="bg-card-elevated border-b border-card-border text-body font-semibold text-foreground">
               <tr>
                 <th className="px-4 py-3">Fund</th>
                 <th className="px-4 py-3 text-right">Units</th>
@@ -179,7 +179,7 @@ export function FundHoldingsPanel({
                     <tr className="hover:bg-card-elevated/40">
                       <td className="px-4 py-3">
                         <Link href={fundDetailHref} className="font-semibold hover:text-primary">
-                          <span className="font-mono text-primary text-xs mr-2">
+                          <span className="font-mono text-primary text-body-sm mr-2">
                             {pos.tickerSymbol}
                           </span>
                           {pos.name}
@@ -195,7 +195,7 @@ export function FundHoldingsPanel({
                         {formatAmount(market, ccy)}
                       </td>
                       <td
-                        className={`px-4 py-3 text-right tabular-nums text-xs font-semibold ${
+                        className={`px-4 py-3 text-right tabular-nums text-body-sm font-semibold ${
                           pnl != null && pnl >= 0 ? "text-success" : "text-error"
                         }`}
                       >
@@ -204,7 +204,7 @@ export function FundHoldingsPanel({
                             {pnl >= 0 ? "+" : ""}
                             {formatAmount(pnl, ccy)}
                             {pnlPct != null && (
-                              <span className="block text-[10px] opacity-80">
+                              <span className="block text-body-sm opacity-80">
                                 {pnlPct >= 0 ? "+" : ""}
                                 {pnlPct.toFixed(1)}%
                               </span>
@@ -218,7 +218,7 @@ export function FundHoldingsPanel({
                         <button
                           type="button"
                           onClick={() => setExpandedFundId(isExpanded ? null : fundSlug)}
-                          className="text-xs font-semibold text-primary hover:underline"
+                          className="text-body-sm font-semibold text-primary hover:underline"
                         >
                           {isExpanded ? "Close" : "Redeem"}
                         </button>
@@ -254,9 +254,9 @@ export function FundHoldingsPanel({
       {transactions.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
           <div className="bg-card-elevated px-4 py-3 border-b border-card-border">
-            <h3 className="text-sm font-semibold">Recent activity</h3>
+            <h3 className="text-body-lg font-semibold">Recent activity</h3>
           </div>
-          <ul className="divide-y divide-card-border text-sm">
+          <ul className="divide-y divide-card-border text-body">
             {transactions.slice(0, 15).map((tx) => (
               <li
                 key={tx.id}

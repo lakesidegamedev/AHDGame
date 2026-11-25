@@ -397,7 +397,7 @@ export function JPDietPage({ countryId }: Props) {
         )}
 
         {!loading && error && (
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-body text-warning">
             <span>Some data failed to load.</span>
             <button
               onClick={refetch}
@@ -417,7 +417,7 @@ export function JPDietPage({ countryId }: Props) {
               aria-selected={activeTab === key}
               aria-controls="diet-content"
               onClick={() => setActiveTab(key)}
-              className={`px-4 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${pillClass(activeTab === key)}`}
+              className={`px-4 py-1.5 text-body focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${pillClass(activeTab === key)}`}
             >
               {label}
             </button>
@@ -474,17 +474,17 @@ export function JPDietPage({ countryId }: Props) {
               {canAdminOverridePropose && proposeChamberLabel && (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-body font-medium text-foreground">
                       {`Admin — propose a ${proposeChamberLabel} bill`}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       Opens to a vote in the currently selected Diet chamber immediately.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowProposeModal(true)}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Propose bill
                   </button>
@@ -496,7 +496,7 @@ export function JPDietPage({ countryId }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowProposeModal(true)}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Propose bill
                   </button>
@@ -535,14 +535,14 @@ export function JPDietPage({ countryId }: Props) {
                 <BillAutoFailWarningBanner warning={cabinetProposalWarning} />
               )}
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   Cabinet bills proposed by eligible cabinet members. These bills go through cabinet
                   review before entering the {lowerName}.
                 </p>
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/country/${countryId.toLowerCase()}/executive/cabinet`}
-                    className="shrink-0 rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-card-border/60"
+                    className="shrink-0 rounded-lg border border-card-border bg-card px-4 py-2 text-body font-semibold text-foreground transition-colors hover:bg-card-border/60"
                   >
                     Open cabinet
                   </Link>
@@ -550,7 +550,7 @@ export function JPDietPage({ countryId }: Props) {
                     type="button"
                     onClick={() => setShowCabinetProposeModal(true)}
                     disabled={!canBrowseCabinetBill}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   >
                     Propose bill
                   </button>
@@ -571,16 +571,16 @@ export function JPDietPage({ countryId }: Props) {
               {government?.status === "pending" && viewerMayAppoint && (
                 <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-body font-medium text-foreground">
                       Government pending formation
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       As party or coalition chair, you may nominate a PM.
                     </p>
                   </div>
                   <button
                     onClick={() => setAppointModalOpen(true)}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Appoint prime minister
                   </button>
@@ -591,8 +591,8 @@ export function JPDietPage({ countryId }: Props) {
               {government?.status === "formed" && viewerIsSittingPM && snapElectionsAllowed && (
                 <div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3">
                   <div className="mb-2">
-                    <p className="text-sm font-medium text-foreground">Dissolve the shūgiin</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body font-medium text-foreground">Dissolve the shūgiin</p>
+                    <p className="text-body-sm text-muted">
                       As Prime Minister, you may call a snap election. All active legislation will
                       fail.
                     </p>
@@ -611,10 +611,10 @@ export function JPDietPage({ countryId }: Props) {
               {government?.status === "formed" && viewerIsMp && !activeNoConfidenceVote && (
                 <div className="flex items-center justify-between rounded-xl border border-warning/20 bg-warning/5 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-body font-medium text-foreground">
                       Propose a no-confidence motion
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       {noConfidenceCooldownTurns && noConfidenceCooldownTurns > 0
                         ? `Cooldown: ${noConfidenceCooldownTurns} turn${noConfidenceCooldownTurns === 1 ? "" : "s"} remaining`
                         : `As an elected ${lowerName} member you may challenge the sitting Prime Minister.`}
@@ -670,7 +670,7 @@ export function JPDietPage({ countryId }: Props) {
               </div>
 
               <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">
-                <p className="text-xs text-muted leading-relaxed">
+                <p className="text-body-sm text-muted leading-relaxed">
                   The Prime Minister is the leader of the party commanding a majority in the{" "}
                   {lowerName}. The Opposition Leader is the chair of the largest non-governing party
                   or coalition.

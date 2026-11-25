@@ -62,11 +62,11 @@ export function BondMaturityTimeline({
           );
         })}
       </div>
-      <div className="mx-3 mt-1 flex justify-between text-[10px] tabular-nums text-muted">
+      <div className="mx-3 mt-1 flex justify-between text-body-sm tabular-nums text-muted">
         <span>Now, turn {currentTurn.toLocaleString("en-US")}</span>
         <span>Turn {lastTurn.toLocaleString("en-US")}</span>
       </div>
-      <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+      <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="h-2 w-2 rounded-[2px] bg-info" />
           Outstanding

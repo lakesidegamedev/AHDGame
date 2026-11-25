@@ -20,14 +20,14 @@ export function BondHoldingsPanel({
   const t = useTranslations("corporations");
   return (
     <section className="overflow-hidden rounded-xl border border-card-border bg-card shadow-sm">
-      <h2 className="border-b border-card-border px-5 py-4 text-sm font-semibold">
+      <h2 className="border-b border-card-border px-5 py-4 text-body font-semibold">
         {t("fundBondHoldings.title")}
       </h2>
       {holdings.length === 0 ? (
-        <p className="px-5 py-4 text-sm text-muted">{t("fundBondHoldings.empty")}</p>
+        <p className="px-5 py-4 text-body text-muted">{t("fundBondHoldings.empty")}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-body-sm">
             <thead className="text-muted">
               <tr>
                 <th className="px-5 py-3">{t("fundBondHoldings.issuer")}</th>

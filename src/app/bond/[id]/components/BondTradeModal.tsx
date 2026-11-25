@@ -556,10 +556,10 @@ export function BondTradeModal({
         {/* Header */}
         <div className="flex items-start justify-between border-b border-card-border px-6 py-4">
           <div>
-            <h2 id={titleId} className="text-base font-semibold text-foreground">
+            <h2 id={titleId} className="text-body-lg font-semibold text-foreground">
               Trade bond
             </h2>
-            <p className="mt-0.5 text-sm text-muted">
+            <p className="mt-0.5 text-body text-muted">
               {bond.corporationName}
               <span className="mx-2 text-card-border">·</span>
               Series {bond.maturityLabel}
@@ -574,7 +574,7 @@ export function BondTradeModal({
                 if (!nativeRate) return null;
                 const native = costPerUnit * nativeRate;
                 return (
-                  <span className="ml-1 text-xs tabular-nums text-muted/70">
+                  <span className="ml-1 text-body-sm tabular-nums text-muted/70">
                     ({formatCurrencyFaceAmount(native, bondCurrency)} native)
                   </span>
                 );
@@ -600,7 +600,7 @@ export function BondTradeModal({
         <div className="px-6 py-5 space-y-4">
           {bond.issuerType === "sovereign" && <SovereignBondRisk risk={bond.sovereignRisk} />}
           {/* Buy / Sell toggle */}
-          <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+          <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
             <button
               type="button"
               onClick={() => {
@@ -635,7 +635,7 @@ export function BondTradeModal({
 
           {/* Account toggle */}
           <div>
-            <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+            <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
               <button
                 type="button"
                 onClick={() => {
@@ -724,7 +724,7 @@ export function BondTradeModal({
             {/* ─ Pay-currency selector (sibling of Personally so it isn't a button-in-button) ─ */}
             {account === "character" && side === "buy" && personalBalances && (
               <div className="flex items-center justify-between mt-2 px-0.5">
-                <span className="text-xs text-muted">Pay with</span>
+                <span className="text-body-sm text-muted">Pay with</span>
                 <div className="relative">
                   <button
                     type="button"
@@ -732,7 +732,7 @@ export function BondTradeModal({
                       e.stopPropagation();
                       setCurrencyDropdownOpen((o) => !o);
                     }}
-                    className="flex items-center gap-1 tabular-nums text-xs text-primary/80 hover:text-primary"
+                    className="flex items-center gap-1 tabular-nums text-body-sm text-primary/80 hover:text-primary"
                   >
                     <span>
                       {CURRENCY_SYMBOLS[selectedPayCurrency] ?? selectedPayCurrency}
@@ -748,9 +748,11 @@ export function BondTradeModal({
                   {currencyDropdownOpen && (
                     <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-card-border bg-card shadow-xl py-1">
                       {loadingRates ? (
-                        <div className="px-3 py-2 text-xs text-muted">Loading rates…</div>
+                        <div className="px-3 py-2 text-body-sm text-muted">Loading rates…</div>
                       ) : getAffordableCurrencies(totalCost).length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-muted">No sufficient balance</div>
+                        <div className="px-3 py-2 text-body-sm text-muted">
+                          No sufficient balance
+                        </div>
                       ) : (
                         getAffordableCurrencies(totalCost).map((code) => (
                           <button
@@ -760,7 +762,7 @@ export function BondTradeModal({
                               setSelectedPayCurrency(code);
                               setCurrencyDropdownOpen(false);
                             }}
-                            className={`w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-card-elevated transition-colors ${
+                            className={`w-full flex items-center justify-between px-3 py-2 text-body-sm hover:bg-card-elevated transition-colors ${
                               code === selectedPayCurrency
                                 ? "text-primary font-medium"
                                 : "text-foreground"
@@ -789,7 +791,7 @@ export function BondTradeModal({
               personalBalances &&
               onAutoConvertChange && (
                 <div className="flex items-center justify-between mt-2 px-0.5">
-                  <span className="text-xs text-muted">Auto-convert shortfall</span>
+                  <span className="text-body-sm text-muted">Auto-convert shortfall</span>
                   <button
                     type="button"
                     role="switch"
@@ -812,13 +814,13 @@ export function BondTradeModal({
           {/* Units input */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label htmlFor={unitsInputId} className="text-xs text-muted">
+              <label htmlFor={unitsInputId} className="text-body-sm text-muted">
                 {side === "buy"
                   ? "Units to buy"
                   : `Units to sell · ${heldUnits.toLocaleString("en-US")} held`}
               </label>
               {side === "buy" && account !== "investmentBank" && (
-                <span className="text-xs text-muted tabular-nums">
+                <span className="text-body-sm text-muted tabular-nums">
                   {bond.publicFloat.toLocaleString("en-US")} in float
                 </span>
               )}
@@ -826,7 +828,7 @@ export function BondTradeModal({
                 <button
                   type="button"
                   onClick={() => setUnits(heldUnits)}
-                  className="text-xs text-muted hover:text-foreground transition-colors"
+                  className="text-body-sm text-muted hover:text-foreground transition-colors"
                 >
                   Sell all
                 </button>
@@ -858,12 +860,12 @@ export function BondTradeModal({
               }}
               min={1}
               max={side === "sell" ? heldUnits : bond.publicFloat}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
             />
           </div>
 
           {/* Summary */}
-          <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+          <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-body">
             <div className="flex justify-between">
               <span className="text-muted">Price per unit</span>
               <span className="tabular-nums font-medium text-foreground">
@@ -878,7 +880,7 @@ export function BondTradeModal({
                 {fmtBondAmount(totalCost)}
                 {totalCost > 0 &&
                   bondCurrency !== (userContext.homeCurrency as CurrencyCode | undefined) && (
-                    <span className="ml-1.5 text-xs font-normal text-muted/70">
+                    <span className="ml-1.5 text-body-sm font-normal text-muted/70">
                       ≈ {formatFull(totalCostAnchor)}
                     </span>
                   )}
@@ -907,34 +909,34 @@ export function BondTradeModal({
               </div>
             )}
             {ratesNeededButMissing && (
-              <p className="text-xs text-muted border-t border-card-border pt-2">
+              <p className="text-body-sm text-muted border-t border-card-border pt-2">
                 Loading market rates…
               </p>
             )}
             {floatShort && (
-              <p className="text-xs text-error border-t border-card-border pt-2">
+              <p className="text-body-sm text-error border-t border-card-border pt-2">
                 Only {bond.publicFloat.toLocaleString("en-US")} units available in float.
               </p>
             )}
             {notEnoughToSell && (
-              <p className="text-xs text-error border-t border-card-border pt-2">
+              <p className="text-body-sm text-error border-t border-card-border pt-2">
                 You only hold {heldUnits.toLocaleString("en-US")} units.
               </p>
             )}
             {depthShort && !notEnoughToSell && (
-              <p className="text-xs text-error border-t border-card-border pt-2">
+              <p className="text-body-sm text-error border-t border-card-border pt-2">
                 The market can only buy {(marketDepthUnits ?? 0).toLocaleString("en-US")} units
                 right now. Sell fewer, or wait a turn for coupon income to refill it.
               </p>
             )}
           </div>
 
-          <InlineError error={error} className="text-xs text-error" />
+          <InlineError error={error} className="text-body-sm text-error" />
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 border-t border-card-border px-6 py-4">
-          <Button variant="ghost" onClick={onClose} className="text-sm">
+          <Button variant="ghost" onClick={onClose} className="text-body">
             Cancel
           </Button>
           <Button
@@ -942,7 +944,7 @@ export function BondTradeModal({
             onClick={handleTrade}
             disabled={!canSubmit}
             isLoading={loading}
-            className={`text-sm shadow-none ${side === "sell" ? "bg-error hover:bg-error/90" : "bg-success hover:bg-success/90"}`}
+            className={`text-body shadow-none ${side === "sell" ? "bg-error hover:bg-error/90" : "bg-success hover:bg-success/90"}`}
           >
             {units > 0
               ? side === "buy"

@@ -48,7 +48,7 @@ export function RecruitPanel({
 
   if (!archetype) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-4 text-[13px] text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-4 text-body-sm text-muted">
         No unit types available for this branch in the current year.
       </div>
     );
@@ -74,8 +74,10 @@ export function RecruitPanel({
   return (
     <div className="rounded-xl border border-[color-mix(in_srgb,var(--gov)_30%,transparent)] bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Recruit a new {branch.name} unit</h3>
-        <button onClick={onCancel} className="text-[12px] text-muted hover:text-foreground">
+        <h3 className="text-body-lg font-semibold text-foreground">
+          Recruit a new {branch.name} unit
+        </h3>
+        <button onClick={onCancel} className="text-body-sm text-muted hover:text-foreground">
           Cancel
         </button>
       </div>
@@ -95,9 +97,9 @@ export function RecruitPanel({
               >
                 <span className="flex items-center gap-2">
                   <MilIcon name={ty.icon} className="h-4 w-4 text-gov-soft" />
-                  <span className="text-[12px] font-medium text-foreground">{ty.type}</span>
+                  <span className="text-body-sm font-medium text-foreground">{ty.type}</span>
                 </span>
-                <span className="tabular text-[11px] text-muted">{ty.power} pwr</span>
+                <span className="tabular text-body-sm text-muted">{ty.power} pwr</span>
               </button>
             ))}
           </div>
@@ -108,16 +110,16 @@ export function RecruitPanel({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. 3rd Vanguard"
-            className="rounded-lg border border-card-border bg-card-muted px-3 py-2 text-[13px] text-foreground outline-none focus:border-[var(--gov)]"
+            className="rounded-lg border border-card-border bg-card-muted px-3 py-2 text-body-sm text-foreground outline-none focus:border-[var(--gov)]"
           />
-          <div className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-[12px]">
+          <div className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm">
             <div className="flex justify-between py-0.5">
               <span className="text-muted">Build cost</span>
               <span className="tabular font-semibold text-foreground">
                 {price == null ? "—" : fmtMoneyAbs(currencySymbol, price)}
               </span>
             </div>
-            <div className="pb-1 text-[11px] text-muted">
+            <div className="pb-1 text-body-sm text-muted">
               One-time draw on the defence appropriation — not recurring upkeep.
             </div>
             <div className="flex justify-between py-0.5">
@@ -151,7 +153,7 @@ export function RecruitPanel({
           </div>
 
           {priceUnknown && (
-            <div className="mt-2 text-[11px] text-[var(--error)]">
+            <div className="mt-2 text-body-sm text-[var(--error)]">
               {hasBudget
                 ? "This country has no usable GDP figure, so a price cannot be computed. Recruitment is unavailable."
                 : "This country has no national budget in this era, so units cannot be funded. Recruitment is unavailable."}
@@ -159,7 +161,7 @@ export function RecruitPanel({
           )}
 
           {appropriationShort && !priceUnknown && (
-            <div className="mt-2 rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-2 text-[11px] text-foreground">
+            <div className="mt-2 rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-2 text-body-sm text-foreground">
               Defence appropriation is short by {fmtMoneyAbs(currencySymbol, price - appropriation)}
               . New orders cannot be financed by borrowing — the overdraft covers upkeep only.
               {turnsUntilAffordable != null
@@ -169,7 +171,7 @@ export function RecruitPanel({
           )}
 
           {manpowerShort && (
-            <div className="mt-2 text-[11px] text-[var(--error)]">
+            <div className="mt-2 text-body-sm text-[var(--error)]">
               Insufficient manpower — {archetype.personnel.toLocaleString("en-US")} required,{" "}
               {(manpowerPool ?? 0).toLocaleString("en-US")} available.
             </div>
@@ -177,7 +179,7 @@ export function RecruitPanel({
           <button
             disabled={busy || manpowerShort || priceUnknown || appropriationShort}
             onClick={() => onRecruit(sel, name.trim() || "New")}
-            className="mt-3 w-full rounded-lg py-2 text-[13px] font-semibold text-black disabled:opacity-50"
+            className="mt-3 w-full rounded-lg py-2 text-body-sm font-semibold text-black disabled:opacity-50"
             style={{ background: "var(--gov)" }}
           >
             Authorize recruitment · 1 action

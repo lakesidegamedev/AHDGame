@@ -39,8 +39,10 @@ export function ParliamentaryResultsView({ data }: { data: ElectionResultsRespon
       {national && nationalSegments.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-5">
           <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold">{national.chamberLabel} — national picture</h3>
-            <span className="text-xs text-muted tabular-nums">
+            <h3 className="text-body-lg font-semibold">
+              {national.chamberLabel} — national picture
+            </h3>
+            <span className="text-body-sm text-muted tabular-nums">
               {national.majorityThreshold} for a majority · solid = declared, faded = projected
             </span>
           </div>
@@ -56,7 +58,7 @@ export function ParliamentaryResultsView({ data }: { data: ElectionResultsRespon
               .map((p) => (
                 <span
                   key={p.party}
-                  className="inline-flex items-center gap-1.5 text-xs tabular-nums"
+                  className="inline-flex items-center gap-1.5 text-body-sm tabular-nums"
                 >
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
                   <span className="font-medium">{p.name}</span>
@@ -72,8 +74,8 @@ export function ParliamentaryResultsView({ data }: { data: ElectionResultsRespon
       {national && isLive && (
         <div className="rounded-xl border border-card-border bg-card p-5">
           <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold">Regions declaring</h3>
-            <span className="text-xs text-muted tabular-nums">
+            <h3 className="text-body-lg font-semibold">Regions declaring</h3>
+            <span className="text-body-sm text-muted tabular-nums">
               {national.regionsDeclared} of {national.totalRegions} declared
             </span>
           </div>
@@ -84,7 +86,7 @@ export function ParliamentaryResultsView({ data }: { data: ElectionResultsRespon
               return (
                 <span
                   key={r.electionId}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all duration-500 ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-body-sm transition-all duration-500 ${
                     r.declared
                       ? "border-card-border bg-card-border/40 font-medium"
                       : "border-card-border/50 text-muted opacity-60"
@@ -102,7 +104,7 @@ export function ParliamentaryResultsView({ data }: { data: ElectionResultsRespon
                     />
                   )}
                   {r.name}
-                  <span className="text-[10px] text-muted tabular-nums">{r.seats}</span>
+                  <span className="text-body-sm text-muted tabular-nums">{r.seats}</span>
                 </span>
               );
             })}

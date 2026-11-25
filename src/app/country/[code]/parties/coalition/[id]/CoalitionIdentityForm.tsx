@@ -43,12 +43,12 @@ export function CoalitionIdentityForm({
         }
       }}
     >
-      <h2 className="mb-1 text-lg font-semibold">Coalition identity</h2>
-      <p className="mb-4 text-sm text-muted">
+      <h2 className="mb-1 text-heading font-semibold">Coalition identity</h2>
+      <p className="mb-4 text-body text-muted">
         Update the name, abbreviation, and colour shown across your coalition.
       </p>
       <fieldset disabled={saving} className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm">
+        <label className="text-body">
           Name
           <input
             required
@@ -59,7 +59,7 @@ export function CoalitionIdentityForm({
             className="mt-1 w-full rounded border border-card-border bg-background p-2"
           />
         </label>
-        <label className="text-sm">
+        <label className="text-body">
           Abbreviation
           <input
             required
@@ -70,7 +70,7 @@ export function CoalitionIdentityForm({
             className="mt-1 w-full rounded border border-card-border bg-background p-2"
           />
         </label>
-        <label className="text-sm">
+        <label className="text-body">
           Colour
           <input
             type="color"
@@ -86,7 +86,7 @@ export function CoalitionIdentityForm({
           {saving ? "Saving..." : "Save identity"}
         </button>
       </fieldset>
-      <p role="status" className="mt-3 text-sm">
+      <p role="status" className="mt-3 text-body">
         {message}
       </p>
     </form>

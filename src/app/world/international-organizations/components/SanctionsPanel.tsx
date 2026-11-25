@@ -78,8 +78,8 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Sanctions</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Sanctions</h3>
+          <p className="text-body-sm text-muted">
             Members jointly embargo a target country on one commodity. Passes by a majority of the
             members that hold a vote.
           </p>
@@ -97,17 +97,17 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
 
       {showForm && proposerIsMember && proposer && canTable && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Table a sanctions resolution</h4>
+          <h4 className="text-body font-semibold text-foreground">Table a sanctions resolution</h4>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted" htmlFor="sanction-target">
+              <label className="text-body-sm font-medium text-muted" htmlFor="sanction-target">
                 Target country
               </label>
               <select
                 id="sanction-target"
                 value={target}
                 onChange={(e) => setTarget(e.target.value as CountryId)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="">Select…</option>
                 {/* Members excluded, not just the viewer: an organisation
@@ -124,14 +124,14 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted" htmlFor="sanction-commodity">
+              <label className="text-body-sm font-medium text-muted" htmlFor="sanction-commodity">
                 Commodity
               </label>
               <select
                 id="sanction-commodity"
                 value={commodity}
                 onChange={(e) => setCommodity(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="all">All commodities</option>
                 {COMMODITY_TYPES.map((c) => (
@@ -142,7 +142,7 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
               </select>
             </div>
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Submit for a vote
@@ -164,18 +164,18 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
               className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-error/30 bg-error/5 p-5"
             >
               <div>
-                <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                <p className="mt-1 text-xs text-muted">
+                <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                <p className="mt-1 text-body-sm text-muted">
                   Embargoing {targetLabel(l)} · {commodityLabel(l.sanctionsCommodity)}
                 </p>
                 {l.sanctionsExpiresOnTurn != null && (
-                  <p className="mt-0.5 text-xs text-muted">
+                  <p className="mt-0.5 text-body-sm text-muted">
                     Lifts in {Math.max(0, l.sanctionsExpiresOnTurn - currentTurn)} turn
                     {Math.max(0, l.sanctionsExpiresOnTurn - currentTurn) === 1 ? "" : "s"}
                   </p>
                 )}
               </div>
-              <span className="rounded-full border border-error/30 bg-error/10 px-2 py-0.5 text-xs font-medium text-error">
+              <span className="rounded-full border border-error/30 bg-error/10 px-2 py-0.5 text-body-sm font-medium text-error">
                 In force
               </span>
             </div>
@@ -188,7 +188,7 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
         <h4 className="text-body-sm font-medium text-muted">Awaiting a vote</h4>
         {pending.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No pending sanctions.</p>
+            <p className="text-body text-muted">No pending sanctions.</p>
           </div>
         ) : (
           pending.map((l) => {
@@ -205,15 +205,15 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
                 onVote={vote}
                 progressClassName="bg-error"
               >
-                <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                <p className="mt-0.5 flex items-center gap-1.5 text-body-sm text-muted">
                   Embargoing
                   {l.sanctionsTargetCountryId && (
                     <CountryFlag country={l.sanctionsTargetCountryId} size="sm" />
                   )}
                   {targetLabel(l)} · {commodityLabel(l.sanctionsCommodity)}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="mt-0.5 text-body-sm text-muted">
                   Tabled by {l.proposedByCharacterName} · closes in {turnsLeft} turn
                   {turnsLeft === 1 ? "" : "s"}
                 </p>

@@ -22,11 +22,11 @@ export function Tile({
       <span className="dossier-label truncate text-muted">{label}</span>
       <div className="flex flex-col">
         <span
-          className={`tabular text-lg font-bold leading-tight ${tone ? TONE_CLASS[tone] : "text-foreground"}`}
+          className={`tabular text-heading font-bold leading-tight ${tone ? TONE_CLASS[tone] : "text-foreground"}`}
         >
           {value}
         </span>
-        {sub && <span className="text-[11px] text-muted">{sub}</span>}
+        {sub && <span className="text-body-sm text-muted">{sub}</span>}
       </div>
     </div>
   );

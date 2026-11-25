@@ -38,7 +38,7 @@ export function AdminSection({
     <div className="mb-6">
       <button
         onClick={onToggleAdmin}
-        className="flex items-center gap-1.5 text-xs text-muted hover:text-amber-400 transition-colors"
+        className="flex items-center gap-1.5 text-body-sm text-muted hover:text-amber-400 transition-colors"
         title={adminOpen ? "Hide admin controls" : "Show admin controls"}
       >
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

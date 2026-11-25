@@ -70,8 +70,8 @@ export function HealCorporationCash() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal corporation cash</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal corporation cash</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Sets liquidCapital to a specific amount for all corporations. Use to reset corporate
           finances after bugs or for testing.
         </p>
@@ -79,7 +79,7 @@ export function HealCorporationCash() {
 
       <div className="flex items-end gap-2">
         <div className="flex-1 max-w-xs">
-          <label htmlFor="corp-cash-amount" className="block text-xs text-muted mb-1">
+          <label htmlFor="corp-cash-amount" className="block text-body-sm text-muted mb-1">
             Liquid Capital ($)
           </label>
           <input
@@ -89,27 +89,27 @@ export function HealCorporationCash() {
             max="1000000000"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-xs"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm"
           />
         </div>
         <button
           onClick={runDiagnostic}
           disabled={loading}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
         >
           {loading ? "Loading…" : "Diagnose"}
         </button>
         <button
           onClick={runHeal}
           disabled={loading}
-          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
         >
           {loading ? "Setting…" : "Set all"}
         </button>
       </div>
 
       {corps && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-1 text-xs max-h-48 overflow-y-auto">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-1 text-body-sm max-h-48 overflow-y-auto">
           <p className="font-medium text-muted mb-2">{corps.length} corporation(s)</p>
           {corps.map((c) => (
             <p key={c.id} className="flex justify-between">

@@ -32,17 +32,17 @@ export function PublicSubsidiaryGroupPage({ corpId }: { corpId: string }) {
           <>
             <Link
               href="/market?tab=sub-groups"
-              className="text-sm text-muted hover:text-foreground"
+              className="text-body text-muted hover:text-foreground"
             >
               {t("back")}
             </Link>
             <header className="flex flex-wrap items-center gap-5 rounded-xl border border-card-border bg-card p-6">
               <CorporationLogo logoUrl={group.logoUrl} name={group.name} size="h-16 w-16" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted">{t("title")}</p>
-                <h1 className="break-words text-3xl font-bold">{group.name}</h1>
+                <p className="text-body-sm text-muted">{t("title")}</p>
+                <h1 className="break-words text-display font-bold">{group.name}</h1>
                 <Link
-                  className="block break-words text-sm text-muted"
+                  className="block break-words text-body text-muted"
                   href={`/corporation/${group.pathId}`}
                 >
                   {group.parentName}
@@ -50,11 +50,11 @@ export function PublicSubsidiaryGroupPage({ corpId }: { corpId: string }) {
               </div>
             </header>
             <nav aria-label={t("sections")} className="border-b border-card-border">
-              <span className="inline-block border-b-2 border-primary px-4 py-3 text-sm font-semibold">
+              <span className="inline-block border-b-2 border-primary px-4 py-3 text-body font-semibold">
                 {t("overview")}
               </span>
             </nav>
-            <p className="text-sm text-muted">{t("publicNote")}</p>
+            <p className="text-body text-muted">{t("publicNote")}</p>
             <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {(["equityValueAnchor", "cashAnchor", "revenueAnchor", "sectorCount"] as const).map(
                 (key) => (
@@ -62,8 +62,8 @@ export function PublicSubsidiaryGroupPage({ corpId }: { corpId: string }) {
                     key={key}
                     className="min-w-0 rounded-xl border border-card-border bg-card p-5"
                   >
-                    <dt className="text-xs text-muted">{t(key)}</dt>
-                    <dd className="mt-2 break-words font-mono text-2xl">
+                    <dt className="text-body-sm text-muted">{t(key)}</dt>
+                    <dd className="mt-2 break-words font-mono text-heading">
                       {key === "sectorCount"
                         ? group[key]
                         : group[key] === null
@@ -74,20 +74,20 @@ export function PublicSubsidiaryGroupPage({ corpId }: { corpId: string }) {
                 )
               )}
             </dl>
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               {t("footprint", { regions: group.regionCount, countries: group.countries.length })}
             </p>
-            <p className="text-xs text-muted">{t("basis")}</p>
+            <p className="text-body-sm text-muted">{t("basis")}</p>
             {group.parentGroupId && (
               <Link
-                className="text-sm text-info"
+                className="text-body text-info"
                 href={`/corporation/${group.parentGroupId}/group`}
               >
                 {t("parentGroup")}
               </Link>
             )}
             <section className="space-y-3">
-              <h2 className="text-lg font-semibold">{t("members")}</h2>
+              <h2 className="text-heading font-semibold">{t("members")}</h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {group.members.map((m) => (
                   <article
@@ -101,7 +101,7 @@ export function PublicSubsidiaryGroupPage({ corpId }: { corpId: string }) {
                       <CorporationLogo name={m.name} logoUrl={m.logoUrl} />
                       <span className="min-w-0 break-words">{m.name}</span>
                     </Link>
-                    <p className="text-sm text-muted">
+                    <p className="text-body text-muted">
                       {t("memberSummary", {
                         revenue:
                           m.revenueAnchor === null
@@ -111,7 +111,10 @@ export function PublicSubsidiaryGroupPage({ corpId }: { corpId: string }) {
                       })}
                     </p>
                     {m.id !== group.id && (childCounts.get(m.id) ?? 0) > 0 && (
-                      <Link className="text-xs text-info" href={`/corporation/${m.pathId}/group`}>
+                      <Link
+                        className="text-body-sm text-info"
+                        href={`/corporation/${m.pathId}/group`}
+                      >
                         {t("viewGroup")}
                       </Link>
                     )}

@@ -34,7 +34,7 @@ export default function RunningForOfficeIntlPage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -51,8 +51,10 @@ export default function RunningForOfficeIntlPage() {
 
         {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Running for office: UK &amp; Japan</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">
+            Running for office: UK &amp; Japan
+          </h1>
+          <p className="mt-2 text-body text-muted">
             Parliamentary systems, proportional elections, snap elections, and the road to becoming
             Prime Minister
           </p>
@@ -66,7 +68,7 @@ export default function RunningForOfficeIntlPage() {
             <SectionHeader id="parliament-vs-president">
               1. Parliamentary vs presidential
             </SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The UK and Japan use{" "}
               <strong className="text-foreground">parliamentary systems</strong>. The Prime Minister
               is not directly elected; they are appointed from the legislature after winning a
@@ -74,7 +76,7 @@ export default function RunningForOfficeIntlPage() {
               separate presidential race.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Feature</th>
@@ -132,12 +134,12 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 2. Shared Campaign Mechanics ── */}
           <section className="space-y-4">
             <SectionHeader id="shared-mechanics">2. Shared campaign mechanics</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Everything in the US guide applies here too: the vote formula (alignment × reach ×
               favorability × party org), campaign upgrades, Political Influence decay, fundraising
               tiers, and the late-campaign doubling on media spending and opposition research.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               One difference worth noting: in parliamentary elections, your{" "}
               <strong className="text-foreground">party&apos;s organization score</strong> matters
               more than in the US, because the government is formed by whichever party wins enough
@@ -148,7 +150,7 @@ export default function RunningForOfficeIntlPage() {
 
           {/* ═══════════════════════════════ UK ═══════════════════════════════ */}
 
-          <p className="border-b border-card-border pb-2 text-sm font-semibold text-foreground">
+          <p className="border-b border-card-border pb-2 text-body font-semibold text-foreground">
             United Kingdom
           </p>
 
@@ -156,7 +158,7 @@ export default function RunningForOfficeIntlPage() {
           <section className="space-y-4">
             <SectionHeader id="uk-offices">3. UK: offices &amp; races</SectionHeader>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Office</th>
@@ -203,7 +205,7 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 4. UK Electoral System ── */}
           <section className="space-y-4">
             <SectionHeader id="uk-electoral">4. UK: electoral system</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               UK Commons elections use{" "}
               <strong className="text-foreground">multi-seat proportional representation</strong>{" "}
               (Hamilton method / largest remainder). Each region elects multiple MPs in proportion
@@ -211,8 +213,8 @@ export default function RunningForOfficeIntlPage() {
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Seat allocation</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Seat allocation</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• England: 543 MPs</li>
                   <li>• Scotland: 57 MPs</li>
                   <li>• Wales: 32 MPs</li>
@@ -221,8 +223,8 @@ export default function RunningForOfficeIntlPage() {
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Eligibility threshold</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Eligibility threshold</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>
                     • <strong className="text-foreground">10% minimum</strong> regional vote share
                     to receive any seats
@@ -238,7 +240,7 @@ export default function RunningForOfficeIntlPage() {
               votes. In a tight multi-party race, coordinate with allied parties or you both lose.
             </Callout>
             <SubHeader>Regional party dynamics</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The regions are not identical. Scotland has the SNP as a major third force; Wales has
               Plaid Cymru; Northern Ireland has a completely different multi-party landscape (DUP,
               Sinn Féin, SDLP, UUP, Alliance). Running in Scotland or Wales means competing against
@@ -250,12 +252,12 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 5. UK Government Formation ── */}
           <section className="space-y-4">
             <SectionHeader id="uk-government">5. UK: government formation</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               After Commons elections resolve, seats are tallied across all four regions. The path
               to PM depends on how many seats your party controls.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Scenario</th>
@@ -293,7 +295,7 @@ export default function RunningForOfficeIntlPage() {
               </table>
             </div>
             <SubHeader>No-confidence votes</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A sitting PM can be removed by a no-confidence motion. Any Commons MP can trigger one;
               it runs for 24 hours; a simple majority of votes cast is needed to remove. On removal,
               government formation restarts from scratch. There is a 48-turn cooldown before another
@@ -309,7 +311,7 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 6. UK Tips ── */}
           <section className="space-y-4">
             <SectionHeader id="uk-tips">6. UK: strategy tips</SectionHeader>
-            <ul className="space-y-3 text-sm text-muted">
+            <ul className="space-y-3 text-body text-muted">
               {[
                 [
                   "Know the seat math before you run.",
@@ -343,7 +345,7 @@ export default function RunningForOfficeIntlPage() {
 
           {/* ═══════════════════════════════ JAPAN ═══════════════════════════════ */}
 
-          <p className="border-b border-card-border pb-2 text-sm font-semibold text-foreground">
+          <p className="border-b border-card-border pb-2 text-body font-semibold text-foreground">
             Japan
           </p>
 
@@ -351,7 +353,7 @@ export default function RunningForOfficeIntlPage() {
           <section className="space-y-4">
             <SectionHeader id="jp-offices">7. Japan: offices &amp; races</SectionHeader>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Office</th>
@@ -398,7 +400,7 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 8. Japan Electoral System ── */}
           <section className="space-y-4">
             <SectionHeader id="jp-electoral">8. Japan: electoral system</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Both chambers use{" "}
               <strong className="text-foreground">multi-seat proportional representation</strong>{" "}
               (Hamilton method / largest remainder), the same system as UK Commons elections. Each
@@ -409,29 +411,29 @@ export default function RunningForOfficeIntlPage() {
               votes against the gate.
             </p>
             <SubHeader>Staggered Sangiin elections</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The Sangiin&apos;s 248 seats are split into two classes. Only one class stands for
               election at a time, alternating every 3 game years:
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Class 1 regions</p>
-                <p className="text-sm text-muted">Hokkaido, Kanto, Kansai, Shikoku: 139 seats</p>
+                <p className="text-body font-semibold text-foreground">Class 1 regions</p>
+                <p className="text-body text-muted">Hokkaido, Kanto, Kansai, Shikoku: 139 seats</p>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Class 2 regions</p>
-                <p className="text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Class 2 regions</p>
+                <p className="text-body text-muted">
                   Tohoku, Chubu, Chugoku, Kyushu &amp; Okinawa: 109 seats
                 </p>
               </div>
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The Sangiin can never be dissolved; it always provides legislative continuity. Even if
               a snap election wipes the Shugiin, the Sangiin continues operating with its existing
               membership.
             </p>
             <SubHeader>Regional party dynamics</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Most regions operate as an LDP vs CDP two-party race. The exception is{" "}
               <strong className="text-foreground">Kansai</strong>, where Nippon Ishin (Ishin)
               replaces CDP as the primary opposition to the LDP. If you are running in Kansai on a
@@ -443,12 +445,12 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 9. Snap Elections ── */}
           <section className="space-y-4">
             <SectionHeader id="jp-snap">9. Japan: snap elections</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Japan&apos;s most distinctive mechanic: the sitting PM can dissolve the Shugiin and
               call a snap election at any time.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Rule</th>
@@ -498,7 +500,7 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 10. Cabinet Bills ── */}
           <section className="space-y-4">
             <SectionHeader id="jp-cabinet">10. Japan: cabinet bills</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Japan has an exclusive legislative pathway unavailable in any other country:{" "}
               <strong className="text-foreground">cabinet bills</strong>. The PM or any cabinet
               member can propose legislation through the cabinet rather than introducing it directly
@@ -506,8 +508,8 @@ export default function RunningForOfficeIntlPage() {
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">How it works</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">How it works</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• PM or any cabinet member proposes a bill</li>
                   <li>• 24-hour cabinet review phase opens</li>
                   <li>• All player-held cabinet positions vote</li>
@@ -517,8 +519,8 @@ export default function RunningForOfficeIntlPage() {
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Why it matters</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Why it matters</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Faster path for coalition-agreed legislation</li>
                   <li>• Bypasses open floor debate phase</li>
                   <li>• Only 1 cabinet bill can be in review at a time</li>
@@ -536,7 +538,7 @@ export default function RunningForOfficeIntlPage() {
           {/* ── 11. Japan Tips ── */}
           <section className="space-y-4">
             <SectionHeader id="jp-tips">11. Japan: strategy tips</SectionHeader>
-            <ul className="space-y-3 text-sm text-muted">
+            <ul className="space-y-3 text-body text-muted">
               {[
                 [
                   "Win the Shugiin. Everything else is secondary.",

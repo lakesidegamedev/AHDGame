@@ -70,7 +70,7 @@ export function RaceAdmin({
                       justifyContent: "space-between",
                       alignItems: "center",
                       gap: 8,
-                      fontSize: 13,
+                      fontSize: 12,
                     }}
                   >
                     <span>{c.name}</span>

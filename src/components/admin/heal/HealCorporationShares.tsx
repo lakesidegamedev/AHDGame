@@ -40,8 +40,8 @@ export function HealCorporationShares() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal corporation shares</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal corporation shares</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Recalculates totalShares for all corporations as shareholder shares + public float +
           reserved sell-order shares. Fixes ownership percentage mismatches.
         </p>
@@ -50,13 +50,13 @@ export function HealCorporationShares() {
       <button
         onClick={runHeal}
         disabled={loading}
-        className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+        className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
       >
         {loading ? "Healing…" : "Heal shares"}
       </button>
 
       {result?.fixes && result.fixes.length > 0 && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-1 text-xs max-h-48 overflow-y-auto">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-1 text-body-sm max-h-48 overflow-y-auto">
           <p className="font-medium text-muted mb-2">{result.fixes.length} fix(es)</p>
           {result.fixes.map((f, i) => (
             <p key={i} className="flex justify-between gap-4">

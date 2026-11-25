@@ -71,7 +71,7 @@ export function NppEntryFunnelPanel() {
   return (
     <div className="space-y-6 rounded border p-4">
       <div>
-        <h3 className="text-lg font-semibold">NPP entry funnel</h3>
+        <h3 className="text-body-lg font-semibold">NPP entry funnel</h3>
         {funnelMissing || !funnel ? (
           <p>No funnel snapshot yet. It is written by the NPP turn phase.</p>
         ) : (
@@ -100,7 +100,7 @@ export function NppEntryFunnelPanel() {
         )}
       </div>
       <div>
-        <h3 className="text-lg font-semibold">State-sector coverage</h3>
+        <h3 className="text-body-lg font-semibold">State-sector coverage</h3>
         {coverageMissing || !coverage ? (
           <p>No vital-signs snapshot yet.</p>
         ) : (
@@ -132,7 +132,7 @@ export function NppEntryFunnelPanel() {
           </>
         )}
       </div>
-      <p className="text-sm opacity-70">
+      <p className="text-body opacity-70">
         Read-only evidence. This view recomputes nothing and changes no entry mechanics.
       </p>
     </div>

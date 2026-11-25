@@ -373,14 +373,14 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
       <div className="mb-6">
         <Link
           href={`/president/primary/${partyId}`}
-          className="text-xs text-muted hover:text-foreground transition-colors"
+          className="text-body-sm text-muted hover:text-foreground transition-colors"
         >
           ← Back to {party.name} Primary
         </Link>
-        <h1 className="text-2xl font-bold mt-1" style={{ color: partyColor }}>
+        <h1 className="text-heading font-bold mt-1" style={{ color: partyColor }}>
           {state.name} — {party.name} Primary
         </h1>
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           {stateDelegates} delegates ·{" "}
           {allocationMethod === "PR" ? "Proportional (15% viability)" : "Winner-take-all"}
           {wave ? ` · ${wave.label}` : " · Not on primary calendar"}
@@ -392,37 +392,37 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
         <div className="rounded-xl border border-card-border bg-card p-3">
           <div className="text-body-sm font-medium text-muted mb-1">Status</div>
           {waveFired ? (
-            <div className="text-sm font-semibold text-green-400">Voted</div>
+            <div className="text-body font-semibold text-green-400">Voted</div>
           ) : turnsUntilWave !== null ? (
-            <div className="text-sm font-semibold text-amber-400">
+            <div className="text-body font-semibold text-amber-400">
               ~{Math.ceil(turnsUntilWave)} turn{Math.ceil(turnsUntilWave) === 1 ? "" : "s"}
             </div>
           ) : (
-            <div className="text-sm text-muted">Not on calendar</div>
+            <div className="text-body text-muted">Not on calendar</div>
           )}
         </div>
         <div className="rounded-xl border border-card-border bg-card p-3">
           <div className="text-body-sm font-medium text-muted mb-1">Delegates</div>
-          <div className="text-sm font-semibold" style={{ color: partyColor }}>
+          <div className="text-body font-semibold" style={{ color: partyColor }}>
             {stateDelegates}
           </div>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-3">
           <div className="text-body-sm font-medium text-muted mb-1">Allocation</div>
-          <div className="text-sm font-semibold">
+          <div className="text-body font-semibold">
             {allocationMethod === "PR" ? "Proportional" : "Winner-take-all"}
           </div>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-3">
           <div className="text-body-sm font-medium text-muted mb-1">Wave</div>
-          <div className="text-sm font-semibold">{wave ? wave.label : "—"}</div>
+          <div className="text-body font-semibold">{wave ? wave.label : "—"}</div>
         </div>
       </div>
 
       {/* Projection trend */}
       {pollingHistory.length > 1 && (
         <div className="mb-6 rounded-xl border border-card-border bg-card p-4">
-          <div className="text-sm font-semibold mb-3">Projection trend</div>
+          <div className="text-body font-semibold mb-3">Projection trend</div>
           <div className="flex gap-0.5 h-16 items-end">
             {pollingHistory.map((snap, si) => {
               const scores = snap.byParty[partyKey]?.[stateId] ?? {};
@@ -450,7 +450,10 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
           </div>
           <div className="mt-2 flex flex-wrap gap-3">
             {rows.map((r) => (
-              <span key={r.candidate._id.toString()} className="flex items-center gap-1.5 text-xs">
+              <span
+                key={r.candidate._id.toString()}
+                className="flex items-center gap-1.5 text-body-sm"
+              >
                 <span
                   className="h-2.5 w-2.5 rounded-sm shrink-0"
                   style={{ backgroundColor: colorForCandidate(r.candidate._id.toString()) }}
@@ -466,15 +469,15 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
 
       {/* Candidate breakdown */}
       <div className="rounded-xl border border-card-border bg-card overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-card-border bg-background text-sm font-semibold text-foreground flex items-center justify-between">
+        <div className="px-4 py-2.5 border-b border-card-border bg-background text-body font-semibold text-foreground flex items-center justify-between">
           <span>Candidate breakdown</span>
-          <span className="text-xs normal-case text-muted/80">
+          <span className="text-body-sm normal-case text-muted/80">
             {hasVoted ? "Actual votes + delegates" : "Pre-vote projection"}
           </span>
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-card-border bg-background text-left text-sm font-semibold text-foreground">
+            <tr className="border-b border-card-border bg-background text-left text-body font-semibold text-foreground">
               <th className="px-3 py-2">#</th>
               <th className="px-3 py-2">Candidate</th>
               <th className="px-3 py-2">Projection</th>
@@ -524,12 +527,12 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
                       {r.candidate.characterName}
                     </Link>
                     {r.candidate.isNPP && (
-                      <span className="ml-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-400">
+                      <span className="ml-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-body-sm text-purple-400">
                         <NppAbbr />
                       </span>
                     )}
                     {r.candidate.primaryCampaignState === stateId && (
-                      <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-400">
+                      <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-body-sm text-amber-400">
                         📍 camped
                       </span>
                     )}
@@ -543,7 +546,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
                         />
                       </div>
                       <span
-                        className="tabular-nums text-xs w-10 text-right shrink-0"
+                        className="tabular-nums text-body-sm w-10 text-right shrink-0"
                         style={{ color }}
                         title={`Projected: ~${Math.round(r.projectionScore).toLocaleString()} votes`}
                       >
@@ -551,7 +554,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-xs">
+                  <td className="px-3 py-2.5 text-right tabular-nums text-body-sm">
                     {r.votes > 0 ? r.votes.toLocaleString() : "—"}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
@@ -566,7 +569,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
           </tbody>
         </table>
         {!hasVoted && stateDelegates > 0 && (
-          <div className="border-t border-card-border bg-background/40 px-4 py-2 text-[11px] text-muted/80">
+          <div className="border-t border-card-border bg-background/40 px-4 py-2 text-body-sm text-muted/80">
             <strong className="text-foreground/80">Proj. Del.</strong> applies this state&apos;s
             allocation rule (
             {allocationMethod === "WTA"
@@ -581,8 +584,10 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
       {/* Primary-wide projected delegate standings */}
       <div className="mt-6 rounded-xl border border-card-border bg-card p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Projected primary standings</h3>
-          <span className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">
+            Projected primary standings
+          </h3>
+          <span className="text-body-sm text-muted">
             {majorityThreshold.toLocaleString()} to clinch · {totalDelegates.toLocaleString()} total
           </span>
         </div>
@@ -603,7 +608,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
                   title={`${r.candidate.characterName}: ${r.projectedTotalDelegates.toLocaleString()} projected delegates`}
                 >
                   {pct > 6 && (
-                    <span className="text-white font-bold text-xs tabular-nums drop-shadow">
+                    <span className="text-white font-bold text-body-sm tabular-nums drop-shadow">
                       {r.projectedTotalDelegates.toLocaleString()}
                     </span>
                   )}
@@ -615,7 +620,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
               className="absolute top-0 bottom-0 w-px bg-white/50 pointer-events-none"
               style={{ left: `${(majorityThreshold / totalDelegates) * 100}%` }}
             >
-              <div className="absolute top-0.5 left-1 text-[9px] font-bold text-white/70 whitespace-nowrap">
+              <div className="absolute top-0.5 left-1 text-body-sm font-bold text-white/70 whitespace-nowrap">
                 {majorityThreshold.toLocaleString()}
               </div>
             </div>
@@ -631,17 +636,17 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
                   className="h-3 w-3 rounded-sm shrink-0"
                   style={{ backgroundColor: colorForCandidate(r.candidate._id.toString()) }}
                 />
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-body-sm font-medium text-foreground">
                   {r.candidate.characterName}
                 </span>
                 <span
-                  className="text-xs tabular-nums font-bold"
+                  className="text-body-sm tabular-nums font-bold"
                   style={{ color: colorForCandidate(r.candidate._id.toString()) }}
                 >
                   {r.projectedTotalDelegates.toLocaleString()}
                 </span>
                 {r.totalDelegates > 0 && (
-                  <span className="text-[11px] text-muted">
+                  <span className="text-body-sm text-muted">
                     ({r.totalDelegates.toLocaleString()} awarded)
                   </span>
                 )}
@@ -650,7 +655,7 @@ export default async function PartyPrimaryStatePage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mt-4 text-[11px] text-muted/80">
+      <div className="mt-4 text-body-sm text-muted/80">
         <p>
           <strong className="text-foreground">Projection</strong> is the pre-vote share implied by
           candidate stats (policy alignment, national influence, favorability, home-state org, and

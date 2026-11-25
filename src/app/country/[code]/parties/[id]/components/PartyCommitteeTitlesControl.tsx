@@ -12,7 +12,7 @@ import { partyApiUrl } from "@/lib/urls";
 import type { CommitteeData } from "./types";
 
 const inputClass =
-  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
+  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
 
 interface Props {
   partyId: string;
@@ -74,15 +74,15 @@ export function PartyCommitteeTitlesControl({
   return (
     <section aria-labelledby="party-committee-titles-heading" className="space-y-4">
       <div>
-        <h3 id="party-committee-titles-heading" className="text-sm font-semibold text-muted">
+        <h3 id="party-committee-titles-heading" className="text-body-lg font-semibold text-muted">
           Committee titles
         </h3>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-body text-muted">
           Leave an individual title blank to use the default member title.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="space-y-1.5 text-sm font-medium text-foreground">
+        <label className="space-y-1.5 text-body font-medium text-foreground">
           <span>Committee name</span>
           <input
             className={inputClass}
@@ -92,7 +92,7 @@ export function PartyCommitteeTitlesControl({
             onChange={(event) => setName(event.target.value)}
           />
         </label>
-        <label className="space-y-1.5 text-sm font-medium text-foreground">
+        <label className="space-y-1.5 text-body font-medium text-foreground">
           <span>Default member title</span>
           <input
             className={inputClass}
@@ -103,7 +103,7 @@ export function PartyCommitteeTitlesControl({
           />
         </label>
         {activeMembers.map(({ id, name: memberName }) => (
-          <label key={id} className="space-y-1.5 text-sm font-medium text-foreground">
+          <label key={id} className="space-y-1.5 text-body font-medium text-foreground">
             <span>Title for {memberName}</span>
             <input
               className={inputClass}
@@ -123,12 +123,12 @@ export function PartyCommitteeTitlesControl({
           type="button"
           onClick={saveTitles}
           disabled={saving || !hasChanges}
-          className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save committee titles"}
         </button>
         {message && (
-          <p role="status" className="text-sm text-muted">
+          <p role="status" className="text-body text-muted">
             {message}
           </p>
         )}

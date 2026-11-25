@@ -120,10 +120,10 @@ export function TargetPanel({
   }, [url, kind, load]);
 
   if (!race || !candidate) {
-    return <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("pick")}</p>;
+    return <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("pick")}</p>;
   }
   if (over) {
-    return <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{tr("over")}</p>;
+    return <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{tr("over")}</p>;
   }
 
   const line = race.multiSeat
@@ -172,7 +172,7 @@ export function TargetPanel({
             borderRadius: "50%",
             display: "grid",
             placeItems: "center",
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: 700,
             background: candidate.partyColor || BLEND.mutedDim,
             color: readableInk(candidate.partyColor || "#888888"),
@@ -186,8 +186,8 @@ export function TargetPanel({
             .toUpperCase()}
         </span>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 700 }}>{candidate.name}</div>
-          <div style={{ fontSize: 12.5, color: BLEND.muted }}>{candidate.partyName}</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{candidate.name}</div>
+          <div style={{ fontSize: 12, color: BLEND.muted }}>{candidate.partyName}</div>
           <EndorsementBadges endorsements={candidate.endorsements} />
         </div>
       </div>
@@ -211,8 +211,8 @@ export function TargetPanel({
             key={label}
             style={{ padding: "8px 10px", background: BLEND.field, borderRadius: 8 }}
           >
-            <dt style={{ fontSize: 11, color: BLEND.muted }}>{label}</dt>
-            <dd style={{ margin: 0, fontFamily: FONT.mono, fontSize: 15, fontWeight: 600 }}>
+            <dt style={{ fontSize: 12, color: BLEND.muted }}>{label}</dt>
+            <dd style={{ margin: 0, fontFamily: FONT.mono, fontSize: 14, fontWeight: 600 }}>
               {value}
             </dd>
           </div>
@@ -221,7 +221,7 @@ export function TargetPanel({
 
       {candidate.isYou ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("you")}</p>
+          <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("you")}</p>
           <button
             type="button"
             onClick={onShowMyMoves}
@@ -242,11 +242,11 @@ export function TargetPanel({
         </div>
       ) : !url ? (
         // No profile to act through (a character record that is gone).
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("noProfile")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("noProfile")}</p>
       ) : current === undefined ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("working")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("working")}</p>
       ) : current === null ? (
-        <p role="alert" style={{ margin: 0, fontSize: 13, color: BLEND.negative }}>
+        <p role="alert" style={{ margin: 0, fontSize: 12, color: BLEND.negative }}>
           {ti("loadError")}
         </p>
       ) : current.kind === "player" ? (
@@ -266,7 +266,7 @@ export function TargetPanel({
       {result && result.url === url ? (
         <p
           role="status"
-          style={{ margin: 0, fontSize: 12.5, color: result.ok ? BLEND.positive : BLEND.caution }}
+          style={{ margin: 0, fontSize: 12, color: result.ok ? BLEND.positive : BLEND.caution }}
         >
           {result.msg}
         </p>
@@ -456,7 +456,7 @@ function ActionRows({
               borderRadius: 9,
               display: "grid",
               placeItems: "center",
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: 700,
               color: r.tone,
               border: `1px solid ${r.tone}`,
@@ -470,7 +470,7 @@ function ActionRows({
             </span>
             <span style={{ fontSize: 12, color: BLEND.muted }}>{r.note}</span>
           </span>
-          <span style={{ flex: "none", fontFamily: FONT.mono, fontSize: 11.5, color: BLEND.muted }}>
+          <span style={{ flex: "none", fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}>
             {t("cost", { actions: r.ap, amount: r.amount })}
           </span>
         </button>

@@ -18,7 +18,7 @@ const ROW = {
   cursor: "pointer",
   textAlign: "left",
   fontFamily: FONT.sans,
-  fontSize: 13,
+  fontSize: 12,
   color: BLEND.ink,
 } as const;
 
@@ -28,7 +28,7 @@ function MarginChip({ abbr, color, margin }: { abbr: string; color: string; marg
     <span
       style={{
         fontFamily: FONT.mono,
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: 700,
         padding: "2px 6px",
         borderRadius: 5,
@@ -67,7 +67,7 @@ export function PastRaces({
     <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <h3 style={{ ...EYEBROW, margin: 0 }}>{t("title")}</h3>
       {others.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("empty")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("empty")}</p>
       ) : (
         <ul
           style={{
@@ -96,7 +96,7 @@ export function PastRaces({
                     border: `1px solid ${open ? BLEND.accent : "transparent"}`,
                   }}
                 >
-                  <span style={{ fontFamily: FONT.mono, fontSize: 12.5 }}>{yearOf(c)}</span>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 12 }}>{yearOf(c)}</span>
                   <span
                     style={{
                       minWidth: 0,
@@ -147,7 +147,7 @@ export function PastRaces({
                             ...ROW,
                             gridTemplateColumns: "minmax(0,1fr) auto",
                             minHeight: 30,
-                            fontSize: 12.5,
+                            fontSize: 12,
                             background: "transparent",
                             border: "1px solid transparent",
                             color: BLEND.muted,

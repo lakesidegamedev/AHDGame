@@ -10,7 +10,7 @@ export function ContingentResolutionPendingBanner({
   const isSeating = phase === "seating";
 
   return (
-    <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm">
+    <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-body">
       <p className="font-semibold text-orange-200">
         {isSeating ? "Executive seating pending" : "Contingent resolution pending"}
       </p>

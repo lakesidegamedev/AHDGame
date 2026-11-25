@@ -8,7 +8,7 @@ export function SovereignBondRisk({
   compact?: boolean;
 }) {
   return (
-    <div className="text-xs text-warning" role="note">
+    <div className="text-body-sm text-warning" role="note">
       <span className="font-semibold">
         Issuer credit: {risk?.creditRating ?? "Not rated"}
         {risk?.creditRating && ["BB", "B", "CCC"].includes(risk.creditRating)

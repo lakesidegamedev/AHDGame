@@ -47,7 +47,7 @@ export function DeclarePositionControl({
   }
 
   const pill = (active: boolean, tone: string) =>
-    `flex-1 rounded-lg border px-3 py-2.5 text-[13px] font-bold transition-colors disabled:opacity-50 ${
+    `flex-1 rounded-lg border px-3 py-2.5 text-body-sm font-bold transition-colors disabled:opacity-50 ${
       active ? `${tone} text-white` : "border-card-border text-muted hover:text-foreground"
     }`;
 
@@ -57,7 +57,7 @@ export function DeclarePositionControl({
         Declare your party&apos;s position
       </div>
       {error && (
-        <div className="mb-2 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+        <div className="mb-2 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-body text-rose-500">
           {error}
         </div>
       )}
@@ -84,7 +84,7 @@ export function DeclarePositionControl({
           type="button"
           disabled={busy}
           onClick={() => send({ action: "withdraw" })}
-          className="mt-2 w-full rounded-lg border border-card-border px-3 py-2 text-[12px] font-semibold text-muted hover:text-foreground disabled:opacity-50"
+          className="mt-2 w-full rounded-lg border border-card-border px-3 py-2 text-body-sm font-semibold text-muted hover:text-foreground disabled:opacity-50"
         >
           Withdraw
         </button>

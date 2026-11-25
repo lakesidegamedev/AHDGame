@@ -100,7 +100,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-1">
-      <h3 className="text-sm font-semibold mb-4">Legislative timeline</h3>
+      <h3 className="text-body-lg font-semibold mb-4">Legislative timeline</h3>
       <div className="relative">
         {steps.map((step, i) => {
           const date = bill[step.dateField as keyof BillDetail] as string | null;
@@ -137,7 +137,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
               )}
               {/* Dot */}
               <div
-                className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
+                className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold ${
                   isDone
                     ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
                     : isCurrent
@@ -149,12 +149,12 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
               </div>
               <div className={`flex-1 pt-0.5 ${isFuture && !isCurrent ? "opacity-40" : ""}`}>
                 <p
-                  className={`text-xs font-medium ${isCurrent ? "text-yellow-400" : isDone ? "text-foreground" : "text-muted"}`}
+                  className={`text-body-sm font-medium ${isCurrent ? "text-yellow-400" : isDone ? "text-foreground" : "text-muted"}`}
                 >
                   {step.label}
                 </p>
                 {date && (
-                  <p className="text-[10px] text-muted mt-0.5">
+                  <p className="text-body-sm text-muted mt-0.5">
                     <GameMonthTime value={date} />
                   </p>
                 )}
@@ -167,7 +167,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
         {isTerminal && !isOverridePath && !isJPOverridePath && (
           <div className="flex items-start gap-3 pb-0">
             <div
-              className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
+              className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold ${
                 bill.status === "failed"
                   ? "border-error bg-error/20 text-error"
                   : bill.status === "vetoed"
@@ -179,12 +179,12 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             </div>
             <div className="flex-1 pt-0.5">
               <p
-                className={`text-xs font-medium ${bill.status === "failed" ? "text-error" : bill.status === "vetoed" ? "text-foreground" : "text-muted"}`}
+                className={`text-body-sm font-medium ${bill.status === "failed" ? "text-error" : bill.status === "vetoed" ? "text-foreground" : "text-muted"}`}
               >
                 {STATUS_LABELS[bill.status]}
               </p>
               {(bill.failedAt ?? bill.enactedAt) && (
-                <p className="text-[10px] text-muted mt-0.5">
+                <p className="text-body-sm text-muted mt-0.5">
                   <GameMonthTime value={(bill.failedAt ?? bill.enactedAt)!} />
                 </p>
               )}
@@ -198,13 +198,13 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             {/* Vetoed step — always shown as a red completed/passed step on the override path */}
             <div className="flex items-start gap-3 pb-4 relative">
               <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-error/40" />
-              <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold border-error bg-error/20 text-error">
+              <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold border-error bg-error/20 text-error">
                 ✗
               </div>
               <div className="flex-1 pt-0.5">
-                <p className="text-xs font-medium text-foreground">Vetoed</p>
+                <p className="text-body-sm font-medium text-foreground">Vetoed</p>
                 {bill.failedAt && (
-                  <p className="text-[10px] text-muted mt-0.5">
+                  <p className="text-body-sm text-muted mt-0.5">
                     <GameMonthTime value={bill.failedAt} />
                   </p>
                 )}
@@ -224,7 +224,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
                     className={`absolute left-[11px] top-6 bottom-0 w-0.5 ${isPast ? "bg-amber-500/40" : "bg-card-border"}`}
                   />
                   <div
-                    className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
+                    className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold ${
                       isPast
                         ? "border-amber-500 bg-amber-500/20 text-amber-400"
                         : isActive
@@ -236,12 +236,12 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
                   </div>
                   <div className={`flex-1 pt-0.5 ${isFuture ? "opacity-40" : ""}`}>
                     <p
-                      className={`text-xs font-medium ${isActive ? "text-amber-400" : isPast ? "text-foreground" : "text-muted"}`}
+                      className={`text-body-sm font-medium ${isActive ? "text-amber-400" : isPast ? "text-foreground" : "text-muted"}`}
                     >
                       Override vote
                     </p>
                     {bill.overrideVotingEndsAt && isActive && (
-                      <p className="text-[10px] text-muted mt-0.5">
+                      <p className="text-body-sm text-muted mt-0.5">
                         Ends <LocalTime value={bill.overrideVotingEndsAt} />
                       </p>
                     )}
@@ -253,13 +253,13 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             {/* Veto Sustained — terminal red step shown only when override_failed */}
             {bill.status === "override_failed" && (
               <div className="flex items-start gap-3 pb-0">
-                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold border-error bg-error/20 text-error">
+                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold border-error bg-error/20 text-error">
                   ✗
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className="text-xs font-medium text-foreground">Veto sustained</p>
+                  <p className="text-body-sm font-medium text-foreground">Veto sustained</p>
                   {bill.overrideFailedAt && (
-                    <p className="text-[10px] text-muted mt-0.5">
+                    <p className="text-body-sm text-muted mt-0.5">
                       <GameMonthTime value={bill.overrideFailedAt} />
                     </p>
                   )}
@@ -270,13 +270,13 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             {/* Override Enacted — shown when bill is signed via override */}
             {bill.status === "signed" && bill.presidentAction === "override" && (
               <div className="flex items-start gap-3 pb-0">
-                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold border-emerald-500 bg-emerald-500/20 text-emerald-400">
+                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold border-emerald-500 bg-emerald-500/20 text-emerald-400">
                   ✓
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className="text-xs font-medium text-emerald-400">Enacted (override)</p>
+                  <p className="text-body-sm font-medium text-emerald-400">Enacted (override)</p>
                   {bill.overrideEnactedAt && (
-                    <p className="text-[10px] text-muted mt-0.5">
+                    <p className="text-body-sm text-muted mt-0.5">
                       <GameMonthTime value={bill.overrideEnactedAt} />
                     </p>
                   )}
@@ -297,13 +297,13 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             {/* Sangiin Rejected — red step marking the rejection that triggered the override */}
             <div className="flex items-start gap-3 pb-4 relative">
               <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-error/40" />
-              <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold border-error bg-error/20 text-error">
+              <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold border-error bg-error/20 text-error">
                 ✗
               </div>
               <div className="flex-1 pt-0.5">
-                <p className="text-xs font-medium text-error">Sangiin rejected</p>
+                <p className="text-body-sm font-medium text-error">Sangiin rejected</p>
                 {bill.otherChamberVotingEndsAt && (
-                  <p className="text-[10px] text-muted mt-0.5">
+                  <p className="text-body-sm text-muted mt-0.5">
                     <GameMonthTime value={bill.otherChamberVotingEndsAt} />
                   </p>
                 )}
@@ -321,7 +321,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
                     className={`absolute left-[11px] top-6 bottom-0 w-0.5 ${isPast ? "bg-amber-500/40" : "bg-card-border"}`}
                   />
                   <div
-                    className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
+                    className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold ${
                       isPast
                         ? "border-amber-500 bg-amber-500/20 text-amber-400"
                         : isActive
@@ -333,12 +333,12 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
                   </div>
                   <div className={`flex-1 pt-0.5 ${isFuture ? "opacity-40" : ""}`}>
                     <p
-                      className={`text-xs font-medium ${isActive ? "text-amber-400" : isPast ? "text-foreground" : "text-muted"}`}
+                      className={`text-body-sm font-medium ${isActive ? "text-amber-400" : isPast ? "text-foreground" : "text-muted"}`}
                     >
                       Shugiin override vote (2/3)
                     </p>
                     {bill.votingEndsAt && isActive && (
-                      <p className="text-[10px] text-muted mt-0.5">
+                      <p className="text-body-sm text-muted mt-0.5">
                         Ends <LocalTime value={bill.votingEndsAt} />
                       </p>
                     )}
@@ -350,13 +350,13 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             {/* Override Failed — terminal red step */}
             {bill.status === "failed" && (
               <div className="flex items-start gap-3 pb-0">
-                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold border-error bg-error/20 text-error">
+                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold border-error bg-error/20 text-error">
                   ✗
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className="text-xs font-medium text-error">Override failed</p>
+                  <p className="text-body-sm font-medium text-error">Override failed</p>
                   {bill.failedAt && (
-                    <p className="text-[10px] text-muted mt-0.5">
+                    <p className="text-body-sm text-muted mt-0.5">
                       <GameMonthTime value={bill.failedAt} />
                     </p>
                   )}
@@ -367,13 +367,13 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
             {/* Enacted via override — terminal green step */}
             {bill.status === "signed" && (
               <div className="flex items-start gap-3 pb-0">
-                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold border-emerald-500 bg-emerald-500/20 text-emerald-400">
+                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-body-sm font-bold border-emerald-500 bg-emerald-500/20 text-emerald-400">
                   ✓
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className="text-xs font-medium text-emerald-400">Enacted (override)</p>
+                  <p className="text-body-sm font-medium text-emerald-400">Enacted (override)</p>
                   {bill.enactedAt && (
-                    <p className="text-[10px] text-muted mt-0.5">
+                    <p className="text-body-sm text-muted mt-0.5">
                       <GameMonthTime value={bill.enactedAt} />
                     </p>
                   )}

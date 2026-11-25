@@ -62,7 +62,7 @@ export function GroundGameControl({
   }
 
   const sideBtn = (s: "yes" | "no", tone: string) =>
-    `flex-1 rounded-lg border px-3 py-2 text-[12.5px] font-bold transition-colors ${
+    `flex-1 rounded-lg border px-3 py-2 text-body-sm font-bold transition-colors ${
       side === s ? `${tone} text-white` : "border-card-border text-muted hover:text-foreground"
     }`;
 
@@ -70,7 +70,7 @@ export function GroundGameControl({
     <div className={card}>
       <div className="mb-2 text-body-sm font-medium text-muted">Ground game · {mode}</div>
       {error && (
-        <div className="mb-2 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+        <div className="mb-2 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-body text-rose-500">
           {error}
         </div>
       )}
@@ -93,7 +93,7 @@ export function GroundGameControl({
         </button>
       </div>
 
-      <div className="mb-3 text-[11px] text-muted">
+      <div className="mb-3 text-body-sm text-muted">
         Targeting: <span className="font-semibold text-foreground">{targetName}</span> · campaign
         saturation {Math.round(saturation * 100)}%
       </div>
@@ -115,13 +115,13 @@ export function GroundGameControl({
               }}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-[13.5px] font-bold">{p.label}</div>
-              <div className="mt-0.5 text-[11px] text-muted">
+              <div className="text-body font-bold">{p.label}</div>
+              <div className="mt-0.5 text-body-sm text-muted">
                 {p.effect === "mobilize"
                   ? `≈${p.nominalSwing.toFixed(2)}% · mobilize · your base`
                   : `+${p.nominalSwing.toFixed(2)}% swing · persuade`}
               </div>
-              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold">
+              <div className="mt-1.5 flex items-center gap-1.5 text-body-sm font-semibold">
                 {mode === "official" ? (
                   <span className="rounded-md bg-primary/10 px-2 py-0.5 text-primary">
                     {p.ps} PS
@@ -138,7 +138,7 @@ export function GroundGameControl({
                 )}
               </div>
             </div>
-            <span className="flex-none text-[12px] font-bold text-[var(--ref-yes)]">
+            <span className="flex-none text-body-sm font-bold text-[var(--ref-yes)]">
               {p.effect === "mobilize" ? "≈" : "+"}
               {p.nominalSwing.toFixed(2)}%
             </span>

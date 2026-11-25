@@ -66,13 +66,13 @@ export function GameHealthWarningsLog() {
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">Warnings & errors</h3>
+      <h3 className="mb-3 text-body-lg font-semibold text-foreground">Warnings & errors</h3>
 
       <div className="mb-3 flex flex-wrap gap-2">
         <select
           value={phaseFilter}
           onChange={(e) => setPhaseFilter(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          className="rounded border border-border bg-background px-2 py-1 text-body-sm"
         >
           <option value="">All phases</option>
           {uniquePhases.map((p) => (
@@ -84,7 +84,7 @@ export function GameHealthWarningsLog() {
         <select
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          className="rounded border border-border bg-background px-2 py-1 text-body-sm"
         >
           <option value="">All severity</option>
           <option value="warning">Warning</option>
@@ -93,7 +93,7 @@ export function GameHealthWarningsLog() {
         <select
           value={sourceFilter}
           onChange={(e) => setSourceFilter(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          className="rounded border border-border bg-background px-2 py-1 text-body-sm"
         >
           <option value="">All sources</option>
           <option value="turnProcessing">Turn</option>
@@ -105,12 +105,12 @@ export function GameHealthWarningsLog() {
       </div>
 
       {loading ? (
-        <p className="text-xs text-muted">Loading...</p>
+        <p className="text-body-sm text-muted">Loading...</p>
       ) : warnings.length === 0 ? (
-        <p className="text-xs text-muted">No warnings or errors found.</p>
+        <p className="text-body-sm text-muted">No warnings or errors found.</p>
       ) : (
         <div className="max-h-80 overflow-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-body-sm">
             <thead className="sticky top-0 bg-card">
               <tr className="border-b border-border">
                 <th className="p-2">Turn</th>
@@ -127,14 +127,14 @@ export function GameHealthWarningsLog() {
                   <td className="p-2">{w.phase}</td>
                   <td className="p-2">
                     <span
-                      className={`rounded px-1.5 py-0.5 text-xs font-medium ${sourceClasses[w.source]}`}
+                      className={`rounded px-1.5 py-0.5 text-body-sm font-medium ${sourceClasses[w.source]}`}
                     >
                       {sourceLabels[w.source]}
                     </span>
                   </td>
                   <td className="p-2">
                     <span
-                      className={`rounded px-1.5 py-0.5 text-xs font-medium ${severityClasses[w.severity]}`}
+                      className={`rounded px-1.5 py-0.5 text-body-sm font-medium ${severityClasses[w.severity]}`}
                     >
                       {w.severity}
                     </span>

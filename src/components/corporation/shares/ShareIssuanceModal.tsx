@@ -201,10 +201,10 @@ export default function ShareIssuanceModal({
         {/* ─── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between border-b border-card-border px-6 py-4">
           <div>
-            <h2 id={titleId} className="text-base font-semibold text-foreground">
+            <h2 id={titleId} className="text-body-lg font-semibold text-foreground">
               Issue shares
             </h2>
-            <p className="mt-0.5 text-sm text-muted">
+            <p className="mt-0.5 text-body text-muted">
               {corporation.name}
               <span className="mx-2 text-card-border">·</span>
               <span className="tabular-nums text-foreground font-medium">
@@ -233,7 +233,7 @@ export default function ShareIssuanceModal({
 
         {/* ─── Mode picker ─────────────────────────────────────────────────── */}
         <div className="border-b border-card-border px-6 py-4">
-          <div className="flex overflow-hidden rounded-lg border border-card-border text-sm">
+          <div className="flex overflow-hidden rounded-lg border border-card-border text-body">
             <button
               type="button"
               onClick={() => {
@@ -265,12 +265,12 @@ export default function ShareIssuanceModal({
               CEO purchase
             </button>
           </div>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             {mode === "public"
               ? "Issue new shares to the market. Raises capital but dilutes existing shareholders."
               : "Personally buy newly issued shares at a 15% premium. Capital goes directly to the corporation."}
           </p>
-          <p className="mt-2 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-[11px] leading-snug text-warning">
+          <p className="mt-2 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-body-sm leading-snug text-warning">
             CEO acquisition limit: as CEO you can buy at most 10% of this corporation&apos;s total
             shares every 120 turns, combined across public-float buys and purchases from other
             players (this self-issuance is separate). Buying the full 10% locks further purchases
@@ -285,12 +285,12 @@ export default function ShareIssuanceModal({
             <div className="space-y-4">
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-xs text-muted">
+                  <label className="text-body-sm text-muted">
                     Issuance size:{" "}
                     <span className="text-foreground font-medium">{issuePercent.toFixed(1)}%</span>{" "}
                     of outstanding
                   </label>
-                  <span className="text-xs text-muted">Max 50%</span>
+                  <span className="text-body-sm text-muted">Max 50%</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Slider
@@ -314,14 +314,14 @@ export default function ShareIssuanceModal({
                           Math.max(0.1, Math.min(MAX_ISSUE_PCT, Number(e.target.value)))
                         )
                       }
-                      className="w-16 rounded-lg border border-card-border bg-background px-2 py-2 text-sm focus:border-primary/60 focus:outline-none"
+                      className="w-16 rounded-lg border border-card-border bg-background px-2 py-2 text-body focus:border-primary/60 focus:outline-none"
                     />
-                    <span className="text-sm text-muted">%</span>
+                    <span className="text-body text-muted">%</span>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+              <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-body">
                 <div className="flex justify-between">
                   <span className="text-muted">New shares issued</span>
                   <span className="tabular-nums font-medium text-foreground">
@@ -344,12 +344,12 @@ export default function ShareIssuanceModal({
                   <span className="text-muted">Price after issue (proceeds kept as cash)</span>
                   <span className="tabular-nums font-medium text-warning">
                     {fmtLocalPrice(dilutedPrice)}{" "}
-                    <span className="text-xs text-muted">({priceChangePct.toFixed(1)}%)</span>
+                    <span className="text-body-sm text-muted">({priceChangePct.toFixed(1)}%)</span>
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-warning/25 bg-warning/5 px-3 py-2.5 text-xs text-warning">
+              <div className="rounded-lg border border-warning/25 bg-warning/5 px-3 py-2.5 text-body-sm text-warning">
                 Existing holders give up {issuanceQuote.ownershipGivenUpPct.toFixed(1)}% of the
                 company. The price shown counts the proceeds as company value; the market may move
                 it, and an underwriting fee is taken from the proceeds.
@@ -362,14 +362,14 @@ export default function ShareIssuanceModal({
             <div className="space-y-4">
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-xs text-muted">
+                  <label className="text-body-sm text-muted">
                     Shares to purchase:{" "}
                     <span className="text-foreground font-medium">
                       {ceoShares.toLocaleString("en-US")}
                     </span>{" "}
                     shares
                   </label>
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     Max {maxCeoShares.toLocaleString("en-US")}
                   </span>
                 </div>
@@ -400,12 +400,12 @@ export default function ShareIssuanceModal({
                       )
                     }
                     placeholder="0"
-                    className="w-20 rounded-lg border border-card-border bg-background px-2 py-2 text-sm focus:border-primary/60 focus:outline-none"
+                    className="w-20 rounded-lg border border-card-border bg-background px-2 py-2 text-body focus:border-primary/60 focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+              <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-body">
                 <div className="flex justify-between">
                   <span className="text-muted">Market price</span>
                   <span className="tabular-nums font-medium text-foreground">
@@ -439,13 +439,13 @@ export default function ShareIssuanceModal({
                   </span>
                 </div>
                 {ceoHasInsufficientFunds && (
-                  <p className="text-xs text-error">
+                  <p className="text-body-sm text-error">
                     Short by {fmtFull(Math.round(ceoTotalCostAnchor - liquidPersonalAnchor))}.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs text-muted">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-body-sm text-muted">
                 New shares issued directly to you. Payment uses your personal liquid balances; other
                 currencies auto-convert at the market spread if enabled. Proceeds strengthen the
                 corporate balance sheet and increase your ownership stake.
@@ -455,15 +455,15 @@ export default function ShareIssuanceModal({
 
           {/* Cooldown notice */}
           {issuanceOnCooldown && (
-            <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 text-xs text-muted">
+            <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 text-body-sm text-muted">
               Issuance limited to once per 24 hours. Available again in{" "}
               <span className="text-foreground font-medium">{cooldownHours}h</span>.
             </div>
           )}
 
-          <InlineError error={error} className="text-xs text-error" />
+          <InlineError error={error} className="text-body-sm text-error" />
           {resultMessage && (
-            <p role="status" className="text-xs text-success">
+            <p role="status" className="text-body-sm text-success">
               {resultMessage}
             </p>
           )}
@@ -472,14 +472,14 @@ export default function ShareIssuanceModal({
         {/* ─── Footer ──────────────────────────────────────────────────────── */}
         <div className="border-t border-card-border px-6 py-4 space-y-3">
           {mode === "public" && requiresVote && (
-            <p className="text-xs text-amber-600">
+            <p className="text-body-sm text-amber-600">
               This issuance causes {(dilutionFraction * 100).toFixed(1)}% dilution and requires a
               shareholder vote.
             </p>
           )}
-          <InlineError error={voteError} className="text-xs text-error" />
+          <InlineError error={voteError} className="text-body-sm text-error" />
           <div className="flex items-center justify-end gap-3">
-            <Button variant="ghost" onClick={onClose} className="text-sm">
+            <Button variant="ghost" onClick={onClose} className="text-body">
               Cancel
             </Button>
             {mode === "public" && requiresVote ? (
@@ -488,7 +488,7 @@ export default function ShareIssuanceModal({
                 onClick={handleProposeIssuance}
                 disabled={loading || !newSharesToIssue}
                 isLoading={loading}
-                className="text-sm shadow-none"
+                className="text-body shadow-none"
               >
                 Propose Share Issuance (shareholder vote)
               </Button>
@@ -498,7 +498,7 @@ export default function ShareIssuanceModal({
                 onClick={handleSubmit}
                 disabled={!canSubmit}
                 isLoading={loading}
-                className={`text-sm shadow-none ${mode === "ceo" ? "bg-warning hover:bg-warning/90 text-black" : ""}`}
+                className={`text-body shadow-none ${mode === "ceo" ? "bg-warning hover:bg-warning/90 text-black" : ""}`}
               >
                 {mode === "public"
                   ? `Issue ${newSharesToIssue.toLocaleString("en-US")} Shares`

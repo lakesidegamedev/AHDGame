@@ -91,22 +91,22 @@ export function CommandStructurePanel({
             what the section IS rather than repeating the name. */}
         <h2 className="dossier-label min-w-0 flex-1 text-muted">Command structure and units</h2>
         {type && (
-          <span className="shrink-0 rounded-full border border-[var(--gov)] px-2 py-0.5 text-[10px] font-semibold text-gov-soft">
+          <span className="shrink-0 rounded-full border border-[var(--gov)] px-2 py-0.5 text-body-sm font-semibold text-gov-soft">
             {type.short}
           </span>
         )}
       </div>
-      {type && <p className="mt-1 text-[13px] font-semibold text-foreground">{type.label}</p>}
+      {type && <p className="mt-1 text-body-sm font-semibold text-foreground">{type.label}</p>}
       <TypeBonuses type={command.type} className="mt-1" />
       {command.role && (
-        <p className="mt-2 text-[12px] italic leading-relaxed text-muted">{command.role}</p>
+        <p className="mt-2 text-body-sm italic leading-relaxed text-muted">{command.role}</p>
       )}
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
         {overview.map((o) => (
           <div key={o.label}>
             <div className="dossier-label text-muted">{o.label}</div>
-            <div className={`text-[13px] font-semibold ${o.cls ?? "text-foreground"}`}>
+            <div className={`text-body-sm font-semibold ${o.cls ?? "text-foreground"}`}>
               {o.value}
             </div>
           </div>
@@ -119,7 +119,7 @@ export function CommandStructurePanel({
       {over && (
         <div className="mt-3 rounded-lg border border-warning/40 bg-warning/10 p-2.5">
           <div className="dossier-label mb-1 text-warning">⚠ Over-capacity penalties</div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-warning">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-body-sm text-warning">
             {overCapacityPenalties(command, unitsById).map((p) => (
               <span key={p}>{p}</span>
             ))}
@@ -130,7 +130,7 @@ export function CommandStructurePanel({
       <div className="mt-4">
         <div className="dossier-label mb-1.5 text-muted">Assigned regions · {regions.length}</div>
         {regions.length === 0 ? (
-          <div className="rounded-md border border-dashed border-card-border px-2.5 py-2 text-center text-[11px] text-muted">
+          <div className="rounded-md border border-dashed border-card-border px-2.5 py-2 text-center text-body-sm text-muted">
             Global scope · no map regions
           </div>
         ) : (
@@ -141,7 +141,7 @@ export function CommandStructurePanel({
                   key={region.id}
                   className="flex items-center gap-2 rounded-md border border-card-border bg-card-elevated px-2.5 py-1.5"
                 >
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-body-sm text-foreground">
                     {region.name}
                   </span>
                   <span className="dossier-label hidden shrink-0 text-muted sm:inline">
@@ -159,7 +159,7 @@ export function CommandStructurePanel({
           Assigned units · {assignedUnits.length}
         </div>
         {assignedUnits.length === 0 ? (
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             No units assigned to this command yet. The Secretary of Defense assigns units to a
             command.
           </p>
@@ -171,7 +171,7 @@ export function CommandStructurePanel({
                   key={String(unit._id)}
                   className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-card-border bg-card-elevated px-2.5 py-1.5"
                 >
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-body-sm text-foreground">
                     {unit.name}
                   </span>
                   {/* Who leads the unit is what decides where it fights: a unit is

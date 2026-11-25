@@ -129,7 +129,7 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
       <p style={{ font: `600 13px ${mono}` }} className="text-warning">
         THE WAR IS WON. NAME YOUR TERMS.
       </p>
-      <p className="mt-1 text-[12px] text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         {view.targetName} has no ground left to hold. You may impose one term. This window closes in{" "}
         {view.turnsLeft} {view.turnsLeft === 1 ? "turn" : "turns"}, after which the war ends with no
         terms taken.
@@ -144,7 +144,7 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
           title="White peace"
           blurb={`The war ends where it began. Neither side is recorded as having won, and nothing changes hands.`}
         >
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Anything the war was being fought over goes back to being an open question.
           </p>
         </Option>
@@ -155,14 +155,14 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
           title="Indemnity"
           blurb={`${view.targetName} pays a reparation, in its own currency.`}
         >
-          <label className="mt-1 block text-[11px] text-muted">
+          <label className="mt-1 block text-body-sm text-muted">
             Amount
             <input
               type="number"
               min={0}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-[12px]"
+              className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-body-sm"
             />
           </label>
         </Option>
@@ -173,13 +173,13 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
           title="Regime change"
           blurb={`${view.targetName} changes its system of government. Its legislature is dissolved and fresh elections are called.`}
         >
-          <label className="mt-1 block text-[11px] text-muted">
+          <label className="mt-1 block text-body-sm text-muted">
             New system
             <select
               aria-label="New system"
               value={system}
               onChange={(e) => setSystem(e.target.value)}
-              className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-[12px]"
+              className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-body-sm"
             >
               {SYSTEMS.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -190,13 +190,13 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
           </label>
 
           {system === "onePartyState" && (
-            <label className="mt-2 block text-[11px] text-muted">
+            <label className="mt-2 block text-body-sm text-muted">
               Ruling party
               <select
                 aria-label="Ruling party"
                 value={rulingParty}
                 onChange={(e) => setRulingParty(e.target.value)}
-                className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-[12px]"
+                className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-body-sm"
               >
                 <option value="">Let the strongest party take power</option>
                 {view.targetParties.map((p) => (
@@ -220,14 +220,14 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
           title="Demilitarisation"
           blurb={`${view.targetName} may award no new defence contracts. Existing orders keep delivering.`}
         >
-          <label className="mt-1 block text-[11px] text-muted">
+          <label className="mt-1 block text-body-sm text-muted">
             Turns
             <input
               type="number"
               min={1}
               value={turns}
               onChange={(e) => setTurns(e.target.value)}
-              className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-[12px]"
+              className="mt-1 block w-full rounded border border-card-border bg-card px-2 py-1 text-body-sm"
             />
           </label>
         </Option>
@@ -239,7 +239,7 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
             title="German reunification"
             blurb={`The German question is settled on East German terms: the two German states become one.`}
           >
-            <p className="mt-1 text-[11px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               This settles the question itself rather than landing on {view.targetName}. The unified
               state carries the eastern government across, and the crisis closes with it.
             </p>
@@ -247,14 +247,14 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
         )}
       </fieldset>
 
-      <InlineError error={error} className="mt-2 text-[12px] text-error" />
+      <InlineError error={error} className="mt-2 text-body-sm text-error" />
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
           disabled={busy}
           onClick={impose}
-          className="rounded bg-error px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-50"
+          className="rounded bg-error px-3 py-1.5 text-body-sm font-semibold text-white disabled:opacity-50"
         >
           Impose terms
         </button>
@@ -262,12 +262,12 @@ export function DictateTermsPanel({ view }: { view: DictateTermsView }) {
           type="button"
           disabled={busy}
           onClick={whitePeace}
-          className="rounded border border-card-border px-3 py-1.5 text-[12px] text-muted disabled:opacity-50"
+          className="rounded border border-card-border px-3 py-1.5 text-body-sm text-muted disabled:opacity-50"
         >
           Sign a white peace
         </button>
       </div>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         Terms are final once imposed. {view.targetName} is notified and the term is written onto
         this war record.
       </p>
@@ -303,8 +303,8 @@ function Option({
           className="mt-1"
         />
         <span>
-          <span className="block text-[12px] font-semibold">{title}</span>
-          <span className="block text-[11px] text-muted">{blurb}</span>
+          <span className="block text-body-sm font-semibold">{title}</span>
+          <span className="block text-body-sm text-muted">{blurb}</span>
         </span>
       </label>
       {checked && <div className="pl-6">{children}</div>}

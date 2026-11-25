@@ -58,12 +58,12 @@ export function EndorseButton({
       <button
         onClick={go}
         disabled={disabled || busy}
-        className="rounded-lg border border-primary/40 px-2.5 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-40"
+        className="rounded-lg border border-primary/40 px-2.5 py-1 text-body-sm text-primary hover:bg-primary/10 disabled:opacity-40"
         title={disabled && !busy ? (disabledReason ?? "") : ""}
       >
         {busy ? "Endorsing…" : label}
       </button>
-      {error && <span className="text-xs text-error max-w-[200px] text-right">{error}</span>}
+      {error && <span className="text-body-sm text-error max-w-[200px] text-right">{error}</span>}
     </span>
   );
 }

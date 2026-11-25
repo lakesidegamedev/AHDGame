@@ -43,7 +43,7 @@ export function TreasuryRegistrationControl({
             d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
           />
         </svg>
-        <div className="text-xs font-semibold text-muted">Registration drive</div>
+        <div className="text-body-sm font-semibold text-muted">Registration drive</div>
       </div>
       <p className="text-body-sm text-muted mb-3 ml-6">{t("description")}</p>
 
@@ -62,14 +62,14 @@ export function TreasuryRegistrationControl({
           variant="primary"
           className="flex-1 max-w-48"
         />
-        <span className="text-lg font-bold tabular-nums w-12 text-right">
+        <span className="text-heading font-bold tabular-nums w-12 text-right">
           {registrationForm.percent}%
         </span>
         {dirty && (
           <button
             onClick={onSave}
             disabled={registrationForm.saving}
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-1.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {registrationForm.saving ? "Saving…" : "Save"}
           </button>
@@ -78,7 +78,7 @@ export function TreasuryRegistrationControl({
 
       {registrationForm.percent > 0 && (
         <div className="mt-3 ml-6 rounded-lg bg-background/50 border border-card-border/30 p-3 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">{t("allocated")}</span>
             <span className="font-semibold tabular-nums">
               {fmt(registrationSpend, party.countryId)} / hr

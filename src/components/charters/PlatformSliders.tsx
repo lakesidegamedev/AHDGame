@@ -41,10 +41,10 @@ export function PlatformSliders({ value, onChange, readOnly = false }: PlatformS
       {AXES.map((axis) => (
         <div key={axis.key} className="space-y-1">
           <div className="flex items-baseline justify-between">
-            <Label htmlFor={`platform-${axis.key}`} className="text-sm font-medium">
+            <Label htmlFor={`platform-${axis.key}`} className="text-body font-medium">
               {axis.label}
             </Label>
-            <span className="font-mono text-xs text-muted">{value[axis.key]}</span>
+            <span className="font-mono text-body-sm text-muted">{value[axis.key]}</span>
           </div>
           <Slider
             id={`platform-${axis.key}`}
@@ -55,7 +55,7 @@ export function PlatformSliders({ value, onChange, readOnly = false }: PlatformS
             onChange={(e) => onChange?.(axis.key, Number(e.target.value))}
             disabled={readOnly}
           />
-          <div className="flex justify-between text-[11px] text-muted">
+          <div className="flex justify-between text-body-sm text-muted">
             <span>{axis.leftPole}</span>
             <span>{axis.rightPole}</span>
           </div>

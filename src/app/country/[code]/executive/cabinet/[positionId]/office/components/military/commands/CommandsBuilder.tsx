@@ -131,7 +131,7 @@ export function CommandsBuilder({
       {/* Autosave re-sends the whole slice, so one dropped write self-heals — but a
           standing refusal would discard every later edit silently. Say so. */}
       {(saveError || commandsSaveError) && (
-        <p role="alert" className="text-[11px] text-error">
+        <p role="alert" className="text-body-sm text-error">
           {saveError ?? commandsSaveError}
         </p>
       )}
@@ -139,7 +139,7 @@ export function CommandsBuilder({
           it, with no explanation — and the count they saw before the fix was a
           commander they could not see and could not remove. */}
       {droppedCommanders > 0 && (
-        <p role="status" className="text-[11px] text-warning">
+        <p role="status" className="text-body-sm text-warning">
           {droppedCommanders === 1
             ? "One commander was removed: they are no longer a commissioned general of this country."
             : `${droppedCommanders} commanders were removed: they are no longer commissioned generals of this country.`}{" "}
@@ -154,7 +154,7 @@ export function CommandsBuilder({
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="rounded-lg bg-[var(--gov)] px-3 py-2 text-[12px] font-bold text-[#1a1200] hover:brightness-110"
+              className="rounded-lg bg-[var(--gov)] px-3 py-2 text-body-sm font-bold text-[#1a1200] hover:brightness-110"
             >
               ＋ Create command
             </button>
@@ -187,7 +187,7 @@ export function CommandsBuilder({
             nothing said so, which produced the question "where do I assign more troops
             to the battlefield as SoD?" — a question with no button, because units are
             never sent to a front directly. */}
-        <div className="mt-3 rounded-lg border border-card-border bg-card-elevated p-3 text-[11px] leading-relaxed text-muted">
+        <div className="mt-3 rounded-lg border border-card-border bg-card-elevated p-3 text-body-sm leading-relaxed text-muted">
           <span className="font-semibold text-foreground">How your troops reach a front.</span> You
           build the force here — commands, the units in them, and each command&rsquo;s Commanding
           General. You do not send units to a war directly. A unit is wherever the general it is
@@ -237,7 +237,7 @@ export function CommandsBuilder({
             />
           ) : (
             <SectionCard title="Command detail" sub="Select a command from the roster">
-              <p className="text-[12px] text-muted">No command selected.</p>
+              <p className="text-body-sm text-muted">No command selected.</p>
             </SectionCard>
           )}
         </div>
@@ -269,7 +269,7 @@ export function CommandsBuilder({
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-card-border p-5">
               <div className="min-w-0">
-                <div className="truncate text-base font-semibold text-foreground">
+                <div className="truncate text-body-lg font-semibold text-foreground">
                   Assign regions
                 </div>
                 <div className="dossier-label text-muted">{selected.name}</div>
@@ -280,7 +280,7 @@ export function CommandsBuilder({
                     type="button"
                     onClick={() => dispatch({ type: "TOGGLE_ASSIGN_MODE" })}
                     aria-pressed={state.assignMode}
-                    className={`rounded-md border px-2.5 py-1.5 text-[11px] font-semibold ${
+                    className={`rounded-md border px-2.5 py-1.5 text-body-sm font-semibold ${
                       state.assignMode
                         ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] text-gov-soft"
                         : "border-card-border text-muted hover:text-foreground"
@@ -292,7 +292,7 @@ export function CommandsBuilder({
                 <button
                   type="button"
                   onClick={closeAssign}
-                  className="rounded-lg bg-[var(--gov)] px-4 py-2 text-[12px] font-bold text-[#1a1200]"
+                  className="rounded-lg bg-[var(--gov)] px-4 py-2 text-body-sm font-bold text-[#1a1200]"
                 >
                   Done
                 </button>

@@ -14,7 +14,7 @@ export function BillProvisionsSection({
 }) {
   return (
     <section className="flex min-w-0 flex-col gap-3 border-t border-card-border/40 pt-2">
-      <h3 className="text-lg font-semibold">Provisions</h3>
+      <h3 className="text-body-lg font-semibold">Provisions</h3>
       {provisions?.length ? (
         <>
           {provisions.map((provision, index) => (
@@ -28,7 +28,7 @@ export function BillProvisionsSection({
           {children}
         </>
       ) : (
-        <p className="text-sm text-muted">No policy provisions are recorded for this bill.</p>
+        <p className="text-body text-muted">No policy provisions are recorded for this bill.</p>
       )}
     </section>
   );

@@ -31,7 +31,7 @@ export function NhsQualityTile({
         </span>
       </div>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold text-foreground">{Math.round(clamped)}</span>
+        <span className="text-heading font-semibold text-foreground">{Math.round(clamped)}</span>
         <span className="text-body-sm text-muted">/ 100 quality</span>
       </div>
       <div

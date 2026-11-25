@@ -183,7 +183,7 @@ export function MarketAdminPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading market settings…</span>
+          <span className="text-body text-muted">Loading market settings…</span>
         </div>
       </div>
     );
@@ -192,19 +192,19 @@ export function MarketAdminPanel() {
   return (
     <div className="space-y-4">
       {error ? (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-body-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
       {message ? (
-        <p className="text-xs text-success" role="status">
+        <p className="text-body-sm text-success" role="status">
           {message}
         </p>
       ) : null}
 
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-        <h3 className="text-sm font-semibold">Premium & loyalty features</h3>
-        <p className="mt-1 mb-4 text-xs text-muted">
+        <h3 className="text-body-lg font-semibold">Premium & loyalty features</h3>
+        <p className="mt-1 mb-4 text-body-sm text-muted">
           Package A/B market mechanics — toggled independently. Supply agreements fill before
           open-market clearing when enabled.
         </p>
@@ -221,10 +221,10 @@ export function MarketAdminPanel() {
                 className="flex items-start justify-between gap-4 rounded-lg border border-card-border bg-background p-3"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-foreground">{toggle.label}</div>
-                  <p className="mt-0.5 text-xs text-muted">{toggle.description}</p>
+                  <div className="text-body font-medium text-foreground">{toggle.label}</div>
+                  <p className="mt-0.5 text-body-sm text-muted">{toggle.description}</p>
                   {blocked && (
-                    <p className="mt-1 text-[11px] text-warning">
+                    <p className="mt-1 text-body-sm text-warning">
                       Enable{" "}
                       {[
                         ...missingRequirements.map(

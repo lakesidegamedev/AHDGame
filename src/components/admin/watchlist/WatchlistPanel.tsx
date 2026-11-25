@@ -97,9 +97,9 @@ export interface WatchlistPanelProps {
 
 const CARD_CLS = "rounded-xl border border-card-border bg-card p-4 shadow-card";
 const OBJECT_ID_RE = /^[0-9a-f]{24}$/i;
-const OVERLINE_CLS = "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted";
+const OVERLINE_CLS = "text-body-sm font-semibold uppercase tracking-[0.14em] text-muted";
 const BTN_CLS =
-  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none";
+  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none";
 
 export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: WatchlistPanelProps) {
   const [entries, setEntries] = useState<WatchlistEntryView[]>([]);
@@ -248,7 +248,7 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h3 className={OVERLINE_CLS}>Watchlist</h3>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="mt-0.5 text-body text-muted">
             {entries.length} pinned account{entries.length === 1 ? "" : "s"}
             {currentTurn > 0 ? ` · turn ${currentTurn}` : ""}
           </p>
@@ -264,16 +264,18 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
 
       {/* Add form — name/username/Discord search instead of raw id paste */}
       <form onSubmit={handleAdd} className={`${CARD_CLS} flex flex-wrap items-end gap-2`}>
-        <div className="relative flex min-w-[220px] flex-1 flex-col gap-1 text-xs font-medium text-muted">
+        <div className="relative flex min-w-[220px] flex-1 flex-col gap-1 text-body-sm font-medium text-muted">
           Player
           {picked ? (
             <div className="flex h-9 items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-2.5">
-              <span className="truncate text-sm font-medium text-foreground">{picked.name}</span>
+              <span className="truncate text-body font-medium text-foreground">{picked.name}</span>
               {picked.username && (
-                <span className="truncate text-xs text-muted">@{picked.username}</span>
+                <span className="truncate text-body-sm text-muted">@{picked.username}</span>
               )}
               {picked.discordUsername && (
-                <span className="truncate text-xs text-indigo-300">{picked.discordUsername}</span>
+                <span className="truncate text-body-sm text-indigo-300">
+                  {picked.discordUsername}
+                </span>
               )}
               <button
                 type="button"
@@ -303,14 +305,14 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by name, username, or Discord"
                 aria-label="Search players"
-                className="h-9 rounded-lg border border-card-border bg-card px-2.5 text-sm text-foreground transition-colors placeholder:text-muted/60 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none"
+                className="h-9 rounded-lg border border-card-border bg-card px-2.5 text-body text-foreground transition-colors placeholder:text-muted/60 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none"
               />
               {query.trim().length >= 2 && (
                 <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-card-border bg-card-elevated shadow-modal">
                   {answered.term !== term ? (
-                    <p className="px-3 py-2 text-xs text-muted">Searching…</p>
+                    <p className="px-3 py-2 text-body-sm text-muted">Searching…</p>
                   ) : answered.hits.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-muted">No match.</p>
+                    <p className="px-3 py-2 text-body-sm text-muted">No match.</p>
                   ) : (
                     answered.hits.map((hit) => (
                       <button
@@ -327,8 +329,10 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
                         className="flex w-full items-center justify-between gap-3 border-b border-card-border px-3 py-2 text-left last:border-b-0 hover:bg-card disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-sm text-foreground">{hit.name}</span>
-                          <span className="block truncate text-xs text-muted">
+                          <span className="block truncate text-body text-foreground">
+                            {hit.name}
+                          </span>
+                          <span className="block truncate text-body-sm text-muted">
                             {[
                               hit.username && `@${hit.username}`,
                               hit.discordUsername,
@@ -348,23 +352,23 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
           )}
         </div>
         {!picked && (
-          <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-xs font-medium text-muted">
+          <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-body-sm font-medium text-muted">
             User ID for banned or unlisted accounts
             <input
               value={userIdInput}
               onChange={(e) => setUserIdInput(e.target.value)}
               placeholder="24-character user ID"
-              className="h-9 rounded-lg border border-card-border bg-card px-2.5 text-sm text-foreground transition-colors placeholder:text-muted/60 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none"
+              className="h-9 rounded-lg border border-card-border bg-card px-2.5 text-body text-foreground transition-colors placeholder:text-muted/60 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none"
             />
           </label>
         )}
-        <label className="flex min-w-[220px] flex-[2] flex-col gap-1 text-xs font-medium text-muted">
+        <label className="flex min-w-[220px] flex-[2] flex-col gap-1 text-body-sm font-medium text-muted">
           Reason (optional)
           <input
             value={reasonInput}
             onChange={(e) => setReasonInput(e.target.value)}
             placeholder="Why is this account being watched?"
-            className="h-9 rounded-lg border border-card-border bg-card px-2.5 text-sm text-foreground transition-colors placeholder:text-muted/60 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none"
+            className="h-9 rounded-lg border border-card-border bg-card px-2.5 text-body text-foreground transition-colors placeholder:text-muted/60 hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none"
           />
         </label>
         <button
@@ -374,17 +378,17 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
         >
           {adding ? "Adding…" : "Add to watchlist"}
         </button>
-        <InlineError error={addError} className="w-full text-xs text-red-400" />
+        <InlineError error={addError} className="w-full text-body-sm text-red-400" />
       </form>
 
       {flash && (
-        <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300">
+        <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-4 py-2 text-body text-emerald-300">
           {flash}
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-body text-red-400">
           {error}
         </div>
       )}
@@ -407,7 +411,7 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
                 d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
               />
             </svg>
-            <span className="text-sm font-semibold text-orange-300">
+            <span className="text-body font-semibold text-orange-300">
               {alertedEntries.length} watched account{alertedEntries.length === 1 ? "" : "s"} have
               new activity since review
             </span>
@@ -417,7 +421,7 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
               <button
                 key={e.id}
                 onClick={() => jumpTo(e.id)}
-                className="rounded-md border border-orange-400/30 bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-200 transition-colors hover:bg-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+                className="rounded-md border border-orange-400/30 bg-orange-500/10 px-2 py-1 text-body-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
               >
                 {memberDisplayName(e.username, e.userId)}
                 {e.alerts.hasNewActivity && (
@@ -458,8 +462,8 @@ export default function WatchlistPanel({ onOpenDossier, onOpenAltLink }: Watchli
               d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
             />
           </svg>
-          <p className="text-sm font-medium">Nothing pinned yet</p>
-          <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
+          <p className="text-body font-medium">Nothing pinned yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-body-sm text-muted">
             Add a suspicious account above to start tracking its activity and alt links.
           </p>
         </div>
@@ -549,31 +553,31 @@ function WatchlistRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold tracking-tight">
+            <span className="text-body font-semibold tracking-tight">
               {memberDisplayName(entry.username, entry.userId)}
             </span>
             {entry.banned && (
-              <span className="rounded-md border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+              <span className="rounded-md border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-red-400">
                 Banned
               </span>
             )}
             {entry.alerts.hasNewActivity && (
-              <span className="rounded-md border border-orange-400/25 bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-300">
+              <span className="rounded-md border border-orange-400/25 bg-orange-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-orange-300">
                 {entry.alerts.newActivityCount} new action
                 {entry.alerts.newActivityCount === 1 ? "" : "s"}
               </span>
             )}
             {entry.alerts.hasNewLinks && (
-              <span className="rounded-md border border-purple-400/25 bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-300">
+              <span className="rounded-md border border-purple-400/25 bg-purple-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-purple-300">
                 {entry.alerts.newLinks.length} new link
                 {entry.alerts.newLinks.length === 1 ? "" : "s"}
               </span>
             )}
           </div>
 
-          {entry.reason && <p className="text-xs text-muted">{entry.reason}</p>}
+          {entry.reason && <p className="text-body-sm text-muted">{entry.reason}</p>}
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-body-sm text-muted">
             <span>
               Pinned {formatRelativeTime(entry.createdAt)}
               {entry.addedByName ? ` by ${entry.addedByName}` : ""}
@@ -593,7 +597,7 @@ function WatchlistRow({
                 <li
                   key={a.id}
                   title={`turn ${a.turn} · ${a.outcome}`}
-                  className={`rounded-md border px-1.5 py-0.5 text-[10px] ${
+                  className={`rounded-md border px-1.5 py-0.5 text-body-sm ${
                     a.outcome === "ok"
                       ? "border-card-border/60 bg-card-elevated/60 text-muted"
                       : "border-red-400/25 bg-red-500/10 text-red-300"
@@ -612,7 +616,7 @@ function WatchlistRow({
                 className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full"
                 style={{ backgroundColor: confidenceHex(topNewLink.confidence) }}
               />
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 New alt link to{" "}
                 <button
                   onClick={() => onOpenAltLink?.(topNewLink.userId)}
@@ -673,13 +677,13 @@ function WatchlistRow({
               <button
                 onClick={onRemove}
                 disabled={removing}
-                className={`${BTN_CLS} h-8 border-red-400/40 bg-red-500/15 px-2 text-xs text-red-400 hover:bg-red-500/25`}
+                className={`${BTN_CLS} h-8 border-red-400/40 bg-red-500/15 px-2 text-body-sm text-red-400 hover:bg-red-500/25`}
               >
                 {removing ? "Removing…" : "Confirm"}
               </button>
               <button
                 onClick={() => setConfirmRemove(false)}
-                className="inline-flex h-8 items-center rounded-lg border border-card-border px-2 text-xs text-muted transition-colors hover:bg-card-elevated motion-reduce:transition-none"
+                className="inline-flex h-8 items-center rounded-lg border border-card-border px-2 text-body-sm text-muted transition-colors hover:bg-card-elevated motion-reduce:transition-none"
               >
                 Cancel
               </button>

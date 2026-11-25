@@ -35,7 +35,7 @@ export function ResponsiveTable<T>({
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       {/* Desktop: table */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="bg-background/50">
             <tr>
               {columns.map((col) => (
@@ -94,7 +94,7 @@ export function ResponsiveTable<T>({
                   <span className="text-body-sm font-medium text-muted">
                     {col.mobileLabel ?? col.header}
                   </span>
-                  <div className="text-sm">{col.render(row)}</div>
+                  <div className="text-body">{col.render(row)}</div>
                 </div>
               ))}
               {renderActions && (
@@ -108,7 +108,7 @@ export function ResponsiveTable<T>({
       </div>
 
       {footer && data.length > 0 && (
-        <div className="border-t border-card-border bg-background/30 px-4 py-3 text-sm text-muted">
+        <div className="border-t border-card-border bg-background/30 px-4 py-3 text-body text-muted">
           {footer}
         </div>
       )}

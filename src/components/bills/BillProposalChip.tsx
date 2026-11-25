@@ -14,13 +14,13 @@ export function BillProposalChip({
   if (!adminProposed) return null;
   if (category === "reunification" || category === "independence") {
     return (
-      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-body-sm font-medium text-emerald-300">
         Referendum passed
       </span>
     );
   }
   return (
-    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+    <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-body-sm font-medium text-amber-300">
       Admin proposed
     </span>
   );

@@ -59,7 +59,7 @@ export function GameHealthTab() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-muted">Loading game health data...</p>;
+    return <p className="text-body text-muted">Loading game health data...</p>;
   }
 
   return (
@@ -69,14 +69,14 @@ export function GameHealthTab() {
       <GameHealthTrendChart snapshots={snapshots} />
 
       <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 shadow-sm">
-        <span className="text-sm font-medium text-foreground">
+        <span className="text-body font-medium text-foreground">
           Data integrity check — Run every
         </span>
         <select
           value={cadence}
           onChange={(e) => updateCadence(Number(e.target.value))}
           disabled={cadenceLoading}
-          className="rounded border border-border bg-background px-2 py-1 text-sm"
+          className="rounded border border-border bg-background px-2 py-1 text-body"
         >
           {[1, 2, 4, 6, 12, 24, 48].map((n) => (
             <option key={n} value={n}>
@@ -84,7 +84,7 @@ export function GameHealthTab() {
             </option>
           ))}
         </select>
-        <span className="text-sm text-muted">
+        <span className="text-body text-muted">
           turn(s) — Last run: Turn {latest?.dataIntegrity?.lastCheckTurn ?? "—"}
         </span>
       </div>

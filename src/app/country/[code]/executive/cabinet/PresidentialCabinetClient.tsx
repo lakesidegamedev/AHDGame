@@ -66,7 +66,7 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
   return (
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-7xl space-y-6 overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8">
-        <nav className="flex flex-wrap items-center gap-2 text-sm">
+        <nav className="flex flex-wrap items-center gap-2 text-body">
           <Link
             href={`/country/${code}/executive`}
             className="text-muted transition-colors hover:text-foreground"
@@ -96,10 +96,10 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
               aria-hidden
             />
             <div className="absolute inset-0 flex flex-col justify-end px-5 pb-4 sm:px-6 sm:pb-5">
-              <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-2xl">
+              <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-heading">
                 {CABINET_HERO.title}
               </h1>
-              <p className="mt-1 text-sm text-white/90 drop-shadow sm:text-base">
+              <p className="mt-1 text-body text-white/90 drop-shadow sm:text-body-lg">
                 {CABINET_HERO.tagline}
               </p>
             </div>
@@ -107,20 +107,22 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
           <div className="flex items-center overflow-x-auto divide-x divide-card-border border-t border-card-border">
             <div className="flex min-w-[110px] flex-col px-5 py-3">
               <span className="text-body-sm font-medium text-muted">Positions</span>
-              <span className="text-base font-bold tabular-nums">
+              <span className="text-body-lg font-bold tabular-nums">
                 {filledCount}
-                <span className="text-xs font-normal text-muted">
+                <span className="text-body-sm font-normal text-muted">
                   {" "}
                   / {data.positions.length} filled
                 </span>
               </span>
-              <span className="whitespace-nowrap text-xs text-muted">
+              <span className="whitespace-nowrap text-body-sm text-muted">
                 {confirmedCount} confirmed · {actingCount} acting · {staffCount} staff
               </span>
             </div>
             <div className="flex min-w-[140px] flex-col px-5 py-3">
               <span className="text-body-sm font-medium text-muted">Pending votes</span>
-              <span className="text-base font-bold tabular-nums">{activeNominations.length}</span>
+              <span className="text-body-lg font-bold tabular-nums">
+                {activeNominations.length}
+              </span>
             </div>
           </div>
         </header>
@@ -142,7 +144,7 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
 
         {activeTab === "overview" && (
           <>
-            <div className="max-w-3xl space-y-2 text-sm text-muted">
+            <div className="max-w-3xl space-y-2 text-body text-muted">
               <p>
                 The President nominates principal officers who must be confirmed by the Senate. Each
                 leads a major executive department and follows the Vice President in the line of
@@ -176,7 +178,7 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
               headerAction={
                 <Link
                   href={senateLink}
-                  className="rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                  className="rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:text-foreground"
                 >
                   Open Senate
                 </Link>

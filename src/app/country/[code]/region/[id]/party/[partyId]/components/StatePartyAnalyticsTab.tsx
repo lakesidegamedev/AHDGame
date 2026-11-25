@@ -49,13 +49,13 @@ function SectionHeader({
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <h2 className="text-heading-sm font-semibold text-foreground">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted">{description}</p>
+        <h2 className="text-heading font-semibold text-foreground">{title}</h2>
+        <p className="mt-1 max-w-3xl text-body leading-relaxed text-muted">{description}</p>
       </div>
       {link ? (
         <Link
           href={link.href}
-          className="inline-flex h-9 items-center justify-center rounded-lg border border-card-border bg-card px-3.5 text-[13px] font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
+          className="inline-flex h-9 items-center justify-center rounded-lg border border-card-border bg-card px-3.5 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
         >
           {link.label}
         </Link>
@@ -86,7 +86,7 @@ function SummaryMetric({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <p className="text-body-sm text-muted">{label}</p>
-      <p className={`mt-2 text-heading-sm font-bold tabular-nums ${toneClass}`}>{value}</p>
+      <p className={`mt-2 text-heading font-bold tabular-nums ${toneClass}`}>{value}</p>
     </div>
   );
 }
@@ -99,7 +99,7 @@ function RiskRow({ item }: { item: PartyAnalyticsRiskItem }) {
     >
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+          <p className="truncate text-body font-medium text-foreground">{item.name}</p>
           <Badge color={getRiskBadgeColor(item.riskLabel)} className="shrink-0">
             {item.riskLabel}
           </Badge>
@@ -126,7 +126,7 @@ function CaucusRiskRow({ item }: { item: PartyAnalyticsCaucusRiskItem }) {
     >
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{item.nppName}</p>
+          <p className="truncate text-body font-medium text-foreground">{item.nppName}</p>
           <Badge color={getCaucusRiskBadgeColor(item.exitRiskLabel)} className="shrink-0">
             {item.exitRiskLabel}
           </Badge>
@@ -137,7 +137,7 @@ function CaucusRiskRow({ item }: { item: PartyAnalyticsCaucusRiskItem }) {
         </p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-sm font-semibold text-warning tabular-nums">
+        <p className="text-body font-semibold text-warning tabular-nums">
           Rel {item.relationshipWithChair.toFixed(1)}
         </p>
         <p className="text-body-sm text-muted">Exit in {item.gapFromExit.toFixed(1)}</p>
@@ -153,7 +153,7 @@ function SlateItemRow({ item }: { item: PartyAnalyticsSlateItem }) {
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-card-border bg-card-muted/50 px-3 py-2 transition-colors hover:border-primary/40 hover:bg-card-muted"
     >
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{item.electionLabel}</p>
+        <p className="truncate text-body font-medium text-foreground">{item.electionLabel}</p>
         <p className="text-body-sm text-muted">{displayCanadianRegionCode(item.state)}</p>
       </div>
       <Badge color={item.statusLabel.startsWith("No") ? "warning" : "error"} className="shrink-0">
@@ -167,8 +167,8 @@ function CoverageSummary({ coverage }: { coverage: PartyAnalyticsSlateCoverageIt
   if (!coverage) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">Coverage summary</h3>
-        <p className="mt-4 text-sm text-muted">
+        <h3 className="text-body-lg font-semibold text-foreground">Coverage summary</h3>
+        <p className="mt-4 text-body text-muted">
           No active local races are on the Slate board right now.
         </p>
       </div>
@@ -180,7 +180,7 @@ function CoverageSummary({ coverage }: { coverage: PartyAnalyticsSlateCoverageIt
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Coverage summary</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">Coverage summary</h3>
           <p className="mt-1 text-body-sm text-muted">
             {displayCanadianRegionCode(coverage.state)}
           </p>
@@ -281,8 +281,8 @@ export function StatePartyAnalyticsTab({
   if (error || !data) {
     return (
       <div className="rounded-xl border border-error/30 bg-error/10 p-6">
-        <p className="text-sm font-medium text-error">Analytics unavailable</p>
-        <p className="mt-2 text-sm text-muted">{error ?? "No analytics payload returned."}</p>
+        <p className="text-body font-medium text-error">Analytics unavailable</p>
+        <p className="mt-2 text-body text-muted">{error ?? "No analytics payload returned."}</p>
       </div>
     );
   }
@@ -322,7 +322,7 @@ export function StatePartyAnalyticsTab({
             />
           </div>
         ) : (
-          <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
             No state organization data is on file for this party yet.
           </div>
         )}
@@ -376,7 +376,7 @@ export function StatePartyAnalyticsTab({
             <Link
               key={link.href}
               href={link.href}
-              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
+              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
             >
               {link.label}
             </Link>
@@ -401,10 +401,10 @@ export function StatePartyAnalyticsTab({
         </div>
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-sm font-semibold text-foreground">Discipline watch</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Discipline watch</h3>
             <div className="mt-4 space-y-3">
               {data.discipline.disciplineWatch.length === 0 ? (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   No same-state NPPs are in the discipline watch band.
                 </p>
               ) : (
@@ -415,10 +415,10 @@ export function StatePartyAnalyticsTab({
             </div>
           </div>
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-sm font-semibold text-foreground">Stubbornness risk</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Stubbornness risk</h3>
             <div className="mt-4 space-y-3">
               {data.discipline.highStubbornness.length === 0 ? (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   No same-state NPPs currently stand out for stubbornness.
                 </p>
               ) : (
@@ -429,10 +429,10 @@ export function StatePartyAnalyticsTab({
             </div>
           </div>
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-sm font-semibold text-foreground">Caucus exit risk</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Caucus exit risk</h3>
             <div className="mt-4 space-y-3">
               {data.discipline.caucusRisk.length === 0 ? (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   No same-state caucus NPPs are close to their chair-exit threshold.
                 </p>
               ) : (
@@ -471,7 +471,7 @@ export function StatePartyAnalyticsTab({
             <Link
               key={link.href}
               href={link.href}
-              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
+              className="inline-flex h-8 items-center justify-center rounded-md border border-card-border bg-card px-3 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-muted/40"
             >
               {link.label}
             </Link>
@@ -480,10 +480,10 @@ export function StatePartyAnalyticsTab({
         <CoverageSummary coverage={data.slate.coverage} />
         <div className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-sm font-semibold text-foreground">Open races</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Open races</h3>
             <div className="mt-4 space-y-3">
               {data.slate.noCoverage.length === 0 ? (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   Every active local race currently has Slate coverage.
                 </p>
               ) : (
@@ -494,10 +494,10 @@ export function StatePartyAnalyticsTab({
             </div>
           </div>
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-sm font-semibold text-foreground">Likely declines</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Likely declines</h3>
             <div className="mt-4 space-y-3">
               {data.slate.atRiskAssignments.length === 0 ? (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   No local Slate assignments are currently flagged as likely declines.
                 </p>
               ) : (

@@ -69,12 +69,12 @@ export default function FinancialsPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="mb-1 text-lg font-bold text-foreground">Sector financials</h2>
-      <p className="mb-4 text-xs text-muted">
+      <h2 className="mb-1 text-heading font-bold text-foreground">Sector financials</h2>
+      <p className="mb-4 text-body-sm text-muted">
         {MONEY_PERIOD_HELP} Figures below are per turn; each row&apos;s tooltip shows the daily
         amount.
       </p>
-      <p className="mb-3 text-xs text-muted">
+      <p className="mb-3 text-body-sm text-muted">
         {financials.taxAssessmentTurn != null
           ? `Income tax assessment recorded for turn ${financials.taxAssessmentTurn}. Assessed tax can remain payable until funded.`
           : "Recorded sector tax is unavailable until the next company turn. No tax payment is inferred."}
@@ -123,9 +123,9 @@ export default function FinancialsPanel({
         )}
         {showRealized && (
           <div className="flex items-center justify-between pl-8">
-            <span className="text-xs text-muted">Earned vs headline</span>
+            <span className="text-body-sm text-muted">Earned vs headline</span>
             <span
-              className={`text-xs font-medium tabular-nums ${realizationGap > 0 ? "text-success" : "text-error"}`}
+              className={`text-body-sm font-medium tabular-nums ${realizationGap > 0 ? "text-success" : "text-error"}`}
             >
               {realizationGap > 0 ? "+" : ""}
               {(realizationGap * 100).toFixed(1)}%
@@ -164,8 +164,8 @@ export default function FinancialsPanel({
         />
         {(financials.techGrowthCostReductionPct ?? 0) > 0 && (
           <div className="flex items-center justify-between pl-8">
-            <span className="text-xs text-muted">Tech tree reduction</span>
-            <span className="text-xs font-medium tabular-nums text-success">
+            <span className="text-body-sm text-muted">Tech tree reduction</span>
+            <span className="text-body-sm font-medium tabular-nums text-success">
               -{financials.techGrowthCostReductionPct}%
             </span>
           </div>
@@ -239,8 +239,8 @@ export default function FinancialsPanel({
         <div className="mt-4 border-t border-card-border pt-4">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <span className="text-sm font-medium text-foreground">Growth target</span>
-              <p className="mt-1 text-[11px] leading-snug text-muted">
+              <span className="text-body font-medium text-foreground">Growth target</span>
+              <p className="mt-1 text-body-sm leading-snug text-muted">
                 {capitalEnabled ? (
                   <>
                     Your investment rate. This budget builds new capacity, and if you stop
@@ -262,18 +262,18 @@ export default function FinancialsPanel({
               <button
                 onClick={() => onGrowthChange(-GROWTH_STEP)}
                 disabled={growthUpdating || sector.targetGrowthRate <= MIN_GROWTH_RATE}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border bg-background text-sm font-bold text-foreground transition-colors hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border bg-background text-body font-bold text-foreground transition-colors hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Decrease growth target"
               >
                 -
               </button>
-              <span className="w-14 text-center text-sm font-bold tabular-nums text-primary">
+              <span className="w-14 text-center text-body font-bold tabular-nums text-primary">
                 {sector.targetGrowthRate.toFixed(1)}%
               </span>
               <button
                 onClick={() => onGrowthChange(GROWTH_STEP)}
                 disabled={growthUpdating || sector.targetGrowthRate >= MAX_GROWTH_RATE}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border bg-background text-sm font-bold text-foreground transition-colors hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border bg-background text-body font-bold text-foreground transition-colors hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Increase growth target"
               >
                 +
@@ -281,22 +281,22 @@ export default function FinancialsPanel({
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-body-sm">
             <div className="rounded-lg border border-card-border bg-background/50 px-3 py-2">
               <div className="text-body-sm font-medium text-muted">Active rate</div>
               <div className="mt-0.5 flex items-baseline gap-1">
-                <span className="text-sm font-semibold tabular-nums text-foreground">
+                <span className="text-body font-semibold tabular-nums text-foreground">
                   {sector.currentGrowthRate.toFixed(1)}%
                 </span>
                 <span
-                  className="text-[10px] text-muted"
+                  className="text-body-sm text-muted"
                   title={`Growth rates are per game year (${GROWTH_RATE_TURNS_PER_YEAR} turns). Money figures are per turn.`}
                 >
                   /yr
                 </span>
                 {sector.currentGrowthRate !== sector.targetGrowthRate && (
                   <span
-                    className="ml-1 text-[10px] text-primary"
+                    className="ml-1 text-body-sm text-primary"
                     title="Trending toward target by 0.5pp per turn"
                   >
                     {sector.currentGrowthRate < sector.targetGrowthRate ? "↑" : "↓"} target
@@ -307,12 +307,12 @@ export default function FinancialsPanel({
             <div className="rounded-lg border border-card-border bg-background/50 px-3 py-2">
               <div className="text-body-sm font-medium text-muted">Current cost</div>
               <div className="mt-0.5 flex items-baseline gap-1">
-                <span className="text-sm font-semibold tabular-nums text-error">
+                <span className="text-body font-semibold tabular-nums text-error">
                   {perTurn(sector.currentGrowthCost)}
                 </span>
-                <span className="text-[10px] text-muted">/turn</span>
+                <span className="text-body-sm text-muted">/turn</span>
               </div>
-              <p className="mt-1 text-[10px] leading-snug text-muted">
+              <p className="mt-1 text-body-sm leading-snug text-muted">
                 You pay this every turn. Over one game year ({GROWTH_RATE_TURNS_PER_YEAR} turns)
                 that is {GROWTH_COST_MULTIPLIER}× the revenue the growth adds.
               </p>
@@ -320,7 +320,7 @@ export default function FinancialsPanel({
           </div>
 
           {growthMessage && (
-            <p className="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
+            <p className="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
               {growthMessage}
             </p>
           )}

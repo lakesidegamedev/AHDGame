@@ -51,7 +51,7 @@ export function StateSquares({
           >
             <span style={{ fontFamily: FONT.mono, fontSize: 12, fontWeight: 700 }}>{s.id}</span>
             {figure ? (
-              <span style={{ fontFamily: FONT.mono, fontSize: 10.5, opacity: 0.8 }}>{figure}</span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 12, opacity: 0.8 }}>{figure}</span>
             ) : null}
           </Link>
         );

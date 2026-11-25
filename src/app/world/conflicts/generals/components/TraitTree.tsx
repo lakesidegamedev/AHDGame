@@ -102,7 +102,7 @@ export function TraitTree({
                   borderRadius: 8,
                   padding: "6px 10px",
                   fontFamily: MIL_FONT.sans,
-                  fontSize: 11.5,
+                  fontSize: 12,
                   fontWeight: 600,
                   cursor: "pointer",
                 }}
@@ -179,7 +179,7 @@ export function TraitTree({
                         <div
                           style={{
                             fontFamily: MIL_FONT.sans,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: st === "learned" ? "#fff" : MIL_COLOR.text,
                             lineHeight: 1.2,
@@ -277,7 +277,7 @@ function TraitDetail({
         <div
           style={{
             fontFamily: MIL_FONT.heading,
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: 700,
             color: MIL_COLOR.textStrong,
             marginTop: 4,
@@ -290,7 +290,7 @@ function TraitDetail({
         </div>
       </div>
       <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ fontSize: 12.5, color: MIL_COLOR.text }}>{f.node.eff}.</div>
+        <div style={{ fontSize: 12, color: MIL_COLOR.text }}>{f.node.eff}.</div>
         {boosted && (
           <div style={{ font: `600 10px ${mono}`, color: MIL_COLOR.gold }}>
             ★ Boosted by national doctrine: {f.node.boost}

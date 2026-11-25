@@ -9,7 +9,7 @@ import { VOTE_COLORS, type VoteCounts } from "./voteSeating";
 export function KickerLabel({ children }: { children: ReactNode }) {
   const text =
     typeof children === "string" ? children.charAt(0).toUpperCase() + children.slice(1) : children;
-  return <span className="text-xs font-semibold text-muted">{text}</span>;
+  return <span className="text-body-sm font-semibold text-muted">{text}</span>;
 }
 
 export function StatusPill({ status, size = "md" }: { status: string; size?: "sm" | "md" }) {
@@ -75,7 +75,7 @@ export function PositionBadges({ econ, social }: { econ?: number | null; social?
           key={i}
           className="font-mono"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             padding: "2px 7px",
             borderRadius: 6,
             color: it.c,
@@ -147,7 +147,7 @@ export function VoteLegend({ votes, eligible }: { votes: VoteCounts; eligible: n
           <span style={{ fontSize: 12, color: "var(--muted)" }}>{it.k}</span>
           <span
             className="font-mono tabular-nums"
-            style={{ fontSize: 12.5, fontWeight: 700, color: "var(--foreground)" }}
+            style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}
           >
             {it.v}
           </span>
@@ -172,7 +172,7 @@ export function Panel({ title, children }: { title?: string; children: ReactNode
           style={{
             margin: "0 0 14px",
             fontFamily: "var(--font-geist-sans)",
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: 600,
             color: "var(--foreground)",
           }}
@@ -201,7 +201,7 @@ export function CurrentToProposed({
 }) {
   const arrowC = direction > 0 ? "var(--success)" : direction < 0 ? "var(--error)" : "var(--muted)";
   const descStyle = {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 1.45,
     color: "var(--muted)",
     marginTop: 4,
@@ -228,7 +228,7 @@ export function CurrentToProposed({
         >
           <div
             style={{
-              fontSize: 9,
+              fontSize: 12,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               color: "var(--muted)",
@@ -238,7 +238,7 @@ export function CurrentToProposed({
           >
             Current law
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>{current}</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>{current}</div>
           {currentDescription && (
             <div style={descStyle}>{renderInlineEmphasis(currentDescription)}</div>
           )}
@@ -250,7 +250,7 @@ export function CurrentToProposed({
             display: "grid",
             placeItems: "center",
             color: arrowC,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
           }}
           aria-hidden="true"
@@ -268,7 +268,7 @@ export function CurrentToProposed({
       >
         <div
           style={{
-            fontSize: 9,
+            fontSize: 12,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
             color: "var(--info)",
@@ -278,7 +278,7 @@ export function CurrentToProposed({
         >
           Proposed
         </div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{proposed}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{proposed}</div>
         {proposedDescription && (
           <div style={{ ...descStyle, color: "var(--foreground)", opacity: 0.75 }}>
             {renderInlineEmphasis(proposedDescription)}
@@ -303,7 +303,7 @@ export function TheCountRail({
     <div className="border-t border-card-border pt-4 sm:border-l sm:border-t-0 sm:pl-[22px] sm:pt-0">
       <div
         style={{
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.16em",
           textTransform: "uppercase",
           color: "var(--muted)",
@@ -337,7 +337,7 @@ export function TheCountRail({
               display: "block",
               marginTop: 4,
               fontFamily: "inherit",
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.16em",
               textTransform: "uppercase",
               color: "var(--muted)",
@@ -364,7 +364,7 @@ export function TheCountRail({
               display: "block",
               marginTop: 4,
               fontFamily: "inherit",
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.16em",
               textTransform: "uppercase",
               color: "var(--muted)",
@@ -378,7 +378,7 @@ export function TheCountRail({
       </div>
       <VoteBar votes={votes} eligible={eligible} height={6} />
       {footer && (
-        <div style={{ marginTop: 8, fontSize: 10.5, color: "var(--muted)", fontStyle: "italic" }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>
           {footer}
         </div>
       )}

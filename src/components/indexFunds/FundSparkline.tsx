@@ -5,7 +5,7 @@ import type { FundNavPoint } from "./types";
 /** Mini NAV trend chart (same visual language as forex sparklines). */
 export function FundSparkline({ history }: { history: FundNavPoint[] }) {
   if (history.length < 2) {
-    return <span className="text-muted text-[10px] italic">No data</span>;
+    return <span className="text-muted text-body-sm italic">No data</span>;
   }
   const values = history.map((h) => h.quotedNav);
   const min = Math.min(...values);

@@ -25,7 +25,7 @@ function PartySeatBar({
           );
         })}
       </div>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
         {segments.map((s) => (
           <li key={s.partyId} className="flex items-center gap-1.5">
             <span
@@ -74,13 +74,13 @@ export function IESeanadCompositionPanel() {
     );
   }
   if (error || !data) {
-    return <p className="py-12 text-center text-sm text-muted">{error ?? "No data."}</p>;
+    return <p className="py-12 text-center text-body text-muted">{error ?? "No data."}</p>;
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">
-        <p className="text-xs leading-relaxed text-muted">
+        <p className="text-body-sm leading-relaxed text-muted">
           <strong className="text-foreground">Advisory chamber — not in legislative loop.</strong>{" "}
           The Seanad sits alongside the Dáil but does not vote on the bills tracked here. This panel
           reconstructs its 60-seat composition from the current Dáil seat-share, sitting cabinet,
@@ -90,16 +90,16 @@ export function IESeanadCompositionPanel() {
 
       <section className="rounded-xl border border-card-border bg-card p-5">
         <header className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-foreground">Vocational panels</h3>
-          <span className="text-xs text-muted">{data.totals.vocational} / 43</span>
+          <h3 className="text-body-lg font-semibold text-foreground">Vocational panels</h3>
+          <span className="text-body-sm text-muted">{data.totals.vocational} / 43</span>
         </header>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Derived proportionally from the Dáil seat-share (Hamilton allocation). Mirrors how Irish
           vocational-panel senators are chosen indirectly by an electorate of councillors, outgoing
           TDs, and senators in real life.
         </p>
         {data.vocational.length === 0 ? (
-          <p className="text-sm text-muted">No Dáil is currently seated.</p>
+          <p className="text-body text-muted">No Dáil is currently seated.</p>
         ) : (
           <PartySeatBar total={data.totals.vocational} segments={data.vocational} />
         )}
@@ -107,10 +107,10 @@ export function IESeanadCompositionPanel() {
 
       <section className="rounded-xl border border-card-border bg-card p-5">
         <header className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-foreground">Taoiseach nominees</h3>
-          <span className="text-xs text-muted">{data.totals.taoiseachPicks} / 11</span>
+          <h3 className="text-body-lg font-semibold text-foreground">Taoiseach nominees</h3>
+          <span className="text-body-sm text-muted">{data.totals.taoiseachPicks} / 11</span>
         </header>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           11 senators are nominated directly by the Taoiseach. Sitting cabinet ministers fill these
           slots first; any leftover slots are filled with governing-party loyalists.
         </p>
@@ -118,7 +118,7 @@ export function IESeanadCompositionPanel() {
           {data.taoiseachPicks.map((p, i) => (
             <li
               key={`${p.characterId ?? "filler"}-${i}`}
-              className="flex items-center gap-2 rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-body"
             >
               <span
                 className="inline-block h-3 w-3 rounded-full"
@@ -129,7 +129,7 @@ export function IESeanadCompositionPanel() {
                   <span className="italic text-muted">Loyalist nominee ({p.partyName})</span>
                 )}
               </span>
-              <span className="text-xs text-muted">{p.partyName}</span>
+              <span className="text-body-sm text-muted">{p.partyName}</span>
             </li>
           ))}
         </ul>
@@ -137,10 +137,10 @@ export function IESeanadCompositionPanel() {
 
       <section className="rounded-xl border border-card-border bg-card p-5">
         <header className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-foreground">University constituencies</h3>
-          <span className="text-xs text-muted">{data.totals.university} / 6</span>
+          <h3 className="text-body-lg font-semibold text-foreground">University constituencies</h3>
+          <span className="text-body-sm text-muted">{data.totals.university} / 6</span>
         </header>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           6 senators are elected by graduates of Trinity College Dublin (3) and the National
           University of Ireland (3). Modelled here as a static placeholder; a full
           graduate-electorate mechanic is tracked in the backlog (§5.1 Option D).

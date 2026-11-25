@@ -160,7 +160,10 @@ export function renderCorporationDetailPageView(
           className="mx-auto max-w-7xl space-y-6 overflow-x-clip px-4 py-6 sm:px-6"
         >
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-xs text-muted" aria-label="Breadcrumb">
+          <nav
+            className="flex items-center gap-1.5 text-body-sm text-muted"
+            aria-label="Breadcrumb"
+          >
             {corporation.isPrivate ? (
               <span>Private corporation</span>
             ) : (
@@ -308,13 +311,13 @@ export function renderCorporationDetailPageView(
               tag="Moderator"
               action={
                 modViewEnabled ? (
-                  <span className="text-xs font-medium text-info">Mod view active</span>
+                  <span className="text-body-sm font-medium text-info">Mod view active</span>
                 ) : (
                   <button
                     type="button"
                     onClick={enableModView}
                     disabled={modViewLoading}
-                    className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated disabled:opacity-50"
+                    className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated disabled:opacity-50"
                   >
                     {modViewLoading ? "Enabling" : "Mod view"}
                   </button>
@@ -369,8 +372,8 @@ export function renderCorporationDetailPageView(
           {corporation.isPrivate && !isCeo && myCharacterId && (
             <section className="space-y-1">
               <div className="flex flex-wrap items-baseline gap-x-2 border-b border-card-border pb-1.5">
-                <h2 className="text-sm font-semibold text-foreground">Private sale</h2>
-                <p className="text-xs text-muted">
+                <h2 className="text-body font-semibold text-foreground">Private sale</h2>
+                <p className="text-body-sm text-muted">
                   Open listings from current owners. An offer escrows the funds until the seller
                   accepts.
                 </p>
@@ -433,7 +436,7 @@ export function renderCorporationDetailPageView(
           )}
 
           {error && (
-            <p role="alert" className="text-sm text-error">
+            <p role="alert" className="text-body text-error">
               {error}
             </p>
           )}
@@ -449,7 +452,7 @@ export function renderCorporationDetailPageView(
                   <button
                     type="button"
                     onClick={() => setBondDefaultModalOpen(true)}
-                    className="inline-flex h-7 shrink-0 items-center rounded-[calc(var(--corp-rad)-2px)] border border-error bg-error px-2.5 text-xs font-medium text-background hover:bg-error/90"
+                    className="inline-flex h-7 shrink-0 items-center rounded-[calc(var(--corp-rad)-2px)] border border-error bg-error px-2.5 text-body-sm font-medium text-background hover:bg-error/90"
                   >
                     Open resolution
                   </button>
@@ -469,14 +472,14 @@ export function renderCorporationDetailPageView(
                   <button
                     type="button"
                     onClick={handleAcceptCeo}
-                    className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-success bg-success px-2.5 text-xs font-medium text-background hover:bg-success/90"
+                    className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-success bg-success px-2.5 text-body-sm font-medium text-background hover:bg-success/90"
                   >
                     Accept
                   </button>
                   <button
                     type="button"
                     onClick={handleDeclineCeo}
-                    className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-muted hover:text-foreground"
+                    className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm font-medium text-muted hover:text-foreground"
                   >
                     Decline
                   </button>

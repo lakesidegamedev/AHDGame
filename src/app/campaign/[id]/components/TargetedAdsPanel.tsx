@@ -136,8 +136,8 @@ export function TargetedAdsPanel({
 
   return (
     <section className="rounded-lg border border-card-border bg-card p-6 space-y-4">
-      <h3 className="text-xl font-bold">{t("title")}</h3>
-      <p className="text-sm text-muted">{t("description")}</p>
+      <h3 className="text-body-lg font-bold">{t("title")}</h3>
+      <p className="text-body text-muted">{t("description")}</p>
       {loading && <p role="status">{t("loading")}</p>}
       {quote && !quote.enabled && <p>{quote.message}</p>}
       {quote?.enabled && (
@@ -203,7 +203,7 @@ export function TargetedAdsPanel({
             </select>
           </label>
           {target && (
-            <div className="space-y-2 text-sm" aria-live="polite">
+            <div className="space-y-2 text-body" aria-live="polite">
               <p>
                 {t("reach", {
                   count: target.eligibleAudience.toLocaleString(),
@@ -226,14 +226,14 @@ export function TargetedAdsPanel({
             </div>
           )}
           {!target && quote.targets[0] && (
-            <p className="text-sm">
+            <p className="text-body">
               {t("unitCost", {
                 funds: formatFull(quote.targets[0].cost),
                 actions: quote.actionCost,
               })}
             </p>
           )}
-          <p className="text-sm text-muted">{t("decay")}</p>
+          <p className="text-body text-muted">{t("decay")}</p>
           <button
             type="button"
             className="rounded bg-primary text-primary-foreground px-4 py-2 disabled:bg-card-border disabled:text-muted"
@@ -244,7 +244,7 @@ export function TargetedAdsPanel({
           </button>
         </>
       )}
-      <p role="status" className="text-sm">
+      <p role="status" className="text-body">
         {message}
       </p>
       {!loading && !quote && (

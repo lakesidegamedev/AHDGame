@@ -182,28 +182,28 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
         {/* Breadcrumb */}
         <div className="flex flex-wrap items-center gap-3">
           <BackButton fallbackHref={stockMarketHref} fallbackLabel="Funds" />
-          <span className="text-muted text-sm">/</span>
-          <span className="font-mono text-sm font-bold text-primary">{fund.tickerSymbol}</span>
+          <span className="text-muted text-body">/</span>
+          <span className="font-mono text-body font-bold text-primary">{fund.tickerSymbol}</span>
         </div>
 
         {/* Masthead */}
         <header className="flex flex-wrap items-end justify-between gap-8">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <span className="font-mono text-xs font-bold text-primary rounded-lg border border-primary/25 bg-primary/10 px-2.5 py-0.5">
+              <span className="font-mono text-body-sm font-bold text-primary rounded-lg border border-primary/25 bg-primary/10 px-2.5 py-0.5">
                 {fund.tickerSymbol}
               </span>
               <span
-                className="inline-flex rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                className="inline-flex rounded-md border px-2 py-0.5 text-body-sm font-bold uppercase tracking-wider"
                 style={{ color: statusTone.tone, background: statusBg, borderColor: statusBorder }}
               >
                 {statusTone.label}
               </span>
             </div>
-            <h1 className="mt-3 text-2xl sm:text-4xl font-semibold leading-tight tracking-tight">
+            <h1 className="mt-3 text-heading sm:text-display font-semibold leading-tight tracking-tight">
               {fund.name}
             </h1>
-            <p className="mt-2.5 text-[13px] text-muted">
+            <p className="mt-2.5 text-body-sm text-muted">
               {fund.scope === "country" ? `${fund.countryId} broad index` : "Global index"} ·{" "}
               {fund.anchorCurrencyCode} anchor
               {fund.sectorType ? ` · ${fund.sectorType}` : ""} ·{" "}
@@ -213,7 +213,7 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
           </div>
           <div className="shrink-0 text-left sm:text-right">
             <div className="text-body-sm font-medium text-muted">NAV / unit</div>
-            <div className="mt-1 font-mono tabular-nums text-[28px] sm:text-[42px] font-bold leading-none">
+            <div className="mt-1 font-mono tabular-nums text-display sm:text-display font-bold leading-none">
               {formatPrice(fund.quotedNav, ccy)}
             </div>
             <div className="mt-2 flex items-center justify-end gap-2.5">
@@ -223,7 +223,7 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
                     key={tf}
                     type="button"
                     onClick={() => setTimeframe(tf)}
-                    className={`rounded-md border px-2 py-1 font-mono text-[10px] font-bold transition-all ${
+                    className={`rounded-md border px-2 py-1 font-mono text-body-sm font-bold transition-all ${
                       timeframe === tf
                         ? "border-primary/45 bg-primary/14 text-primary"
                         : "border-transparent text-muted hover:text-foreground"
@@ -262,13 +262,13 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
           ].map((s) => (
             <div key={s.label} className="whitespace-nowrap">
               <div className="text-body-sm font-medium text-muted">{s.label}</div>
-              <div className="mt-1.5 font-mono tabular-nums text-base font-bold">{s.value}</div>
+              <div className="mt-1.5 font-mono tabular-nums text-body-lg font-bold">{s.value}</div>
             </div>
           ))}
         </div>
 
         {fund.status === "paused" && (
-          <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-body text-warning">
             This fund is paused
             {fund.pauseReason ? ` (${fund.pauseReason.replace(/_/g, " ")})` : ""}. Subscriptions may
             be restricted; redemptions still pay from available cash.
@@ -288,12 +288,12 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
                     onClick={() => setActiveTab(t.key)}
                     role="tab"
                     aria-selected={active}
-                    className={`inline-flex items-center gap-2 px-4 py-1.5 text-[13px] ${pillClass(active)}`}
+                    className={`inline-flex items-center gap-2 px-4 py-1.5 text-body-sm ${pillClass(active)}`}
                   >
                     {t.label}
                     {t.count && (
                       <span
-                        className="rounded-full px-1.5 py-px font-mono text-[10px] font-bold"
+                        className="rounded-full px-1.5 py-px font-mono text-body-sm font-bold"
                         style={{
                           background: active
                             ? "color-mix(in srgb, var(--primary-foreground) 25%, transparent)"
@@ -320,9 +320,9 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
                 <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
                   <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-sm font-semibold">Backing ratio</h2>
+                      <h2 className="text-body font-semibold">Backing ratio</h2>
                       <span
-                        className="inline-flex rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                        className="inline-flex rounded-md border px-2 py-0.5 text-body-sm font-bold uppercase tracking-wider"
                         style={{
                           color: statusTone.tone,
                           background: statusBg,
@@ -337,14 +337,14 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
                       </span>
                     </div>
                     <BackingRatioGauge ratio={fund.backingRatio ?? null} />
-                    <p className="mt-3 text-[11px] leading-relaxed text-muted">
+                    <p className="mt-3 text-body-sm leading-relaxed text-muted">
                       Assets ÷ (NAV × units outstanding). Below{" "}
                       <span className="font-mono text-error">50%</span> the fund is under-backed.
                     </p>
                   </div>
 
                   <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
-                    <h2 className="text-sm font-semibold">Asset composition</h2>
+                    <h2 className="text-body font-semibold">Asset composition</h2>
                     <AssetCompositionBar
                       holdingsValueAnchor={holdingsValueAnchor}
                       cashAnchor={fund.cashAnchor}
@@ -361,7 +361,7 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
             {activeTab === "holdings" && (
               <div className="space-y-5">
                 {fund.lastRebalancedAt && (
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     Last rebalanced: {formatRebalanceDate(fund.lastRebalancedAt)}
                   </p>
                 )}

@@ -103,8 +103,8 @@ export function NationalizeWizard({ official }: { official: NatOfficialActions }
 
   return (
     <div className="rounded-xl border border-gold/30 bg-gold/5 p-5">
-      <h3 className="text-body-sm font-semibold text-gold">Nationalize an asset</h3>
-      <p className="mt-1 text-body-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-gold">Nationalize an asset</h3>
+      <p className="mt-1 text-body-sm text-muted">
         Executive power reaches failing or NPC firms HQ&apos;d here. Solvent private corporations
         require legislation.
       </p>
@@ -129,12 +129,12 @@ export function NationalizeWizard({ official }: { official: NatOfficialActions }
                 className="h-4 w-4"
               />
               <span className="font-medium text-foreground">{t.name}</span>
-              <span className="text-body-xs text-muted">
+              <span className="text-body-sm text-muted">
                 · {OWNER_LABEL[t.ownerKind]} · {t.sectorCount} sector
                 {t.sectorCount === 1 ? "" : "s"}
                 {eligibilityReasons(t.triggers) ? ` · ${eligibilityReasons(t.triggers)}` : ""}
               </span>
-              <span className="ml-auto text-body-xs text-muted">
+              <span className="ml-auto text-body-sm text-muted">
                 {money(Math.max(t.marketCapLocal, t.liquidCapitalLocal), t.currency)}
               </span>
             </label>
@@ -159,7 +159,7 @@ export function NationalizeWizard({ official }: { official: NatOfficialActions }
           <div className="text-body-sm text-muted">
             Indicative compensation:{" "}
             <span className="text-foreground">{money(indicative, selected.currency)}</span>
-            <span className="block text-body-xs">
+            <span className="block text-body-sm">
               Final amount computed and debited at execution.
             </span>
           </div>

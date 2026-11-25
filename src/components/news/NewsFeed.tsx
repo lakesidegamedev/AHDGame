@@ -132,7 +132,7 @@ export function NewsFeed({
       {/* Author filter banner */}
       {authorId && (
         <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-body">
             <svg
               className="h-4 w-4 text-primary shrink-0"
               fill="none"
@@ -160,7 +160,10 @@ export function NewsFeed({
               )}
             </span>
           </div>
-          <Link href="/news" className="text-xs text-muted hover:text-foreground transition-colors">
+          <Link
+            href="/news"
+            className="text-body-sm text-muted hover:text-foreground transition-colors"
+          >
             Clear filter ×
           </Link>
         </div>
@@ -186,14 +189,14 @@ export function NewsFeed({
         </div>
       ) : error ? (
         <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-body text-error">{error}</p>
           <button
             onClick={() => {
               setError(null);
               setLoading(true);
               fetchPosts(0, false).finally(() => setLoading(false));
             }}
-            className="mt-3 text-xs text-primary hover:underline"
+            className="mt-3 text-body-sm text-primary hover:underline"
           >
             Try again
           </button>
@@ -201,7 +204,7 @@ export function NewsFeed({
       ) : posts.length === 0 ? (
         <div className="rounded-xl border border-card-border bg-card p-12 text-center">
           <p className="font-medium text-foreground">No posts yet</p>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             {authorId
               ? feed === "advertisement"
                 ? "This politician has no sponsored posts yet."
@@ -234,7 +237,7 @@ export function NewsFeed({
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="w-full rounded-xl border border-card-border bg-card py-3 text-sm text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
+              className="w-full rounded-xl border border-card-border bg-card py-3 text-body text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
             >
               {loadingMore ? "Loading..." : "Load more"}
             </button>

@@ -271,8 +271,8 @@ export function CrisesManager() {
         onOpenCreateModal={() => setShowModal(true)}
       />
 
-      {message && <p className="text-sm text-amber-400">{message}</p>}
-      {loading && <p className="text-sm text-muted">Loading...</p>}
+      {message && <p className="text-body text-amber-400">{message}</p>}
+      {loading && <p className="text-body text-muted">Loading...</p>}
 
       <CrisesTable
         crises={crises}

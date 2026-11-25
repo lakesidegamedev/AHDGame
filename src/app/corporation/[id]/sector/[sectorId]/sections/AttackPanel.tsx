@@ -41,21 +41,21 @@ export default function AttackPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="mb-1 text-lg font-bold text-foreground">Market actions</h2>
-      <p className="mb-4 text-xs text-muted">
+      <h2 className="mb-1 text-heading font-bold text-foreground">Market actions</h2>
+      <p className="mb-4 text-body-sm text-muted">
         Attempt a sector split against this rival&apos;s whole plants.
       </p>
 
       <div className="grid gap-4">
         {attackInfo.plantSplitQuote && attackInfo.plantCount != null && (
           <div className="rounded-xl border border-error/20 bg-background/40 p-4">
-            <h3 className="text-sm font-semibold text-foreground">Split rival plants</h3>
-            <p className="mt-1 text-xs text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">Split rival plants</h3>
+            <p className="mt-1 text-body-sm text-muted">
               Your MS against theirs sets the share, from 1% up to 20% of their plants, and the
               success chance. Plants you win transfer intact.
             </p>
             {attackMsg && (
-              <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+              <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-body-sm text-success">
                 {attackMsg}
               </div>
             )}
@@ -83,14 +83,14 @@ export default function AttackPanel({
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Committed: {formatAmount(attackInfo.plantSplitQuote.cashCostAnchor)} +{" "}
                 {attackInfo.plantSplitQuote.marketingStrengthCost} MS, paid even on failure
               </p>
               <button
                 type="button"
                 onClick={() => setPlannerOpen(true)}
-                className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20"
+                className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-body font-medium text-error transition-colors hover:bg-error/20"
               >
                 Plan sector split
               </button>

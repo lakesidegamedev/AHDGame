@@ -61,7 +61,7 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="flex items-center text-sm font-bold text-foreground">
+        <h3 className="flex items-center text-body-lg font-bold text-foreground">
           Gosplan planner
           <Tooltip content={CE_TERMS.gosplan} label="About Gosplan" />
         </h3>
@@ -69,12 +69,12 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
           National plan
         </Badge>
       </div>
-      <p className="mt-1 text-[11px] leading-snug text-muted">
+      <p className="mt-1 text-body-sm leading-snug text-muted">
         Set the output quota for every enterprise. Over-ambition breeds shortage, slack wastes
         capacity. The balancing act is heavy industry against consumer goods.
       </p>
 
-      <div className="mt-3 flex flex-wrap gap-4 text-xs">
+      <div className="mt-3 flex flex-wrap gap-4 text-body-sm">
         <span className="text-muted">
           Aggregate fulfillment{" "}
           <span className="font-bold tabular-nums text-foreground">
@@ -96,16 +96,16 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
           return (
             <div key={s.corpId} className="rounded-lg border border-card-border/60 p-3">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-semibold text-foreground">{s.sectorLabel}</span>
+                <span className="text-body font-semibold text-foreground">{s.sectorLabel}</span>
                 <span
-                  className={`text-xs font-semibold tabular-nums ${
+                  className={`text-body-sm font-semibold tabular-nums ${
                     under ? "text-warning" : "text-success"
                   }`}
                 >
                   {Math.round(s.planFulfillment * 100)}% of plan
                 </span>
               </div>
-              <div className="mt-0.5 text-[11px] text-muted">
+              <div className="mt-0.5 text-body-sm text-muted">
                 Output{" "}
                 <span className="tabular-nums text-foreground">
                   {formatCompactNumber(s.output)}
@@ -119,7 +119,7 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
                   inputMode="numeric"
                   value={targets[s.corpId] ?? ""}
                   onChange={(e) => setTargets((t) => ({ ...t, [s.corpId]: e.target.value }))}
-                  className="w-full flex-1 rounded-md border border-card-border bg-card px-2 py-1.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+                  className="w-full flex-1 rounded-md border border-card-border bg-card px-2 py-1.5 text-right text-body tabular-nums text-foreground focus:border-primary focus:outline-none"
                 />
               </label>
             </div>
@@ -129,9 +129,9 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
 
       {/* Desktop (sm and up): compact table. */}
       <div className="mt-4 hidden overflow-x-auto sm:block">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-body">
           <thead>
-            <tr className="border-b border-card-border text-sm font-semibold text-foreground">
+            <tr className="border-b border-card-border text-body font-semibold text-foreground">
               <th className="px-2 py-2">Sector</th>
               <th className="px-2 py-2 text-right">Output</th>
               <th className="px-2 py-2 text-right">Fulfillment</th>
@@ -161,7 +161,7 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
                       inputMode="numeric"
                       value={targets[s.corpId] ?? ""}
                       onChange={(e) => setTargets((t) => ({ ...t, [s.corpId]: e.target.value }))}
-                      className="w-28 rounded-md border border-card-border bg-card px-2 py-1 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+                      className="w-28 rounded-md border border-card-border bg-card px-2 py-1 text-right text-body tabular-nums text-foreground focus:border-primary focus:outline-none"
                     />
                   </td>
                 </tr>
@@ -171,7 +171,7 @@ export function GosplanPlannerPanel({ dashboard, onSaved }: Props) {
         </table>
       </div>
 
-      <InlineError error={error} className="mt-3 text-xs text-error" />
+      <InlineError error={error} className="mt-3 text-body-sm text-error" />
       <div className="mt-4">
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? "Saving..." : "Set plan quotas"}

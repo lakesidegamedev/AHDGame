@@ -59,7 +59,7 @@ export function WhipTabs({
             role="tab"
             aria-selected={audience === "player"}
             onClick={() => setAudience("player")}
-            className={`px-4 py-1.5 text-sm ${pillClass(audience === "player")}`}
+            className={`px-4 py-1.5 text-body ${pillClass(audience === "player")}`}
           >
             Players
           </button>
@@ -68,7 +68,7 @@ export function WhipTabs({
           role="tab"
           aria-selected={audience === "npp"}
           onClick={() => setAudience("npp")}
-          className={`px-4 py-1.5 text-sm ${pillClass(audience === "npp")}`}
+          className={`px-4 py-1.5 text-body ${pillClass(audience === "npp")}`}
         >
           NPPs
         </button>
@@ -76,7 +76,7 @@ export function WhipTabs({
           role="tab"
           aria-selected={audience === "defiance"}
           onClick={() => setAudience("defiance")}
-          className={`px-4 py-1.5 text-sm ${pillClass(audience === "defiance")}`}
+          className={`px-4 py-1.5 text-body ${pillClass(audience === "defiance")}`}
         >
           Defiance
         </button>

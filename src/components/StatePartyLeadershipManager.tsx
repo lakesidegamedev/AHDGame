@@ -76,19 +76,19 @@ export function StatePartyLeadershipManager({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Appoint state chair</h3>
+      <h3 className="text-body-lg font-semibold">Appoint state chair</h3>
 
       {message && (
-        <div className={`rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-3 text-body ${getMessageStyle(message)}`}>{message}</div>
       )}
 
       <div className="rounded-lg border border-card-border bg-card p-4">
-        <div className="text-sm font-medium mb-2">State chair</div>
+        <div className="text-body font-medium mb-2">State chair</div>
         <div className="space-y-2">
           <select
             value={selectedChar}
             onChange={(e) => setSelectedChar(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
             disabled={loading}
           >
             <option value="">Select member...</option>
@@ -101,7 +101,7 @@ export function StatePartyLeadershipManager({
           <button
             onClick={appointChair}
             disabled={!selectedChar || loading}
-            className="w-full rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-lg px-3 py-2 text-body font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: partyColor }}
           >
             {loading ? "Appointing..." : "Appoint"}
@@ -110,7 +110,7 @@ export function StatePartyLeadershipManager({
       </div>
 
       {members.length === 0 && (
-        <p className="text-sm text-muted">No eligible members in this state party to appoint.</p>
+        <p className="text-body text-muted">No eligible members in this state party to appoint.</p>
       )}
     </div>
   );

@@ -109,7 +109,7 @@ export function RateOffsetEditor({
     direction: string
   ) => (
     <label className="block min-w-0 space-y-1.5">
-      <span className="flex justify-between text-xs text-muted">
+      <span className="flex justify-between text-body-sm text-muted">
         <span>{kind === "deposit" ? "Deposit offset" : "Lending offset"}</span>
         <span className="font-mono tabular-nums text-foreground">{value.toFixed(2)} pp</span>
       </span>
@@ -122,11 +122,11 @@ export function RateOffsetEditor({
         onChange={(e) => updateRateState({ [kind]: parseFloat(e.target.value) })}
         aria-label={kind === "deposit" ? "Deposit rate offset" : "Lending rate offset"}
       />
-      <span className="block text-xs text-foreground">{rateLine}</span>
-      <span className="block font-mono text-[11px] text-muted">
+      <span className="block text-body-sm text-foreground">{rateLine}</span>
+      <span className="block font-mono text-body-sm text-muted">
         Legal rate limits [{corridor.minOffset}, {corridor.maxOffset}]
       </span>
-      <span className="block text-[11px] text-muted">{direction}</span>
+      <span className="block text-body-sm text-muted">{direction}</span>
     </label>
   );
 
@@ -145,7 +145,7 @@ export function RateOffsetEditor({
       }
     >
       <div className="space-y-1 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           You pay{" "}
           <span className="font-mono text-foreground">
             {effective.depositRatePercent.toFixed(2)}%
@@ -158,7 +158,7 @@ export function RateOffsetEditor({
           <span className="font-mono font-medium text-foreground">{spread.toFixed(2)} points</span>,
           is what the loan book earns before losses and insurance.
         </p>
-        <p className="text-[11px] text-muted">{corridorSentence(corridors, primeRate)}</p>
+        <p className="text-body-sm text-muted">{corridorSentence(corridors, primeRate)}</p>
       </div>
       <div className="grid gap-x-8 gap-y-4 pt-2 md:grid-cols-2">
         {offsetControl(

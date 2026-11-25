@@ -71,33 +71,33 @@ export default function ForSalePanel({
     return (
       <div className="rounded-xl border border-success/30 bg-success/5 p-6">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-success">
+          <span className="inline-flex items-center rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-body-sm font-bold uppercase tracking-wider text-success">
             For sale
           </span>
-          <h3 className="text-sm font-semibold text-foreground">Buy this sector</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">Buy this sector</h3>
         </div>
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           The seller is offering this sector at {PRICE_PCT}% of its estimated worth, which is what
           its future profits are worth today. That is {DISCOUNT_PCT}% off. The asking price was
           fixed when the listing went up.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+        <div className="mt-4 grid grid-cols-2 gap-3 text-body-sm">
           <div>
             <div className="text-muted">Asking price</div>
-            <div className="text-base font-bold text-foreground tabular-nums">
+            <div className="text-body-lg font-bold text-foreground tabular-nums">
               {formatAmount(sector.forSale!.priceAnchor, buyerCurrency)}
             </div>
           </div>
           <div>
             <div className="text-muted">Estimated worth at listing</div>
-            <div className="text-sm tabular-nums text-foreground">
+            <div className="text-body tabular-nums text-foreground">
               {formatAmount(sector.forSale!.npvAnchor, buyerCurrency)}
             </div>
           </div>
         </div>
         {message && (
           <div
-            className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            className={`mt-3 rounded-lg border px-3 py-2 text-body-sm ${
               message.type === "error"
                 ? "border-error/30 bg-error/10 text-error"
                 : "border-success/30 bg-success/10 text-success"
@@ -107,7 +107,7 @@ export default function ForSalePanel({
           </div>
         )}
         {forSaleInfo.securedLoan && (
-          <div className="mt-3 rounded-lg border border-card-border p-3 text-xs text-muted">
+          <div className="mt-3 rounded-lg border border-card-border p-3 text-body-sm text-muted">
             This site carries a secured construction loan of{" "}
             <strong className="text-foreground">
               {formatAmount(forSaleInfo.securedLoan.outstandingAnchor, buyerCurrency)}
@@ -121,7 +121,7 @@ export default function ForSalePanel({
           </div>
         )}
         {forSaleInfo.conflict && (
-          <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+          <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3 text-body-sm text-primary">
             {sector.forSale?.pledged
               ? `You already operate this market in ${sector.stateName}. Purchasing will pay off the lender and merge this site into yours.`
               : `You already operate this market in ${sector.stateName}. Purchasing will merge its revenue and workers into your existing site.`}
@@ -130,7 +130,7 @@ export default function ForSalePanel({
         <div className="mt-4">
           {confirmBuy ? (
             <div className="space-y-3">
-              <p className="text-sm text-foreground">
+              <p className="text-body text-foreground">
                 {forSaleInfo.conflict ? (
                   <>
                     Merge this sector into your existing one for{" "}
@@ -154,7 +154,7 @@ export default function ForSalePanel({
                     onBuy();
                   }}
                   disabled={buying}
-                  className="flex-1 rounded-lg border border-success/40 bg-success px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 rounded-lg border border-success/40 bg-success px-3 py-2 text-body font-semibold text-white transition-colors hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {buying
                     ? forSaleInfo.conflict
@@ -168,7 +168,7 @@ export default function ForSalePanel({
                   type="button"
                   onClick={() => setConfirmBuy(false)}
                   disabled={buying}
-                  className="rounded-lg border border-card-border px-3 py-2 text-sm font-medium text-muted hover:bg-card-elevated"
+                  className="rounded-lg border border-card-border px-3 py-2 text-body font-medium text-muted hover:bg-card-elevated"
                 >
                   Cancel
                 </button>
@@ -179,7 +179,7 @@ export default function ForSalePanel({
               type="button"
               onClick={() => setConfirmBuy(true)}
               disabled={buying}
-              className="w-full rounded-lg border border-success/30 bg-success/10 px-4 py-2 text-sm font-semibold text-success transition-colors hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg border border-success/30 bg-success/10 px-4 py-2 text-body font-semibold text-success transition-colors hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-50"
               title={forSaleInfo.conflict ? "Merge into your existing sector" : "Buy this sector"}
             >
               {forSaleInfo.conflict ? "Buy & merge sector" : "Buy sector"}
@@ -198,20 +198,20 @@ export default function ForSalePanel({
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-muted">
+          <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-body-sm font-bold uppercase tracking-wider text-muted">
             For sale
           </span>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-body-lg font-semibold text-foreground">
             You can&apos;t buy this sector yet
           </h3>
         </div>
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           {reason
             ? (forSaleInfo.blockDetail ?? BLOCK_REASON_TEXT[reason])
             : "This listing is not available to your corporation."}
         </p>
         {reason === "insufficient_funds" && (
-          <p className="mt-2 text-xs text-muted tabular-nums">
+          <p className="mt-2 text-body-sm text-muted tabular-nums">
             Cost to you:{" "}
             {formatAmount(
               buyerCurrency
@@ -229,41 +229,41 @@ export default function ForSalePanel({
   if (!isCeo) return null;
 
   if (sector.forSale?.foreclosed) {
-    return <p className="text-sm text-muted">This sector is listed for secured recovery.</p>;
+    return <p className="text-body text-muted">This sector is listed for secured recovery.</p>;
   }
 
   if (isListed && sector.forSale) {
     return (
       <div className="rounded-xl border border-success/30 bg-success/5 p-6">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-success">
+          <span className="inline-flex items-center rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-body-sm font-bold uppercase tracking-wider text-success">
             Listed
           </span>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-body-lg font-semibold text-foreground">
             For Sale on the secondary market
           </h3>
         </div>
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           Other CEOs can purchase this sector from their corporation treasury. The listing price is
           locked at posting and won&apos;t change as the sector&apos;s profit fluctuates.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+        <div className="mt-4 grid grid-cols-2 gap-3 text-body-sm">
           <div>
             <div className="text-muted">Asking price</div>
-            <div className="text-base font-bold text-foreground tabular-nums">
+            <div className="text-body-lg font-bold text-foreground tabular-nums">
               {formatAmount(sector.forSale.priceAnchor, sellerCurrency)}
             </div>
           </div>
           <div>
             <div className="text-muted">Estimated worth at listing</div>
-            <div className="text-sm tabular-nums text-foreground">
+            <div className="text-body tabular-nums text-foreground">
               {formatAmount(sector.forSale.npvAnchor, sellerCurrency)}
             </div>
           </div>
         </div>
         {message && (
           <div
-            className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            className={`mt-3 rounded-lg border px-3 py-2 text-body-sm ${
               message.type === "error"
                 ? "border-error/30 bg-error/10 text-error"
                 : "border-success/30 bg-success/10 text-success"
@@ -276,7 +276,7 @@ export default function ForSalePanel({
           type="button"
           onClick={onUnlist}
           disabled={unlisting}
-          className="mt-4 w-full rounded-lg border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-semibold text-warning transition-colors hover:bg-warning/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 w-full rounded-lg border border-warning/30 bg-warning/10 px-4 py-2 text-body font-semibold text-warning transition-colors hover:bg-warning/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {unlisting ? "Unlisting…" : "Unlist sector"}
         </button>
@@ -289,8 +289,8 @@ export default function ForSalePanel({
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">List sector for sale</h3>
-          <p className="mt-1 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">List sector for sale</h3>
+          <p className="mt-1 text-body-sm text-muted">
             Sell this sector to another CEO at {PRICE_PCT}% of its estimated worth, which is what
             its future profits are worth today. The money goes straight to your corporation
             treasury.
@@ -304,7 +304,7 @@ export default function ForSalePanel({
               onRequestListQuote?.();
             }}
             disabled={listing}
-            className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-body font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             List for sale
           </button>
@@ -312,7 +312,7 @@ export default function ForSalePanel({
       </div>
       {message && (
         <div
-          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+          className={`mt-3 rounded-lg border px-3 py-2 text-body-sm ${
             message.type === "error"
               ? "border-error/30 bg-error/10 text-error"
               : "border-success/30 bg-success/10 text-success"
@@ -323,31 +323,31 @@ export default function ForSalePanel({
       )}
       {confirmList && (
         <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
-          <p className="text-sm text-foreground">
+          <p className="text-body text-foreground">
             List this sector at <strong>{PRICE_PCT}%</strong> of its estimated worth, a{" "}
             {DISCOUNT_PCT}% discount?
           </p>
           {listQuote ? (
-            <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-2 gap-3 text-body-sm">
               <div>
                 <div className="text-muted">Estimated worth now</div>
-                <div className="text-sm tabular-nums text-foreground">
+                <div className="text-body tabular-nums text-foreground">
                   {formatAmount(listQuote.npvAnchor, sellerCurrency)}
                 </div>
               </div>
               <div>
                 <div className="text-muted">You would receive</div>
-                <div className="text-base font-bold tabular-nums text-foreground">
+                <div className="text-body-lg font-bold tabular-nums text-foreground">
                   {formatAmount(listQuote.priceAnchor, sellerCurrency)}
                 </div>
               </div>
             </div>
           ) : listQuoteError ? (
-            <p className="text-xs text-error">{listQuoteError}</p>
+            <p className="text-body-sm text-error">{listQuoteError}</p>
           ) : (
-            <p className="text-xs text-muted">Working out the price…</p>
+            <p className="text-body-sm text-muted">Working out the price…</p>
           )}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             No fee comes out of the price, and the buyer pays any acquisition costs on top. The
             price is fixed when you list. The sale completes when another CEO buys it, and the money
             goes straight to your corporation treasury. You can unlist at any time until then.
@@ -360,7 +360,7 @@ export default function ForSalePanel({
                 onList();
               }}
               disabled={listing || !listQuote}
-              className="flex-1 rounded-lg border border-primary/40 bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="flex-1 rounded-lg border border-primary/40 bg-primary px-3 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {listing ? "Listing…" : "Confirm listing"}
             </button>
@@ -368,7 +368,7 @@ export default function ForSalePanel({
               type="button"
               onClick={() => setConfirmList(false)}
               disabled={listing}
-              className="rounded-lg border border-card-border px-3 py-2 text-sm font-medium text-muted hover:bg-card-elevated"
+              className="rounded-lg border border-card-border px-3 py-2 text-body font-medium text-muted hover:bg-card-elevated"
             >
               Cancel
             </button>

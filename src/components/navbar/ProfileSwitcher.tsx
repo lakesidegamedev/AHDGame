@@ -51,7 +51,7 @@ interface ProfileSwitcherProps {
 
 function ActivePill({ label }: { label: string }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-body-sm font-semibold text-primary">
       <svg
         className="h-3 w-3"
         fill="none"
@@ -67,7 +67,7 @@ function ActivePill({ label }: { label: string }) {
 }
 
 const ROW_BASE =
-  "flex w-full items-center gap-2.5 rounded-lg text-sm transition-colors disabled:opacity-50";
+  "flex w-full items-center gap-2.5 rounded-lg text-body transition-colors disabled:opacity-50";
 
 const ROW_STYLE: Record<ProfileSwitcherVariant, { row: string; active: string; idle: string }> = {
   desktop: {
@@ -108,7 +108,7 @@ export function ProfileSwitcher({
         <span className="min-w-0 flex-1">
           <span className="block truncate">{char.name}</span>
           {char.detail && (
-            <span className="block truncate text-[11px] font-normal text-muted/70">
+            <span className="block truncate text-body-sm font-normal text-muted/70">
               {char.detail}
             </span>
           )}
@@ -116,7 +116,7 @@ export function ProfileSwitcher({
         {isActiveChar ? (
           <ActivePill label={activeLabel} />
         ) : (
-          <span className="shrink-0 text-xs text-muted/60">{char.countryId}</span>
+          <span className="shrink-0 text-body-sm text-muted/60">{char.countryId}</span>
         )}
       </>
     );
@@ -186,7 +186,7 @@ export function ProfileSwitcher({
         {isImperialMode ? (
           <ActivePill label={activeLabel} />
         ) : (
-          <span className="shrink-0 rounded-full border border-amber-400/30 px-2 py-0.5 text-[11px] font-medium text-amber-400/80">
+          <span className="shrink-0 rounded-full border border-amber-400/30 px-2 py-0.5 text-body-sm font-medium text-amber-400/80">
             {imperialLabel}
           </span>
         )}
