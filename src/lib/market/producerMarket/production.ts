@@ -1,5 +1,10 @@
 import { productionOrderOutcomes } from "./productionOrderOutcomes";
-import { attributeCountryBooks, marketAccountKind } from "./marketAttributionRules";
+import {
+  attributeCountryBooks,
+  carriedStockByBook,
+  marketAccountKind,
+  withCarriedStock,
+} from "./marketAttributionRules";
 import { markStateServiceSpill } from "./stateServiceSpillRules";
 import { closingProducerCash, ProducerCashChanges } from "./cashChangesRules";
 import { settleProducerMarket, type ProducerOffer, type PurchaseOrder } from "./rules";
@@ -939,7 +944,13 @@ export function advanceProducerEconomy(
     ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),
     ...(market.regionalBooks ? { regionalBooks: market.regionalBooks } : {}),
     ...(attribution
-      ? { countryBookAttribution: attribution.books, companyBooks: attribution.companies }
+      ? {
+          countryBookAttribution: withCarriedStock(
+            attribution.books,
+            carriedStockByBook(results, (id) => countryOfProducer?.(id))
+          ),
+          companyBooks: attribution.companies,
+        }
       : {}),
     ...(wideSales.length > 0 ? { wideEconomySales: wideSales } : {}),
     orderOutcomes: productionOrderOutcomes(

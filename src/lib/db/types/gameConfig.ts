@@ -289,6 +289,14 @@ export interface GameConfig extends ProducerGameConfig {
   wideEconomyPricingStage?: number;
 
   /**
+   * >= 1: a lane whose new plant output goes more than 15% unsold for three
+   * turns running gets a bigger wider-economy buyer, up to 25% of demand,
+   * buying only unsold output at the reference price at most. Absent = 1
+   * (on); 0 = off (the buyer stays at its base size).
+   */
+  wideEconomySurplusStage?: number;
+
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.

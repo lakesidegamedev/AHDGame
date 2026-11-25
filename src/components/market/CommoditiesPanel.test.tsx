@@ -61,6 +61,34 @@ describe("CommoditiesPanel balance", () => {
     renderPanel([row({ commodity: "food", label: "Food Products" })]);
     expect(screen.getByText("Short")).toBeTruthy();
   });
+
+  it("calls old stock an overhang, not a surplus, when new output matches orders", () => {
+    renderPanel([
+      row({
+        commodity: "building_materials",
+        label: "Building Materials",
+        globalSupply: 150,
+        globalDemand: 100,
+        carriedStock: 52,
+      }),
+    ]);
+    const cell = screen.getByText("Old stock left");
+    expect(cell.getAttribute("title")).toContain("unsold stock from earlier turns");
+    expect(screen.queryByText("Surplus")).toBeNull();
+  });
+
+  it("still calls a surplus when new output alone exceeds orders", () => {
+    renderPanel([
+      row({
+        commodity: "electronics",
+        label: "Electronics",
+        globalSupply: 150,
+        globalDemand: 100,
+        carriedStock: 10,
+      }),
+    ]);
+    expect(screen.getByText("Surplus")).toBeTruthy();
+  });
 });
 
 it("shows a rising last-turn price alongside a negative annualized change", () => {
