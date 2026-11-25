@@ -21,8 +21,8 @@ describe("monopolyChargePct", () => {
       shield: 0,
       stateOwned: false,
     });
-    expect(stateOnly).toBeCloseTo(5, 5);
-    expect(countryOnly).toBeCloseTo(1.43, 1);
+    expect(stateOnly).toBeCloseTo(3.75, 5);
+    expect(countryOnly).toBeCloseTo((20 / 70) * 3.75, 8);
     expect(both).toBeCloseTo(stateOnly + countryOnly, 8);
   });
   it("is zero below the thresholds and for state-owned companies", () => {
@@ -36,16 +36,20 @@ describe("monopolyChargePct", () => {
   it("is cut by the shield", () => {
     expect(
       monopolyChargePct({ localSharePct: 100, nationalSharePct: 0, shield: 0.5, stateOwned: false })
-    ).toBeCloseTo(2.5, 5);
+    ).toBeCloseTo(1.875, 5);
   });
 });
 
 describe("dominanceCostPct", () => {
-  it("runs from 0 at 50% to 15 at 100% of the state", () => {
+  it("runs in a straight line from 0 at 50% to 3.75 at 100% of the state", () => {
     expect(dominanceCostPct({ localSharePct: 50, shield: 0, stateOwned: false })).toBe(0);
     expect(dominanceCostPct({ localSharePct: 100, shield: 0, stateOwned: false })).toBeCloseTo(
-      15,
+      3.75,
       5
+    );
+    expect(dominanceCostPct({ localSharePct: 75, shield: 0, stateOwned: false })).toBeCloseTo(
+      1.875,
+      8
     );
   });
   it("ignores the country share and state-owned companies", () => {

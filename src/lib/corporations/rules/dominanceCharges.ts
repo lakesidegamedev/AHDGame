@@ -12,7 +12,10 @@
  * Pure: plain data in, plain data out.
  */
 import {
-  getDominanceMarginPenalty,
+  DOMINANCE_COST_PCT_AT_FULL,
+  DOMINANCE_MARKET_SHARE_THRESHOLD,
+} from "@/lib/constants/corporationsTables";
+import {
   getDominanceRegulatoryBurden,
   getNationalDominanceRegulatoryBurden,
 } from "@/lib/corporations/rules/corporationEconomy";
@@ -42,5 +45,9 @@ export function monopolyChargePct(input: ShareInput): number {
 /** Percent added to the site's operating costs by state dominance (0 or positive). */
 export function dominanceCostPct(input: Omit<ShareInput, "nationalSharePct">): number {
   if (input.stateOwned) return 0;
-  return Math.max(0, -getDominanceMarginPenalty(finite(input.localSharePct))) * open(input.shield);
+  const share = Math.min(100, finite(input.localSharePct));
+  if (share <= DOMINANCE_MARKET_SHARE_THRESHOLD) return 0;
+  const progress =
+    (share - DOMINANCE_MARKET_SHARE_THRESHOLD) / (100 - DOMINANCE_MARKET_SHARE_THRESHOLD);
+  return progress * DOMINANCE_COST_PCT_AT_FULL * open(input.shield);
 }
