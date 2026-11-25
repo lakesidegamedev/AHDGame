@@ -231,7 +231,7 @@ export default function CharacterPortfolioPage() {
                   onClick={() => setChartView("total")}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                     chartView === "total"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
@@ -241,7 +241,7 @@ export default function CharacterPortfolioPage() {
                   onClick={() => setChartView("breakdown")}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                     chartView === "breakdown"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
@@ -253,7 +253,7 @@ export default function CharacterPortfolioPage() {
                       onClick={() => setSeriesView("total")}
                       className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                         seriesView === "total"
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-card-elevated text-muted hover:text-foreground"
                       }`}
                     >
@@ -293,7 +293,7 @@ export default function CharacterPortfolioPage() {
                       onClick={() => setSeriesView("savings")}
                       className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                         seriesView === "savings"
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-card-elevated text-muted hover:text-foreground"
                       }`}
                     >

@@ -408,7 +408,7 @@ function FundsTab({
         type="button"
         onClick={submit}
         disabled={submitting || displayAmount <= 0 || displayAmount > maxDisplayTransfer}
-        className="w-full rounded-md bg-primary px-3 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-md bg-primary px-3 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         {submitting
           ? t("sending")

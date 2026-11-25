@@ -183,7 +183,7 @@ export function NationalCommitteeElectionPanel({
                   onClick={() => handleEnter(false)}
                   disabled={loading || cooldownActive}
                   title={cooldownActive ? cooldownLabel : undefined}
-                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                 >
                   {loading
                     ? "Processing..."
@@ -302,7 +302,7 @@ export function NationalCommitteeElectionPanel({
                             <div
                               className={`h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${
                                 isSelected
-                                  ? "bg-primary border-primary text-white"
+                                  ? "bg-primary border-primary text-primary-foreground"
                                   : "border-card-border bg-card text-transparent"
                               }`}
                             >
@@ -335,7 +335,7 @@ export function NationalCommitteeElectionPanel({
               <button
                 onClick={handleVote}
                 disabled={loading}
-                className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+                className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {loading ? "Submitting votes..." : `Submit votes (${selectedVotes.size} selected)`}
               </button>

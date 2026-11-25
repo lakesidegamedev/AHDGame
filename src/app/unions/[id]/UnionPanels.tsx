@@ -301,7 +301,7 @@ export function UndergroundOrganizePanel({
             aria-describedby="underground-action-cost underground-quiet-effect"
             disabled={actionPending || actionsLoading || cannotAfford}
             onClick={() => onDrive("quiet")}
-            className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+            className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             Quiet cell work
           </button>

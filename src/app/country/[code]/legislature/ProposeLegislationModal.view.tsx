@@ -440,7 +440,7 @@ export function renderLegacyProposeLegislationModalView(
                   type="button"
                   onClick={addRow}
                   disabled={rows.length >= maxPolicyRows}
-                  className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 >
                   + Add provision
                 </button>
@@ -829,7 +829,7 @@ export function renderLegacyProposeLegislationModalView(
             <button
               type="submit"
               disabled={submitDisabled}
-              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {submitting ? "Proposing…" : "Propose bill"}
             </button>

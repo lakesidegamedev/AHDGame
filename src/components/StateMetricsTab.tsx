@@ -372,7 +372,7 @@ export function StateMetricsTab({ stateId, countryId }: StateMetricsTabProps) {
           <p className="mt-4 text-red-400">{error || "No metrics available"}</p>
           <button
             onClick={fetchMetrics}
-            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+            className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Try again
           </button>
@@ -496,7 +496,7 @@ export function StateMetricsTab({ stateId, countryId }: StateMetricsTabProps) {
                   onClick={() => setActiveCategory(tab.id)}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     activeTab.id === tab.id
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted hover:bg-background/80 hover:text-foreground"
                   }`}
                 >

@@ -218,7 +218,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                       "flex-1 py-2.5 text-center transition-colors",
                       i > 0 ? "border-l border-card-border" : "",
                       mode === m.id
-                        ? "bg-primary text-white font-semibold"
+                        ? "bg-primary text-primary-foreground font-semibold"
                         : "bg-card-elevated text-muted hover:text-foreground",
                     ].join(" ")}
                   >

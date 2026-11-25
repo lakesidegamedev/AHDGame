@@ -399,7 +399,7 @@ function LessonCard({
             <button
               onClick={saveTags}
               disabled={saving}
-              className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground disabled:opacity-50"
+              className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {saving ? "…" : "Save"}
             </button>

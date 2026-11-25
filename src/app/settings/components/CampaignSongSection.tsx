@@ -125,7 +125,7 @@ export function CampaignSongSection({ character, onCharacterUpdate }: Props) {
         <button
           type="submit"
           disabled={campaignSongSaving}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed flex items-center gap-2"
         >
           <span className="flex items-center gap-2">
             {campaignSongSaved ? <CheckIcon /> : campaignSongSaving ? <SpinnerIcon /> : null}

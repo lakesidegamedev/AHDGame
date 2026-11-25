@@ -808,7 +808,7 @@ export function FundTradePanel({
         type="button"
         onClick={handleSubmit}
         disabled={submitDisabled}
-        className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
       >
         {loading ? "Processing…" : mode === "subscribe" ? "Subscribe" : "Withdraw"}
       </button>

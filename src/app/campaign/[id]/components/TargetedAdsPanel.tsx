@@ -236,7 +236,7 @@ export function TargetedAdsPanel({
           <p className="text-sm text-muted">{t("decay")}</p>
           <button
             type="button"
-            className="rounded bg-primary text-white px-4 py-2 disabled:opacity-50"
+            className="rounded bg-primary text-primary-foreground px-4 py-2 disabled:bg-card-border disabled:text-muted"
             disabled={busy || loading || !target?.available || count > quote.maxCount}
             onClick={buy}
           >

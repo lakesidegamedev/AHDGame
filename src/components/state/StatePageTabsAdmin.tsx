@@ -400,7 +400,7 @@ export function AdminTab({
                   }}
                   className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                     entityType === "player"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card text-muted hover:text-foreground"
                   }`}
                 >
@@ -473,7 +473,7 @@ export function AdminTab({
               <button
                 onClick={handleAssign}
                 disabled={loading || !selectedEntityId}
-                className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {loading ? "Assigning..." : "Assign seat"}
               </button>

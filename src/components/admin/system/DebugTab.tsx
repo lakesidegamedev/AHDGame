@@ -291,7 +291,7 @@ export function DebugTab() {
           <button
             onClick={diagnoseSnapshots}
             disabled={snapshotLoading}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {snapshotLoading ? "Diagnosing..." : "Diagnose snapshots"}
           </button>
@@ -454,7 +454,7 @@ export function DebugTab() {
           <button
             onClick={runNPPEntryDebug}
             disabled={loading}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {loading ? "Running..." : "Run NPP entry debug"}
           </button>

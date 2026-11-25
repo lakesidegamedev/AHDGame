@@ -304,7 +304,7 @@ export function NppRosterPanel({
                 across {sel.size} NPPs?
               </span>
               <button
-                className="rounded-md bg-primary px-3 py-1 font-medium text-white disabled:opacity-50"
+                className="rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 disabled={busy}
                 onClick={() => runBulk(confirmAction)}
               >

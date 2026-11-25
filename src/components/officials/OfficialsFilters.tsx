@@ -66,7 +66,7 @@ export function OfficialsFilters({
       <button
         onClick={onSearch}
         disabled={loading}
-        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         Search
       </button>

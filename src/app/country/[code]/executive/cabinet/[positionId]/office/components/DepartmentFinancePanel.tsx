@@ -561,7 +561,7 @@ export function DepartmentFinancePanel({
               {canAct && adjustablePrograms.length > 0 && (
                 <button
                   type="button"
-                  className="mt-4 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                  className="mt-4 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                   disabled={allocationLocked || saving || !allocationsValid}
                   onClick={saveAllocations}
                 >

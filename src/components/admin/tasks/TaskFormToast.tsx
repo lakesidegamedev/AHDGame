@@ -145,7 +145,7 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-1.5 rounded text-sm bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="px-4 py-1.5 rounded text-sm bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
               >
                 {submitting ? "Saving…" : "Save task"}
               </button>

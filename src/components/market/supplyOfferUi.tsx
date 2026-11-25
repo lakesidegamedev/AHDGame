@@ -190,7 +190,7 @@ function Segmented<T extends string>({
             prominent ? "h-9 px-4 text-sm" : "h-8 px-2.5 text-xs"
           } ${
             value === o.value
-              ? "border-primary bg-primary text-white"
+              ? "border-primary bg-primary text-primary-foreground"
               : "border-card-border text-foreground hover:bg-card-elevated"
           }`}
         >

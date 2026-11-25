@@ -81,7 +81,7 @@ export function CoalitionIdentityForm({
         </label>
         <button
           type="submit"
-          className="self-end rounded bg-primary px-4 py-3 text-white disabled:opacity-50"
+          className="self-end rounded bg-primary px-4 py-3 text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           {saving ? "Saving..." : "Save identity"}
         </button>

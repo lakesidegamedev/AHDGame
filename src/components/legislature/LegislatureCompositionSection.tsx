@@ -212,7 +212,7 @@ export function LegislatureCompositionSection({
                   onClick={() => setViewMode("parties")}
                   className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
                     viewMode === "parties"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted hover:text-foreground"
                   }`}
                 >
@@ -222,7 +222,7 @@ export function LegislatureCompositionSection({
                   onClick={() => setViewMode("coalitions")}
                   className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
                     viewMode === "coalitions"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted hover:text-foreground"
                   }`}
                 >
@@ -239,7 +239,7 @@ export function LegislatureCompositionSection({
             <p className="text-xs text-muted/70">Seats will appear once elections conclude.</p>
             <Link
               href="/elections"
-              className="inline-block mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary transition-colors"
+              className="inline-block mt-3 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary transition-colors"
             >
               View upcoming elections →
             </Link>

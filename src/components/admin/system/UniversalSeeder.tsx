@@ -744,7 +744,7 @@ export function UniversalSeeder() {
                 onClick={() => setActiveYear(tab.id)}
                 className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                   activeYear === tab.id
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:text-foreground hover:bg-card-elevated"
                 }`}
               >
@@ -808,7 +808,7 @@ export function UniversalSeeder() {
                       onClick={() => setScope(s)}
                       className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                         scope === s
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "text-muted hover:text-foreground hover:bg-card-elevated"
                       } ${!hasTargets ? "opacity-50" : ""}`}
                       title={

@@ -133,7 +133,7 @@ export function DisplayPreferenceToggle() {
                   onClick={() => setDisplayCurrencyPreference(key)}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                     displayCurrencyPreference === key
-                      ? "bg-primary text-white shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -157,7 +157,7 @@ export function DisplayPreferenceToggle() {
                   onClick={() => setDisplayCurrencyPreference(code)}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                     displayCurrencyPreference === code
-                      ? "bg-primary text-white shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted hover:text-foreground"
                   }`}
                 >

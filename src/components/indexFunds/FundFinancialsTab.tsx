@@ -168,7 +168,7 @@ export default function FundFinancialsTab({
             onClick={() => setView(v.key)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               view === v.key
-                ? "bg-primary text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted hover:text-foreground"
             }`}
           >

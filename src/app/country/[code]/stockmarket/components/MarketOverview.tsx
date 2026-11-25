@@ -592,7 +592,7 @@ export function MarketOverview({
         void import("lightweight-charts").then(({ LineSeries }) => {
           if (cancelled || !chart || compareRef.current) return;
           compareRef.current = chart.addSeries(LineSeries, {
-            color: cssVar("--primary", "#6d5dfc"),
+            color: cssVar("--primary", "#4f46e5"),
             lineWidth: 2,
             priceScaleId: "compare",
             priceLineVisible: false,

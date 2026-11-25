@@ -104,7 +104,7 @@ export function PrimaryPhaseView({
           <button
             onClick={onEnter}
             disabled={actionLoading}
-            className="mt-4 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="mt-4 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             Be the first — Enter race
           </button>

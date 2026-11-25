@@ -373,7 +373,7 @@ const ActionCardCompact = memo(function ActionCardCompact(
                         <button
                           onClick={() => setConvertConfirming(true)}
                           disabled={!!executing}
-                          className="rounded-md bg-primary px-2 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+                          className="rounded-md bg-primary px-2 py-1.5 text-body-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                         >
                           {executing === "convertCash" ? "..." : "Go"}
                         </button>

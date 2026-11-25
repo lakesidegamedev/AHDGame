@@ -171,7 +171,7 @@ function BillsTab({
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Propose bill
           </button>
@@ -307,7 +307,7 @@ function LeadershipTab({
           </div>
           <button
             onClick={() => setAppointModalOpen(true)}
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Appoint prime minister
           </button>

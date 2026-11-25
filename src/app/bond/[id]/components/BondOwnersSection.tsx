@@ -377,7 +377,7 @@ export function BondOwnersSection({
                       onClick={() => setPage(i)}
                       className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
                         i === page
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "border border-card-border text-muted hover:text-foreground"
                       }`}
                     >

@@ -153,7 +153,7 @@ export function TransactionHistory({ currency }: Props) {
                 }}
                 className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
                   scope === s.key
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted hover:text-foreground"
                 }`}
               >

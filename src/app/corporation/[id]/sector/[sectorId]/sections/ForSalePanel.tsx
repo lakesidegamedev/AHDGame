@@ -360,7 +360,7 @@ export default function ForSalePanel({
                 onList();
               }}
               disabled={listing || !listQuote}
-              className="flex-1 rounded-lg border border-primary/40 bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg border border-primary/40 bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {listing ? "Listing…" : "Confirm listing"}
             </button>

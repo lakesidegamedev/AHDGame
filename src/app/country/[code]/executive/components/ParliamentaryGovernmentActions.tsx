@@ -122,7 +122,7 @@ export function ParliamentaryGovernmentActions({
             </div>
             <button
               onClick={() => setAppointModalOpen(true)}
-              className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Appoint {executiveTitle}
             </button>
@@ -144,7 +144,7 @@ export function ParliamentaryGovernmentActions({
           </div>
           <button
             onClick={() => setHosModalOpen(true)}
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Nominate {hosNomination.title}
           </button>

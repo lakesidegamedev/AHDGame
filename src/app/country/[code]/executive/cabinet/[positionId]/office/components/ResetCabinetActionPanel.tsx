@@ -139,7 +139,7 @@ export function ResetCabinetActionPanel({
                   submitting !== null
                 }
                 onClick={() => void issue(action.id)}
-                className="mt-4 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted"
               >
                 {active ? "Active" : submitting === action.id ? "Issuing..." : "Use action"}
               </button>

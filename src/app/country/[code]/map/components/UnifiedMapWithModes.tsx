@@ -168,7 +168,7 @@ export function UnifiedMapWithModes({
                     onClick={() => setResourceType(r)}
                     className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                       resourceType === r
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card-elevated text-muted hover:text-foreground"
                     }`}
                   >
@@ -183,7 +183,7 @@ export function UnifiedMapWithModes({
                     onClick={() => setResourceToggle(tog)}
                     className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                       resourceToggle === tog
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card-elevated text-muted hover:text-foreground"
                     }`}
                   >

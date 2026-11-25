@@ -217,7 +217,7 @@ export function PriorityLane({ onResolved }: { onResolved?: () => void }) {
               type="button"
               onClick={() => void commit()}
               disabled={!pick || committing || expired}
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none"
+              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border motion-reduce:transition-none"
             >
               {committing ? "Committing…" : "Commit"}
             </button>

@@ -197,7 +197,7 @@ export function PrivatizationVotePanel({
             disabled={submitting}
             className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
               myVote?.vote === "yes"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "border border-card-border hover:bg-card"
             }`}
           >

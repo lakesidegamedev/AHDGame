@@ -363,7 +363,7 @@ export function CorporationsTable({
                           <button
                             onClick={() => onAppointCeo(row.id)}
                             disabled={!appointedCharId || actionLoading === row.id}
-                            className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
+                            className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                           >
                             Appoint
                           </button>

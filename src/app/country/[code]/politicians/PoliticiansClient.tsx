@@ -453,7 +453,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
                 </p>
                 <button
                   onClick={resetFilters}
-                  className="mt-6 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                  className="mt-6 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   Clear all filters
                 </button>

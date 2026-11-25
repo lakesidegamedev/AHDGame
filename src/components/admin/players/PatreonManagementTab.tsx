@@ -186,7 +186,7 @@ export function PatreonManagementTab({ context = "admin" }: PatreonManagementTab
               type="button"
               onClick={() => void saveStatus(tier || null)}
               disabled={loading}
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               Save
             </button>

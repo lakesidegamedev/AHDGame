@@ -167,7 +167,9 @@ export function PresidentialMapWithStateDetail({
             <button
               onClick={() => setViewMode("ev")}
               className={`px-3 py-1.5 text-sm font-medium transition-colors rounded-l-lg ${
-                viewMode === "ev" ? "bg-primary text-white" : "text-muted hover:text-foreground"
+                viewMode === "ev"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               EV
@@ -176,7 +178,7 @@ export function PresidentialMapWithStateDetail({
               onClick={() => setViewMode("popular")}
               className={`px-3 py-1.5 text-sm font-medium transition-colors rounded-r-lg ${
                 viewMode === "popular"
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted hover:text-foreground"
               }`}
             >

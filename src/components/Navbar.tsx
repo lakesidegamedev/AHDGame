@@ -645,7 +645,7 @@ export const Navbar = React.memo(function Navbar({
                 </Link>
                 <Link
                   href="/register"
-                  className="inline-flex items-center justify-center rounded-lg bg-primary px-3.5 h-9 text-sm font-semibold text-white transition-all duration-150 hover:bg-primary-dark active:scale-[0.98]"
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-3.5 h-9 text-sm font-semibold text-primary-foreground transition-all duration-150 hover:bg-primary-dark active:scale-[0.98]"
                 >
                   {t("common.register")}
                 </Link>

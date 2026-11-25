@@ -368,7 +368,7 @@ export function NppRecruitmentPanel({
         <button
           onClick={handleRecruit}
           disabled={!canRecruitNow || recruiting}
-          className="w-full sm:w-auto px-6 py-2.5 rounded-lg text-sm font-medium transition-colors bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto px-6 py-2.5 rounded-lg text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed"
         >
           {recruiting
             ? "Recruiting..."

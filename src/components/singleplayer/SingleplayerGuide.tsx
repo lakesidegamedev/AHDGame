@@ -135,7 +135,7 @@ export function SingleplayerGuide() {
                     aria-hidden="true"
                     className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] ${
                       step.done
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : current
                           ? "border-primary text-primary"
                           : "border-card-border text-muted"
@@ -167,7 +167,7 @@ export function SingleplayerGuide() {
               {LINK_STEPS.has(next.id) && !onNextPage ? (
                 <Link
                   href={next.href}
-                  className="mt-2 inline-flex rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary/90"
+                  className="mt-2 inline-flex rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
                 >
                   {t(`steps.${next.id}.action`)}
                 </Link>

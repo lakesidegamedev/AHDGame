@@ -207,7 +207,7 @@ function PetitionCard({
             type="button"
             disabled={busy}
             onClick={() => onAction(petition, "sign")}
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {busy ? "Signing" : "Sign recall petition"}
           </button>
@@ -218,7 +218,7 @@ function PetitionCard({
               type="button"
               disabled={busy}
               onClick={() => onAction(petition, "remove")}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {busy ? "Recording" : "Declare: remove"}
             </button>
@@ -392,7 +392,7 @@ export function CommonsVacancyPanel({ countryId }: { countryId: CountryId }) {
               type="button"
               disabled={pending === "resign"}
               onClick={() => void handleResign()}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {pending === "resign" ? "Resigning" : "Resign seat"}
             </button>

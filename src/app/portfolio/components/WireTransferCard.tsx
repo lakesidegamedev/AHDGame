@@ -225,7 +225,7 @@ export function WireTransferCard({
         <button
           onClick={handleSend}
           disabled={sending || !selected || !amount}
-          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed transition-opacity"
         >
           {sending ? "Sending…" : "Send wire"}
         </button>

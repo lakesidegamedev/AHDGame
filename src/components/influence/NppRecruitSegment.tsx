@@ -146,7 +146,7 @@ export function NppRecruitSegment({
           type="button"
           onClick={handle}
           disabled={disabled}
-          className="mt-4 w-full rounded-lg bg-primary py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+          className="mt-4 w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {st.inFrontier === false
             ? `${st.stateName} is out of your party's reach`

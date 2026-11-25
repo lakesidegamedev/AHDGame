@@ -331,7 +331,7 @@ export function ResourceCapacityAdminPanel() {
                             <button
                               onClick={() => saveRow(row)}
                               disabled={saving}
-                              className="text-body-xs px-3 py-1 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
+                              className="text-body-xs px-3 py-1 rounded bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                             >
                               {saving ? "Saving…" : "Save"}
                             </button>

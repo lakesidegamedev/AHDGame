@@ -77,7 +77,7 @@ export default function CommodityChart({
                 onClick={() => setTimeRange(range)}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   timeRange === range
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -91,7 +91,7 @@ export default function CommodityChart({
               onClick={() => setView("price")}
               className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                 view === "price"
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -101,7 +101,7 @@ export default function CommodityChart({
               onClick={() => setView("supply_demand")}
               className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                 view === "supply_demand"
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground"
               }`}
             >

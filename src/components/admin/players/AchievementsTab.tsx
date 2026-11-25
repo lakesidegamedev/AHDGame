@@ -178,7 +178,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
           type="button"
           onClick={handleSyncNames}
           disabled={syncLoading}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {syncLoading ? "Syncing..." : "Sync names"}
         </button>
@@ -253,7 +253,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
               <button
                 type="submit"
                 disabled={actionLoading || !grantCharacterId || !grantSlug}
-                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 Grant achievement
               </button>

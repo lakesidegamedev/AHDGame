@@ -232,7 +232,7 @@ export function SupplyOfferBoard({
             type="button"
             disabled={busy}
             onClick={() => setConfirming(row.id)}
-            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy ? t("taking") : t("take")}
           </button>
@@ -261,7 +261,7 @@ export function SupplyOfferBoard({
               type="button"
               disabled={busy}
               onClick={() => void take(row)}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {busy ? t("taking") : t("confirm")}
             </button>
@@ -395,7 +395,7 @@ export function SupplyOfferBoard({
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {t("submit")}
           </button>

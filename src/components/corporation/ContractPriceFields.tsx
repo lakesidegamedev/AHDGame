@@ -80,7 +80,7 @@ export function ContractPriceFields(props: {
             onClick={() => onChange({ ...value, priceMode: mode })}
             className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
               value.priceMode === mode
-                ? "border-primary bg-primary text-white"
+                ? "border-primary bg-primary text-primary-foreground"
                 : "border-card-border text-muted hover:text-foreground"
             } disabled:opacity-50`}
           >

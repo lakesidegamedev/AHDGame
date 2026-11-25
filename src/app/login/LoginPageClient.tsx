@@ -308,7 +308,7 @@ export default function LoginPageClient({
                 />
                 <div className="absolute left-5 top-4 z-10">{brand}</div>
                 {eraLabel && (
-                  <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white">
+                  <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-primary-foreground">
                     {eraLabel}
                   </span>
                 )}

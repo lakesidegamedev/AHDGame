@@ -103,7 +103,7 @@ export function PageError({
             </Link>
             <Link
               href="/dashboard"
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Dashboard
             </Link>

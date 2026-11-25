@@ -303,7 +303,7 @@ export function PrivateLoanModal({
               disabled={!hasCharacter}
               className={`flex-1 border-r border-card-border px-3 py-2.5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                 borrowerType === "character"
-                  ? "bg-primary font-semibold text-white"
+                  ? "bg-primary font-semibold text-primary-foreground"
                   : "bg-card-elevated text-muted hover:text-foreground"
               }`}
             >
@@ -315,7 +315,7 @@ export function PrivateLoanModal({
               disabled={eligibleCorporations.length === 0}
               className={`flex-1 px-3 py-2.5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                 borrowerType === "corporation"
-                  ? "bg-primary font-semibold text-white"
+                  ? "bg-primary font-semibold text-primary-foreground"
                   : "bg-card-elevated text-muted hover:text-foreground"
               }`}
             >

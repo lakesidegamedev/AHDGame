@@ -485,7 +485,7 @@ export function CreateCrisisModal({
           <button
             onClick={onSubmit}
             disabled={submitting}
-            className="rounded border border-primary bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="rounded border border-primary bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
           >
             {submitting ? "Creating..." : "Create crisis"}
           </button>

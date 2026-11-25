@@ -361,7 +361,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
               </div>
               <button
                 onClick={() => setTradeOpen(true)}
-                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Trade {currencyCode}
               </button>

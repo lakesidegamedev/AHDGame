@@ -146,7 +146,7 @@ export function OrderBook({ orders, onFilled }: Props) {
                       <button
                         onClick={() => handleFill(o._id)}
                         disabled={filling === o._id}
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                        className="rounded-md bg-primary px-3 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         {filling === o._id ? "..." : "Fill"}
                       </button>

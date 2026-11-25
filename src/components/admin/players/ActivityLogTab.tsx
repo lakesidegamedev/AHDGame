@@ -435,7 +435,7 @@ export function ActivityLogTab({
         <button
           onClick={applyFilters}
           disabled={loading}
-          className="min-h-[40px] rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="min-h-[40px] rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           Search
         </button>

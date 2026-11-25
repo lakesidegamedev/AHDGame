@@ -128,7 +128,7 @@ export default async function CampaignPage() {
           </p>
           <Link
             href="/elections"
-            className="inline-block mt-4 px-6 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors"
+            className="inline-block mt-4 px-6 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             View elections
           </Link>

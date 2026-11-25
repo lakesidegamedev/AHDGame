@@ -178,7 +178,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
                 !nameValidation.valid ||
                 newName === character.name
               }
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed whitespace-nowrap"
             >
               <span className="flex items-center gap-2">
                 {nameSaved ? <CheckIcon /> : nameSaving ? <SpinnerIcon /> : null}
@@ -242,7 +242,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
         <button
           type="submit"
           disabled={bioSaving}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed flex items-center gap-2"
         >
           <span className="flex items-center gap-2">
             {bioSaved ? <CheckIcon /> : bioSaving ? <SpinnerIcon /> : null}

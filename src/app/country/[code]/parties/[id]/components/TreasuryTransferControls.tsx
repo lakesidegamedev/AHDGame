@@ -140,7 +140,7 @@ export function TreasuryTransferControls({
           <button
             onClick={onTransfer}
             disabled={transferForm.transferring}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {transferForm.transferring ? "…" : "Transfer"}
           </button>
@@ -224,7 +224,7 @@ export function TreasuryTransferControls({
           <button
             onClick={onSendToMember}
             disabled={sendForm.sending}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {sendForm.sending ? "…" : "Send"}
           </button>

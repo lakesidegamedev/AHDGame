@@ -878,7 +878,7 @@ export function renderLegacyProposeBillModalView(
             <button
               type="submit"
               disabled={loading || !canAfford || (hasActiveBill && !adminOverride)}
-              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
             >
               {loading ? "Proposing…" : "Propose bill"}
             </button>

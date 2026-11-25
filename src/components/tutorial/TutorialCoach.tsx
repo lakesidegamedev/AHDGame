@@ -678,7 +678,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               <button
                 type="button"
                 onClick={() => current.link && router.push(current.link)}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
               >
                 {t("coach.takeMeThere")}
               </button>
@@ -686,7 +686,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               <button
                 type="button"
                 onClick={advance}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
               >
                 {current.external ? t("coach.next") : t(current.next)}
               </button>

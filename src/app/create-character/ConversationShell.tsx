@@ -226,7 +226,7 @@ export function ConversationShell({
             onClick={() => goTo(next.id)}
             disabled={!active.complete}
             aria-describedby={blocker ? "conversation-step-blocker" : undefined}
-            className="min-h-[2.75rem] rounded bg-primary px-6 text-body-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[2.75rem] rounded bg-primary px-6 text-body-sm font-semibold text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted"
           >
             {next.id === "review" ? "Review your choices" : "Continue"}
           </button>

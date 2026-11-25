@@ -213,7 +213,7 @@ function ReportForm({
           type="button"
           disabled={!tag && !detail.trim()}
           onClick={() => onSend([tag ?? "", detail.trim()].filter(Boolean).join(": "))}
-          className="rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:bg-card-elevated disabled:text-muted"
+          className="rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground disabled:bg-card-elevated disabled:text-muted"
         >
           Send report
         </button>

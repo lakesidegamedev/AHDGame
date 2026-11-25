@@ -270,7 +270,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
           <button
             onClick={handleSubmit}
             disabled={submitting || picked.length < 2 || !picksAreConnected}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Locking in…" : "Lock in priority region"}
           </button>

@@ -188,7 +188,7 @@ export function SupplyOfferRow({
             type="button"
             disabled={busy || !corpId}
             onClick={() => void take()}
-            className="inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy ? "Taking..." : "Take offer"}
           </button>
