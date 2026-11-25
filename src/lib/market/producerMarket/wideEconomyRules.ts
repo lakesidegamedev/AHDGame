@@ -9,6 +9,7 @@
  */
 import type { ProducerOffer, PurchaseOrder } from "./producerQuotes";
 import type { ProducerMarketResult } from "./rules";
+import type { WideEconomySale } from "./productionTypes";
 import { sortFundedCountryBookRows } from "./fundedBookRules";
 
 /** The background economy's size: this share of each good's baseline demand. */
@@ -480,6 +481,30 @@ export function withWideEconomyFills(
     row.supply = Math.max(0, row.supply - Math.max(0, r.offeredUnits - r.deliveredUnits));
   }
   return { ...market, prices, countryBooks: sortFundedCountryBookRows([...rows.values()]) };
+}
+
+/**
+ * What the wider economy's seller sold this clearing, one row per offer that
+ * sold anything: the units the country book counts as its supply.
+ */
+export function wideEconomySales(
+  market: Pick<ProducerMarketResult, "offers">,
+  sellerOffers: readonly ProducerOffer[]
+): WideEconomySale[] {
+  const settled = new Map(market.offers.map((o) => [o.id, o]));
+  const out: WideEconomySale[] = [];
+  for (const offer of sellerOffers) {
+    const units = settled.get(offer.id)?.deliveredUnits ?? 0;
+    if (!(units > 0) || !offer.countryId) continue;
+    out.push({
+      accountId: offer.accountId,
+      countryId: offer.countryId,
+      commodity: offer.commodity,
+      book: offer.book,
+      units,
+    });
+  }
+  return out;
 }
 
 /** Units and spend each order got from the wider economy's seller this clearing. */
