@@ -33,6 +33,12 @@ export interface ActionCard {
 
 export type ActionsViewMode = "cards" | "compact";
 
+export interface LoadingActionCardProps {
+  card: ActionCard;
+  imageUrl: string | null;
+  loading: true;
+}
+
 /**
  * What one use of an action does to the stat it moves, from the same quote
  * the server executes: e.g. Influence 12.0% to 13.0%. Absent for actions

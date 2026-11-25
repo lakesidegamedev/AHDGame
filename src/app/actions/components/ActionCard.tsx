@@ -20,49 +20,82 @@ import {
 } from "../actionsConstants";
 
 const FLIPFLOP_AXIS_LABELS = { economic: "Economic", social: "Social" } as const;
-import type { ActionCardProps } from "../actionsTypes";
+import type { ActionCardProps, LoadingActionCardProps } from "../actionsTypes";
 import ActionExecuteRow from "./ActionExecuteRow";
 import { Delta } from "@/components/ui/Figure";
 import { formatMoney } from "@/lib/ui/numbers";
 
-const ActionCard = memo(function ActionCard({
+const CARD_FRAME =
+  "relative flex flex-col overflow-hidden rounded-xl border border-card-border bg-card transition-colors hover:border-foreground/20";
+const CARD_BODY = "flex flex-col flex-1 p-4 gap-4";
+
+function ActionCardHeading({
   card,
   imageUrl,
-  character,
-  homeState,
-  executing,
-  flash,
-  flipflopStep,
-  flipflopAxis,
-  flipflopDir,
-  onExecute,
-  onOpenCampaignAction,
-  onFlipflop,
-  onFlipflopStepChange,
-  onFlipflopAxisChange,
-  onFlipflopDirChange,
-  campaignActionCost,
-  campaignFundCost,
-  campaignMaxed,
-  advertiseActionCost,
-  advertiseFundCost,
-  fundraiseActionCost,
-  buildDonorBaseActionCost,
-  buildDonorBaseFundCost,
-  fundraiseYield,
-  campaignCurrency,
-  displayCampaignFunds,
-  quotedFundCost,
-  displayPersonalWealth,
-  blockGdpScaledCosts,
-  forexEnabled,
-  convertCashOpen,
-  convertCashAmount,
-  onConvertCashOpenChange,
-  onConvertCashAmountChange,
-  onConvertCashExecute,
-  projection,
-}: ActionCardProps) {
+  blocked,
+}: {
+  card: ActionCardProps["card"];
+  imageUrl: string | null;
+  blocked?: boolean;
+}) {
+  return (
+    <div className="relative h-36 overflow-hidden bg-card-elevated">
+      {imageUrl && (
+        <Image
+          src={imageUrl}
+          alt={card.imageAlt}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          loading="lazy"
+          fetchPriority="low"
+          unoptimized={bypassNextImageOptimization(imageUrl)}
+          className={`object-cover transition-[filter] ${blocked ? "grayscale" : ""}`}
+        />
+      )}
+      <div className={`absolute inset-0 bg-gradient-to-t ${CARD_PHOTO_SCRIM}`} />
+      <div className="absolute inset-0 flex flex-col justify-end p-4">
+        <h3 className="text-heading font-semibold leading-tight text-white">{card.label}</h3>
+        <p className="mt-0.5 text-body-sm text-white/85">
+          {CATEGORY_LABELS[card.category]} · {card.tagline}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function LoadingDetails({ card }: Pick<LoadingActionCardProps, "card">) {
+  const fundKind = fundLineKind(card.type);
+  return (
+    <>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-card-border pt-3 text-body">
+        <dt className="text-muted">{FUND_LINE_TERMS.cost}</dt>
+        <dd className="text-muted">Checking price</dd>
+        {fundKind !== "cost" && (
+          <>
+            <dt className="text-muted">{FUND_LINE_TERMS[fundKind]}</dt>
+            <dd aria-hidden />
+          </>
+        )}
+        <dt className="text-muted">Effect</dt>
+        <dd className="text-foreground">
+          {card.effect}
+          {card.effectNote && (
+            <span className="mt-0.5 block text-body-sm text-muted">{card.effectNote}</span>
+          )}
+        </dd>
+      </dl>
+      <button
+        disabled
+        type="button"
+        className="mt-auto w-full cursor-not-allowed rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold opacity-50"
+      >
+        {card.label}
+      </button>
+    </>
+  );
+}
+
+const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActionCardProps) {
   const {
     formatAmount,
     toDisplay,
@@ -73,14 +106,62 @@ const ActionCard = memo(function ActionCard({
     inputSymbol,
     baseRates,
   } = useCurrency();
+  // Self-funding requires confirmation of the Infamy cost.
+  const [convertConfirming, setConvertConfirming] = useState(false);
+  if ("loading" in props) {
+    return (
+      <div data-coach={`action-${props.card.type}`} className={CARD_FRAME}>
+        <ActionCardHeading card={props.card} imageUrl={props.imageUrl} />
+        <div className={CARD_BODY}>
+          <p className="flex-1 text-body leading-relaxed text-muted">{props.card.flavor}</p>
+          <LoadingDetails card={props.card} />
+        </div>
+      </div>
+    );
+  }
+  const {
+    card,
+    imageUrl,
+    character,
+    homeState,
+    executing,
+    flash,
+    flipflopStep,
+    flipflopAxis,
+    flipflopDir,
+    onExecute,
+    onOpenCampaignAction,
+    onFlipflop,
+    onFlipflopStepChange,
+    onFlipflopAxisChange,
+    onFlipflopDirChange,
+    campaignActionCost,
+    campaignFundCost,
+    campaignMaxed,
+    advertiseActionCost,
+    advertiseFundCost,
+    fundraiseActionCost,
+    buildDonorBaseActionCost,
+    buildDonorBaseFundCost,
+    fundraiseYield,
+    campaignCurrency,
+    displayCampaignFunds,
+    quotedFundCost,
+    displayPersonalWealth,
+    blockGdpScaledCosts,
+    forexEnabled,
+    convertCashOpen,
+    convertCashAmount,
+    onConvertCashOpenChange,
+    onConvertCashAmountChange,
+    onConvertCashExecute,
+    projection,
+  } = props;
   const personalAnchor = forexEnabled
     ? toInternalFrom(displayPersonalWealth, currencyCode)
     : displayPersonalWealth;
   const politicalLocal = (amount: number) =>
     forexEnabled ? campaignAnchorToLocal(amount, character.countryId ?? "US", baseRates) : amount;
-  // Self-funding confirm step: the player must acknowledge the Infamy cost
-  // before the donation is submitted (server behavior unchanged).
-  const [convertConfirming, setConvertConfirming] = useState(false);
   const isCampaign = card.type === "campaign";
   const isAdvertise = card.type === "advertise";
   const isFundraise = card.type === "fundraise";
@@ -151,34 +232,9 @@ const ActionCard = memo(function ActionCard({
     gdpCostsBlocked || isMaxed || noDonor || noCash || cantAffordFunds || cantAffordActions;
 
   return (
-    <div
-      data-coach={`action-${card.type}`}
-      className="relative flex flex-col overflow-hidden rounded-xl border border-card-border bg-card transition-colors hover:border-foreground/20"
-    >
-      {/* Image Header — period photography, resolved for the live era + country */}
-      <div className="relative h-36 overflow-hidden">
-        {/* unoptimized: static Cloudflare CDN art — routing through the Railway image optimizer would add egress */}
-        <Image
-          src={imageUrl}
-          alt={card.imageAlt}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          loading="lazy"
-          unoptimized={bypassNextImageOptimization(imageUrl)}
-          className={`object-cover transition-[filter] ${blocked ? "grayscale" : ""}`}
-        />
-        <div className={`absolute inset-0 bg-gradient-to-t ${CARD_PHOTO_SCRIM}`} />
-
-        <div className="absolute inset-0 flex flex-col justify-end p-4">
-          <h3 className="text-heading font-semibold leading-tight text-white">{card.label}</h3>
-          <p className="mt-0.5 text-body-sm text-white/85">
-            {CATEGORY_LABELS[card.category]} · {card.tagline}
-          </p>
-        </div>
-      </div>
-
-      {/* Content Body */}
-      <div className="flex flex-col flex-1 p-4 gap-4">
+    <div data-coach={`action-${card.type}`} className={CARD_FRAME}>
+      <ActionCardHeading card={card} imageUrl={imageUrl} blocked={blocked} />
+      <div className={CARD_BODY}>
         <p className="flex-1 text-body leading-relaxed text-muted">{card.flavor}</p>
 
         {/* Cost and effect: two plain rows */}

@@ -236,6 +236,7 @@ export interface AuthUser {
 export interface AuthUserWithCharacter extends AuthUser {
   hasCharacter: boolean;
   character?: Character;
+  actionsViewMode?: User["actionsViewMode"];
 }
 
 /**
@@ -462,6 +463,7 @@ export const getAuthUserWithCharacter = cache(async (): Promise<AuthUserWithChar
     ...authUser,
     hasCharacter: !!character,
     character: character || undefined,
+    ...(user.actionsViewMode && { actionsViewMode: user.actionsViewMode }),
   };
 });
 
