@@ -139,6 +139,8 @@ export function EconomyOutlookClient() {
               strip={<PulseStrip countryId={countryId} pulse={data.pulse} />}
             />
 
+            {/* Section heading for the outline; the panels below carry their own titles. */}
+            <h2 className="sr-only">Economic indicators</h2>
             <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
               <div className="flex flex-col gap-4 lg:col-span-5">
                 <RealEconomyPanel

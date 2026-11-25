@@ -146,6 +146,8 @@ export function NewsPageClient({
         </header>
 
         {activeFeed === "article" && crisisWire}
+        {/* Section heading for the outline; the feed and side panels carry their own titles. */}
+        <h2 className="sr-only">News feed</h2>
         <NewsTab
           authorId={authorId}
           initialPosts={activeFeed === "article" ? initialPosts : undefined}

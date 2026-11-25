@@ -235,6 +235,7 @@ export async function GET(request: Request) {
           { supply: data?.globalSupply ?? 0, demand: data?.globalDemand ?? 0 },
           world
         ),
+        ...(world?.carriedStock ? { carriedStock: world.carriedStock } : {}),
         ...(world
           ? {
               backgroundEconomy: {

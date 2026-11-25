@@ -204,6 +204,7 @@ export function ParliamentaryGovernmentActions({
           joint sitting — either chamber's deputies may vote. */}
       {activeAppointmentVotes.map((vote) => (
         <GovernmentVotePanel
+          headingLevel="h2"
           key={vote._id}
           vote={vote}
           countryCode={countryCode}
@@ -221,6 +222,7 @@ export function ParliamentaryGovernmentActions({
       {/* Active no-confidence vote panel (single) */}
       {activeNoConfidenceVote && (
         <GovernmentVotePanel
+          headingLevel="h2"
           vote={activeNoConfidenceVote}
           countryCode={countryCode}
           canVote={viewerIsCommonsMp}

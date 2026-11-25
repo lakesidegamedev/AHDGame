@@ -123,6 +123,7 @@ import { producerWideEconomyBaselineCollection } from "@/lib/db/repositories/pro
 import {
   WIDE_ECONOMY_BASELINE_TURNS,
   WIDE_ECONOMY_SHORT_TURNS,
+  WIDE_ECONOMY_SURPLUS_TURNS,
   type WideEconomyBaseline,
   type WideEconomyMarketRow,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -490,31 +491,42 @@ async function prepareRunFundedProducerTurn(
   }
   // Recent real shortage per lane, newest first, for the seller's short-lane
   // boost; a turn without the record ends the run of turns.
+  // Recent unsold share of new plant output per lane, the same way, for the
+  // buyer's oversupplied-lane boost.
   let wideEconomyShortageHistory: Record<string, number>[] | undefined;
+  let wideEconomySurplusHistory: Record<string, number>[] | undefined;
   if ((input.env.wideEconomyStage ?? 0) >= 1) {
     const ids = Array.from(
-      { length: WIDE_ECONOMY_SHORT_TURNS },
+      { length: Math.max(WIDE_ECONOMY_SHORT_TURNS, WIDE_ECONOMY_SURPLUS_TURNS) },
       (_, i) => `${worldEpoch}:${openingTurn - i}`
     );
     const docs = await producerMarketOutcomesCollection<{
       _id: string;
       wideShortage?: Record<string, number>;
+      wideSurplus?: Record<string, number>;
     }>(db)
-      .find({ _id: { $in: ids } }, { projection: { wideShortage: 1 } })
+      .find({ _id: { $in: ids } }, { projection: { wideShortage: 1, wideSurplus: 1 } })
       .toArray();
-    const byId = new Map(docs.map((d) => [d._id, d.wideShortage]));
-    wideEconomyShortageHistory = [];
-    for (const id of ids) {
-      const shortage = byId.get(id);
-      if (!shortage) break;
-      wideEconomyShortageHistory.push(shortage);
-    }
+    const byId = new Map(docs.map((d) => [d._id, d]));
+    const run = (pick: (d: (typeof docs)[number]) => Record<string, number> | undefined) => {
+      const out: Record<string, number>[] = [];
+      for (const id of ids) {
+        const doc = byId.get(id);
+        const value = doc ? pick(doc) : undefined;
+        if (!value) break;
+        out.push(value);
+      }
+      return out;
+    };
+    wideEconomyShortageHistory = run((d) => d.wideShortage).slice(0, WIDE_ECONOMY_SHORT_TURNS);
+    wideEconomySurplusHistory = run((d) => d.wideSurplus).slice(0, WIDE_ECONOMY_SURPLUS_TURNS);
   }
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
     lookups,
     ...(wideEconomyShortageHistory ? { wideEconomyShortageHistory } : {}),
+    ...(wideEconomySurplusHistory ? { wideEconomySurplusHistory } : {}),
     env: demandEnv,
     sectorOps: [],
     publicCarryIn,

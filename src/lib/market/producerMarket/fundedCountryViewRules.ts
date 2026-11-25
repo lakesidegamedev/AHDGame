@@ -51,6 +51,8 @@ export interface FundedCountryMarket {
   supplyBy?: UnitsByKind;
   demandBy?: UnitsByKind;
   filledBy?: UnitsByKind;
+  /** Part of the company supply that is stock from earlier turns; absent when none. */
+  carriedStock?: number;
 }
 
 /** The funded book a turn published, or null when there is none. */
@@ -79,6 +81,7 @@ export function fundedCountryMarket(row: FundedCountryBookRow): FundedCountryMar
     ...(row.supplyBy ? { supplyBy: { ...row.supplyBy } } : {}),
     ...(row.requestedBy ? { demandBy: withoutSpillover(row.requestedBy, spilloverRequested) } : {}),
     ...(row.filledBy ? { filledBy: { ...row.filledBy } } : {}),
+    ...(nonNegative(row.carriedStock) > 0 ? { carriedStock: nonNegative(row.carriedStock) } : {}),
   };
 }
 
@@ -113,6 +116,7 @@ export function worldFundedMarket(
   const supplyBy = mergeBy((m) => m.supplyBy);
   const demandBy = mergeBy((m) => m.demandBy);
   const filledBy = mergeBy((m) => m.filledBy);
+  const carriedStock = sum((m) => m.carriedStock ?? 0);
   return {
     supply: sum((m) => m.supply),
     demand: sum((m) => m.demand),
@@ -124,6 +128,7 @@ export function worldFundedMarket(
     ...(supplyBy ? { supplyBy } : {}),
     ...(demandBy ? { demandBy } : {}),
     ...(filledBy ? { filledBy } : {}),
+    ...(carriedStock > 0 ? { carriedStock } : {}),
   };
 }
 

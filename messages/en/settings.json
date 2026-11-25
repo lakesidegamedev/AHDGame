@@ -764,7 +764,9 @@
         "system": "Account and community"
       },
       "noMatch": "No alert matches that search.",
-      "groupOnCount": "{on} of {total} on"
+      "groupOnCount": "{on} of {total} on",
+      "groupAllOn": "Turn all on",
+      "groupAllOff": "Turn all off"
     },
     "email": {
       "noneOnFile": "No email on file",

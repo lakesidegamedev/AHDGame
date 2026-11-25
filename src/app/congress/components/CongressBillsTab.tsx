@@ -210,7 +210,9 @@ export function CongressBillsTab({
           />
           <div className="min-w-[9rem] flex-1">
             <h2 className="truncate text-lg font-semibold leading-tight text-foreground">
-              {chamber?.name ?? (activeTab === "senate" ? "Senate" : "House")}
+              {/* Names the section, not just the chamber: the banner above already
+                  carries the chamber name as its own heading. */}
+              {chamber?.name ?? (activeTab === "senate" ? "Senate" : "House")} bills
             </h2>
             <p className="mt-0.5 text-xs text-muted">
               {chamber?.seats != null && <>{chamber.seats} seats · </>}

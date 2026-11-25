@@ -44,6 +44,11 @@ export interface FundedCountryBookRow {
   demandBy?: import("./marketAttributionRules").UnitsByKind;
   requestedBy?: import("./marketAttributionRules").UnitsByKind;
   filledBy?: import("./marketAttributionRules").UnitsByKind;
+  /**
+   * Part of the company supply that is plants' unsold stock from earlier
+   * turns offered again, same basis; absent when none (carriedStockByBook).
+   */
+  carriedStock?: number;
 }
 
 /** Compact regional-only market measurements, in settlement units per turn. */

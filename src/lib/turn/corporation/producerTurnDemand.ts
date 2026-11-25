@@ -86,6 +86,8 @@ import {
   wideEconomyWeights as buildWideEconomyWeights,
   wideEconomyShortageBoost as buildWideEconomyShortageBoost,
   wideEconomyBoostOffers as buildWideEconomyBoostOffers,
+  wideEconomyBoostedOrders,
+  wideEconomySurplusBoost,
   type WideEconomyBaseline,
   type WideEconomyMarketRow,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -117,6 +119,8 @@ export async function buildProducerTurnDemand(
     wideEconomyAccountId?: (countryId: string) => string;
     /** Recent real shortage per lane, newest first (wideEconomyShortageBoost). */
     wideEconomyShortageHistory?: readonly Readonly<Record<string, number>>[];
+    /** Recent unsold share of new plant output per lane, newest first (wideEconomySurplusBoost). */
+    wideEconomySurplusHistory?: readonly Readonly<Record<string, number>>[];
     /** The world's stored wider-economy baseline, when one exists. */
     wideEconomyBaseline?: WideEconomyBaseline | null;
     /** Recent settled turns to build the baseline from when none is stored yet. */
@@ -617,7 +621,16 @@ export async function buildProducerTurnDemand(
       }
     : null;
   // Both sides trade only in the after-market pass (residualWideEconomyLines).
-  const wideEconomyOrders = wideOn && wideLineInput ? buildWideEconomyOrders(wideLineInput) : [];
+  // A persistently oversupplied lane gets a bigger buyer, after the market as ever
+  // (gameConfig.wideEconomySurplusStage, absent = on).
+  const wideSurplusBoost =
+    (input.env.wideEconomySurplusStage ?? 1) >= 1
+      ? wideEconomySurplusBoost(input.wideEconomySurplusHistory ?? [])
+      : new Map<string, number>();
+  const wideEconomyOrders =
+    wideOn && wideLineInput
+      ? wideEconomyBoostedOrders(buildWideEconomyOrders(wideLineInput), wideSurplusBoost, laneKeyOf)
+      : [];
   // A persistently short lane gets a bigger seller, residual only as ever.
   const wideBoost = buildWideEconomyShortageBoost(input.wideEconomyShortageHistory ?? []);
   const wideEconomyOffers = wideOn && wideLineInput ? buildWideEconomyOffers(wideLineInput) : [];

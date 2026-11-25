@@ -68,13 +68,61 @@ export function marketRows(
 ): MarketRows | null {
   if (!market) return null;
   return {
-    supply: block(market.supplyBy, market.supply, "sellers", "Local offers"),
+    supply: withStockRow(
+      block(market.supplyBy, market.supply, "sellers", "Local offers"),
+      market.carriedStock
+    ),
     demand: block(market.demandBy, market.demand, "buyers", "Local orders"),
     received:
       market.filled === null ? null : block(market.filledBy, market.filled, "buyers", "Received"),
     imports: options.world ? null : market.imports,
     exports: options.world ? null : market.exports,
     crossBorder: options.world ? (options.crossBorder ?? null) : null,
+  };
+}
+
+/** Label of the companies' new output when stock from earlier turns is shown apart. */
+export const NEW_OUTPUT_LABEL = "Player and AI companies, made this turn";
+/** Label of plants' unsold stock from earlier turns offered again. */
+export const CARRIED_STOCK_LABEL = "Unsold stock from earlier turns";
+
+/**
+ * The company row split into this turn's output and stock carried from
+ * earlier turns, so an old stock overhang is not read as new overproduction.
+ * The block still adds up to the same total.
+ */
+function withStockRow(supply: MarketRowBlock, stock: number | undefined): MarketRowBlock {
+  const i = supply.rows.findIndex((r) => r.key === "company");
+  if (i < 0 || !(stock != null && stock > 0)) return supply;
+  const company = supply.rows[i]!;
+  const old = Math.min(stock, company.units);
+  const rows = [...supply.rows];
+  rows.splice(
+    i,
+    1,
+    { key: "companyNew", label: NEW_OUTPUT_LABEL, units: company.units - old },
+    { key: "carriedStock", label: CARRIED_STOCK_LABEL, units: old }
+  );
+  return { ...supply, rows };
+}
+
+/**
+ * How offers compared with orders once old stock is set apart: new output
+ * against orders decides whether a market is oversupplied, and stock is a
+ * separate overhang. Ratios are offers over orders; null without orders.
+ */
+export function newOutputBalance(market: {
+  supply: number;
+  demand: number;
+  carriedStock?: number;
+}): { newSupply: number; stock: number; newRatio: number | null; totalRatio: number | null } {
+  const stock = Math.max(0, Math.min(market.carriedStock ?? 0, market.supply));
+  const newSupply = market.supply - stock;
+  return {
+    newSupply,
+    stock,
+    newRatio: market.demand > 0 ? newSupply / market.demand : null,
+    totalRatio: market.demand > 0 ? market.supply / market.demand : null,
   };
 }
 

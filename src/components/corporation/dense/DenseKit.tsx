@@ -465,8 +465,9 @@ export function Segmented<T extends string | number>({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={`border-r border-card-border px-2 text-xs tabular-nums transition-colors last:border-r-0 disabled:opacity-50 ${
+              // Same selected look as filter pills across the game.
               active
-                ? "bg-foreground font-semibold text-background"
+                ? "bg-primary/10 font-semibold text-primary"
                 : "text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >

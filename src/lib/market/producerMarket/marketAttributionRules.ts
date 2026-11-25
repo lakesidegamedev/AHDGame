@@ -40,6 +40,8 @@ export interface CountryBookAttribution {
   demandBy: UnitsByKind;
   requestedBy: UnitsByKind;
   filledBy: UnitsByKind;
+  /** Part of the company supply that is stock from earlier turns; absent when none. */
+  carriedStock?: number;
 }
 
 /** One company's part of a country's book for one good. */
@@ -240,4 +242,52 @@ export function scaleUnits(units: UnitsByKind, factor: number): UnitsByKind {
   return Object.fromEntries(
     Object.entries(units).map(([k, v]) => [k, (v ?? 0) * factor])
   ) as UnitsByKind;
+}
+
+/**
+ * Plants' stock from earlier turns offered again this turn, per country book:
+ * what each offered beyond this turn's output left after its own sites took
+ * theirs. Part of the company supply, on the same per-turn basis; kept apart
+ * so screens can tell new output from an old stock overhang. Keyed by
+ * JSON [countryId, commodity]; books without stock are absent.
+ */
+export function carriedStockByBook(
+  producers: readonly {
+    id: string;
+    products: readonly {
+      commodity: string;
+      producedUnits?: number;
+      offeredUnits?: number;
+      internalDeliveredUnits?: number;
+    }[];
+  }[],
+  countryOf: (producerId: string) => string | null | undefined
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const p of producers) {
+    const countryId = countryOf(p.id);
+    if (!countryId) continue;
+    for (const x of p.products) {
+      const forSale = Math.max(0, positive(x.producedUnits) - positive(x.internalDeliveredUnits));
+      const stock = positive(x.offeredUnits) - forSale;
+      if (!(stock > 1e-9)) continue;
+      const key = JSON.stringify([countryId, x.commodity]);
+      out.set(key, (out.get(key) ?? 0) + stock);
+    }
+  }
+  return out;
+}
+
+/** Each book with its old stock, never more than the company supply it is part of. */
+export function withCarriedStock(
+  books: readonly CountryBookAttribution[],
+  stock: ReadonlyMap<string, number>
+): CountryBookAttribution[] {
+  return books.map((b) => {
+    const units = Math.min(
+      stock.get(JSON.stringify([b.countryId, b.commodity])) ?? 0,
+      b.supplyBy.company ?? 0
+    );
+    return units > 0 ? { ...b, carriedStock: units } : b;
+  });
 }

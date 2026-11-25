@@ -10,7 +10,15 @@ import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBoo
 import { commodityDetailPerTurn, marketPerTurn } from "@/lib/commodities/perTurnUnits";
 import { flowsFromWorldMarket, worldSupplyFigures } from "@/lib/commodities/worldSupplyRules";
 import { buildScarcityBreakdown, premiumTrendSentence } from "@/lib/market/priceBreakdownRules";
-import { balanceParts, listRowsWithOthers, marketRows, rowsTotal } from "./marketRows";
+import {
+  balanceParts,
+  CARRIED_STOCK_LABEL,
+  listRowsWithOthers,
+  marketRows,
+  NEW_OUTPUT_LABEL,
+  newOutputBalance,
+  rowsTotal,
+} from "./marketRows";
 
 const sum = (xs: readonly { units: number }[]) => xs.reduce((n, x) => n + x.units, 0);
 
@@ -210,5 +218,24 @@ describe("market rows add up to the totals shown", () => {
         breakdown.pricingLeavesOutBackground
       )
     ).toMatch(/^The premium reads supply without what the background economy sold\. Demand/);
+  });
+
+  it("old stock: the company row splits into new output and stock, and still adds up", () => {
+    const us = { ...display(markets.US!), carriedStock: 30 };
+    const rows = marketRows(us, { world: false })!;
+    expect(rowsTotal(rows.supply.rows)).toBeCloseTo(us.supply, 9);
+    expect(rows.supply.rows.map((r) => [r.label, r.units])).toEqual([
+      [NEW_OUTPUT_LABEL, 70],
+      [CARRIED_STOCK_LABEL, 30],
+      ["Background economy (sellers)", 10],
+    ]);
+  });
+
+  it("old stock: a market is oversupplied only when new output exceeds orders", () => {
+    // 150 offered against 100 ordered, but 60 of it is old stock: new output is 90% of orders.
+    const b = newOutputBalance({ supply: 150, demand: 100, carriedStock: 60 });
+    expect(b).toEqual({ newSupply: 90, stock: 60, newRatio: 0.9, totalRatio: 1.5 });
+    // Stock is never more than the supply it is part of.
+    expect(newOutputBalance({ supply: 10, demand: 10, carriedStock: 50 }).stock).toBe(10);
   });
 });

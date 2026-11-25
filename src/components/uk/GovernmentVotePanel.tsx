@@ -47,6 +47,8 @@ interface GovernmentVotePanelProps {
   myWhippedFrom?: string | null;
   appointmentLabel?: string;
   onVoteCast?: () => void;
+  /** Heading level for the panel title: h2 where it is a top-level page section. */
+  headingLevel?: "h2" | "h3";
 }
 
 function getTimeRemaining(closesAt: string): string {
@@ -69,7 +71,9 @@ export default function GovernmentVotePanel({
   myWhippedFrom,
   appointmentLabel = "PM Appointment Vote",
   onVoteCast,
+  headingLevel = "h3",
 }: GovernmentVotePanelProps) {
+  const Heading = headingLevel;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const clock = useGameClock();
@@ -144,7 +148,7 @@ export default function GovernmentVotePanel({
     <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between gap-4">
-        <h3 className="text-base font-semibold">{headerLabel}</h3>
+        <Heading className="text-base font-semibold">{headerLabel}</Heading>
         {isActive && <span className="text-xs text-muted">{timeRemaining}</span>}
       </div>
 
