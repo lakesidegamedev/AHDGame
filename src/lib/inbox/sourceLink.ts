@@ -237,6 +237,16 @@ export function resolveSourceLink(
   }
 
   // ── Crisis ────────────────────────────────────────────────────────────────
+  if (type === "corp_credit_rating_change") {
+    const corporationId = asString(m.corporationId);
+    if (corporationId) {
+      return {
+        label: "View corporation",
+        href: `/corporation/${encodeURIComponent(corporationId)}`,
+      };
+    }
+  }
+
   if (type === "crisis" || type === "crisis_resolved") {
     const crisisId = asString(m.crisisId);
     if (crisisId) {
