@@ -164,6 +164,23 @@ describe("pricingAsks", () => {
     expect(pricingAsks(undefined, undefined)).toEqual([]);
   });
 
+  it("carries the cost-plus basis the ask used", () => {
+    const [row] = pricingAsks(
+      [
+        {
+          commodity: "steel",
+          book: "world",
+          offeredUnits: 5,
+          askingUnitPrice: 880,
+          costPlus: { markup: 0.1, unitCost: 800 },
+        },
+      ],
+      undefined
+    );
+    expect(row.costPlus).toEqual({ markup: 0.1, unitCost: 800 });
+    expect(row.costPlus!.unitCost! * (1 + row.costPlus!.markup)).toBeCloseTo(row.askingUnitPrice);
+  });
+
   it("reports what the plant was paid on average beside the lane's clearing price", () => {
     const [row] = pricingAsks(
       [

@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { costPlusUnitCosts } from "@/lib/market/costPlusPricing/rules";
 import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
 import { presetUsesSocietyPressures } from "@/lib/societyPressures/preset";
@@ -531,6 +532,14 @@ export function prepareProducerPhysicalSector(input: {
             },
           ])
       );
+  }
+  // Cost-plus asks price off last run's operating cost per unit made.
+  if (plan.outputs.some((output) => output.policy.kind === "costPlus")) {
+    const last = sector.producerSettlement;
+    if (last && last.turn === openingTurn) {
+      const costs = costPlusUnitCosts({ receipt: last, outputs: plan.outputs });
+      if (Object.keys(costs).length) plan.costPlusUnitCostByOutput = costs;
+    }
   }
   const suspended =
     lookups.corporateEmbargoSuppression?.has(`${countryId}|${corp.countryId}`) === true &&

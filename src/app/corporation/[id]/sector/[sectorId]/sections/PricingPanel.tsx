@@ -192,6 +192,15 @@ export default function PricingPanel({
                     </span>
                   </>
                 )}
+                {a.costPlus && (
+                  <span className="block text-muted">
+                    {a.costPlus.unitCost == null
+                      ? "Cost-plus: no settled run to price from yet, so this ask was the market price."
+                      : a.costPlus.capped
+                        ? `Cost-plus: ${formatPrice(a.costPlus.unitCost)} cost per unit made last run plus ${Math.round(a.costPlus.markup * 100)}% would pass 3x the reference price, so the ask was capped there.`
+                        : `Cost-plus: ${formatPrice(a.costPlus.unitCost)} cost per unit made last run plus ${Math.round(a.costPlus.markup * 100)}% = ${formatPrice(a.costPlus.unitCost * (1 + a.costPlus.markup))}.`}
+                  </span>
+                )}
               </span>
             </li>
           ))}

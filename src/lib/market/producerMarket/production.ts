@@ -501,6 +501,7 @@ export function advanceProducerEconomy(
     minorByPlan,
     proposedById,
     askBrackets,
+    costPlusAsks,
   } = buildProducerInputOrders({
     plans,
     plannedById,
@@ -887,6 +888,7 @@ export function advanceProducerEconomy(
     input,
     postedOffers,
     askBrackets,
+    costPlusAsks,
     plans,
     internalAccountingAccounts,
     physicalMaximum,
