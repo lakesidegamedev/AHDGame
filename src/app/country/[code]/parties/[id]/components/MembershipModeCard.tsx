@@ -7,6 +7,7 @@ import { partyApiUrl } from "@/lib/urls";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import type { PartyData } from "./types";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface MembershipModeCardProps {
   party: PartyData;
@@ -93,17 +94,13 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
 
       {/* Mode toggle */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-md border border-card-border overflow-hidden text-sm">
+        <div className={`${PILL_TRACK} text-sm`}>
           <button
             type="button"
             onClick={() => setMode("open")}
             disabled={savingMode !== null}
             aria-pressed={mode === "open"}
-            className={`px-4 py-1.5 transition-colors disabled:opacity-50 ${
-              mode === "open"
-                ? "bg-card-border text-foreground"
-                : "bg-card text-muted hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 disabled:opacity-50 ${pillClass(mode === "open")}`}
           >
             Open
           </button>
@@ -112,11 +109,7 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
             onClick={() => setMode("approval")}
             disabled={savingMode !== null}
             aria-pressed={mode === "approval"}
-            className={`px-4 py-1.5 transition-colors disabled:opacity-50 ${
-              mode === "approval"
-                ? "bg-card-border text-foreground"
-                : "bg-card text-muted hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 disabled:opacity-50 ${pillClass(mode === "approval")}`}
           >
             Approval required
           </button>

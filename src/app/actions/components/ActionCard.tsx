@@ -18,6 +18,7 @@ import {
   FUND_LINE_TERMS,
   fundLineKind,
 } from "../actionsConstants";
+import { pillClass } from "@/components/ui/selectedState";
 
 const FLIPFLOP_AXIS_LABELS = { economic: "Economic", social: "Social" } as const;
 import type { ActionCardProps, LoadingActionCardProps } from "../actionsTypes";
@@ -408,22 +409,14 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
                     <button
                       onClick={() => onFlipflopDirChange(-1)}
                       aria-pressed={flipflopDir === -1}
-                      className={`rounded-md border py-1.5 text-body-sm font-semibold transition-colors ${
-                        flipflopDir === -1
-                          ? "border-foreground/50 bg-card-muted text-foreground"
-                          : "border-card-border bg-card-elevated hover:bg-card-muted"
-                      }`}
+                      className={`py-1.5 text-body-sm ${pillClass(flipflopDir === -1)}`}
                     >
                       Left
                     </button>
                     <button
                       onClick={() => onFlipflopDirChange(1)}
                       aria-pressed={flipflopDir === 1}
-                      className={`rounded-md border py-1.5 text-body-sm font-semibold transition-colors ${
-                        flipflopDir === 1
-                          ? "border-foreground/50 bg-card-muted text-foreground"
-                          : "border-card-border bg-card-elevated hover:bg-card-muted"
-                      }`}
+                      className={`py-1.5 text-body-sm ${pillClass(flipflopDir === 1)}`}
                     >
                       Right
                     </button>

@@ -40,3 +40,4 @@ export {
 export { NewFeatureBadge } from "./NewFeatureBadge";
 
 export { Figure, Delta, type FigureKind, type DeltaKind } from "./Figure";
+export { PILL_IDLE, PILL_SELECTED, PILL_SHAPE, PILL_TRACK, pillClass } from "./selectedState";

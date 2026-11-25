@@ -10,6 +10,7 @@ import type { WidgetLayout, WidgetMenu } from "@/lib/sidebarWidgets/widgetCatalo
 import { SidebarWidget, widgetBadge } from "./SidebarWidget";
 import { WidgetEditor, type WidgetOption } from "./WidgetEditor";
 import { useSidebarWidgetData } from "./useSidebarWidgetData";
+import { pillClass } from "@/components/ui/selectedState";
 
 const AskDrawerPanel = dynamic(
   () => import("@/components/askDrawer/AskDrawerPanel").then((m) => m.AskDrawerPanel),
@@ -239,7 +240,7 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${active ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"}`}
+      className={`px-3 py-1.5 text-xs font-semibold ${pillClass(active)}`}
     >
       {children}
     </button>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HeroImage } from "@/components/HeroImage";
 import { HeroStatsStrip } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countriesCore";
+import { PILL_SELECTED, PILL_SHAPE } from "@/components/ui/selectedState";
 
 interface LegislatureHeaderProps {
   countryId: CountryId;
@@ -75,7 +76,7 @@ export default function LegislatureHeader({
           {/* Top: chamber switcher (US only) */}
           {chamberSwitcher && (
             <div
-              className="flex rounded-lg overflow-hidden w-fit border border-white/30 bg-black/60"
+              className="flex w-fit gap-1 rounded-full border border-white/30 bg-black/60 p-0.5"
               role="tablist"
               aria-label="Chamber"
             >
@@ -88,12 +89,12 @@ export default function LegislatureHeader({
                   aria-controls="legislature-content"
                   aria-disabled={opt.disabled}
                   onClick={() => !opt.disabled && chamberSwitcher.onSwitch(opt.key)}
-                  className={`px-4 py-1.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  className={`px-4 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${PILL_SHAPE} ${
                     opt.disabled
-                      ? "bg-transparent text-white/30 cursor-not-allowed"
+                      ? "cursor-not-allowed text-white/30"
                       : chamberSwitcher.active === opt.key
-                        ? "bg-white/20 text-white"
-                        : "bg-transparent text-white/70 hover:text-white hover:bg-white/10"
+                        ? PILL_SELECTED
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {opt.label}

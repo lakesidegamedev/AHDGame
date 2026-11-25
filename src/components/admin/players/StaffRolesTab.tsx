@@ -7,6 +7,7 @@ import { PlayerSelector } from "@/components/PlayerSelector";
 import { LocalTime } from "@/components/time/LocalTime";
 import { staffRoleLabel } from "@/lib/staff/grantRules";
 import type { GrantableStaffRole } from "@/lib/staff/rules";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface StaffMember {
   userId: string;
@@ -94,7 +95,7 @@ export function StaffRolesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-1 rounded-lg border border-card-border bg-card p-1" role="tablist">
+      <div className="flex gap-1 rounded-full bg-card-muted p-0.5" role="tablist">
         {(["moderator", "junior_dev"] as const).map((r) => (
           <button
             key={r}
@@ -105,9 +106,7 @@ export function StaffRolesTab() {
               setSelectedUser(null);
               setError("");
             }}
-            className={`flex-1 rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
-              role === r ? "bg-primary/10 text-primary" : "text-muted hover:text-foreground"
-            }`}
+            className={`flex-1 px-3 py-1.5 text-body-sm ${pillClass(role === r)}`}
           >
             {staffRoleLabel(r)}s
           </button>

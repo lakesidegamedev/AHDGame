@@ -24,6 +24,7 @@ import { BillAutoFailWarningBanner } from "@/components/bills/BillAutoFailWarnin
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 
 import MinimumWageFloorNote from "@/components/legislation/MinimumWageFloorNote";
+import { pillClass } from "@/components/ui/selectedState";
 export function renderLegacyProposeBillModalView(
   context: LegacyProposeBillModalViewContext
 ): ReactNode {
@@ -257,11 +258,7 @@ export function renderLegacyProposeBillModalView(
                         role="tab"
                         aria-selected={tradeSubType === st}
                         onClick={() => setTradeSubType(st)}
-                        className={`rounded-md px-4 py-1.5 text-sm font-semibold capitalize transition-colors ${
-                          tradeSubType === st
-                            ? "bg-primary/15 text-foreground"
-                            : "text-muted hover:text-foreground"
-                        }`}
+                        className={`px-4 py-1.5 text-sm capitalize ${pillClass(tradeSubType === st)}`}
                       >
                         {st}
                       </button>

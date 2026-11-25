@@ -12,6 +12,7 @@ import {
 } from "@/components/party/partyPageStyles";
 import { Party } from "../partiesTypes";
 import { partiesUrl } from "@/lib/urls";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface PartiesHeaderProps {
   effectiveCountry: string;
@@ -68,11 +69,7 @@ export function PartiesHeader({
                   key={country.id}
                   href={partiesUrl(country.id)}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors ${
-                    active
-                      ? "border-foreground/40 bg-card text-foreground"
-                      : "border-card-border bg-card/80 text-muted hover:text-foreground"
-                  }`}
+                  className={`px-3 py-1.5 text-body-sm ${pillClass(active)}`}
                 >
                   {country.name}
                 </Link>

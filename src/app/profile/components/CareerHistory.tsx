@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui";
 import { Modal } from "@/components/ui";
 import { SectionHeader } from "./ProfileMeters";
 import { PROFILE_LINK_CLASS } from "./profileStyles";
+import { pillClass } from "@/components/ui/selectedState";
 
 type CareerT = ReturnType<typeof useTranslations>;
 
@@ -310,20 +311,16 @@ function TabStrip({
     other: t("tabOther"),
   };
   return (
-    <div className="mb-1 flex flex-wrap gap-x-4 border-b border-card-border/60">
+    <div className="mb-1 flex flex-wrap gap-1 border-b border-card-border/60 pb-2">
       {tabs.map((tab) => (
         <button
           key={tab}
           type="button"
           aria-pressed={active === tab}
           onClick={() => onSelect(tab)}
-          className={`-mb-px border-b-2 py-1.5 text-body-sm font-medium transition-colors ${
-            active === tab
-              ? "border-foreground text-foreground"
-              : "border-transparent text-muted hover:text-foreground"
-          }`}
+          className={`px-3 py-1.5 text-body-sm ${pillClass(active === tab)}`}
         >
-          {tabLabels[tab]} <span className="tabular-nums text-muted">{counts[tab]}</span>
+          {tabLabels[tab]} <span className="tabular-nums opacity-70">{counts[tab]}</span>
         </button>
       ))}
     </div>

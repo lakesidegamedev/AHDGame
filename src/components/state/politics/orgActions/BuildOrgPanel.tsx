@@ -17,6 +17,7 @@ import { PsSpendButtons } from "./PsSpendButtons";
 import { usePsSpendScope } from "./usePsSpendScope";
 import { useActionPreview } from "./useActionPreview";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface BuildOrgPanelProps {
   countryCode: string;
@@ -237,7 +238,7 @@ export function BuildOrgPanel({
             type="button"
             aria-pressed={count === value}
             onClick={() => setCount(value)}
-            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+            className={`px-3 py-1 ${pillClass(count === value)}`}
           >
             x{value}
           </button>

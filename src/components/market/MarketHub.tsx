@@ -29,6 +29,7 @@ import {
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
 import type { ExchangeData } from "@/app/country/[code]/stockmarket/types";
+import { pillClass } from "@/components/ui/selectedState";
 
 // One panel per tab, and only the selected tab renders. The overview stays
 // eager because it is the default tab.
@@ -277,7 +278,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
           <div
             role="tablist"
             aria-label="Market sections"
-            className="flex min-w-max gap-1 border-b border-card-border"
+            className="flex min-w-max gap-1 border-b border-card-border pb-2"
           >
             {MARKET_TABS.map((t) => (
               <button
@@ -286,11 +287,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
                 role="tab"
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
-                className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  tab === t.key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:text-foreground"
-                }`}
+                className={`whitespace-nowrap px-3 py-1.5 text-sm ${pillClass(tab === t.key)}`}
               >
                 {t.key === "sub-groups" ? groupT("tab") : t.label}
               </button>

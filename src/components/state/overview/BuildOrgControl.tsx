@@ -9,6 +9,7 @@ import { usePsSpendScope } from "@/components/state/politics/orgActions/usePsSpe
 import { useActionPreview } from "@/components/state/politics/orgActions/useActionPreview";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { pillClass } from "@/components/ui/selectedState";
 
 type BuildOrgPreview =
   | {
@@ -178,7 +179,7 @@ export function BuildOrgControl({
             type="button"
             aria-pressed={count === value}
             onClick={() => setCount(value)}
-            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+            className={`px-3 py-1 ${pillClass(count === value)}`}
           >
             x{value}
           </button>

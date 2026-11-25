@@ -28,6 +28,7 @@ import {
   type MoneyGraphResponse,
 } from "./dossierTypes";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface MoneyFlowGraphProps {
   userId: string;
@@ -191,22 +192,14 @@ export function MoneyFlowGraph({ userId, centerIds }: MoneyFlowGraphProps) {
     <div className="space-y-3">
       {/* Controls: depth + truncation badges */}
       <div className="flex flex-wrap items-center gap-2">
-        <div
-          className="inline-flex overflow-hidden rounded-lg border border-card-border"
-          role="group"
-          aria-label="Graph depth"
-        >
+        <div className={PILL_TRACK} role="group" aria-label="Graph depth">
           {([1, 2] as const).map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => setDepth(d)}
               aria-pressed={depth === d}
-              className={`px-2.5 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none ${
-                depth === d
-                  ? "bg-card-elevated text-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
+              className={`px-2.5 py-1 text-[11px] motion-reduce:transition-none ${pillClass(depth === d)}`}
             >
               {d} hop{d > 1 ? "s" : ""}
             </button>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { EmptyState } from "@/components/ui";
 import { LocalTime } from "@/components/time/LocalTime";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface ConfidenceVoteRow {
   id: string;
@@ -112,21 +113,14 @@ export function UKLeadershipPanel() {
   return (
     <div className="space-y-4">
       {/* Inner tab bar */}
-      <div
-        role="tablist"
-        className="flex gap-1 p-1 rounded-lg bg-background border border-card-border w-fit"
-      >
+      <div role="tablist" className={`${PILL_TRACK} w-fit`}>
         {INNER_TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={innerTab === t.id}
             onClick={() => setInnerTab(t.id)}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-              innerTab === t.id
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted hover:text-foreground"
-            }`}
+            className={`whitespace-nowrap px-3 py-1 text-xs ${pillClass(innerTab === t.id)}`}
           >
             {t.label}
           </button>

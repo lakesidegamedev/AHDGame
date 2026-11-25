@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { holdingMarketTotals } from "@/lib/corporations/rules/holdingTerms";
 import { StocksTable, type Holding } from "./HoldingsTables";
+import { pillClass } from "@/components/ui/selectedState";
 export function StockHoldingValues({ holdings }: { holdings: Holding[] }) {
   const { formatAmount, toInternalFrom } = useCurrency();
   const t = useTranslations("profile.stockHoldings");
@@ -45,7 +46,7 @@ export function StockHoldingsView({ holdings }: { holdings: Holding[] }) {
             key={value}
             aria-pressed={value === term}
             onClick={() => setTerm(value)}
-            className={`rounded-full border px-3 py-1 text-sm ${value === term ? "border-primary bg-primary/10" : "border-card-border"}`}
+            className={`px-3 py-1 text-sm ${pillClass(value === term)}`}
           >
             {t(value)}
           </button>

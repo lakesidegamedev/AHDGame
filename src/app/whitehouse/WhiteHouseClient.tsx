@@ -47,6 +47,7 @@ export {
   RUNNING_GUIDE_HREF,
   deskDeadlineLabel,
 } from "./WhiteHouseParts";
+import { pillClass } from "@/components/ui/selectedState";
 
 // Overview is the tab the page opens on. Every other body is one click away and
 // pulls its own heavy tree: the orders tab drags the policy effect catalog, the
@@ -558,7 +559,7 @@ export default function WhiteHouseClient({
 
         {/* Tabs — Address + Orders tabs only visible to President + admin */}
         <nav
-          className="-mt-2 flex min-w-0 overflow-x-auto border-b border-card-border"
+          className="-mt-2 flex min-w-0 gap-1 overflow-x-auto border-b border-card-border pb-2"
           aria-label="White House sections"
         >
           <TabButton active={activeTab === "overview"} onClick={() => setActiveTab("overview")}>
@@ -1053,17 +1054,13 @@ function TabButton({
   variant?: "admin";
 }) {
   const stateClass =
-    variant === "admin"
-      ? active
-        ? "border-b-2 border-dashed border-foreground/50 text-foreground font-medium"
-        : "text-muted/80 hover:text-foreground"
-      : active
-        ? "border-b-2 border-primary text-foreground font-medium"
-        : "text-muted hover:text-foreground";
+    variant === "admin" && !active
+      ? "rounded-full border border-dashed border-card-border text-muted hover:text-foreground"
+      : pillClass(active);
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${stateClass}`}
+      className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${stateClass}`}
       aria-current={active ? "page" : undefined}
     >
       {children}

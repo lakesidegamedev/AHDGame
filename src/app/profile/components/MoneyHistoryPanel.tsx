@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import type { MoneyHistoryRow, MoneyHistoryWallet } from "@/lib/character/moneyHistory/rules";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface HistoryPage {
   rows: MoneyHistoryRow[];
@@ -87,9 +88,7 @@ export function MoneyHistoryPanel() {
                 type="button"
                 onClick={() => pick(f)}
                 aria-pressed={filter === f}
-                className={`px-1 py-1 text-body-sm ${
-                  filter === f ? "font-semibold text-foreground" : "text-muted"
-                }`}
+                className={`px-3 py-1 text-body-sm ${pillClass(filter === f)}`}
               >
                 {t(f)}
               </button>

@@ -202,7 +202,7 @@ export function IdentitySection({ character, onCharacterUpdate, expectedUserId }
 
       <div className="space-y-4">
         {/* Google — in development, show disabled card */}
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-card-border/50 bg-card/50 opacity-60">
+        <div className="flex items-center gap-4 p-4 rounded-xl border border-card-border/50 bg-card opacity-60">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card-muted border border-card-border">
             {GoogleIcon}
           </div>

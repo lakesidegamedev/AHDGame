@@ -5,9 +5,9 @@ import { loadWorldAlignment } from "@/lib/alignment/queries/worldAlignment";
 import { ColdWarLedgerClient } from "./ColdWarLedgerClient";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Cold War ledger | A House Divided",
+  title: "World alignment | A House Divided",
   description:
-    "Where every nation stands between the blocs — each holds a share per bloc plus an uncommitted remainder, with the contested states the two sides are still fighting over.",
+    "See diplomatic influence across the world, from historical alliances to present-day centers of influence.",
   pathname: "/world/cold-war-ledger",
 });
 

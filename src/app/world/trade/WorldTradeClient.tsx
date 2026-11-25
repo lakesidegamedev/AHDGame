@@ -9,6 +9,7 @@ import BilateralView from "./components/BilateralView";
 import MatrixView from "./components/MatrixView";
 import MapView from "./components/MapView";
 import RestrictionsView from "./components/RestrictionsView";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * World Trade Ledger panel.
@@ -67,7 +68,7 @@ export default function WorldTradeClient({ ledger }: { ledger: WorldTradeLedger 
           <div
             role="tablist"
             aria-label="Trade views"
-            className="inline-flex flex-wrap gap-1 rounded-lg border border-card-border bg-card p-1"
+            className="inline-flex flex-wrap gap-1 rounded-full bg-card-muted p-0.5"
           >
             {TABS.map((t) => (
               <button
@@ -75,11 +76,7 @@ export default function WorldTradeClient({ ledger }: { ledger: WorldTradeLedger 
                 role="tab"
                 aria-selected={view === t.id}
                 onClick={() => setView(t.id)}
-                className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                  view === t.id
-                    ? "bg-primary/15 text-foreground"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`px-4 py-1.5 text-sm ${pillClass(view === t.id)}`}
               >
                 {t.label}
               </button>

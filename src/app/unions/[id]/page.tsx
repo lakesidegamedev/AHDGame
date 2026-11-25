@@ -54,6 +54,7 @@ import {
 import { UnionSectorsTable } from "./UnionSectorsTable";
 import type { SectorStatus } from "./unionSectorTable";
 import { approvalText } from "@/lib/ui/tone";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -602,7 +603,7 @@ function UnionDashboard({ id }: { id: string }) {
           scrolling sideways, so every tab stays in view on a phone. */}
       <section className="space-y-6">
         <div className="border-b border-card-border">
-          <nav className="flex flex-wrap items-center gap-x-1" aria-label="Tabs">
+          <nav className="flex flex-wrap items-center gap-1 pb-2" aria-label="Tabs">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -612,11 +613,7 @@ function UnionDashboard({ id }: { id: string }) {
                   setTab(t.key);
                 }}
                 aria-current={tab === t.key ? "page" : undefined}
-                className={`-mb-px flex items-center whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-                  tab === t.key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:border-muted hover:text-foreground"
-                }`}
+                className={`flex items-center whitespace-nowrap px-3 py-1.5 text-sm ${pillClass(tab === t.key)}`}
               >
                 {t.label}
                 {t.count != null && (

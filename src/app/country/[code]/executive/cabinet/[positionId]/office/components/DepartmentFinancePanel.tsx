@@ -10,6 +10,7 @@ import {
   programFundingRequestPerTurn,
 } from "@/lib/resetFinance/rules/programRequest";
 import { DepartmentProgramPanel } from "./DepartmentProgramPanel";
+import { pillClass } from "@/components/ui/selectedState";
 
 function money(value: number, symbol: string): string {
   return `${symbol}${Math.round(value).toLocaleString()}`;
@@ -342,11 +343,7 @@ export function DepartmentFinancePanel({
                   role="tab"
                   aria-selected={activeProgramTab === "overview"}
                   onClick={() => setRequestedProgramTab("overview")}
-                  className={`shrink-0 border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                    activeProgramTab === "overview"
-                      ? "border-gov text-foreground"
-                      : "border-transparent text-muted hover:text-foreground"
-                  }`}
+                  className={`shrink-0 px-3 py-1.5 text-sm ${pillClass(activeProgramTab === "overview")}`}
                 >
                   Overview
                 </button>
@@ -358,11 +355,7 @@ export function DepartmentFinancePanel({
                     title={program.programName}
                     aria-selected={activeProgramTab === program.programId}
                     onClick={() => setRequestedProgramTab(program.programId!)}
-                    className={`max-w-56 shrink-0 truncate border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                      activeProgramTab === program.programId
-                        ? "border-gov text-foreground"
-                        : "border-transparent text-muted hover:text-foreground"
-                    }`}
+                    className={`max-w-56 shrink-0 truncate px-3 py-1.5 text-sm ${pillClass(activeProgramTab === program.programId)}`}
                   >
                     {program.programName}
                   </button>

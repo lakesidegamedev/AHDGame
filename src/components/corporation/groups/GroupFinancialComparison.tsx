@@ -19,6 +19,7 @@ import {
 import type { GroupBalanceSheet } from "@/lib/corporations/groups/groupBalanceSheet";
 import type { GroupManagementView } from "./useGroupManagement";
 import { AnchorUnitNote } from "@/components/currency/AnchorUnit";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 const button =
   "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium hover:bg-card-elevated disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-info";
 const tones = ["text-gold", "text-info", "text-secondary", "text-success"];
@@ -342,7 +343,7 @@ export function GroupFinancialComparison({
       <section className="min-w-0 rounded-xl border border-card-border bg-card p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div
-            className="inline-flex flex-wrap gap-1 rounded-lg border border-card-border p-1"
+            className="inline-flex flex-wrap gap-1 rounded-full bg-card-muted p-0.5"
             role="group"
             aria-label={t("chartMetric")}
           >
@@ -351,24 +352,20 @@ export function GroupFinancialComparison({
                 type="button"
                 key={k}
                 aria-pressed={metric === k}
-                className={`rounded-md px-3 py-1 text-xs ${metric === k ? "bg-card-elevated" : "text-muted"}`}
+                className={`px-3 py-1 text-xs ${pillClass(metric === k)}`}
                 onClick={() => setMetric(k)}
               >
                 {t("chartMetrics." + k)}
               </button>
             ))}
           </div>
-          <div
-            className="inline-flex gap-1 rounded-lg border border-card-border p-1"
-            role="group"
-            aria-label={t("trendRange")}
-          >
+          <div className={PILL_TRACK} role="group" aria-label={t("trendRange")}>
             {([12, 24, 48] as const).map((n) => (
               <button
                 type="button"
                 key={n}
                 aria-pressed={range === n}
-                className={`rounded-md px-2 py-1 text-xs ${range === n ? "bg-card-elevated" : "text-muted"}`}
+                className={`px-2.5 py-1 text-xs ${pillClass(range === n)}`}
                 onClick={() => setRange(n)}
               >
                 {t("turnRange", { count: n })}

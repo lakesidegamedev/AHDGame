@@ -9,6 +9,7 @@ import { PositionLabel } from "@/components/PositionLabel";
 import { formatLeanValue } from "@/lib/utils/demographics";
 import { hexToRgba } from "@/components/national/identityColor";
 import { countryUrl } from "@/lib/urls";
+import { PILL_SELECTED, PILL_SHAPE } from "@/components/ui/selectedState";
 
 export type PolicyView = "code" | "record";
 
@@ -131,15 +132,15 @@ export function PolicyMasthead({
               </div>
             </div>
           </div>
-          <span className="inline-flex overflow-hidden rounded-lg border border-white/20">
+          <span className="inline-flex gap-1 rounded-full border border-white/20 p-0.5">
             {(["code", "record"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => onViewChange(option)}
                 aria-pressed={view === option}
-                className={`px-3 py-1 text-xs font-semibold capitalize transition-colors ${
-                  view === option ? "bg-white/15 text-white" : "text-white/55 hover:text-white"
+                className={`px-3 py-1 text-xs capitalize ${PILL_SHAPE} ${
+                  view === option ? PILL_SELECTED : "text-white/55 hover:text-white"
                 }`}
               >
                 {option}

@@ -6,6 +6,7 @@ import { Building2, ChartNoAxesCombined, Compass, Network, Pencil } from "lucide
 import styles from "./GroupPage.module.css";
 import { GroupOverviewDashboard } from "./GroupOverviewDashboard";
 import { Skeleton } from "@/components/ui";
+import { pillClass } from "@/components/ui/selectedState";
 
 // The supply-chain section owns its own section of the group page and drags the
 // commodity catalog and the supply-agreement board in with it, so it mounts when
@@ -135,12 +136,12 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
       )}
       <nav
         aria-label={t("sections")}
-        className="flex gap-1 overflow-x-auto border-b border-card-border"
+        className="flex gap-1 overflow-x-auto border-b border-card-border pb-2"
       >
         {["overview", "financials", "directions", "supply"].map((key, index) => (
           <button
             key={key}
-            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-info ${section === key ? "border-primary text-foreground bg-card" : "border-transparent text-muted hover:bg-card hover:text-foreground"}`}
+            className={`inline-flex shrink-0 items-center gap-2 px-4 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-info ${pillClass(section === key)}`}
             aria-pressed={section === key}
             onClick={() => {
               history.replaceState(null, "", "#" + key);

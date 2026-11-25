@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { toolPath, type NavGroup } from "@/lib/staff/panelRegistry";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface ControlNavProps {
   groups: NavGroup[];
@@ -29,11 +30,7 @@ export function ControlNav({ groups, onNavigate }: ControlNavProps) {
                 prefetch={false}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-md px-2.5 py-1.5 text-body-sm transition-colors ${
-                  active
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted hover:bg-white/5 hover:text-foreground"
-                }`}
+                className={`px-2.5 py-1.5 text-body-sm ${pillClass(active)}`}
               >
                 {tool.label}
               </Link>

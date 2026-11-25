@@ -18,6 +18,7 @@ import {
   stateOrgBonusFraction,
 } from "@/lib/elections/engine/constants";
 import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface StateOrgRow {
   builtThisTurn?: boolean;
@@ -313,11 +314,7 @@ export function StateOrganizationTab({
                 type="button"
                 onClick={() => setViewingCharacterId(null)}
                 aria-pressed={viewedCandidate === null}
-                className={`rounded border px-2 py-1 text-xs transition-colors ${
-                  viewedCandidate === null
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-card-border text-muted hover:text-primary"
-                }`}
+                className={`px-2.5 py-1 text-xs ${pillClass(viewedCandidate === null)}`}
               >
                 You
               </button>
@@ -328,11 +325,7 @@ export function StateOrganizationTab({
                 type="button"
                 onClick={() => setViewingCharacterId(c.characterId)}
                 aria-pressed={viewedCandidate?.characterId === c.characterId}
-                className={`rounded border px-2 py-1 text-xs transition-colors ${
-                  viewedCandidate?.characterId === c.characterId
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-card-border text-muted hover:text-primary"
-                }`}
+                className={`px-2.5 py-1 text-xs ${pillClass(viewedCandidate?.characterId === c.characterId)}`}
               >
                 {c.name}
                 {c.isSelf ? " (you)" : ""}

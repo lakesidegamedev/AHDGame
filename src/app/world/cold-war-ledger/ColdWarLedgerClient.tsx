@@ -7,6 +7,7 @@ import type { AlignmentStatus } from "@/lib/alignment/project";
 import type { LedgerRow, WorldAlignmentView } from "@/lib/alignment/queries/worldAlignment";
 import { ShareBar, POLE_TEXT } from "@/components/alignment/ShareBar";
 import { alignmentColor } from "@/lib/constants/alignmentColors";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** Band label + the semantic token it renders in. */
 const BAND: Record<AlignmentStatus, { label: string; text: string }> = {
@@ -77,7 +78,7 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
             >
               {tallies.byPole.get(pole.id) ?? 0}
             </div>
-            <div className="text-body-xs text-muted">countries where this bloc leads</div>
+            <div className="text-body-xs text-muted">countries where this center leads</div>
           </div>
         ))}
         <div className="rounded-lg border border-card-border bg-card p-3 shadow-card">
@@ -101,11 +102,7 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
             type="button"
             aria-pressed={filter === chip.key}
             onClick={() => setFilter(chip.key)}
-            className={`rounded-full border px-3 py-1 text-body-sm transition-colors ${
-              filter === chip.key
-                ? "border-muted bg-card-elevated text-foreground"
-                : "border-card-border text-muted hover:text-foreground"
-            }`}
+            className={`px-3 py-1 text-body-sm ${pillClass(filter === chip.key)}`}
           >
             {chip.label}
           </button>
@@ -121,7 +118,7 @@ export function ColdWarLedgerClient({ view }: { view: WorldAlignmentView }) {
       </div>
 
       <p className="text-body-sm text-muted">
-        Lead is the gap between a country’s top two bloc shares. Non-members at {view.joinGate}{" "}
+        Lead is the gap between a country’s top two influence shares. Non-members at {view.joinGate}{" "}
         points qualify as Eligible. At {ALIGNMENT_GATES.locked} points, influence actions are
         blocked (Locked). A member below {view.joinGate} points shows Defection risk.
       </p>
@@ -179,13 +176,13 @@ function Header({ view }: { view: WorldAlignmentView }) {
   return (
     <header className="space-y-1">
       <p className="text-body-sm font-medium text-muted">
-        {view.year} · {view.poles.length} blocs · {view.rows.length} countries tracked
+        {view.year} · {view.poles.length} influence centers · {view.rows.length} countries tracked
       </p>
-      <h1 className="text-display font-semibold">Cold War ledger</h1>
+      <h1 className="text-display font-semibold">World alignment</h1>
       <p className="max-w-prose text-body text-muted">
-        Each country has 100 points split between the blocs and its uncommitted share. This ledger
-        tracks every country the world models, including background nations and breakaway states, so
-        it is a longer list than the playable nations.
+        Each country has 100 points split between centers of influence and its uncommitted share. An
+        influence lead measures diplomatic alignment. Alliance membership is listed separately. The
+        ledger includes countries outside the playable roster.
       </p>
     </header>
   );

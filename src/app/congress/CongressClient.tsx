@@ -21,6 +21,7 @@ import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import type { CongressMembersResponse } from "@/lib/congress/types";
 import type { BillsResponse } from "@/lib/legislature/dto/billDisplay";
+import { PILL_SELECTED, PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 export function USCongressPage({ countryId }: { countryId: CountryId }) {
   const searchParams = useSearchParams();
@@ -230,7 +231,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
             <div className="absolute inset-0 flex flex-col justify-between px-5 sm:px-6 py-4 sm:py-5">
               {/* Top: chamber switcher */}
               <div
-                className="flex rounded-lg overflow-hidden w-fit border border-white/30 bg-black/60"
+                className="flex w-fit gap-1 rounded-full border border-white/30 bg-black/60 p-0.5"
                 role="tablist"
                 aria-label="Chamber"
               >
@@ -242,10 +243,10 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
                     aria-selected={activeTab === tab}
                     aria-controls="congress-content"
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-1.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    className={`px-4 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       activeTab === tab
-                        ? "bg-white/20 text-white"
-                        : "bg-transparent text-white/70 hover:text-white hover:bg-white/10"
+                        ? `${PILL_SHAPE} ${PILL_SELECTED}`
+                        : `${PILL_SHAPE} text-white/70 hover:bg-white/10 hover:text-white`
                     }`}
                   >
                     {tab === "senate" ? upperChamberLabel : lowerChamberLabel}
@@ -360,7 +361,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
           </div>
         )}
 
-        <div className="mb-6 flex rounded-lg border border-card-border overflow-x-auto overflow-y-hidden">
+        <div className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-card-border pb-2">
           {PAGE_TABS.map(({ key, label }) => (
             <button
               key={key}
@@ -369,11 +370,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
               aria-controls="congress-content"
               id={`page-tab-${key}`}
               onClick={() => setPageTab(key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                pageTab === key
-                  ? "bg-card-border text-foreground"
-                  : "bg-card text-muted hover:text-foreground"
-              }`}
+              className={`px-4 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${pillClass(pageTab === key)}`}
             >
               {label}
             </button>

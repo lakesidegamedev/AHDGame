@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pillClass } from "@/components/ui/selectedState";
 
 type Severity = "high" | "medium" | "low";
 type SeverityFilter = Severity | "all";
@@ -235,16 +236,14 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setSeverityFilter(opt.id)}
-                  className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                    isActive
-                      ? "border-info/40 bg-info/10 text-info"
-                      : "border-card-border text-muted hover:bg-white/5 hover:text-foreground"
-                  }`}
+                  className={`flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] ${pillClass(isActive)}`}
                 >
                   <span>{opt.label}</span>
                   <span
                     className={`rounded px-1 text-[10px] tabular-nums ${
-                      isActive ? "bg-info/15 text-info" : "bg-white/5 text-muted"
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-white/5 text-muted"
                     }`}
                   >
                     {count}

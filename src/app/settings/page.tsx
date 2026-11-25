@@ -557,7 +557,7 @@ function useSettingsPageContentContext() {
               <label className="block text-xs font-medium text-muted mb-1">
                 {t("page.username")}
               </label>
-              <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
                 {username || "..."}
               </div>
               {formerName && <p className="mt-1 text-xs text-muted">formerly {formerName}</p>}
@@ -655,7 +655,7 @@ function useSettingsPageContentContext() {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-muted mb-1">{t("page.name")}</label>
-              <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
                 {imperialChar.name}
               </div>
               <p className="mt-1 text-xs text-muted">{t("page.imperialContactAdmin")}</p>
@@ -683,7 +683,7 @@ function useSettingsPageContentContext() {
               <label className="block text-xs font-medium text-muted mb-1">
                 {t("page.royalHouse")}
               </label>
-              <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+              <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-sm text-foreground">
                 {imperialChar.royalHouse}
               </div>
             </div>
@@ -805,7 +805,7 @@ function useSettingsPageContentContext() {
                   ? "border-error/30 bg-error/[0.04] hover:border-error/60"
                   : needsBackground
                     ? "border-warning/40 bg-warning/[0.04] ring-1 ring-warning/20"
-                    : "border-card-border bg-background/45 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-elevated"
+                    : "border-card-border bg-card-muted hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-elevated"
             }`}
           >
             <span

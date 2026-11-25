@@ -21,6 +21,7 @@ import {
 } from "./components/ScotusNominateModal";
 import { ScotusVoteRow, type ScotusNominationRow } from "./components/ScotusVoteRow";
 import { DocketExplainer, DocketHistoryTab } from "./components/DocketHistoryTab";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface ScotusResponse {
   seats: SeatCardData[];
@@ -374,27 +375,19 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
           </section>
 
           <nav
-            className="flex overflow-x-auto border-b border-card-border"
+            className="flex gap-1 overflow-x-auto border-b border-card-border pb-2"
             aria-label="Supreme Court sections"
           >
             <button
               onClick={() => setActiveTab("bench")}
-              className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
-                activeTab === "bench"
-                  ? "border-b-2 border-primary font-medium text-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
+              className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(activeTab === "bench")}`}
               aria-current={activeTab === "bench" ? "page" : undefined}
             >
               Bench
             </button>
             <button
               onClick={() => setActiveTab("docket")}
-              className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
-                activeTab === "docket"
-                  ? "border-b-2 border-primary font-medium text-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
+              className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(activeTab === "docket")}`}
               aria-current={activeTab === "docket" ? "page" : undefined}
             >
               Docket

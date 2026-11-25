@@ -9,6 +9,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { RegimeChangeHistory } from "./RegimeChangeHistory";
 import { governmentSystemLabel } from "@/lib/military/peaceTerm";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface Scalars {
   popularLegitimacy: number;
@@ -1008,11 +1009,7 @@ function ConventionDraftForm({
                 setElectionDelayTurns(d);
                 setConfirming(false);
               }}
-              className={`rounded border px-3 py-1 text-sm disabled:opacity-40 ${
-                electionDelayTurns === d
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-card-border text-foreground"
-              }`}
+              className={`px-3 py-1 text-sm disabled:opacity-40 ${pillClass(electionDelayTurns === d)}`}
               data-testid={`regime-convention-delay-${d}`}
             >
               {d} turns

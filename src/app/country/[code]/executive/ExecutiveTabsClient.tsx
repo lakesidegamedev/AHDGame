@@ -13,6 +13,7 @@ import { AdminAppointPmButton } from "./components/AdminAppointPmModal";
 import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { ExecutiveActivitySection } from "./components/ExecutiveActivitySection";
 import { ForeignAffairsTab } from "./components/ForeignAffairsTab";
+import { pillClass } from "@/components/ui/selectedState";
 
 type TabKey =
   | "devolution"
@@ -114,7 +115,7 @@ export function ExecutiveTabsClient({
           Foreign Affairs and Regime Health — sat off the edge of a phone with no
           way to reach them. */}
       <nav
-        className="mb-6 flex min-w-0 overflow-x-auto border-b border-card-border"
+        className="mb-6 flex min-w-0 gap-1 overflow-x-auto border-b border-card-border pb-2"
         aria-label="Executive sections"
       >
         <TabButton active={active === "overview"} onClick={() => setActive("overview")}>
@@ -221,19 +222,17 @@ function TabButton({
   let className: string;
   if (variant === "admin") {
     className = active
-      ? "border-b-2 border-dashed border-foreground/50 text-foreground font-medium"
-      : "text-muted/80 hover:text-foreground";
+      ? pillClass(true)
+      : "rounded-full border border-dashed border-card-border text-muted hover:text-foreground";
   } else {
-    className = active
-      ? "border-b-2 border-primary text-foreground font-medium"
-      : "text-muted hover:text-foreground";
+    className = pillClass(active);
   }
   return (
     <button
       onClick={onClick}
       // shrink-0 + nowrap so the strip scrolls instead of squeezing the labels
       // into unreadable slivers on a phone.
-      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${className}`}
+      className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${className}`}
       aria-current={active ? "page" : undefined}
     >
       {children}

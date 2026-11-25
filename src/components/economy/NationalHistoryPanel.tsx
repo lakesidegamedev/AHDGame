@@ -7,6 +7,7 @@ import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { NationalMacroPoint } from "@/lib/economy/rules/macroHistory";
 import { seriesChangePercent } from "@/lib/economy/rules/macroHistory";
+import { pillClass } from "@/components/ui/selectedState";
 
 export interface CountryMacroHistoryPayload {
   countryId: string;
@@ -212,13 +213,9 @@ export function NationalHistoryPanel({
               type="button"
               onClick={() => setMetric(id)}
               aria-pressed={active}
-              className={`rounded-md border font-medium transition-colors ${
+              className={`${
                 compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
-              } ${
-                active
-                  ? "border-card-border bg-card-elevated text-foreground shadow-card"
-                  : "border-transparent text-muted hover:bg-card-muted hover:text-foreground"
-              }`}
+              } ${pillClass(active)}`}
             >
               <span
                 className="mr-1.5 inline-block h-2 w-2 rounded-full"

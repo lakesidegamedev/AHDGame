@@ -3,6 +3,7 @@
 import { positionBucketHex } from "@/lib/utils/politics";
 import type { NationalAxes } from "@/lib/policy/nationalAxes";
 import { dominantAxis, getDomainLabel } from "./policyView";
+import { pillClass } from "@/components/ui/selectedState";
 
 const EUROPEAN_COLOUR_COUNTRIES = new Set(["UK", "DE"]);
 
@@ -48,11 +49,7 @@ export function TitlesRail({
             type="button"
             onClick={() => onSelect(domain)}
             aria-current={active ? "true" : undefined}
-            className={`flex shrink-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors lg:w-full lg:rounded-none lg:border-l-2 lg:px-4 ${
-              active
-                ? "bg-primary/10 text-foreground lg:border-primary lg:bg-primary/5"
-                : "text-muted hover:bg-card-elevated/40 hover:text-foreground lg:border-transparent"
-            }`}
+            className={`flex shrink-0 items-center justify-between gap-3 px-3 py-2 text-left text-xs lg:w-full lg:px-4 ${pillClass(active)}`}
           >
             <span className="truncate">{getDomainLabel(domain)}</span>
             {lean ? (

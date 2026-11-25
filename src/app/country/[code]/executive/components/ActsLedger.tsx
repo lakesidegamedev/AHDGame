@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { ExecutiveActKind } from "@/lib/constants/executiveSurface";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** Serialized ExecutiveAct from GET /api/country/[code]/executive/acts. */
 export interface LedgerAct {
@@ -80,11 +81,7 @@ export function ActsLedger({
               key={pill.key}
               type="button"
               onClick={() => setFilter(pill.key)}
-              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition-colors ${
-                filter === pill.key
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-card-border text-muted hover:text-foreground"
-              }`}
+              className={`px-2.5 py-0.5 text-[10px] ${pillClass(filter === pill.key)}`}
               aria-pressed={filter === pill.key}
             >
               {pill.label}

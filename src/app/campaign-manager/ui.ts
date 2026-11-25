@@ -4,22 +4,23 @@ import { readableInk, shadeColorForTier } from "@/lib/elections/marginTierShade"
 import type { MarginTier } from "@/lib/elections/generalViewModel";
 
 /**
- * Shared Campaign Manager styling, on Blend tokens. A selected chip inverts to
- * ink on the page colour; resting chips sit on the field ground.
+ * Shared Campaign Manager styling, on Blend tokens. A selected chip or segment
+ * is the site's filled primary pill (see components/ui/selectedState.ts);
+ * resting chips sit on the field ground.
  */
 
 export function chipStyle(on: boolean, extra: CSSProperties = {}): CSSProperties {
   return {
     minHeight: 34,
     padding: "0 10px",
-    borderRadius: 8,
+    borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
     fontSize: 13,
     fontWeight: 600,
-    background: on ? BLEND.ink : BLEND.field,
-    color: on ? BLEND.page : BLEND.ink,
-    border: `1px solid ${on ? BLEND.ink : BLEND.hairlineStrong}`,
+    background: on ? "var(--primary)" : BLEND.field,
+    color: on ? "var(--primary-foreground)" : BLEND.ink,
+    border: `1px solid ${on ? "var(--primary)" : BLEND.hairlineStrong}`,
     ...extra,
   };
 }
@@ -28,13 +29,13 @@ export function segmentStyle(on: boolean): CSSProperties {
   return {
     minHeight: 32,
     border: 0,
-    borderRadius: 7,
+    borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
     fontSize: 13,
     fontWeight: 600,
-    background: on ? BLEND.ink : "transparent",
-    color: on ? BLEND.page : BLEND.muted,
+    background: on ? "var(--primary)" : "transparent",
+    color: on ? "var(--primary-foreground)" : BLEND.muted,
   };
 }
 
