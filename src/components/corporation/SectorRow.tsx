@@ -1,7 +1,7 @@
 "use client";
 
 import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useState } from "react";
 import Link from "next/link";

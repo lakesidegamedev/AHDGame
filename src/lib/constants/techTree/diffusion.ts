@@ -90,14 +90,6 @@ export function adoptionLagYears(readiness: number): number {
 /** Who is adopting: a player company may license, an NPP corporation follows the country. */
 export type DiffusionAdopter = "player" | "npp";
 
-/** Player research unlocks grant access across countries. */
-export function usesCountryDiffusion(
-  method: { requiresTechUnlock?: boolean },
-  adopter: DiffusionAdopter
-): boolean {
-  return adopter === "npp" || !method.requiresTechUnlock;
-}
-
 export interface StrategyCountryContext {
   readiness: number;
   /** A company in another country already runs the method. */

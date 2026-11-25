@@ -18,7 +18,6 @@ import { isStrategySunset } from "./sunset";
 import {
   countryDiffusionContext,
   strategyOpenYear,
-  usesCountryDiffusion,
   type DiffusionAdopter,
   type TechDiffusionSnapshot,
 } from "./diffusion";
@@ -103,7 +102,7 @@ export function getStrategyAvailability(
       return { locked: true, reason: "tech" };
     }
   }
-  if (world.diffusion && usesCountryDiffusion(strategy, world.diffusion.adopter)) {
+  if (world.diffusion && (world.diffusion.adopter === "npp" || !strategy.requiresTechUnlock)) {
     const country = countryDiffusionContext(
       world.diffusion.snapshot,
       world.diffusion.countryId,

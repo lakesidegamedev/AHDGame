@@ -1,7 +1,7 @@
 "use client";
 
 import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
