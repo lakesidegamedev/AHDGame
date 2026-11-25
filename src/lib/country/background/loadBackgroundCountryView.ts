@@ -32,7 +32,6 @@ import { tradeFlowSnapshotsCollection } from "@/lib/db/repositories/tradeFlowSna
 /** Trade partner the page reports against: the player country. */
 const TRADE_PARTNER = COUNTRY_CONFIGS.US.id;
 const MAX_BONDS = 5;
-const MAX_CRISES = 5;
 
 type MacroDoc = Pick<
   MacroCountryState,
@@ -176,7 +175,6 @@ export async function loadBackgroundCountryView(
           {
             projection: { name: 1, startTurn: 1 },
             sort: { startTurn: -1 },
-            limit: MAX_CRISES,
           }
         )
         .toArray(),
