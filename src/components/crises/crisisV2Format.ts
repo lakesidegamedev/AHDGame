@@ -41,15 +41,15 @@ export function forecastText(
   if (forecast.length === 0) return null;
   const end = forecast[forecast.length - 1];
   const turns = forecast.length;
+  const period = `${turns} ${turns === 1 ? "turn" : "turns"}`;
   const now = Math.round(severity);
   const later = Math.round(end);
   const grace =
     graceTurns != null && graceTurns > 0
       ? ` After ${graceTurns} idle ${graceTurns === 1 ? "turn" : "turns"}, inaction can add to severity.`
       : "";
-  if (Math.abs(later - now) < 1)
-    return `If nobody acts: holds near ${now} for ${turns} turns.${grace}`;
-  return `If nobody acts: ${now} now, about ${later} in ${turns} turns.${grace}`;
+  if (Math.abs(later - now) < 1) return `If nobody acts: holds near ${now} for ${period}.${grace}`;
+  return `If nobody acts: ${now} now, about ${later} in ${period}.${grace}`;
 }
 
 export interface ResponderView {

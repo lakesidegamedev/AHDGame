@@ -25,6 +25,7 @@ import {
 } from "./crisisBoardStyle";
 
 export function stageText(crisis: BoardCrisis): string {
+  if (crisis.bulletin) return "News update";
   if (crisis.status === "resolved") return `Resolved, began turn ${crisis.startTurn}`;
   return crisis.v2 ? STAGE_LABEL[crisis.v2.stage] : "Ongoing";
 }
@@ -32,6 +33,10 @@ export function stageText(crisis: BoardCrisis): string {
 function whoCanRespondText(crisis: BoardCrisis): string {
   if (crisis.viewerCanAct) return "You can respond now.";
   if (crisis.status === "resolved") return "This crisis is over.";
+  if (crisis.bulletin)
+    return "This update records a development. It has no direct crisis effects or response.";
+  if (crisis.responseClosed)
+    return "The response window has closed. The event stays listed until its scheduled end.";
   if (crisis.whoCanAct) return `Waiting on a response from: ${crisis.whoCanAct}.`;
   const roles = crisis.v2?.responders.map((r) => r.role) ?? [];
   if (roles.length > 0) {
@@ -62,7 +67,7 @@ export function BoardCard({
     country: (id) => countryName(id as CountryId),
     region: (id) => regionNames[id] ?? id,
   });
-  const band = resolved ? "low" : crisis.severity;
+  const band = resolved || crisis.bulletin ? "low" : crisis.severity;
 
   return (
     <div
@@ -96,7 +101,9 @@ export function BoardCard({
             You can respond
           </span>
         )}
-        {!resolved && <SeverityTag band={crisis.severity} score={crisis.severityScore} />}
+        {!resolved && !crisis.bulletin && (
+          <SeverityTag band={crisis.severity} score={crisis.severityScore} />
+        )}
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
@@ -129,7 +136,7 @@ export function BoardCard({
             </div>
           )}
 
-          {crisis.v2 && !resolved && (
+          {crisis.v2 && !resolved && !crisis.bulletin && (
             <CrisisV2Strip crisisId={crisis.id} v2={crisis.v2} onPulled={onPulled} />
           )}
 

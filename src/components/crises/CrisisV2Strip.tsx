@@ -98,6 +98,13 @@ export function CrisisV2Strip({
           </span>{" "}
           <span className={TREND_CLASS[v2.trend]}>{TREND_TEXT[v2.trend]}</span>
           {forecast && <div>{forecast}</div>}
+          {v2.turnsUntilExpiry != null && (
+            <div>
+              {v2.turnsUntilExpiry === 0
+                ? "Scheduled to end this turn."
+                : `Scheduled to end in ${v2.turnsUntilExpiry} ${v2.turnsUntilExpiry === 1 ? "turn" : "turns"}.`}
+            </div>
+          )}
         </div>
       </div>
       <CrisisLeverList

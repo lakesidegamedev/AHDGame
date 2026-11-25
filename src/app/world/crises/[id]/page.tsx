@@ -1,3 +1,5 @@
+import { getCountryAccessFromDb } from "@/lib/countryAccess";
+import { isConflictBulletin } from "@/lib/crises/rules/eventDisplay";
 import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
 import type { CountryId } from "@/lib/constants/countries";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
@@ -197,7 +199,8 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
       : crisis.scope === "country"
         ? { countryId: { $in: crisis.countryIds }, regionType: { $nin: ["nation"] } }
         : {};
-  const [v2Detail, affectedStates] = await Promise.all([
+  const onlyCountry = crisis.countryIds.length === 1 ? (crisis.countryIds[0] as CountryId) : null;
+  const [v2Detail, affectedStates, countryAccess] = await Promise.all([
     loadCrisisV2Detail(
       db,
       crisis,
@@ -209,6 +212,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
           .find(stateFilter as never)
           .project<Pick<State, "_id" | "name" | "gdp">>({ name: 1, gdp: 1 })
           .toArray(),
+    !admin && onlyCountry ? getCountryAccessFromDb(db, onlyCountry) : null,
   ]);
   const affectedGdpMillions = affectedStates.reduce((sum, s) => sum + (s.gdp ?? 0), 0);
   const locationName = await resolveCrisisLocationName(
@@ -220,6 +224,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   );
 
   const isActive = crisis.status === "active";
+  const bulletin = isConflictBulletin(crisis);
   const startingYear = gameState?.startingYear ?? STARTING_YEAR;
   // Crisis turns are stored RAW. Without the founding-phase clock every date on
   // this page reads a game year ahead of the status bar (#1208).
@@ -299,7 +304,8 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                     isActive ? sev.eyebrow : "text-zinc-400"
                   }`}
                 >
-                  {scopeWord} crisis{isActive ? ` · ${sev.label}` : ""}
+                  {scopeWord}{" "}
+                  {bulletin ? "news update" : `crisis${isActive ? ` · ${sev.label}` : ""}`}
                 </p>
                 <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight text-balance">
                   {crisis.name}
@@ -312,12 +318,12 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                         : "border-emerald-300/40 bg-emerald-500/15 text-emerald-100"
                     }`}
                   >
-                    {isActive ? "Active" : "Resolved"}
+                    {bulletin ? "Reported" : isActive ? "Active" : "Resolved"}
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded-full border border-white/25 bg-black text-zinc-100 font-medium">
                     {scopeWord}
                   </span>
-                  {isActive && (
+                  {isActive && !bulletin && (
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full border font-medium ${sev.badge}`}
                     >
@@ -380,10 +386,29 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
               </div>
             )}
 
-            {v2Detail && <CrisisV2Detail crisisId={id} detail={v2Detail} />}
+            {crisis.globalResponse?.conflictKey === "arab_uprisings" && (
+              <p className="text-sm text-muted">
+                The authorities named in the report represent the countries where the uprisings
+                began. The countries listed here are the governments invited to respond.
+              </p>
+            )}
+            {bulletin && (
+              <p className="rounded-lg border border-card-border bg-card px-4 py-3 text-sm text-muted">
+                This update records a development. It has no direct crisis effects or response.
+              </p>
+            )}
+            {v2Detail && !bulletin && (
+              <CrisisV2Detail
+                crisisId={id}
+                detail={v2Detail}
+                hasDecision={!!crisis.interactionDefinition}
+              />
+            )}
 
             {/* Interactive decision panel (interactive crises only) */}
-            {crisis.interactionDefinition && <CrisisInteractionPanel crisisId={id} />}
+            {crisis.interactionDefinition && (
+              <CrisisInteractionPanel crisisId={id} crisisActive={isActive} />
+            )}
 
             {/* Effects: only when there are some; "0 effects" over an empty
                 list said nothing. */}
@@ -400,6 +425,12 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                   <p className="mt-0.5 text-xs text-muted">
                     Per-turn effects ease off as the crisis subsides; the bar shows relative impact.
                   </p>
+                  {crisis.templateKey === "war_civil_defense_fever" && (
+                    <p className="mt-1 text-xs text-muted">
+                      The retail margin hit starts at the same value in each country and fades over
+                      time. The severity score does not multiply it.
+                    </p>
+                  )}
                 </div>
                 <ul className="divide-y divide-card-border/60">
                   {crisis.effects.map((effect, i) => {
@@ -558,13 +589,13 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                         isActive ? "bg-warning" : "bg-success"
                       }`}
                     />
-                    {isActive ? "Active" : "Resolved"}
+                    {bulletin ? "Reported" : isActive ? "Active" : "Resolved"}
                   </span>
                 </Fact>
                 <Fact label="Scope" tooltip={CRISIS_TOOLTIPS.scope}>
                   {scopeWord}
                 </Fact>
-                {isActive && (
+                {isActive && !bulletin && (
                   <Fact label="Severity" tooltip={CRISIS_TOOLTIPS.severity}>
                     <span className={`inline-flex items-center gap-1.5 ${SEV_TEXT[severity]}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${SEV_DOT[severity]}`} />
@@ -602,8 +633,16 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                   </Fact>
                 )}
                 {crisis.countryIds.length > 0 && (
-                  <Fact label="Countries" tooltip={CRISIS_TOOLTIPS.countries}>
+                  <Fact
+                    label={crisis.globalResponse ? "Countries invited to respond" : "Countries"}
+                    tooltip={CRISIS_TOOLTIPS.countries}
+                  >
                     {targetCountryNames}
+                    {countryAccess && !countryAccess.registered && (
+                      <span className="block text-xs font-normal text-muted">
+                        This country’s economy pages are unavailable to players in this world.
+                      </span>
+                    )}
                   </Fact>
                 )}
                 {crisis.regionIds.length > 0 && (

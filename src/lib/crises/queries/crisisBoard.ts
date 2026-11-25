@@ -1,3 +1,4 @@
+import { isConflictBulletin } from "../rules/eventDisplay";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { ObjectId, type Db } from "mongodb";
@@ -78,6 +79,8 @@ export interface BoardCrisis {
   whoCanAct: string | null;
   decisionDeadline: string | null;
   decisionOpen: boolean;
+  responseClosed?: boolean;
+  bulletin?: boolean;
   viewerCanAct: boolean;
   exposure: ExposureReason[];
   chainFamily: string | null;
@@ -284,6 +287,8 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       whoCanAct: decisionOpen && node ? describeRoleRequirement(node) : null,
       decisionDeadline: interaction?.decisionDeadline?.toISOString() ?? null,
       decisionOpen,
+      responseClosed: !!interaction?.resolvedAt,
+      bulletin: isConflictBulletin(crisis),
       viewerCanAct,
       exposure,
       chainFamily: crisis.chain?.family ?? null,

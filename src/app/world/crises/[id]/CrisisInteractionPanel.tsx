@@ -386,7 +386,13 @@ function OptionPreview({
  * POST /api/crises/[id]/interact. Renders nothing for crises without an active
  * interaction (non-interactive crises, or when the feature flag is off).
  */
-export default function CrisisInteractionPanel({ crisisId }: { crisisId: string }) {
+export default function CrisisInteractionPanel({
+  crisisId,
+  crisisActive,
+}: {
+  crisisId: string;
+  crisisActive?: boolean;
+}) {
   const [interaction, setInteraction] = useState<SerializedInteraction | null>(null);
   const [canInteract, setCanInteract] = useState(false);
   const [multiResponder, setMultiResponder] = useState(false);
@@ -678,6 +684,12 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                   : "Response complete"}
               </span>
             </div>
+            {crisisActive && (
+              <p className="mt-2 text-xs text-muted">
+                The response window is closed. This event stays on the active list until its
+                scheduled end.
+              </p>
+            )}
             {terminalNode?.outcomeMessage ? (
               <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
                 {terminalNode.outcomeMessage}

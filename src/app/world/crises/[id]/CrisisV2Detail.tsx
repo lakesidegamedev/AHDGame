@@ -78,7 +78,15 @@ export function ScarList({ scars }: { scars: CrisisV2ScarView[] }) {
 }
 
 /** Crisis v2 block for the detail page: stage, severity, forecast, levers, log and scars. */
-export default function CrisisV2Detail({ crisisId, detail }: { crisisId: string; detail: Detail }) {
+export default function CrisisV2Detail({
+  crisisId,
+  detail,
+  hasDecision,
+}: {
+  crisisId: string;
+  detail: Detail;
+  hasDecision?: boolean;
+}) {
   const router = useRouter();
   const ended = detail.stage === "resolved";
   return (
@@ -88,7 +96,7 @@ export default function CrisisV2Detail({ crisisId, detail }: { crisisId: string;
           {ended ? "How it ended" : "Where it stands"}
         </h2>
         <CrisisV2Strip crisisId={crisisId} v2={detail} onPulled={() => router.refresh()} />
-        {!ended && detail.levers.length === 0 && (
+        {!ended && !hasDecision && detail.levers.length === 0 && (
           <p className="mt-2 text-xs text-muted">{noResponseText(detail.responders)}</p>
         )}
       </section>
