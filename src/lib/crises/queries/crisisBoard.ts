@@ -251,7 +251,7 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       crisis.status === "active" &&
       (viewerCanActOnCrisis(crisis, interaction, viewer) || (v2?.levers.length ?? 0) > 0);
     const exposure = context ? exposureReasons(crisis, context, viewerCanAct) : [];
-    const severityScore = crisisScoreFor(crisis, v2?.severity);
+    const severityScore = v2?.severity ?? crisisScoreFor(crisis, undefined);
     return {
       id: crisis._id.toString(),
       name: crisis.name,

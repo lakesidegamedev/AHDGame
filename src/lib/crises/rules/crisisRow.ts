@@ -76,17 +76,16 @@ export const SECTION_ORDER: readonly CrisisSection[] = ["ongoing", "warning", "a
 export const SECTION_META: Record<CrisisSection, { title: string; hint: string }> = {
   ongoing: { title: "Ongoing", hint: "Happening now, worst first." },
   warning: { title: "Early warning", hint: "Signs of trouble that have not hit yet." },
-  aftermath: { title: "Aftermath and resolved", hint: "Over, or recovering." },
+  aftermath: { title: "Resolved", hint: "Crises that have ended." },
 };
 
-/** Ongoing crises first, then early warnings, then aftermath and resolved ones. */
+/** Ongoing crises first, then early warnings, then resolved crises. */
 export function crisisSection(input: {
   status: "active" | "resolved";
   stage: string | null | undefined;
 }): CrisisSection {
   if (input.status === "resolved") return "aftermath";
   if (input.stage === "signal") return "warning";
-  if (input.stage === "aftermath" || input.stage === "resolved") return "aftermath";
   return "ongoing";
 }
 
