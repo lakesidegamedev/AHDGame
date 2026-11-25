@@ -5,7 +5,13 @@ import { getStatesCollection } from "@/lib/db/collections/states";
 import type { Db, ObjectId } from "mongodb";
 import type { ActiveCrisisStage, CrisisRole, LeverCost } from "@/lib/crises/v2/types";
 import { AID_DEFAULT_PCT_GDP, AID_MAX_PCT_GDP } from "@/lib/constants/crises";
-import type { Crisis, CrisisInteraction, CrisisLeverUse } from "@/lib/db/types/crisis";
+import type {
+  Crisis,
+  CrisisDecisionNode,
+  CrisisEffect,
+  CrisisInteraction,
+  CrisisLeverUse,
+} from "@/lib/db/types/crisis";
 import { getGameState } from "@/lib/gameState";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { leverActionCost } from "@/lib/crises/v2/leverActions";
@@ -43,6 +49,14 @@ export interface AvailableLever {
   tradeoff?: string;
   /** Present on an aid pledge, which the holder sizes before pulling. */
   aid?: AidPledgeRange;
+  preview?: {
+    description: string;
+    effects: CrisisEffect[];
+    contribution?: number;
+    contributionCurrency: string;
+    durationReductionTurns?: number;
+    treasuryCostPctGdp?: number;
+  };
 }
 
 export interface AvailableCrisisLevers {
@@ -98,10 +112,12 @@ async function loadLegacyNodes(
 ): Promise<{
   ranges: Map<string, AidPledgeRange>;
   nodeCountries: Map<string, Map<string, readonly string[]>>;
+  nodes: Map<string, Map<string, CrisisDecisionNode>>;
 }> {
   const ranges = new Map<string, AidPledgeRange>();
   const nodeCountries = new Map<string, Map<string, readonly string[]>>();
-  if (crisisIds.length === 0 || !countryId) return { ranges, nodeCountries };
+  const nodes = new Map<string, Map<string, CrisisDecisionNode>>();
+  if (crisisIds.length === 0 || !countryId) return { ranges, nodeCountries, nodes };
   const [interactions, budget] = await Promise.all([
     crisisInteractionsCollection(db)
       .find(
@@ -114,6 +130,7 @@ async function loadLegacyNodes(
             "decisionTree.requiredCountryIds": 1,
             "decisionTree.aidMaxPctGdp": 1,
             "decisionTree.aidDefaultPctGdp": 1,
+            "decisionTree.options": 1,
           },
         }
       )
@@ -123,6 +140,10 @@ async function loadLegacyNodes(
   const senderGdp =
     budget?.gdpSmoothed && budget.gdpSmoothed > 0 ? budget.gdpSmoothed : (budget?.gdp ?? 0);
   for (const interaction of interactions) {
+    nodes.set(
+      interaction.crisisId.toString(),
+      new Map(interaction.decisionTree.map((node) => [node.nodeId, node]))
+    );
     const gates = new Map<string, readonly string[]>();
     for (const n of interaction.decisionTree) {
       if (n.requiredCountryIds?.length) gates.set(n.nodeId, n.requiredCountryIds);
@@ -137,7 +158,7 @@ async function loadLegacyNodes(
       currencyCode: budget?.currencyCode ?? "USD",
     });
   }
-  return { ranges, nodeCountries };
+  return { ranges, nodeCountries, nodes };
 }
 
 export async function getAvailableLevers(
@@ -184,7 +205,11 @@ export async function getAvailableLevers(
     lastPulled.set(key, Math.max(lastPulled.get(key) ?? -Infinity, pull.submittedTurn));
   }
 
-  const { ranges: aidRanges, nodeCountries } = await loadLegacyNodes(
+  const {
+    ranges: aidRanges,
+    nodeCountries,
+    nodes,
+  } = await loadLegacyNodes(
     db,
     crises
       .filter((c) =>
@@ -223,6 +248,11 @@ export async function getAvailableLevers(
         lastPulled.get(`${crisis._id.toString()}:${lever.id}`)
       );
       if (block) continue;
+      const crisisId = crisis._id.toString();
+      const node = lever.legacy ? nodes.get(crisisId)?.get(lever.legacy.nodeId) : undefined;
+      const option = node?.options?.find(
+        (candidate) => candidate.optionId === lever.legacy?.optionId
+      );
       levers.push({
         id: lever.id,
         label: lever.label,
@@ -234,6 +264,18 @@ export async function getAvailableLevers(
         viaBill: lever.role === "legislature",
         ...(stanceTradeoff(def.id, lever.id) ? { tradeoff: stanceTradeoff(def.id, lever.id) } : {}),
         cutsSeverity: lever.mitigation > 0 && def.pacing?.kind !== "tracked",
+        ...(option
+          ? {
+              preview: {
+                description: option.description,
+                effects: option.effects,
+                contribution: option.collectiveContribution,
+                contributionCurrency: aidRanges.get(crisisId)?.currencyCode ?? "USD",
+                durationReductionTurns: option.durationReductionTurns,
+                treasuryCostPctGdp: option.treasuryCostPctGdp,
+              },
+            }
+          : {}),
         ...(lever.legacy?.kind === "aid" && aidRanges.has(crisis._id.toString())
           ? { aid: aidRanges.get(crisis._id.toString()) }
           : {}),

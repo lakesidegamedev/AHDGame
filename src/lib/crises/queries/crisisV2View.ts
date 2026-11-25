@@ -1,3 +1,5 @@
+import { collectiveSpending } from "../v2/ledgerView";
+import { crisisInteractionsCollection } from "@/lib/db/repositories/crisisInteractions";
 import { ObjectId, type Db } from "mongodb";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
@@ -56,6 +58,7 @@ export interface CrisisV2ScarView {
 
 export interface CrisisV2Detail extends CrisisV2Summary {
   ledger: LedgerRowView[];
+  spending: ReturnType<typeof collectiveSpending>;
   scars: CrisisV2ScarView[];
 }
 
@@ -210,15 +213,20 @@ export async function loadCrisisV2Detail(
   const summary = live
     ? ((await loadCrisisV2Summaries(db, [crisis], viewerId)).get(crisis._id.toString()) ?? null)
     : null;
-  const [names, scars] = await Promise.all([
+  const [names, scars, interaction] = await Promise.all([
     holderNames(
       db,
       crisis.v2.ledger.map((row) => row.holderId)
     ),
     scarViews(db, crisis.v2.scars ?? [], turn),
+    crisisInteractionsCollection(db).findOne(
+      { crisisId: crisis._id, "contributors.0": { $exists: true } },
+      { projection: { "contributors.countryId": 1, "contributors.amount": 1 } }
+    ),
   ]);
   const ledger = ledgerView(crisis.v2.ledger, def, names);
-  if (summary) return { ...summary, ledger, scars };
+  const spending = collectiveSpending(interaction?.contributors ?? []);
+  if (summary) return { ...summary, ledger, scars, spending };
   const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => s.severity);
   return {
     definitionId: crisis.v2.definitionId,
@@ -235,5 +243,6 @@ export async function loadCrisisV2Detail(
     graceTurns: null,
     ledger,
     scars,
+    spending,
   };
 }
