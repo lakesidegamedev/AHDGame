@@ -16,3 +16,8 @@ out of the same offer, so stock was overstated and new output understated.
 Advertising, a service with no stock, showed thousands of units of it, and
 the market list called several well supplied goods short. Stock is now only
 what plants offered beyond this turn's output.
+
+The background economy's extra buying for oversupplied goods also no longer
+reads a region as oversupplied while its own buyers went short there: output
+that did not sell because it was priced above what buyers would pay is not a
+surplus.

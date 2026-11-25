@@ -312,6 +312,24 @@ describe("the buyer on oversupplied lanes", () => {
     expect(surplus[laneKeyOf("oil", "world")]).toBe(0);
   });
 
+  it("never calls a lane oversupplied while its real buyers went short (output priced out)", () => {
+    const surplus = wideEconomyLaneSurplus({
+      products: [{ commodity: "steel", book: "world", producedUnits: 10, soldUnits: 0 }],
+      outcomes: [
+        {
+          accountId: "public",
+          commodity: "steel",
+          book: "world",
+          requestedUnits: 5,
+          deliveredUnits: 1,
+        },
+      ],
+      isWideAccount: (id) => id === WIDE,
+      laneKey: laneKeyOf,
+    });
+    expect(surplus[lane]).toBe(0);
+  });
+
   it("grows only after three oversupplied turns, toward 10% unsold, capped at 2.5x", () => {
     const turn = (u: number) => ({ [lane]: u });
     expect(wideEconomySurplusBoost([turn(0.3), turn(0.3)]).size).toBe(0);
