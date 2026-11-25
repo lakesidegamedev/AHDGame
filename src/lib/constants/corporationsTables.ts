@@ -251,7 +251,8 @@ export const DOMINANCE_MARKET_SHARE_THRESHOLD = 50;
  * always <= the largest cell - a same-50%-threshold national toll could never
  * fire. This lower threshold is what makes national market power tollable: 30%
  * of a whole country's sector is real concentration even with no local monopoly.
- * The turn charges the HARSHER of the local and national tolls, never both.
+ * The funded monopoly charge adds the local and national parts; the build toll
+ * still takes the harsher of the two.
  */
 export const DOMINANCE_NATIONAL_SHARE_THRESHOLD = 30;
 
@@ -265,8 +266,8 @@ export const DOMINANCE_NATIONAL_SHARE_THRESHOLD = 30;
  */
 export const DOMINANCE_RAMP_EXPONENT = 2;
 
-/** Growth-cost multiplier at 100% share (1.0× at the threshold, convex ramp between). */
-export const DOMINANCE_GROWTH_COST_MULT_AT_FULL = 3.0;
+/** Growth-cost (build toll) multiplier at 100% share (1.0× at the threshold, convex ramp between). */
+export const DOMINANCE_GROWTH_COST_MULT_AT_FULL = 1.15;
 
 /** Attack-capture multiplier at 100% share (1.0× at the threshold, convex ramp between). */
 export const DOMINANCE_ATTACK_EASE_MULT_AT_FULL = 3.5;
@@ -279,7 +280,7 @@ export const DOMINANCE_MARGIN_PENALTY_AT_THRESHOLD = 0;
  * regulatory pressure, customer backlash, unionisation, and political risk a
  * monopolist accumulates as it tightens its grip on a sector.
  */
-export const DOMINANCE_MARGIN_PENALTY_AT_FULL = -15;
+export const DOMINANCE_MARGIN_PENALTY_AT_FULL = -3.75;
 
 /**
  * Regulatory burden as a fraction of hourly revenue at the dominance threshold.
@@ -288,11 +289,18 @@ export const DOMINANCE_MARGIN_PENALTY_AT_FULL = -15;
 export const DOMINANCE_REGULATORY_BURDEN_AT_THRESHOLD = 0;
 
 /**
- * Regulatory burden as a fraction of hourly revenue at 100% market share.
- * 5% of revenue is meaningful but not crippling — a sector is still profitable
- * at 100% share, just less so.
+ * Monopoly charge as a fraction of sold revenue at 100% market share. The state
+ * part (from 50% of a state) and the country part (from 30% of a country) each
+ * reach this at 100% and add, so the most a site can pay is twice this.
  */
-export const DOMINANCE_REGULATORY_BURDEN_AT_FULL = 0.05;
+export const DOMINANCE_REGULATORY_BURDEN_AT_FULL = 0.0375;
+
+/**
+ * Dominance cost: percent added to a site's operating costs at 100% share of its
+ * own state and sector, rising in a straight line from 0 at the 50% threshold.
+ * State share only; there is no country version.
+ */
+export const DOMINANCE_COST_PCT_AT_FULL = 3.75;
 
 /**
  * Rival corps in the same (state, sectorType) cell at which the dominance toll

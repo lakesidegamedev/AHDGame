@@ -367,6 +367,26 @@ export default function FinancialsTab({
                       note="Included in gross revenue"
                     />
                   )}
+                  {(financials.revenueEffects ?? []).map((effect) => (
+                    <StatementLine
+                      key={effect.key}
+                      indent
+                      label={effect.label}
+                      amount={fmtSigned(scale(effect.amount))}
+                      amountClass={signTone(effect.amount)}
+                      note="Included in gross revenue"
+                      title="A revenue effect that applied to your sectors on the last recorded turn. Sales plus these effects make gross revenue."
+                    />
+                  ))}
+                  {(financials.subsidyReceived ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Subsidy received"
+                      amount={fmt(scale(financials.subsidyReceived ?? 0))}
+                      note="Paid by the government, not in gross revenue"
+                      title="Money the government paid you from its sector subsidy budget for the sectors a subsidy covers. It is added to operating income and is not counted as sales revenue."
+                    />
+                  )}
                   <StatementLine
                     indent
                     label="Sector maintenance"
@@ -381,6 +401,16 @@ export default function FinancialsTab({
                         : "Non-labour running costs: upkeep, inputs, overhead."
                     }
                   />
+                  {(financials.dominanceCost ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Dominance cost"
+                      amount={cost(financials.dominanceCost ?? 0)}
+                      pct={pctOf(financials.dominanceCost ?? 0)}
+                      note="Included in sector maintenance"
+                      title="Extra running cost in states where you hold more than half of a sector. It applies to sites in those states only."
+                    />
+                  )}
                   {financials.laborCosts > 0 && (
                     <StatementLine
                       indent

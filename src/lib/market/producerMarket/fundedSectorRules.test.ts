@@ -48,6 +48,7 @@ describe("funded sector result", () => {
       inputs: 20,
       maintenance: 8,
       managementOverhead: 5,
+      dominanceCost: 0,
       freight: 0,
     });
     // The named legs never exceed the costs the sector booked.
@@ -305,5 +306,77 @@ describe("funded sector ops store recent settled profit", () => {
       24
     );
     expect(out[0].updateOne.update.$set).not.toHaveProperty("valuationProfitHistory");
+  });
+});
+
+describe("funded revenue effects", () => {
+  const withEffects = {
+    ...legacy,
+    fundedRevenueLegs: { homeLocation: 5, regulatoryBurden: -10 },
+    fundedSubsidyPp: 7.5,
+  };
+
+  it("adds each effect to the sold revenue as its own line, and the lines add up", () => {
+    const r = fundedSectorResult(withEffects, receipt);
+    expect(r.fundedSalesRevenue).toBe(100);
+    expect(r.fundedRevenueEffects?.map((l) => [l.key, l.amount])).toEqual([
+      ["homeLocation", 5],
+      ["regulatoryBurden", -10],
+    ]);
+    expect(r.hourlyRevenue).toBe(95);
+  });
+
+  it("keeps producer costs on sold revenue so the effects land on profit", () => {
+    const r = fundedSectorResult(withEffects, receipt);
+    expect(r.costs).toBe(70 + 10 * Math.min(1, 1));
+    expect(r.hourlyRevenue - r.costs).toBe(95 - 80);
+  });
+
+  it("pays the subsidy on its own line, outside revenue", () => {
+    const r = fundedSectorResult(withEffects, receipt);
+    expect(r.fundedSubsidyReceived).toBe(7.5);
+    expect(r.hourlyRevenue).toBe(95);
+  });
+
+  it("names the monopoly charge as a revenue effect", () => {
+    const r = fundedSectorResult(withEffects, receipt);
+    expect(r.fundedRevenueEffects?.find((l) => l.key === "regulatoryBurden")?.label).toBe(
+      "Monopoly charge"
+    );
+  });
+
+  it("raises operating costs, not revenue, for the dominance cost", () => {
+    const base = fundedSectorResult(legacy, receipt);
+    const dominated = fundedSectorResult({ ...legacy, fundedDominanceCostPct: 10 }, receipt);
+    expect(dominated.hourlyRevenue).toBe(base.hourlyRevenue);
+    const producerCosts = 100 - receipt.profit;
+    expect(dominated.costParts.dominanceCost).toBeCloseTo(producerCosts * 0.1, 8);
+    expect(dominated.costs - base.costs).toBeCloseTo(producerCosts * 0.1, 8);
+  });
+
+  it("leaves the result unchanged when revenue effects are off", () => {
+    const r = fundedSectorResult(legacy, receipt);
+    expect(r.hourlyRevenue).toBe(100);
+    expect(r.fundedRevenueEffects).toBeUndefined();
+    expect(r.fundedSubsidyReceived).toBeUndefined();
+  });
+
+  it("stamps sales, named effects and the subsidy on plantsPnl", () => {
+    const result = fundedSectorResult(withEffects, receipt);
+    const out = fundedSectorOpsAll(
+      [{ updateOne: { filter: { _id: "s1" }, update: { $set: { wageLevel: 1 } } } }],
+      new Map([["s1", { receipt, result, daily: (a: number) => a * 2 }]]),
+      24
+    );
+    const pnl = (out[0].updateOne.update.$set as { plantsPnl: Record<string, unknown> }).plantsPnl;
+    expect(pnl).toMatchObject({
+      revenue: 190,
+      salesRevenue: 200,
+      subsidyReceived: 15,
+      revenueEffects: [
+        { key: "homeLocation", amount: 10 },
+        { key: "regulatoryBurden", amount: -20 },
+      ],
+    });
   });
 });

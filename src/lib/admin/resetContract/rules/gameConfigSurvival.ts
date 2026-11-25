@@ -40,6 +40,9 @@ export const GAME_CONFIG_SURVIVORS: readonly GameConfigSurvivor[] = Object.freez
     reason: "Economy tuning set deliberately by the owner; a duration or rate, not a turn anchor.",
     keys: [
       "dominanceRunningCostScale",
+      "fundedMonopolyCharge",
+      "fundedDominanceCost",
+      "fundedRevenueEffects",
       "managementOverheadPpPerDoubling",
       "marketGovernorRampTurns",
       "nppInsolvencyGraceTurns",

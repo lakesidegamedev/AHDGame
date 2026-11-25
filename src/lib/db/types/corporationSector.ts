@@ -735,8 +735,16 @@ export interface CorporateSector {
     stockAddedAtCost?: number;
     /** Funded market: transition floor support received this turn (reported beside profit). */
     transitionSupport?: number;
+    /** Funded market: revenue the plant sold, before revenue effects, daily host-currency money. */
+    salesRevenue?: number;
+    /** Funded market: revenue effects that applied this turn; `revenue` includes their sum. Daily host-currency money. */
+    revenueEffects?: { key: string; label: string; amount: number }[];
+    /** Funded market: government subsidy credited to the company, not sales revenue. Daily host-currency money. */
+    subsidyReceived?: number;
     /** Funded market: management overhead inside `totalCost`, daily host-currency money. */
     managementOverhead?: number;
+    /** Funded market: extra cost from state dominance inside `totalCost`, daily host-currency money. */
+    dominanceCost?: number;
     /** Funded market: growth spend realized this turn inside `totalCost`, daily host-currency money. */
     growthCost?: number;
     /** Matched own-site management-account entries, daily host-currency money. */

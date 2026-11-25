@@ -46,6 +46,8 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { managementOverheadPpForCorp } from "../managementOverhead";
 import { appliedDominanceMarginPenalty } from "@/lib/corporations/rules/dominanceRunningCost";
 import { capSizeCosts } from "@/lib/corporations/rules/sizeCostCap";
+import type { RevenueEffectLegs } from "@/lib/corporations/rules/revenueEffects";
+import { dominanceCostPct, monopolyChargePct } from "@/lib/corporations/rules/dominanceCharges";
 import { resolveSectorMandate } from "@/lib/nationalization/soeMandates";
 import { corpAlignmentModifier } from "@/lib/economicModels/effects";
 import type { getSectorTechEffects } from "@/lib/constants/techTree";
@@ -144,6 +146,14 @@ export interface MarginStackResult {
    * funded sector has no flip to match, so it pays the running share alone.
    */
   fundedSizeLegs: { sprawl: number; overhead: number; dominance: number };
+  /**
+   * Legs a funded turn applies as a share of sold revenue (points, signed).
+   * Empty when revenue effects are off. Economy-wide legs are never here:
+   * funded pricing already carries them.
+   */
+  revenueEffectLegs: RevenueEffectLegs;
+  /** Percent the site's operating costs rise by state dominance. 0 when off. */
+  dominanceCostPct: number;
   negativeProductionMarginPenalty: number;
   expropriationRiskMod: number;
   economicModelAlignmentMod: number;
@@ -411,19 +421,35 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   const sprawlMod = cappedSize.sprawl;
   const managementOverheadMod = cappedSize.overhead;
   const dominanceMarginPenalty = cappedSize.dominance;
+  const revenueEffects = lookups.revenueEffects;
+  const revenueEffectsOn = revenueEffects?.enabled === true;
+  const sharesInput = {
+    localSharePct: dominanceShares.local,
+    nationalSharePct: dominanceShares.national,
+    shield: techEffects.dominanceShield,
+    stateOwned: isStateOwned(corp),
+  };
+  // Monopoly charge: a revenue cut that follows the control group's shares.
+  const monopolyChargePp =
+    revenueEffects?.monopolyCharge === true ? -monopolyChargePct(sharesInput) : 0;
+  // Dominance cost: extra operating cost in a state the group dominates.
+  const dominanceCostPctValue =
+    revenueEffects?.dominanceCost === true ? dominanceCostPct(sharesInput) : 0;
   const fundedSizeLegs = capSizeCosts({
     sprawl: rawSprawlMod,
     overhead: rawManagementOverheadMod,
-    dominance: isStateOwned(corp)
-      ? 0
-      : appliedDominanceMarginPenalty({
-          localSharePct: dominanceShares.local,
-          nationalSharePct: dominanceShares.national,
-          shield: techEffects.dominanceShield,
-          plantsEnabled,
-          plantsRampLambda: 1,
-          runningScale: running?.scale ?? 0,
-        }),
+    // With the dominance cost on it replaces the running size cost.
+    dominance:
+      isStateOwned(corp) || revenueEffects?.dominanceCost === true
+        ? 0
+        : appliedDominanceMarginPenalty({
+            localSharePct: dominanceShares.local,
+            nationalSharePct: dominanceShares.national,
+            shield: techEffects.dominanceShield,
+            plantsEnabled,
+            plantsRampLambda: 1,
+            runningScale: running?.scale ?? 0,
+          }),
   });
   // Sustained-negative-production margin penalty: counter-driven, see
   // `getSustainedNegativeProductionPenalty`. Punishes long-term parking at
@@ -465,6 +491,25 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   // v3 Phase 6: margin hit while a strike is active. The production leg was
   // already consumed through the shared labour output factor above.
   const strikeMarginMod = strikeMarginModifier;
+  const revenueEffectLegs: RevenueEffectLegs = revenueEffectsOn
+    ? {
+        stateSpecialization: stateSectorSpecializationMod,
+        sectorTypeMatch: sectorTypeMatchMod,
+        homeLocation: homeLocationMod,
+        economicModel: economicModelAlignmentMod,
+        strategy: strategyMarginMod,
+        typeSwitch: typeSwitchMod,
+        // The funded market already charges import tariffs when its stage is on.
+        ...(lookups.fundedTariffs ? {} : { domesticTariff: domesticTariffMod }),
+        ...(lookups.fundedTariffs ? {} : { foreignTariff: foreignTariffMod }),
+        exportPremium: exportPremiumMod,
+        expropriationRisk: expropriationRiskMod,
+        disaster: disasterMarginMod,
+        regionalCondition: regionalConditionMarginMod,
+        strike: strikeMarginMod,
+      }
+    : {};
+  if (monopolyChargePp !== 0) revenueEffectLegs.regulatoryBurden = monopolyChargePp;
   const totalMarginMod =
     stateMetricMargin.cappedTotal +
     commodityMod +
@@ -551,6 +596,8 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     typeSwitchMod,
     dominanceMarginPenalty,
     fundedSizeLegs,
+    revenueEffectLegs,
+    dominanceCostPct: dominanceCostPctValue,
     negativeProductionMarginPenalty,
     expropriationRiskMod,
     economicModelAlignmentMod,

@@ -18,6 +18,7 @@ export interface FundedCostParts {
   minorInputPremiumAnchor: number;
   inventoryWriteOffAnchor: number;
   managementOverheadAnchor: number | null;
+  dominanceCostAnchor: number | null;
   growthAnchor: number | null;
 }
 
@@ -27,7 +28,8 @@ const stored = (n: number | undefined, toAnchor: (n: number) => number) =>
 
 export function fundedCostParts(
   receipt: FundedCostPartsInput,
-  pnl: { managementOverhead?: number; growthCost?: number } | null | undefined,
+  pnl:
+    { managementOverhead?: number; dominanceCost?: number; growthCost?: number } | null | undefined,
   turnsPerDay: number,
   toAnchor: (storedDaily: number) => number
 ): FundedCostParts {
@@ -42,6 +44,7 @@ export function fundedCostParts(
     minorInputPremiumAnchor: Math.max(0, num(receipt.minorInputPremium)) * turnsPerDay,
     inventoryWriteOffAnchor: Math.max(0, num(receipt.inventoryWriteOff)) * turnsPerDay,
     managementOverheadAnchor: stored(pnl?.managementOverhead, toAnchor),
+    dominanceCostAnchor: stored(pnl?.dominanceCost, toAnchor),
     growthAnchor: stored(pnl?.growthCost, toAnchor),
   };
 }

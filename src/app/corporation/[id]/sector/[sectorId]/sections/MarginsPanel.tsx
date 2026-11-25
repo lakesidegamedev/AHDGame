@@ -95,16 +95,16 @@ export function topMarginDrivers(margins: Margins): { label: string; value: numb
     ["Expropriation risk", margins.expropriationRiskModifier],
     ["Economic model fit", margins.economicModelAlignmentModifier],
     ["Logistics sprawl", margins.sprawlModifier],
-    ["Inflation", margins.inflationModifier],
-    ["National debt", margins.debtToGdpModifier],
-    ["Deficit spending", margins.deficitToGdpModifier],
+    ["Inflation (already in prices)", margins.inflationModifier],
+    ["National debt (already in prices)", margins.debtToGdpModifier],
+    ["Deficit spending (already in prices)", margins.deficitToGdpModifier],
     ["Type switch penalty", margins.typeSwitchModifier],
     ["Strategy transition", margins.strategyTransitionModifier],
     ["Foreign tariff", margins.foreignTariffModifier],
     ["Tariff friction", margins.domesticTariffMalus],
     ["Government subsidy", margins.subsidyModifier],
-    ["Market dominance", margins.dominanceMarginPenalty],
-    ["Regulatory burden", margins.dominanceRegulatoryBurdenPp],
+    ["Dominance cost", margins.dominanceMarginPenalty],
+    ["Monopoly charge", margins.dominanceRegulatoryBurdenPp],
     ["Sustained under-production", margins.sustainedNegativeProductionPenalty],
     ["Active crises", margins.crisisMarginPenalty],
   ];
@@ -667,21 +667,21 @@ export default function MarginsPanel({
                 )}
                 {margins.dominanceMarginPenalty !== 0 && (
                   <ModifierRow
-                    label="Market dominance"
+                    label="Dominance cost"
                     modifier={margins.dominanceMarginPenalty}
                     rawValue={null}
                     rawUnit=""
-                    tooltip="Margin pressure on dominant sectors (>50% of state market). Models regulatory scrutiny, customer backlash, and political risk. Scales linearly to -15pp at 100% market share."
+                    tooltip="Dominance cost: extra running cost on a site in a state where the company holds over 50% of the market. Rises in a straight line to 3.75% of the site's running costs at 100% share. Charged as a cost, shown here as margin points."
                     icon={Crown}
                   />
                 )}
                 {margins.dominanceRegulatoryBurdenPp !== 0 && (
                   <ModifierRow
-                    label="Regulatory burden"
+                    label="Monopoly charge"
                     modifier={margins.dominanceRegulatoryBurdenPp}
                     rawValue={null}
                     rawUnit=""
-                    tooltip="Compliance, antitrust legal, and lobbying costs for dominant sectors. Deducted from revenue (shown as a margin-equivalent here). Up to 5% of revenue at 100% share."
+                    tooltip="Monopoly charge: a cut of sold revenue for holding over 50% of a state market (up to 3.75% at 100%), plus a country part for holding over 30% of the country market (up to 3.75% at 100%). The two parts add. This row shows the state part."
                     icon={Gavel}
                   />
                 )}
@@ -712,7 +712,7 @@ export default function MarginsPanel({
                 )}
                 {margins.inflationModifier !== 0 && (
                   <ModifierRow
-                    label="Inflation"
+                    label="Inflation (already in prices)"
                     modifier={margins.inflationModifier}
                     rawValue={margins.inflationRate}
                     rawUnit="%"
@@ -722,7 +722,7 @@ export default function MarginsPanel({
                 )}
                 {margins.debtToGdpModifier !== 0 && (
                   <ModifierRow
-                    label="National debt"
+                    label="National debt (already in prices)"
                     modifier={margins.debtToGdpModifier}
                     rawValue={margins.debtToGdpRatio}
                     rawUnit="% of GDP"
@@ -732,7 +732,7 @@ export default function MarginsPanel({
                 )}
                 {margins.deficitToGdpModifier !== 0 && (
                   <ModifierRow
-                    label="Deficit spending"
+                    label="Deficit spending (already in prices)"
                     modifier={margins.deficitToGdpModifier}
                     rawValue={margins.deficitToGdpPct}
                     rawUnit="% of GDP"
