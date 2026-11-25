@@ -1,3 +1,5 @@
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
+import { loadOwnerCurrencyInfo, sectorMoneyAnchor } from "@/lib/corporations/sectorRevenueScale";
 import type { Db } from "mongodb";
 import type {
   GameHealthSnapshot,
@@ -743,9 +745,8 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
         { $match: { countryId: { $in: countryIds } } },
         {
           $group: {
-            _id: "$countryId",
+            _id: { countryId: "$countryId", corporationId: "$corporationId" },
             totalRevenue: { $sum: "$revenue" },
-            realizedRevenue: { $sum: "$realizedRevenue" },
           },
         },
       ])
@@ -774,7 +775,30 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
   const budgetMap = new Map(budgetDocs.map((d) => [d._id as string, d]));
   const bondMap = new Map(bondCounts.map((d) => [d._id as string, d]));
   const corpMap = new Map(corpRevenues.map((d) => [d._id as string, d]));
-  const sectorRevMap = new Map(sectorRevenues.map((d) => [d._id as string, d]));
+  // Revenue is stored in each site's host currency (a foreign owner's site is
+  // in the era-blind currency, a domestic one in the owner's), so it is
+  // converted to ₳ per owner and host country before countries are compared.
+  const [ownerCurrency, valuationFx] = await Promise.all([
+    loadOwnerCurrencyInfo(
+      db,
+      sectorRevenues.map((d) => (d._id as { corporationId: string }).corporationId)
+    ),
+    loadValuationFxRates(db),
+  ]);
+  const sectorAnchorByCountry = new Map<string, number>();
+  for (const d of sectorRevenues) {
+    const key = d._id as { countryId: string; corporationId: string };
+    sectorAnchorByCountry.set(
+      key.countryId,
+      (sectorAnchorByCountry.get(key.countryId) ?? 0) +
+        sectorMoneyAnchor(
+          d.totalRevenue as number,
+          { countryId: key.countryId },
+          ownerCurrency.get(String(key.corporationId)),
+          valuationFx
+        )
+    );
+  }
   const gdpMap = new Map(stateGdps.map((d) => [d._id as string, d]));
   const fundMap = new Map(fundAggs.map((d) => [d._id as string, d]));
 
@@ -814,7 +838,7 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
 
     // Prefer the real `corporateSectors` figure; fall back to the legacy
     // embedded-array sum so a world predating the schema move still reports.
-    const sectorData = sectorRevMap.get(countryId) as { totalRevenue?: number } | undefined;
+    const sectorAnchor = sectorAnchorByCountry.get(countryId);
     const corpData = corpMap.get(countryId) ?? { totalRevenue: 0 };
     // Normalise to the ₳ anchor. `corporateSectors.revenue` is stored in the
     // SECTOR'S HOST CURRENCY (sectorTurn writes it via writeCorpEconomicLocal),
@@ -823,10 +847,11 @@ async function collectEconomyStats(db: Db): Promise<EconomyStats> {
     // 14,300x, when in ₳ it is 837x — and Japan actually ranks BELOW the UK once
     // converted. Every cross-country revenue chart built on the raw field was
     // wrong.
-    const rawRevenue = sectorData?.totalRevenue ?? corpData.totalRevenue ?? 0;
+    const legacyRevenue = corpData.totalRevenue ?? 0;
     const countryCurrency = COUNTRY_CURRENCY_MAP[countryId as CountryId];
     const fxRate = countryCurrency ? (fxByCurrency.get(countryCurrency) ?? 1) : 1;
-    const totalCorporationRevenue = fxRate > 0 ? rawRevenue / fxRate : rawRevenue;
+    const totalCorporationRevenue =
+      sectorAnchor ?? (fxRate > 0 ? legacyRevenue / fxRate : legacyRevenue);
     const gdpLevel = (gdpMap.get(countryId) as { gdp?: number } | undefined)?.gdp ?? 0;
 
     const fundData = fundMap.get(countryId) ?? { avgFunds: 0, totalFunds: 0 };

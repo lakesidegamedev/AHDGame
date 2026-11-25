@@ -9,7 +9,8 @@ import type { Corporation, CorporateSector, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
-import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
+import { loadFxRatesByCurrency, loadValuationFxRates } from "@/lib/currency/corporationCapital";
+import { sectorMoneyInCorpCurrency } from "@/lib/corporations/sectorRevenueScale";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { buildPrimeRateMap, computeSectorNpvSum } from "@/lib/bonds/corporateBondDefault";
 import { applyTier, sectorCompensationValuationAnchor } from "./compensation";
@@ -201,11 +202,23 @@ export async function computeNationalizationTargetDetail(
     .project<{
       sectorType: CorporateSector["sectorType"];
       stateId: string;
+      countryId?: string;
       revenue: number;
       currentGrowthRate?: number;
       productionPolicyLevel?: number;
-    }>({ sectorType: 1, stateId: 1, revenue: 1, currentGrowthRate: 1, productionPolicyLevel: 1 })
+    }>({
+      sectorType: 1,
+      stateId: 1,
+      countryId: 1,
+      revenue: 1,
+      currentGrowthRate: 1,
+      productionPolicyLevel: 1,
+    })
     .toArray();
+  // Each site's revenue is stored in its host currency; show every figure in the corp's own.
+  const fx = await loadValuationFxRates(db);
+  const revenueInCorpCurrency = (s: (typeof sectors)[number]) =>
+    Math.round(sectorMoneyInCorpCurrency(s.revenue ?? 0, s, corp, fx));
 
   const round1 = (n: number) => Math.round(n * 10) / 10;
   const avgGrowthPct = sectors.length
@@ -248,13 +261,13 @@ export async function computeNationalizationTargetDetail(
     hqStateName: regionName(corp.headquartersState),
     sectorCount: sectors.length,
     regionCount: new Set(sectors.map((s) => s.stateId)).size,
-    totalRevenuePerTurn: sectors.reduce((sum, s) => sum + Math.round(s.revenue ?? 0), 0),
+    totalRevenuePerTurn: sectors.reduce((sum, s) => sum + revenueInCorpCurrency(s), 0),
     avgGrowthPct,
     avgProductionPct,
     sectors: sectors.map((s) => ({
       sectorType: s.sectorType,
       stateName: regionName(s.stateId),
-      revenuePerTurn: Math.round(s.revenue ?? 0),
+      revenuePerTurn: revenueInCorpCurrency(s),
     })),
     marketCapLocal: Math.max(0, Math.round((corp.sharePrice ?? 0) * (corp.totalShares ?? 0))),
     liquidCapitalLocal: Math.round(corp.liquidCapital ?? 0),
