@@ -1,5 +1,7 @@
 "use client";
 
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useState } from "react";
 import Link from "next/link";
@@ -309,6 +311,7 @@ export function SectorRow({
         value={pendingChange?.sectorId === sector._id ? pendingChange.targetStrategyId : currentId}
         onChange={(e) => {
           const newId = e.target.value;
+          if (sector.methodLocks?.[newId]) return;
           if (newId === currentId) {
             setPendingChange(null);
           } else {
@@ -329,10 +332,22 @@ export function SectorRow({
         )}
         {strategies.map((s) => {
           const zeroYield = isUnavailableExtractionStrategy(s);
+          const lock = sector.methodLocks?.[s.id];
+          const lockLabel =
+            lock?.reason === "diffusion" && sector.countryId
+              ? `Opens in ${getCountryDisplayName(sector.countryId as CountryId, preset)} in ${lock.opensYear}`
+              : lock?.reason === "tech"
+                ? "Requires research"
+                : lock?.reason === "era"
+                  ? "Future technology tier"
+                  : lock?.reason === "sunset"
+                    ? "Retired technology"
+                    : zeroYield
+                      ? "no deposits"
+                      : null;
           return (
-            <option key={s.id} value={s.id} disabled={zeroYield}>
-              {s.name}
-              {zeroYield ? " (no deposits)" : ""}
+            <option key={s.id} value={s.id} disabled={zeroYield || !!lock}>
+              {lockLabel ? `${s.name} (${lockLabel})` : s.name}
             </option>
           );
         })}

@@ -198,6 +198,20 @@ describe("NPP retooling under technology diffusion", () => {
     expect(onTime?.updates).toMatchObject({ strategyId: "fusion_commercial" });
   });
 
+  it("can retool a player company to a researched method before local diffusion", () => {
+    const decision = decide(
+      plant,
+      { energy: 3 },
+      {
+        ...base,
+        corp: { ...corp, ceoType: "character" },
+        currentYear: 2050,
+        techDiffusion: diffusion(),
+      }
+    );
+    expect(decision?.updates).toMatchObject({ strategyId: "fusion_commercial" });
+  });
+
   it("does not license early from a foreign operator", () => {
     const decision = decide(
       plant,

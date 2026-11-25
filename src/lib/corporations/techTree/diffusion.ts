@@ -9,18 +9,21 @@
  * pass the sector rows they already hold so the operator scan is free.
  */
 import type { Db, Filter } from "mongodb";
-import type { CommodityPrice, CorporateSector } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import {
   computeTechReadiness,
+  countryDiffusionContext,
+  strategyOpenYear,
   operatorCountriesByStrategy,
   presetUsesTechDiffusion,
   weightedMean,
   type DiffusionAdopter,
   type TechDiffusionSnapshot,
 } from "@/lib/constants/techTree/diffusion";
+import { getDecadeById } from "@/lib/constants/techTree/decades";
 import type { StrategyDiffusionWorld } from "@/lib/constants/techTree/strategyAvailability";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -151,4 +154,36 @@ export async function loadStrategyDiffusionWorld(
   }
   const snapshot = await loadTechDiffusionSnapshot(db, { countryIds: [input.countryId] });
   return { snapshot, countryId: input.countryId, adopter: input.adopter };
+}
+
+/** Opening years shared by Research and the Operations picker. */
+export async function loadMethodOpeningYears(
+  db: Db,
+  preset: string | undefined,
+  countryIds: readonly string[],
+  adopter: DiffusionAdopter
+): Promise<Map<string, Record<string, number>>> {
+  const countries = [...new Set(countryIds.filter(Boolean))];
+  if (!countries.length) return new Map();
+  const snapshot = presetUsesTechDiffusion(preset)
+    ? await loadTechDiffusionSnapshot(db, { countryIds: countries })
+    : undefined;
+  const methods = Object.values(SECTOR_STRATEGIES)
+    .flat()
+    .filter((method) => method.minDecade && (adopter === "npp" || !method.requiresTechUnlock));
+  return new Map(
+    countries.map((countryId) => [
+      countryId,
+      Object.fromEntries(
+        methods.flatMap((method) => {
+          if (!method.minDecade) return [];
+          const context = countryDiffusionContext(snapshot, countryId, adopter, method.id);
+          const year = context
+            ? strategyOpenYear(method, context)
+            : getDecadeById(method.minDecade)?.startYear;
+          return year == null ? [] : [[method.id, year]];
+        })
+      ),
+    ])
+  );
 }

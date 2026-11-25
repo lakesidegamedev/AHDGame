@@ -1,3 +1,7 @@
+import { loadMethodOpeningYears } from "@/lib/corporations/techTree/diffusion";
+import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { loadSectorCrisisEffects } from "@/lib/crises/queries/sectorCrisisEffects";
 import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
@@ -177,6 +181,18 @@ export async function loadCorporationDetailView(args: {
   const stateCtx = await loadStateViewContext(db, corporation, sectors, allStates);
   const { states, stateNameMap, stateCountryMap, uniqueStateIds, federalBudgets, gameState } =
     stateCtx;
+
+  const methodOpenings = await loadMethodOpeningYears(
+    db,
+    gameState?.preset,
+    sectors
+      .map((sector) => sector.countryId)
+      .filter((countryId): countryId is NonNullable<typeof countryId> => !!countryId),
+    corporation.ceoType === "npp" ? "npp" : "player"
+  );
+  const methodYear =
+    gameState?.currentYear ??
+    STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
 
   // Live rates plus the engine's authored fallback: cross-border sector money
   // is stored in the host's era currency (FRF, ITL, ...), which has no live row.
@@ -570,8 +586,29 @@ export async function loadCorporationDetailView(args: {
     },
     sectors: sectorDetails.map((sd) => {
       const tax = income.perSectorTax.get(sd._id.toString());
+      const openings = sd.countryId ? methodOpenings.get(sd.countryId) : undefined;
+      const methodLocks = (SECTOR_STRATEGIES[sd.sectorType] ?? []).flatMap<
+        readonly [
+          string,
+          { reason: "era" | "sunset" | "tech" } | { reason: "diffusion"; opensYear: number },
+        ]
+      >((method) => {
+        const { reason } = getStrategyAvailability(corporation, method, methodYear, true);
+        if (
+          reason === "era" ||
+          reason === "sunset" ||
+          (reason === "tech" && (viewerOwnsCorporation || subsidiary.canDirectAsParent))
+        ) {
+          return [[method.id, { reason }] as const];
+        }
+        const opensYear = openings?.[method.id];
+        return opensYear != null && opensYear > methodYear
+          ? [[method.id, { reason: "diffusion", opensYear }] as const]
+          : [];
+      });
       return {
         ...sd,
+        ...(methodLocks.length ? { methodLocks: Object.fromEntries(methodLocks) } : {}),
         crisisEffects: crisisEffectsBySector.get(sd._id.toString()),
         federalTaxPaid: sd.recordedTax?.federalTax,
         taxAssessmentTurn: sd.recordedTax?.turn,
