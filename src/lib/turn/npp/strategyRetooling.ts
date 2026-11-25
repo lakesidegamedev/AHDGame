@@ -81,7 +81,11 @@ export function chooseNppStrategyRetool(ctx: StrategyRetoolContext): StrategyRet
       sectorResearch: ctx.sectorResearchByLane?.get(operatingType),
       laneResearch: ctx.sectorResearchByLane,
       diffusion: ctx.techDiffusion
-        ? { snapshot: ctx.techDiffusion, countryId, adopter: "npp" as const }
+        ? {
+            snapshot: ctx.techDiffusion,
+            countryId,
+            adopter: ctx.corp.ceoType === "npp" ? ("npp" as const) : ("player" as const),
+          }
         : undefined,
     };
     const currentId = sector.strategyId ?? "standard";

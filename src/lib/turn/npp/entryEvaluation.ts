@@ -128,7 +128,8 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
                 stateId: entryCandidate.stateId,
                 availabilityOf: placementSignals.stateInputAvailabilityOf,
               }
-            : undefined
+            : undefined,
+          corp
         )
       : undefined);
   const foundingRecipe =

@@ -258,7 +258,14 @@ describe("SectorsTab type select and dossier", () => {
     cleanup();
   });
 
-  it("disables methods waiting for local diffusion and names their opening year", () => {
+  it.each([
+    {
+      lock: { reason: "diffusion", opensYear: 2036 } as const,
+      label: " (Opens in Canada in 2036)",
+    },
+    { lock: { reason: "tech" } as const, label: " (Requires research)" },
+    { lock: undefined, label: "" },
+  ])("shows the right availability for a production method ($label)", ({ lock, label }) => {
     const onStrategyChange = vi.fn();
     render(
       <SectorsTab
@@ -273,7 +280,7 @@ describe("SectorsTab type select and dossier", () => {
             stateName: "Ontario",
             countryId: "CA",
             strategyId: "standard",
-            methodOpeningYears: { autonomous_freight: 2036 },
+            methodLocks: lock ? { autonomous_freight: lock } : undefined,
           }),
         ]}
       />
@@ -281,12 +288,12 @@ describe("SectorsTab type select and dossier", () => {
 
     const pickers = screen.getAllByRole("combobox", { name: /Operating strategy/ });
     for (const picker of pickers) {
-      const locked = within(picker).getByRole("option", {
-        name: "Autonomous Freight (Opens in Canada in 2036)",
+      const option = within(picker).getByRole("option", {
+        name: `Autonomous Freight${label}`,
       });
-      expect((locked as HTMLOptionElement).disabled).toBe(true);
+      expect((option as HTMLOptionElement).disabled).toBe(!!lock);
       fireEvent.change(picker, { target: { value: "autonomous_freight" } });
-      expect((picker as HTMLSelectElement).value).not.toBe("autonomous_freight");
+      expect((picker as HTMLSelectElement).value).toBe(lock ? "standard" : "autonomous_freight");
     }
     expect(onStrategyChange).not.toHaveBeenCalled();
   });

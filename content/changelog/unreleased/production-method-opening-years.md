@@ -1,7 +1,7 @@
 ---
 date: 2026-11-25
-title: "Research and Operations show when production methods open"
-summary: "Research cards list local opening years and explain early licensing. Operations marks a method as locked until it reaches the plant’s country."
+title: "Researched production methods work in every country"
+summary: "Player companies can use researched production methods in every country once the technology tier is open. Research and Operations show local opening years for methods that still follow country diffusion."
 tags: [corporations, research, operations]
 badges: [patch]
 areas: [fullstack]

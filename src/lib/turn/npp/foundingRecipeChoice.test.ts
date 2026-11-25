@@ -8,6 +8,7 @@ import {
 } from "./foundingRecipeChoice";
 import { foundingSectorWeights } from "./foundingSectorChoice";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { TECH_TREE } from "@/lib/constants/techTree/nodes";
 
 const prices =
   (ratios: Partial<Record<CommodityType, number>>) =>
@@ -93,6 +94,20 @@ describe("foundingRecipeAvailable under technology diffusion", () => {
         "NG"
       )(pharma)
     ).toBe(true);
+  });
+
+  it("lets autopilot found a player site using the company's research", () => {
+    const freight = SECTOR_STRATEGIES.logistics.find((r) => r.id === "autonomous_freight")!;
+    const node = TECH_TREE.logistics.find((candidate) => candidate.name === "Autonomous Freight")!;
+    const company = {
+      type: "logistics" as const,
+      ceoType: "character" as const,
+      unlockedTechNodeIds: [node.id],
+    };
+    const freightWorld = { ...world, currentYear: 2032 };
+
+    expect(foundingRecipeAvailable("logistics", freightWorld, "NG", company)(freight)).toBe(true);
+    expect(foundingRecipeAvailable("logistics", freightWorld, "NG")(freight)).toBe(false);
   });
 
   it("keeps the calendar gate when no country is given", () => {

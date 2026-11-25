@@ -1,4 +1,5 @@
 import { loadMethodOpeningYears } from "@/lib/corporations/techTree/diffusion";
+import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
@@ -574,15 +575,28 @@ export async function loadCorporationDetailView(args: {
     sectors: sectorDetails.map((sd) => {
       const tax = income.perSectorTax.get(sd._id.toString());
       const openings = sd.countryId ? methodOpenings.get(sd.countryId) : undefined;
-      const futureMethods = openings
-        ? (SECTOR_STRATEGIES[sd.sectorType] ?? []).flatMap(({ id }) => {
-            const year = openings[id];
-            return year != null && year > methodYear ? [[id, year] as const] : [];
-          })
-        : [];
+      const methodLocks = (SECTOR_STRATEGIES[sd.sectorType] ?? []).flatMap<
+        readonly [
+          string,
+          { reason: "era" | "sunset" | "tech" } | { reason: "diffusion"; opensYear: number },
+        ]
+      >((method) => {
+        const { reason } = getStrategyAvailability(corporation, method, methodYear, true);
+        if (
+          reason === "era" ||
+          reason === "sunset" ||
+          (reason === "tech" && (viewerOwnsCorporation || subsidiary.canDirectAsParent))
+        ) {
+          return [[method.id, { reason }] as const];
+        }
+        const opensYear = openings?.[method.id];
+        return opensYear != null && opensYear > methodYear
+          ? [[method.id, { reason: "diffusion", opensYear }] as const]
+          : [];
+      });
       return {
         ...sd,
-        ...(futureMethods.length ? { methodOpeningYears: Object.fromEntries(futureMethods) } : {}),
+        ...(methodLocks.length ? { methodLocks: Object.fromEntries(methodLocks) } : {}),
         federalTaxPaid: sd.recordedTax?.federalTax,
         taxAssessmentTurn: sd.recordedTax?.turn,
         federalTaxForecast: tax?.federalTaxPaid,

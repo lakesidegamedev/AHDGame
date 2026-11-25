@@ -688,7 +688,10 @@ export interface CommoditySupplyDemandBlendPct {
 }
 
 export interface SectorDetail {
-  methodOpeningYears?: Record<string, number>;
+  methodLocks?: Record<
+    string,
+    { reason: "era" | "sunset" | "tech" } | { reason: "diffusion"; opensYear: number }
+  >;
   _id: string;
   /** Funded-market transition package while its window is open for this sector. */
   cutoverTransition?: {

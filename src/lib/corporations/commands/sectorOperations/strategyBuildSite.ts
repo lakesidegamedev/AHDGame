@@ -70,7 +70,7 @@ export async function prepareStrategyBuildSite(
       preset: gameState?.preset,
       techTreesEnabled: true,
       countryId,
-      adopter: "player",
+      adopter: corporation.ceoType === "npp" ? "npp" : "player",
     }),
     sectorType === "extraction"
       ? stateResourceCapacityCollection(db).findOne({ stateId }, { projection: { resources: 1 } })

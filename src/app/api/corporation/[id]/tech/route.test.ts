@@ -64,9 +64,9 @@ beforeEach(async () => {
 });
 
 describe("GET /api/corporation/[id]/tech", () => {
-  it.each([false, true])(
-    "shows tiered unlock years by operating country (foreign operator: %s)",
-    async (foreignOperator) => {
+  it.each(["player", "npp"] as const)(
+    "returns the appropriate country opening years for a %s company",
+    async (ceoType) => {
       const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
       const { getGameState } = await import("@/lib/gameState");
       vi.mocked(getGameState).mockResolvedValue({
@@ -83,6 +83,7 @@ describe("GET /api/corporation/[id]/tech", () => {
         corporation: makeCorp({
           type: "logistics",
           countryId: "CA",
+          ceoType,
           unlockedTechNodeIds: [node.id],
         }),
       } as never);
@@ -91,9 +92,7 @@ describe("GET /api/corporation/[id]/tech", () => {
       sectors.aggregate.mockReturnValue({
         toArray: vi
           .fn()
-          .mockResolvedValue(
-            foreignOperator ? [{ _id: { strategyId: "autonomous_freight", countryId: "US" } }] : []
-          ),
+          .mockResolvedValue([{ _id: { strategyId: "autonomous_freight", countryId: "US" } }]),
       });
 
       const { GET } = await import("./route");
@@ -107,11 +106,13 @@ describe("GET /api/corporation/[id]/tech", () => {
       expect(owned.effects).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            licensingYears: 3,
-            methodOpenings: [
-              { countryId: "CA", year: foreignOperator ? 2033 : 2036, open: false },
-              { countryId: "US", year: 2036, open: false },
-            ],
+            methodOpenings:
+              ceoType === "player"
+                ? []
+                : [
+                    { countryId: "CA", year: 2036, open: false },
+                    { countryId: "US", year: 2036, open: false },
+                  ],
           }),
         ])
       );

@@ -17,6 +17,7 @@ import {
   computeTechReadiness,
   countryDiffusionContext,
   strategyOpenYear,
+  usesCountryDiffusion,
   operatorCountriesByStrategy,
   presetUsesTechDiffusion,
   weightedMean,
@@ -170,7 +171,7 @@ export async function loadMethodOpeningYears(
     : undefined;
   const methods = Object.values(SECTOR_STRATEGIES)
     .flat()
-    .filter((method) => method.minDecade);
+    .filter((method) => method.minDecade && usesCountryDiffusion(method, adopter));
   return new Map(
     countries.map((countryId) => [
       countryId,
