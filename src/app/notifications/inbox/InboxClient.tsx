@@ -81,21 +81,82 @@ function receivedMailIds(item: InboxItem): string[] {
     .map((message) => message.id as string);
 }
 
-function groupItems(items: InboxItem[]): { thisTurn: InboxItem[]; earlier: InboxItem[] } {
-  // Items with time === "now" or ending in "m" or "h" are considered "this turn".
-  // Items ending in "d" are "earlier". This is a display heuristic — the exact
-  // cutoff doesn't need to be precise.
-  const thisTurn: InboxItem[] = [];
-  const earlier: InboxItem[] = [];
-  for (const item of items) {
-    const t = item.time;
-    if (t === "now" || t.endsWith("m") || t.endsWith("h")) {
-      thisTurn.push(item);
-    } else {
-      earlier.push(item);
-    }
+function groupItems(items: InboxItem[]): { thisTurn: InboxItem[][]; earlier: InboxItem[][] } {
+  const thisTurn: InboxItem[][] = [];
+  const earlier: InboxItem[][] = [];
+  for (const group of groupedRailItems(items)) {
+    const time = group[0].time;
+    if (time === "now" || time.endsWith("m") || time.endsWith("h")) thisTurn.push(group);
+    else earlier.push(group);
   }
   return { thisTurn, earlier };
+}
+
+function notificationThreadKey(item: InboxItem): string {
+  if (item.kind === "mail") return `mail:${item.id}`;
+  const href = item.source?.href;
+  if (href && (item.type === "crisis" || item.type === "crisis_resolved")) {
+    return `crisis:${item.label.includes("Shared by all your characters")}:${href}`;
+  }
+  if (href && item.type === "corp_credit_rating_change") return `credit:${item.label}:${href}`;
+  return JSON.stringify([
+    item.type,
+    item.label,
+    item.title,
+    item.body,
+    href,
+    (item.meta ?? []).filter(([label]) => label !== "Turn"),
+  ]);
+}
+
+function groupedRailItems(items: InboxItem[]): InboxItem[][] {
+  const groups = new Map<string, InboxItem[]>();
+  for (const item of items) {
+    const key = notificationThreadKey(item);
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
+  }
+  return [...groups.values()];
+}
+
+function InboxRailRows({
+  groups,
+  selectedId,
+  compact,
+  onSelect,
+}: {
+  groups: InboxItem[][];
+  selectedId: string | null;
+  compact: boolean;
+  onSelect: (item: InboxItem) => void;
+}) {
+  const row = (item: InboxItem) => (
+    <RailItem
+      key={item.id}
+      item={item}
+      selected={item.id === selectedId}
+      compact={compact}
+      onSelect={() => onSelect(item)}
+    />
+  );
+
+  return groups.map((group) => {
+    const first = group[0];
+    if (group.length === 1) return row(first);
+    const unread = group.filter((item) => item.unread).length;
+    return (
+      <details key={first.id} className="border-b border-card-border">
+        <summary className="cursor-pointer px-4 py-3 text-sm text-foreground">
+          <span className={unread ? "font-semibold" : undefined}>{first.title}</span>
+          <span className="ml-2 text-xs text-muted">
+            {group.length} notifications{unread > 0 ? ` · ${unread} unread` : ""}
+          </span>
+        </summary>
+        {group.map(row)}
+      </details>
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -542,15 +603,12 @@ export function InboxClient() {
                 <div className="border-b border-card-border bg-card-elevated/25 px-4 py-2">
                   <p className="text-body-sm font-medium text-foreground/70">This turn</p>
                 </div>
-                {thisTurn.map((item) => (
-                  <RailItem
-                    key={item.id}
-                    item={item}
-                    selected={item.id === selId}
-                    compact={compact}
-                    onSelect={() => void handleSelect(item)}
-                  />
-                ))}
+                <InboxRailRows
+                  groups={thisTurn}
+                  selectedId={selId}
+                  compact={compact}
+                  onSelect={(item) => void handleSelect(item)}
+                />
               </>
             )}
 
@@ -559,15 +617,12 @@ export function InboxClient() {
                 <div className="border-b border-card-border bg-card-elevated/25 px-4 py-2">
                   <p className="text-body-sm font-medium text-foreground/70">Earlier</p>
                 </div>
-                {earlier.map((item) => (
-                  <RailItem
-                    key={item.id}
-                    item={item}
-                    selected={item.id === selId}
-                    compact={compact}
-                    onSelect={() => void handleSelect(item)}
-                  />
-                ))}
+                <InboxRailRows
+                  groups={earlier}
+                  selectedId={selId}
+                  compact={compact}
+                  onSelect={(item) => void handleSelect(item)}
+                />
               </>
             )}
           </div>

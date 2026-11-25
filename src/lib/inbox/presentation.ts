@@ -84,6 +84,7 @@ export function notificationLabel(type: NotificationType): string {
 
 const URGENT_TYPES: ReadonlySet<NotificationType> = new Set([
   "player_attack",
+  "corp_sector_attacked",
   "corp_nationalization_risk",
   "corp_hostile_takeover_available",
   "corp_nationalization_notice",
@@ -114,8 +115,14 @@ const SOCIAL_TYPES: ReadonlySet<NotificationType> = new Set([
   "coalition_chair_transferred",
 ]);
 
-export function notificationUrgency(type: NotificationType, action: boolean): InboxUrgency {
-  if (URGENT_TYPES.has(type)) return "urgent";
+export function notificationUrgency(
+  type: NotificationType,
+  action: boolean,
+  metadata?: Record<string, unknown>
+): InboxUrgency {
+  const advisory = metadata?.advisory;
+  if (URGENT_TYPES.has(type) || (type === "corp_autopilot_advisory" && advisory === "distress"))
+    return "urgent";
   if (SOCIAL_TYPES.has(type)) return "social";
   if (action || ACTION_TYPES.has(type)) return "decision";
   return "update";
@@ -174,6 +181,7 @@ export function notificationMeta(
 
   addMeta(meta, "Position", metadata.position);
   addMeta(meta, "Chamber", metadata.chamber);
+  addMeta(meta, "Crisis start turn", metadata.crisisStartTurn);
   addMeta(meta, "Turn", turn ?? metadata.turn);
 
   return meta.length > 0 ? meta.slice(0, 4) : undefined;

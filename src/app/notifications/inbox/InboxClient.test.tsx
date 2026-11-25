@@ -69,6 +69,35 @@ it("keeps the inbox heading and tab row in place while the data loads", () => {
   expect(screen.getByRole("tablist", { name: "Inbox segment" })).toBeTruthy();
 });
 
+it("groups matching notifications while keeping different event links separate", () => {
+  const first = {
+    ...notif("first"),
+    source: { label: "View event", href: "/events/first" },
+    meta: [["Turn", "10"]] as [string, string][],
+  };
+  const repeated = { ...first, id: "repeat", meta: [["Turn", "11"]] as [string, string][] };
+  const other = { ...first, id: "other", source: { ...first.source, href: "/events/other" } };
+  mockUseInboxData.mockReturnValue(hookResult([first, repeated, other], vi.fn()));
+
+  const { container } = render(<InboxClient />);
+
+  expect(container.querySelectorAll("details")).toHaveLength(1);
+  expect(container.querySelector("summary")?.textContent).toContain("2 notifications");
+  expect(container.querySelectorAll("details button")).toHaveLength(2);
+});
+
+it("puts crisis starts and ends for the same crisis in one group across time sections", () => {
+  const source = { label: "View crisis", href: "/world/crises/one" };
+  const ended = { ...notif("ended"), type: "crisis_resolved" as const, source };
+  const started = { ...notif("started"), type: "crisis" as const, source, time: "1d" };
+  mockUseInboxData.mockReturnValue(hookResult([ended, started], vi.fn()));
+
+  const { container } = render(<InboxClient />);
+
+  expect(container.querySelector("summary")?.textContent).toContain("2 notifications");
+  expect(container.querySelectorAll("details button")).toHaveLength(2);
+});
+
 describe("InboxClient handleMarkAllRead", () => {
   beforeEach(() => {
     vi.clearAllMocks();

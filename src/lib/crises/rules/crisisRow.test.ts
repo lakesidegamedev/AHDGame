@@ -30,11 +30,12 @@ describe("crisisSeverityScore", () => {
 });
 
 describe("crisisSection", () => {
-  it("puts ongoing first, warnings next, aftermath and resolved last", () => {
+  it("keeps active recovery stages under ongoing", () => {
     expect(crisisSection({ status: "active", stage: "peak" })).toBe("ongoing");
     expect(crisisSection({ status: "active", stage: undefined })).toBe("ongoing");
     expect(crisisSection({ status: "active", stage: "signal" })).toBe("warning");
-    expect(crisisSection({ status: "active", stage: "aftermath" })).toBe("aftermath");
+    expect(crisisSection({ status: "active", stage: "aftermath" })).toBe("ongoing");
+    expect(crisisSection({ status: "active", stage: "resolved" })).toBe("ongoing");
     expect(crisisSection({ status: "resolved", stage: "peak" })).toBe("aftermath");
   });
 });
