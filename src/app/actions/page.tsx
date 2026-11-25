@@ -20,6 +20,9 @@ async function loadInitialHero(): Promise<InitialActionsHero | null> {
   return {
     imageUrl: getActionImage("hero", { era, countryId: user.character.countryId }),
     eraLabel: String(world.currentYear ?? era),
+    era,
+    countryId: user.character.countryId,
+    viewMode: user.actionsViewMode,
   };
 }
 

@@ -1,11 +1,7 @@
 import { Skeleton } from "@/components/ui";
 import { CardSkeleton, StatGridSkeleton } from "@/components/ui/loading-skeletons";
 
-/**
- * /actions resolves the character, their state and influence budget before it
- * can render any action card. Mirrors the page's header, stat row and the
- * three-column action grid.
- */
+/** Reserves space during navigation while the server loads the page artwork. */
 export default function ActionsLoading() {
   return (
     <main className="mx-auto max-w-7xl space-y-8 overflow-x-hidden px-4 py-8 sm:px-6">
