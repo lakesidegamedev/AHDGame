@@ -1,5 +1,7 @@
 "use client";
 
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import type { CountryId } from "@/lib/constants/countries";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useState } from "react";
 import Link from "next/link";
@@ -309,6 +311,7 @@ export function SectorRow({
         value={pendingChange?.sectorId === sector._id ? pendingChange.targetStrategyId : currentId}
         onChange={(e) => {
           const newId = e.target.value;
+          if (sector.methodOpeningYears?.[newId] != null) return;
           if (newId === currentId) {
             setPendingChange(null);
           } else {
@@ -329,10 +332,12 @@ export function SectorRow({
         )}
         {strategies.map((s) => {
           const zeroYield = isUnavailableExtractionStrategy(s);
+          const opensYear = sector.methodOpeningYears?.[s.id];
           return (
-            <option key={s.id} value={s.id} disabled={zeroYield}>
-              {s.name}
-              {zeroYield ? " (no deposits)" : ""}
+            <option key={s.id} value={s.id} disabled={zeroYield || opensYear != null}>
+              {opensYear != null && sector.countryId
+                ? `${s.name} (Opens in ${getCountryDisplayName(sector.countryId as CountryId, preset)} in ${opensYear})`
+                : `${s.name}${zeroYield ? " (no deposits)" : ""}`}
             </option>
           );
         })}

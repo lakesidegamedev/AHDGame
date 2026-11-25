@@ -1,3 +1,6 @@
+import { loadMethodOpeningYears } from "@/lib/corporations/techTree/diffusion";
+import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { IMF_INSTITUTION_PLAYER_DESCRIPTION } from "@/lib/imf/constants";
 import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
 import { viewerRunsCorporation } from "@/lib/corporations/ceoActor";
@@ -176,6 +179,18 @@ export async function loadCorporationDetailView(args: {
   const stateCtx = await loadStateViewContext(db, corporation, sectors, allStates);
   const { states, stateNameMap, stateCountryMap, uniqueStateIds, federalBudgets, gameState } =
     stateCtx;
+
+  const methodOpenings = await loadMethodOpeningYears(
+    db,
+    gameState?.preset,
+    sectors
+      .map((sector) => sector.countryId)
+      .filter((countryId): countryId is NonNullable<typeof countryId> => !!countryId),
+    corporation.ceoType === "npp" ? "npp" : "player"
+  );
+  const methodYear =
+    gameState?.currentYear ??
+    STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
 
   // Live rates plus the engine's authored fallback: cross-border sector money
   // is stored in the host's era currency (FRF, ITL, ...), which has no live row.
@@ -558,8 +573,16 @@ export async function loadCorporationDetailView(args: {
     },
     sectors: sectorDetails.map((sd) => {
       const tax = income.perSectorTax.get(sd._id.toString());
+      const openings = sd.countryId ? methodOpenings.get(sd.countryId) : undefined;
+      const futureMethods = openings
+        ? (SECTOR_STRATEGIES[sd.sectorType] ?? []).flatMap(({ id }) => {
+            const year = openings[id];
+            return year != null && year > methodYear ? [[id, year] as const] : [];
+          })
+        : [];
       return {
         ...sd,
+        ...(futureMethods.length ? { methodOpeningYears: Object.fromEntries(futureMethods) } : {}),
         federalTaxPaid: sd.recordedTax?.federalTax,
         taxAssessmentTurn: sd.recordedTax?.turn,
         federalTaxForecast: tax?.federalTaxPaid,

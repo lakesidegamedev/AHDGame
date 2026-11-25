@@ -258,6 +258,39 @@ describe("SectorsTab type select and dossier", () => {
     cleanup();
   });
 
+  it("disables methods waiting for local diffusion and names their opening year", () => {
+    const onStrategyChange = vi.fn();
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        onStrategyChange={onStrategyChange}
+        sectors={[
+          sector({
+            sectorType: "logistics",
+            _id: "ontario-logistics",
+            stateId: "ON",
+            stateName: "Ontario",
+            countryId: "CA",
+            strategyId: "standard",
+            methodOpeningYears: { autonomous_freight: 2036 },
+          }),
+        ]}
+      />
+    );
+
+    const pickers = screen.getAllByRole("combobox", { name: /Operating strategy/ });
+    for (const picker of pickers) {
+      const locked = within(picker).getByRole("option", {
+        name: "Autonomous Freight (Opens in Canada in 2036)",
+      });
+      expect((locked as HTMLOptionElement).disabled).toBe(true);
+      fireEvent.change(picker, { target: { value: "autonomous_freight" } });
+      expect((picker as HTMLSelectElement).value).not.toBe("autonomous_freight");
+    }
+    expect(onStrategyChange).not.toHaveBeenCalled();
+  });
+
   it("lists every owned type and shows every sector until one is picked", () => {
     render(<SectorsTab {...baseProps} sectors={mixedSectors} isCeo />);
 
