@@ -640,4 +640,35 @@ describe("wider-economy funding", () => {
     expect((outcome.newHouseholdIncome as { totalAnchor: number }).totalAnchor).toBeCloseTo(40, 6);
     expect(r.turnWarnings.join(" ")).not.toContain("New household income audit");
   });
+
+  it("pays growth income and the spending power top-up in one turn, each in its own batch", async () => {
+    const walletId = producerWalletId("world", {
+      kind: "households",
+      countryId: "US",
+      stateId: "US_CA",
+      currency: "USD",
+    });
+    const r = await runWith(0, () => ({
+      newHouseholdIncome: [
+        { walletId, countryId: "US", amount: 40, share: 0.022, source: "growth" },
+        { walletId, countryId: "US", amount: 25, share: 0.01, source: "spendingPower" },
+      ],
+    }));
+    const minted = (kind: string) =>
+      r.memory
+        .collection("bankMoneyMoves")
+        .docs.filter((m) => m.kind === kind)
+        .flatMap((m) => m.legs as { kind: string; amount: number }[])
+        .filter((l) => l.kind === "mint")
+        .reduce((n, l) => n + l.amount, 0);
+    expect(minted("producer_household_new_income")).toBeCloseTo(40 * RATE, 6);
+    expect(minted("producer_household_spending_power")).toBeCloseTo(25 * RATE, 6);
+    const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
+    expect((outcome.newHouseholdIncome as { totalAnchor: number }).totalAnchor).toBeCloseTo(40, 6);
+    expect((outcome.householdSpendingPower as { totalAnchor: number }).totalAnchor).toBeCloseTo(
+      25,
+      6
+    );
+    expect(r.turnWarnings.join(" ")).not.toContain("New household income audit");
+  });
 });
