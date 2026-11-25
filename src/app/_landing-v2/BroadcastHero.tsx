@@ -33,7 +33,7 @@ export function BroadcastHeadline({
   const written = String(year);
   const at = text.lastIndexOf(written);
   return (
-    <h1 className="ahd-bc-headline text-balance text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-5xl">
+    <h1 className="ahd-bc-headline text-balance text-display font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-display">
       {at < 0 ? (
         text
       ) : (
@@ -127,11 +127,11 @@ export function BroadcastTierKey({
                   : TIER_COLORS[tier],
             }}
           />
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-white/70">
+          <span className="font-mono text-body-sm uppercase tracking-[0.12em] text-white/70">
             {TIER_LABELS[tier]}
           </span>
           {counts?.[tier] !== undefined && (
-            <span className="font-mono text-[10px] tabular-nums text-white">{counts[tier]}</span>
+            <span className="font-mono text-body-sm tabular-nums text-white">{counts[tier]}</span>
           )}
         </li>
       ))}

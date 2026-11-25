@@ -197,7 +197,7 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
     const hue = meta?.hue ?? "var(--muted)";
     return (
       <span
-        className="inline-flex h-6 w-9 flex-shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-bold"
+        className="inline-flex h-6 w-9 flex-shrink-0 items-center justify-center rounded-full font-mono text-body-sm font-bold"
         style={{ border: `1.5px solid ${hue}`, color: hue, background: `${hue}24` }}
         title={meta?.name ?? code}
       >
@@ -211,24 +211,24 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-bold text-foreground">
+        <h3 className="text-body-lg font-bold text-foreground">
           Trade restrictions{" "}
           <span className="font-normal text-muted">· embargoes &amp; tariffs</span>
         </h3>
-        <span className="text-[10px] text-muted">
+        <span className="text-body-sm text-muted">
           {items.length + tariffs.length} active
           {pending.length > 0 ? ` · ${pending.length} pending` : ""}
         </span>
       </div>
 
       {loading ? (
-        <p className="py-6 text-center text-sm text-muted">Loading restrictions…</p>
+        <p className="py-6 text-center text-body text-muted">Loading restrictions…</p>
       ) : failed ? (
-        <p className="py-6 text-center text-sm text-error">
+        <p className="py-6 text-center text-body text-error">
           Couldn&apos;t load trade restrictions.
         </p>
       ) : nothing ? (
-        <p className="py-6 text-center text-sm text-muted">
+        <p className="py-6 text-center text-body text-muted">
           No embargoes or tariffs are in force. Trade flows freely.
         </p>
       ) : (
@@ -241,10 +241,10 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
                 <div key={g.code}>
                   <div className="mb-2 flex items-center gap-2">
                     {chip(g.code)}
-                    <span className="text-sm font-semibold text-foreground">
+                    <span className="text-body font-semibold text-foreground">
                       {countryMeta.get(g.code)?.name ?? g.code}
                     </span>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-body-sm text-muted">
                       · {g.rows.length} restriction{g.rows.length === 1 ? "" : "s"}
                     </span>
                   </div>
@@ -265,8 +265,8 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
                         >
                           {chip(e.targetCountry)}
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm text-foreground">{summary}</p>
-                            <p className="text-[11px] text-muted">
+                            <p className="truncate text-body text-foreground">{summary}</p>
+                            <p className="text-body-sm text-muted">
                               {e.origin === "legislation"
                                 ? "By law"
                                 : e.origin === "crisis"
@@ -280,7 +280,7 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
                             </p>
                           </div>
                           <span
-                            className={`shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            className={`shrink-0 rounded-md border px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${
                               e.mode === "block"
                                 ? "border-error/40 text-error"
                                 : "border-warning/40 text-warning"
@@ -305,10 +305,10 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
                 <div key={g.code}>
                   <div className="mb-2 flex items-center gap-2">
                     {chip(g.code)}
-                    <span className="text-sm font-semibold text-foreground">
+                    <span className="text-body font-semibold text-foreground">
                       {countryMeta.get(g.code)?.name ?? g.code}
                     </span>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-body-sm text-muted">
                       · {g.rows.length} tariff{g.rows.length === 1 ? "" : "s"}
                     </span>
                   </div>
@@ -319,12 +319,12 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
                         className="flex items-center gap-3 rounded-lg border border-card-border bg-card-elevated px-3 py-2"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm text-foreground">{tariffSummary(t)}</p>
-                          <p className="text-[11px] text-muted">
+                          <p className="truncate text-body text-foreground">{tariffSummary(t)}</p>
+                          <p className="text-body-sm text-muted">
                             {TARIFF_SCOPE_LABELS[t.scopeType] ?? t.scopeType}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-md border border-warning/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
+                        <span className="shrink-0 rounded-md border border-warning/40 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-warning">
                           {t.rate}%
                         </span>
                       </li>
@@ -340,7 +340,7 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
             <div>
               <h4 className="mb-2 flex items-center gap-2 text-body-sm font-medium text-muted">
                 Pending in legislation
-                <span className="rounded-md border border-primary/40 px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-primary">
+                <span className="rounded-md border border-primary/40 px-1.5 py-0.5 text-body-sm font-semibold normal-case tracking-normal text-primary">
                   not yet in force
                 </span>
               </h4>
@@ -367,13 +367,13 @@ export default function RestrictionsView({ ledger }: { ledger: WorldTradeLedger 
                       <span className="text-muted">→</span>
                       {chip(p.targetCountry)}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-foreground">{summary}</p>
-                        <p className="truncate text-[11px] text-muted">
+                        <p className="truncate text-body text-foreground">{summary}</p>
+                        <p className="truncate text-body-sm text-muted">
                           {countryMeta.get(p.sourceCountry)?.name ?? p.sourceCountry} ·{" "}
                           {p.billTitle}
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-md border border-card-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                      <span className="shrink-0 rounded-md border border-card-border px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-muted">
                         {statusLabel(p.status)}
                       </span>
                     </li>

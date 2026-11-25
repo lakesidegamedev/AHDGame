@@ -124,11 +124,11 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
 
   return (
     <>
-      <p className="text-sm text-muted mb-4">{t("profile.intro")}</p>
+      <p className="text-body text-muted mb-4">{t("profile.intro")}</p>
 
       <Link
         href={profileHref}
-        className="mb-6 inline-flex items-center gap-2 rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-card-border"
+        className="mb-6 inline-flex items-center gap-2 rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-card-elevated hover:border-card-border"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -151,7 +151,10 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
 
       <form onSubmit={handleNameSave} className="space-y-4 mb-6">
         <div>
-          <label htmlFor="displayName" className="block text-sm font-medium text-foreground mb-1.5">
+          <label
+            htmlFor="displayName"
+            className="block text-body font-medium text-foreground mb-1.5"
+          >
             {t("profile.characterName")}
           </label>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -160,7 +163,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className={`flex-1 rounded-xl border px-4 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+              className={`flex-1 rounded-xl border px-4 py-2.5 text-body bg-background focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                 newName && nameValidation.valid
                   ? "border-success/60 focus:ring-success/30"
                   : newName && !nameValidation.valid
@@ -178,7 +181,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
                 !nameValidation.valid ||
                 newName === character.name
               }
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="rounded-xl bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed whitespace-nowrap"
             >
               <span className="flex items-center gap-2">
                 {nameSaved ? <CheckIcon /> : nameSaving ? <SpinnerIcon /> : null}
@@ -193,12 +196,12 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
             </button>
           </div>
           {cooldownRemaining && (
-            <p className="mt-1.5 text-xs text-warning">
+            <p className="mt-1.5 text-body-sm text-warning">
               {t("profile.cooldownNotice", { time: cooldownRemaining })}
             </p>
           )}
           <p
-            className={`mt-1 text-xs transition-colors ${
+            className={`mt-1 text-body-sm transition-colors ${
               newName && nameValidation.valid
                 ? "text-success"
                 : newName && !nameValidation.valid
@@ -217,7 +220,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
       <div className="my-8 border-t border-card-border" />
 
       <form onSubmit={handleBioSave} className="space-y-3">
-        <label htmlFor="bio" className="block text-sm font-medium text-foreground mb-1.5">
+        <label htmlFor="bio" className="block text-body font-medium text-foreground mb-1.5">
           {t("profile.publicBio")}
         </label>
         <div className="relative">
@@ -227,11 +230,11 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
             onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO))}
             rows={4}
             placeholder={t("profile.bioPlaceholder")}
-            className="w-full rounded-xl border border-card-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-xl border border-card-border bg-background px-4 py-3 text-body focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={bioSaving}
           />
           <span
-            className={`absolute bottom-3 right-3 text-[11px] ${bio.length >= MAX_BIO ? "text-error" : "text-muted"}`}
+            className={`absolute bottom-3 right-3 text-body-sm ${bio.length >= MAX_BIO ? "text-error" : "text-muted"}`}
           >
             {bio.length}/{MAX_BIO}
           </span>
@@ -242,7 +245,7 @@ export function ProfileSection({ character, onCharacterUpdate, profileHref }: Pr
         <button
           type="submit"
           disabled={bioSaving}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="rounded-xl bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed flex items-center gap-2"
         >
           <span className="flex items-center gap-2">
             {bioSaved ? <CheckIcon /> : bioSaving ? <SpinnerIcon /> : null}

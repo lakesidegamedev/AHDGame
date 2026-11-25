@@ -9,6 +9,7 @@ import { usePsSpendScope } from "@/components/state/politics/orgActions/usePsSpe
 import { useActionPreview } from "@/components/state/politics/orgActions/useActionPreview";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { pillClass } from "@/components/ui/selectedState";
 
 type BuildOrgPreview =
   | {
@@ -164,28 +165,28 @@ export function BuildOrgControl({
     : "Spend Political Strength to grow your party's Organization here (needs a party player or official here)";
 
   const buttonClass =
-    "rounded-lg bg-primary px-3.5 py-2 text-body font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
+    "rounded-lg bg-primary px-3.5 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border";
 
   return (
     <div className="mt-4 space-y-3">
       <p className="text-body text-muted">{standingLine}</p>
 
       <fieldset disabled={busy} className="flex gap-2">
-        <legend className="text-xs text-muted">Builds per click</legend>
+        <legend className="text-body-sm text-muted">Builds per click</legend>
         {[1, 5, 10].map((value) => (
           <button
             key={value}
             type="button"
             aria-pressed={count === value}
             onClick={() => setCount(value)}
-            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+            className={`px-3 py-1 ${pillClass(count === value)}`}
           >
             x{value}
           </button>
         ))}
       </fieldset>
       {count > 1 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Prices rise with each build. The batch stops when the next build is blocked. Completed
           builds remain charged.
         </p>

@@ -82,7 +82,7 @@ export function CampaignRail(props: Props) {
   return (
     <div className="flex flex-col gap-4">
       {error && (
-        <div className="rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+        <div className="rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-body text-rose-500">
           {error}
         </div>
       )}
@@ -94,10 +94,10 @@ export function CampaignRail(props: Props) {
             className="rounded-2xl border bg-card p-5 shadow-card"
             style={{ borderColor: "color-mix(in srgb, var(--ref-amber) 40%, var(--card-border))" }}
           >
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--ref-amber)]">
+            <div className="mb-2 text-body-sm font-bold uppercase tracking-widest text-[var(--ref-amber)]">
               {decisionMaker}&apos;s decision
             </div>
-            <p className="mb-4 text-[12.5px] leading-relaxed text-muted">
+            <p className="mb-4 text-body-sm leading-relaxed text-muted">
               Grant the referendum to open a public campaign and ballot, or decline the request.
             </p>
             <div className="flex flex-col gap-2.5">
@@ -105,7 +105,7 @@ export function CampaignRail(props: Props) {
                 type="button"
                 disabled={busy}
                 onClick={() => post(submitBase, { action: "grant" })}
-                className="rounded-lg bg-primary px-4 py-3 text-[13.5px] font-bold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-3 text-body font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {busy ? "Granting…" : "Grant the referendum"}
               </button>
@@ -113,7 +113,7 @@ export function CampaignRail(props: Props) {
                 type="button"
                 disabled={busy}
                 onClick={() => post(submitBase, { action: "decline" })}
-                className="rounded-lg border border-[var(--ref-no)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ref-no)] transition-colors hover:bg-[color-mix(in_srgb,var(--ref-no)_10%,transparent)] disabled:opacity-50"
+                className="rounded-lg border border-[var(--ref-no)] px-4 py-2.5 text-body-sm font-semibold text-[var(--ref-no)] transition-colors hover:bg-[color-mix(in_srgb,var(--ref-no)_10%,transparent)] disabled:opacity-50"
               >
                 Decline — refuse the request
               </button>
@@ -127,10 +127,10 @@ export function CampaignRail(props: Props) {
               borderColor: "color-mix(in srgb, var(--ref-amber) 35%, transparent)",
             }}
           >
-            <div className="mb-1.5 text-[13px] font-bold text-[var(--ref-amber)]">
+            <div className="mb-1.5 text-body-sm font-bold text-[var(--ref-amber)]">
               Awaiting {nationalGovernment}
             </div>
-            <p className="text-[12.5px] leading-relaxed text-muted">
+            <p className="text-body-sm leading-relaxed text-muted">
               The campaign cannot open until the {decisionMaker} grants this referendum.
             </p>
           </div>
@@ -161,7 +161,7 @@ export function CampaignRail(props: Props) {
       {/* actuating → admin convert/block */}
       {showAdminActuate && (
         <div className={card}>
-          <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[var(--ref-amber)]">
+          <div className="mb-3 text-body-sm font-bold uppercase tracking-widest text-[var(--ref-amber)]">
             Conversion window — admin
           </div>
           <div className="flex flex-col gap-2.5">
@@ -169,7 +169,7 @@ export function CampaignRail(props: Props) {
               type="button"
               disabled={busy}
               onClick={() => post(actuateUrl, { action: "resolve" })}
-              className="rounded-lg bg-[var(--ref-amber)] px-4 py-3 text-[13.5px] font-bold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-[var(--ref-amber)] px-4 py-3 text-body font-bold text-white transition-colors hover:opacity-90 disabled:opacity-50"
             >
               {busy ? "Converting…" : "Convert now"}
             </button>
@@ -177,7 +177,7 @@ export function CampaignRail(props: Props) {
               type="button"
               disabled={busy}
               onClick={() => post(actuateUrl, { action: "block" })}
-              className="rounded-lg border border-[var(--ref-no)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ref-no)] transition-colors hover:bg-[color-mix(in_srgb,var(--ref-no)_10%,transparent)] disabled:opacity-50"
+              className="rounded-lg border border-[var(--ref-no)] px-4 py-2.5 text-body-sm font-semibold text-[var(--ref-no)] transition-colors hover:bg-[color-mix(in_srgb,var(--ref-no)_10%,transparent)] disabled:opacity-50"
             >
               Block
             </button>

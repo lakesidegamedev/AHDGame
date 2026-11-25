@@ -29,7 +29,7 @@ function MissingEmbed({ what, id }: { what: string; id: string }) {
   const isWriter = useIsWikiWriter();
   if (!isWriter) return null;
   return (
-    <p className="my-3 text-xs italic text-muted">
+    <p className="my-3 text-body-sm italic text-muted">
       {what} {id ? `"${id}" ` : ""}not found. Only you can see this line.
     </p>
   );
@@ -38,7 +38,7 @@ function MissingEmbed({ what, id }: { what: string; id: string }) {
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
     <figure className="my-4 rounded-lg border border-card-border bg-card/60 p-4">
-      <figcaption className="mb-3 text-sm font-semibold text-foreground">{title}</figcaption>
+      <figcaption className="mb-3 text-body font-semibold text-foreground">{title}</figcaption>
       {children}
     </figure>
   );
@@ -90,7 +90,7 @@ export function WikiElectionEmbed({ data }: { data?: string }) {
     <Frame title={`${label}${finalized ? "" : " (counting)"}`}>
       <ul className="space-y-2">
         {rows.map((row) => (
-          <li key={row.name} className="text-sm">
+          <li key={row.name} className="text-body">
             <div className="flex justify-between gap-2 text-foreground">
               <span>
                 {row.name}
@@ -132,7 +132,7 @@ export function WikiPartySeatsEmbed({ data }: { data?: string }) {
     <Frame title={`${name}: seats held`}>
       <ul className="space-y-2">
         {seats.map((s) => (
-          <li key={s.label} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-2 text-sm">
+          <li key={s.label} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-2 text-body">
             <span className="text-muted">{s.label}</span>
             <div className="h-3 rounded bg-card-elevated">
               <div
@@ -189,7 +189,7 @@ export function WikiStockEmbed({ data }: { data?: string }) {
       >
         <path d={path} fill="none" stroke="currentColor" strokeWidth="2" className="text-primary" />
       </svg>
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         Latest {last.toFixed(2)}. Low {lo.toFixed(2)}, high {hi.toFixed(2)} over the last{" "}
         {points.length} turns.
       </p>

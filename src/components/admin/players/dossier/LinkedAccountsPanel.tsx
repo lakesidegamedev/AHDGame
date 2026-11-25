@@ -42,7 +42,7 @@ export function LinkedAccountsPanel({ links, clusters, onPivot }: LinkedAccounts
       <h3 className={`mb-2 ${OVERLINE_CLS}`}>Linked accounts ({links.length})</h3>
 
       {links.length === 0 ? (
-        <p className="py-6 text-center text-xs text-muted">
+        <p className="py-6 text-center text-body-sm text-muted">
           No alt-detection links point at this account.
         </p>
       ) : (
@@ -56,10 +56,10 @@ export function LinkedAccountsPanel({ links, clusters, onPivot }: LinkedAccounts
                 className="group flex w-full items-center gap-3 rounded-md px-1 py-2.5 text-left transition-colors hover:bg-card-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium group-hover:text-foreground">
+                  <span className="block truncate text-body font-medium group-hover:text-foreground">
                     {memberDisplayName(link.otherUsername, link.otherUserId)}
                   </span>
-                  <span className="block truncate text-[11px] text-muted">
+                  <span className="block truncate text-body-sm text-muted">
                     {link.topSignal
                       ? signalMeta(link.topSignal as AltSignal).label
                       : "No dominant signal"}
@@ -93,7 +93,7 @@ export function LinkedAccountsPanel({ links, clusters, onPivot }: LinkedAccounts
                 key={cluster.id}
                 className="rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2"
               >
-                <div className="flex flex-wrap items-center gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-2 text-body-sm">
                   <span
                     className={`font-bold tabular-nums ${confidenceTextClass(cluster.confidence)}`}
                   >
@@ -102,7 +102,7 @@ export function LinkedAccountsPanel({ links, clusters, onPivot }: LinkedAccounts
                   <span className="font-medium">
                     {cluster.size} account{cluster.size === 1 ? "" : "s"}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+                  <span className="inline-flex items-center gap-1.5 text-body-sm text-muted">
                     <span
                       aria-hidden
                       className="inline-block h-2 w-2 rounded-full ring-2 ring-background"
@@ -113,7 +113,7 @@ export function LinkedAccountsPanel({ links, clusters, onPivot }: LinkedAccounts
                     {ROLE_LABEL[cluster.role]}
                   </span>
                   <span
-                    className={`ml-auto rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    className={`ml-auto rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${
                       CLUSTER_STATUS_STYLE[cluster.status] ?? CLUSTER_STATUS_STYLE.open
                     }`}
                   >
@@ -122,7 +122,7 @@ export function LinkedAccountsPanel({ links, clusters, onPivot }: LinkedAccounts
                 </div>
                 {cluster.topEvidence.length > 0 && (
                   <p
-                    className="mt-1 truncate text-[11px] text-muted"
+                    className="mt-1 truncate text-body-sm text-muted"
                     title={cluster.topEvidence[0]}
                   >
                     {cluster.topEvidence[0]}

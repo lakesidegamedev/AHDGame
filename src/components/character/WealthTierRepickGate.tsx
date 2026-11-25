@@ -99,10 +99,10 @@ export function WealthTierRepickGate() {
       />
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-card-border bg-card shadow-2xl">
         <div className="relative px-5 pt-5 pb-4">
-          <h2 id="wealth-tier-repick-title" className="text-lg font-semibold text-foreground">
+          <h2 id="wealth-tier-repick-title" className="text-heading font-semibold text-foreground">
             Choose your starting wealth
           </h2>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             The economy has started fresh. Pick the wealth background your politician begins the new
             economy with. Your personal cash is set to the amount shown. You can make this choice
             once.
@@ -132,13 +132,15 @@ export function WealthTierRepickGate() {
                           : "border-card-border hover:border-primary/50"
                       }`}
                     >
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-body font-medium text-foreground">
                         {option.label}
                         {current === option.value && (
-                          <span className="ml-2 text-xs font-normal text-muted">(current)</span>
+                          <span className="ml-2 text-body-sm font-normal text-muted">
+                            (current)
+                          </span>
                         )}
                       </span>
-                      <span className="text-sm tabular-nums text-foreground">
+                      <span className="text-body tabular-nums text-foreground">
                         {formatLocalAmountFull(option.amount, option.currency)}
                       </span>
                     </button>
@@ -147,7 +149,7 @@ export function WealthTierRepickGate() {
               </div>
 
               {error && (
-                <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-xs text-error">
+                <p className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-body-sm text-error">
                   {error}
                 </p>
               )}

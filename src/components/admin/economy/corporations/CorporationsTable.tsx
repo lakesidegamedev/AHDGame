@@ -78,7 +78,7 @@ export function CorporationsTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="bg-background/50">
             <tr>
               {[
@@ -108,7 +108,7 @@ export function CorporationsTable({
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">{row.name}</div>
-                    <div className="text-xs text-muted">
+                    <div className="text-body-sm text-muted">
                       {row.countryId} ·{" "}
                       {OPERATING_SECTOR_TYPE_LABELS[
                         row.type as keyof typeof OPERATING_SECTOR_TYPE_LABELS
@@ -129,20 +129,20 @@ export function CorporationsTable({
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
                       {row.suspended && (
-                        <span className="text-[10px] font-semibold bg-error/20 text-error px-1.5 py-0.5 rounded w-fit">
+                        <span className="text-body-sm font-semibold bg-error/20 text-error px-1.5 py-0.5 rounded w-fit">
                           Suspended
                         </span>
                       )}
                       {row.bondDefaultCreditPenaltyUntilTurn != null && (
-                        <span className="text-[10px] font-semibold bg-warning/20 text-warning px-1.5 py-0.5 rounded w-fit">
+                        <span className="text-body-sm font-semibold bg-warning/20 text-warning px-1.5 py-0.5 rounded w-fit">
                           Bond default
                         </span>
                       )}
                       {row.creditRatingSnapshot && (
-                        <span className="text-[10px] text-muted">{row.creditRatingSnapshot}</span>
+                        <span className="text-body-sm text-muted">{row.creditRatingSnapshot}</span>
                       )}
                       {row.imfBailoutActive && (
-                        <span className="text-[10px] font-semibold bg-accent/20 text-accent px-1.5 py-0.5 rounded w-fit">
+                        <span className="text-body-sm font-semibold bg-accent/20 text-accent px-1.5 py-0.5 rounded w-fit">
                           IMF
                           {row.imfFacilityPrincipalOutstanding != null && (
                             <span className="text-muted font-normal">
@@ -153,7 +153,7 @@ export function CorporationsTable({
                         </span>
                       )}
                       {!row.suspended && row.bondDefaultCreditPenaltyUntilTurn == null && (
-                        <span className="text-xs text-muted">OK</span>
+                        <span className="text-body-sm text-muted">OK</span>
                       )}
                     </div>
                   </td>
@@ -170,13 +170,13 @@ export function CorporationsTable({
                             corpName: row.name,
                           })
                         }
-                        className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                        className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                       >
                         Timers
                       </button>
                       <button
                         onClick={() => openInline({ type: "capital", corpId: row.id })}
-                        className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                        className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                       >
                         Capital
                       </button>
@@ -188,13 +188,13 @@ export function CorporationsTable({
                             corpName: row.name,
                           })
                         }
-                        className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                        className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                       >
                         Dividend
                       </button>
                       <button
                         onClick={() => openInline({ type: "appointCeo", corpId: row.id })}
-                        className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                        className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                       >
                         Appoint CEO
                       </button>
@@ -202,13 +202,13 @@ export function CorporationsTable({
                         onClick={() =>
                           openConfirm({ type: "vacateCeo", corpId: row.id, corpName: row.name })
                         }
-                        className="text-xs px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
+                        className="text-body-sm px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
                       >
                         Vacate CEO
                       </button>
                       <button
                         onClick={() => openInline({ type: "hq", corpId: row.id })}
-                        className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                        className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                       >
                         Move HQ
                       </button>
@@ -216,7 +216,7 @@ export function CorporationsTable({
                         <>
                           <button
                             onClick={() => openImfPanel(row)}
-                            className="text-xs px-2 py-1 rounded border border-accent/40 text-accent hover:bg-accent/10 transition-colors"
+                            className="text-body-sm px-2 py-1 rounded border border-accent/40 text-accent hover:bg-accent/10 transition-colors"
                           >
                             IMF
                           </button>
@@ -228,7 +228,7 @@ export function CorporationsTable({
                                 corpName: row.name,
                               })
                             }
-                            className="text-xs px-2 py-1 rounded border border-error/50 text-error hover:bg-error/10 transition-colors"
+                            className="text-body-sm px-2 py-1 rounded border border-error/50 text-error hover:bg-error/10 transition-colors"
                           >
                             Force liq
                           </button>
@@ -239,7 +239,7 @@ export function CorporationsTable({
                           onClick={() =>
                             openConfirm({ type: "resume", corpId: row.id, corpName: row.name })
                           }
-                          className="text-xs px-2 py-1 rounded border border-success/40 text-success hover:bg-success/10 transition-colors"
+                          className="text-body-sm px-2 py-1 rounded border border-success/40 text-success hover:bg-success/10 transition-colors"
                         >
                           Resume
                         </button>
@@ -248,7 +248,7 @@ export function CorporationsTable({
                           onClick={() =>
                             openConfirm({ type: "suspend", corpId: row.id, corpName: row.name })
                           }
-                          className="text-xs px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
+                          className="text-body-sm px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
                         >
                           Suspend
                         </button>
@@ -262,14 +262,14 @@ export function CorporationsTable({
                   <tr key={`${row.id}-confirm`}>
                     <td colSpan={9} className="px-4 py-3 bg-warning/5 border-t border-warning/20">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-sm font-medium">
+                        <span className="text-body font-medium">
                           {confirm.type === "resetTimers" && `Reset all timers for ${row.name}?`}
                           {confirm.type === "forceDividend" &&
                             `Force dividend payout for ${row.name}?`}
                           {confirm.type === "vacateCeo" && (
                             <>
                               Vacate CEO of {row.name}?{" "}
-                              <span className="text-xs text-muted font-normal">
+                              <span className="text-body-sm text-muted font-normal">
                                 ceoVacant will be set to true.
                               </span>
                             </>
@@ -287,13 +287,13 @@ export function CorporationsTable({
                         <button
                           onClick={onConfirm}
                           disabled={actionLoading === row.id}
-                          className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
+                          className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
                         >
                           Confirm
                         </button>
                         <button
                           onClick={() => dispatch({ type: "SET_CONFIRM", value: null })}
-                          className="text-xs text-muted hover:text-foreground"
+                          className="text-body-sm text-muted hover:text-foreground"
                         >
                           Cancel
                         </button>
@@ -310,7 +310,7 @@ export function CorporationsTable({
                       className="px-4 py-3 bg-background/40 border-t border-card-border"
                     >
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-xs text-muted">Amount (negative to drain):</span>
+                        <span className="text-body-sm text-muted">Amount (negative to drain):</span>
                         <input
                           type="number"
                           value={capitalAmount}
@@ -318,18 +318,18 @@ export function CorporationsTable({
                             dispatch({ type: "SET_CAPITAL_AMOUNT", value: e.target.value })
                           }
                           placeholder="e.g. 500000"
-                          className="w-36 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                          className="w-36 rounded border border-card-border bg-background px-2 py-1 text-body"
                         />
                         <button
                           onClick={() => onGrantCapital(row.id)}
                           disabled={actionLoading === row.id}
-                          className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
+                          className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
                         >
                           Apply
                         </button>
                         <button
                           onClick={() => dispatch({ type: "SET_INLINE", value: null })}
-                          className="text-xs text-muted hover:text-foreground"
+                          className="text-body-sm text-muted hover:text-foreground"
                         >
                           Cancel
                         </button>
@@ -354,7 +354,7 @@ export function CorporationsTable({
                           placeholder="Search for character…"
                         />
                         {appointedCharName && (
-                          <p className="text-xs text-muted">
+                          <p className="text-body-sm text-muted">
                             Selected: <strong>{appointedCharName}</strong> — appointment is
                             auto-accepted; ceoVacant set to false.
                           </p>
@@ -363,13 +363,13 @@ export function CorporationsTable({
                           <button
                             onClick={() => onAppointCeo(row.id)}
                             disabled={!appointedCharId || actionLoading === row.id}
-                            className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
+                            className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                           >
                             Appoint
                           </button>
                           <button
                             onClick={() => dispatch({ type: "SET_INLINE", value: null })}
-                            className="text-xs text-muted hover:text-foreground"
+                            className="text-body-sm text-muted hover:text-foreground"
                           >
                             Cancel
                           </button>
@@ -392,7 +392,7 @@ export function CorporationsTable({
                           onChange={(e) =>
                             dispatch({ type: "SET_HQ_COUNTRY", value: e.target.value })
                           }
-                          className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+                          className="rounded border border-card-border bg-background px-2 py-1 text-body"
                         >
                           {["US", "UK", "JP", "DE"].map((c) => (
                             <option key={c} value={c}>
@@ -407,18 +407,18 @@ export function CorporationsTable({
                             dispatch({ type: "SET_HQ_REGION", value: e.target.value })
                           }
                           placeholder="Region ID (e.g. CA, england)"
-                          className="w-44 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                          className="w-44 rounded border border-card-border bg-background px-2 py-1 text-body"
                         />
                         <button
                           onClick={() => onMoveHq(row.id)}
                           disabled={actionLoading === row.id}
-                          className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
+                          className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90"
                         >
                           Move
                         </button>
                         <button
                           onClick={() => dispatch({ type: "SET_INLINE", value: null })}
-                          className="text-xs text-muted hover:text-foreground"
+                          className="text-body-sm text-muted hover:text-foreground"
                         >
                           Cancel
                         </button>

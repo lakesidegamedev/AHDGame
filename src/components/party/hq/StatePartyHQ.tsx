@@ -15,6 +15,7 @@ import { orgTier, toneColor } from "./orgTier";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencyCodes";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fmtMoney } from "./formatters";
+import { pillClass } from "@/components/ui/selectedState";
 
 export interface StatePartyHQProps {
   countryId: string;
@@ -388,7 +389,7 @@ export function StatePartyHQ({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
         Loading state parties…
       </div>
     );
@@ -406,7 +407,7 @@ export function StatePartyHQ({
 
       {/* Priority banner */}
       {weak.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-2 text-body">
           <span className="font-semibold text-warning">
             {weak.length} winnable states are under-organized
           </span>
@@ -417,7 +418,7 @@ export function StatePartyHQ({
                 <button
                   key={r.regionId}
                   onClick={() => setOpenId(r.regionId)}
-                  className="rounded-full border border-card-border px-2 py-0.5 text-xs"
+                  className="rounded-full border border-card-border px-2 py-0.5 text-body-sm"
                 >
                   {displayCanadianRegionCode(r.regionId)}{" "}
                   <span style={{ color: toneColor(t.tone) }}>{r.organization.toFixed(0)}%</span>
@@ -430,10 +431,10 @@ export function StatePartyHQ({
 
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-muted">State parties</h3>
+        <h3 className="text-body-lg font-semibold text-muted">State parties</h3>
         <div className="flex items-center gap-2">
           {view === "map" && (
-            <div className="inline-flex rounded-lg border border-card-border p-0.5 text-xs">
+            <div className="inline-flex rounded-lg border border-card-border p-0.5 text-body-sm">
               {(["org", "reg"] as const).map((c) => (
                 <button
                   key={c}
@@ -446,7 +447,7 @@ export function StatePartyHQ({
             </div>
           )}
           {hasMap && (
-            <div className="inline-flex rounded-lg border border-card-border p-0.5 text-xs">
+            <div className="inline-flex rounded-lg border border-card-border p-0.5 text-body-sm">
               {(["table", "map"] as const).map((v) => (
                 <button
                   key={v}
@@ -466,14 +467,14 @@ export function StatePartyHQ({
         <div className="sticky top-2 z-10 space-y-2 rounded-xl border border-card-border bg-card-elevated px-4 py-2 shadow-lg">
           {canSpendPs && bulkMode && (
             <fieldset disabled={busy} className="flex gap-2">
-              <legend className="text-xs text-muted">Builds per selected region</legend>
+              <legend className="text-body-sm text-muted">Builds per selected region</legend>
               {[1, 5, 10].map((value) => (
                 <button
                   key={value}
                   type="button"
                   aria-pressed={repeatCount === value}
                   onClick={() => setRepeatCount(value)}
-                  className={`rounded border px-3 py-1 ${repeatCount === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+                  className={`px-3 py-1 ${pillClass(repeatCount === value)}`}
                 >
                   x{value}
                 </button>
@@ -481,7 +482,7 @@ export function StatePartyHQ({
             </fieldset>
           )}
           {canSpendPs && bulkMode && estimate && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border pb-2 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border pb-2 text-body-sm">
               <span className="font-medium">
                 Build organization x{repeatCount} in each of {estimate.states} states with national
                 party PS · Est. <b className="tabular-nums">{estimate.totalPS} PS</b>
@@ -530,7 +531,7 @@ export function StatePartyHQ({
                     overBudget
                   }
                   onClick={() => runBulkSpend()}
-                  className="rounded-md bg-primary px-3 py-1 font-medium text-white disabled:opacity-50"
+                  className="rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 >
                   {busy
                     ? "Working…"
@@ -546,8 +547,8 @@ export function StatePartyHQ({
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-semibold">{sel.size} states</span>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-body font-semibold">{sel.size} states</span>
+            <div className="flex flex-wrap items-center gap-2 text-body-sm">
               {canManage && (
                 <>
                   <button
@@ -630,7 +631,7 @@ function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-3">
       <div className="text-body-sm text-muted">{label}</div>
-      <div className="text-lg font-bold tabular-nums text-foreground">{value}</div>
+      <div className="text-heading font-bold tabular-nums text-foreground">{value}</div>
     </div>
   );
 }

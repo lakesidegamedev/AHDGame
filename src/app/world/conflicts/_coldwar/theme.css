@@ -252,10 +252,10 @@
   }
 }
 
-/* The war's headline. 38px is a desktop size; a long conflict name at 375px
-   wraps to three lines and shoves the whole page down. */
+/* The war's headline sits on the display step of the type scale. */
 .cw-front-title {
-  font-size: clamp(26px, 7vw, 38px);
+  font-size: var(--text-display);
+  line-height: var(--text-display--line-height);
 }
 
 /* A next-tick chip is a sentence plus a timing. Side by side they squeeze the

@@ -35,7 +35,7 @@ export function ElectoralCollegeAnalysis({
 
   return (
     <section className="mb-8">
-      <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-2xl font-semibold text-foreground">
+      <h2 className="mb-4 scroll-mt-24 border-b border-card-border pb-2 text-heading font-semibold text-foreground">
         Electoral College analysis
       </h2>
 
@@ -118,22 +118,22 @@ export function ElectoralCollegeTable({ generalResults }: ElectoralCollegeTableP
   return (
     <section className="mb-10 ">
       <SectionLabel as="h3">Electoral College results</SectionLabel>
-      <p className="mb-4 text-sm text-muted">
+      <p className="mb-4 text-body text-muted">
         {isContingent
           ? "270 electoral votes needed for an outright win. This race was decided by a House contingent ballot after no candidate reached a majority."
           : "270 electoral votes needed to win. Winner-take-all per state (Maine and Nebraska allocate by congressional district)."}
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border text-left">
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Candidate
               </th>
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Party
               </th>
-              <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Electoral votes
               </th>
             </tr>
@@ -176,22 +176,22 @@ export function StateWinnersTable({ generalResults }: { generalResults: GeneralR
     <section className="mb-10 ">
       <SectionLabel as="h3">Results by state</SectionLabel>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border text-left">
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 State
               </th>
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Winner
               </th>
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Share
               </th>
-              <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Margin
               </th>
-              <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Electoral votes
               </th>
             </tr>

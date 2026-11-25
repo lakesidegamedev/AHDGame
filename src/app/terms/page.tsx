@@ -16,14 +16,14 @@ export default function TermsOfServicePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Terms of service</h1>
-          <p className="mt-2 text-sm text-muted">Effective date: {EFFECTIVE_DATE}</p>
+          <h1 className="text-display font-bold tracking-tight">Terms of service</h1>
+          <p className="mt-2 text-body text-muted">Effective date: {EFFECTIVE_DATE}</p>
         </div>
 
         <div className="rounded-xl border border-card-border bg-card p-6 sm:p-8 space-y-8">
           <section>
-            <h2 className="text-lg font-bold mb-3">1. Introduction</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">1. Introduction</h2>
+            <p className="text-body text-muted leading-relaxed">
               By accessing or using A House Divided (&ldquo;the Service&rdquo;) at{" "}
               <a href="https://ahousedividedgame.com" className="text-primary hover:underline">
                 ahousedividedgame.com
@@ -34,8 +34,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">2. The Service</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">2. The Service</h2>
+            <p className="text-body text-muted leading-relaxed">
               A House Divided is a browser-based political simulation game provided for
               entertainment purposes only. Nothing in the game, on the website, or in any associated
               community constitutes legal, financial, or political advice.
@@ -43,8 +43,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">3. Age Requirement</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">3. Age Requirement</h2>
+            <p className="text-body text-muted leading-relaxed">
               A House Divided is not directed at or intended for use by children under the age of
               13. By using the Service, you represent and warrant that you are at least 13 years
               old. If you are under 13, you may not use the Service. We reserve the right to
@@ -55,8 +55,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">4. Accounts</h2>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">4. Accounts</h2>
+            <ul className="list-disc pl-5 space-y-1 text-body text-muted leading-relaxed">
               <li>You must provide accurate and truthful information when registering.</li>
               <li>
                 You are responsible for maintaining the security of your account and password.
@@ -69,13 +69,13 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">5. Game &amp; Community Rules</h2>
-            <p className="text-sm text-muted leading-relaxed mb-4">
+            <h2 className="text-heading font-bold mb-3">5. Game &amp; Community Rules</h2>
+            <p className="text-body text-muted leading-relaxed mb-4">
               The following rules apply in-game and in all official A House Divided Discord servers.
               Moderators remove content that breaks these rules. Players may receive a warning,
               suspension, or ban.
             </p>
-            <div className="space-y-5 text-sm text-muted leading-relaxed">
+            <div className="space-y-5 text-body text-muted leading-relaxed">
               <div>
                 <p className="font-semibold text-foreground mb-1">Content moderation</p>
                 <p>
@@ -168,8 +168,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">6. Intellectual Property</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">6. Intellectual Property</h2>
+            <p className="text-body text-muted leading-relaxed">
               The{" "}
               <a
                 href="https://github.com/lakesidegamedev/AHDGame"
@@ -184,8 +184,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">7. Disclaimer of Warranties</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">7. Disclaimer of Warranties</h2>
+            <p className="text-body text-muted leading-relaxed">
               The Service is provided &ldquo;as is&rdquo; without warranty of any kind. We make no
               guarantees about uptime, data persistence, or the continuity of game state. The game
               world may change, be updated, or become temporarily unavailable without notice.
@@ -193,8 +193,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">8. Limitation of Liability</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">8. Limitation of Liability</h2>
+            <p className="text-body text-muted leading-relaxed">
               To the fullest extent permitted by applicable law, A House Divided and its operators
               shall not be liable for any indirect, incidental, special, consequential, or punitive
               damages arising out of or related to your use of the Service.
@@ -202,16 +202,16 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">9. Governing Law</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">9. Governing Law</h2>
+            <p className="text-body text-muted leading-relaxed">
               These Terms of Service are governed by and construed in accordance with the laws of
               the United States, without regard to conflict of law principles.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">10. Changes to These Terms</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">10. Changes to These Terms</h2>
+            <p className="text-body text-muted leading-relaxed">
               We may update these Terms of Service at any time. Continued use of the Service after
               changes are posted constitutes your acceptance of the updated terms. The effective
               date at the top of this page reflects the date of the most recent revision.
@@ -219,8 +219,8 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">11. Contact</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">11. Contact</h2>
+            <p className="text-body text-muted leading-relaxed">
               For questions about these terms, email us at{" "}
               <a href="mailto:admin@ahousedividedgame.com" className="text-primary hover:underline">
                 admin@ahousedividedgame.com
@@ -239,7 +239,7 @@ export default function TermsOfServicePage() {
           </section>
         </div>
 
-        <p className="mt-6 text-center text-xs text-muted">
+        <p className="mt-6 text-center text-body-sm text-muted">
           By using A House Divided, you agree to these Terms of Service and our{" "}
           <Link href="/privacy" className="text-primary hover:underline">
             Privacy policy

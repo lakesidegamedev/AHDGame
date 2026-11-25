@@ -132,12 +132,14 @@ export function HealthCard({ data }: { data: ConsolePayload }) {
     <section className="min-w-0">
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-card-border pb-1.5">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <h2 className={`text-sm font-semibold ${TONE_TEXT[meaning.tone]}`}>{meaning.headline}</h2>
-          <span className="text-xs text-muted">
+          <h2 className={`text-body font-semibold ${TONE_TEXT[meaning.tone]}`}>
+            {meaning.headline}
+          </h2>
+          <span className="text-body-sm text-muted">
             {t("eyebrow.monitor")}, {charterLabel(charter.type)} charter in {charter.currency}
           </span>
         </div>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           Confidence{" "}
           {band ? (
             <span className={`font-medium ${band.tone}`}>
@@ -149,7 +151,7 @@ export function HealthCard({ data }: { data: ConsolePayload }) {
           )}
         </span>
       </div>
-      <p className="max-w-3xl py-1.5 text-xs text-muted">{meaning.detail}</p>
+      <p className="max-w-3xl py-1.5 text-body-sm text-muted">{meaning.detail}</p>
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 pt-1 sm:grid-cols-3">
         <HealthStat
@@ -226,14 +228,14 @@ function HealthStat({
   const t = useTranslations("corporations.bankConsole");
   return (
     <div className="min-w-0">
-      <dt className="flex items-center gap-1 text-[11px] text-muted">
+      <dt className="flex items-center gap-1 text-body-sm text-muted">
         {label}
         <Tooltip content={tooltip} label={t("about", { label })} />
       </dt>
-      <dd className={`mt-0.5 font-mono text-sm font-medium tabular-nums ${TONE_TEXT[tone]}`}>
+      <dd className={`mt-0.5 font-mono text-body font-medium tabular-nums ${TONE_TEXT[tone]}`}>
         {value}
       </dd>
-      {sub && <dd className="mt-0.5 text-[11px] text-muted">{sub}</dd>}
+      {sub && <dd className="mt-0.5 text-body-sm text-muted">{sub}</dd>}
     </div>
   );
 }

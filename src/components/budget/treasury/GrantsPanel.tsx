@@ -31,8 +31,8 @@ export function GrantsPanel({ title, recipientLabel, grants, total, sym }: Grant
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3">
-        <div className="text-sm font-semibold text-foreground">{title}</div>
-        <div className="text-body-xs text-muted">
+        <div className="text-body font-semibold text-foreground">{title}</div>
+        <div className="text-body-sm text-muted">
           {money(total)} total · by {recipientLabel.toLowerCase()}
         </div>
       </div>
@@ -43,14 +43,14 @@ export function GrantsPanel({ title, recipientLabel, grants, total, sym }: Grant
         <div className="space-y-2">
           {sorted.map((g) => (
             <div key={g.id} className="flex items-center gap-3">
-              <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded bg-card-elevated text-[10px] font-bold text-muted">
+              <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded bg-card-elevated text-body-sm font-bold text-muted">
                 {g.id.slice(0, 3).toUpperCase()}
               </span>
-              <span className="w-32 shrink-0 truncate text-body-xs text-foreground">{g.name}</span>
+              <span className="w-32 shrink-0 truncate text-body-sm text-foreground">{g.name}</span>
               <div className="flex-1">
                 <Meter value={(g.amount / max) * 100} tone="gold" height={6} />
               </div>
-              <span className="w-16 shrink-0 text-right font-mono text-body-xs font-semibold tabular-nums text-foreground">
+              <span className="w-16 shrink-0 text-right font-mono text-body-sm font-semibold tabular-nums text-foreground">
                 {money(g.amount)}
               </span>
             </div>

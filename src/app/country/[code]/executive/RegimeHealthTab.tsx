@@ -9,6 +9,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { RegimeChangeHistory } from "./RegimeChangeHistory";
 import { governmentSystemLabel } from "@/lib/military/peaceTerm";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface Scalars {
   popularLegitimacy: number;
@@ -366,7 +367,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
         className="rounded-lg border border-card-border bg-card p-4"
         data-testid="regime-health-loading"
       >
-        <p className="text-sm text-muted">Loading regime diagnostics…</p>
+        <p className="text-body text-muted">Loading regime diagnostics…</p>
       </div>
     );
   }
@@ -376,7 +377,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
         className="rounded-lg border border-card-border bg-card p-4"
         data-testid="regime-health-forbidden"
       >
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Regime diagnostics are visible only to the sitting head of government. The public Regime
           Stability panel on the country overview is the public view.
         </p>
@@ -389,7 +390,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
         className="rounded-lg border border-card-border bg-card p-4"
         data-testid="regime-health-error"
       >
-        <p className="text-sm text-error">Failed to load regime diagnostics.</p>
+        <p className="text-body text-error">Failed to load regime diagnostics.</p>
       </div>
     );
   }
@@ -399,7 +400,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
         className="rounded-lg border border-card-border bg-card p-4"
         data-testid="regime-health-na"
       >
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           This country is no longer a one-party state. Regime mechanics no longer apply.
         </p>
       </div>
@@ -412,7 +413,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
     <div className="space-y-4" data-testid="regime-health-tab">
       {err && (
         <div
-          className="rounded border border-error/40 bg-error/5 p-3 text-sm text-error"
+          className="rounded border border-error/40 bg-error/5 p-3 text-body text-error"
           data-testid="regime-health-error-banner"
         >
           {err}
@@ -425,15 +426,15 @@ export function RegimeHealthTab({ countryCode }: Props) {
         data-testid="regime-stage-banner"
       >
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className={`text-lg font-bold ${stageVisual.textClass}`}>
+          <h2 className={`text-heading font-bold ${stageVisual.textClass}`}>
             Stage: {STAGE_LABEL[data.stage] ?? data.stage}
           </h2>
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             Dwell s1={data.dwellCounters.stage1}, s2={data.dwellCounters.stage2.sustained}, s3=
             {data.dwellCounters.stage3}, s4={data.dwellCounters.stage4}
           </span>
         </div>
-        <p className="mt-1 text-xs text-foreground/80">{stageVisual.blurb}</p>
+        <p className="mt-1 text-body-sm text-foreground/80">{stageVisual.blurb}</p>
       </section>
 
       {/* Scalars + history + projection */}
@@ -441,7 +442,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
         className={`rounded-lg border ${stageVisual.borderClass} bg-card p-4`}
         data-testid="regime-scalars"
       >
-        <h3 className="text-sm font-semibold text-foreground">Scalars (raw, leader-only)</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">Scalars (raw, leader-only)</h3>
         <dl className="mt-2 grid gap-4 sm:grid-cols-2">
           <ScalarCard
             label="Popular legitimacy"
@@ -465,7 +466,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
           />
         </dl>
         {data.projection && (
-          <p className="mt-2 text-[10px] text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             Solid line: last {Math.min(data.history.popularLegitimacy.length, 24)} turns of history.
             Dashed line: 48-turn projection from current economy + decaying boost modifiers (no
             future shocks).
@@ -480,10 +481,10 @@ export function RegimeHealthTab({ countryCode }: Props) {
           data-testid="regime-active-decision"
         >
           <div className="mb-2 flex items-start justify-between gap-3">
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="text-body-lg font-semibold text-foreground">
               {DECISION_LABEL[data.activeDecision.kind] ?? data.activeDecision.kind}
             </h3>
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               expires turn {data.activeDecision.expiresAtTurn}
             </span>
           </div>
@@ -495,11 +496,11 @@ export function RegimeHealthTab({ countryCode }: Props) {
                 return (
                   <div
                     key={o.id}
-                    className="rounded border border-card-border bg-card p-3 text-sm"
+                    className="rounded border border-card-border bg-card p-3 text-body"
                     data-testid={`regime-option-${o.id}`}
                   >
                     <div className="font-medium text-foreground">{o.label}</div>
-                    <div className="mt-1 text-xs text-muted">{o.description}</div>
+                    <div className="mt-1 text-body-sm text-muted">{o.description}</div>
                     {hasBanned ? (
                       <div className="mt-2 flex items-center gap-2">
                         <select
@@ -509,7 +510,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                               e.target.value === "" ? "" : Number(e.target.value)
                             )
                           }
-                          className="flex-1 rounded border border-card-border bg-background px-2 py-1 text-xs"
+                          className="flex-1 rounded border border-card-border bg-background px-2 py-1 text-body-sm"
                           data-testid="regime-selective-concession-picker"
                         >
                           <option value="">Pick a banned party…</option>
@@ -528,7 +529,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                               bannedPartyId: Number(selectedBannedParty),
                             })
                           }
-                          className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-body-sm text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
                           data-testid="regime-selective-concession-confirm"
                         >
                           Legalize
@@ -536,7 +537,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                       </div>
                     ) : (
                       <p
-                        className="mt-2 text-xs italic text-muted"
+                        className="mt-2 text-body-sm italic text-muted"
                         data-testid="regime-selective-concession-empty"
                       >
                         No banned parties to legalize — option unavailable.
@@ -550,11 +551,11 @@ export function RegimeHealthTab({ countryCode }: Props) {
                   key={o.id}
                   disabled={busy !== null}
                   onClick={() => void resolveDecision(o.id, data.activeDecision?.payload)}
-                  className="rounded border border-card-border bg-card p-3 text-left text-sm hover:bg-card/80 disabled:opacity-50"
+                  className="rounded border border-card-border bg-card p-3 text-left text-body hover:bg-card/80 disabled:opacity-50"
                   data-testid={`regime-option-${o.id}`}
                 >
                   <div className="font-medium text-foreground">{o.label}</div>
-                  <div className="mt-1 text-xs text-muted">{o.description}</div>
+                  <div className="mt-1 text-body-sm text-muted">{o.description}</div>
                 </button>
               );
             })}
@@ -568,10 +569,10 @@ export function RegimeHealthTab({ countryCode }: Props) {
         data-testid="regime-reform-actions"
       >
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Liberalization reforms</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">Liberalization reforms</h3>
           {data.pendingReformDiscount && data.pendingReformDiscount.turn === data.currentTurn && (
             <span
-              className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-400"
+              className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-body-sm text-emerald-700 dark:text-emerald-400"
               data-testid="regime-discount-flag"
             >
               Half-cost discount available this turn
@@ -597,7 +598,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                   <button
                     type="button"
                     onClick={() => setExpandedAction(isExpanded ? null : action)}
-                    className="flex flex-1 items-center gap-2 text-left text-sm text-foreground hover:text-primary"
+                    className="flex flex-1 items-center gap-2 text-left text-body text-foreground hover:text-primary"
                     aria-expanded={isExpanded}
                     data-testid={`regime-reform-toggle-${action}`}
                   >
@@ -612,14 +613,14 @@ export function RegimeHealthTab({ countryCode }: Props) {
                   <div className="flex items-center gap-2">
                     {onCooldown && (
                       <span
-                        className="text-xs text-muted"
+                        className="text-body-sm text-muted"
                         data-testid={`regime-reform-cooldown-${action}`}
                       >
                         cooldown until turn {avail.cooldownUntil}
                       </span>
                     )}
                     {avail?.note && !meta && (
-                      <span className="text-xs text-muted">{avail.note}</span>
+                      <span className="text-body-sm text-muted">{avail.note}</span>
                     )}
                     <button
                       disabled={!avail?.available || busy !== null || !perPartyReady}
@@ -635,7 +636,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                           void triggerReform(action);
                         }
                       }}
-                      className="rounded border border-card-border bg-card px-3 py-1 text-xs hover:bg-card/80 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="rounded border border-card-border bg-card px-3 py-1 text-body-sm hover:bg-card/80 disabled:opacity-40 disabled:cursor-not-allowed"
                       data-testid={`regime-reform-${action}`}
                     >
                       Trigger
@@ -643,7 +644,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                   </div>
                 </div>
                 {isPerParty && (
-                  <div className="px-2 pb-2 text-xs">
+                  <div className="px-2 pb-2 text-body-sm">
                     {data.bannedParties.length > 0 ? (
                       <label className="flex flex-wrap items-center gap-2">
                         <span className="text-muted">Party to legalize</span>
@@ -653,7 +654,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                             setLegalizePartyId(e.target.value === "" ? "" : Number(e.target.value))
                           }
                           disabled={busy !== null}
-                          className="min-w-0 flex-1 rounded border border-card-border bg-background px-2 py-1 text-sm text-foreground"
+                          className="min-w-0 flex-1 rounded border border-card-border bg-background px-2 py-1 text-body text-foreground"
                           data-testid="regime-legalize-party-picker"
                         >
                           <option value="">Pick a banned party…</option>
@@ -679,7 +680,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
                 )}
                 {isExpanded && meta && (
                   <div
-                    className="border-t border-card-border/40 bg-card/40 p-3 text-xs"
+                    className="border-t border-card-border/40 bg-card/40 p-3 text-body-sm"
                     data-testid={`regime-reform-detail-${action}`}
                   >
                     <p className="text-foreground/90">{meta.description}</p>
@@ -733,9 +734,9 @@ export function RegimeHealthTab({ countryCode }: Props) {
         className="rounded-lg border border-card-border bg-card p-4"
         data-testid="regime-convention"
       >
-        <h3 className="text-sm font-semibold text-foreground">Constitutional convention</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">Constitutional convention</h3>
         {!data.convention ? (
-          <div className="mt-2 space-y-3 text-xs text-muted">
+          <div className="mt-2 space-y-3 text-body-sm text-muted">
             <p>
               No convention in progress. A convention is the voluntary way out of the one-party
               state: you set the terms of the transition yourself instead of waiting for Stage 4 to
@@ -783,7 +784,7 @@ export function RegimeHealthTab({ countryCode }: Props) {
             <button
               disabled={busy !== null || data.stage === "collapse"}
               onClick={() => void announceConvention()}
-              className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-sm text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-body text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
               data-testid="regime-convention-announce"
             >
               Announce constitutional convention
@@ -810,8 +811,8 @@ export function RegimeHealthTab({ countryCode }: Props) {
           className="rounded-lg border border-card-border bg-card p-4"
           data-testid="regime-transitions"
         >
-          <h3 className="text-sm font-semibold text-foreground">Recent stage transitions</h3>
-          <ul className="mt-2 space-y-1 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Recent stage transitions</h3>
+          <ul className="mt-2 space-y-1 text-body-sm text-muted">
             {data.transitionHistory.map((t, i) => (
               <li key={`${t.turn}-${i}`}>
                 <span className="font-medium text-foreground">Turn {t.turn}:</span>{" "}
@@ -867,7 +868,7 @@ function ConventionStatus({
 }) {
   const electionTurn = convention.draftDeadlineTurn + convention.electionDelayTurns;
   return (
-    <div className="mt-2 space-y-2 text-xs text-muted" data-testid="regime-convention-status">
+    <div className="mt-2 space-y-2 text-body-sm text-muted" data-testid="regime-convention-status">
       <p>
         Phase:{" "}
         <strong className="text-foreground">
@@ -938,7 +939,7 @@ function ConventionDraftForm({
 
   const electionTurn = convention.draftDeadlineTurn + electionDelayTurns;
   const primaryButton =
-    "rounded border border-primary/40 bg-primary/10 px-3 py-1 text-sm text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed";
+    "rounded border border-primary/40 bg-primary/10 px-3 py-1 text-body text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed";
 
   return (
     <form
@@ -961,7 +962,7 @@ function ConventionDraftForm({
             setConfirming(false);
           }}
           disabled={busy}
-          className="block w-full rounded border border-card-border bg-background px-2 py-1.5 text-sm text-foreground"
+          className="block w-full rounded border border-card-border bg-background px-2 py-1.5 text-body text-foreground"
           data-testid="regime-convention-target"
         >
           {options.targets.map((t) => {
@@ -1008,11 +1009,7 @@ function ConventionDraftForm({
                 setElectionDelayTurns(d);
                 setConfirming(false);
               }}
-              className={`rounded border px-3 py-1 text-sm disabled:opacity-40 ${
-                electionDelayTurns === d
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-card-border text-foreground"
-              }`}
+              className={`px-3 py-1 text-body disabled:opacity-40 ${pillClass(electionDelayTurns === d)}`}
               data-testid={`regime-convention-delay-${d}`}
             >
               {d} turns
@@ -1041,7 +1038,7 @@ function ConventionDraftForm({
               type="button"
               disabled={busy}
               onClick={() => setConfirming(false)}
-              className="rounded border border-card-border px-3 py-1 text-sm text-foreground disabled:opacity-40"
+              className="rounded border border-card-border px-3 py-1 text-body text-foreground disabled:opacity-40"
             >
               Keep editing
             </button>
@@ -1117,9 +1114,9 @@ function ScalarCard({
 
   return (
     <div data-testid={testId}>
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="text-2xl font-bold tabular-nums text-foreground">{value.toFixed(1)}</dd>
-      <dd className="text-xs text-muted">band: {band}</dd>
+      <dt className="text-body-sm text-muted">{label}</dt>
+      <dd className="text-heading font-bold tabular-nums text-foreground">{value.toFixed(1)}</dd>
+      <dd className="text-body-sm text-muted">band: {band}</dd>
       {hasSeries && (
         <svg
           viewBox={`0 0 ${sparkW} ${sparkH}`}
@@ -1168,7 +1165,7 @@ function ScalarCard({
         <RegimeChangeHistory entries={history} />
       </dd>
       {deltaLabel && (
-        <dd className="mt-1 text-xs text-muted" data-testid={`${testId}-projection-label`}>
+        <dd className="mt-1 text-body-sm text-muted" data-testid={`${testId}-projection-label`}>
           {deltaLabel}
         </dd>
       )}

@@ -49,7 +49,7 @@ export function BasingAccess({
   }
   const name = (id: string) => countries.find((c) => c.id === id)?.name ?? id;
   return (
-    <section className="mt-6 rounded border border-neutral-700 p-4 text-sm">
+    <section className="mt-6 rounded border border-neutral-700 p-4 text-body">
       <h2 className="font-semibold">Friendly-base access</h2>
       <p className="mt-1 text-neutral-400">
         Offer access to your home-region ports or airbases. The other nation must accept. Either

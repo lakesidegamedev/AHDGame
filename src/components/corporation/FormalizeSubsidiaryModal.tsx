@@ -60,24 +60,24 @@ export function FormalizeSubsidiaryModal({
       {...dialogProps}
     >
       <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-5 space-y-4">
-        <h2 id={titleId} className="text-base font-bold text-foreground">
+        <h2 id={titleId} className="text-body-lg font-bold text-foreground">
           Formalize subsidiary
         </h2>
-        <p className="text-sm text-foreground">
+        <p className="text-body text-foreground">
           Formalize <span className="font-semibold">{corporationName}</span> as a managed subsidiary
           of <span className="font-semibold">{parentName}</span>?
         </p>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {corporationName} stays a separate corporation with its own sectors, share price, and
           shareholders. As parent CEO you may appoint its CEO, inject capital, and set a dividend
           floor, but its day-to-day is run by a different CEO.
         </p>
-        {err && <p className="text-xs text-error">{err}</p>}
+        {err && <p className="text-body-sm text-error">{err}</p>}
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold"
+            className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold"
           >
             Cancel
           </button>
@@ -85,7 +85,7 @@ export function FormalizeSubsidiaryModal({
             type="button"
             onClick={handleSubmit}
             disabled={busy}
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy ? "Working…" : "Formalize"}
           </button>

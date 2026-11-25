@@ -39,7 +39,7 @@ function ChartFence({ raw }: { raw: string }) {
     // Surface authoring mistakes in place rather than rendering nothing — a
     // silently missing chart is much harder to notice in review than this.
     return (
-      <div className="my-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
+      <div className="my-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
         Chart could not be rendered: {result.error}
       </div>
     );
@@ -48,7 +48,7 @@ function ChartFence({ raw }: { raw: string }) {
 }
 
 export function ChangelogMarkdown({ content, compact = false }: ChangelogMarkdownProps) {
-  const body = compact ? "text-sm" : "text-[15px]";
+  const body = compact ? "text-body" : "text-body";
   const lead = compact ? "leading-relaxed" : "leading-7";
 
   return (
@@ -76,19 +76,19 @@ export function ChangelogMarkdown({ content, compact = false }: ChangelogMarkdow
         },
         h2: ({ children }) =>
           compact ? (
-            <h3 className="mb-2 mt-4 text-sm font-bold text-foreground/80 first:mt-0">
+            <h3 className="mb-2 mt-4 text-body-lg font-bold text-foreground/80 first:mt-0">
               {children}
             </h3>
           ) : (
-            <h2 className="mb-3 mt-10 border-b border-card-border pb-2 text-xl font-bold tracking-tight text-foreground first:mt-0">
+            <h2 className="mb-3 mt-10 border-b border-card-border pb-2 text-heading font-bold tracking-tight text-foreground first:mt-0">
               {children}
             </h2>
           ),
         h3: ({ children }) =>
           compact ? (
-            <h4 className="mb-1.5 mt-3 text-sm font-semibold text-foreground">{children}</h4>
+            <h4 className="mb-1.5 mt-3 text-body font-semibold text-foreground">{children}</h4>
           ) : (
-            <h3 className="mb-2 mt-7 text-base font-semibold text-foreground">{children}</h3>
+            <h3 className="mb-2 mt-7 text-body-lg font-semibold text-foreground">{children}</h3>
           ),
         p: ({ children, node }) => {
           // Images become block figures with captions, which cannot sit in a paragraph.
@@ -122,16 +122,16 @@ export function ChangelogMarkdown({ content, compact = false }: ChangelogMarkdow
         hr: () => <hr className="my-8 border-card-border" />,
         table: ({ children }) => (
           <div className="my-5 overflow-x-auto">
-            <table className="w-full border-collapse text-sm">{children}</table>
+            <table className="w-full border-collapse text-body">{children}</table>
           </div>
         ),
         th: ({ children }) => (
-          <th className="border-b border-card-border px-2 py-1.5 text-left text-sm font-semibold text-foreground">
+          <th className="border-b border-card-border px-2 py-1.5 text-left text-body font-semibold text-foreground">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="border-b border-card-border/40 px-2 py-1.5 text-sm text-muted">
+          <td className="border-b border-card-border/40 px-2 py-1.5 text-body text-muted">
             {children}
           </td>
         ),
@@ -153,7 +153,9 @@ export function ChangelogMarkdown({ content, compact = false }: ChangelogMarkdow
                 />
               </div>
               {alt && (
-                <figcaption className="mt-2 text-xs leading-relaxed text-muted">{alt}</figcaption>
+                <figcaption className="mt-2 text-body-sm leading-relaxed text-muted">
+                  {alt}
+                </figcaption>
               )}
             </figure>
           );
@@ -168,13 +170,13 @@ export function ChangelogMarkdown({ content, compact = false }: ChangelogMarkdow
           }
           if (className?.startsWith("language-")) {
             return (
-              <code className="block overflow-x-auto rounded-lg bg-zinc-900 p-3 font-mono text-xs leading-relaxed text-emerald-400">
+              <code className="block overflow-x-auto rounded-lg bg-zinc-900 p-3 font-mono text-body-sm leading-relaxed text-emerald-400">
                 {children}
               </code>
             );
           }
           return (
-            <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-xs text-emerald-400">
+            <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-body-sm text-emerald-400">
               {children}
             </code>
           );

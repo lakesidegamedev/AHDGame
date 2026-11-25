@@ -47,6 +47,7 @@ export {
   RUNNING_GUIDE_HREF,
   deskDeadlineLabel,
 } from "./WhiteHouseParts";
+import { pillClass } from "@/components/ui/selectedState";
 
 // Overview is the tab the page opens on. Every other body is one click away and
 // pulls its own heavy tree: the orders tab drags the policy effect catalog, the
@@ -558,7 +559,7 @@ export default function WhiteHouseClient({
 
         {/* Tabs — Address + Orders tabs only visible to President + admin */}
         <nav
-          className="-mt-2 flex min-w-0 overflow-x-auto border-b border-card-border"
+          className="-mt-2 flex min-w-0 gap-1 overflow-x-auto border-b border-card-border pb-2"
           aria-label="White House sections"
         >
           <TabButton active={activeTab === "overview"} onClick={() => setActiveTab("overview")}>
@@ -613,7 +614,7 @@ export default function WhiteHouseClient({
           <div data-testid="whitehouse-admin-tab" className="space-y-6">
             {needsExecutiveInit && (
               <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
-                <p className="text-sm text-foreground mb-3">
+                <p className="text-body text-foreground mb-3">
                   <strong>Admin:</strong> President and Vice President slots have not been created
                   yet. Initialize them to enable appointments.
                 </p>
@@ -621,7 +622,7 @@ export default function WhiteHouseClient({
                   <button
                     onClick={handleInitializeExecutive}
                     disabled={submitting}
-                    className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                    className="rounded-lg bg-amber-500 px-4 py-2 text-body font-medium text-black hover:bg-amber-400 disabled:opacity-50 transition-colors"
                   >
                     Initialize president &amp; VP slots
                   </button>
@@ -629,7 +630,7 @@ export default function WhiteHouseClient({
               </div>
             )}
             <section>
-              <h2 className="text-sm font-semibold text-muted mb-4">
+              <h2 className="text-body font-semibold text-muted mb-4">
                 Executive appointments (admin)
               </h2>
               <div className="grid gap-6 sm:grid-cols-2">
@@ -660,10 +661,10 @@ export default function WhiteHouseClient({
           <>
             <section className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
               <div className="mb-3">
-                <h2 className="text-sm font-semibold text-foreground">
+                <h2 className="text-body font-semibold text-foreground">
                   Government approval history
                 </h2>
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-body-sm text-muted">
                   National approval snapshots by turn. This is a public approval measure, not the
                   parliamentary government-confidence gauge.
                 </p>
@@ -747,7 +748,7 @@ export default function WhiteHouseClient({
                         {data.isVicePresident && (
                           <Link
                             href={`/country/${countryId.toLowerCase()}/executive/vice-president`}
-                            className="whitespace-nowrap rounded-md border border-primary/40 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                            className="whitespace-nowrap rounded-md border border-primary/40 px-2.5 py-1 text-body-sm font-medium text-primary transition-colors hover:bg-primary/10"
                           >
                             VP office
                           </Link>
@@ -756,7 +757,7 @@ export default function WhiteHouseClient({
                           <button
                             onClick={handleResignVp}
                             disabled={resignLoading}
-                            className="whitespace-nowrap rounded-md border border-error/30 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
+                            className="whitespace-nowrap rounded-md border border-error/30 px-2.5 py-1 text-body-sm font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
                           >
                             {resignLoading ? "Resigning..." : "Resign"}
                           </button>
@@ -773,7 +774,7 @@ export default function WhiteHouseClient({
                                 setVpNomineeCharId("");
                                 setVpNominateError("");
                               }}
-                              className="whitespace-nowrap rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card-elevated"
+                              className="whitespace-nowrap rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-foreground transition-colors hover:bg-card-elevated"
                             >
                               Nominate
                             </button>
@@ -782,7 +783,7 @@ export default function WhiteHouseClient({
                           <button
                             onClick={() => handleWithdrawVpNomination(data.vpNomination!.id)}
                             disabled={submitting}
-                            className="whitespace-nowrap rounded-md border border-error/30 px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
+                            className="whitespace-nowrap rounded-md border border-error/30 px-2.5 py-1 text-body-sm font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
                           >
                             Withdraw
                           </button>
@@ -798,14 +799,14 @@ export default function WhiteHouseClient({
                     {chrome.isUs && (
                       <Link
                         href={scotusUrl(countryId)}
-                        className="rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                        className="rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:text-foreground"
                       >
                         Supreme Court
                       </Link>
                     )}
                     <Link
                       href={`/country/${countryId.toLowerCase()}/executive/cabinet`}
-                      className="rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                      className="rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:text-foreground"
                     >
                       Cabinet room
                     </Link>
@@ -816,18 +817,18 @@ export default function WhiteHouseClient({
               {/* VP confirmation vote: the 25th Amendment needs both chambers. */}
               {data.vpNomination && data.isSenator && (
                 <div className="flex flex-col gap-3 rounded-xl border border-info/30 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-sm">
+                  <div className="text-body">
                     <span className="font-medium text-foreground">
                       {data.vpNomination.nomineeCharacterName}
                     </span>
-                    <span className="ml-2 text-xs text-muted">
+                    <span className="ml-2 text-body-sm text-muted">
                       for Vice President · {data.vpNomination.votesFor} for,{" "}
                       {data.vpNomination.votesAgainst} against, {data.vpNomination.votesAbstain}{" "}
                       abstain
                     </span>
                   </div>
                   {data.vpNomination.myVote ? (
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       Your vote:{" "}
                       <span className="font-medium capitalize text-foreground">
                         {data.vpNomination.myVote}
@@ -840,7 +841,7 @@ export default function WhiteHouseClient({
                           key={v}
                           onClick={() => handleVpVote(data.vpNomination!.id, v)}
                           disabled={vpVotingId !== null}
-                          className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                          className={`rounded-md border px-3 py-1 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                             v === "for"
                               ? "border-success/40 bg-success/15 text-success hover:bg-success/25"
                               : v === "against"
@@ -860,18 +861,18 @@ export default function WhiteHouseClient({
               {data.isPresident && bills.length > 0 && (
                 <section className="space-y-3">
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground">
+                    <h2 className="text-body font-semibold text-foreground">
                       Bills awaiting your signature
                     </h2>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-body-sm text-muted">
                       Sign or veto before each deadline. A bill you leave unanswered becomes law
                       without your signature when its deadline passes.
                     </p>
                   </div>
                   <div className="overflow-x-auto rounded-xl border border-warning/30 bg-card">
-                    <table className="w-full min-w-[560px] border-collapse text-sm">
+                    <table className="w-full min-w-[560px] border-collapse text-body">
                       <thead>
-                        <tr className="border-b border-card-border bg-card-muted text-left text-[11px] text-muted">
+                        <tr className="border-b border-card-border bg-card-muted text-left text-body-sm text-muted">
                           <th scope="col" className="px-4 py-2 font-medium">
                             Bill
                           </th>
@@ -897,9 +898,11 @@ export default function WhiteHouseClient({
                               >
                                 {b.title}
                               </Link>
-                              <p className="mt-0.5 line-clamp-1 text-xs text-muted">{b.summary}</p>
+                              <p className="mt-0.5 line-clamp-1 text-body-sm text-muted">
+                                {b.summary}
+                              </p>
                             </td>
-                            <td className="whitespace-nowrap px-3 py-2.5 text-xs font-medium text-warning">
+                            <td className="whitespace-nowrap px-3 py-2.5 text-body-sm font-medium text-warning">
                               {b.presidentActionDeadlineOnTurn != null || b.presidentActionDeadline
                                 ? deskDeadlineLabel(
                                     b.presidentActionDeadlineOnTurn != null
@@ -913,14 +916,14 @@ export default function WhiteHouseClient({
                                 <button
                                   onClick={() => handleBillAction(b.id, "sign")}
                                   disabled={billActionId !== null}
-                                  className="min-h-[36px] touch-manipulation rounded-md border border-success/50 bg-success/20 px-3.5 py-1 text-xs font-medium text-success transition-colors hover:bg-success/30 disabled:opacity-50"
+                                  className="min-h-[36px] touch-manipulation rounded-md border border-success/50 bg-success/20 px-3.5 py-1 text-body-sm font-medium text-success transition-colors hover:bg-success/30 disabled:opacity-50"
                                 >
                                   Sign
                                 </button>
                                 <button
                                   onClick={() => handleBillAction(b.id, "veto")}
                                   disabled={billActionId !== null}
-                                  className="min-h-[36px] touch-manipulation rounded-md border border-error/50 bg-error/20 px-3.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error/30 disabled:opacity-50"
+                                  className="min-h-[36px] touch-manipulation rounded-md border border-error/50 bg-error/20 px-3.5 py-1 text-body-sm font-medium text-error transition-colors hover:bg-error/30 disabled:opacity-50"
                                 >
                                   Veto
                                 </button>
@@ -942,19 +945,19 @@ export default function WhiteHouseClient({
       {vpNominateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-6 mx-4 shadow-modal">
-            <h3 className="text-lg font-semibold mb-2">Nominate vice president</h3>
-            <p className="text-sm text-muted mb-4">
+            <h3 className="text-body-lg font-semibold mb-2">Nominate vice president</h3>
+            <p className="text-body text-muted mb-4">
               Under the 25th Amendment, the President nominates a VP who must be confirmed by a
               simple majority of the Senate. The vote closes after 24 hours.
             </p>
-            <label htmlFor="vp-nominee-character" className="block text-sm font-medium mb-2">
+            <label htmlFor="vp-nominee-character" className="block text-body font-medium mb-2">
               Select nominee
             </label>
             <select
               id="vp-nominee-character"
               value={vpNomineeCharId}
               onChange={(e) => setVpNomineeCharId(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
             >
               <option value="">— Select a character —</option>
               {characters.map((c) => (
@@ -964,7 +967,7 @@ export default function WhiteHouseClient({
                 </option>
               ))}
             </select>
-            <InlineError error={vpNominateError} className="text-xs text-error mb-3" />
+            <InlineError error={vpNominateError} className="text-body-sm text-error mb-3" />
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => {
@@ -972,14 +975,14 @@ export default function WhiteHouseClient({
                   setVpNomineeCharId("");
                   setVpNominateError("");
                 }}
-                className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card-elevated transition-colors"
+                className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card-elevated transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleNominateVp}
                 disabled={submitting || !vpNomineeCharId}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {submitting ? "Nominating…" : "Send to Senate"}
               </button>
@@ -992,20 +995,20 @@ export default function WhiteHouseClient({
       {appointModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-6 mx-4 shadow-modal">
-            <h3 className="text-lg font-semibold mb-4">
+            <h3 className="text-body-lg font-semibold mb-4">
               Appoint {appointModal === "president" ? "President" : "Vice president"}
             </h3>
-            <p className="text-sm text-muted mb-4">
+            <p className="text-body text-muted mb-4">
               Only player characters can serve. NPPs cannot be appointed.
             </p>
-            <label htmlFor="appoint-character" className="block text-sm font-medium mb-2">
+            <label htmlFor="appoint-character" className="block text-body font-medium mb-2">
               Select character
             </label>
             <select
               id="appoint-character"
               value={selectedCharId}
               onChange={(e) => setSelectedCharId(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
             >
               <option value="">— Vacate position —</option>
               {characters.map((c) => (
@@ -1021,14 +1024,14 @@ export default function WhiteHouseClient({
                   setAppointModal(null);
                   setSelectedCharId("");
                 }}
-                className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card-elevated transition-colors"
+                className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card-elevated transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAppoint}
                 disabled={submitting}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {selectedCharId ? "Appoint" : "Vacate"}
               </button>
@@ -1053,17 +1056,13 @@ function TabButton({
   variant?: "admin";
 }) {
   const stateClass =
-    variant === "admin"
-      ? active
-        ? "border-b-2 border-dashed border-foreground/50 text-foreground font-medium"
-        : "text-muted/80 hover:text-foreground"
-      : active
-        ? "border-b-2 border-primary text-foreground font-medium"
-        : "text-muted hover:text-foreground";
+    variant === "admin" && !active
+      ? "rounded-full border border-dashed border-card-border text-muted hover:text-foreground"
+      : pillClass(active);
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${stateClass}`}
+      className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${stateClass}`}
       aria-current={active ? "page" : undefined}
     >
       {children}

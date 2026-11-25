@@ -115,10 +115,10 @@ export function renderGuidedLegislationModalView(
       <div className="my-auto w-full max-w-5xl rounded-2xl border border-card-border bg-card shadow-modal">
         <header className="flex items-start justify-between border-b border-card-border p-5">
           <div>
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-heading font-semibold">
               {queue ? "Queue a bill" : "Guided legislative proposal"}
             </h2>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               {isCustomBill ? t("noEffects") : `Build up to ${MAX_PROVISIONS} reviewed provisions.`}{" "}
               Costs {BILL_PROPOSE_ACTION_COST} action points and{" "}
               {getProvisionCostTotal(
@@ -135,7 +135,7 @@ export function renderGuidedLegislationModalView(
               <button
                 type="button"
                 onClick={returnToBill}
-                className="rounded-lg border border-card-border px-3 py-2 text-sm font-medium hover:border-primary hover:text-primary"
+                className="rounded-lg border border-card-border px-3 py-2 text-body font-medium hover:border-primary hover:text-primary"
               >
                 Back to bill
               </button>
@@ -144,7 +144,7 @@ export function renderGuidedLegislationModalView(
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="text-xl text-muted"
+              className="text-heading text-muted"
             >
               ×
             </button>
@@ -154,7 +154,7 @@ export function renderGuidedLegislationModalView(
         <div className="border-b border-card-border px-5 py-3">
           <div className="flex flex-wrap gap-2">
             {steps.map((candidate) => {
-              const className = `rounded px-2 py-1 text-[11px] ${step === candidate.id ? "bg-primary text-white" : "bg-background text-muted"}`;
+              const className = `rounded px-2 py-1 text-body-sm ${step === candidate.id ? "bg-primary text-white" : "bg-background text-muted"}`;
               return candidate.id === "overview" && canReturnToBill ? (
                 <button
                   key={candidate.id}
@@ -175,20 +175,20 @@ export function renderGuidedLegislationModalView(
 
         <main className="max-h-[72vh] overflow-y-auto p-5">
           {(hasActiveBill || !canSubmit) && !adminOverride ? (
-            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-warning">
               {t("activeBillProposalBlocked")}
             </div>
           ) : null}
           {loadError && !isCustomBill ? (
             <div
               role="alert"
-              className="rounded-lg border border-error/40 bg-error/10 p-4 text-sm text-error"
+              className="rounded-lg border border-error/40 bg-error/10 p-4 text-body text-error"
             >
               {loadError}
             </div>
           ) : null}
           {!catalog && !loadError && !isCustomBill ? (
-            <p className="text-sm text-muted">Loading the reviewed catalog...</p>
+            <p className="text-body text-muted">Loading the reviewed catalog...</p>
           ) : null}
           {catalog || step === "starting" || step === "overview" ? (
             <>
@@ -196,7 +196,7 @@ export function renderGuidedLegislationModalView(
                 <section className="space-y-5">
                   <div>
                     <h3 className="font-semibold">How do you want to find a law?</h3>
-                    <p className="mt-1 text-sm text-muted">{t("startingHelp")}</p>
+                    <p className="mt-1 text-body text-muted">{t("startingHelp")}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(queue
@@ -217,7 +217,7 @@ export function renderGuidedLegislationModalView(
                             setStep("overview");
                           }
                         }}
-                        className={`rounded-lg border px-4 py-2 text-sm ${path === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+                        className={`rounded-lg border px-4 py-2 text-body ${path === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
                       >
                         {t(
                           value === "custom"
@@ -230,7 +230,7 @@ export function renderGuidedLegislationModalView(
                     ))}
                   </div>
                   {path === "domain" ? (
-                    <label className="block max-w-xl text-sm text-muted">
+                    <label className="block max-w-xl text-body text-muted">
                       Policy domain
                       <select
                         value={domain}
@@ -242,7 +242,7 @@ export function renderGuidedLegislationModalView(
                           clearSelection();
                           setStep("family");
                         }}
-                        className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm text-foreground"
+                        className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body text-foreground"
                       >
                         <option value="">Select a policy domain</option>
                         {domains.map((value) => (
@@ -253,7 +253,7 @@ export function renderGuidedLegislationModalView(
                       </select>
                     </label>
                   ) : (
-                    <label className="block max-w-xl text-sm text-muted">
+                    <label className="block max-w-xl text-body text-muted">
                       Metric to affect
                       <select
                         value={metric}
@@ -265,7 +265,7 @@ export function renderGuidedLegislationModalView(
                           clearSelection();
                           setStep("family");
                         }}
-                        className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm text-foreground"
+                        className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body text-foreground"
                       >
                         <option value="">Select a metric</option>
                         {metrics.map((candidate) => (
@@ -296,7 +296,7 @@ export function renderGuidedLegislationModalView(
                       />
                       <button
                         type="button"
-                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                        className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground"
                         onClick={() => {
                           const error = validateEmbargoRows(embargoRows);
                           if (error) {
@@ -347,7 +347,7 @@ export function renderGuidedLegislationModalView(
                           className="rounded-xl border border-card-border bg-background/40 p-4 text-left hover:border-primary"
                         >
                           <span className="font-medium">{candidate.title}</span>
-                          <span className="mt-2 block text-xs text-muted">
+                          <span className="mt-2 block text-body-sm text-muted">
                             {candidate.description}
                           </span>
                         </button>
@@ -387,11 +387,11 @@ export function renderGuidedLegislationModalView(
                           }}
                           className="rounded-xl border border-card-border bg-background/40 p-4 text-left hover:border-primary"
                         >
-                          <span className="text-[10px] font-semibold text-primary">
+                          <span className="text-body-sm font-semibold text-primary">
                             {candidate.domain}
                           </span>
                           <span className="mt-1 block font-medium">{candidate.title}</span>
-                          <span className="mt-2 block text-xs text-muted">
+                          <span className="mt-2 block text-body-sm text-muted">
                             Current law: {candidate.currentLaw}
                           </span>
                         </button>
@@ -401,7 +401,7 @@ export function renderGuidedLegislationModalView(
                   <button
                     type="button"
                     onClick={() => setStep("starting")}
-                    className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                    className="rounded-lg border border-card-border px-4 py-2 text-body"
                   >
                     Back
                   </button>
@@ -412,15 +412,15 @@ export function renderGuidedLegislationModalView(
                 <section className="space-y-4">
                   <div>
                     <h3 className="font-semibold">{family.title}</h3>
-                    <p className="mt-1 text-sm text-muted" title={family.currentLawDescription}>
+                    <p className="mt-1 text-body text-muted" title={family.currentLawDescription}>
                       Current law: {family.currentLaw}. The matching level is shown but cannot be
                       proposed.
                     </p>
-                    <p className="mt-2 text-xs text-muted">
+                    <p className="mt-2 text-body-sm text-muted">
                       Overseeing agency: {agencyName(family)}
                     </p>
                     <p
-                      className="mt-1 text-xs text-muted"
+                      className="mt-1 text-body-sm text-muted"
                       title="These provisional forecasts compare each option with current law at full implementation and show whether each observed metric is expected to rise or fall. Color indicates whether that movement is favorable or unfavorable."
                     >
                       Expected metric direction from current law at full implementation
@@ -440,7 +440,7 @@ export function renderGuidedLegislationModalView(
                           }}
                           className={`rounded-xl border p-4 text-left ${current ? "cursor-not-allowed border-card-border bg-background/20 opacity-60" : "border-card-border bg-background/40 hover:border-primary"}`}
                         >
-                          <span className="text-[10px] font-semibold uppercase text-primary">
+                          <span className="text-body-sm font-semibold uppercase text-primary">
                             {candidate.option.choice === "leave_to_states"
                               ? "Leave it to the States"
                               : "Policy option"}
@@ -453,10 +453,10 @@ export function renderGuidedLegislationModalView(
                             countryId={countryId}
                             className="mt-2"
                           />
-                          <span className="mt-2 block text-xs text-muted">
+                          <span className="mt-2 block text-body-sm text-muted">
                             {candidate.description}
                           </span>
-                          <span className="mt-3 block border-t border-card-border pt-2 text-xs">
+                          <span className="mt-3 block border-t border-card-border pt-2 text-body-sm">
                             Allocation{" "}
                             {money(
                               current
@@ -465,7 +465,7 @@ export function renderGuidedLegislationModalView(
                             )}
                           </span>
                           <span
-                            className={`block text-xs font-medium ${changeClass(candidate.annualAllocationDelta, true)}`}
+                            className={`block text-body-sm font-medium ${changeClass(candidate.annualAllocationDelta, true)}`}
                           >
                             Budget change {money(candidate.annualAllocationDelta)}
                           </span>
@@ -478,7 +478,7 @@ export function renderGuidedLegislationModalView(
                             return (
                               <span
                                 key={effect.metricId}
-                                className={`block text-xs font-medium ${changeClass(normalizedEffectChange(family, candidate, effect.metricId), false)}`}
+                                className={`block text-body-sm font-medium ${changeClass(normalizedEffectChange(family, candidate, effect.metricId), false)}`}
                               >
                                 {metricName(effect.metricId)}:{" "}
                                 <span className={metricDirectionClass(indicator)}>{indicator}</span>
@@ -492,7 +492,7 @@ export function renderGuidedLegislationModalView(
                   <button
                     type="button"
                     onClick={() => setStep("family")}
-                    className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                    className="rounded-lg border border-card-border px-4 py-2 text-body"
                   >
                     Back
                   </button>
@@ -503,7 +503,7 @@ export function renderGuidedLegislationModalView(
                 <section className="space-y-5">
                   <div>
                     <h3 className="font-semibold">{tax.title}</h3>
-                    <p className="mt-1 text-sm text-muted">
+                    <p className="mt-1 text-body text-muted">
                       Choose the exact statutory rate. The current rate cannot be proposed as a
                       change.
                     </p>
@@ -518,7 +518,7 @@ export function renderGuidedLegislationModalView(
                       value={taxRate}
                       onChange={(event) => setTaxRate(Number(event.target.value))}
                     />
-                    <div className="mt-3 flex items-center justify-between text-sm">
+                    <div className="mt-3 flex items-center justify-between text-body">
                       <span>Current {taxEstimate.currentRate}%</span>
                       <label>
                         Proposed{" "}
@@ -544,7 +544,7 @@ export function renderGuidedLegislationModalView(
                     <button
                       type="button"
                       onClick={() => setStep("family")}
-                      className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                      className="rounded-lg border border-card-border px-4 py-2 text-body"
                     >
                       Back
                     </button>
@@ -552,7 +552,7 @@ export function renderGuidedLegislationModalView(
                       type="button"
                       disabled={!taxRateValid || taxRate === taxEstimate.currentRate}
                       onClick={() => setStep("review")}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       Review
                     </button>
@@ -569,14 +569,14 @@ export function renderGuidedLegislationModalView(
                           ?.title
                       }
                     </h3>
-                    <p className="mt-1 text-sm text-muted">
+                    <p className="mt-1 text-body text-muted">
                       {subsidyAction === "subsidy"
                         ? "Choose which companies qualify for the +7.5% profit margin."
                         : "Choose the subsidy to withdraw."}
                     </p>
                   </div>
                   <div className="space-y-3 rounded-xl border border-card-border bg-background/40 p-5">
-                    <label className="block text-sm text-muted">
+                    <label className="block text-body text-muted">
                       Coverage
                       <select
                         value={subsidyScope}
@@ -584,25 +584,25 @@ export function renderGuidedLegislationModalView(
                           setSubsidyScope(event.target.value as SubsidyScope);
                           setSubsidySector("");
                         }}
-                        className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm text-foreground"
+                        className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body text-foreground"
                       >
                         <option value="economy_wide">Economy-wide</option>
                         <option value="sector">Specific sector</option>
                       </select>
                     </label>
                     {subsidyScope === "sector" ? (
-                      <label className="block text-sm text-muted">
+                      <label className="block text-body text-muted">
                         Sector
                         <SubsidySectorSelect
                           value={subsidySector}
                           onChange={(value) => setSubsidySector(value as OperatingSectorType | "")}
                           placeholderLabel="Select a sector"
-                          className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm text-foreground"
+                          className="mt-2 w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body text-foreground"
                         />
                       </label>
                     ) : null}
                     {subsidyAction === "subsidy" ? (
-                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <label className="flex cursor-pointer items-center gap-2 text-body">
                         <input
                           type="checkbox"
                           checked={subsidyDomesticOnly}
@@ -617,7 +617,7 @@ export function renderGuidedLegislationModalView(
                     <button
                       type="button"
                       onClick={() => setStep("family")}
-                      className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                      className="rounded-lg border border-card-border px-4 py-2 text-body"
                     >
                       Back
                     </button>
@@ -625,7 +625,7 @@ export function renderGuidedLegislationModalView(
                       type="button"
                       disabled={!subsidyValid}
                       onClick={() => setStep("review")}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       Review
                     </button>
@@ -637,7 +637,7 @@ export function renderGuidedLegislationModalView(
                 <section className="space-y-4">
                   <div
                     role="alert"
-                    className="rounded-lg border border-error/40 bg-error/10 p-4 text-sm text-error"
+                    className="rounded-lg border border-error/40 bg-error/10 p-4 text-body text-error"
                   >
                     This policy level is unavailable. Return to the law list and choose another
                     provision.
@@ -645,7 +645,7 @@ export function renderGuidedLegislationModalView(
                   <button
                     type="button"
                     onClick={() => setStep("family")}
-                    className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                    className="rounded-lg border border-card-border px-4 py-2 text-body"
                   >
                     Back
                   </button>
@@ -657,7 +657,7 @@ export function renderGuidedLegislationModalView(
                   <h3 className="font-semibold">Review provision</h3>
                   {family && option ? (
                     <div className="rounded-xl border border-card-border bg-background/40 p-5">
-                      <p className="text-xs font-semibold uppercase text-primary">
+                      <p className="text-body-sm font-semibold uppercase text-primary">
                         Proposed policy
                       </p>
                       <h4 className="mt-1 font-semibold">{option.title}</h4>
@@ -667,8 +667,8 @@ export function renderGuidedLegislationModalView(
                         countryId={countryId}
                         className="mt-2"
                       />
-                      <p className="mt-2 text-sm text-muted">{option.description}</p>
-                      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                      <p className="mt-2 text-body text-muted">{option.description}</p>
+                      <dl className="mt-4 grid gap-3 text-body sm:grid-cols-2">
                         <div>
                           <dt className="text-muted">Agency</dt>
                           <dd>{agencyName(family)}</dd>
@@ -690,7 +690,7 @@ export function renderGuidedLegislationModalView(
                       </dl>
                       <div className="mt-4 space-y-1">
                         <p
-                          className="text-xs text-muted"
+                          className="text-body-sm text-muted"
                           title="These provisional forecasts compare the selected option with current law at full implementation and show whether each observed metric is expected to rise or fall. Color indicates whether that movement is favorable or unfavorable."
                         >
                           Expected metric direction from current law at full implementation
@@ -721,7 +721,7 @@ export function renderGuidedLegislationModalView(
                           targetSectorType: subsidySector,
                         })}
                       </h4>
-                      <p className="mt-2 text-sm text-muted">
+                      <p className="mt-2 text-body text-muted">
                         {subsidyAction === "subsidy"
                           ? `Qualifying companies earn a +7.5% profit margin.${subsidyDomesticOnly ? ` ${domesticOnlyLabel}.` : ""}`
                           : "Ends the matching active subsidy."}
@@ -736,7 +736,7 @@ export function renderGuidedLegislationModalView(
                         countryId={countryId}
                         className="mt-2"
                       />
-                      <p className="mt-2 text-sm">
+                      <p className="mt-2 text-body">
                         Current rate {taxEstimate.currentRate}% → proposed rate {taxRate}%
                       </p>
                     </div>
@@ -745,7 +745,7 @@ export function renderGuidedLegislationModalView(
                     <button
                       type="button"
                       onClick={() => setStep("level")}
-                      className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                      className="rounded-lg border border-card-border px-4 py-2 text-body"
                     >
                       Back
                     </button>
@@ -758,7 +758,7 @@ export function renderGuidedLegislationModalView(
                             ? addSubsidyToDraft
                             : addTaxToDraft
                       }
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                      className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground"
                     >
                       Add to draft bill
                     </button>
@@ -773,7 +773,7 @@ export function renderGuidedLegislationModalView(
                       <h3 className="font-semibold">
                         {isCustomBill ? t("customBill") : "Bill overview"}
                       </h3>
-                      <p className="text-sm text-muted">
+                      <p className="text-body text-muted">
                         {isCustomBill
                           ? t("noEffects")
                           : "Review the draft or add another provision without retracing the previous steps."}
@@ -783,7 +783,7 @@ export function renderGuidedLegislationModalView(
                       <button
                         type="button"
                         onClick={beginAnother}
-                        className="rounded-lg border border-card-border px-4 py-2 text-sm"
+                        className="rounded-lg border border-card-border px-4 py-2 text-body"
                       >
                         {t("changeStartingPoint")}
                       </button>
@@ -792,7 +792,7 @@ export function renderGuidedLegislationModalView(
                         type="button"
                         disabled={draft.length >= MAX_PROVISIONS}
                         onClick={beginAnother}
-                        className="rounded-lg border border-card-border px-4 py-2 text-sm disabled:opacity-50"
+                        className="rounded-lg border border-card-border px-4 py-2 text-body disabled:opacity-50"
                       >
                         Add another provision
                       </button>
@@ -831,7 +831,7 @@ export function renderGuidedLegislationModalView(
                                     ? `${provision.action === "subsidy" ? "Grant subsidy" : "End subsidy"}: ${subsidyTargetLabel(provision)}`
                                     : `${provision.tax.title}: ${provision.rate}%`}
                             </p>
-                            <p className="mt-1 text-xs text-muted">
+                            <p className="mt-1 text-body-sm text-muted">
                               {provision.kind === "embargo"
                                 ? formatEmbargoProvisionLabel(embargoToPayload(provision.row))
                                     .description
@@ -851,7 +851,7 @@ export function renderGuidedLegislationModalView(
                                 current.filter((candidate) => candidate !== provision)
                               )
                             }
-                            className="text-xs text-error"
+                            className="text-body-sm text-error"
                           >
                             Remove
                           </button>
@@ -860,22 +860,22 @@ export function renderGuidedLegislationModalView(
                     })}
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="text-xs text-muted">
+                    <label className="text-body-sm text-muted">
                       Bill title
                       <input
                         value={title}
                         onChange={(event) => setTitle(event.target.value)}
                         maxLength={200}
-                        className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+                        className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
                       />
                     </label>
                     {chambers.length > 0 ? (
-                      <label className="text-xs text-muted">
+                      <label className="text-body-sm text-muted">
                         Originating chamber
                         <select
                           value={chamber}
                           onChange={(event) => setChamber(event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+                          className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
                         >
                           {chambers.map((candidate) => (
                             <option key={candidate.value} value={candidate.value}>
@@ -886,25 +886,25 @@ export function renderGuidedLegislationModalView(
                       </label>
                     ) : null}
                   </div>
-                  <label className="block text-xs text-muted">
+                  <label className="block text-body-sm text-muted">
                     {isCustomBill ? t("messageBody") : "Summary"}
                     <textarea
                       value={summary}
                       onChange={(event) => setSummary(event.target.value)}
                       maxLength={bodyLimit}
                       rows={isCustomBill ? 10 : 3}
-                      className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+                      className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
                     />
                   </label>
                   {isCustomBill ? (
-                    <p className="text-xs text-muted" aria-live="polite">
+                    <p className="text-body-sm text-muted" aria-live="polite">
                       {t("characterCount", {
                         count: summary.length,
                         limit: CUSTOM_BILL_BODY_MAX_LENGTH,
                       })}
                     </p>
                   ) : (
-                    <p className="text-xs text-muted" title={catalog?.balanceNotice}>
+                    <p className="text-body-sm text-muted" title={catalog?.balanceNotice}>
                       {catalog?.balanceNotice}
                     </p>
                   )}
@@ -921,7 +921,7 @@ export function renderGuidedLegislationModalView(
                         !summary.trim()
                       }
                       onClick={submit}
-                      className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-5 py-2 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       {queue
                         ? submitting

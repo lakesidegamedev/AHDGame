@@ -45,9 +45,9 @@ export interface ContractAccess {
   }[];
 }
 export const inputClass =
-  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm";
+  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body";
 export const buttonClass =
-  "rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50";
+  "rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted";
 export async function contractPost(url: string, body: unknown) {
   const res = await fetch(url, {
     method: "POST",
@@ -101,7 +101,7 @@ export function PublishTenderForm({
     !(access.extractionEnabled && (access.nationalExtraction || access.regionalExtraction))
   )
     return (
-      <p role="alert" className="text-sm text-muted">
+      <p role="alert" className="text-body text-muted">
         {t("notAuthorized")}
       </p>
     );
@@ -150,9 +150,9 @@ export function PublishTenderForm({
         }
       }}
     >
-      <h2 className="text-lg font-semibold">{t("publish")}</h2>
-      <p className="text-sm text-muted">{t("publishExplanation")}</p>
-      <label className="block text-sm">
+      <h2 className="text-heading font-semibold">{t("publish")}</h2>
+      <p className="text-body text-muted">{t("publishExplanation")}</p>
+      <label className="block text-body">
         {t("type")}
         <select
           className={inputClass}
@@ -165,11 +165,11 @@ export function PublishTenderForm({
           )}
         </select>
       </label>
-      <label className="block text-sm">
+      <label className="block text-body">
         {t("titleLabel")}
         <input required name="title" minLength={5} maxLength={120} className={inputClass} />
       </label>
-      <label className="block text-sm">
+      <label className="block text-body">
         {t("descriptionLabel")}
         <textarea
           required
@@ -179,7 +179,7 @@ export function PublishTenderForm({
           className={inputClass}
         />
       </label>
-      <label className="block text-sm">
+      <label className="block text-body">
         {t("biddingLength")}
         <input
           required
@@ -193,7 +193,7 @@ export function PublishTenderForm({
           className={inputClass}
         />
       </label>
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         {t("deadlineSummary", {
           close: deadlines.closesTurn,
           deadline: deadlines.awardDeadlineTurn,
@@ -202,7 +202,7 @@ export function PublishTenderForm({
       </p>
       {type === "defence" ? (
         <fieldset className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm">
+          <label className="text-body">
             {t("component")}
             <select name="component" className={inputClass}>
               {["ground", "naval", "air", "rocket", "space", "marine"].map((d) => (
@@ -212,7 +212,7 @@ export function PublishTenderForm({
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("grade")}
             <select
               name="grade"
@@ -227,7 +227,7 @@ export function PublishTenderForm({
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("lots")}
             <input
               required
@@ -239,7 +239,7 @@ export function PublishTenderForm({
               className={inputClass}
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("maximumPrice")}
             <input
               required
@@ -259,16 +259,16 @@ export function PublishTenderForm({
               className={inputClass}
             />
           </label>
-          <p className="text-sm text-muted sm:col-span-2">{t("defenceReservation")}</p>
+          <p className="text-body text-muted sm:col-span-2">{t("defenceReservation")}</p>
           {access.uncommittedAppropriation != null && (
-            <p className="text-sm text-muted sm:col-span-2">
+            <p className="text-body text-muted sm:col-span-2">
               {t("fundingReference", { amount: access.uncommittedAppropriation })}
             </p>
           )}
         </fieldset>
       ) : (
         <fieldset className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm">
+          <label className="text-body">
             {t("state")}
             <select
               required
@@ -283,7 +283,7 @@ export function PublishTenderForm({
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("resource")}
             <select
               required
@@ -298,7 +298,7 @@ export function PublishTenderForm({
               ))}
             </select>
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("share")}
             <input
               required
@@ -312,7 +312,7 @@ export function PublishTenderForm({
               className={inputClass}
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("term")}
             <input
               required
@@ -324,7 +324,7 @@ export function PublishTenderForm({
               className={inputClass}
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("royalty")}
             <input
               required
@@ -337,7 +337,7 @@ export function PublishTenderForm({
               className={inputClass}
             />
           </label>
-          <label className="text-sm">
+          <label className="text-body">
             {t("minimumFeeLocal", { currency: access.currencyQuote?.code ?? "?" })}
             <input
               required
@@ -350,8 +350,8 @@ export function PublishTenderForm({
               className={inputClass}
             />
           </label>
-          <p className="text-sm text-muted sm:col-span-2">{t("extractionReservation")}</p>
-          <p className="text-sm text-muted sm:col-span-2">
+          <p className="text-body text-muted sm:col-span-2">{t("extractionReservation")}</p>
+          <p className="text-body text-muted sm:col-span-2">
             {capacity
               ? t("capacityQuantity", {
                   allocated: capacity.allocatedDailyUnits,
@@ -360,15 +360,15 @@ export function PublishTenderForm({
                 })
               : t("capacityUnavailable")}
           </p>
-          <p className="text-sm text-muted sm:col-span-2">{t("capacityBasis")}</p>
-          <p className="text-sm text-muted sm:col-span-2">{t("exchangeNote")}</p>
+          <p className="text-body text-muted sm:col-span-2">{t("capacityBasis")}</p>
+          <p className="text-body text-muted sm:col-span-2">{t("exchangeNote")}</p>
           {!validContractQuote(access.currencyQuote) && (
             <p role="alert">{t("currencyUnavailable")}</p>
           )}
         </fieldset>
       )}
       {error && (
-        <p role="alert" className="text-sm text-error">
+        <p role="alert" className="text-body text-error">
           {error}
         </p>
       )}
@@ -410,7 +410,7 @@ export function BidForm({
   const prior = tender.bids.find((b) => b.corporationId === corporationId);
   const quote = corp?.currencyQuote;
   const extraction = tender.terms.type === "extraction";
-  if (!eligible.length) return <p className="text-sm text-muted">{t("noEligibleCorporation")}</p>;
+  if (!eligible.length) return <p className="text-body text-muted">{t("noEligibleCorporation")}</p>;
   async function submit(form: FormData, withdraw = false) {
     setBusy(true);
     setError("");
@@ -452,11 +452,13 @@ export function BidForm({
       }}
     >
       <h3 className="font-semibold">{t("yourBid")}</h3>
-      <p className="text-sm text-muted">{t("bindingBid")}</p>
-      <p className="text-sm text-muted">{t(extraction ? "extractionPayment" : "defencePayment")}</p>
-      {extraction && <p className="text-sm text-muted">{t("exchangeNote")}</p>}
+      <p className="text-body text-muted">{t("bindingBid")}</p>
+      <p className="text-body text-muted">
+        {t(extraction ? "extractionPayment" : "defencePayment")}
+      </p>
+      {extraction && <p className="text-body text-muted">{t("exchangeNote")}</p>}
       {extraction && !validContractQuote(quote) && <p role="alert">{t("currencyUnavailable")}</p>}
-      <label className="block text-sm">
+      <label className="block text-body">
         {t("corporation")}
         <select
           className={inputClass}
@@ -471,7 +473,7 @@ export function BidForm({
         </select>
       </label>
       {tender.terms.type === "defence" && (
-        <label className="block text-sm">
+        <label className="block text-body">
           {t("plant")}
           <select
             required
@@ -490,7 +492,7 @@ export function BidForm({
           </select>
         </label>
       )}
-      <label className="block text-sm">
+      <label className="block text-body">
         {tender.terms.type === "defence"
           ? t("pricePerLot")
           : t("signingFeeLocal", { currency: quote?.code ?? "?" })}
@@ -520,7 +522,7 @@ export function BidForm({
         />
       </label>
       {error && (
-        <p role="alert" className="text-sm text-error">
+        <p role="alert" className="text-body text-error">
           {error}
         </p>
       )}
@@ -535,7 +537,7 @@ export function BidForm({
           <button
             type="button"
             disabled={busy}
-            className="text-sm text-error"
+            className="text-body text-error"
             onClick={() => void submit(new FormData(), true)}
           >
             {t("withdrawBid")}

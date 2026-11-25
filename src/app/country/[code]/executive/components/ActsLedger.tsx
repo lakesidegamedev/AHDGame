@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { ExecutiveActKind } from "@/lib/constants/executiveSurface";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** Serialized ExecutiveAct from GET /api/country/[code]/executive/acts. */
 export interface LedgerAct {
@@ -80,11 +81,7 @@ export function ActsLedger({
               key={pill.key}
               type="button"
               onClick={() => setFilter(pill.key)}
-              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition-colors ${
-                filter === pill.key
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-card-border text-muted hover:text-foreground"
-              }`}
+              className={`px-2.5 py-0.5 text-body-sm ${pillClass(filter === pill.key)}`}
               aria-pressed={filter === pill.key}
             >
               {pill.label}
@@ -93,7 +90,7 @@ export function ActsLedger({
         </span>
       </div>
       {visible.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm italic text-muted">
+        <p className="px-4 py-6 text-center text-body italic text-muted">
           No recorded acts{filter !== "all" ? " for this filter" : " yet"}.
         </p>
       ) : (
@@ -107,18 +104,18 @@ export function ActsLedger({
               key={`${act.kind}-${act.refId}`}
               className="relative grid grid-cols-[64px_92px_1fr] items-baseline gap-2.5 px-4 py-2"
             >
-              <span className="text-right font-mono text-[10px] text-muted">
+              <span className="text-right font-mono text-body-sm text-muted">
                 <Stamp act={act} />
               </span>
               <span
-                className={`rounded px-1 py-0.5 text-center text-[9px] font-bold tracking-wider ${KIND_TONE[act.kind]}`}
+                className={`rounded px-1 py-0.5 text-center text-body-sm font-bold tracking-wider ${KIND_TONE[act.kind]}`}
               >
                 {actLabels[act.kind]}
               </span>
-              <span className="min-w-0 truncate text-sm text-foreground/90">
+              <span className="min-w-0 truncate text-body text-foreground/90">
                 {act.title}
                 {act.detail && (
-                  <span className="ml-1.5 font-mono text-[10px] text-muted">· {act.detail}</span>
+                  <span className="ml-1.5 font-mono text-body-sm text-muted">· {act.detail}</span>
                 )}
               </span>
             </div>
@@ -126,7 +123,7 @@ export function ActsLedger({
         </div>
       )}
       {footer && (
-        <div className="border-t border-card-border/50 px-4 py-2.5 text-xs text-muted">
+        <div className="border-t border-card-border/50 px-4 py-2.5 text-body-sm text-muted">
           Full record on the{" "}
           <Link
             href={footer.href}

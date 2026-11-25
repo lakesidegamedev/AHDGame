@@ -60,24 +60,21 @@ export function WrappedPoster({
   const stats = posterStats(recap);
   return (
     <div className="flex h-full flex-col">
-      <p
-        className="text-[14px] font-medium text-white/55"
-        style={anim(motion, "ahdw-rise", 400, 0)}
-      >
+      <p className="text-body font-medium text-white/55" style={anim(motion, "ahdw-rise", 400, 0)}>
         {season} Wrapped
       </p>
       <h2
-        className="mt-3 text-balance text-[40px] font-extrabold leading-[0.95] tracking-[-0.045em] text-white"
+        className="mt-3 text-balance text-display font-extrabold leading-[0.95] tracking-[-0.045em] text-white"
         style={anim(motion, "ahdw-rise", 500, 80)}
       >
         {recap.name}
       </h2>
-      <p className="mt-2 text-[15px] text-white/60" style={anim(motion, "ahdw-rise", 450, 160)}>
+      <p className="mt-2 text-body text-white/60" style={anim(motion, "ahdw-rise", 450, 160)}>
         {[recap.party, recap.countryName].filter(Boolean).join(" · ")}
       </p>
       {recap.highestOffice && (
         <p
-          className="mt-1 text-[15px] font-semibold"
+          className="mt-1 text-body font-semibold"
           style={{ color: accent, ...anim(motion, "ahdw-rise", 450, 220) }}
         >
           {recap.highestOffice}
@@ -104,8 +101,8 @@ export function WrappedPoster({
             className="min-w-0"
             style={anim(motion, "ahdw-rise", 450, 500 + i * 70)}
           >
-            <dt className="truncate text-[12px] text-white/50">{s.label}</dt>
-            <dd className="truncate text-[24px] font-bold tabular-nums leading-tight tracking-[-0.03em] text-white">
+            <dt className="truncate text-body-sm text-white/50">{s.label}</dt>
+            <dd className="truncate text-heading font-bold tabular-nums leading-tight tracking-[-0.03em] text-white">
               {s.value}
             </dd>
           </div>
@@ -114,10 +111,10 @@ export function WrappedPoster({
 
       {recap.persona && (
         <div className="mt-6" style={anim(motion, "ahdw-rise", 450, 950)}>
-          <p className="text-[20px] font-bold tracking-[-0.02em]" style={{ color: accent }}>
+          <p className="text-heading font-bold tracking-[-0.02em]" style={{ color: accent }}>
             {recap.persona.title}
           </p>
-          <p className="mt-0.5 text-[14px] leading-snug text-white/60">{recap.persona.reason}</p>
+          <p className="mt-0.5 text-body leading-snug text-white/60">{recap.persona.reason}</p>
         </div>
       )}
 
@@ -133,7 +130,7 @@ export function WrappedPoster({
           height={22}
           className="shrink-0 object-contain"
         />
-        <span className="text-[13px] font-semibold tracking-tight text-white/80">
+        <span className="text-body-sm font-semibold tracking-tight text-white/80">
           A House Divided
         </span>
       </div>

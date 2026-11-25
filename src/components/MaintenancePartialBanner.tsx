@@ -51,10 +51,10 @@ export function MaintenancePartialBanner() {
   return (
     <div className="relative z-40 border-b border-warning/30 bg-warning/10 text-warning-muted">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2">
-        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/20 text-sm font-bold text-warning">
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/20 text-body font-bold text-warning">
           !
         </span>
-        <p className="text-sm">
+        <p className="text-body">
           <span className="font-semibold text-warning">Limited maintenance:</span>{" "}
           {status.reason || DEFAULT_REASON}
           {status.expectedEnd ? (

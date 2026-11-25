@@ -13,7 +13,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white font-semibold hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border",
+    "bg-primary text-primary-foreground font-semibold hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border",
   secondary:
     "border border-card-border bg-card text-foreground font-medium hover:bg-card/80 hover:border-muted/40 disabled:opacity-50",
   ghost: "text-muted font-medium hover:bg-card hover:text-foreground disabled:opacity-50",
@@ -22,9 +22,9 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-7 px-2.5 text-xs rounded-md",
-  md: "h-9 px-3.5 text-[13px] rounded-lg",
-  lg: "h-11 px-4.5 text-sm rounded-lg",
+  sm: "h-7 px-2.5 text-body-sm rounded-md",
+  md: "h-9 px-3.5 text-body-sm rounded-lg",
+  lg: "h-11 px-4.5 text-body rounded-lg",
 };
 
 // Icon-only buttons keep their visual size but extend the tap target to a

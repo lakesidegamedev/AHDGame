@@ -183,7 +183,9 @@ export function FundraisingManagementSection({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       {msg && (
-        <div className={`px-6 py-3 border-b border-card-border/40 text-sm ${getMessageStyle(msg)}`}>
+        <div
+          className={`px-6 py-3 border-b border-card-border/40 text-body ${getMessageStyle(msg)}`}
+        >
           {msg}
         </div>
       )}
@@ -216,12 +218,12 @@ export function FundraisingManagementSection({
               variant="primary"
               className="flex-1 max-w-48"
             />
-            <span className="text-lg font-bold tabular-nums w-12 text-right">{taxRate}%</span>
+            <span className="text-heading font-bold tabular-nums w-12 text-right">{taxRate}%</span>
             {taxRate !== stateParty.stateTaxRate && (
               <button
                 onClick={handleSaveTax}
                 disabled={savingTax}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="rounded-lg px-4 py-2 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                 style={{ backgroundColor: stateParty.partyColor }}
               >
                 {savingTax ? "Saving…" : "Save"}
@@ -253,7 +255,7 @@ export function FundraisingManagementSection({
           <div className="flex items-center justify-between">
             <span className="text-body-sm font-medium text-muted">Total budget allocation</span>
             <span
-              className={`text-sm font-bold tabular-nums ${
+              className={`text-body font-bold tabular-nums ${
                 totalBudgetPct > 50
                   ? "text-error"
                   : totalBudgetPct > 25
@@ -261,7 +263,8 @@ export function FundraisingManagementSection({
                     : "text-foreground"
               }`}
             >
-              {totalBudgetPct}% <span className="text-xs font-normal text-muted">of revenue</span>
+              {totalBudgetPct}%{" "}
+              <span className="text-body-sm font-normal text-muted">of revenue</span>
             </span>
           </div>
         </div>
@@ -286,7 +289,7 @@ export function FundraisingManagementSection({
             </svg>
             <div className="text-body-sm font-medium text-muted">GOTV — Get out the vote</div>
           </div>
-          <p className="text-[11px] text-muted/60 mb-3 ml-6">
+          <p className="text-body-sm text-muted/60 mb-3 ml-6">
             Rally your base. Boost voter turnout for a targeted demographic through door-knocking,
             phone banking, and voter drives.
           </p>
@@ -300,7 +303,9 @@ export function FundraisingManagementSection({
               variant="primary"
               className="flex-1 max-w-48"
             />
-            <span className="text-lg font-bold tabular-nums w-12 text-right">{gotvPercent}%</span>
+            <span className="text-heading font-bold tabular-nums w-12 text-right">
+              {gotvPercent}%
+            </span>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -310,7 +315,7 @@ export function FundraisingManagementSection({
                 setGotvCategory(e.target.value);
                 setGotvGroup("");
               }}
-              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">Category…</option>
               {targetableCategories.map((category) => (
@@ -323,7 +328,7 @@ export function FundraisingManagementSection({
               value={gotvGroup}
               onChange={(e) => setGotvGroup(e.target.value)}
               disabled={!gotvCategory}
-              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
             >
               <option value="">Demographic…</option>
               {groupsForGotvCat.map((d) => (
@@ -336,7 +341,7 @@ export function FundraisingManagementSection({
               <button
                 onClick={handleSaveGotv}
                 disabled={savingGotv || gotvNeedsTarget}
-                className="rounded-lg px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="rounded-lg px-4 py-1.5 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
                 style={{ backgroundColor: stateParty.partyColor }}
               >
                 {savingGotv ? "Saving…" : "Save"}
@@ -345,7 +350,7 @@ export function FundraisingManagementSection({
           </div>
 
           {gotvNeedsTarget && (
-            <p className="mt-2 text-xs text-error flex items-center gap-1.5 ml-6">
+            <p className="mt-2 text-body-sm text-error flex items-center gap-1.5 ml-6">
               <svg
                 className="h-3 w-3 shrink-0"
                 fill="none"
@@ -364,11 +369,11 @@ export function FundraisingManagementSection({
           )}
           {gotvPercent > 0 && selectedGotvDemo && (
             <div className="mt-3 ml-6 rounded-lg bg-background/50 border border-card-border/30 p-3 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-muted">Spending</span>
                 <span className="font-semibold tabular-nums">{fmt(gotvSpend, countryId)} / hr</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-muted">Alignment efficacy</span>
                 <span
                   className={`font-semibold tabular-nums ${
@@ -378,7 +383,7 @@ export function FundraisingManagementSection({
                   {Math.round(gotvAlignMult * 100)}%
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-muted">Est. turnout boost</span>
                 <span className="font-bold tabular-nums text-success">
                   +{gotvEstBoost.toFixed(3)}% / turn
@@ -408,7 +413,7 @@ export function FundraisingManagementSection({
             </svg>
             <div className="text-body-sm font-medium text-muted">Voter suppression</div>
           </div>
-          <p className="text-[11px] text-muted/60 mb-3 ml-6">
+          <p className="text-body-sm text-muted/60 mb-3 ml-6">
             Dirty tricks. Spread misinformation, intimidate voters, and reduce turnout among an
             opposing demographic.
           </p>
@@ -422,7 +427,7 @@ export function FundraisingManagementSection({
               variant="error"
               className="flex-1 max-w-48"
             />
-            <span className="text-lg font-bold tabular-nums w-12 text-right">
+            <span className="text-heading font-bold tabular-nums w-12 text-right">
               {suppressionPercent}%
             </span>
           </div>
@@ -434,7 +439,7 @@ export function FundraisingManagementSection({
                 setSuppressionCategory(e.target.value);
                 setSuppressionGroup("");
               }}
-              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">Category…</option>
               {targetableCategories.map((category) => (
@@ -447,7 +452,7 @@ export function FundraisingManagementSection({
               value={suppressionGroup}
               onChange={(e) => setSuppressionGroup(e.target.value)}
               disabled={!suppressionCategory}
-              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
             >
               <option value="">Demographic…</option>
               {groupsForSupCat.map((d) => (
@@ -460,7 +465,7 @@ export function FundraisingManagementSection({
               <button
                 onClick={handleSaveSuppression}
                 disabled={savingSuppression || supNeedsTarget}
-                className="rounded-lg px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity bg-error"
+                className="rounded-lg px-4 py-1.5 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity bg-error"
               >
                 {savingSuppression ? "Saving…" : "Save"}
               </button>
@@ -468,7 +473,7 @@ export function FundraisingManagementSection({
           </div>
 
           {supNeedsTarget && (
-            <p className="mt-2 text-xs text-error flex items-center gap-1.5 ml-6">
+            <p className="mt-2 text-body-sm text-error flex items-center gap-1.5 ml-6">
               <svg
                 className="h-3 w-3 shrink-0"
                 fill="none"
@@ -487,11 +492,11 @@ export function FundraisingManagementSection({
           )}
           {suppressionPercent > 0 && selectedSupDemo && (
             <div className="mt-3 ml-6 rounded-lg bg-background/50 border border-card-border/30 p-3 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-muted">Spending</span>
                 <span className="font-semibold tabular-nums">{fmt(supSpend, countryId)} / hr</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-muted">Counter-alignment</span>
                 <span
                   className={`font-semibold tabular-nums ${
@@ -501,7 +506,7 @@ export function FundraisingManagementSection({
                   {Math.round(supAlignMult * 100)}%
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="text-muted">Est. turnout reduction</span>
                 <span className="font-bold tabular-nums text-error">
                   -{supEstBoost.toFixed(3)}% / turn
@@ -533,18 +538,18 @@ export function FundraisingManagementSection({
               placeholder="Amount"
               value={transferAmount}
               onChange={(e) => setTransferAmount(e.target.value)}
-              className="w-36 bg-background py-2 text-sm"
+              className="w-36 bg-background py-2 text-body"
             />
             <button
               onClick={handleTransfer}
               disabled={transferring}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+              className="rounded-lg px-4 py-2 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
               style={{ backgroundColor: stateParty.partyColor }}
             >
               {transferring ? "…" : "Transfer"}
             </button>
           </div>
-          <div className="mt-1 text-xs text-muted">
+          <div className="mt-1 text-body-sm text-muted">
             Available: {fmt(stateParty.treasury, countryId)} · Min. {fmt(1000, countryId)}
           </div>
         </div>
@@ -568,7 +573,7 @@ export function FundraisingManagementSection({
           </svg>
           <div className="text-body-sm font-medium text-muted">Send to member</div>
         </div>
-        <p className="text-[11px] text-muted mb-3">
+        <p className="text-body-sm text-muted mb-3">
           State party funds count towards the same per-turn ceiling as national funds:{" "}
           {fmt(
             getEffectivePlayerPayoutCap(countryId.toUpperCase() as CountryId, statePartyOfficers),
@@ -584,7 +589,7 @@ export function FundraisingManagementSection({
           <select
             value={sendMemberId}
             onChange={(e) => setSendMemberId(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">Select member…</option>
             {sortedMembers
@@ -600,18 +605,18 @@ export function FundraisingManagementSection({
             placeholder="Amount"
             value={sendAmount}
             onChange={(e) => setSendAmount(e.target.value)}
-            className="w-32 bg-background py-2 text-sm"
+            className="w-32 bg-background py-2 text-body"
           />
           <button
             onClick={handleSendToMember}
             disabled={sending}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="rounded-lg px-4 py-2 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
             style={{ backgroundColor: stateParty.partyColor }}
           >
             {sending ? "…" : "Send"}
           </button>
         </div>
-        <div className="mt-1 text-xs text-muted">
+        <div className="mt-1 text-body-sm text-muted">
           Available: {fmt(stateParty.treasury, countryId)} · Min. {fmt(1000, countryId)}
         </div>
       </div>

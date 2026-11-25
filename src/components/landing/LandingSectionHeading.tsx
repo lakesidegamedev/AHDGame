@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
  */
 export function LandingSectionHeading({ children, id }: { children: ReactNode; id?: string }) {
   return (
-    <h2 id={id} className="text-heading-lg font-semibold tracking-tight text-foreground">
+    <h2 id={id} className="text-heading font-semibold tracking-tight text-foreground">
       {children}
     </h2>
   );

@@ -89,7 +89,7 @@ export function AssetCompositionBar({
         {slices.map((s) => {
           const pct = (Math.max(0, s.amountAnchor) / safeTotal) * 100;
           return (
-            <li key={s.key} className="flex items-center gap-2.5 text-xs">
+            <li key={s.key} className="flex items-center gap-2.5 text-body-sm">
               <span
                 className="inline-block h-2 w-2 shrink-0 rounded-sm"
                 style={{ background: s.color }}
@@ -104,7 +104,7 @@ export function AssetCompositionBar({
           );
         })}
       </ul>
-      <div className="mt-3 flex items-center justify-between border-t border-card-border pt-3 text-xs">
+      <div className="mt-3 flex items-center justify-between border-t border-card-border pt-3 text-body-sm">
         <span className="text-muted">Total backing</span>
         <span className="font-mono tabular-nums font-bold">{formatAmount(total, ccy)}</span>
       </div>

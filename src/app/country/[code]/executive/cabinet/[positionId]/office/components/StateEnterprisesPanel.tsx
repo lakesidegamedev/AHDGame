@@ -99,8 +99,8 @@ export function StateEnterprisesPanel({
 
   return (
     <section className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
-      <h2 className="mb-2 text-lg font-semibold">State enterprises</h2>
-      <p className="mb-4 text-sm text-muted">
+      <h2 className="mb-2 text-heading font-semibold">State enterprises</h2>
+      <p className="mb-4 text-body text-muted">
         The country&apos;s National Corporations. Split a sector type into a new corp, or merge a
         split-off back into the primary.
       </p>
@@ -120,19 +120,19 @@ export function StateEnterprisesPanel({
                 >
                   {c.name}
                 </Link>{" "}
-                <span className="text-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {c.isPrimary
                     ? "· primary"
                     : `· ${c.assignedSectorTypes.map((t) => OPERATING_SECTOR_TYPE_LABELS[t]).join(", ") || "split-off"}`}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted">
+              <div className="flex items-center gap-3 text-body-sm text-muted">
                 <span>{c.sectorCount} sectors</span>
                 <span>{c.ceoVacant ? "CEO vacant" : `CEO: ${c.ceoName ?? "—"}`}</span>
               </div>
             </div>
             {/* Performance roll-up */}
-            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs">
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-body-sm">
               <Stat label="Revenue/turn" value={natMoney(c.revenuePerTurn, c.currency)} />
               <Stat
                 label="Cash reserve"
@@ -144,20 +144,20 @@ export function StateEnterprisesPanel({
           </div>
         ))}
         {data && data.corporations.length === 0 && (
-          <p className="text-sm text-muted">No National Corporations yet.</p>
+          <p className="text-body text-muted">No National Corporations yet.</p>
         )}
       </div>
 
       {/* Reorg forms */}
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-card-border p-4">
-          <h3 className="mb-2 text-sm font-semibold">Split off a sector type</h3>
+          <h3 className="mb-2 text-body-lg font-semibold">Split off a sector type</h3>
           <div className="space-y-2">
             <select
               value={splitType}
               onChange={(e) => setSplitType(e.target.value)}
               disabled={!canAct || busy}
-              className="w-full rounded border border-card-border bg-card-elevated px-2 py-1 text-sm"
+              className="w-full rounded border border-card-border bg-card-elevated px-2 py-1 text-body"
             >
               <option value="">Select a sector type…</option>
               {(data?.splittableSectorTypes ?? []).map((t) => (
@@ -173,7 +173,7 @@ export function StateEnterprisesPanel({
               onChange={(e) => setSplitName(e.target.value)}
               placeholder="New corporation name"
               disabled={!canAct || busy}
-              className="w-full rounded border border-card-border bg-card-elevated px-2 py-1 text-sm"
+              className="w-full rounded border border-card-border bg-card-elevated px-2 py-1 text-body"
             />
             <Button
               onClick={() =>
@@ -195,13 +195,13 @@ export function StateEnterprisesPanel({
         </div>
 
         <div className="rounded-lg border border-card-border p-4">
-          <h3 className="mb-2 text-sm font-semibold">Merge a split-off back</h3>
+          <h3 className="mb-2 text-body-lg font-semibold">Merge a split-off back</h3>
           <div className="space-y-2">
             <select
               value={mergeType}
               onChange={(e) => setMergeType(e.target.value)}
               disabled={!canAct || busy}
-              className="w-full rounded border border-card-border bg-card-elevated px-2 py-1 text-sm"
+              className="w-full rounded border border-card-border bg-card-elevated px-2 py-1 text-body"
             >
               <option value="">Select a split-off type…</option>
               {mergeableTypes.map((t) => (
@@ -210,7 +210,9 @@ export function StateEnterprisesPanel({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted">Folds into the primary and dissolves the shell.</p>
+            <p className="text-body-sm text-muted">
+              Folds into the primary and dissolves the shell.
+            </p>
             <Button
               onClick={() =>
                 act("merge", { sectorType: mergeType }, "Split-off merged back.", () =>
@@ -227,7 +229,7 @@ export function StateEnterprisesPanel({
 
       {feedback && (
         <p
-          className={`mt-4 text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+          className={`mt-4 text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
         >
           {feedback.message}
         </p>

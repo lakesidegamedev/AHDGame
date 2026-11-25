@@ -42,11 +42,11 @@ export default async function NewCharterPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
-        <Link href="/charters" className="text-xs text-muted hover:underline">
+        <Link href="/charters" className="text-body-sm text-muted hover:underline">
           ← All charters
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Draft a party charter</h1>
-        <p className="mt-1 text-sm text-muted">
+        <h1 className="mt-2 text-heading font-bold">Draft a party charter</h1>
+        <p className="mt-1 text-body text-muted">
           A charter is the founding agreement for a new party. You name the three founders and set
           the platform; once all three sign, the party is ratified and goes live in {countryName}.
           The new party starts with <strong>no leaders</strong>: the chair, vice chair, and
@@ -65,7 +65,7 @@ export default async function NewCharterPage() {
         />
       </div>
 
-      <div className="mt-4 rounded-md border border-card-border bg-card/40 p-4 text-xs text-muted">
+      <div className="mt-4 rounded-md border border-card-border bg-card/40 p-4 text-body-sm text-muted">
         <p className="mb-1 font-semibold">How signing works</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>Each founder gets a charter detail page where they can sign or reject.</li>

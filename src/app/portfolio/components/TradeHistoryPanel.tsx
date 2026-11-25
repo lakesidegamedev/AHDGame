@@ -82,16 +82,16 @@ export function TradeHistoryPanel() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-muted">Loading your trade history…</p>;
+    return <p className="text-body text-muted">Loading your trade history…</p>;
   }
   if (error) {
-    return <p className="text-sm text-error">{error}</p>;
+    return <p className="text-body text-error">{error}</p>;
   }
   if (!data || data.entries.length === 0) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <h2 className="text-lg font-bold text-foreground">Trade history</h2>
-        <p className="text-sm text-muted mt-1">
+        <h2 className="text-heading font-bold text-foreground">Trade history</h2>
+        <p className="text-body text-muted mt-1">
           You have not traded any shares yet. Buys and sells show up here with what you made or lost
           on each one.
         </p>
@@ -107,20 +107,20 @@ export function TradeHistoryPanel() {
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Realized profit and loss</h2>
-            <p className="text-xs text-muted mt-0.5 max-w-prose">
+            <h2 className="text-heading font-bold text-foreground">Realized profit and loss</h2>
+            <p className="text-body-sm text-muted mt-0.5 max-w-prose">
               What you actually made on shares you have already sold. Shares you still hold are not
               counted here. Sales are matched against your oldest shares first.
             </p>
           </div>
           <p
-            className={`text-3xl font-black tabular-nums ${pnlClass(data.totalRealizedPnlAnchor)}`}
+            className={`text-display font-black tabular-nums ${pnlClass(data.totalRealizedPnlAnchor)}`}
           >
             {formatAmount(data.totalRealizedPnlAnchor)}
           </p>
         </div>
         {data.hasUnmatchedSales && (
-          <p className="text-xs text-warning mt-3">
+          <p className="text-body-sm text-warning mt-3">
             Some sales are from shares bought before trade records began, so their profit cannot be
             worked out. Those sales are left out of the total.
           </p>
@@ -129,9 +129,9 @@ export function TradeHistoryPanel() {
 
       {data.positions.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
-          <h3 className="text-sm font-bold text-foreground mb-3">By corporation</h3>
+          <h3 className="text-body-lg font-bold text-foreground mb-3">By corporation</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="text-left text-body-sm font-medium text-muted">
                   <th className="pb-2 pr-4 font-semibold">Corporation</th>
@@ -173,9 +173,9 @@ export function TradeHistoryPanel() {
       )}
 
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6">
-        <h3 className="text-sm font-bold text-foreground mb-3">Every trade</h3>
+        <h3 className="text-body-lg font-bold text-foreground mb-3">Every trade</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr className="text-left text-body-sm font-medium text-muted">
                 <th className="pb-2 pr-4 font-semibold">When</th>

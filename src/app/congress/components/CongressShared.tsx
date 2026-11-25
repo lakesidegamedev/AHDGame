@@ -22,7 +22,7 @@ export function PartyChip({
 }) {
   if (isVacant)
     return (
-      <span className="rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-[10px] text-muted">
+      <span className="rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm text-muted">
         Vacant
       </span>
     );
@@ -32,7 +32,7 @@ export function PartyChip({
     // instead of wrapping and doubling the row it sits in.
     <span
       title={partyName}
-      className="inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium"
+      className="inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-body-sm font-medium"
       style={{
         borderColor: partyColor + "60",
         backgroundColor: partyColor + "18",
@@ -64,7 +64,7 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${map[status] ?? "bg-card-elevated text-muted/80"}`}
+      className={`rounded-full px-2 py-0.5 text-body-sm font-medium capitalize ${map[status] ?? "bg-card-elevated text-muted/80"}`}
     >
       {status}
     </span>

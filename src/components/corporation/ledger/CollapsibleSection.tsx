@@ -28,9 +28,9 @@ export function CollapsibleSection({
         onClick={() => setOpen((v) => !v)}
         className="flex min-h-12 w-full items-center gap-2.5 border-b border-card-border text-left lg:hidden"
       >
-        <span className="text-[15px] font-semibold text-foreground">{title}</span>
+        <span className="text-body font-semibold text-foreground">{title}</span>
         {summary != null && (
-          <span className="ml-auto font-mono text-xs tabular-nums text-muted">{summary}</span>
+          <span className="ml-auto font-mono text-body-sm tabular-nums text-muted">{summary}</span>
         )}
         <svg
           aria-hidden

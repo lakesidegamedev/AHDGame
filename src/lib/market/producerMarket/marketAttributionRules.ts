@@ -246,8 +246,9 @@ export function scaleUnits(units: UnitsByKind, factor: number): UnitsByKind {
 
 /**
  * Plants' stock from earlier turns offered again this turn, per country book:
- * what each offered beyond this turn's output left after its own sites took
- * theirs. Part of the company supply, on the same per-turn basis; kept apart
+ * what each offered beyond this turn's output. Deliveries to the company's
+ * own sites come out of that offer, so they do not change it. Part of the
+ * company supply, on the same per-turn basis; kept apart
  * so screens can tell new output from an old stock overhang. Keyed by
  * JSON [countryId, commodity]; books without stock are absent.
  */
@@ -258,6 +259,7 @@ export function carriedStockByBook(
       commodity: string;
       producedUnits?: number;
       offeredUnits?: number;
+      /** Own-site deliveries: part of the offer, so ignored here. */
       internalDeliveredUnits?: number;
     }[];
   }[],
@@ -268,8 +270,7 @@ export function carriedStockByBook(
     const countryId = countryOf(p.id);
     if (!countryId) continue;
     for (const x of p.products) {
-      const forSale = Math.max(0, positive(x.producedUnits) - positive(x.internalDeliveredUnits));
-      const stock = positive(x.offeredUnits) - forSale;
+      const stock = positive(x.offeredUnits) - positive(x.producedUnits);
       if (!(stock > 1e-9)) continue;
       const key = JSON.stringify([countryId, x.commodity]);
       out.set(key, (out.get(key) ?? 0) + stock);

@@ -93,7 +93,7 @@ export function CabinetBannerUploader({ countryCode, positionId, onUploaded }: P
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="flex items-center gap-1.5 rounded-lg border border-white/30 bg-black/70 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-black/60 disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-lg border border-white/30 bg-black/70 px-3 py-1.5 text-body-sm font-medium text-white transition-colors hover:bg-black/60 disabled:opacity-50"
         aria-label="Upload office banner"
       >
         <svg
@@ -131,7 +131,7 @@ export function CabinetBannerUploader({ countryCode, positionId, onUploaded }: P
         onChange={handleFileChange}
       />
       {error && (
-        <span className="rounded-md bg-red-900/70 px-2 py-1 text-xs text-red-100" role="alert">
+        <span className="rounded-md bg-red-900/70 px-2 py-1 text-body-sm text-red-100" role="alert">
           {error}
         </span>
       )}

@@ -69,7 +69,7 @@ export function SuggestionReportButton({ issueNumber, commentId, initiallyOpen }
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-body-sm font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
       >
         <svg
           className="h-3.5 w-3.5"
@@ -88,7 +88,10 @@ export function SuggestionReportButton({ issueNumber, commentId, initiallyOpen }
         Report
       </button>
       {message && !open && (
-        <p className={`mt-1 text-xs ${message.ok ? "text-success" : "text-error"}`} role="status">
+        <p
+          className={`mt-1 text-body-sm ${message.ok ? "text-success" : "text-error"}`}
+          role="status"
+        >
           {message.text}
         </p>
       )}
@@ -97,14 +100,14 @@ export function SuggestionReportButton({ issueNumber, commentId, initiallyOpen }
           onSubmit={submit}
           className="absolute right-0 z-20 mt-2 w-72 space-y-2 rounded-xl border border-card-border bg-card-elevated p-3 shadow-lg"
         >
-          <label className="block text-xs font-semibold" htmlFor={`${id}-reason`}>
+          <label className="block text-body-sm font-semibold" htmlFor={`${id}-reason`}>
             {commentId ? "What is wrong with this reply?" : "What is wrong with this suggestion?"}
           </label>
           <select
             id={`${id}-reason`}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-body"
           >
             {REASONS.map((r) => (
               <option key={r.value} value={r.value}>
@@ -118,10 +121,10 @@ export function SuggestionReportButton({ issueNumber, commentId, initiallyOpen }
             maxLength={900}
             rows={3}
             placeholder="Optional: anything a moderator should know"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-body"
           />
           {message && !message.ok && (
-            <p className="text-xs text-error" role="status">
+            <p className="text-body-sm text-error" role="status">
               {message.text}
             </p>
           )}
@@ -129,14 +132,14 @@ export function SuggestionReportButton({ issueNumber, commentId, initiallyOpen }
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-foreground"
+              className="rounded-lg px-3 py-1.5 text-body-sm text-muted hover:text-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               Send report
             </button>

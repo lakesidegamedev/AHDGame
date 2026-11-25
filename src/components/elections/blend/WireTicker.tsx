@@ -27,7 +27,7 @@ export function WireTicker({ items, durationSeconds }: WireTickerProps) {
 
   return (
     <div className="flex h-[38px] items-center overflow-hidden rounded-lg border border-card-border bg-card-muted">
-      <span className="flex h-full shrink-0 items-center bg-primary px-3.5 text-[10px] font-black uppercase tracking-[0.18em] text-white">
+      <span className="flex h-full shrink-0 items-center bg-primary px-3.5 text-body-sm font-black uppercase tracking-[0.18em] text-primary-foreground">
         Wire
       </span>
       {/* min-w-0 so the max-content track cannot push the strip wider than the page. */}
@@ -39,7 +39,7 @@ export function WireTicker({ items, durationSeconds }: WireTickerProps) {
           {segments.map((item, i) => (
             <span
               key={`${item.text}-${i}`}
-              className="text-xs font-medium"
+              className="text-body-sm font-medium"
               style={{ color: item.color }}
               // The second segment is a visual duplicate of the first.
               aria-hidden={i >= items.length}

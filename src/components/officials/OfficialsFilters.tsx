@@ -31,7 +31,7 @@ export function OfficialsFilters({
       <select
         value={selectedState}
         onChange={(e) => onStateChange(e.target.value)}
-        className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+        className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
       >
         <option value="">All states</option>
         {sortByRegionLabel(US_STATES, (s) => s).map((s) => (
@@ -44,7 +44,7 @@ export function OfficialsFilters({
       <select
         value={selectedOfficeType}
         onChange={(e) => onOfficeTypeChange(e.target.value)}
-        className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+        className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
       >
         <option value="">All office types</option>
         <option value="senate">Senate</option>
@@ -53,7 +53,7 @@ export function OfficialsFilters({
         <option value="vicePresident">Vice president</option>
       </select>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-body">
         <input
           type="checkbox"
           checked={showOnlyVacant}
@@ -66,14 +66,14 @@ export function OfficialsFilters({
       <button
         onClick={onSearch}
         disabled={loading}
-        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+        className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         Search
       </button>
 
       <button
         onClick={onAddHouseRep}
-        className="rounded-lg border border-card-border px-3 py-1.5 text-sm font-medium hover:bg-background"
+        className="rounded-lg border border-card-border px-3 py-1.5 text-body font-medium hover:bg-background"
       >
         + Add House rep
       </button>

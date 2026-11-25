@@ -34,19 +34,21 @@ function BannedContent() {
 
           {/* Title */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-error">Account banned</h1>
-            <p className="text-sm text-muted">Your account has been banned from A House Divided.</p>
+            <h1 className="text-display font-bold text-error">Account banned</h1>
+            <p className="text-body text-muted">
+              Your account has been banned from A House Divided.
+            </p>
           </div>
 
           {/* Reason box */}
           <div className="rounded-lg border border-card-border bg-card p-4">
             <p className="text-body-sm font-medium text-muted mb-2">Reason</p>
-            <p className="text-sm font-medium text-foreground">{reason}</p>
+            <p className="text-body font-medium text-foreground">{reason}</p>
           </div>
 
           {/* Contact info */}
           <div className="pt-2">
-            <p className="text-xs text-muted/70">
+            <p className="text-body-sm text-muted/70">
               If you believe this was a mistake, please contact an administrator through Discord or
               GitHub.
             </p>
@@ -55,8 +57,8 @@ function BannedContent() {
 
         {/* Additional info card */}
         <div className="mt-4 rounded-xl border border-card-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-muted mb-2">What this means</h2>
-          <ul className="space-y-1 text-xs text-muted list-disc list-inside">
+          <h2 className="text-body font-semibold text-muted mb-2">What this means</h2>
+          <ul className="space-y-1 text-body-sm text-muted list-disc list-inside">
             <li>You cannot access your character or participate in the game</li>
             <li>Your profile and political career have been suspended</li>
             <li>Bans are typically permanent unless appealed successfully</li>

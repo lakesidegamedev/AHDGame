@@ -35,7 +35,7 @@ export function WikiPageTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="bg-card-elevated">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Slug</th>
@@ -58,7 +58,7 @@ export function WikiPageTable({
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="mt-2 rounded-lg border border-card-border bg-card-elevated px-4 py-1.5 text-sm text-foreground hover:bg-card-hover"
+                      className="mt-2 rounded-lg border border-card-border bg-card-elevated px-4 py-1.5 text-body text-foreground hover:bg-card-hover"
                     >
                       Retry
                     </button>

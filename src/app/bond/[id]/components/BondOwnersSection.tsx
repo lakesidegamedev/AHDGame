@@ -141,8 +141,8 @@ export function BondOwnersSection({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       <div className="px-6 py-4 border-b border-card-border flex items-center justify-between">
-        <h2 className="text-lg font-bold text-foreground">Bond ownership</h2>
-        <span className="text-xs text-muted tabular-nums">
+        <h2 className="text-heading font-bold text-foreground">Bond ownership</h2>
+        <span className="text-body-sm text-muted tabular-nums">
           {totalUnits.toLocaleString("en-US")} total units
         </span>
       </div>
@@ -207,7 +207,7 @@ export function BondOwnersSection({
                 </>
               )}
             </svg>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm max-w-xs">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-body max-w-xs">
               {slices.map((slice, idx) => (
                 <button
                   key={slice.label}
@@ -231,13 +231,13 @@ export function BondOwnersSection({
 
           {/* Holder table */}
           <div className="flex-1 min-w-0">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="border-b border-card-border">
                   {["Holder", "Units", "% Total", "Mkt Value"].map((h, i) => (
                     <th
                       key={h}
-                      className={`pb-2.5 text-[10px] font-bold uppercase tracking-wider text-muted ${i === 0 ? "text-left" : "text-right"}`}
+                      className={`pb-2.5 text-body-sm font-bold uppercase tracking-wider text-muted ${i === 0 ? "text-left" : "text-right"}`}
                     >
                       {h}
                     </th>
@@ -359,7 +359,7 @@ export function BondOwnersSection({
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-card-border">
-                <span className="text-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {page * ITEMS_PER_PAGE + 1}–
                   {Math.min((page + 1) * ITEMS_PER_PAGE, allRows.length)} of {allRows.length}
                 </span>
@@ -367,7 +367,7 @@ export function BondOwnersSection({
                   <button
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                     disabled={page === 0}
-                    className="px-2.5 py-1 rounded-lg border border-card-border text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 rounded-lg border border-card-border text-body-sm text-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     ← Prev
                   </button>
@@ -375,9 +375,9 @@ export function BondOwnersSection({
                     <button
                       key={i}
                       onClick={() => setPage(i)}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
+                      className={`px-2.5 py-1 rounded-lg text-body-sm transition-colors ${
                         i === page
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "border border-card-border text-muted hover:text-foreground"
                       }`}
                     >
@@ -387,7 +387,7 @@ export function BondOwnersSection({
                   <button
                     onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={page === totalPages - 1}
-                    className="px-2.5 py-1 rounded-lg border border-card-border text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-2.5 py-1 rounded-lg border border-card-border text-body-sm text-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Next →
                   </button>

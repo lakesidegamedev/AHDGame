@@ -27,7 +27,7 @@ export function OrgCountryCard({
       style={{ left: position.x, top: position.y }}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-foreground">{countryName}</p>
+        <p className="text-body font-semibold text-foreground">{countryName}</p>
         <button
           type="button"
           aria-label="Close"
@@ -45,7 +45,9 @@ export function OrgCountryCard({
         </button>
       </div>
       {orgs.length === 0 ? (
-        <p className="text-xs text-muted">{countryName} is not a member of any organization.</p>
+        <p className="text-body-sm text-muted">
+          {countryName} is not a member of any organization.
+        </p>
       ) : (
         <ul className="space-y-1.5">
           {orgs.map((org) => (
@@ -55,7 +57,7 @@ export function OrgCountryCard({
                 className="card-hover flex items-center gap-2 rounded-lg border border-card-border bg-card p-2"
               >
                 <Seal identity={org.identity} size={28} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                <span className="min-w-0 flex-1 truncate text-body font-medium text-foreground">
                   {org.def.name}
                 </span>
               </Link>

@@ -1,5 +1,7 @@
 "use client";
 
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -26,6 +28,8 @@ type EffectCategory =
   | "method";
 
 interface TechEffectView {
+  methodOpenings?: { countryId: string; year: number; open: boolean }[];
+  licensingYears?: number;
   category: EffectCategory;
   label: string;
 }
@@ -261,14 +265,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   }
   if (!data || data.enabled === false) {
     return (
-      <p className="py-2 text-xs text-muted">
+      <p className="py-2 text-body-sm text-muted">
         The sector tech-tree system is not currently enabled.
       </p>
     );
   }
   if (data.redacted) {
     return (
-      <p className="py-2 text-xs text-muted">
+      <p className="py-2 text-body-sm text-muted">
         This corporation is private. Its technology choices are visible only to the CEO.
       </p>
     );
@@ -303,7 +307,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
           title={`${data.sectorLabel ?? "Sector"} tech tree`}
           actions={<WikiHelpLink screen="corporation-tech" />}
         >
-          <div className="space-y-2 py-1 text-xs text-muted">
+          <div className="space-y-2 py-1 text-body-sm text-muted">
             <p>
               Spend R&amp;D points and cash to research technologies. Each decade splits into two
               tracks: the Corporate track applies operating bonuses at{" "}
@@ -431,7 +435,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
       </div>
 
       {viewerIsCeo && (data.unlockableCount ?? 0) > 0 && !dismissUnlock && (
-        <p className="flex flex-wrap items-center gap-2 text-xs text-warning">
+        <p className="flex flex-wrap items-center gap-2 text-body-sm text-warning">
           <span>
             <span className="font-mono font-medium">{data.unlockableCount}</span> technolog
             {data.unlockableCount === 1 ? "y is" : "ies are"} ready to unlock with your current
@@ -467,7 +471,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
 
       {data.frontier && current && current.id === data.decades?.[data.decades.length - 1]?.id && (
         <DenseSection title="Frontier programmes">
-          <div className="space-y-2 py-1 text-xs text-muted">
+          <div className="space-y-2 py-1 text-body-sm text-muted">
             <p>
               After the last research tier, R&amp;D funds repeatable programmes for your primary
               sector. Each output programme adds {data.frontier.outputPctPerProgramme}% plant
@@ -521,13 +525,13 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
             aria-expanded={showHistory}
             className="flex w-full items-center justify-between border-b border-card-border pb-1.5 text-left"
           >
-            <span className="text-sm font-semibold text-foreground">
+            <span className="text-body font-semibold text-foreground">
               Earlier decades{" "}
-              <span className="text-xs font-normal text-muted">
+              <span className="text-body-sm font-normal text-muted">
                 {history.length} of baseline tech
               </span>
             </span>
-            <span className="text-xs text-muted">{showHistory ? "Hide" : "Show"}</span>
+            <span className="text-body-sm text-muted">{showHistory ? "Hide" : "Show"}</span>
           </button>
           {showHistory &&
             history.map((decade) => (
@@ -557,7 +561,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
       {confirmNode && (
         <Modal open title={`Unlock ${confirmNode.node.name}?`} onClose={() => setConfirmNode(null)}>
           <div className="space-y-4">
-            <p className="text-sm text-foreground">
+            <p className="text-body text-foreground">
               Spend <strong>{confirmNode.node.cost} R&amp;D points</strong> and{" "}
               <strong>{fmtCash(confirmNode.node.cashCost)}</strong> cash.
               {confirmNode.node.parentSlot === null &&
@@ -577,7 +581,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                 )}
               {confirmNode.node.exclusiveGroup && <> {t("specializationConfirmation")}</>}
             </p>
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               R&amp;D points left after unlocking{" "}
               <strong className="text-foreground">
                 {((data.rdScore ?? 0) - confirmNode.node.cost).toLocaleString("en-US")}
@@ -585,7 +589,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               .
             </p>
             {qualityEstimate && (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 {t("qualityEstimate", {
                   before: qualityEstimate.before,
                   after: qualityEstimate.after,
@@ -615,7 +619,7 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
           onClose={() => setConfirmAbandon(null)}
         >
           <div className="space-y-4">
-            <p className="text-sm text-foreground">
+            <p className="text-body text-foreground">
               This removes every node you unlocked in {decadeLabel(confirmAbandon.label)} and frees
               the decade so you can choose the other track.{" "}
               <strong>No R&amp;D points or cash are refunded.</strong>
@@ -681,7 +685,7 @@ function DecadeSection({
       }
       className={inert ? "opacity-70" : ""}
     >
-      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-card-border pb-3 text-xs">
+      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-card-border pb-3 text-body-sm">
         {decade.autoGrantedDecade ? (
           <span className="text-muted">{t("completedBaseline")}</span>
         ) : decade.committedLane ? (
@@ -839,12 +843,12 @@ function LaneTree({
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
         <div className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold text-white">{t(`track.${lane}`)}</h3>
-            <p className="text-[11px] text-white/80">
+            <h3 className="text-body-lg font-semibold text-white">{t(`track.${lane}`)}</h3>
+            <p className="text-body-sm text-white/80">
               {lane === "generic" ? t("corporateEffect") : t("sectorEffect")}
             </p>
           </div>
-          <span className="rounded bg-black/45 px-1.5 py-0.5 text-[11px] text-white">
+          <span className="rounded bg-black/45 px-1.5 py-0.5 text-body-sm text-white">
             {t("ownedCount", { owned, total: nodes.length })}
           </span>
         </div>
@@ -875,7 +879,7 @@ function LaneTree({
                 ] as const
               ).map((branch, branchIndex) => (
                 <div key={branch[0]} className="flex min-w-0 flex-col items-center">
-                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted">
+                  <p className="mb-1 text-body-sm font-medium uppercase tracking-wide text-muted">
                     {branchIndex === 0 ? t("leftBranch") : t("rightBranch")}
                   </p>
                   {branch.map((slot, index) => {
@@ -903,12 +907,12 @@ function LaneTree({
         {[10, 11, 12].some((slot) => bySlot.has(slot)) && (
           <>
             <div className="mt-2 border-t border-card-border pt-3 text-center">
-              <p className="text-xs font-semibold text-foreground">
+              <p className="text-body-sm font-semibold text-foreground">
                 {chosenSpec
                   ? t("specializationSelected", { name: chosenSpec.name })
                   : t("specializationChoice")}
               </p>
-              <p className="mt-0.5 text-[11px] text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 {decade.autoGrantedDecade ? t("specializationsClosed") : t("chooseSpecialization")}
               </p>
             </div>
@@ -1022,10 +1026,10 @@ function TechNodeCard({
       }`}
       title={node.description}
     >
-      <h4 className="text-xs font-semibold leading-snug text-foreground">{node.name}</h4>
-      <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted">{node.description}</p>
+      <h4 className="text-body-sm font-semibold leading-snug text-foreground">{node.name}</h4>
+      <p className="mt-1 line-clamp-3 text-body-sm leading-snug text-muted">{node.description}</p>
       {inputEfficiencyClipped && (
-        <p className="mt-1.5 text-[10px] font-medium text-warning">
+        <p className="mt-1.5 text-body-sm font-medium text-warning">
           {remainingInputEfficiency === 0
             ? `This input reduction adds nothing because the ${inputEfficiencyCapPct}% cap is reached.`
             : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap. Only ${
@@ -1034,32 +1038,50 @@ function TechNodeCard({
         </p>
       )}
       {node.effects.length > 0 && (
-        <ul className="mt-1.5 space-y-1 text-[11px] leading-snug text-muted">
+        <ul className="mt-1.5 space-y-1 text-body-sm leading-snug text-muted">
           {node.effects.map((effect, index) => (
-            <li key={`${effect.category}-${index}`}>{effect.label}</li>
+            <li key={`${effect.category}-${index}`}>
+              {effect.label}
+              {!!effect.methodOpenings?.length && (
+                <ul className="mt-0.5">
+                  {effect.methodOpenings.map(({ countryId, year, open }) => (
+                    <li key={countryId}>
+                      {open ? "Open" : "Opens"} in {getCountryDisplayName(countryId as CountryId)}{" "}
+                      {open ? "since" : "in"} {year}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!!effect.methodOpenings?.length && !!effect.licensingYears && (
+                <p>
+                  Licensing can bring this forward by up to {effect.licensingYears} years if a
+                  company abroad already uses the method.
+                </p>
+              )}
+            </li>
           ))}
         </ul>
       )}
       {!isOwned && (
-        <p className="mt-1.5 text-[10px] tabular-nums text-muted">
+        <p className="mt-1.5 text-body-sm tabular-nums text-muted">
           {node.cost} R&amp;D · {fmtCash(node.cashCost)}
         </p>
       )}
       {expired && (
         <p
-          className="mt-1.5 text-[10px] font-medium text-warning"
+          className="mt-1.5 text-body-sm font-medium text-warning"
           title="A tech's plant effects and dominance shield apply only in its own decade and the one after it."
         >
           Effect expired: older than last decade
         </p>
       )}
       {node.valuePerTurn != null && (
-        <p className="mt-0.5 text-[10px] tabular-nums text-muted">
+        <p className="mt-0.5 text-body-sm tabular-nums text-muted">
           Worth about {fmtCash(node.valuePerTurn)}/turn
           {!isOwned && node.paybackTurns != null && ` · pays back in ${node.paybackTurns} turns`}
         </p>
       )}
-      <div className="mt-2 text-[10px] leading-snug">{status}</div>
+      <div className="mt-2 text-body-sm leading-snug">{status}</div>
     </article>
   );
 }

@@ -9,6 +9,7 @@ import {
   type TechDiffusionSnapshot,
 } from "./diffusion";
 import { getStrategyAvailability } from "./strategyAvailability";
+import { TECH_TREE } from "./nodes";
 import type { TechCorpView } from "./selectors";
 
 const corp: TechCorpView = { type: "energy", unlockedTechNodeIds: [] };
@@ -163,6 +164,34 @@ describe("getStrategyAvailability with a country context", () => {
     });
     expect(getStrategyAvailability(corp, method, 2036, true, brWorld).locked).toBe(false);
   });
+
+  it.each([
+    ["player", true, { locked: false }],
+    ["player", false, { locked: true, reason: "tech" }],
+    ["npp", true, { locked: true, reason: "diffusion", opensYear: 2036 }],
+  ] as const)(
+    "checks research and country access for a %s company (researched: %s)",
+    (adopter, researched, expected) => {
+      const node = TECH_TREE.logistics.find(
+        (candidate) => candidate.name === "Autonomous Freight"
+      )!;
+      const company: TechCorpView = {
+        type: "logistics",
+        unlockedTechNodeIds: researched ? [node.id] : [],
+      };
+      const strategy = { id: "autonomous_freight", minDecade: "2029", requiresTechUnlock: true };
+      const world = { diffusion: { snapshot: snap, countryId: "BR", adopter } };
+
+      expect(getStrategyAvailability(company, strategy, 2032, true, world)).toEqual(expected);
+      expect(getStrategyAvailability(company, strategy, 2028, true, world)).toEqual({
+        locked: true,
+        reason: "era",
+      });
+      expect(
+        getStrategyAvailability(company, { ...strategy, sunsetDecade: "2029" }, 2032, true, world)
+      ).toEqual({ locked: true, reason: "sunset" });
+    }
+  );
 
   it("reports the era lock before the tier year", () => {
     const world = { diffusion: { snapshot: snap, countryId: "US", adopter: "npp" as const } };

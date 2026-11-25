@@ -135,14 +135,14 @@ export function SeedDiagnosticPanel() {
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-      <h3 className="text-sm font-semibold text-white">Seed diagnostic</h3>
-      <p className="text-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-white">Seed diagnostic</h3>
+      <p className="text-body-sm text-muted">
         Conformance checks that a fresh reset matches the era seed. Drift compares live macros to
         the post-reset baseline (growth-adjusted), with tolerances that widen over turns.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs text-muted" htmlFor="seed-diagnostic-mode">
+        <label className="text-body-sm text-muted" htmlFor="seed-diagnostic-mode">
           Mode
         </label>
         <select
@@ -150,7 +150,7 @@ export function SeedDiagnosticPanel() {
           value={mode}
           onChange={(e) => setMode(e.target.value as DiagnosticMode)}
           disabled={loading}
-          className="text-sm px-2 py-1 rounded border border-card-border bg-card-elevated text-white disabled:opacity-40"
+          className="text-body px-2 py-1 rounded border border-card-border bg-card-elevated text-white disabled:opacity-40"
         >
           <option value="conformance">Conformance</option>
           <option value="drift">Drift</option>
@@ -159,7 +159,7 @@ export function SeedDiagnosticPanel() {
           type="button"
           onClick={handleRun}
           disabled={loading}
-          className="text-sm px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 transition-colors"
+          className="text-body px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 transition-colors"
         >
           {loading ? "Running…" : "Run seed diagnostic"}
         </button>
@@ -167,18 +167,20 @@ export function SeedDiagnosticPanel() {
           type="button"
           onClick={() => void loadLatest()}
           disabled={loading || loadingLatest}
-          className="text-sm px-3 py-1.5 rounded border border-white/10 text-muted hover:bg-white/5 disabled:opacity-40 transition-colors"
+          className="text-body px-3 py-1.5 rounded border border-white/10 text-muted hover:bg-white/5 disabled:opacity-40 transition-colors"
         >
           Refresh latest
         </button>
       </div>
 
-      <InlineError error={error} className="text-xs text-red-400" />
+      <InlineError error={error} className="text-body-sm text-red-400" />
 
-      {loadingLatest && !report && <p className="text-xs text-muted">Loading latest report…</p>}
+      {loadingLatest && !report && (
+        <p className="text-body-sm text-muted">Loading latest report…</p>
+      )}
 
       {report && (
-        <div className="text-xs space-y-3">
+        <div className="text-body-sm space-y-3">
           <p>
             <span className="text-muted">
               {report.mode} · {report.preset} · turn {report.turn} (calendar {report.calendarTurn})

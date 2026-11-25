@@ -86,7 +86,7 @@ export function ModAuditLogTab({ apiBase = "/api/admin/moderators" }: ModAuditLo
         <select
           value={filterAction}
           onChange={(e) => setFilterAction(e.target.value)}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         >
           <option value="">All actions</option>
           {Object.entries(ACTION_LABELS).map(([value, label]) => (
@@ -104,16 +104,16 @@ export function ModAuditLogTab({ apiBase = "/api/admin/moderators" }: ModAuditLo
           </div>
         ) : error && entries.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-sm text-error">{error}</p>
+            <p className="text-body text-error">{error}</p>
             <button
               onClick={() => fetchEntries()}
-              className="mt-3 rounded-lg border border-card-border bg-background px-4 py-1.5 text-sm text-foreground transition-colors hover:bg-card-hover"
+              className="mt-3 rounded-lg border border-card-border bg-background px-4 py-1.5 text-body text-foreground transition-colors hover:bg-card-hover"
             >
               Retry
             </button>
           </div>
         ) : entries.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted">No audit log entries</p>
+          <p className="px-4 py-8 text-center text-body text-muted">No audit log entries</p>
         ) : (
           <div className="divide-y divide-card-border">
             {entries.map((entry) => (
@@ -121,33 +121,33 @@ export function ModAuditLogTab({ apiBase = "/api/admin/moderators" }: ModAuditLo
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-info">{entry.moderatorName}</span>
-                    <span className="text-sm text-muted">
+                    <span className="text-body text-muted">
                       {ACTION_LABELS[entry.action] ?? entry.action}
                     </span>
                     {entry.targetUsername && (
-                      <span className="text-sm">
+                      <span className="text-body">
                         &rarr; <span className="font-medium">{entry.targetUsername}</span>
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     <LocalTime value={entry.createdAt} />
                   </span>
                 </div>
-                {entry.details && <p className="mt-1 text-xs text-muted">{entry.details}</p>}
+                {entry.details && <p className="mt-1 text-body-sm text-muted">{entry.details}</p>}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {error && entries.length > 0 && <p className="text-center text-sm text-error">{error}</p>}
+      {error && entries.length > 0 && <p className="text-center text-body text-error">{error}</p>}
 
       {hasMore && (
         <button
           onClick={() => cursor && fetchEntries(cursor)}
           disabled={loading}
-          className="w-full rounded-lg border border-card-border bg-card px-4 py-2 text-sm text-muted transition-colors hover:bg-card-hover"
+          className="w-full rounded-lg border border-card-border bg-card px-4 py-2 text-body text-muted transition-colors hover:bg-card-hover"
         >
           {loading ? "Loading..." : "Load more"}
         </button>

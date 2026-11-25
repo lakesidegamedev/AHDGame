@@ -58,15 +58,15 @@ export function AdminObservabilityTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-heading-lg font-semibold text-foreground">Observability</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-heading font-semibold text-foreground">Observability</h2>
+        <p className="mt-1 text-body text-muted">
           Live Sentry error feed. Issues from the last 24 hours.
         </p>
       </div>
 
       {!configured && (
         <div className="rounded-lg border border-card-border bg-card-muted/30 p-4">
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             Sentry issue feed is not configured. Set{" "}
             <code className="text-foreground">SENTRY_API_TOKEN</code> in the server environment.
           </p>
@@ -92,7 +92,7 @@ export function AdminObservabilityTab() {
             <button
               onClick={() => void fetchIssues()}
               disabled={loading}
-              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-card-muted hover:text-foreground disabled:opacity-50"
+              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body font-medium text-muted transition-colors hover:bg-card-muted hover:text-foreground disabled:opacity-50"
             >
               {loading ? "Loading…" : "Refresh"}
             </button>
@@ -100,7 +100,7 @@ export function AdminObservabilityTab() {
 
           {error && (
             <div className="rounded-lg border border-error/30 bg-error/10 p-3">
-              <p className="text-sm text-error">{error}</p>
+              <p className="text-body text-error">{error}</p>
             </div>
           )}
 
@@ -114,8 +114,8 @@ export function AdminObservabilityTab() {
                   {issue.level}
                 </Badge>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{issue.title}</p>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted">
+                  <p className="truncate text-body font-medium text-foreground">{issue.title}</p>
+                  <div className="mt-1 flex items-center gap-3 text-body-sm text-muted">
                     <span>×{issue.timesSeen} events</span>
                     <span>·</span>
                     <span>{issue.project?.name ?? "unknown"}</span>
@@ -136,7 +136,7 @@ export function AdminObservabilityTab() {
 
             {!loading && !error && issues.length === 0 && (
               <div className="rounded-lg border border-card-border bg-card p-8 text-center">
-                <p className="text-sm text-muted">No issues in the last 24 hours. 🎉</p>
+                <p className="text-body text-muted">No issues in the last 24 hours. 🎉</p>
               </div>
             )}
 

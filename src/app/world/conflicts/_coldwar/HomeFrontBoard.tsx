@@ -125,7 +125,7 @@ export function HomeFrontBoard({ side }: { side: Side }) {
                 margin: 0,
                 fontFamily: headingFont,
                 fontWeight: 700,
-                fontSize: 32,
+                fontSize: 30,
                 lineHeight: 1,
                 color: "#f3f1ea",
               }}
@@ -136,7 +136,7 @@ export function HomeFrontBoard({ side }: { side: Side }) {
               style={{
                 margin: "8px 0 0",
                 maxWidth: 580,
-                fontSize: 13,
+                fontSize: 12,
                 lineHeight: 1.5,
                 color: "#9595a4",
               }}
@@ -162,13 +162,13 @@ export function HomeFrontBoard({ side }: { side: Side }) {
                 marginTop: 5,
                 fontFamily: headingFont,
                 fontWeight: 700,
-                fontSize: 34,
+                fontSize: 30,
                 lineHeight: 1,
                 color: big.color,
               }}
             >
               {big.value}
-              <span style={{ fontSize: 15 }}>%</span>
+              <span style={{ fontSize: 14 }}>%</span>
             </div>
             <div style={{ marginTop: 3, font: `600 9.5px ${mono}`, color: big.color }}>
               {big.tier}
@@ -207,7 +207,7 @@ export function HomeFrontBoard({ side }: { side: Side }) {
                 {s.label}
               </div>
               <div
-                style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 22, color: s.color }}
+                style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 20, color: s.color }}
               >
                 {s.value}
                 {s.suffix && <span style={{ fontSize: 12, color: "#8a8a9a" }}>{s.suffix}</span>}
@@ -278,7 +278,7 @@ export function HomeFrontBoard({ side }: { side: Side }) {
                       }}
                     >
                       <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 15 }}>{p.icon}</span>
+                        <span style={{ fontSize: 14 }}>{p.icon}</span>
                         <span
                           style={{
                             font: "600 12.5px system-ui",

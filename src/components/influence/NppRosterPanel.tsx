@@ -19,6 +19,7 @@ import {
   type RosterSort,
 } from "./nppRoster";
 import { sortByRegionLabel } from "@/lib/regionOptions";
+import { pillClass } from "@/components/ui/selectedState";
 
 export interface NppRosterPanelProps {
   scope: "state" | "national";
@@ -86,7 +87,7 @@ function StatBar({ value, invert }: { value: number; invert?: boolean }) {
   const eff = invert ? 100 - value : value;
   return (
     <div className="flex flex-col gap-0.5">
-      <span className={`text-xs font-semibold tabular-nums ${statTone(eff)}`}>
+      <span className={`text-body-sm font-semibold tabular-nums ${statTone(eff)}`}>
         {value.toFixed(2)}
       </span>
       <span className="block h-1 w-full overflow-hidden rounded-full bg-card-border/40">
@@ -224,14 +225,14 @@ export function NppRosterPanel({
           placeholder="Search NPPs or states…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="min-w-[180px] flex-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm"
+          className="min-w-[180px] flex-1 rounded-lg border border-card-border bg-card px-3 py-1.5 text-body"
         />
         {scope === "national" && (
           <select
             aria-label="State"
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value)}
-            className="rounded-lg border border-card-border bg-card px-2 py-1.5 text-sm"
+            className="rounded-lg border border-card-border bg-card px-2 py-1.5 text-body"
           >
             <option value="all">All states</option>
             {stateOptions.map((s) => (
@@ -245,7 +246,7 @@ export function NppRosterPanel({
           aria-label="Sort"
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as RosterSort)}
-          className="rounded-lg border border-card-border bg-card px-2 py-1.5 text-sm"
+          className="rounded-lg border border-card-border bg-card px-2 py-1.5 text-body"
         >
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>
@@ -262,7 +263,7 @@ export function NppRosterPanel({
             key={f.key}
             type="button"
             onClick={() => setFilter(f.key)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+            className={`rounded-full border px-3 py-1 text-body-sm font-medium ${
               filter === f.key
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-card-border text-muted hover:text-foreground"
@@ -276,7 +277,7 @@ export function NppRosterPanel({
           type="button"
           onClick={toggleSelectAll}
           disabled={rows.length === 0}
-          className="ml-auto rounded-full border border-card-border px-3 py-1 text-xs font-medium text-muted hover:text-foreground disabled:opacity-50"
+          className="ml-auto rounded-full border border-card-border px-3 py-1 text-body-sm font-medium text-muted hover:text-foreground disabled:opacity-50"
         >
           {allFilteredSelected ? "Clear all" : `Select all (${rows.length})`}
         </button>
@@ -285,17 +286,17 @@ export function NppRosterPanel({
       {/* Bulk bar (top) */}
       {sel.size > 0 && (
         <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-card-border bg-card-elevated px-4 py-2 shadow-lg">
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-body">
             <span className="font-semibold">{sel.size} selected</span>
             <button
-              className="text-xs text-muted hover:text-foreground"
+              className="text-body-sm text-muted hover:text-foreground"
               onClick={() => setSel(new Set())}
             >
               Clear
             </button>
           </div>
           {confirmAction ? (
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-body-sm">
               <span>
                 Spend {bulkCost(sel.size, confirmAction).actions} AP
                 {bulkCost(sel.size, confirmAction).funds > 0
@@ -304,7 +305,7 @@ export function NppRosterPanel({
                 across {sel.size} NPPs?
               </span>
               <button
-                className="rounded-md bg-primary px-3 py-1 font-medium text-white disabled:opacity-50"
+                className="rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 disabled={busy}
                 onClick={() => runBulk(confirmAction)}
               >
@@ -319,11 +320,11 @@ export function NppRosterPanel({
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-muted">Bulk:</span>
+              <span className="text-body-sm text-muted">Bulk:</span>
               {actions.map((a) => (
                 <button
                   key={a.type}
-                  className="rounded-md border border-card-border bg-card px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors hover:border-primary/60 hover:bg-primary/10 hover:text-primary"
+                  className="rounded-md border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold shadow-sm transition-colors hover:border-primary/60 hover:bg-primary/10 hover:text-primary"
                   onClick={() => setConfirmAction(a)}
                 >
                   {a.name}
@@ -336,9 +337,9 @@ export function NppRosterPanel({
 
       {/* Roster table */}
       <div className="overflow-x-auto rounded-xl border border-card-border">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-card-border text-left text-sm font-semibold text-foreground">
+            <tr className="border-b border-card-border text-left text-body font-semibold text-foreground">
               <th className="w-8 px-2 py-2"></th>
               <th className="px-2 py-2">NPP</th>
               {STAT_DEFS.map((s) => (
@@ -369,7 +370,7 @@ export function NppRosterPanel({
                       >
                         {n.name}
                       </Link>
-                      <span className="text-xs text-muted">
+                      <span className="text-body-sm text-muted">
                         {displayCanadianRegionCode(n.homeState)}
                         {n.currentOfficeLabel
                           ? ` · ${n.currentOfficeLabel}`
@@ -407,7 +408,9 @@ export function NppRosterPanel({
           </tbody>
         </table>
         {rows.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-muted">No NPPs match this filter.</div>
+          <div className="px-4 py-6 text-center text-body text-muted">
+            No NPPs match this filter.
+          </div>
         )}
       </div>
 
@@ -449,7 +452,7 @@ function NppDrawer({
       <div className="mb-3 flex items-start justify-between">
         <div>
           <div className="font-semibold">{npp.name}</div>
-          <div className="text-xs text-muted">
+          <div className="text-body-sm text-muted">
             {displayCanadianRegionCode(npp.homeState)}
             {npp.currentOfficeLabel ? ` · ${npp.currentOfficeLabel}` : ""}
           </div>
@@ -464,7 +467,7 @@ function NppDrawer({
         </button>
       </div>
       {flags.length > 0 && (
-        <div className="mb-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+        <div className="mb-3 rounded-lg bg-warning/10 px-3 py-2 text-body-sm text-warning">
           Needs attention: {flags.join(" · ")}
         </div>
       )}
@@ -477,20 +480,20 @@ function NppDrawer({
         ))}
       </div>
       <fieldset disabled={busy} className="mb-3 flex gap-2 items-center">
-        <legend className="text-xs text-muted">Actions per click</legend>
+        <legend className="text-body-sm text-muted">Actions per click</legend>
         {[1, 5, 10].map((value) => (
           <button
             key={value}
             type="button"
             aria-pressed={count === value}
             onClick={() => setCount(value)}
-            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+            className={`px-3 py-1 ${pillClass(count === value)}`}
           >
             x{value}
           </button>
         ))}
       </fieldset>
-      <p className="mb-2 text-xs text-muted">
+      <p className="mb-2 text-body-sm text-muted">
         Stops if a stat cap or available funds/action points prevent the next action. Completed
         actions remain charged.
       </p>
@@ -504,18 +507,18 @@ function NppDrawer({
               type="button"
               disabled={busy || !!blocked || !a.available}
               onClick={() => onAction(npp.id, a.type, count)}
-              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-50 ${
+              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-body disabled:opacity-50 ${
                 isRec ? "border-primary bg-primary/5" : "border-card-border hover:bg-card-elevated"
               }`}
             >
               <span>
                 <span className="font-medium">{a.name}</span>
                 {isRec && (
-                  <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] text-primary">
+                  <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-body-sm text-primary">
                     Recommended
                   </span>
                 )}
-                <span className="ml-2 text-xs text-muted">
+                <span className="ml-2 text-body-sm text-muted">
                   {a.actionCost * count} AP
                   {a.baseFundCost > 0
                     ? ` · ${formatLocalFunds(a.baseFundCost * count, currency)}`

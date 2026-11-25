@@ -77,8 +77,8 @@ export function ElectionQuickActions({
           disabled={loading}
           className={`rounded-lg border bg-card p-2.5 text-center transition-colors hover:bg-card/80 disabled:opacity-50 ${a.color}`}
         >
-          <div className={`text-[11px] font-semibold ${a.textColor}`}>{a.label}</div>
-          <div className="mt-0.5 text-[9px] text-muted">{a.desc}</div>
+          <div className={`text-body-sm font-semibold ${a.textColor}`}>{a.label}</div>
+          <div className="mt-0.5 text-body-sm text-muted">{a.desc}</div>
         </button>
       ))}
     </div>

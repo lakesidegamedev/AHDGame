@@ -33,7 +33,7 @@ export default function ModifierRow({
   icon: Icon,
 }: ModifierRowProps) {
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div className="flex items-center justify-between text-body">
       <InfoTooltip
         trigger={
           <span className="flex items-center gap-2 cursor-default">
@@ -59,7 +59,7 @@ export default function ModifierRow({
       </InfoTooltip>
       <div className="flex items-center gap-2">
         {rawValue != null && (
-          <span className="text-xs text-muted tabular-nums">
+          <span className="text-body-sm text-muted tabular-nums">
             ({rawValue}
             {rawUnit})
           </span>
@@ -72,7 +72,7 @@ export default function ModifierRow({
           ) : (
             <Minus className="h-3 w-3 text-muted shrink-0" />
           )}
-          <span className={`font-semibold tabular-nums text-sm ${modColor(modifier)}`}>
+          <span className={`font-semibold tabular-nums text-body ${modColor(modifier)}`}>
             {modSign(modifier)}%
           </span>
         </div>

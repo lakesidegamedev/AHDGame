@@ -99,7 +99,7 @@ export function CommodityDistribution({ data: rawType }: { data?: string }) {
   if (error || !data) {
     return (
       <div className="my-4 rounded-xl border border-card-border bg-card/40 p-6">
-        <p className="text-sm text-muted">{error ?? "No distribution data available"}</p>
+        <p className="text-body text-muted">{error ?? "No distribution data available"}</p>
       </div>
     );
   }
@@ -115,19 +115,19 @@ export function CommodityDistribution({ data: rawType }: { data?: string }) {
           <h3 className="mt-0.5 font-semibold text-foreground">{data.label}</h3>
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted">Global price</p>
-          <p className="font-mono text-base text-foreground">
+          <p className="text-body-sm text-muted">Global price</p>
+          <p className="font-mono text-body-lg text-foreground">
             ${formatNumber(data.globalPrice)}
-            <span className="ml-1 text-xs text-muted">/ {data.unit}</span>
+            <span className="ml-1 text-body-sm text-muted">/ {data.unit}</span>
           </p>
-          <p className="text-xs text-muted">base ${formatNumber(data.basePrice)}</p>
+          <p className="text-body-sm text-muted">base ${formatNumber(data.basePrice)}</p>
         </div>
       </header>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-card-border/60 text-sm font-semibold text-foreground">
+            <tr className="border-b border-card-border/60 text-body font-semibold text-foreground">
               <th className="py-2 pr-3 text-left font-semibold">Country</th>
               <th className="py-2 px-3 text-right font-semibold">Supply</th>
               <th className="py-2 px-3 text-right font-semibold">Demand</th>
@@ -169,7 +169,7 @@ export function CommodityDistribution({ data: rawType }: { data?: string }) {
                         />
                       </div>
                       <span
-                        className={`font-mono text-sm ${isExporter ? "text-success" : "text-error"}`}
+                        className={`font-mono text-body ${isExporter ? "text-success" : "text-error"}`}
                       >
                         {isExporter ? "+" : ""}
                         {formatNumber(c.net)}
@@ -191,14 +191,14 @@ export function CommodityDistribution({ data: rawType }: { data?: string }) {
       {data.isExtractable && data.topProducerStates.length > 0 && (
         <div>
           <p className="mb-2 text-body-sm font-medium text-muted">Top producing regions</p>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-body">
             {data.topProducerStates.map((s) => (
               <li
                 key={s.stateId}
                 className="flex items-center justify-between rounded bg-card-elevated/60 px-3 py-1.5"
               >
                 <span className="text-foreground">
-                  <span className="mr-2 text-xs text-muted">{s.countryId}</span>
+                  <span className="mr-2 text-body-sm text-muted">{s.countryId}</span>
                   {s.name}
                 </span>
                 <span className="font-mono text-muted">
@@ -210,7 +210,7 @@ export function CommodityDistribution({ data: rawType }: { data?: string }) {
         </div>
       )}
 
-      <footer className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+      <footer className="flex flex-wrap items-center justify-between gap-2 text-body-sm text-muted">
         <Link href={`/commodity/${data.commodity}`} className="hover:text-primary hover:underline">
           View full market page →
         </Link>

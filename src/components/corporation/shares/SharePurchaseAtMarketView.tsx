@@ -203,7 +203,7 @@ export function SharePurchaseAtMarketView({
   return (
     <div className="space-y-4">
       {equityMarketPoolActive && (
-        <div className="grid grid-cols-3 gap-2 rounded-lg border border-card-border bg-card-elevated/40 p-3 text-xs">
+        <div className="grid grid-cols-3 gap-2 rounded-lg border border-card-border bg-card-elevated/40 p-3 text-body-sm">
           <div>
             <div className="text-muted">Market sell price</div>
             <div className="mt-0.5 tabular-nums font-semibold text-error">
@@ -225,7 +225,7 @@ export function SharePurchaseAtMarketView({
         </div>
       )}
       {/* Buy / Sell toggle */}
-      <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+      <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
         <button
           type="button"
           onClick={() => onSwitchSide("buy")}
@@ -253,15 +253,15 @@ export function SharePurchaseAtMarketView({
       {/* ─ Buy side ─────────────────────────────────────── */}
       {atMarketSide === "buy" && (
         <>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Buy at the current price. Personal and corporate purchases use the public float; an
             investment bank opens a prop-book position.
           </p>
 
           {myCorporation && (
             <div>
-              <label className="mb-1.5 block text-xs text-muted">Purchase as</label>
-              <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+              <label className="mb-1.5 block text-body-sm text-muted">Purchase as</label>
+              <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
                 <button
                   type="button"
                   onClick={() => {
@@ -326,7 +326,7 @@ export function SharePurchaseAtMarketView({
           {!buyAsCorp && !buyAsInvestmentBank && myCurrencyBalances && (
             <div className="space-y-2">
               <div className="flex items-center justify-between px-0.5">
-                <span className="text-xs text-muted">Pay with</span>
+                <span className="text-body-sm text-muted">Pay with</span>
                 <div className="relative" ref={currencyDropdownRef}>
                   <button
                     type="button"
@@ -334,7 +334,7 @@ export function SharePurchaseAtMarketView({
                       e.stopPropagation();
                       setCurrencyDropdownOpen((o) => !o);
                     }}
-                    className="flex items-center gap-1 tabular-nums text-xs text-primary/80 hover:text-primary"
+                    className="flex items-center gap-1 tabular-nums text-body-sm text-primary/80 hover:text-primary"
                   >
                     <span>
                       {CURRENCY_SYMBOLS[selectedPayCurrency] ?? selectedPayCurrency}
@@ -350,9 +350,11 @@ export function SharePurchaseAtMarketView({
                   {currencyDropdownOpen && (
                     <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-card-border bg-card shadow-xl py-1">
                       {loadingRates ? (
-                        <div className="px-3 py-2 text-xs text-muted">Loading rates…</div>
+                        <div className="px-3 py-2 text-body-sm text-muted">Loading rates…</div>
                       ) : getAffordableCurrencies(buyCost).length === 0 ? (
-                        <div className="px-3 py-2 text-xs text-muted">No sufficient balance</div>
+                        <div className="px-3 py-2 text-body-sm text-muted">
+                          No sufficient balance
+                        </div>
                       ) : (
                         getAffordableCurrencies(buyCost).map((code) => (
                           <button
@@ -362,7 +364,7 @@ export function SharePurchaseAtMarketView({
                               setSelectedPayCurrency(code);
                               setCurrencyDropdownOpen(false);
                             }}
-                            className={`w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-card-elevated transition-colors ${
+                            className={`w-full flex items-center justify-between px-3 py-2 text-body-sm hover:bg-card-elevated transition-colors ${
                               code === selectedPayCurrency
                                 ? "text-primary font-medium"
                                 : "text-foreground"
@@ -385,7 +387,7 @@ export function SharePurchaseAtMarketView({
               </div>
               {onAutoConvertChange && (
                 <div className="flex items-center justify-between px-0.5">
-                  <span className="text-xs text-muted">Auto-convert shortfall</span>
+                  <span className="text-body-sm text-muted">Auto-convert shortfall</span>
                   <button
                     type="button"
                     role="switch"
@@ -407,7 +409,7 @@ export function SharePurchaseAtMarketView({
           )}
 
           <div>
-            <label className="mb-1.5 block text-xs text-muted">
+            <label className="mb-1.5 block text-body-sm text-muted">
               Shares to buy
               <span className="mx-1.5 text-card-border">·</span>
               {floatAvailable.toLocaleString("en-US")} in float
@@ -426,16 +428,16 @@ export function SharePurchaseAtMarketView({
               aria-invalid={buyQuantityError != null}
               aria-describedby={buyQuantityError ? buyQuantityErrorId : undefined}
               placeholder="Quantity"
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
             />
             {buyQuantityError && (
-              <p id={buyQuantityErrorId} className="mt-1.5 text-xs text-error">
+              <p id={buyQuantityErrorId} className="mt-1.5 text-body-sm text-error">
                 {buyQuantityError}
               </p>
             )}
             {/* CEO limit first: a limit order counts toward the same window. */}
             {(ceoLimitReached || (floatAvailable <= 0 && !buyAsInvestmentBank)) && (
-              <p className="mt-1.5 text-xs text-warning">
+              <p className="mt-1.5 text-body-sm text-warning">
                 {ceoLimitReached
                   ? "You have reached your CEO buying limit for this window. Open buy orders count toward it, so cancel unused orders to free room."
                   : "No shares are for sale on the market right now. Use a Limit order to bid for shares from holders."}
@@ -444,7 +446,7 @@ export function SharePurchaseAtMarketView({
           </div>
 
           {quantity > 0 && (
-            <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+            <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-body">
               <div className="flex justify-between">
                 <span className="text-muted">Price per share</span>
                 <span className="tabular-nums font-medium">
@@ -498,7 +500,7 @@ export function SharePurchaseAtMarketView({
                 </div>
               )}
               {ratesNeededButMissing && (
-                <p className="text-xs text-muted border-t border-card-border pt-2">
+                <p className="text-body-sm text-muted border-t border-card-border pt-2">
                   Loading market rates…
                 </p>
               )}
@@ -510,14 +512,14 @@ export function SharePurchaseAtMarketView({
       {/* ─ Sell side ────────────────────────────────────── */}
       {atMarketSide === "sell" && (
         <>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Sell shares instantly at the current market price. Proceeds credited immediately.
           </p>
 
           {myCorporation && (
             <div>
-              <label className="mb-1.5 block text-xs text-muted">Sell as</label>
-              <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
+              <label className="mb-1.5 block text-body-sm text-muted">Sell as</label>
+              <div className="flex overflow-hidden rounded-lg border border-card-border text-body-sm">
                 <button
                   type="button"
                   onClick={() => {
@@ -586,7 +588,7 @@ export function SharePurchaseAtMarketView({
                 )}
               </div>
               {myCorporationShares === 0 && (
-                <p className="mt-1.5 text-xs text-muted">
+                <p className="mt-1.5 text-body-sm text-muted">
                   Your corporation holds no shares in this company.
                 </p>
               )}
@@ -594,14 +596,14 @@ export function SharePurchaseAtMarketView({
           )}
 
           {myCorporation && sellAsCorp && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5 text-xs text-warning">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5 text-body-sm text-warning">
               This sells corporate-held shares back into the public float, reducing your
               corporation&apos;s ownership stake. This is the reverse of a buyback.
             </div>
           )}
 
           {isCeo && !sellAsCorp && totalPersonalShares > 0 && quantity === totalPersonalShares && (
-            <div className="rounded-lg border border-error/30 bg-error/5 px-3 py-2.5 text-xs text-error">
+            <div className="rounded-lg border border-error/30 bg-error/5 px-3 py-2.5 text-body-sm text-error">
               You are the CEO. Selling all {totalPersonalShares.toLocaleString("en-US")} of your
               remaining shares will remove you as CEO. You&apos;ll need to be re-appointed to become
               CEO again. You&apos;ll be asked to confirm before this goes through.
@@ -610,7 +612,7 @@ export function SharePurchaseAtMarketView({
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs text-muted">
+              <label className="text-body-sm text-muted">
                 Shares to sell
                 {!sellAsCorp && !sellAsInvestmentBank && (
                   <>
@@ -627,7 +629,7 @@ export function SharePurchaseAtMarketView({
                       Math.min(sellAsCorp ? myCorporationShares : myShares, marketDepthShares)
                     )
                   }
-                  className="text-xs text-muted hover:text-foreground transition-colors"
+                  className="text-body-sm text-muted hover:text-foreground transition-colors"
                 >
                   Sell all
                 </button>
@@ -646,22 +648,22 @@ export function SharePurchaseAtMarketView({
                 setQuantity(parseShareQuantity(raw));
               }}
               placeholder="Quantity"
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
             />
             {quantityDraft !== null && quantityDraft.trim() !== "" && quantity === 0 && (
-              <p className="mt-1 text-xs text-error" role="alert">
+              <p className="mt-1 text-body-sm text-error" role="alert">
                 Enter a whole number of shares greater than zero.
               </p>
             )}
             {sellAtMarketInsufficient && (
-              <p className="mt-1 text-xs text-error">
+              <p className="mt-1 text-body-sm text-error">
                 {sellAsCorp
                   ? `Corporation only holds ${myCorporationShares.toLocaleString("en-US")} shares.`
                   : `The selected holding contains ${myShares.toLocaleString("en-US")} shares.`}
               </p>
             )}
             {marketDepthInsufficient && (
-              <p className="mt-1 text-xs text-error">
+              <p className="mt-1 text-body-sm text-error">
                 The market can currently absorb {marketDepthShares.toLocaleString("en-US")} shares.
                 Very large sales are limited to 5% of the company&apos;s value per turn; place a
                 sell order and the rest fills over the coming turns.
@@ -670,7 +672,7 @@ export function SharePurchaseAtMarketView({
           </div>
 
           {quantity > 0 && !sellAtMarketInsufficient && !marketDepthInsufficient && (
-            <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-sm">
+            <div className="rounded-lg border border-card-border bg-card-elevated/40 p-4 space-y-2 text-body">
               <div className="flex justify-between">
                 <span className="text-muted">Price per share</span>
                 <span className="tabular-nums font-medium">

@@ -24,7 +24,7 @@ export function SectionHeader({
       <h2
         className={
           level === "main"
-            ? "text-heading-lg font-semibold tracking-tight text-foreground"
+            ? "text-heading font-semibold tracking-tight text-foreground"
             : "text-body-lg font-semibold text-foreground"
         }
       >

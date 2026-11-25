@@ -17,7 +17,7 @@ import { AnchoredDropdownPanel } from "@/components/navbar/AnchoredDropdownPanel
  * (classic-navbar organization).
  */
 export function navTabClassName(active: boolean): string {
-  return `relative inline-flex shrink-0 items-center rounded-lg px-3 py-2 text-[13px] transition-colors hover:text-foreground ${
+  return `relative inline-flex shrink-0 items-center rounded-lg px-3 py-2 text-body-sm transition-colors hover:text-foreground ${
     active
       ? "font-medium text-foreground after:absolute after:inset-x-3 after:bottom-1 after:h-px after:rounded-full after:bg-primary after:opacity-70"
       : "text-muted"
@@ -169,10 +169,10 @@ export function MenuRow({
       }`}
     >
       {dot && <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${dot}`} />}
-      <span className={`text-[13px] ${strong ? "font-medium text-foreground" : "text-fg-2"}`}>
+      <span className={`text-body-sm ${strong ? "font-medium text-foreground" : "text-fg-2"}`}>
         {children}
       </span>
-      {meta && <span className={`ml-auto font-mono text-[10px] ${metaClass}`}>{meta}</span>}
+      {meta && <span className={`ml-auto font-mono text-body-sm ${metaClass}`}>{meta}</span>}
     </Link>
   );
 }

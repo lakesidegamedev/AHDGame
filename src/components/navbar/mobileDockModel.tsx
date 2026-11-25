@@ -82,7 +82,7 @@ export function useMobileDockModel({ enabled, onClose, search, ...input }: Mobil
               href={option.href}
               onClick={onClose}
               aria-current={option.current ? "true" : undefined}
-              className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium ${option.current ? "border-primary/50 bg-primary/10 text-foreground" : "border-card-border text-muted"}`}
+              className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-body-sm font-medium ${option.current ? "border-primary/50 bg-primary/10 text-foreground" : "border-card-border text-muted"}`}
             >
               <CountryFlag country={option.country} size="sm" />
               {option.label}

@@ -43,7 +43,7 @@ export function OfficeholderPortrait({
           size={aperture}
           borderKey={holder.borderKey}
           tintColor={holder.tintColor}
-          className={compact ? "" : "text-xl"}
+          className={compact ? "" : "text-heading"}
         />
       ) : (
         <div className={aperture} />

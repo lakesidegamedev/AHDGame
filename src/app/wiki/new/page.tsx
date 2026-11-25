@@ -33,8 +33,8 @@ export default async function WikiNewPage({ searchParams }: WikiNewPageProps) {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-[1100px] px-4 py-7 sm:px-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Create new wiki page</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-heading font-bold text-foreground">Create new wiki page</h1>
+          <p className="mt-1 text-body text-muted">
             {canPublishDirectly
               ? "Create and publish a new wiki page immediately."
               : "Submit a new wiki page for moderator review."}
@@ -42,7 +42,7 @@ export default async function WikiNewPage({ searchParams }: WikiNewPageProps) {
         </div>
 
         {!canPublishDirectly && (
-          <div className="mb-6 rounded-xl border border-card-border bg-card/40 p-4 text-sm text-muted">
+          <div className="mb-6 rounded-xl border border-card-border bg-card/40 p-4 text-body text-muted">
             <p className="mb-1 font-semibold text-foreground">Before you start</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>

@@ -23,7 +23,7 @@ const BAND_TAG_CLASS: Record<CrisisSeverity, string> = {
 export function SeverityTag({ band, score }: { band: CrisisSeverity; score?: number | null }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold ${BAND_TAG_CLASS[band]}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-body-sm font-semibold ${BAND_TAG_CLASS[band]}`}
     >
       {SEVERITY_BAND_LABEL[band]}
       {score != null && (
@@ -58,7 +58,7 @@ export function CrisisEffectChip({
   return (
     <span
       title={view.detail}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs ${EFFECT_TONE_CLASS[view.tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-body-sm ${EFFECT_TONE_CLASS[view.tone]}`}
     >
       <span className="font-medium">{view.target}</span>
       <span className="font-mono font-semibold tabular-nums">{view.amount}</span>

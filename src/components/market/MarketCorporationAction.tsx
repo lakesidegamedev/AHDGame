@@ -37,7 +37,7 @@ export function MarketCorporationAction() {
   }, [corporationId, turn?.currentTurn]);
 
   const className =
-    "inline-flex items-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors";
+    "inline-flex items-center rounded-lg bg-primary px-3 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors";
   if (corporationId) {
     return (
       <Link href={`/corporation/${corporationId}`} className={className}>
@@ -59,7 +59,7 @@ export function MarketCorporationAction() {
           Found corporation
         </button>
         {cooldown > 0 && (
-          <p className="mt-1 text-xs text-muted" role="status">
+          <p className="mt-1 text-body-sm text-muted" role="status">
             Available to found in {cooldown} turns
           </p>
         )}

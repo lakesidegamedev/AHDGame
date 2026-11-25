@@ -13,10 +13,10 @@ export function LivePreviewPanel({ derived }: { derived: DerivedComposition }) {
   return (
     <div className="sticky top-4 rounded-xl border border-card-border bg-card p-4 shadow-card">
       <p className="text-body-sm font-medium text-muted">Live state lean</p>
-      <p className="mb-3 text-[11px] text-muted">
+      <p className="mb-3 text-body-sm text-muted">
         Census buckets with your edits applied · recomputed on every change
       </p>
-      <div className="space-y-3 text-sm">
+      <div className="space-y-3 text-body">
         <div>
           <div className="flex justify-between">
             <span className="text-muted">Economic</span>
@@ -43,8 +43,8 @@ export function LivePreviewPanel({ derived }: { derived: DerivedComposition }) {
         </div>
         {derived.buckets.map((section) => (
           <div key={section.dim} className="border-t border-card-border pt-2">
-            <p className="mb-1 text-[11px] font-medium text-muted">{section.dimLabel}</p>
-            <table className="w-full text-[11px] tabular-nums">
+            <p className="mb-1 text-body-sm font-medium text-muted">{section.dimLabel}</p>
+            <table className="w-full text-body-sm tabular-nums">
               <thead className="text-muted">
                 <tr>
                   <th className="text-left font-normal">Bucket</th>

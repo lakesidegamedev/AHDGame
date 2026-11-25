@@ -30,7 +30,7 @@ export function ChangelogPostView({
     <div className="mx-auto max-w-3xl px-4 py-8 pb-20">
       <Link
         href="/changelog"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+        className="mb-6 inline-flex items-center gap-1.5 text-body text-muted transition-colors hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" />
         All releases
@@ -39,23 +39,23 @@ export function ChangelogPostView({
       <article>
         <header className="mb-8 border-b border-card-border pb-6">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm font-bold text-primary">v{post.version}</span>
-            <span className="text-sm text-muted">{formatDate(post.date)}</span>
-            <span className="text-sm text-muted">·</span>
-            <span className="text-sm text-muted">{minutes} min read</span>
+            <span className="font-mono text-body font-bold text-primary">v{post.version}</span>
+            <span className="text-body text-muted">{formatDate(post.date)}</span>
+            <span className="text-body text-muted">·</span>
+            <span className="text-body text-muted">{minutes} min read</span>
             {post.era && (
-              <span className="rounded-full border border-card-border bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
+              <span className="rounded-full border border-card-border bg-background px-2 py-0.5 text-body-sm font-medium uppercase tracking-wide text-muted">
                 {post.era}
               </span>
             )}
           </div>
 
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-foreground">
+          <h1 className="text-display font-bold leading-tight tracking-tight text-foreground">
             {post.title}
           </h1>
 
           {post.summary && (
-            <p className="mt-3 text-base leading-relaxed text-muted">{post.summary}</p>
+            <p className="mt-3 text-body-lg leading-relaxed text-muted">{post.summary}</p>
           )}
 
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -64,7 +64,7 @@ export function ChangelogPostView({
               return (
                 <span
                   key={badge}
-                  className={`rounded-full border px-2 py-0.5 text-xs font-medium ${style.classes}`}
+                  className={`rounded-full border px-2 py-0.5 text-body-sm font-medium ${style.classes}`}
                 >
                   {style.label}
                 </span>
@@ -92,7 +92,7 @@ export function ChangelogPostView({
                 <ArrowLeft className="h-3 w-3" />
                 Newer
               </span>
-              <span className="mt-1 block text-sm font-semibold text-foreground group-hover:text-primary">
+              <span className="mt-1 block text-body font-semibold text-foreground group-hover:text-primary">
                 v{newer.version} · {newer.title}
               </span>
             </Link>
@@ -108,7 +108,7 @@ export function ChangelogPostView({
                 Older
                 <ArrowRight className="h-3 w-3" />
               </span>
-              <span className="mt-1 block text-sm font-semibold text-foreground group-hover:text-primary">
+              <span className="mt-1 block text-body font-semibold text-foreground group-hover:text-primary">
                 v{older.version} · {older.title}
               </span>
             </Link>

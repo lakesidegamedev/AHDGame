@@ -34,7 +34,7 @@ export default function PlannedEconomiesGuidePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -43,8 +43,8 @@ export default function PlannedEconomiesGuidePage() {
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Planned / Command economies</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Planned / Command economies</h1>
+          <p className="mt-2 text-body text-muted">
             Run the state industries, allocate the plan, direct state credit, and decide whether the
             country stays communist or reforms toward the market
           </p>
@@ -56,7 +56,7 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 1. Overview ── */}
           <section className="space-y-4">
             <SectionHeader id="overview">1. What this is</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Most countries in A House Divided are market economies: floating currencies, a
               central-bank chair setting rates, commodity prices that clear on supply and demand.
               Planned (command) economies are a different model, and now a played one. In a command
@@ -78,7 +78,7 @@ export default function PlannedEconomiesGuidePage() {
               </Link>
               ) describe the market path. This page describes the planned path.
             </Callout>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The regime is off by default. When an admin enables{" "}
               <strong className="text-foreground">command economy</strong>, countries that start on
               the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc
@@ -90,8 +90,8 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 2. How it starts ── */}
           <section className="space-y-4">
             <SectionHeader id="how-it-starts">2. How a country becomes one</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">Two gates must both be true:</p>
-            <ol className="list-decimal space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">Two gates must both be true:</p>
+            <ol className="list-decimal space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 An <strong className="text-foreground">admin</strong> turns on the command-economy
                 feature for the world (default off). Players cannot flip this themselves.
@@ -104,7 +104,7 @@ export default function PlannedEconomiesGuidePage() {
               </li>
             </ol>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Band</th>
@@ -139,7 +139,7 @@ export default function PlannedEconomiesGuidePage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Soviet Russia and early China start fully command; Eastern-bloc countries start
               command; China starts further along the dial in later eras. Where each ends up is now
               up to how the country is governed.
@@ -149,7 +149,7 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 3. SOEs ── */}
           <section className="space-y-4">
             <SectionHeader id="soes">3. State-owned enterprises</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Instead of one national conglomerate, a command country&apos;s commanding heights are
               split into{" "}
               <strong className="text-foreground">
@@ -158,7 +158,7 @@ export default function PlannedEconomiesGuidePage() {
               (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals,
               transport; the exact set is country and era specific). Each SOE carries its own:
             </p>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 <strong className="text-foreground">Plan target</strong>: the output quota it is
                 expected to hit.
@@ -193,7 +193,7 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 4. Three seats ── */}
           <section className="space-y-4">
             <SectionHeader id="seats">4. The three seats</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A command economy is run through three offices. Each is filled by the government
               (cabinet or Supreme Soviet). If a seat is empty, the state brain runs it competently
               by default, so single-player worlds still work. A human who claims a seat takes over
@@ -202,7 +202,7 @@ export default function PlannedEconomiesGuidePage() {
             <div className="space-y-4">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
                 <SubHeader>SOE Director (the industrialist)</SubHeader>
-                <p className="text-sm text-muted leading-relaxed">
+                <p className="text-body text-muted leading-relaxed">
                   One director seat per strategic SOE. The director runs a single enterprise and
                   chooses its <strong className="text-foreground">production target</strong> (safe
                   or a stretch quota), files an{" "}
@@ -213,7 +213,7 @@ export default function PlannedEconomiesGuidePage() {
                   lean slowly drags it. Hit your targets and the enterprise grows and your standing
                   rises; miss them and you feed the shortages that erode the command system.
                 </p>
-                <p className="text-sm text-muted leading-relaxed">
+                <p className="text-body text-muted leading-relaxed">
                   Because efficiency is capacity utilisation,{" "}
                   <strong className="text-foreground">
                     investment goes where efficiency is high
@@ -229,7 +229,7 @@ export default function PlannedEconomiesGuidePage() {
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
                 <SubHeader>Gosplan central planner (the macro)</SubHeader>
-                <p className="text-sm text-muted leading-relaxed">
+                <p className="text-body text-muted leading-relaxed">
                   The planner sets the <strong className="text-foreground">national plan</strong>:
                   the output quotas and the investment split across every sector. This is the
                   heavy-industry-versus-consumer-goods balancing act. Over-ambitious targets look
@@ -239,7 +239,7 @@ export default function PlannedEconomiesGuidePage() {
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
                 <SubHeader>Gosbank Chair (the kingmaker)</SubHeader>
-                <p className="text-sm text-muted leading-relaxed">
+                <p className="text-body text-muted leading-relaxed">
                   The Gosbank chair runs <strong className="text-foreground">state credit</strong>.
                   Each turn the bank lends a credit budget across the SOEs. The chair decides{" "}
                   <strong className="text-foreground">which sectors get the money</strong> (an
@@ -257,10 +257,10 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 5. Directed credit ── */}
           <section className="space-y-4">
             <SectionHeader id="credit">5. Directed credit and its cost</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Directed credit is the Gosbank Chair&apos;s main lever, and it is a genuine tradeoff.
             </p>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 <strong className="text-foreground">The upside</strong>: credit builds an SOE&apos;s
                 capacity and lifts its output over the following turns. Fund the right sectors and
@@ -282,7 +282,7 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 6. Marketization earned ── */}
           <section className="space-y-4">
             <SectionHeader id="marketization">6. Marketization is earned</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The single most important change: marketization is{" "}
               <strong className="text-foreground">no longer scripted</strong>. The era sets the
               starting level, then it drifts every turn based on three live drivers.
@@ -306,12 +306,12 @@ export default function PlannedEconomiesGuidePage() {
                   key={term}
                   className="rounded-xl border border-card-border bg-card p-4 space-y-1.5"
                 >
-                  <p className="text-sm font-semibold text-foreground">{term}</p>
-                  <p className="text-sm text-muted leading-relaxed">{def}</p>
+                  <p className="text-body font-semibold text-foreground">{term}</p>
+                  <p className="text-body text-muted leading-relaxed">{def}</p>
                 </div>
               ))}
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               There is <strong className="text-foreground">no era gravity</strong>. History can
               break. A well-run orthodox USSR can stay red long past 1991. A badly mismanaged one
               reforms toward the market and, eventually, out of communism. A hardline government
@@ -329,7 +329,7 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 7. Feedback loops ── */}
           <section className="space-y-4">
             <SectionHeader id="loops">7. The feedback loops</SectionHeader>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 <strong className="text-foreground">Reform spiral</strong>: underfund the SOEs, they
                 miss plan, shortages grow, the black market swells, marketization rises, market
@@ -352,13 +352,13 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 8. Repression ── */}
           <section className="space-y-4">
             <SectionHeader id="repression">8. Repression: holding the line</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Reform is not the only answer to a swelling black market. A hardline government can
               crack down instead. The Gosbank Chair (or head of government) can set an{" "}
               <strong className="text-foreground">internal repression</strong> level that forces the
               second economy down, hides the grey market, and slows the drift toward the market.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               What repression does <strong className="text-foreground">not</strong> do is fix the
               shortage. The shelves are still empty; you have only pushed the trading underground.
               And it is not free: cracking down costs regime legitimacy every turn, and the bill
@@ -377,12 +377,12 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 9. Planned rules still apply ── */}
           <section className="space-y-4">
             <SectionHeader id="planned-rules">9. The planned rules still apply</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               While a country sits in the command or dual-track bands, the planned machinery is in
               force. Read shortage, overhang, and the black-market premium as your signals rather
               than waiting for prices or the peg to clear.
             </p>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 <strong className="text-foreground">Fixed official currency</strong>: in a fully
                 command country the official rate is pinned to its era anchor and does not float. Do
@@ -415,7 +415,7 @@ export default function PlannedEconomiesGuidePage() {
           {/* ── 10. Dual-track ── */}
           <section className="space-y-4">
             <SectionHeader id="dual-track">10. Dual-track transition</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Dual-track means plan and market run in parallel: a share of pricing and shortage
               machinery stays planned, the rest clears like a market. As the marketization level
               climbs through the 30-to-70 band, more of the economy behaves like a market and the
@@ -428,7 +428,7 @@ export default function PlannedEconomiesGuidePage() {
           <section className="space-y-4">
             <SectionHeader id="what-to-do">11. What you can do</SectionHeader>
             <SubHeader>As a player</SubHeader>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 Claim an SOE Director seat and drive one enterprise&apos;s targets, investment, and
                 labor-versus-quality mix.
@@ -455,7 +455,7 @@ export default function PlannedEconomiesGuidePage() {
               </li>
             </ul>
             <SubHeader>What you cannot do</SubHeader>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>Turn the regime on or off (admin only).</li>
               <li>Set the world-wide second-economy tolerance (admin only).</li>
               <li>

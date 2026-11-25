@@ -60,7 +60,7 @@ export function CharterIssueForm({
   return (
     <BankPanel kind="ceoControl" title="Issue bank charter" className="max-w-2xl">
       <div className="space-y-3 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Posts{" "}
           <span className="font-mono text-foreground">
             {formatBankMoney(
@@ -72,10 +72,10 @@ export function CharterIssueForm({
           law.
         </p>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs text-muted">
+          <label className="flex flex-col gap-1 text-body-sm text-muted">
             Charter type
             <select
-              className="h-8 min-w-48 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+              className="h-8 min-w-48 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
               value={type}
               onChange={(e) => updateCharterState({ type: e.target.value as BankCharterType })}
               disabled={!canMutate}
@@ -95,7 +95,7 @@ export function CharterIssueForm({
             </SmallButton>
           )}
         </div>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Treasury{" "}
           <span className="font-mono text-foreground">
             {formatBankMoney(data.corporation.liquidCapital, data.currency)}
@@ -114,22 +114,22 @@ function CharterUnavailableNotice({ data }: { data: ConsolePayload }) {
   return (
     <BankPanel kind="ceoControl" title="Bank charter" className="max-w-2xl">
       <div className="space-y-3 py-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           This corporation has no bank charter, and none can be issued right now.
         </p>
         {data.eligibilityReasons.length > 0 && (
-          <ul className="list-disc space-y-0.5 pl-5 text-xs text-error">
+          <ul className="list-disc space-y-0.5 pl-5 text-body-sm text-error">
             {data.eligibilityReasons.map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
         )}
         {types.length === 0 ? (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             No private bank charters are legal in this jurisdiction.
           </p>
         ) : (
-          <ul className="space-y-0.5 text-xs" aria-label="Capital required per charter type">
+          <ul className="space-y-0.5 text-body-sm" aria-label="Capital required per charter type">
             {types.map((t) => (
               <li key={t} className="flex justify-between gap-4">
                 <span className="text-muted">{charterLabel(t)} charter capital</span>
@@ -143,7 +143,7 @@ function CharterUnavailableNotice({ data }: { data: ConsolePayload }) {
             ))}
           </ul>
         )}
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Treasury <span className="font-mono text-foreground">{treasury}</span>, currency{" "}
           {data.currency}
         </p>

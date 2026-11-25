@@ -86,7 +86,7 @@ function rowSummary(row: ManualRow): string {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
+  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
 
 export function OfficeHistoryAdmin({
   officeIdentity,
@@ -239,7 +239,7 @@ export function OfficeHistoryAdmin({
           <button
             type="button"
             onClick={startAdd}
-            className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+            className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1 text-body-sm font-medium text-primary transition-colors hover:bg-primary/20"
           >
             Add historical entry
           </button>
@@ -251,7 +251,7 @@ export function OfficeHistoryAdmin({
           {manualRows.map((row) => (
             <li
               key={row.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-card/40 px-3 py-1.5 text-xs"
+              className="flex items-center justify-between gap-2 rounded-md bg-card/40 px-3 py-1.5 text-body-sm"
             >
               <span className="text-muted">{rowSummary(row)}</span>
               <span className="flex shrink-0 gap-2">
@@ -345,7 +345,7 @@ export function OfficeHistoryAdmin({
               </label>
             </>
           )}
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2 text-body-sm text-muted">
             <input
               type="checkbox"
               checked={form.isIncumbent}
@@ -358,7 +358,7 @@ export function OfficeHistoryAdmin({
               type="button"
               disabled={busy}
               onClick={() => (editingId ? submitEdit(editingId) : submitNew())}
-              className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              className="rounded-md border border-primary/50 bg-primary/10 px-3 py-1.5 text-body-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
             >
               {busy ? "Saving…" : editingId ? "Save changes" : "Add entry"}
             </button>
@@ -366,7 +366,7 @@ export function OfficeHistoryAdmin({
               type="button"
               disabled={busy}
               onClick={cancel}
-              className="rounded-md border border-card-border px-3 py-1.5 text-xs text-muted transition-colors hover:text-foreground disabled:opacity-50"
+              className="rounded-md border border-card-border px-3 py-1.5 text-body-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
             >
               Cancel
             </button>
@@ -374,7 +374,7 @@ export function OfficeHistoryAdmin({
         </div>
       )}
 
-      <InlineError error={error} className="mt-2 text-xs text-red-400" />
+      <InlineError error={error} className="mt-2 text-body-sm text-red-400" />
     </div>
   );
 }

@@ -24,8 +24,8 @@ export function HealWithdrawnTallies() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal withdrawn candidate tallies</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal withdrawn candidate tallies</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Finds and removes withdrawn candidates&apos; votes, names, and seat estimates from active
           election tallies. Fixes incorrect vote share percentages and seat projections after NPP
           withdrawals.
@@ -42,7 +42,7 @@ export function HealWithdrawnTallies() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           <p className="font-medium">
             Found{" "}
             <span className={diagnostic.affectedTallies > 0 ? "text-error" : "text-success"}>

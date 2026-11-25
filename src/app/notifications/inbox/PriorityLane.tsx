@@ -130,12 +130,12 @@ export function PriorityLane({ onResolved }: { onResolved?: () => void }) {
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
           ✓
         </span>
-        <div className="min-w-0 text-sm">
+        <div className="min-w-0 text-body">
           <span className="font-medium text-foreground">{chosen?.label ?? "Resolved"}</span>
           <span className="mx-1.5 text-muted opacity-40">·</span>
           <span className="text-muted">Outcome: {resolved.tierLabel}</span>
           {resolved.effects.length > 0 && (
-            <span className="ml-1.5 font-mono text-xs text-muted">
+            <span className="ml-1.5 font-mono text-body-sm text-muted">
               {resolved.effects.map((e) => `${e.type} ${formatDelta(e.delta)}`).join(", ")}
             </span>
           )}
@@ -168,18 +168,18 @@ export function PriorityLane({ onResolved }: { onResolved?: () => void }) {
         <div className="min-w-0 flex-1">
           {/* Top row */}
           <div className="mb-1.5 flex items-center gap-2">
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-body-sm font-bold uppercase tracking-wide text-primary">
               Needs your input
             </span>
-            <span className="ml-auto flex items-center gap-1 font-mono text-xs text-primary">
+            <span className="ml-auto flex items-center gap-1 font-mono text-body-sm text-primary">
               <span aria-hidden>⏱</span>
               {expired ? "resolving…" : formatCountdown(remainingMs)}
             </span>
           </div>
 
-          <h3 className="text-base font-bold leading-tight text-foreground">{event.title}</h3>
+          <h3 className="text-body-lg font-bold leading-tight text-foreground">{event.title}</h3>
           {event.headline && (
-            <p className="mt-0.5 line-clamp-2 text-sm text-muted">{event.headline}</p>
+            <p className="mt-0.5 line-clamp-2 text-body text-muted">{event.headline}</p>
           )}
 
           {/* Options */}
@@ -193,7 +193,7 @@ export function PriorityLane({ onResolved }: { onResolved?: () => void }) {
                   onClick={() => setPick(opt.id)}
                   disabled={committing}
                   className={[
-                    "flex flex-col items-start rounded-lg border px-3 py-1.5 text-left text-sm transition-colors motion-reduce:transition-none disabled:opacity-50",
+                    "flex flex-col items-start rounded-lg border px-3 py-1.5 text-left text-body transition-colors motion-reduce:transition-none disabled:opacity-50",
                     on
                       ? "border-primary/50 bg-primary/10 text-foreground"
                       : "border-card-border bg-card text-muted hover:border-primary/25 hover:text-foreground",
@@ -202,7 +202,7 @@ export function PriorityLane({ onResolved }: { onResolved?: () => void }) {
                 >
                   <span className="font-medium">{opt.label}</span>
                   {opt.statAdjustment && opt.statAdjustment.delta !== 0 && (
-                    <span className="font-mono text-[10px] text-muted">
+                    <span className="font-mono text-body-sm text-muted">
                       Roll {formatDelta(opt.statAdjustment.delta)} ({opt.statAdjustment.label})
                     </span>
                   )}
@@ -217,12 +217,12 @@ export function PriorityLane({ onResolved }: { onResolved?: () => void }) {
               type="button"
               onClick={() => void commit()}
               disabled={!pick || committing || expired}
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none"
+              className="rounded-lg bg-primary px-4 py-1.5 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border motion-reduce:transition-none"
             >
               {committing ? "Committing…" : "Commit"}
             </button>
             {!pick && (
-              <span className="flex items-center gap-1 text-xs text-muted">
+              <span className="flex items-center gap-1 text-body-sm text-muted">
                 <span aria-hidden className="text-primary">
                   ⏱
                 </span>

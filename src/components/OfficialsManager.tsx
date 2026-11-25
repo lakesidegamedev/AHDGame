@@ -282,27 +282,27 @@ export function OfficialsManager() {
       {state.status && (
         <div className="mb-6 flex flex-wrap gap-6 border-b border-card-border pb-4">
           <div>
-            <div className="text-xs text-muted">Total</div>
-            <div className="text-sm font-semibold text-foreground">
+            <div className="text-body-sm text-muted">Total</div>
+            <div className="text-body font-semibold text-foreground">
               {state.status.summary.total}
             </div>
           </div>
           <div>
-            <div className="text-xs text-muted">Filled</div>
-            <div className="text-sm font-semibold text-green-400">
+            <div className="text-body-sm text-muted">Filled</div>
+            <div className="text-body font-semibold text-green-400">
               {state.status.summary.filled}
             </div>
           </div>
           <div>
-            <div className="text-xs text-muted">Vacant</div>
-            <div className="text-sm font-semibold text-yellow-400">
+            <div className="text-body-sm text-muted">Vacant</div>
+            <div className="text-body font-semibold text-yellow-400">
               {state.status.summary.vacant}
             </div>
           </div>
           <div>
-            <div className="text-xs text-muted">Status</div>
+            <div className="text-body-sm text-muted">Status</div>
             <div
-              className={`text-sm font-semibold ${state.status.initialized ? "text-green-400" : "text-red-400"}`}
+              className={`text-body font-semibold ${state.status.initialized ? "text-green-400" : "text-red-400"}`}
             >
               {state.status.initialized ? "Initialized" : "Not initialized"}
             </div>
@@ -327,7 +327,7 @@ export function OfficialsManager() {
                 d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
               />
             </svg>
-            <span className="text-sm font-medium text-yellow-400">
+            <span className="text-body font-medium text-yellow-400">
               Office positions not fully initialized
             </span>
           </div>
@@ -336,7 +336,7 @@ export function OfficialsManager() {
               <button
                 onClick={() => handleInitialize()}
                 disabled={state.loading}
-                className="rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+                className="rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-body font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
               >
                 Initialize all
               </button>
@@ -345,7 +345,7 @@ export function OfficialsManager() {
               <button
                 onClick={() => handleInitialize("senate")}
                 disabled={state.loading}
-                className="rounded border border-card-border px-3 py-1.5 text-sm font-medium hover:bg-background disabled:opacity-50"
+                className="rounded border border-card-border px-3 py-1.5 text-body font-medium hover:bg-background disabled:opacity-50"
               >
                 Senate only
               </button>
@@ -354,7 +354,7 @@ export function OfficialsManager() {
               <button
                 onClick={() => handleInitialize("house")}
                 disabled={state.loading}
-                className="rounded border border-card-border px-3 py-1.5 text-sm font-medium hover:bg-background disabled:opacity-50"
+                className="rounded border border-card-border px-3 py-1.5 text-body font-medium hover:bg-background disabled:opacity-50"
               >
                 House only
               </button>
@@ -364,7 +364,7 @@ export function OfficialsManager() {
               <button
                 onClick={() => handleInitialize("executive")}
                 disabled={state.loading}
-                className="rounded border border-card-border px-3 py-1.5 text-sm font-medium hover:bg-background disabled:opacity-50"
+                className="rounded border border-card-border px-3 py-1.5 text-body font-medium hover:bg-background disabled:opacity-50"
               >
                 President & VP
               </button>
@@ -395,12 +395,12 @@ export function OfficialsManager() {
           {/* House Representative Form */}
           {state.showHouseForm && (
             <div className="mb-4 rounded-lg border border-card-border bg-background p-4">
-              <h3 className="mb-3 text-sm font-medium">Appoint House representative</h3>
+              <h3 className="mb-3 text-body-lg font-medium">Appoint House representative</h3>
               <div className="flex flex-wrap gap-3">
                 <select
                   value={state.houseState}
                   onChange={(e) => dispatch({ type: "SET_HOUSE_STATE", state: e.target.value })}
-                  className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                  className="rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                 >
                   <option value="">Select state</option>
                   {sortByRegionLabel(US_STATES, (s) => s).map((s) => (
@@ -418,13 +418,13 @@ export function OfficialsManager() {
                     dispatch({ type: "SET_HOUSE_SEATS", seats: parseInt(e.target.value) || 1 })
                   }
                   placeholder="Seats"
-                  className="w-24 rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                  className="w-24 rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                 />
 
                 <select
                   value={state.houseCharacterId}
                   onChange={(e) => dispatch({ type: "SET_HOUSE_CHARACTER", id: e.target.value })}
-                  className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                  className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                 >
                   <option value="">Select character</option>
                   {state.characters
@@ -439,13 +439,13 @@ export function OfficialsManager() {
                 <button
                   onClick={handleCreateHouseRep}
                   disabled={state.loading}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                 >
                   Appoint
                 </button>
                 <button
                   onClick={() => dispatch({ type: "CLOSE_HOUSE_FORM" })}
-                  className="rounded-lg border border-card-border px-3 py-1.5 text-sm hover:bg-card"
+                  className="rounded-lg border border-card-border px-3 py-1.5 text-body hover:bg-card"
                 >
                   Cancel
                 </button>
@@ -464,7 +464,7 @@ export function OfficialsManager() {
 
           {/* Maintenance accordion */}
           <details className="group mt-2">
-            <summary className="flex cursor-pointer select-none list-none items-center gap-2 py-1 text-xs font-medium text-muted hover:text-foreground">
+            <summary className="flex cursor-pointer select-none list-none items-center gap-2 py-1 text-body-sm font-medium text-muted hover:text-foreground">
               <svg
                 className="h-3 w-3 transition-transform group-open:rotate-90"
                 fill="none"
@@ -480,16 +480,16 @@ export function OfficialsManager() {
               {/* Remove Duplicate Officials */}
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-yellow-400">
+                  <div className="text-body font-medium text-yellow-400">
                     Remove duplicate officials
                   </div>
-                  <p className="mt-0.5 text-xs text-muted">
+                  <p className="mt-0.5 text-body-sm text-muted">
                     Deletes vacant placeholder rows for House/State Senate races and clears orphaned
                     office fields on characters. Safe to run multiple times.
                   </p>
                   {state.cleanupResult && (
                     <div
-                      className={`mt-2 text-xs ${state.cleanupResult.ok ? "text-green-400" : "text-red-400"}`}
+                      className={`mt-2 text-body-sm ${state.cleanupResult.ok ? "text-green-400" : "text-red-400"}`}
                     >
                       {state.cleanupResult.message}
                       {state.cleanupResult.ok && state.cleanupResult.details && (
@@ -505,7 +505,7 @@ export function OfficialsManager() {
                 <button
                   onClick={handleDuplicateCleanup}
                   disabled={state.loading}
-                  className="shrink-0 rounded border border-yellow-500/40 bg-yellow-500/10 px-3 py-1.5 text-sm font-medium text-yellow-400 hover:bg-yellow-500/20 disabled:opacity-50"
+                  className="shrink-0 rounded border border-yellow-500/40 bg-yellow-500/10 px-3 py-1.5 text-body font-medium text-yellow-400 hover:bg-yellow-500/20 disabled:opacity-50"
                 >
                   Run cleanup
                 </button>
@@ -514,8 +514,8 @@ export function OfficialsManager() {
               {/* Reset All Officials */}
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-red-400">Reset all officials</div>
-                  <p className="mt-0.5 text-xs text-muted">
+                  <div className="text-body font-medium text-red-400">Reset all officials</div>
+                  <p className="mt-0.5 text-body-sm text-muted">
                     Deletes every elected official and clears currentOffice on all characters and
                     NPPs. Elections are unaffected. Cannot be undone.
                   </p>
@@ -523,7 +523,7 @@ export function OfficialsManager() {
                 <button
                   onClick={handleResetOfficials}
                   disabled={state.loading}
-                  className="shrink-0 rounded border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                  className="shrink-0 rounded border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-body font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50"
                 >
                   Reset all
                 </button>
@@ -537,12 +537,12 @@ export function OfficialsManager() {
       {state.appointingOfficial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-6">
-            <h3 className="mb-4 text-lg font-semibold">
+            <h3 className="mb-4 text-body-lg font-semibold">
               Appoint to {getOfficialLabel(state.appointingOfficial)}
             </h3>
 
             <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium">Select character</label>
+              <label className="mb-2 block text-body font-medium">Select character</label>
               <select
                 value={state.selectedCharacterId}
                 onChange={(e) => dispatch({ type: "SET_SELECTED_CHARACTER", id: e.target.value })}
@@ -564,14 +564,14 @@ export function OfficialsManager() {
                   dispatch({ type: "CLOSE_APPOINTMENT_MODAL" });
                   dispatch({ type: "SET_SELECTED_CHARACTER", id: "" });
                 }}
-                className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background"
+                className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-background"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAppoint}
                 disabled={state.loading}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {state.selectedCharacterId ? "Appoint" : "Vacate"}
               </button>
@@ -582,7 +582,7 @@ export function OfficialsManager() {
 
       {/* Status Message */}
       {state.message && (
-        <div className={`mt-4 rounded-lg p-3 text-sm ${getMessageStyle(state.message)}`}>
+        <div className={`mt-4 rounded-lg p-3 text-body ${getMessageStyle(state.message)}`}>
           {state.message}
         </div>
       )}

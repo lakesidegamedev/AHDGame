@@ -368,7 +368,7 @@ export function CentralBankAdminTab({ countryId }: Props) {
             <Skeleton className="h-32 w-full rounded-xl" />
           ) : (
             <>
-              <p className="text-heading-lg font-semibold tabular-nums text-foreground">
+              <p className="text-heading font-semibold tabular-nums text-foreground">
                 {primeRate.toFixed(2)}%
               </p>
               <div className="mt-4 space-y-3 border-t border-card-border pt-4">
@@ -389,7 +389,7 @@ export function CentralBankAdminTab({ countryId }: Props) {
                   >
                     −
                   </button>
-                  <span className="min-w-[4rem] text-center text-lg font-semibold text-foreground tabular-nums">
+                  <span className="min-w-[4rem] text-center text-heading font-semibold text-foreground tabular-nums">
                     {currentRate.toFixed(2)}%
                   </span>
                   <button
@@ -420,7 +420,7 @@ export function CentralBankAdminTab({ countryId }: Props) {
                   type="button"
                   onClick={() => void handleRateSubmit()}
                   disabled={submitting || pendingRate === null || pendingRate === primeRate}
-                  className="w-full rounded-md bg-primary px-4 py-2 text-body font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                 >
                   {submitting ? "Updating..." : "Apply rate"}
                 </button>

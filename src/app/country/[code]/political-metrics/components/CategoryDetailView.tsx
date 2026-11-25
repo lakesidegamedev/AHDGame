@@ -78,7 +78,7 @@ export function CategoryDetailView({
           <CategoryIcon icon={CATEGORY_ICONS[category.id] ?? "library"} className="h-6 w-6" />
         </span>
         <div className="min-w-[200px] flex-1">
-          <h2 className="text-heading-lg font-bold text-foreground">{category.displayName}</h2>
+          <h2 className="text-heading font-bold text-foreground">{category.displayName}</h2>
           <div className="mt-0.5 text-body-sm text-muted">
             {data.countryDisplayName} · seven metrics spanning the ideological range
           </div>

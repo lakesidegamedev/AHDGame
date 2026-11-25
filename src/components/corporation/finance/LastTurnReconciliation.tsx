@@ -60,7 +60,7 @@ export function LastTurnReconciliation({
       title={`Turn ${data.turn}, recorded`}
       meta={data.reportingCurrency === null ? "per turn, in ₳" : "per turn, local currency"}
     >
-      <p className="py-2 text-xs text-muted">
+      <p className="py-2 text-body-sm text-muted">
         What the turn actually booked. The Income statement below the estimate is a forecast for the
         next turn and can differ.
       </p>
@@ -85,7 +85,7 @@ export function LastTurnReconciliation({
           />
         ))}
         {statement.costDriversUnrecorded && (
-          <p className="py-1 pl-4 text-xs text-muted">
+          <p className="py-1 pl-4 text-body-sm text-muted">
             Costs by type were not recorded for one of these turns, so only the total is shown.
           </p>
         )}
@@ -124,7 +124,7 @@ export function LastTurnReconciliation({
             cash.evidence.unconvertedMovements > 0 ||
             cash.before == null) && (
             <StatementGroup>
-              <span className="text-xs text-warning">
+              <span className="text-body-sm text-warning">
                 {cash.evidence.boundary !== "recorded" &&
                   "Snapshot timing is estimated for this comparison. "}
                 {cash.evidence.unconvertedMovements > 0 &&

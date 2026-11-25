@@ -91,7 +91,7 @@ export function TickerChangeCard({
       actionLabel="Change"
     >
       <div className="space-y-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           1 to 5 letters.{" "}
           {corporation.isPrivate
             ? "Takes effect at once."
@@ -105,7 +105,7 @@ export function TickerChangeCard({
             placeholder="e.g. ACME"
             maxLength={5}
             aria-label="New ticker"
-            className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-[13px] uppercase tracking-wide text-foreground focus:border-foreground focus:outline-none"
+            className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-body-sm uppercase tracking-wide text-foreground focus:border-foreground focus:outline-none"
           />
           <SmallButton
             tone="primary"

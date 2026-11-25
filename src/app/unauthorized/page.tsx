@@ -38,21 +38,21 @@ function UnauthorizedContent() {
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-3">
               <div className="h-px flex-1 bg-card-border" />
-              <h1 className="text-6xl font-black tabular-nums text-warning">403</h1>
+              <h1 className="text-display font-black tabular-nums text-warning">403</h1>
               <div className="h-px flex-1 bg-card-border" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">Access denied</h2>
+            <h2 className="text-heading font-bold text-foreground">Access denied</h2>
           </div>
 
           {/* Reason */}
           <div className="rounded-lg border border-card-border bg-card p-4">
             <p className="text-body-sm font-medium text-muted mb-2">Reason</p>
-            <p className="text-sm text-foreground">{reason}</p>
+            <p className="text-body text-foreground">{reason}</p>
           </div>
 
           {/* Political flavor text */}
           <div className="pt-2">
-            <p className="text-xs text-muted/70">
+            <p className="text-body-sm text-muted/70">
               This section of the capitol is{" "}
               <span className="font-semibold text-foreground">restricted</span>. You may need
               special clearance or administrator privileges.
@@ -63,13 +63,13 @@ function UnauthorizedContent() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link
               href={returnUrl}
-              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              className="rounded-lg bg-primary px-6 py-2.5 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Go back
             </Link>
             <Link
               href="/"
-              className="rounded-lg border border-card-border bg-card px-6 py-2.5 text-sm font-semibold text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
+              className="rounded-lg border border-card-border bg-card px-6 py-2.5 text-body font-semibold text-muted hover:text-foreground hover:bg-card-elevated transition-colors"
             >
               Return home
             </Link>
@@ -78,8 +78,8 @@ function UnauthorizedContent() {
 
         {/* Common restricted areas */}
         <div className="mt-4 rounded-xl border border-card-border bg-card p-4">
-          <h3 className="text-sm font-semibold text-muted mb-3">Common reasons</h3>
-          <ul className="space-y-2 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-muted mb-3">Common reasons</h3>
+          <ul className="space-y-2 text-body-sm text-muted">
             <li className="flex items-start gap-2">
               <span className="text-warning shrink-0">•</span>
               <span>Admin panel requires administrator privileges</span>

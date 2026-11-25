@@ -102,7 +102,7 @@ export function BugReportForm({
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="Brief summary of the bug"
           maxLength={200}
-          className="bg-background py-2.5 text-sm"
+          className="bg-background py-2.5 text-body"
           required
         />
       </div>
@@ -163,7 +163,7 @@ export function BugReportForm({
         <button
           type="button"
           onClick={onShowContextToggle}
-          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm"
+          className="flex w-full items-center justify-between px-4 py-3 text-left text-body"
         >
           <span className="font-medium text-muted">Captured context (page, actions, device)</span>
           <svg
@@ -176,7 +176,7 @@ export function BugReportForm({
           </svg>
         </button>
         {showContext && (
-          <div className="border-t border-card-border px-4 py-3 text-xs text-muted space-y-2">
+          <div className="border-t border-card-border px-4 py-3 text-body-sm text-muted space-y-2">
             <p>
               <span className="font-medium text-foreground/80">Page:</span> {ctx.pathname || "/"}
             </p>
@@ -211,7 +211,7 @@ export function BugReportForm({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-body text-red-400">
           {error}
         </div>
       )}
@@ -221,7 +221,7 @@ export function BugReportForm({
           type="button"
           variant="secondary"
           onClick={onCancel}
-          className="flex-1 h-10 py-2.5 text-sm"
+          className="flex-1 h-10 py-2.5 text-body"
         >
           Cancel
         </Button>
@@ -230,7 +230,7 @@ export function BugReportForm({
           variant="primary"
           isLoading={submitting}
           disabled={!category || !title.trim() || !description.trim()}
-          className="flex-1 h-10 py-2.5 text-sm"
+          className="flex-1 h-10 py-2.5 text-body"
         >
           Submit
         </Button>

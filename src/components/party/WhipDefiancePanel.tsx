@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui";
 import type { WhipDefianceItem, WhipDefianceSnapshot } from "@/lib/partyWhips/whipDefiance";
 import { whipIssuerRoleLabel } from "@/lib/partyWhips/issuerRole";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 function formatIssuedAt(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -26,22 +27,22 @@ function DefianceRow({ item }: { item: WhipDefianceItem }) {
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={item.voterHref}
-              className="text-sm font-semibold text-foreground hover:text-primary"
+              className="text-body font-semibold text-foreground hover:text-primary"
             >
               {item.voterName}
             </Link>
             <Badge color={toneForMode(item.mode)}>{item.mode === "hard" ? "Hard" : "Soft"}</Badge>
             <Badge color="secondary">{item.chamber}</Badge>
           </div>
-          <p className="mt-1 text-sm text-muted">{item.targetLabel}</p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body text-muted">{item.targetLabel}</p>
+          <p className="mt-1 text-body-sm text-muted">
             Wanted {item.whipDirection.toUpperCase()} · Current {item.currentVoteLabel}
             {whipIssuerRoleLabel(item.issuerRole)
               ? ` · Issued by ${whipIssuerRoleLabel(item.issuerRole)}`
               : ""}
           </p>
         </div>
-        <div className="text-right text-xs text-muted">
+        <div className="text-right text-body-sm text-muted">
           {item.voterState ? <p>{item.voterState}</p> : null}
           {item.voterOffice ? <p>{item.voterOffice}</p> : null}
           <p className="mt-1">{formatIssuedAt(item.createdAt)}</p>
@@ -99,18 +100,18 @@ export function WhipDefiancePanel({ defianceUrl }: { defianceUrl: string }) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-card-border bg-card px-4 py-3">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Active defiance only appears here. If a player or NPP changes their vote back into line,
           the row clears automatically.
         </p>
       </div>
 
       {loading ? (
-        <div className="rounded-lg border border-card-border bg-card p-4 text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-card p-4 text-body text-muted">
           Loading active defiance...
         </div>
       ) : error ? (
-        <div className="rounded-lg border border-error/30 bg-error/10 p-4 text-sm text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 p-4 text-body text-error">
           {error}
         </div>
       ) : data ? (
@@ -118,28 +119,23 @@ export function WhipDefiancePanel({ defianceUrl }: { defianceUrl: string }) {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-card-border bg-card p-4">
               <p className="text-body-sm text-muted">Active defiance</p>
-              <p className="mt-2 text-heading-sm font-bold tabular-nums text-foreground">
+              <p className="mt-2 text-heading font-bold tabular-nums text-foreground">
                 {data.activeCount}
               </p>
             </div>
             <div className="rounded-xl border border-card-border bg-card p-4">
               <p className="text-body-sm text-muted">Players defying</p>
-              <p className="mt-2 text-heading-sm font-bold tabular-nums text-warning">
+              <p className="mt-2 text-heading font-bold tabular-nums text-warning">
                 {data.playerCount}
               </p>
             </div>
             <div className="rounded-xl border border-card-border bg-card p-4">
               <p className="text-body-sm text-muted">NPPs defying</p>
-              <p className="mt-2 text-heading-sm font-bold tabular-nums text-error">
-                {data.nppCount}
-              </p>
+              <p className="mt-2 text-heading font-bold tabular-nums text-error">{data.nppCount}</p>
             </div>
           </div>
 
-          <div
-            role="tablist"
-            className="flex gap-1 w-fit rounded-lg border border-card-border bg-background p-1"
-          >
+          <div role="tablist" className={`${PILL_TRACK} w-fit`}>
             {(
               [
                 { key: "players", label: `Players (${data.playerCount})` },
@@ -152,11 +148,7 @@ export function WhipDefiancePanel({ defianceUrl }: { defianceUrl: string }) {
                 role="tab"
                 aria-selected={audience === tab.key}
                 onClick={() => setAudience(tab.key)}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                  audience === tab.key
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`px-4 py-1.5 text-body ${pillClass(audience === tab.key)}`}
               >
                 {tab.label}
               </button>
@@ -165,7 +157,7 @@ export function WhipDefiancePanel({ defianceUrl }: { defianceUrl: string }) {
 
           <div className="space-y-3">
             {activeItems.length === 0 ? (
-              <div className="rounded-lg border border-card-border bg-card p-4 text-sm text-muted">
+              <div className="rounded-lg border border-card-border bg-card p-4 text-body text-muted">
                 No active {audience === "players" ? "player" : "NPP"} defiance right now.
               </div>
             ) : (

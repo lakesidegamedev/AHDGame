@@ -722,7 +722,7 @@ export default function SectorDetailPage() {
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
           <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-            <h2 className="text-lg font-semibold text-error">{error || "Sector not found"}</h2>
+            <h2 className="text-heading font-semibold text-error">{error || "Sector not found"}</h2>
             <BackButton />
           </div>
         </main>
@@ -749,18 +749,18 @@ export default function SectorDetailPage() {
         >
           <Link
             href={`${corpHref}?tab=sectors`}
-            className="inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
+            className="inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
           >
             <ArrowLeft className="h-4 w-4 text-primary" />
             All {corporation.name} sectors
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             {corporation.isPrivate ? (
-              <span className="text-xs font-medium text-muted">Private, not listed</span>
+              <span className="text-body-sm font-medium text-muted">Private, not listed</span>
             ) : (
               <Link
                 href={`/stockmarket/${exchange}?tab=stocks`}
-                className="text-xs font-medium text-muted transition-colors hover:text-foreground"
+                className="text-body-sm font-medium text-muted transition-colors hover:text-foreground"
               >
                 Listed on {exchangeLabel}
               </Link>
@@ -954,13 +954,13 @@ export default function SectorDetailPage() {
         {activeTab === "operations" && (
           <div className="mx-auto max-w-3xl space-y-6" role="tabpanel">
             <div>
-              <h2 className="text-xl font-bold text-foreground">Run the sector</h2>
-              <p className="mt-1 text-sm text-muted">
+              <h2 className="text-heading font-bold text-foreground">Run the sector</h2>
+              <p className="mt-1 text-body text-muted">
                 Set strategy, output, investment and pricing from one workspace.
               </p>
             </div>
             {parentDirection && (
-              <p className="rounded border border-card-border bg-card px-4 py-3 text-sm text-muted">
+              <p className="rounded border border-card-border bg-card px-4 py-3 text-body text-muted">
                 Managed by{" "}
                 <Link
                   href={`/corporation/${parentDirection.parentPathId}`}
@@ -1072,8 +1072,8 @@ export default function SectorDetailPage() {
         {activeTab === "market" && (
           <div className="mx-auto max-w-3xl space-y-6" role="tabpanel">
             <div>
-              <h2 className="text-xl font-bold text-foreground">Market & supply chain</h2>
-              <p className="mt-1 text-sm text-muted">
+              <h2 className="text-heading font-bold text-foreground">Market & supply chain</h2>
+              <p className="mt-1 text-body text-muted">
                 Trace margin pressure from inputs through to competitors.
               </p>
             </div>
@@ -1131,8 +1131,8 @@ export default function SectorDetailPage() {
         {labourEnabled && activeTab === "people" && (
           <div className="mx-auto max-w-3xl space-y-6" role="tabpanel">
             <div>
-              <h2 className="text-xl font-bold text-foreground">People</h2>
-              <p className="mt-1 text-sm text-muted">
+              <h2 className="text-heading font-bold text-foreground">People</h2>
+              <p className="mt-1 text-body text-muted">
                 Workforce policy and labour relations, without the financial noise.
               </p>
             </div>
@@ -1153,7 +1153,7 @@ export default function SectorDetailPage() {
             {labourFullEnabled && sector.undergroundUnrest && (
               <div
                 role="status"
-                className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning"
+                className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-body text-warning"
               >
                 Underground labor unrest is elevated in this sector while unions are banned.
               </div>
@@ -1188,8 +1188,8 @@ export default function SectorDetailPage() {
             <ManagementPanel>
               {/* Sector Name editor */}
               <div>
-                <label className="block text-sm font-semibold text-foreground">Sector name</label>
-                <p className="mt-1 text-xs text-muted">
+                <label className="block text-body font-semibold text-foreground">Sector name</label>
+                <p className="mt-1 text-body-sm text-muted">
                   Give this sector a custom display name. Leave blank to use the default type label.
                 </p>
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -1199,18 +1199,18 @@ export default function SectorDetailPage() {
                     onChange={(e) => dispatch({ type: "SET_NAME_DRAFT", value: e.target.value })}
                     maxLength={40}
                     placeholder={sector.sectorLabel}
-                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/60 focus:outline-none"
+                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary/60 focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={handleSaveName}
                     disabled={nameSaving}
-                    className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+                    className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-body font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
                   >
                     {nameSaving ? "Saving..." : "Save name"}
                   </button>
                 </div>
-                {nameMessage && <p className="mt-3 text-sm text-muted">{nameMessage}</p>}
+                {nameMessage && <p className="mt-3 text-body text-muted">{nameMessage}</p>}
               </div>
 
               {/* Sell on the secondary market */}

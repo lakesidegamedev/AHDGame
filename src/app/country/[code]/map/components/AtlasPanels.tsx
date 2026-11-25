@@ -22,7 +22,7 @@ export function OfficeholderCard({ holder }: { holder: MapOfficeholder }) {
       <div className="min-w-0">
         <p className={styles.overline}>{t(holder.office as "house" | "senate" | "governor")}</p>
         <p className="font-semibold leading-snug">{holder.name}</p>
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+        <p className="mt-1 flex items-center gap-1.5 text-body-sm text-muted">
           <span className={styles.dot} style={{ background: holder.color }} />
           {holder.partyName}
         </p>
@@ -54,9 +54,9 @@ export function AtlasTooltip({
         <span className={styles.overline}>{t("briefing")}</span>
         <span className="font-mono text-muted">{id}</span>
       </div>
-      <h3 className="mt-1 text-lg font-semibold text-foreground">{region?.name ?? id}</h3>
+      <h3 className="mt-1 text-body-lg font-semibold text-foreground">{region?.name ?? id}</h3>
       {mode !== "governor" && mode !== "senate" && (
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-body text-muted">
           {cell?.label === id ? t(mode as "house") : (cell?.label ?? t("noData"))}
         </p>
       )}
@@ -64,7 +64,7 @@ export function AtlasTooltip({
         <OfficeholderCard key={h.id} holder={h} />
       ))}
       {relevant.length > 2 && (
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           {t("moreHolders", { count: relevant.length - 2 })}
         </p>
       )}
@@ -75,12 +75,12 @@ export function AtlasTooltip({
 export function AtlasBars({ rows, unit }: { rows: AtlasBar[]; unit: string }) {
   const t = useTranslations("elections.atlas");
   const max = Math.max(...rows.map((r) => r.value), 1);
-  if (!rows.length) return <p className="py-5 text-sm text-muted">{t("noChart")}</p>;
+  if (!rows.length) return <p className="py-5 text-body text-muted">{t("noChart")}</p>;
   return (
     <div className={styles.bars}>
       {rows.map((row) => (
         <div key={row.id}>
-          <div className="mb-1.5 flex justify-between gap-3 text-xs">
+          <div className="mb-1.5 flex justify-between gap-3 text-body-sm">
             <span className="truncate">{row.label}</span>
             <span className="shrink-0 font-mono text-muted">
               {unit === t("seats")
@@ -194,7 +194,7 @@ export function AtlasBreakdown({
   return (
     <Card className={styles.panel}>
       <p className={styles.overline}>{t("national")}</p>
-      <h3 className="mt-1 text-lg font-semibold">{t(mode as "house")}</h3>
+      <h3 className="mt-1 text-body-lg font-semibold">{t(mode as "house")}</h3>
       {isChamber && total > 0 && (
         <div className={styles.composition} aria-label={t("distribution")}>
           {rows.map((r) => (
@@ -207,7 +207,7 @@ export function AtlasBreakdown({
         </div>
       )}
       <AtlasBars rows={rows} unit={unit} />
-      <p className="mt-4 text-xs leading-relaxed text-muted">{note}</p>
+      <p className="mt-4 text-body-sm leading-relaxed text-muted">{note}</p>
     </Card>
   );
 }
@@ -233,8 +233,8 @@ export function AtlasInspector({
     return (
       <Card className={styles.panel}>
         <p className={styles.overline}>{t("inspect")}</p>
-        <h3 className="text-lg font-semibold">{t("select")}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-muted">{t("selectHint")}</p>
+        <h3 className="text-body-lg font-semibold">{t("select")}</h3>
+        <p className="mt-2 text-body leading-relaxed text-muted">{t("selectHint")}</p>
       </Card>
     );
   const holders = data.officeholders?.[id] ?? [];
@@ -257,8 +257,8 @@ export function AtlasInspector({
           {id}
         </span>
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{region.name}</h2>
-          <p className="mt-1 text-xs text-muted">{region.grouping}</p>
+          <h2 className="text-heading font-semibold tracking-tight">{region.name}</h2>
+          <p className="mt-1 text-body-sm text-muted">{region.grouping}</p>
         </div>
       </div>
       {mode === "population" && (
@@ -272,7 +272,7 @@ export function AtlasInspector({
         </p>
       )}
       {!politicalMode && (
-        <div className="my-4 rounded-lg bg-background p-3 text-xs leading-relaxed text-muted">
+        <div className="my-4 rounded-lg bg-background p-3 text-body-sm leading-relaxed text-muted">
           {cells[id]?.tooltip?.length
             ? cells[id].tooltip?.map((line, i) => <p key={i}>{line}</p>)
             : (cells[id]?.label ?? t("noData"))}
@@ -280,14 +280,14 @@ export function AtlasInspector({
       )}
       {seats.length > 0 && politicalMode !== "governor" && (
         <div className="mb-5">
-          <h3 className="mb-3 text-sm font-semibold">
+          <h3 className="mb-3 text-body-lg font-semibold">
             {t(politicalMode as "house" | "senate" | "governor")}
           </h3>
           <AtlasBars rows={seats} unit={t("seats")} />
         </div>
       )}
-      <h3 className="text-sm font-semibold">{t("seated")}</h3>
-      {!visibleHolders.length && <p className="mt-2 text-xs text-muted">{t("noHolders")}</p>}
+      <h3 className="text-body-lg font-semibold">{t("seated")}</h3>
+      {!visibleHolders.length && <p className="mt-2 text-body-sm text-muted">{t("noHolders")}</p>}
       <div className={styles.holderList}>
         {[...visibleHolders]
           .sort((a, b) => (OFFICE_ORDER[a.office] ?? 3) - (OFFICE_ORDER[b.office] ?? 3))

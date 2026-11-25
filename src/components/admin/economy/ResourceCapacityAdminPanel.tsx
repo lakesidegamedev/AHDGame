@@ -188,7 +188,7 @@ export function ResourceCapacityAdminPanel() {
       {/* Header + seed */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-heading-sm font-semibold">Resource capacity</h2>
+          <h2 className="text-heading font-semibold">Resource capacity</h2>
           <p className="text-body-sm text-muted">
             Per-state extraction ceilings (units/turn) for the 7 extractable commodities. Unseeded
             or zero values cap extraction at 0, which is what bounds commodity supply and keeps
@@ -252,7 +252,7 @@ export function ResourceCapacityAdminPanel() {
               <span className="text-body-lg font-bold tabular-nums">
                 {totalsByResource[res].toLocaleString("en-US")}
               </span>
-              <span className="text-body-xs text-muted">{COMMODITY_UNITS[res]}/turn</span>
+              <span className="text-body-sm text-muted">{COMMODITY_UNITS[res]}/turn</span>
             </div>
           ))}
         </div>
@@ -277,7 +277,7 @@ export function ResourceCapacityAdminPanel() {
                   {EXTRACTABLE_RESOURCES.map((res) => (
                     <th key={res} className="px-3 py-2 text-right font-semibold whitespace-nowrap">
                       {COMMODITY_LABELS[res]}
-                      <div className="text-body-xs text-muted font-normal">
+                      <div className="text-body-sm text-muted font-normal">
                         {COMMODITY_UNITS[res]}
                       </div>
                     </th>
@@ -297,7 +297,7 @@ export function ResourceCapacityAdminPanel() {
                     >
                       <td className="px-3 py-2 font-medium whitespace-nowrap">
                         {state?.name ?? row.stateId}
-                        <div className="text-body-xs text-muted">{row.stateId}</div>
+                        <div className="text-body-sm text-muted">{row.stateId}</div>
                       </td>
                       <td className="px-3 py-2 text-muted">{row.countryId}</td>
                       {EXTRACTABLE_RESOURCES.map((res) => {
@@ -324,14 +324,14 @@ export function ResourceCapacityAdminPanel() {
                             <button
                               onClick={() => resetRow(row.stateId)}
                               disabled={saving}
-                              className="text-body-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors disabled:opacity-50"
+                              className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors disabled:opacity-50"
                             >
                               Reset
                             </button>
                             <button
                               onClick={() => saveRow(row)}
                               disabled={saving}
-                              className="text-body-xs px-3 py-1 rounded bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
+                              className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground font-semibold hover:bg-primary-dark transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                             >
                               {saving ? "Saving…" : "Save"}
                             </button>

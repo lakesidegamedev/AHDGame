@@ -99,41 +99,43 @@ export default function ProspectModal({
   return (
     <Modal open title={`Prospect for ${COMMODITY_LABELS[resource] ?? resource}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Send a survey crew to search for new{" "}
           {(COMMODITY_LABELS[resource] ?? resource).toLowerCase()} deposits in this state. Takes{" "}
           {PROSPECT_DURATION_TURNS} turns to complete.
         </p>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-2 gap-3 text-body">
           <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3">
             <div className="text-body-sm font-medium text-muted">Success odds</div>
-            <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+            <div className="mt-1 text-heading font-semibold tabular-nums text-foreground">
               {Math.round(successChance * 100)}%
             </div>
-            <p className="mt-0.5 text-xs text-muted">Higher with more R&amp;D score.</p>
+            <p className="mt-0.5 text-body-sm text-muted">Higher with more R&amp;D score.</p>
           </div>
           <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3">
             <div className="text-body-sm font-medium text-muted">Expected yield</div>
-            <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+            <div className="mt-1 text-heading font-semibold tabular-nums text-foreground">
               {yieldMinUnits.toLocaleString("en-US")}-{yieldMaxUnits.toLocaleString("en-US")}
             </div>
-            <p className="mt-0.5 text-xs text-muted">{unit} added to state capacity on success.</p>
+            <p className="mt-0.5 text-body-sm text-muted">
+              {unit} added to state capacity on success.
+            </p>
           </div>
         </div>
 
-        <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3 text-sm">
+        <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3 text-body">
           <div className="flex items-center justify-between">
             <span className="text-muted">Starting cost</span>
             <span className="font-medium tabular-nums text-foreground">{startingCostDisplay}</span>
           </div>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Cost escalates the more this state has already been successfully surveyed for this
             resource (up to 4x). The exact cost is charged on launch.
           </p>
         </div>
 
-        <InlineError error={error} className="text-sm text-error" />
+        <InlineError error={error} className="text-body text-error" />
 
         <div className="flex gap-3 pt-1">
           <Button type="submit" disabled={submitting} className="flex-1">

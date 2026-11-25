@@ -73,8 +73,8 @@ export function StateDistrictsSection({
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold">Congressional districts</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold">Congressional districts</h3>
+          <p className="text-body-sm text-muted">
             House seats here are decided district by district. The map can be redrawn in census
             years by a governor whose party also controls the state legislature.
           </p>
@@ -82,12 +82,12 @@ export function StateDistrictsSection({
         {canRedraw ? (
           <Link
             href={regionRedistrictUrl(countryCode, stateId)}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white"
+            className="rounded-md bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground"
           >
             Redraw this map →
           </Link>
         ) : redrawReason ? (
-          <span className="text-xs text-muted">{redrawReason}</span>
+          <span className="text-body-sm text-muted">{redrawReason}</span>
         ) : null}
       </div>
       <DistrictCardGrid districts={districts} caps={caps} isAdmin={isAdmin} />

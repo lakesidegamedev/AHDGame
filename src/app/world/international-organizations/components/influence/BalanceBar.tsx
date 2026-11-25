@@ -5,6 +5,7 @@ import { formatShare } from "@/lib/alignment/normalize";
 import { POLE_TEXT, ShareBar } from "@/components/alignment/ShareBar";
 import { alignmentColor } from "@/lib/constants/alignmentColors";
 import type { OrgInfluenceView } from "@/lib/alignment/queries/orgInfluence";
+import { pillClass } from "@/components/ui/selectedState";
 
 type Weighting = "economy" | "nations";
 
@@ -35,7 +36,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
       className="space-y-2 rounded-lg border border-card-border bg-card p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-body-sm font-semibold text-foreground">World standing</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">World standing</h3>
         <div className="flex gap-1">
           {(["economy", "nations"] as const).map((w) => (
             <button
@@ -43,11 +44,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
               type="button"
               onClick={() => setWeighting(w)}
               aria-pressed={weighting === w}
-              className={`rounded px-2 py-1 text-body-xs transition-colors ${
-                weighting === w
-                  ? "bg-card-muted text-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
+              className={`px-2.5 py-1 text-body-sm ${pillClass(weighting === w)}`}
             >
               {w === "economy" ? "by economy" : "by nations"}
             </button>
@@ -63,7 +60,7 @@ export function BalanceBar({ view }: { view: OrgInfluenceView }) {
         size="lead"
       />
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-xs">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm">
         {view.poles.map((p) => (
           <span
             key={p.id}

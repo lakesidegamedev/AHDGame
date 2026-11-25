@@ -1,3 +1,4 @@
+import { automaticCrisisOption } from "./rules/automaticResponse";
 import { BSON } from "mongodb";
 import { withSessionDb } from "@/lib/db/sessionDb";
 /**
@@ -1013,8 +1014,7 @@ async function autoResolveCrisisInteractionInTransaction(
     return;
   }
 
-  const defaultOption =
-    currentNode.options?.find((o) => o.optionId === "decline") ?? currentNode.options?.[0];
+  const defaultOption = automaticCrisisOption(currentNode);
 
   const resolutionPath = [...interaction.resolutionPath];
 

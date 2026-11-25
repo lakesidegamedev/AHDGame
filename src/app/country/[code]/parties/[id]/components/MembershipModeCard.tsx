@@ -7,6 +7,7 @@ import { partyApiUrl } from "@/lib/urls";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import type { PartyData } from "./types";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface MembershipModeCardProps {
   party: PartyData;
@@ -85,25 +86,21 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Party membership</h2>
-        <span className="text-xs text-muted">Control who can join your party</span>
+        <h2 className="text-heading font-semibold">Party membership</h2>
+        <span className="text-body-sm text-muted">Control who can join your party</span>
       </div>
 
-      {msg && <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(msg)}`}>{msg}</div>}
+      {msg && <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(msg)}`}>{msg}</div>}
 
       {/* Mode toggle */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-md border border-card-border overflow-hidden text-sm">
+        <div className={`${PILL_TRACK} text-body`}>
           <button
             type="button"
             onClick={() => setMode("open")}
             disabled={savingMode !== null}
             aria-pressed={mode === "open"}
-            className={`px-4 py-1.5 transition-colors disabled:opacity-50 ${
-              mode === "open"
-                ? "bg-card-border text-foreground"
-                : "bg-card text-muted hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 disabled:opacity-50 ${pillClass(mode === "open")}`}
           >
             Open
           </button>
@@ -112,18 +109,14 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
             onClick={() => setMode("approval")}
             disabled={savingMode !== null}
             aria-pressed={mode === "approval"}
-            className={`px-4 py-1.5 transition-colors disabled:opacity-50 ${
-              mode === "approval"
-                ? "bg-card-border text-foreground"
-                : "bg-card text-muted hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 disabled:opacity-50 ${pillClass(mode === "approval")}`}
           >
             Approval required
           </button>
         </div>
-        {savingMode && <span className="text-xs text-muted">Saving…</span>}
+        {savingMode && <span className="text-body-sm text-muted">Saving…</span>}
       </div>
-      <p className="mt-3 text-xs text-muted">
+      <p className="mt-3 text-body-sm text-muted">
         {mode === "approval"
           ? "New members must be approved by a party leader before they join. Requests appear below."
           : "Anyone eligible can join instantly. Switch to “Approval Required” to review joiners first."}
@@ -132,11 +125,11 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
       {/* Pending requests */}
       {(mode === "approval" || pending.length > 0) && (
         <div className="mt-6 border-t border-card-border pt-6">
-          <h3 className="text-sm font-semibold text-muted mb-3">
+          <h3 className="text-body-lg font-semibold text-muted mb-3">
             Pending requests {pending.length > 0 && `(${pending.length})`}
           </h3>
           {pending.length === 0 ? (
-            <p className="text-sm text-muted italic">No pending join requests.</p>
+            <p className="text-body text-muted italic">No pending join requests.</p>
           ) : (
             <div className="space-y-2">
               {pending.map((req) => (
@@ -147,11 +140,11 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
                   <div>
                     <Link
                       href={`/character/${req.characterId}`}
-                      className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+                      className="text-body font-medium text-foreground hover:text-primary hover:underline"
                     >
                       {req.characterName}
                     </Link>
-                    <div className="text-xs text-muted mt-0.5">
+                    <div className="text-body-sm text-muted mt-0.5">
                       Requested <GameMonthTime value={req.requestedAt} />
                     </div>
                   </div>
@@ -159,14 +152,14 @@ export function MembershipModeCard({ party, countryCode, onUpdate }: MembershipM
                     <button
                       onClick={() => resolveRequest(req.characterId, "accept")}
                       disabled={actioning !== null}
-                      className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:bg-success/90 transition-colors disabled:opacity-50"
+                      className="rounded-lg bg-success px-3 py-1.5 text-body-sm font-medium text-white hover:bg-success/90 transition-colors disabled:opacity-50"
                     >
                       {actioning === req.characterId ? "…" : "Accept"}
                     </button>
                     <button
                       onClick={() => resolveRequest(req.characterId, "decline")}
                       disabled={actioning !== null}
-                      className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors disabled:opacity-50"
+                      className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors disabled:opacity-50"
                     >
                       Decline
                     </button>

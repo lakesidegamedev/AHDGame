@@ -84,7 +84,7 @@ export function MajorityBar({ segments, total, threshold, thresholdLabel }: Majo
         />
       </div>
       <div
-        className="mt-1 -translate-x-1/2 text-[10px] font-semibold text-muted tabular-nums"
+        className="mt-1 -translate-x-1/2 text-body-sm font-semibold text-muted tabular-nums"
         style={{ marginLeft: pct(threshold), width: "fit-content" }}
       >
         {thresholdLabel}

@@ -74,7 +74,7 @@ export function SuspendEndorsePanel({
           style={{
             margin: "0 0 10px",
             fontFamily: FONT.sans,
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: 600,
           }}
         >
@@ -104,7 +104,7 @@ export function SuspendEndorsePanel({
             style={{
               marginTop: 7,
               fontFamily: FONT.mono,
-              fontSize: 10.5,
+              fontSize: 12,
               color: BLEND.mutedDimmer,
             }}
           >
@@ -126,7 +126,7 @@ export function SuspendEndorsePanel({
           style={{
             margin: "0 0 8px",
             fontFamily: FONT.sans,
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: 600,
           }}
         >
@@ -178,7 +178,7 @@ export function SuspendEndorsePanel({
           if (!busy) setConfirmOpen(false);
         }}
       >
-        <div className="space-y-3 text-sm">
+        <div className="space-y-3 text-body">
           <p>
             You will suspend active campaigning for the rest of the general election and endorse{" "}
             <span className="font-semibold">{selectedTarget?.name}</span>.
@@ -202,7 +202,7 @@ export function SuspendEndorsePanel({
             type="button"
             onClick={() => setConfirmOpen(false)}
             disabled={busy}
-            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-card/80 disabled:opacity-50"
+            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body font-medium text-foreground hover:bg-card/80 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -210,7 +210,7 @@ export function SuspendEndorsePanel({
             type="button"
             onClick={handleConfirm}
             disabled={busy}
-            className="rounded-lg bg-warning px-3 py-1.5 text-sm font-semibold text-background hover:brightness-110 disabled:opacity-60"
+            className="rounded-lg bg-warning px-3 py-1.5 text-body font-semibold text-background hover:brightness-110 disabled:opacity-60"
           >
             {busy ? "Confirming..." : "Confirm"}
           </button>

@@ -8,7 +8,7 @@
 export function NewFeatureBadge({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`ml-1 text-[10px] font-medium text-primary ${className}`.trim()}
+      className={`ml-1 text-body-sm font-medium text-primary ${className}`.trim()}
       aria-label="New feature"
     >
       new

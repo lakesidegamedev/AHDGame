@@ -19,7 +19,7 @@ export function RetiredCharactersModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="mx-4 w-full max-w-lg rounded-xl border border-card-border bg-card p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Retired characters — {username}</h3>
+          <h3 className="text-body-lg font-semibold">Retired characters — {username}</h3>
           <button
             type="button"
             aria-label="Close"
@@ -37,18 +37,18 @@ export function RetiredCharactersModal({
           </button>
         </div>
         {characters.length === 0 ? (
-          <p className="text-sm text-muted">No retired characters found.</p>
+          <p className="text-body text-muted">No retired characters found.</p>
         ) : (
           <div className="max-h-80 space-y-3 overflow-y-auto">
             {characters.map((rc) => (
               <div key={rc.id} className="rounded-lg border border-card-border bg-background p-3">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{rc.name}</span>
-                  <span className="rounded bg-muted/20 px-2 py-0.5 text-xs text-muted">
+                  <span className="rounded bg-muted/20 px-2 py-0.5 text-body-sm text-muted">
                     {rc.reason.replace("_", " ")}
                   </span>
                 </div>
-                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
                   <span>
                     {rc.countryId} — {rc.homeState}
                   </span>
@@ -66,7 +66,7 @@ export function RetiredCharactersModal({
         <div className="mt-4 flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Close
           </button>

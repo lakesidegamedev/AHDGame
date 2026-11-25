@@ -19,7 +19,7 @@ export function ElectionClockBadge({
       <div className="flex flex-col items-end">
         <span className="text-body-sm font-medium text-muted">Time remaining</span>
         <span
-          className={`text-lg font-bold tabular-nums leading-none mt-1 ${
+          className={`text-heading font-bold tabular-nums leading-none mt-1 ${
             remaining <= urgentAt
               ? "text-red-400"
               : remaining <= warnAt
@@ -34,7 +34,7 @@ export function ElectionClockBadge({
   }
   return (
     <span
-      className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border ${
+      className={`inline-flex items-center rounded-md px-2.5 py-1 text-body-sm font-medium border ${
         status === "completed"
           ? "bg-green-500/10 text-green-500 border-green-500/20"
           : "bg-muted/10 text-muted border-muted/20"

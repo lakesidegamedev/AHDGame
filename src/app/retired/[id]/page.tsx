@@ -162,7 +162,7 @@ export default function RetiredCharacterProfilePage() {
     return (
       <div className="min-h-screen bg-background">
         <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
-          <Link href="/settings" className="text-sm text-primary hover:underline">
+          <Link href="/settings" className="text-body text-primary hover:underline">
             &larr; Back to Settings
           </Link>
           <div className="mt-8 rounded-xl border border-card-border bg-card-elevated/50 p-8 text-center">
@@ -183,7 +183,7 @@ export default function RetiredCharacterProfilePage() {
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 overflow-x-hidden">
         {/* Navigation */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-2 text-body text-muted">
           <Link href="/settings" className="hover:text-foreground">
             Settings
           </Link>
@@ -192,7 +192,7 @@ export default function RetiredCharacterProfilePage() {
         </nav>
 
         {/* Archived banner */}
-        <div className="mb-6 rounded-lg border border-card-border bg-card-muted/30 px-4 py-3 text-sm text-muted">
+        <div className="mb-6 rounded-lg border border-card-border bg-card-muted/30 px-4 py-3 text-body text-muted">
           This is an archived character profile. All data shown is a snapshot from when the
           character was retired.
         </div>
@@ -203,18 +203,18 @@ export default function RetiredCharacterProfilePage() {
             {/* Header */}
             <header className="mb-6 pb-4 border-b border-card-border">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-foreground">{snap.name}</h1>
+                <h1 className="text-display font-bold text-foreground">{snap.name}</h1>
                 <span
-                  className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${reasonInfo.color}`}
+                  className={`rounded-full border px-2.5 py-0.5 text-body-sm font-semibold ${reasonInfo.color}`}
                 >
                   {reasonInfo.label}
                 </span>
               </div>
-              <p className="text-lg text-muted">
+              <p className="text-heading text-muted">
                 {getOfficeLabel(snap.currentOffice, countryId)} · {snap.partyName}
                 {snap.homeState && ` · ${snap.homeState}, ${snap.countryId}`}
               </p>
-              <p className="text-sm text-muted mt-1">
+              <p className="text-body text-muted mt-1">
                 Active: <GameMonthTime value={snap.createdAt} /> &mdash;{" "}
                 <GameMonthTime value={data.retiredAt} />
               </p>
@@ -222,7 +222,7 @@ export default function RetiredCharacterProfilePage() {
                 <button
                   type="button"
                   onClick={() => setShowRecap(true)}
-                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-body font-semibold text-primary transition-colors hover:bg-primary/20"
                 >
                   ✨ Rewatch your Wrapped
                 </button>
@@ -232,14 +232,14 @@ export default function RetiredCharacterProfilePage() {
             {/* Bio */}
             {snap.bio && (
               <section className="mb-8">
-                <p className="text-[15px] leading-relaxed text-foreground">{snap.bio}</p>
+                <p className="text-body leading-relaxed text-foreground">{snap.bio}</p>
               </section>
             )}
 
             {/* Highest Office */}
             {snap.highestOffice && (
               <section className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground mb-3 pb-2 border-b border-card-border">
+                <h2 className="text-heading font-semibold text-foreground mb-3 pb-2 border-b border-card-border">
                   Highest office held
                 </h2>
                 <p className="text-foreground">{snap.highestOffice}</p>
@@ -249,7 +249,7 @@ export default function RetiredCharacterProfilePage() {
             {/* Career History */}
             {snap.careerHistory && snap.careerHistory.length > 0 && (
               <section className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground mb-4 pb-2 border-b border-card-border">
+                <h2 className="text-heading font-semibold text-foreground mb-4 pb-2 border-b border-card-border">
                   Career history
                 </h2>
                 <div className="space-y-3">
@@ -264,12 +264,12 @@ export default function RetiredCharacterProfilePage() {
                         className="flex items-start gap-3 rounded-lg border border-card-border/50 bg-card/40 px-4 py-3"
                       >
                         <div className="shrink-0 mt-0.5">
-                          <span className={`text-xs font-semibold ${eventInfo.color}`}>
+                          <span className={`text-body-sm font-semibold ${eventInfo.color}`}>
                             {eventInfo.label}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
+                          <p className="text-body font-medium text-foreground">
                             {event.type === "relocated"
                               ? `${event.fromState ?? "?"} → ${event.toState ?? "?"}${
                                   event.fromCountry &&
@@ -282,7 +282,7 @@ export default function RetiredCharacterProfilePage() {
                                 ? getOfficeLabel(event.office, countryId)
                                 : event.officeLabel}
                           </p>
-                          <p className="text-xs text-muted mt-0.5">
+                          <p className="text-body-sm text-muted mt-0.5">
                             {gameDateAnchor ? (
                               formatGameMonth(event.date, gameDateAnchor)
                             ) : (
@@ -300,13 +300,13 @@ export default function RetiredCharacterProfilePage() {
             {/* Political Positions */}
             {(econ !== 0 || social !== 0) && (
               <section className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground mb-4 pb-2 border-b border-card-border">
+                <h2 className="text-heading font-semibold text-foreground mb-4 pb-2 border-b border-card-border">
                   Political positions
                 </h2>
                 <div className="space-y-4">
                   {/* Economic */}
                   <div>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
+                    <div className="flex items-center justify-between text-body mb-1.5">
                       <span className="text-muted">Economic</span>
                       <span className="font-medium text-foreground">{getPolicyLabel(econ)}</span>
                     </div>
@@ -321,14 +321,14 @@ export default function RetiredCharacterProfilePage() {
                       />
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-0.5 bg-muted/50" />
                     </div>
-                    <div className="flex justify-between text-[10px] text-muted mt-0.5">
+                    <div className="flex justify-between text-body-sm text-muted mt-0.5">
                       <span>Left</span>
                       <span>Right</span>
                     </div>
                   </div>
                   {/* Social */}
                   <div>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
+                    <div className="flex items-center justify-between text-body mb-1.5">
                       <span className="text-muted">Social</span>
                       <span className="font-medium text-foreground">{getPolicyLabel(social)}</span>
                     </div>
@@ -343,7 +343,7 @@ export default function RetiredCharacterProfilePage() {
                       />
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-0.5 bg-muted/50" />
                     </div>
-                    <div className="flex justify-between text-[10px] text-muted mt-0.5">
+                    <div className="flex justify-between text-body-sm text-muted mt-0.5">
                       <span>Liberal</span>
                       <span>Conservative</span>
                     </div>
@@ -355,7 +355,7 @@ export default function RetiredCharacterProfilePage() {
             {/* Demographics */}
             {snap.demographics && (
               <section className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground mb-4 pb-2 border-b border-card-border">
+                <h2 className="text-heading font-semibold text-foreground mb-4 pb-2 border-b border-card-border">
                   Background
                 </h2>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -368,7 +368,7 @@ export default function RetiredCharacterProfilePage() {
                         className="rounded-lg border border-card-border/50 bg-card/40 px-3 py-2"
                       >
                         <p className="text-body-sm font-medium text-muted">{key}</p>
-                        <p className="text-sm font-medium text-foreground mt-0.5">
+                        <p className="text-body font-medium text-foreground mt-0.5">
                           {getDemographicLabel(key, value)}
                         </p>
                       </div>
@@ -386,7 +386,7 @@ export default function RetiredCharacterProfilePage() {
               <div className="p-4">
                 {/* Avatar */}
                 <div className="flex justify-center mb-4">
-                  <div className="relative h-32 w-32 rounded-lg overflow-hidden bg-gradient-to-br from-zinc-700 to-zinc-900 text-4xl font-bold flex items-center justify-center">
+                  <div className="relative h-32 w-32 rounded-lg overflow-hidden bg-gradient-to-br from-zinc-700 to-zinc-900 text-display font-bold flex items-center justify-center">
                     {snap.avatarUrl ? (
                       <Image
                         src={snap.avatarUrl}
@@ -401,7 +401,7 @@ export default function RetiredCharacterProfilePage() {
                   </div>
                 </div>
 
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <tbody>
                     <tr>
                       <td className="py-1.5 pr-2 align-top text-muted font-medium">Office</td>

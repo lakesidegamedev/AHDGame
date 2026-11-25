@@ -94,7 +94,7 @@ const TYPE_OPTIONS = [
 ];
 
 const INPUT_CLS =
-  "min-h-[40px] rounded border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary";
+  "min-h-[40px] rounded border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary";
 
 function EventSummary({ event, isMod }: { event: ActivityLogEvent; isMod: boolean }) {
   if (event.type === "turn_summary") {
@@ -144,7 +144,7 @@ function EventSummary({ event, isMod }: { event: ActivityLogEvent; isMod: boolea
 function EventDetail({ event, isMod }: { event: ActivityLogEvent; isMod: boolean }) {
   if (event.type === "turn_summary" && event.actions) {
     return (
-      <div className="mt-2 space-y-1 text-xs text-muted">
+      <div className="mt-2 space-y-1 text-body-sm text-muted">
         {event.actions.map((a, i) => (
           <div key={i} className="flex gap-2">
             <span className="font-medium text-foreground">{a.type}</span>
@@ -167,7 +167,7 @@ function EventDetail({ event, isMod }: { event: ActivityLogEvent; isMod: boolean
   if (event.type === "login") {
     if (isMod) {
       return (
-        <div className="mt-2 text-xs text-muted">
+        <div className="mt-2 text-body-sm text-muted">
           <div className="truncate max-w-lg">
             Tracking cookie: {event.trackingId ? "present" : "--"}
           </div>
@@ -175,7 +175,7 @@ function EventDetail({ event, isMod }: { event: ActivityLogEvent; isMod: boolean
       );
     }
     return (
-      <div className="mt-2 text-xs text-muted">
+      <div className="mt-2 text-body-sm text-muted">
         <div className="truncate max-w-lg">Fingerprint: {event.fingerprint ?? "--"}</div>
         <div className="truncate max-w-lg">Tracking: {event.trackingId ?? "--"}</div>
         <div>IP: {event.ipAddress ?? "—"}</div>
@@ -185,7 +185,7 @@ function EventDetail({ event, isMod }: { event: ActivityLogEvent; isMod: boolean
   }
   if (event.type === "game_action") {
     return (
-      <div className="mt-2 space-y-0.5 text-xs text-muted">
+      <div className="mt-2 space-y-0.5 text-body-sm text-muted">
         <div>Cost: {event.actionCost} AP</div>
         {event.targetName && (
           <div>
@@ -208,7 +208,7 @@ function EventDetail({ event, isMod }: { event: ActivityLogEvent; isMod: boolean
   }
   if (event.details && Object.keys(event.details).length > 0) {
     return (
-      <div className="mt-2 text-xs text-muted">
+      <div className="mt-2 text-body-sm text-muted">
         <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-black/20 p-2">
           {JSON.stringify(event.details, null, 2)}
         </pre>
@@ -354,7 +354,7 @@ export function ActivityLogTab({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold sm:text-lg">Activity log</h2>
+      <h2 className="text-body-lg font-semibold sm:text-heading">Activity log</h2>
 
       {/* Filter bar */}
       <div className="flex flex-wrap gap-2">
@@ -394,7 +394,7 @@ export function ActivityLogTab({
           onChange={(e) => setPendingFilters((p) => ({ ...p, from: e.target.value }))}
           className={INPUT_CLS}
         />
-        <span className="self-center text-muted text-sm">to</span>
+        <span className="self-center text-muted text-body">to</span>
         <input
           type="date"
           value={pendingFilters.to}
@@ -402,7 +402,7 @@ export function ActivityLogTab({
           className={INPUT_CLS}
         />
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted">Flags:</span>
+          <span className="text-body-sm text-muted">Flags:</span>
           {(["high", "medium", "low"] as const).map((sev) => {
             const active = pendingFilters.flagSeverities.includes(sev);
             return (
@@ -417,7 +417,7 @@ export function ActivityLogTab({
                       : [...p.flagSeverities, sev],
                   }))
                 }
-                className={`min-h-[40px] rounded border px-3 py-2 text-xs font-medium capitalize transition-colors ${
+                className={`min-h-[40px] rounded border px-3 py-2 text-body-sm font-medium capitalize transition-colors ${
                   active
                     ? sev === "high"
                       ? "border-red-500/40 bg-red-500/15 text-red-400"
@@ -435,17 +435,17 @@ export function ActivityLogTab({
         <button
           onClick={applyFilters}
           disabled={loading}
-          className="min-h-[40px] rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="min-h-[40px] rounded bg-primary px-4 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           Search
         </button>
       </div>
 
-      <InlineError error={error} className="text-sm text-red-500" />
+      <InlineError error={error} className="text-body text-red-500" />
 
       {/* Table */}
       <div className="rounded-xl border border-card-border bg-card overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="border-b border-card-border bg-card/50">
             <tr>
               <th className="px-4 py-3 text-left font-medium text-muted">Timestamp</th>
@@ -460,7 +460,7 @@ export function ActivityLogTab({
           <tbody className="divide-y divide-card-border">
             {events.length === 0 && !loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted text-sm">
+                <td colSpan={5} className="px-4 py-8 text-center text-muted text-body">
                   No events found.
                 </td>
               </tr>
@@ -473,12 +473,12 @@ export function ActivityLogTab({
                   className="cursor-pointer hover:bg-card/80 transition-colors"
                   onClick={() => toggleExpand(event._id)}
                 >
-                  <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
+                  <td className="px-4 py-3 text-body-sm text-muted whitespace-nowrap">
                     <LocalTime value={event.timestamp} />
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[event.type] ?? ""}`}
+                      className={`rounded px-2 py-0.5 text-body-sm font-medium ${TYPE_BADGE[event.type] ?? ""}`}
                     >
                       {event.type.replace("_", " ")}
                     </span>
@@ -492,15 +492,15 @@ export function ActivityLogTab({
                       <>
                         <div className="font-medium">{event.username}</div>
                         {event.characterName && (
-                          <div className="text-xs text-muted">{event.characterName}</div>
+                          <div className="text-body-sm text-muted">{event.characterName}</div>
                         )}
                       </>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted hidden sm:table-cell">
+                  <td className="px-4 py-3 text-body-sm text-muted hidden sm:table-cell">
                     {event.countryId ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-3 text-body-sm">
                     <EventSummary event={event} isMod={isModeratorContext} />
                     {expanded && <EventDetail event={event} isMod={isModeratorContext} />}
                   </td>
@@ -512,19 +512,19 @@ export function ActivityLogTab({
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted">Page {pageNum}</p>
+        <p className="text-body-sm text-muted">Page {pageNum}</p>
         <div className="flex gap-2">
           <button
             onClick={goPrev}
             disabled={pageNum <= 1 || loading}
-            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-sm font-medium hover:bg-card disabled:opacity-40"
+            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-body font-medium hover:bg-card disabled:opacity-40"
           >
             ← Previous
           </button>
           <button
             onClick={goNext}
             disabled={!hasMore || loading}
-            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-sm font-medium hover:bg-card disabled:opacity-40"
+            className="min-h-[40px] rounded border border-card-border px-4 py-2 text-body font-medium hover:bg-card disabled:opacity-40"
           >
             Next →
           </button>

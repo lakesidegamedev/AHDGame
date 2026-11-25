@@ -52,13 +52,13 @@ export function WikiReviewLogPanel() {
 
   return (
     <section className="space-y-4" aria-label="Approval log">
-      <h2 className="text-xl font-bold text-foreground">Approval log</h2>
+      <h2 className="text-heading font-bold text-foreground">Approval log</h2>
       <div className="flex flex-wrap gap-3">
         <select
           value={moderator}
           onChange={(e) => setModerator(e.target.value)}
           aria-label="Filter by moderator"
-          className="rounded-md border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+          className="rounded-md border border-card-border bg-card px-3 py-2 text-body text-foreground"
         >
           <option value="">All moderators</option>
           {moderators.map((m) => (
@@ -73,20 +73,20 @@ export function WikiReviewLogPanel() {
           onChange={(e) => setSlug(e.target.value)}
           placeholder="Page address, like player-12"
           aria-label="Filter by page address"
-          className="w-64 rounded-md border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+          className="w-64 rounded-md border border-card-border bg-card px-3 py-2 text-body text-foreground"
         />
       </div>
 
       {failed ? (
-        <p className="text-sm text-muted">The log could not be loaded.</p>
+        <p className="text-body text-muted">The log could not be loaded.</p>
       ) : loading && entries.length === 0 ? (
-        <p className="text-sm text-muted">Loading...</p>
+        <p className="text-body text-muted">Loading...</p>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-muted">No decisions match.</p>
+        <p className="text-body text-muted">No decisions match.</p>
       ) : (
         <ul className="divide-y divide-card-border rounded-lg border border-card-border bg-card">
           {entries.map((e) => (
-            <li key={e.id} className="px-4 py-3 text-sm">
+            <li key={e.id} className="px-4 py-3 text-body">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={

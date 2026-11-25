@@ -88,14 +88,14 @@ function PositionSlider({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-xs font-medium text-muted" htmlFor={id}>
+        <label className="text-body-sm font-medium text-muted" htmlFor={id}>
           {axis === "economic" ? "Economic position" : "Social position"}
         </label>
         {value !== null && (
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-[10px] text-muted hover:text-foreground underline"
+            className="text-body-sm text-muted hover:text-foreground underline"
           >
             Skip
           </button>
@@ -103,7 +103,7 @@ function PositionSlider({
       </div>
       {value !== null ? (
         <>
-          <span className="text-xs font-normal text-foreground">
+          <span className="text-body-sm font-normal text-foreground">
             {value > 0 ? `+${value}` : value} — {POSITION_LABELS[value]?.split(" / ")[labelIndex]}
           </span>
           <input
@@ -121,13 +121,13 @@ function PositionSlider({
         <button
           type="button"
           onClick={() => onChange(0)}
-          className="w-full rounded-lg border border-dashed border-card-border bg-background px-3 py-2 text-xs text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+          className="w-full rounded-lg border border-dashed border-card-border bg-background px-3 py-2 text-body-sm text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
         >
           + Set {axis} position
         </button>
       )}
       {value !== null && (
-        <div className="flex justify-between text-xs text-muted mt-1">
+        <div className="flex justify-between text-body-sm text-muted mt-1">
           <span>−5</span>
           <span>0</span>
           <span>+5</span>
@@ -274,15 +274,18 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
     <div className="space-y-6">
       {/* State Update Card */}
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-foreground mb-1">Change home region</h3>
-        <p className="text-sm text-muted mb-5">
+        <h3 className="text-body-lg font-semibold text-foreground mb-1">Change home region</h3>
+        <p className="text-body text-muted mb-5">
           Update a character&apos;s home region by their username. Regions are per-country — US
           states, UK regions, Soviet republics and so on.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 max-w-sm">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="cs-username">
+            <label
+              className="block text-body-sm font-medium text-muted mb-1.5"
+              htmlFor="cs-username"
+            >
               Username
             </label>
             <input
@@ -293,12 +296,15 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
               placeholder="e.g. rainforest"
               autoComplete="off"
               spellCheck={false}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="cs-country">
+            <label
+              className="block text-body-sm font-medium text-muted mb-1.5"
+              htmlFor="cs-country"
+            >
               Country
             </label>
             <select
@@ -308,7 +314,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
                 setStateCountryId(e.target.value as CountryId);
                 setHomeState("");
               }}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {COUNTRIES.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -316,14 +322,14 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Picks which regions to list. The move must stay inside the character&apos;s own
               country.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="cs-state">
+            <label className="block text-body-sm font-medium text-muted mb-1.5" htmlFor="cs-state">
               New home region
             </label>
             <select
@@ -331,7 +337,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
               value={homeState}
               onChange={(e) => setHomeState(e.target.value)}
               disabled={stateRegionsLoading || stateRegions.length === 0}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             >
               <option value="">
                 {stateRegionsLoading
@@ -351,14 +357,14 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
           <button
             type="submit"
             disabled={!username.trim() || !homeState || loading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed"
           >
             {loading ? "Updating…" : "Update state"}
           </button>
         </form>
 
         {result && (
-          <p className={`mt-4 text-sm font-medium ${result.ok ? "text-success" : "text-error"}`}>
+          <p className={`mt-4 text-body font-medium ${result.ok ? "text-success" : "text-error"}`}>
             {result.ok ? "✓ " : "✗ "}
             {result.message}
           </p>
@@ -367,14 +373,17 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
 
       {/* Country Update Card */}
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-foreground mb-1">Change home country</h3>
-        <p className="text-sm text-muted mb-5">
+        <h3 className="text-body-lg font-semibold text-foreground mb-1">Change home country</h3>
+        <p className="text-body text-muted mb-5">
           Relocate a character to a different country by their username.
         </p>
 
         <form onSubmit={handleCountrySubmit} className="space-y-4 max-w-sm">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="cc-username">
+            <label
+              className="block text-body-sm font-medium text-muted mb-1.5"
+              htmlFor="cc-username"
+            >
               Username
             </label>
             <input
@@ -385,12 +394,15 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
               placeholder="e.g. rainforest"
               autoComplete="off"
               spellCheck={false}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="cc-country">
+            <label
+              className="block text-body-sm font-medium text-muted mb-1.5"
+              htmlFor="cc-country"
+            >
               New country
             </label>
             <select
@@ -402,7 +414,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
                 // region of the country they just switched away from.
                 setCountryHomeState("");
               }}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {COUNTRIES.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -414,7 +426,10 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
 
           {(countryRegionsLoading || countryRegions.length > 0) && (
             <div>
-              <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="cc-state">
+              <label
+                className="block text-body-sm font-medium text-muted mb-1.5"
+                htmlFor="cc-state"
+              >
                 Home region
               </label>
               <select
@@ -422,7 +437,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
                 value={countryHomeState}
                 onChange={(e) => setCountryHomeState(e.target.value)}
                 disabled={countryRegionsLoading}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               >
                 <option value="">
                   {countryRegionsLoading ? "Loading regions…" : "— Select a region —"}
@@ -450,7 +465,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
               countryRegionsLoading ||
               (countryRegions.length > 0 && !countryHomeState)
             }
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed"
           >
             {countryLoading ? "Updating…" : "Update country"}
           </button>
@@ -458,7 +473,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
 
         {countryResult && (
           <p
-            className={`mt-4 text-sm font-medium ${countryResult.ok ? "text-success" : "text-error"}`}
+            className={`mt-4 text-body font-medium ${countryResult.ok ? "text-success" : "text-error"}`}
           >
             {countryResult.ok ? "✓ " : "✗ "}
             {countryResult.message}
@@ -468,8 +483,8 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
 
       {/* Positions Update Card */}
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-foreground mb-1">Change policy positions</h3>
-        <p className="text-sm text-muted mb-5">
+        <h3 className="text-body-lg font-semibold text-foreground mb-1">Change policy positions</h3>
+        <p className="text-body text-muted mb-5">
           Adjust a character&apos;s economic and/or social policy positions. Values range from
           &minus;5 (far left/liberal) to +5 (far right/traditional). Leave an axis unchanged by
           clicking &quot;Skip&quot;.
@@ -477,10 +492,10 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
 
         <form onSubmit={handlePositionsSubmit} className="space-y-4 max-w-sm">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Character</label>
+            <label className="block text-body-sm font-medium text-muted mb-1.5">Character</label>
             {posCharacter ? (
               <div className="flex items-center gap-2">
-                <div className="flex-1 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm">
+                <div className="flex-1 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-body">
                   <span className="font-medium">{posCharacter.name}</span>
                 </div>
                 <button
@@ -491,7 +506,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
                     setSocial(null);
                     setPosResult(null);
                   }}
-                  className="rounded-md border border-card-border bg-card px-3 py-2 text-xs text-muted hover:text-foreground"
+                  className="rounded-md border border-card-border bg-card px-3 py-2 text-body-sm text-muted hover:text-foreground"
                 >
                   Clear
                 </button>
@@ -513,14 +528,16 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
           <button
             type="submit"
             disabled={!posCharacter || (economic === null && social === null) || posLoading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed"
           >
             {posLoading ? "Updating…" : "Update positions"}
           </button>
         </form>
 
         {posResult && (
-          <p className={`mt-4 text-sm font-medium ${posResult.ok ? "text-success" : "text-error"}`}>
+          <p
+            className={`mt-4 text-body font-medium ${posResult.ok ? "text-success" : "text-error"}`}
+          >
             {posResult.ok ? "✓ " : "✗ "}
             {posResult.message}
           </p>

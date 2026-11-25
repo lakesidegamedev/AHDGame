@@ -30,7 +30,7 @@ export default function TargetedAdsActionPage() {
   }, [refresh]);
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="text-3xl font-bold text-foreground">{t("title")}</h1>
+      <h1 className="text-display font-bold text-foreground">{t("title")}</h1>
       <p className="mt-2 mb-6 text-muted">{t("standingDescription")}</p>
       {failed && (
         <p role="alert" className="text-error">

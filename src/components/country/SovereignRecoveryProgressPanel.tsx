@@ -50,10 +50,10 @@ export function SovereignRecoveryProgressPanel({ countryCode }: Props) {
 
   return (
     <div className="rounded-lg border border-amber-500 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
-      <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+      <h3 className="text-body-lg font-semibold text-amber-800 dark:text-amber-200">
         Sovereign recovery — In progress
       </h3>
-      <div className="mt-3 space-y-3 text-xs">
+      <div className="mt-3 space-y-3 text-body-sm">
         <div>
           <div className="flex items-baseline justify-between">
             <span className="text-amber-700 dark:text-amber-300">Recovery floor</span>
@@ -105,7 +105,7 @@ export function SovereignRecoveryProgressPanel({ countryCode }: Props) {
         ) : null}
 
         {status.imfSovereignBailoutActive ? (
-          <span className="inline-block rounded border border-emerald-600 bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950 dark:text-emerald-200">
+          <span className="inline-block rounded border border-emerald-600 bg-emerald-100 px-2 py-0.5 text-body-sm font-medium text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950 dark:text-emerald-200">
             IMF bailout facility active
           </span>
         ) : null}

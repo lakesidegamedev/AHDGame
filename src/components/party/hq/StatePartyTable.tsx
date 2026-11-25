@@ -57,9 +57,9 @@ export function StatePartyTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-card-border">
-      <table className="w-full text-sm">
+      <table className="w-full text-body">
         <thead>
-          <tr className="border-b border-card-border text-left text-xs text-muted">
+          <tr className="border-b border-card-border text-left text-body-sm text-muted">
             <th className="w-8 px-2 py-2">
               <input
                 type="checkbox"
@@ -116,7 +116,7 @@ export function StatePartyTable({
                     onClick={() => onOpen(r.regionId)}
                   >
                     <span
-                      className="inline-flex h-6 w-7 items-center justify-center rounded text-[10px] font-bold text-white"
+                      className="inline-flex h-6 w-7 items-center justify-center rounded text-body-sm font-bold text-white"
                       style={{ backgroundColor: orgFill(r.organization) }}
                     >
                       {displayCanadianRegionCode(r.regionId)}
@@ -149,20 +149,20 @@ export function StatePartyTable({
                 <td className="px-2 py-2 tabular-nums">{fmtMoney(r.treasury)}</td>
                 <td className="px-2 py-2 tabular-nums">{r.registrationPct.toFixed(0)}%</td>
                 <td className="px-2 py-2">
-                  <span className="rounded-full bg-card-border/40 px-2 py-0.5 text-xs">
+                  <span className="rounded-full bg-card-border/40 px-2 py-0.5 text-body-sm">
                     {r.nppCount}
                   </span>
                 </td>
                 <td className="px-2 py-2">
-                  <span className="text-xs" style={{ color: ln.color }}>
+                  <span className="text-body-sm" style={{ color: ln.color }}>
                     {ln.label}
                   </span>
                 </td>
                 <td className="px-2 py-2">
                   {r.chairName ? (
-                    <span className="text-xs">{r.chairName}</span>
+                    <span className="text-body-sm">{r.chairName}</span>
                   ) : (
-                    <span className="text-xs text-muted italic">Vacant</span>
+                    <span className="text-body-sm text-muted italic">Vacant</span>
                   )}
                 </td>
                 <td className="px-2 py-2 text-right">

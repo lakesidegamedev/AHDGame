@@ -69,12 +69,12 @@ export function SuperShareAdoptionCard({
   return (
     <GovernanceRow label="Dual-class shares" summary="Not adopted" actionLabel="Propose">
       <div className="space-y-1.5">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           A shareholder vote to make your current shares supershares, each with several votes. You
           keep control of governance votes while selling more of the company. Supershares convert to
           common stock when sold; dividends and payouts are unchanged.
         </p>
-        <label className="flex items-center gap-2 text-xs text-muted">
+        <label className="flex items-center gap-2 text-body-sm text-muted">
           Votes per share
           <input
             type="range"

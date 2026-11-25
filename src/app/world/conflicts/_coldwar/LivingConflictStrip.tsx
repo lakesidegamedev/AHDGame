@@ -34,7 +34,7 @@ export function LivingConflictStrip({ conflicts }: { conflicts: LivingConflictVi
               {conflict.phase} · {conflict.status.toUpperCase()}
             </div>
             {conflict.participants.length > 0 ? (
-              <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>
+              <div style={{ color: "#9ca3af", fontSize: 12, marginTop: 4 }}>
                 {t("participants")}: {conflict.participants.join(", ")}
               </div>
             ) : null}
@@ -84,7 +84,7 @@ export function LivingConflictStrip({ conflicts }: { conflicts: LivingConflictVi
               </dl>
             ) : null}
             {conflict.nextPhases.length > 0 ? (
-              <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 8 }}>
+              <div style={{ color: "#9ca3af", fontSize: 12, marginTop: 8 }}>
                 {t("nextPhases")}: {conflict.nextPhases.join(", ")}
               </div>
             ) : null}

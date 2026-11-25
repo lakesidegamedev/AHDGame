@@ -81,8 +81,8 @@ const COLUMNS: ResponsiveTableColumn<CorpRow>[] = [
       if (r.ceoVacant) flags.push("CEO Vacant");
       if (r.suspended) flags.push("Suspended");
       if (r.bondDefaultActive) flags.push("Bond Default");
-      if (flags.length === 0) return <span className="text-muted text-xs">OK</span>;
-      return <span className="text-xs font-medium text-error">{flags.join(" · ")}</span>;
+      if (flags.length === 0) return <span className="text-muted text-body-sm">OK</span>;
+      return <span className="text-body-sm font-medium text-error">{flags.join(" · ")}</span>;
     },
   },
 ];
@@ -118,14 +118,14 @@ export function StockMarketAdminPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold">Stock market</h2>
+        <h2 className="text-heading font-semibold">Stock market</h2>
         {/* Country filter pills */}
         <div className="flex flex-wrap gap-2">
           {COUNTRY_PILLS.map((pill) => (
             <button
               key={pill.id}
               onClick={() => setCountryFilter(pill.id)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
                 countryFilter === pill.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-card border border-card-border text-muted hover:text-foreground"
@@ -166,12 +166,12 @@ export function StockMarketAdminPanel() {
             >
               <p className="text-body-sm font-medium text-muted">{card.label}</p>
               <p
-                className={`text-xl font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
+                className={`text-heading font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
               >
                 {card.value}
               </p>
               {card.sub && (
-                <p className={`text-xs ${card.subHighlight ? "text-warning" : "text-muted"}`}>
+                <p className={`text-body-sm ${card.subHighlight ? "text-warning" : "text-muted"}`}>
                   {card.sub}
                 </p>
               )}
@@ -180,7 +180,10 @@ export function StockMarketAdminPanel() {
         </div>
       )}
 
-      <InlineError error={error} className="text-sm text-error bg-error/10 rounded-lg px-4 py-3" />
+      <InlineError
+        error={error}
+        className="text-body text-error bg-error/10 rounded-lg px-4 py-3"
+      />
 
       {/* Flagged corporations */}
       {!loading &&
@@ -204,7 +207,7 @@ export function StockMarketAdminPanel() {
           return (
             <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
               <div className="px-5 py-3 border-b border-card-border">
-                <h3 className="text-sm font-semibold text-muted">
+                <h3 className="text-body-lg font-semibold text-muted">
                   <span className="text-warning">&#9650;</span> Flagged corporations
                 </h3>
               </div>
@@ -219,8 +222,8 @@ export function StockMarketAdminPanel() {
                       className={`flex items-center justify-between px-5 py-3 border-l-2 ${borderColor}`}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="font-medium text-sm">{corp.name}</span>
-                        <span className="text-xs text-muted">
+                        <span className="font-medium text-body">{corp.name}</span>
+                        <span className="text-body-sm text-muted">
                           {[
                             corp.ceoVacant && "No CEO",
                             corp.liquidCapital <= 0 && `Liquid capital ${fmt(corp.liquidCapital)}`,
@@ -235,7 +238,7 @@ export function StockMarketAdminPanel() {
                         {badges.map((b) => (
                           <span
                             key={b.label}
-                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
+                            className={`text-body-sm font-semibold uppercase px-2 py-0.5 rounded ${
                               b.color === "error"
                                 ? "bg-error/15 text-error"
                                 : "bg-warning/15 text-warning"
@@ -254,11 +257,11 @@ export function StockMarketAdminPanel() {
         })()}
 
       {loading ? (
-        <div className="text-muted text-sm py-8 text-center">Loading…</div>
+        <div className="text-muted text-body py-8 text-center">Loading…</div>
       ) : (
         <>
           <div className="flex items-center gap-2 px-1">
-            <h3 className="text-sm font-semibold text-muted">All listed corporations</h3>
+            <h3 className="text-body-lg font-semibold text-muted">All listed corporations</h3>
           </div>
           <ResponsiveTable
             columns={COLUMNS}

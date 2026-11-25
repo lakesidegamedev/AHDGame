@@ -68,16 +68,16 @@ export function EstimateBox({ variant, tone, cost, funds, gain }: EstimateBoxPro
               content="Political Strength (PS) cost. It starts at the base cost and goes up by 1 for each recent build in this state, fading by 3 per turn once you stop. The money price rises with it and comes out of the treasury of whichever party (state or national) pays the PS."
             />
           </div>
-          <div className="mt-1 text-lg font-bold tabular-nums leading-none">
+          <div className="mt-1 text-heading font-bold tabular-nums leading-none">
             {cost.effectivePS.toFixed(0)}
-            <span className="ml-1 text-xs font-medium text-muted">PS</span>
+            <span className="ml-1 text-body-sm font-medium text-muted">PS</span>
           </div>
           {cost.ladderPS > 0 ? (
-            <div className="mt-1 text-[10px] text-muted tabular-nums">
+            <div className="mt-1 text-body-sm text-muted tabular-nums">
               base {cost.basePS.toFixed(0)} + {cost.ladderPS.toFixed(0)} for recent builds
             </div>
           ) : (
-            <div className="mt-1 text-[10px] text-muted">Base cost (no recent builds here)</div>
+            <div className="mt-1 text-body-sm text-muted">Base cost (no recent builds here)</div>
           )}
         </div>
 
@@ -89,22 +89,24 @@ export function EstimateBox({ variant, tone, cost, funds, gain }: EstimateBoxPro
               content="Expected change to your party's share of this state's organization after one build. Parties that have built here for longer keep the advantage of everything they have built."
             />
           </div>
-          <div className={`mt-1 text-lg font-bold tabular-nums leading-none ${gainValueColor}`}>
+          <div
+            className={`mt-1 text-heading font-bold tabular-nums leading-none ${gainValueColor}`}
+          >
             {gain.sign}
             {gain.value.toFixed(2)}
-            <span className="ml-1 text-xs font-medium text-muted">{gain.unit}</span>
+            <span className="ml-1 text-body-sm font-medium text-muted">{gain.unit}</span>
           </div>
           {gain.clamped ? (
-            <div className="mt-1 text-[10px] text-muted">Floor-clamped</div>
+            <div className="mt-1 text-body-sm text-muted">Floor-clamped</div>
           ) : (
-            <div className="mt-1 text-[10px] text-muted">Derived from bucket share</div>
+            <div className="mt-1 text-body-sm text-muted">Derived from bucket share</div>
           )}
         </div>
       </div>
 
       {funds ? (
         <div className="space-y-1">
-          <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center justify-between gap-3 text-body-sm">
             <span className="text-muted">
               {variant === "projection" ? "Estimated funds" : "Funds"}
             </span>
@@ -114,14 +116,14 @@ export function EstimateBox({ variant, tone, cost, funds, gain }: EstimateBoxPro
             </span>
           </div>
           {funds.sizeMultiplier !== undefined && Math.abs(funds.sizeMultiplier - 1) >= 0.05 ? (
-            <div className="text-[10px] text-muted">
+            <div className="text-body-sm text-muted">
               {funds.sizeMultiplier > 1 ? "Larger" : "Smaller"} state:{" "}
               {funds.sizeMultiplier.toFixed(2)}× the national average price, because a point of Org
               here is worth {funds.sizeMultiplier > 1 ? "more" : "less"}.
             </div>
           ) : null}
           {funds.fundedFraction !== undefined && funds.fundedFraction < 1 ? (
-            <div className="text-[10px] text-warning">
+            <div className="text-body-sm text-warning">
               Partly funded: the treasury covers {Math.round(funds.fundedFraction * 100)}% of this
               click.
             </div>

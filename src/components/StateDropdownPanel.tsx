@@ -59,7 +59,7 @@ export function StateDropdownPanel({
         <Link
           href={regionPartyUrl(countryId, stateId, currentParty.id)}
           onClick={() => onClose()}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+          className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
         >
           <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -79,7 +79,7 @@ export function StateDropdownPanel({
       <Link
         href={regionUrl(countryId, stateId)}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -96,7 +96,7 @@ export function StateDropdownPanel({
       <Link
         href={`${regionUrl(countryId, stateId)}?tab=economy`}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -115,7 +115,7 @@ export function StateDropdownPanel({
       <Link
         href={regionElectionsUrl(countryId, stateId)}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -132,7 +132,7 @@ export function StateDropdownPanel({
       <Link
         href={regionLegislatureUrl(countryId, stateId)}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -150,7 +150,7 @@ export function StateDropdownPanel({
         <Link
           href={`${regionUrl(countryId.toLowerCase(), stateId.toLowerCase())}/office`}
           onClick={() => onClose()}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+          className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
         >
           <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -169,7 +169,7 @@ export function StateDropdownPanel({
         <Link
           href={campaignManagerHref({ race: activeElection.id })}
           onClick={() => onClose()}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+          className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
         >
           <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -182,7 +182,7 @@ export function StateDropdownPanel({
           {t("state.myElection")}
         </Link>
       ) : (
-        <div className="flex items-center gap-2 px-4 py-2.5 text-sm text-muted opacity-50 cursor-not-allowed">
+        <div className="flex items-center gap-2 px-4 py-2.5 text-body text-muted opacity-50 cursor-not-allowed">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               strokeLinecap="round"
@@ -200,7 +200,7 @@ export function StateDropdownPanel({
         <Link
           href={`/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}`}
           onClick={() => onClose()}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+          className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
         >
           <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path

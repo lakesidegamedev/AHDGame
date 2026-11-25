@@ -10,7 +10,7 @@ export default function CommodityOffersClient({ commodity }: { commodity: Commod
   return (
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-8 sm:px-6">
-        <nav className="flex items-center gap-1.5 text-sm text-muted" aria-label="Breadcrumb">
+        <nav className="flex items-center gap-1.5 text-body text-muted" aria-label="Breadcrumb">
           <Link
             href="/country/us/stockmarket?tab=commodities"
             className="transition-colors hover:text-foreground"
@@ -27,7 +27,7 @@ export default function CommodityOffersClient({ commodity }: { commodity: Commod
           <span aria-hidden>/</span>
           <span className="font-medium text-foreground">Supply offers</span>
         </nav>
-        <p className="max-w-2xl text-sm text-muted">
+        <p className="max-w-2xl text-body text-muted">
           Standing offers to buy or sell {label.toLowerCase()} on a supply agreement. Taking an
           offer starts a binding agreement at the listed terms: a premium or discount to the market
           price, for the quantity you choose, with priority in clearing. Related corporations and

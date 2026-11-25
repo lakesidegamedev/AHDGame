@@ -100,15 +100,15 @@ export function ElectionTimerForm({
   const showSenateClass = timerForm.electionType === "senate";
   const showChamberClass = timerForm.electionType === "sangiin";
 
-  const selectClass = "rounded-lg border border-card-border bg-background px-3 py-2 text-sm";
+  const selectClass = "rounded-lg border border-card-border bg-background px-3 py-2 text-body";
   const inputClass =
-    "w-14 rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-center tabular-nums";
+    "w-14 rounded-lg border border-card-border bg-background px-3 py-2 text-body text-center tabular-nums";
 
   return (
     <div className="mb-3 rounded-lg border border-primary/30 bg-card p-3">
       <div className="mb-3 flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-primary">Modify timers</h3>
-        <span className="rounded bg-primary/15 px-2 py-0.5 text-[9px] text-primary">
+        <h3 className="text-body-lg font-semibold text-primary">Modify timers</h3>
+        <span className="rounded bg-primary/15 px-2 py-0.5 text-body-sm text-primary">
           {isGlobal
             ? "Applies to all countries"
             : `${COUNTRY_CLIENT_CONFIGS[selectedCountry]?.name} only`}
@@ -117,7 +117,7 @@ export function ElectionTimerForm({
       <div className="flex flex-wrap items-end gap-2">
         {/* Action */}
         <div>
-          <label className="mb-1 block text-[9px] uppercase text-muted">Action</label>
+          <label className="mb-1 block text-body-sm uppercase text-muted">Action</label>
           <select
             value={timerForm.action}
             onChange={(e) =>
@@ -136,7 +136,7 @@ export function ElectionTimerForm({
 
         {/* Election Type */}
         <div>
-          <label className="mb-1 block text-[9px] uppercase text-muted">Type</label>
+          <label className="mb-1 block text-body-sm uppercase text-muted">Type</label>
           <select
             value={timerForm.electionType}
             onChange={(e) =>
@@ -159,7 +159,7 @@ export function ElectionTimerForm({
         {/* State/Region — only for per-country views */}
         {!isGlobal && (
           <div>
-            <label className="mb-1 block text-[9px] uppercase text-muted">
+            <label className="mb-1 block text-body-sm uppercase text-muted">
               {getRegionLabel(selectedCountry)}
             </label>
             <select
@@ -205,7 +205,7 @@ export function ElectionTimerForm({
         {/* Senate Class — only when Senate selected */}
         {showSenateClass && (
           <div>
-            <label className="mb-1 block text-[9px] uppercase text-muted">Senate class</label>
+            <label className="mb-1 block text-body-sm uppercase text-muted">Senate class</label>
             <select
               value={timerForm.senateClass}
               onChange={(e) =>
@@ -227,7 +227,7 @@ export function ElectionTimerForm({
         {/* Chamber Class — only when Sangiin selected */}
         {showChamberClass && (
           <div>
-            <label className="mb-1 block text-[9px] uppercase text-muted">Chamber class</label>
+            <label className="mb-1 block text-body-sm uppercase text-muted">Chamber class</label>
             <select
               value={timerForm.chamberClass}
               onChange={(e) =>
@@ -250,7 +250,7 @@ export function ElectionTimerForm({
 
         {/* Primary Hours */}
         <div className="text-center">
-          <label className="mb-1 block text-[9px] uppercase text-muted">Primary</label>
+          <label className="mb-1 block text-body-sm uppercase text-muted">Primary</label>
           <input
             type="number"
             min="0"
@@ -270,7 +270,7 @@ export function ElectionTimerForm({
 
         {/* General Hours */}
         <div className="text-center">
-          <label className="mb-1 block text-[9px] uppercase text-muted">General</label>
+          <label className="mb-1 block text-body-sm uppercase text-muted">General</label>
           <input
             type="number"
             min="0"
@@ -290,15 +290,15 @@ export function ElectionTimerForm({
 
         {/* Total display */}
         <div className="pb-1 text-center">
-          <div className="text-sm font-semibold tabular-nums text-primary">{total}h</div>
-          <div className="text-[9px] text-muted">({gameYears}y)</div>
+          <div className="text-body font-semibold tabular-nums text-primary">{total}h</div>
+          <div className="text-body-sm text-muted">({gameYears}y)</div>
         </div>
 
         {/* Apply */}
         <button
           onClick={onApply}
           disabled={loading}
-          className="ml-auto rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="ml-auto rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           Apply
         </button>

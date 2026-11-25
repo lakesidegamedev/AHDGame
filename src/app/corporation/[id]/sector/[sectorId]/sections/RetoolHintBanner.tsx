@@ -30,7 +30,7 @@ export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: Retool
       aria-label="Strategy suggestion"
       className="rounded-xl border border-info/40 bg-info/10 p-4"
     >
-      <p className="text-sm font-semibold text-foreground">
+      <p className="text-body font-semibold text-foreground">
         This plant&apos;s main product is oversupplied here
       </p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -38,10 +38,10 @@ export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: Retool
           aria-label="This plant last turn"
           className="rounded-lg border border-border bg-surface p-3"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          <p className="text-body-sm font-semibold uppercase tracking-wide text-muted">
             This plant, last turn
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Buyers took {pct(hint.currentMain.fill)} of the {current} it offered.
             {mixed && (
               <>
@@ -52,7 +52,7 @@ export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: Retool
             )}
           </p>
           {hint.runShare != null && (
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               It ran at {pct(hint.runShare)} of its capacity.
             </p>
           )}
@@ -61,16 +61,16 @@ export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: Retool
           aria-label="This market"
           className="rounded-lg border border-border bg-surface p-3"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          <p className="text-body-sm font-semibold uppercase tracking-wide text-muted">
             This market, all sellers
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             {pct(hint.currentMain.marketSurplusShare)} of the {current} on offer here had no buyer,
             going by the latest market book.
           </p>
         </section>
       </div>
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         The {hint.suggestedStrategyName} strategy makes mostly {suggested}, and this market is{" "}
         {pct(hint.suggestedMain.unmetShare)} short of it. On {hint.suggestedStrategyName} this plant
         would sell about {pct(hint.suggestedValueFill)} of its output by value, enough to climb back
@@ -81,7 +81,7 @@ export default function RetoolHintBanner({ hint, isCeo, onOpenStrategy }: Retool
         <button
           type="button"
           onClick={() => onOpenStrategy(hint.suggestedStrategyId)}
-          className="mt-2 rounded-lg border border-info/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-info/15"
+          className="mt-2 rounded-lg border border-info/40 px-3 py-1.5 text-body-sm font-medium text-foreground hover:bg-info/15"
         >
           Review {hint.suggestedStrategyName} retool
         </button>

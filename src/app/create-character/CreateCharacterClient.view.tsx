@@ -145,10 +145,10 @@ export function renderCreateCharacterClientView(
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-body font-semibold">{option.name}</span>
-                    <span className="block truncate text-body-xs text-muted">{option.desc}</span>
+                    <span className="block truncate text-body-sm text-muted">{option.desc}</span>
                   </span>
                   <span
-                    className="shrink-0 font-mono text-body-xs text-muted"
+                    className="shrink-0 font-mono text-body-sm text-muted"
                     title={`${option.playerCount} registered players`}
                   >
                     {option.playerCount}
@@ -566,7 +566,7 @@ export function renderCreateCharacterClientView(
           role="alert"
           className="w-full max-w-md rounded-xl border border-card-border bg-card p-6 text-center shadow-card"
         >
-          <h1 className="text-lg font-semibold">We could not load character creation</h1>
+          <h1 className="text-heading font-semibold">We could not load character creation</h1>
           <p className="mt-2 text-body-sm text-muted">
             The game did not answer in time. You are still signed in, and anything you already
             entered is saved on this device.
@@ -581,7 +581,7 @@ export function renderCreateCharacterClientView(
                 attempt: prev.attempt + 1,
               }));
             }}
-            className="mt-5 inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-primary px-5 text-body-sm font-semibold text-white hover:bg-primary-dark"
+            className="mt-5 inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-primary px-5 text-body-sm font-semibold text-primary-foreground hover:bg-primary-dark"
           >
             Try again
           </button>
@@ -608,7 +608,7 @@ export function renderCreateCharacterClientView(
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <h1 className="text-heading font-semibold tracking-tight">New candidate</h1>
               {creationInfo ? (
-                <p className="font-mono text-body-xs uppercase tracking-[0.14em] text-muted">
+                <p className="font-mono text-body-sm uppercase tracking-[0.14em] text-muted">
                   {creationInfo.gameDate}
                   <span className="mx-2 text-card-border">|</span>
                   world began {creationInfo.startDate}
@@ -633,7 +633,7 @@ export function renderCreateCharacterClientView(
           {creationInfo ? (
             creationInfo.flavorText && (
               <div className="mt-1.5 max-w-3xl">
-                <p className="font-mono text-body-xs uppercase tracking-[0.14em] text-muted/70">
+                <p className="font-mono text-body-sm uppercase tracking-[0.14em] text-muted/70">
                   How it started &mdash; {creationInfo.flavorDate}
                 </p>
                 <p className="mt-1 text-body-sm leading-relaxed text-muted">
@@ -695,8 +695,8 @@ export function renderCreateCharacterClientView(
 
       <footer className="border-t border-card-border bg-card-muted">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <p className="text-body-xs text-muted">A House Divided &mdash; political simulation</p>
-          <Link href="/dashboard" className="text-body-xs text-muted hover:text-foreground">
+          <p className="text-body-sm text-muted">A House Divided &mdash; political simulation</p>
+          <Link href="/dashboard" className="text-body-sm text-muted hover:text-foreground">
             Back to dashboard
           </Link>
         </div>

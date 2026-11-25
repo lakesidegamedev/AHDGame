@@ -89,8 +89,42 @@ describe("theme text contrast", () => {
     expect(css).toMatch(/--text-color-primary:\s*var\(--primary-ink\);/);
   });
 
+  it("maps primary text, fill text and borders to their own tokens", () => {
+    expect(css).toMatch(/--color-primary-foreground:\s*var\(--primary-foreground\);/);
+    expect(css).toMatch(/--border-color-primary:\s*var\(--primary-border\);/);
+  });
+
+  it("uses the indigo palette on the default theme", () => {
+    const tokens = resolveTheme("default");
+    expect(resolveColour(tokens, "primary").toLowerCase()).toBe("#4f46e5");
+    expect(resolveColour(tokens, "primary-foreground").toLowerCase()).toBe("#ffffff");
+    expect(resolveColour(tokens, "primary-border").toLowerCase()).toBe("#818cf8");
+    expect(resolveColour(tokens, "primary-ink").toLowerCase()).toBe("#a5b4fc");
+    // Primary fill with white text, and outline text on the card.
+    expect(contrast("#ffffff", "#4f46e5")).toBeGreaterThanOrEqual(6.2);
+    expect(contrast("#a5b4fc", resolveColour(tokens, "card"))).toBeGreaterThanOrEqual(8.3);
+    // Disabled controls sit on the neutral surface with muted text.
+    expect(resolveColour(tokens, "card-border").toLowerCase()).toBe("#2a2a3d");
+  });
+
   for (const theme of themes) {
     const tokens = resolveTheme(theme);
+    it(`${theme}: text on a primary fill is at least ${AA_BODY}:1`, () => {
+      const ratio = contrast(
+        resolveColour(tokens, "primary-foreground"),
+        resolveColour(tokens, "primary")
+      );
+      expect(ratio).toBeGreaterThanOrEqual(AA_BODY);
+    });
+    for (const surface of SURFACES) {
+      it(`${theme}: primary border on ${surface} is at least 3:1`, () => {
+        const ratio = contrast(
+          resolveColour(tokens, "primary-border"),
+          resolveColour(tokens, surface)
+        );
+        expect(ratio).toBeGreaterThanOrEqual(3);
+      });
+    }
     for (const text of TEXT_TOKENS) {
       for (const surface of SURFACES) {
         it(`${theme}: ${text} on ${surface} is at least ${AA_BODY}:1`, () => {

@@ -6,6 +6,7 @@ import { Building2, ChartNoAxesCombined, Compass, Network, Pencil } from "lucide
 import styles from "./GroupPage.module.css";
 import { GroupOverviewDashboard } from "./GroupOverviewDashboard";
 import { Skeleton } from "@/components/ui";
+import { pillClass } from "@/components/ui/selectedState";
 
 // The supply-chain section owns its own section of the group page and drags the
 // commodity catalog and the supply-agreement board in with it, so it mounts when
@@ -30,7 +31,7 @@ import { useGroupManagement } from "./useGroupManagement";
 import { GroupFinancialComparison } from "./GroupFinancialComparison";
 import { GroupDirections } from "./GroupDirections";
 const button =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-card-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info";
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-card-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info";
 const sectionIcons = [Building2, ChartNoAxesCombined, Compass, Network];
 export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
   const t = useTranslations("corporations.group");
@@ -65,7 +66,7 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
   if (!data)
     return (
       <main className="mx-auto max-w-7xl p-6 space-y-3">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <h1 className="text-heading font-bold">{t("title")}</h1>
         <p role={error ? "alert" : undefined}>{error || t("noGroup")}</p>
         <Link href={"/corporation/" + corpId}>{t("viewCorporation")}</Link>
       </main>
@@ -91,7 +92,7 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
   }
   return (
     <main className={`${styles.page} mx-auto max-w-7xl p-4 sm:p-6 space-y-6`}>
-      <nav aria-label={t("breadcrumb")} className="text-sm text-muted">
+      <nav aria-label={t("breadcrumb")} className="text-body text-muted">
         <Link href={"/corporation/" + data.rootId}>{t("parentCorporation")}</Link> / {t("title")}
       </nav>
       <header className="flex flex-wrap items-center gap-5 rounded-xl border border-card-border bg-card p-5 sm:p-7">
@@ -101,13 +102,13 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
           size="h-16 w-16"
         />
         <div className="flex-1">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-gold">
+          <p className="mb-1 text-body-sm font-semibold uppercase tracking-widest text-gold">
             {t("title")}
           </p>
-          <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="break-words text-heading font-bold tracking-tight sm:text-display">
             {data.settings.name}
           </h1>
-          <p className="text-sm text-muted">{t("memberCount", { count: data.members.length })}</p>
+          <p className="text-body text-muted">{t("memberCount", { count: data.members.length })}</p>
         </div>
         {data.canManage && (
           <button
@@ -129,18 +130,18 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
         )}
       </header>
       {(error || sheetError) && (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="text-body text-red-400">
           {error || sheetError}
         </p>
       )}
       <nav
         aria-label={t("sections")}
-        className="flex gap-1 overflow-x-auto border-b border-card-border"
+        className="flex gap-1 overflow-x-auto border-b border-card-border pb-2"
       >
         {["overview", "financials", "directions", "supply"].map((key, index) => (
           <button
             key={key}
-            className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-info ${section === key ? "border-primary text-foreground bg-card" : "border-transparent text-muted hover:bg-card hover:text-foreground"}`}
+            className={`inline-flex shrink-0 items-center gap-2 px-4 py-1.5 text-body focus-visible:outline-2 focus-visible:outline-info ${pillClass(section === key)}`}
             aria-pressed={section === key}
             onClick={() => {
               history.replaceState(null, "", "#" + key);
@@ -162,7 +163,7 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
               id="group-identity-editor"
               className="rounded-xl border border-card-border bg-card p-5 space-y-3"
             >
-              <h2 className="border-b border-card-border pb-3 text-sm font-semibold">
+              <h2 className="border-b border-card-border pb-3 text-body font-semibold">
                 {t("identity")}
               </h2>
               <form
@@ -177,7 +178,7 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
                   });
                 }}
               >
-                <label className="text-sm">
+                <label className="text-body">
                   {t("groupName")}
                   <input
                     className="mt-2 block w-full rounded-lg border border-card-border bg-background px-3 py-2 sm:min-w-80"
@@ -192,10 +193,10 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
                   {t("save")}
                 </button>
               </form>
-              <label className="block text-sm">
+              <label className="block text-body">
                 {t("groupLogo")}
                 <input
-                  className="mt-2 block max-w-full text-xs text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-card-elevated file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
+                  className="mt-2 block max-w-full text-body-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-card-elevated file:px-3 file:py-2 file:text-body file:font-medium file:text-foreground"
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/gif"
                   disabled={uploading || busy}
@@ -206,7 +207,7 @@ export function SubsidiaryGroupPage({ corpId }: { corpId: string }) {
           )}
           <GroupOverviewDashboard data={data} sheet={sheet} />
           <details className="rounded-xl border border-card-border bg-card p-5">
-            <summary className="cursor-pointer text-sm font-semibold">
+            <summary className="cursor-pointer text-body font-semibold">
               {t("groupTaxStructure")}
             </summary>
             {groupPayload && (

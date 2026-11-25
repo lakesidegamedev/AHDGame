@@ -140,18 +140,18 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => switchMode("float")}
-                    className="text-xs text-muted hover:text-foreground transition-colors"
+                    className="text-body-sm text-muted hover:text-foreground transition-colors"
                   >
                     ← Back
                   </button>
-                  <h2 id={titleId} className="text-base font-semibold text-foreground">
+                  <h2 id={titleId} className="text-body-lg font-semibold text-foreground">
                     Open orders
                   </h2>
                 </div>
               ) : (
-                <h2 className="text-base font-semibold text-foreground">Buy / Sell shares</h2>
+                <h2 className="text-body-lg font-semibold text-foreground">Buy / Sell shares</h2>
               )}
-              <p className="mt-0.5 text-sm text-muted">
+              <p className="mt-0.5 text-body text-muted">
                 {corporation.name}
                 <span className="mx-2 text-card-border">·</span>
                 <span>Reference price </span>
@@ -161,7 +161,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 {(() => {
                   if (!myHomeCurrency || corpCurrency === myHomeCurrency) return null;
                   return (
-                    <span className="ml-1 text-xs tabular-nums text-muted/70">
+                    <span className="ml-1 text-body-sm tabular-nums text-muted/70">
                       ({formatCurrencyFaceAmount(corporation.sharePrice, corpCurrency)} native)
                     </span>
                   );
@@ -180,10 +180,10 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
               {mode !== "orders" && openOrders.length > 0 && (
                 <button
                   onClick={() => switchMode("orders")}
-                  className="flex items-center gap-1.5 rounded-lg border border-card-border bg-card-elevated px-2.5 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg border border-card-border bg-card-elevated px-2.5 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
                 >
                   Orders
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-body-sm font-bold text-primary">
                     {openOrders.length}
                   </span>
                 </button>
@@ -208,7 +208,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
           {/* ─── Mode picker ─────────────────────────────────────────────────── */}
           {mode !== "orders" && (
             <div className="shrink-0 border-b border-card-border px-6 py-4">
-              <div className="flex overflow-hidden rounded-lg border border-card-border text-sm">
+              <div className="flex overflow-hidden rounded-lg border border-card-border text-body">
                 {modes.map((m, i) => (
                   <button
                     key={m.id}
@@ -218,14 +218,14 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                       "flex-1 py-2.5 text-center transition-colors",
                       i > 0 ? "border-l border-card-border" : "",
                       mode === m.id
-                        ? "bg-primary text-white font-semibold"
+                        ? "bg-primary text-primary-foreground font-semibold"
                         : "bg-card-elevated text-muted hover:text-foreground",
                     ].join(" ")}
                   >
                     {m.label}
                     {m.id === "orderbook" && orderbookCount > 0 && (
                       <span
-                        className={`ml-1 text-[10px] font-bold ${mode === "orderbook" ? "text-white/80" : "text-primary"}`}
+                        className={`ml-1 text-body-sm font-bold ${mode === "orderbook" ? "text-white/80" : "text-primary"}`}
                       >
                         ({orderbookCount})
                       </span>
@@ -415,7 +415,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
             )}
 
             {ceoShareWindow && (
-              <p className="rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-[11px] leading-snug text-warning">
+              <p className="rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-body-sm leading-snug text-warning">
                 CEO purchase limit: used {ceoShareWindow.acquiredShares.toLocaleString("en-US")}/
                 {ceoShareWindow.capShares.toLocaleString("en-US")} shares this{" "}
                 {ceoShareWindow.windowTurns}-turn window (
@@ -428,12 +428,12 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
               </p>
             )}
 
-            <InlineError error={error} className="text-xs text-error" />
+            <InlineError error={error} className="text-body-sm text-error" />
           </div>
 
           {/* ─── Footer ──────────────────────────────────────────────────────── */}
           <div className="flex shrink-0 items-center justify-end gap-3 border-t border-card-border px-6 py-4">
-            <Button variant="ghost" onClick={onClose} className="text-sm">
+            <Button variant="ghost" onClick={onClose} className="text-body">
               {mode === "orders" ? "Close" : "Cancel"}
             </Button>
             {mode === "float" && (
@@ -444,7 +444,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 }
                 disabled={!canSubmitFloat || loading}
                 isLoading={loading}
-                className={`text-sm shadow-none ${
+                className={`text-body shadow-none ${
                   atMarketSide === "sell"
                     ? "bg-error hover:bg-error/90"
                     : "bg-success hover:bg-success/90"
@@ -459,7 +459,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 onClick={() => handlePlaceLimitOrder()}
                 disabled={!canSubmitLimit || loading}
                 isLoading={loading}
-                className={`text-sm shadow-none ${
+                className={`text-body shadow-none ${
                   orderSide === "sell"
                     ? "bg-error hover:bg-error/90"
                     : "bg-success hover:bg-success/90"
@@ -479,14 +479,16 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
       {ceoVacateConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-sm rounded-2xl border border-warning/40 bg-card p-5 shadow-modal space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">This will remove you as CEO</h3>
-            <p className="text-xs leading-relaxed text-muted">{ceoVacateConfirm.message}</p>
+            <h3 className="text-body-lg font-semibold text-foreground">
+              This will remove you as CEO
+            </h3>
+            <p className="text-body-sm leading-relaxed text-muted">{ceoVacateConfirm.message}</p>
             <div className="flex items-center justify-end gap-2 pt-1">
               <Button
                 variant="ghost"
                 onClick={() => setCeoVacateConfirm(null)}
                 disabled={loading}
-                className="text-sm"
+                className="text-body"
               >
                 Cancel
               </Button>
@@ -495,7 +497,7 @@ export function renderSharePurchaseModalView(context: SharePurchaseModalViewCont
                 onClick={() => void handleSellAtMarket(true)}
                 disabled={loading}
                 isLoading={loading}
-                className="text-sm bg-error hover:bg-error/90"
+                className="text-body bg-error hover:bg-error/90"
               >
                 Sell &amp; step down
               </Button>

@@ -28,8 +28,8 @@ export function StartProjectPanel({
   return (
     <div className="rounded-xl border border-[color-mix(in_srgb,var(--gov)_30%,transparent)] bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Start a new project</h3>
-        <button onClick={onCancel} className="text-[12px] text-muted hover:text-foreground">
+        <h3 className="text-body-lg font-semibold text-foreground">Start a new project</h3>
+        <button onClick={onCancel} className="text-body-sm text-muted hover:text-foreground">
           Cancel
         </button>
       </div>
@@ -49,9 +49,9 @@ export function StartProjectPanel({
               >
                 <span className="flex items-center gap-2">
                   <InfraIcon name={a.icon} className="h-4 w-4 text-gov-soft" />
-                  <span className="text-[12px] font-medium text-foreground">{a.label}</span>
+                  <span className="text-body-sm font-medium text-foreground">{a.label}</span>
                 </span>
-                <span className="text-[10px] text-muted">{a.buildDuration} turns</span>
+                <span className="text-body-sm text-muted">{a.buildDuration} turns</span>
               </button>
             ))}
           </div>
@@ -61,7 +61,7 @@ export function StartProjectPanel({
           <select
             value={regionId}
             onChange={(e) => setRegionId(e.target.value)}
-            className="rounded-lg border border-card-border bg-card-muted px-3 py-2 text-[13px] text-foreground outline-none focus:border-[var(--gov)]"
+            className="rounded-lg border border-card-border bg-card-muted px-3 py-2 text-body-sm text-foreground outline-none focus:border-[var(--gov)]"
           >
             {regions.length === 0 && <option value="">No region available</option>}
             {regions.map((rg) => (
@@ -76,12 +76,12 @@ export function StartProjectPanel({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={arch.label}
-            className="rounded-lg border border-card-border bg-card-muted px-3 py-2 text-[13px] text-foreground outline-none focus:border-[var(--gov)]"
+            className="rounded-lg border border-card-border bg-card-muted px-3 py-2 text-body-sm text-foreground outline-none focus:border-[var(--gov)]"
           />
 
-          <p className="mt-3 text-[11px] leading-relaxed text-muted">{arch.description}</p>
+          <p className="mt-3 text-body-sm leading-relaxed text-muted">{arch.description}</p>
 
-          <div className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-[12px]">
+          <div className="mt-3 rounded-lg border border-card-border bg-card-muted p-3 text-body-sm">
             <div className="flex justify-between py-0.5">
               <span className="text-muted">Build time</span>
               <span className="tabular text-foreground">{arch.buildDuration} turns</span>
@@ -112,7 +112,7 @@ export function StartProjectPanel({
           <button
             disabled={busy || !regionId}
             onClick={() => onStart(arch.id, regionId, name.trim() || arch.label)}
-            className="mt-3 w-full rounded-lg py-2 text-[13px] font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 w-full rounded-lg py-2 text-body-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: "var(--gov)" }}
           >
             Authorize · 1 action

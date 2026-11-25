@@ -190,11 +190,11 @@ export function BillCard({
           </div>
           <h3
             className="m-0 text-foreground transition-colors group-hover:text-primary"
-            style={{ fontSize: 23, lineHeight: 1.15, fontWeight: 600, letterSpacing: "-0.005em" }}
+            style={{ fontSize: 16, lineHeight: 1.15, fontWeight: 600, letterSpacing: "-0.005em" }}
           >
             {bill.title}
           </h3>
-          <p className="mt-2 line-clamp-2 max-w-[62ch] text-sm leading-relaxed text-muted">
+          <p className="mt-2 line-clamp-2 max-w-[62ch] text-body leading-relaxed text-muted">
             {bill.summary}
           </p>
         </Link>
@@ -203,7 +203,7 @@ export function BillCard({
           .map((provision, index) => (
             <div
               key={`${provision.legislationTypeId}:${index}`}
-              className="mt-2 flex flex-wrap items-center gap-3 text-xs"
+              className="mt-2 flex flex-wrap items-center gap-3 text-body-sm"
             >
               <span className="text-muted">{provision.legislationTypeName}</span>
               <PositionBadges
@@ -213,7 +213,7 @@ export function BillCard({
               />
             </div>
           ))}
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px]">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-body-sm">
           {sponsorHref ? (
             // Duplicate of the name link below, so keep it out of the a11y tree.
             <Link href={sponsorHref} className="shrink-0" aria-hidden tabIndex={-1}>

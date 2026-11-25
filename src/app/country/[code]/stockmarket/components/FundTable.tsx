@@ -185,7 +185,7 @@ export function FundTable({
   if (funds.length === 0) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-        <p className="text-muted text-sm">Index funds are not available for this exchange yet.</p>
+        <p className="text-muted text-body">Index funds are not available for this exchange yet.</p>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export function FundTable({
               setFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
           />
           <svg
             className="absolute left-3 top-2.5 h-4 w-4 text-muted"
@@ -233,7 +233,7 @@ export function FundTable({
               key={opt.field}
               type="button"
               onClick={() => handleSort(opt.field)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                 sortField === opt.field
                   ? "bg-primary/10 text-primary border border-primary/20"
                   : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
@@ -247,7 +247,7 @@ export function FundTable({
 
       <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead className="bg-card-elevated border-b border-card-border">
               <tr>
                 <th className="px-2 py-2.5 sm:px-4 sm:py-3 text-muted text-body-sm font-medium w-[70px] sm:w-[80px]">
@@ -335,15 +335,15 @@ export function FundTable({
                               href={href}
                               className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1"
                             >
-                              <div className="hidden sm:flex h-10 w-10 rounded-lg bg-primary/10 items-center justify-center border border-primary/20 shrink-0 font-mono text-xs font-bold text-primary">
+                              <div className="hidden sm:flex h-10 w-10 rounded-lg bg-primary/10 items-center justify-center border border-primary/20 shrink-0 font-mono text-body-sm font-bold text-primary">
                                 {fund.tickerSymbol.slice(0, 3)}
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <span className="font-bold text-foreground truncate group-hover:text-primary transition-colors">
                                   {fund.name}
                                 </span>
-                                <div className="flex items-center gap-2 text-xs text-muted">
-                                  <span className="px-1.5 py-0.5 rounded-md bg-card-elevated border border-card-border uppercase text-[9px] tracking-wide font-semibold">
+                                <div className="flex items-center gap-2 text-body-sm text-muted">
+                                  <span className="px-1.5 py-0.5 rounded-md bg-card-elevated border border-card-border uppercase text-body-sm tracking-wide font-semibold">
                                     {scopeLabel}
                                   </span>
                                   {fund.sectorType && (
@@ -392,7 +392,7 @@ export function FundTable({
                               {fund.topHoldings.map((h) => (
                                 <li
                                   key={h.corporationId}
-                                  className="flex items-center gap-2 text-xs"
+                                  className="flex items-center gap-2 text-body-sm"
                                 >
                                   <span className="min-w-0 flex-1 truncate text-foreground">
                                     {corpNames?.get(h.corporationId) ??
@@ -412,7 +412,7 @@ export function FundTable({
                             </ul>
                             <Link
                               href={href}
-                              className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
+                              className="mt-2 inline-block text-body-sm font-semibold text-primary hover:underline"
                             >
                               Full composition
                             </Link>
@@ -429,7 +429,7 @@ export function FundTable({
 
         {totalPages > 1 && (
           <div className="flex flex-col gap-3 border-t border-card-border bg-card-elevated/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-muted tabular-nums">
+            <p className="text-body-sm text-muted tabular-nums">
               Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, totalCount)}{" "}
               of {totalCount}
             </p>
@@ -438,18 +438,18 @@ export function FundTable({
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
               >
                 Previous
               </button>
-              <span className="text-xs font-medium text-muted tabular-nums px-1">
+              <span className="text-body-sm font-medium text-muted tabular-nums px-1">
                 Page {safePage} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
+                className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-card-elevated disabled:pointer-events-none disabled:opacity-40"
               >
                 Next
               </button>
@@ -470,27 +470,27 @@ function FundStatusBadge({
 }) {
   if (status === "paused") {
     return (
-      <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-warning/10 text-warning border border-warning/30">
+      <span className="inline-flex px-2 py-0.5 rounded-md text-body-sm font-bold uppercase tracking-wide bg-warning/10 text-warning border border-warning/30">
         Paused
       </span>
     );
   }
   if (status === "delisted") {
     return (
-      <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-error/10 text-error border border-error/30">
+      <span className="inline-flex px-2 py-0.5 rounded-md text-body-sm font-bold uppercase tracking-wide bg-error/10 text-error border border-error/30">
         Delisted
       </span>
     );
   }
   if (backingRatio !== null && backingRatio < 0.8) {
     return (
-      <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-warning/10 text-warning border border-warning/30">
+      <span className="inline-flex px-2 py-0.5 rounded-md text-body-sm font-bold uppercase tracking-wide bg-warning/10 text-warning border border-warning/30">
         {(backingRatio * 100).toFixed(0)}% backed
       </span>
     );
   }
   return (
-    <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-success/10 text-success border border-success/30">
+    <span className="inline-flex px-2 py-0.5 rounded-md text-body-sm font-bold uppercase tracking-wide bg-success/10 text-success border border-success/30">
       Active
     </span>
   );

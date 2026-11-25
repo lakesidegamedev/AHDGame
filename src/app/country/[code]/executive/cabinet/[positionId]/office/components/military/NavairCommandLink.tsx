@@ -18,7 +18,7 @@ export function NavairCommandLink({ countryCode }: { countryCode: string }) {
       title="Naval and air command"
       sub="Stations and missions for the fleet and air force, including the Blockade posture"
     >
-      <p className="text-[12px] text-muted">
+      <p className="text-body-sm text-muted">
         Hulls and wings are commanded from one screen, not from this roster. Where each formation is
         stationed and what it is doing — sea control, blockade of an enemy&apos;s trade approaches,
         close air support — is set at{" "}

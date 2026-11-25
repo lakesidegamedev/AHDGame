@@ -50,22 +50,22 @@ export function MergerReviewQueuePanel({ data, onDecided, canAct }: Props) {
 
   return (
     <section className="rounded-xl border border-card-border bg-card p-4">
-      <h3 className="text-sm font-semibold text-foreground">Merger review</h3>
-      <p className="mt-1 text-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-foreground">Merger review</h3>
+      <p className="mt-1 text-body-sm text-muted">
         Mergers referred to the {data.seatName}. Every referral resolves on its deadline whether or
         not you act, on the published bands, so silence is itself a decision.
       </p>
       {!data.enforcementLive && (
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           Antitrust enforcement is repealed. No new deal can be referred; the referrals below opened
           under the previous law and still need deciding.
         </p>
       )}
-      {err && <p className="mt-2 text-xs text-error">{err}</p>}
+      {err && <p className="mt-2 text-body-sm text-error">{err}</p>}
 
       <h4 className="mt-4 text-body-sm font-medium text-muted">Awaiting your decision</h4>
       {pending.length === 0 ? (
-        <p className="mt-2 text-xs text-muted">No merger is waiting on you.</p>
+        <p className="mt-2 text-body-sm text-muted">No merger is waiting on you.</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {pending.map((review) => (

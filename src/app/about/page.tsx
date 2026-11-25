@@ -20,16 +20,16 @@ export default async function AboutPage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">About A House Divided</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">About A House Divided</h1>
+          <p className="mt-2 text-body text-muted">
             A real-time multiplayer political and economic simulation
           </p>
         </div>
 
         <div className="rounded-xl border border-card-border bg-card p-6 sm:p-8 space-y-8">
           <section>
-            <h2 className="text-lg font-bold mb-3">What is A House Divided?</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">What is A House Divided?</h2>
+            <p className="text-body text-muted leading-relaxed">
               A House Divided is a browser-based political and economic simulation game where
               players create politicians, run for elected office, propose and vote on legislation,
               manage campaign strategies, and shape the political landscape of simulated countries.
@@ -39,8 +39,8 @@ export default async function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">How it works</h2>
-            <div className="space-y-3 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">How it works</h2>
+            <div className="space-y-3 text-body text-muted leading-relaxed">
               <p>
                 Players register an account and create a politician character with a party
                 affiliation, home state, and policy positions. From there, they can run in elections
@@ -72,16 +72,15 @@ export default async function AboutPage() {
                     </Link>
                   </span>
                 ))}
-                . Another {world.registeredCountryCount - world.playable.length} nations run their
-                own economies and political machinery in the same world, and you can browse every
-                one of them.
+                . The world tracks {world.presentCountryCount} countries in total, including
+                background nations.
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Who runs it?</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">Who runs it?</h2>
+            <p className="text-body text-muted leading-relaxed">
               A House Divided is an independent project maintained by a small admin team. The game
               has no affiliation with any real political party, government, or organization. It is
               provided purely for entertainment purposes.
@@ -90,7 +89,7 @@ export default async function AboutPage() {
               href="https://lakesidegames.net"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground"
+              className="mt-3 inline-flex items-center gap-2 text-body text-muted transition-colors hover:text-foreground"
             >
               <Image
                 src="/lakeside-mark.svg"
@@ -104,8 +103,8 @@ export default async function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Get involved</h2>
-            <div className="space-y-2 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">Get involved</h2>
+            <div className="space-y-2 text-body text-muted leading-relaxed">
               <p>
                 The best way to get involved is to{" "}
                 <Link href="/register" className="text-primary hover:underline">
@@ -140,8 +139,8 @@ export default async function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Credits &amp; attributions</h2>
-            <div className="space-y-3 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">Credits &amp; attributions</h2>
+            <div className="space-y-3 text-body text-muted leading-relaxed">
               <p>
                 A House Divided is built on open-source software and uses a number of third-party
                 assets. We gratefully acknowledge the following:
@@ -195,7 +194,10 @@ export default async function AboutPage() {
                   </a>
                   , distributed under the SIL Open Font License.
                 </li>
-                <li>Built with Next.js, React, Tailwind CSS, and MongoDB. Hosted on Vercel.</li>
+                <li>
+                  Built with Next.js, React, Tailwind CSS, and MongoDB. Self-hosted by Lakeside
+                  Games.
+                </li>
               </ul>
               <p>
                 If you believe an asset on this site is used incorrectly, please{" "}
@@ -208,7 +210,7 @@ export default async function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">Explore the simulation</h2>
+            <h2 className="text-heading font-bold mb-3">Explore the simulation</h2>
             <div className="flex flex-wrap gap-3">
               {[
                 { href: "/country/us/elections", label: "Elections" },
@@ -221,7 +223,7 @@ export default async function AboutPage() {
                 <Link
                   key={href}
                   href={href}
-                  className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:border-primary/40 hover:text-primary"
+                  className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium transition-colors hover:border-primary/40 hover:text-primary"
                 >
                   {label}
                 </Link>
@@ -230,7 +232,7 @@ export default async function AboutPage() {
           </section>
         </div>
 
-        <p className="mt-6 text-center text-xs text-muted">
+        <p className="mt-6 text-center text-body-sm text-muted">
           <Link href="/privacy" className="text-primary hover:underline">
             Privacy policy
           </Link>{" "}

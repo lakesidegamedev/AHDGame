@@ -76,20 +76,22 @@ export function SectorBoard({
             }`}
           >
             <div className="flex min-h-4 items-baseline justify-between gap-1.5">
-              <span className="truncate text-xs font-semibold text-foreground">{tile.label}</span>
+              <span className="truncate text-body-sm font-semibold text-foreground">
+                {tile.label}
+              </span>
               {tile.star && (
                 <span
-                  className="whitespace-nowrap text-[9.5px] font-bold text-gold"
+                  className="whitespace-nowrap text-body-sm font-bold text-gold"
                   title={`${tile.star.rank === "primary" ? "Primary" : "Secondary"} regional specialization — +${tile.star.bonus}pp profit margin for this sector here`}
                 >
                   ★ {tile.star.rank === "primary" ? "1st" : "2nd"} +{tile.star.bonus}pp
                 </span>
               )}
             </div>
-            <div className="mt-1 font-mono text-sm font-bold tabular-nums text-foreground">
+            <div className="mt-1 font-mono text-body font-bold tabular-nums text-foreground">
               {formatMarket(tile.totalMarket)}
             </div>
-            <div className="text-[9.5px] text-muted">market /day</div>
+            <div className="text-body-sm text-muted">market /day</div>
             <div
               className="mt-2 h-1 overflow-hidden rounded-full bg-track"
               title={
@@ -103,7 +105,7 @@ export function SectorBoard({
                 style={{ width: `${Math.max(0, Math.min(100, tile.ownedPercent))}%` }}
               />
             </div>
-            <div className="mt-1 flex justify-between text-[9.5px]">
+            <div className="mt-1 flex justify-between text-body-sm">
               <span className="text-muted">Avg. Growth</span>
               <span
                 className={`font-mono tabular-nums ${TONE_CLASS[avgGrowthTone(tile.avgGrowth)]}`}

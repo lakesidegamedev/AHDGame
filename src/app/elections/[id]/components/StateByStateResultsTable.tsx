@@ -52,14 +52,16 @@ export function StateByStateResultsTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       <div className="px-5 py-3 bg-card-elevated border-b border-card-border">
-        <h3 className="text-lg font-semibold">State-by-state results</h3>
-        <p className="text-xs text-muted mt-1">All 50 states + DC · Click column headers to sort</p>
+        <h3 className="text-body-lg font-semibold">State-by-state results</h3>
+        <p className="text-body-sm text-muted mt-1">
+          All 50 states + DC · Click column headers to sort
+        </p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-card-border bg-background text-left text-sm font-semibold text-foreground">
+            <tr className="border-b border-card-border bg-background text-left text-body font-semibold text-foreground">
               <th
                 className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("state")}
@@ -102,7 +104,7 @@ export function StateByStateResultsTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{result.stateName}</span>
-                    <span className="text-xs text-muted">
+                    <span className="text-body-sm text-muted">
                       ({displayCanadianRegionCode(result.stateId)})
                     </span>
                   </div>
@@ -134,7 +136,7 @@ export function StateByStateResultsTable({
                     {result.winnerPct.toFixed(1)}%
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-muted text-xs">
+                <td className="px-4 py-3 text-right tabular-nums text-muted text-body-sm">
                   {formatVotes(result.totalVotes)}
                 </td>
               </tr>

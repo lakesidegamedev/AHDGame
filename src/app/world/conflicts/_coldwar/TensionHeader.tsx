@@ -105,7 +105,7 @@ function PressureCard({
         <ColdWarHelp label={label}>{help}</ColdWarHelp>
       </div>
       <div style={{ marginTop: 3, font: `700 18px ${mono}`, color: "#f0d08a" }}>+{value}</div>
-      <div style={{ marginTop: 2, fontSize: 11, color: "#858596" }}>{detail}</div>
+      <div style={{ marginTop: 2, fontSize: 12, color: "#858596" }}>{detail}</div>
     </div>
   );
 }
@@ -132,7 +132,7 @@ function EffectCard({
         <ColdWarHelp label={label}>{help}</ColdWarHelp>
       </div>
       <div style={{ marginTop: 4, font: `700 17px ${mono}`, color }}>{value}</div>
-      <div style={{ marginTop: 3, fontSize: 11, lineHeight: 1.35, color: "#858596" }}>{detail}</div>
+      <div style={{ marginTop: 3, fontSize: 12, lineHeight: 1.35, color: "#858596" }}>{detail}</div>
     </div>
   );
 }
@@ -465,7 +465,7 @@ export function TensionHeader({
                           background: "rgba(255,120,73,.05)",
                         }}
                       >
-                        <span style={{ fontSize: 15 }}>{p.flag}</span>
+                        <span style={{ fontSize: 14 }}>{p.flag}</span>
                         <span style={{ fontSize: 12, color: "#e8e8ee" }}>{p.name}</span>
                         <span style={{ font: `700 11px ${mono}`, color: "#ff9d7a" }}>
                           {fmtN(p.warheads)} warheads

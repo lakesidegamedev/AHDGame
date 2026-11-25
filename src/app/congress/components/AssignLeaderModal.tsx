@@ -38,11 +38,11 @@ export function AssignLeaderModal({
       maxWidthClass="max-w-sm"
     >
       <div className="space-y-4">
-        <p className="text-xs text-muted">{roleLabel}</p>
+        <p className="text-body-sm text-muted">{roleLabel}</p>
         <select
           value={assignCharacterId}
           onChange={(e) => onCharacterChange(e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         >
           <option value="">— Select member —</option>
           {chamberMembers.map((m) => (
@@ -55,7 +55,7 @@ export function AssignLeaderModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-lg border border-card-border py-2 text-sm text-muted"
+            className="flex-1 rounded-lg border border-card-border py-2 text-body text-muted"
           >
             Cancel
           </button>
@@ -63,7 +63,7 @@ export function AssignLeaderModal({
             type="button"
             onClick={onSubmit}
             disabled={assignLoading || !assignCharacterId}
-            className="flex-1 rounded-lg bg-primary py-2 text-sm text-white disabled:opacity-50"
+            className="flex-1 rounded-lg bg-primary py-2 text-body text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {assignLoading ? "Saving…" : "Assign"}
           </button>

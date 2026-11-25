@@ -91,13 +91,13 @@ export function StatePartyMetricsPanel({ stateParty }: StatePartyMetricsPanelPro
               content="Your party's share of all the organization built in this state. Each Build Organization click adds one unit. A party that stops building here slowly loses share."
             />
           </div>
-          <p className="text-xs text-muted/70 leading-relaxed max-w-md">
+          <p className="text-body-sm text-muted/70 leading-relaxed max-w-md">
             {getOrgFlavorText(stateParty.organization, stateParty.partyName)}
           </p>
         </div>
         <div className="text-right shrink-0">
-          <div className={`text-3xl font-bold tabular-nums ${orgLabel.color}`}>{orgValue}</div>
-          <div className={`text-xs font-semibold ${orgLabel.color}`}>{orgLabel.label}</div>
+          <div className={`text-display font-bold tabular-nums ${orgLabel.color}`}>{orgValue}</div>
+          <div className={`text-body-sm font-semibold ${orgLabel.color}`}>{orgLabel.label}</div>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ export function StatePartyMetricsPanel({ stateParty }: StatePartyMetricsPanelPro
               style={{ width: `${Math.min(100, Math.max(0, stateParty.organization))}%` }}
             />
           </div>
-          <div className="mt-1.5 text-xs text-muted tabular-nums">
+          <div className="mt-1.5 text-body-sm text-muted tabular-nums">
             {orgValue}% of statewide Org pool
           </div>
         </div>
@@ -125,14 +125,14 @@ export function StatePartyMetricsPanel({ stateParty }: StatePartyMetricsPanelPro
                 className="flex items-start justify-between gap-3 px-3 py-2.5"
               >
                 <div className="min-w-0">
-                  <div className="flex items-center text-xs font-medium text-foreground">
+                  <div className="flex items-center text-body-sm font-medium text-foreground">
                     {effect.label}
                     <Tooltip label={`About ${effect.label}`} content={effect.tooltip} />
                   </div>
-                  <div className="mt-0.5 text-[11px] leading-snug text-muted">{effect.blurb}</div>
+                  <div className="mt-0.5 text-body-sm leading-snug text-muted">{effect.blurb}</div>
                 </div>
                 {/* Plain text: the party colour read as a warning when it was red. */}
-                <div className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+                <div className="shrink-0 text-body font-bold tabular-nums text-foreground">
                   {effect.value}
                 </div>
               </div>

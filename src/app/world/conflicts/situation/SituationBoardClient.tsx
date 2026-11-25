@@ -135,7 +135,7 @@ export function SituationBoardClient({
                 style={{
                   margin: "6px 0 0",
                   fontFamily: headingFont,
-                  fontSize: 34,
+                  fontSize: 30,
                   fontWeight: 700,
                   color: C.acc,
                   lineHeight: 1,
@@ -147,7 +147,7 @@ export function SituationBoardClient({
                 style={{
                   margin: "8px 0 0",
                   maxWidth: 560,
-                  fontSize: 13,
+                  fontSize: 12,
                   color: MIL_COLOR.textMuted,
                   lineHeight: 1.5,
                 }}
@@ -184,7 +184,7 @@ export function SituationBoardClient({
               <div
                 style={{
                   fontFamily: headingFont,
-                  fontSize: 28,
+                  fontSize: 30,
                   fontWeight: 700,
                   color: "#fff",
                   marginTop: 4,
@@ -323,7 +323,7 @@ export function SituationBoardClient({
                 style={{
                   margin: "0 auto",
                   maxWidth: 460,
-                  fontSize: 13,
+                  fontSize: 12,
                   color: MIL_COLOR.textMuted,
                   lineHeight: 1.6,
                 }}

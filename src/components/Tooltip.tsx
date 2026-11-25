@@ -140,7 +140,7 @@ export function Tooltip({ content, children, side = "top", maxWidth = 280 }: Too
           className="fixed z-[9999] pointer-events-none"
           style={{ top: pos.top, left: pos.left, maxWidth }}
         >
-          <div className="rounded-lg border border-card-border bg-card px-3 py-2.5 text-xs text-foreground shadow-modal shadow-black/30 leading-relaxed">
+          <div className="rounded-lg border border-card-border bg-card px-3 py-2.5 text-body-sm text-foreground shadow-modal shadow-black/30 leading-relaxed">
             {content}
           </div>
         </div>

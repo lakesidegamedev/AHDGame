@@ -20,7 +20,7 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
                 >
                   {health.statusLabel}
                 </span>
-                <span className="text-xs text-muted">
+                <span className="text-body-sm text-muted">
                   {health.chairVacant
                     ? "Chair vacant"
                     : health.election.status === "active"
@@ -28,12 +28,12 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
                       : "Chair seated"}
                 </span>
               </div>
-              <p className="mt-3 text-sm text-muted">{health.statusReason}</p>
+              <p className="mt-3 text-body text-muted">{health.statusReason}</p>
             </div>
 
             <div className="rounded-lg border border-card-border bg-card p-4">
               <div className="text-body-sm font-semibold text-muted">Churn | Last {12} turns</div>
-              <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+              <div className="mt-3 grid grid-cols-3 gap-3 text-body">
                 <div>
                   <div className="font-bold text-success tabular-nums">
                     {health.recentJoinCount}
@@ -57,7 +57,7 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
 
             <div className="rounded-lg border border-card-border bg-card p-4">
               <div className="text-body-sm font-semibold text-muted">Discipline</div>
-              <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+              <div className="mt-3 grid grid-cols-3 gap-3 text-body">
                 <div>
                   <div className="font-bold tabular-nums">{health.activeDefianceCount}</div>
                   <div className="text-body-sm text-muted">Defying</div>
@@ -75,7 +75,7 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
 
             <div className="rounded-lg border border-card-border bg-card p-4">
               <div className="text-body-sm font-semibold text-muted">Chair election</div>
-              <div className="mt-3 text-sm">
+              <div className="mt-3 text-body">
                 <div className="font-bold">
                   {health.election.status === "active"
                     ? "Voting now"
@@ -102,9 +102,9 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
 
           <div className="grid gap-4 xl:grid-cols-2">
             <div className="rounded-lg border border-card-border bg-card p-5">
-              <h3 className="mb-3 text-sm font-semibold text-muted">At-risk NPP members</h3>
+              <h3 className="mb-3 text-body-lg font-semibold text-muted">At-risk NPP members</h3>
               {health.atRiskMembers.length === 0 ? (
-                <p className="text-sm italic text-muted">
+                <p className="text-body italic text-muted">
                   No caucus NPPs are close to the chair-relationship exit threshold.
                 </p>
               ) : (
@@ -115,7 +115,7 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
                       className="flex items-center justify-between gap-3 rounded border border-card-border bg-background/50 p-3"
                     >
                       <div>
-                        <div className="text-sm font-semibold">{member.nppName}</div>
+                        <div className="text-body font-semibold">{member.nppName}</div>
                         <div className="text-body-sm text-muted">
                           Relationship {member.relationshipWithChair.toFixed(1)} | Exit in{" "}
                           {member.gapFromExit.toFixed(1)}
@@ -139,9 +139,9 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
             </div>
 
             <div className="rounded-lg border border-card-border bg-card p-5">
-              <h3 className="mb-3 text-sm font-semibold text-muted">Recent churn</h3>
+              <h3 className="mb-3 text-body-lg font-semibold text-muted">Recent churn</h3>
               {health.recentChurn.length === 0 ? (
-                <p className="text-sm italic text-muted">
+                <p className="text-body italic text-muted">
                   No joins, leaves, or forced exits in the last 12 turns.
                 </p>
               ) : (
@@ -152,7 +152,7 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
                       className="flex items-center justify-between gap-3 rounded border border-card-border bg-background/50 p-3"
                     >
                       <div>
-                        <div className="text-sm font-semibold">{entry.memberName}</div>
+                        <div className="text-body font-semibold">{entry.memberName}</div>
                         <div className="text-body-sm text-muted">
                           {entry.memberType === "character" ? "Player" : "NPP"} |{" "}
                           {formatCaucusChurnKind(entry.kind)}
@@ -171,9 +171,9 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
       )}
 
       <div className="rounded-lg border border-card-border bg-card p-5">
-        <h3 className="mb-3 text-sm font-semibold text-muted">Key policy positions</h3>
+        <h3 className="mb-3 text-body-lg font-semibold text-muted">Key policy positions</h3>
         {detail.positions.length === 0 ? (
-          <p className="text-sm italic text-muted">No positions defined yet.</p>
+          <p className="text-body italic text-muted">No positions defined yet.</p>
         ) : (
           <ul className="space-y-2">
             {detail.positions.map((position) => (
@@ -192,9 +192,9 @@ export function OverviewSubtab({ detail }: { detail: CaucusDetail }) {
                 </span>
                 <div className="flex-1">
                   <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="text-sm font-semibold">{position.topic}</span>
-                    <span className="text-xs text-muted">to</span>
-                    <span className="text-sm text-primary">{position.stance}</span>
+                    <span className="text-body font-semibold">{position.topic}</span>
+                    <span className="text-body-sm text-muted">to</span>
+                    <span className="text-body text-primary">{position.stance}</span>
                   </div>
                   {position.note && <p className="mt-1 text-body-sm text-muted">{position.note}</p>}
                 </div>

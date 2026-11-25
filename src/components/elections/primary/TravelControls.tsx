@@ -78,8 +78,8 @@ export function TravelControls({
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Where you are campaigning</h3>
-        <p className="text-xs text-muted mt-0.5">
+        <h3 className="text-body-lg font-semibold text-foreground">Where you are campaigning</h3>
+        <p className="text-body-sm text-muted mt-0.5">
           Travelling earns a presence bonus in that state each turn, and is what lets you canvass
           there. Costs actions by the state&apos;s size.
         </p>
@@ -90,12 +90,12 @@ export function TravelControls({
           <div className="text-body-sm font-medium text-muted">Currently in</div>
           {currentStateId ? (
             <div className="mt-1">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-sm font-semibold text-amber-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-body font-semibold text-amber-400">
                 📍 {currentStateName ?? currentStateId}
               </span>
             </div>
           ) : (
-            <div className="text-sm text-muted mt-1">
+            <div className="text-body text-muted mt-1">
               Nowhere yet. You can only canvass in your home state until you travel.
             </div>
           )}
@@ -106,7 +106,7 @@ export function TravelControls({
             disabled={busy || playerActions < focusCost}
             onClick={() => void travelTo(focusState.id)}
             title={playerActions < focusCost ? `Needs ${focusCost} actions` : undefined}
-            className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-body-sm font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Travel to {focusState.name} ({focusCost} {focusCost === 1 ? "action" : "actions"})
           </button>
@@ -115,7 +115,7 @@ export function TravelControls({
           type="button"
           disabled={busy}
           onClick={() => setPickerOpen(true)}
-          className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-body-sm font-medium text-amber-300 hover:bg-amber-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {focusState && !here
             ? "Another state"
@@ -127,7 +127,7 @@ export function TravelControls({
 
       {message && (
         <div
-          className={`rounded-md px-2.5 py-1.5 text-xs ${
+          className={`rounded-md px-2.5 py-1.5 text-body-sm ${
             message.startsWith("✓") ? "bg-success/10 text-success" : "bg-error/10 text-error"
           }`}
         >

@@ -72,7 +72,7 @@ function Badge({ tone, children }: { tone: "ok" | "warn" | "muted"; children: Re
   }[tone];
   return (
     <span
-      className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+      className="shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider"
       style={palette}
     >
       {children}
@@ -129,7 +129,7 @@ export function BankingRolloutPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading banking rollout…</span>
+          <span className="text-body text-muted">Loading banking rollout…</span>
         </div>
       </div>
     );
@@ -137,7 +137,7 @@ export function BankingRolloutPanel() {
   if (!snapshot) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-        <p className="text-sm text-destructive">Could not load the banking rollout.</p>
+        <p className="text-body text-destructive">Could not load the banking rollout.</p>
       </div>
     );
   }
@@ -150,7 +150,7 @@ export function BankingRolloutPanel() {
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-card sm:p-6">
       <div className="mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">Savings accounts rollout</h3>
+          <h3 className="text-body-lg font-semibold">Savings accounts rollout</h3>
           <Badge tone={snapshot.privateBankingEnabled ? "ok" : "muted"}>
             {snapshot.privateBankingEnabled ? "Private banking on" : "Private banking off"}
           </Badge>
@@ -158,7 +158,7 @@ export function BankingRolloutPanel() {
             {snapshot.gate.ok ? "Gate open" : "Gate closed"}
           </Badge>
         </div>
-        <p className="text-xs leading-relaxed text-muted">
+        <p className="text-body-sm leading-relaxed text-muted">
           Off, then shadow, then authoritative, then one currency at a time into the read cohort.
           Widening needs the gate open and a clean, fresh comparison; narrowing is always allowed.
           Turn {snapshot.currentTurn}.
@@ -166,13 +166,13 @@ export function BankingRolloutPanel() {
       </div>
 
       {error ? (
-        <p className="mb-3 text-xs text-destructive" role="alert">
+        <p className="mb-3 text-body-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
       {!snapshot.gate.ok ? (
-        <ul className="mb-4 space-y-1 rounded-lg border border-card-border bg-background/40 p-3 text-xs text-muted">
+        <ul className="mb-4 space-y-1 rounded-lg border border-card-border bg-background/40 p-3 text-body-sm text-muted">
           {snapshot.gate.reasons.map((reason) => (
             <li key={reason}>{reason}</li>
           ))}
@@ -181,12 +181,12 @@ export function BankingRolloutPanel() {
 
       <div className="mb-4 rounded-lg border border-card-border bg-background/40 p-4">
         <div className="mb-1 flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">Mode</span>
+          <span className="text-body font-semibold">Mode</span>
           <span className="text-body-sm font-medium text-muted">
             {MODES.find((m) => m.value === snapshot.state.mode)?.label ?? snapshot.state.mode}
           </span>
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           {MODES.find((m) => m.value === snapshot.state.mode)?.blurb}
         </p>
         <div className="inline-flex flex-wrap gap-1 rounded-lg border border-card-border bg-card p-1">
@@ -202,9 +202,9 @@ export function BankingRolloutPanel() {
                 disabled={saving || active || blocked}
                 title={blocked ? decision?.reasons.join(" ") : mode.blurb}
                 onClick={() => void apply(change)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
                 }`}
               >
@@ -217,19 +217,19 @@ export function BankingRolloutPanel() {
 
       <div className="mb-4 rounded-lg border border-card-border bg-background/40 p-4">
         <div className="mb-1 flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">Read cohort</span>
+          <span className="text-body font-semibold">Read cohort</span>
           <span className="text-body-sm font-medium text-muted">
             {snapshot.state.readCurrencies.length > 0
               ? snapshot.state.readCurrencies.join(", ")
               : "none"}
           </span>
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Currencies whose accounts the balance sheets count as cash-backed liabilities. A currency
           joins only in authoritative mode, migrated and clean in the last comparison.
         </p>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-body-sm">
             <thead>
               <tr className="text-left text-body-sm font-medium text-muted">
                 <th className="py-1 pr-3">Currency</th>
@@ -270,9 +270,9 @@ export function BankingRolloutPanel() {
                           disabled={saving || !d.allowed}
                           title={d.allowed ? undefined : d.reasons.join(" ")}
                           onClick={() => void apply(change)}
-                          className={`rounded-md border border-card-border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+                          className={`rounded-md border border-card-border px-2 py-1 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                             inCohort
-                              ? "bg-primary text-white"
+                              ? "bg-primary text-primary-foreground"
                               : "text-muted hover:bg-background hover:text-foreground"
                           }`}
                         >
@@ -286,21 +286,21 @@ export function BankingRolloutPanel() {
           </table>
         </div>
         {snapshot.comparison ? (
-          <p className="mt-2 text-[11px] text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             Comparison from turn {snapshot.comparison.turn}.
           </p>
         ) : (
-          <p className="mt-2 text-[11px] text-muted">No comparison has run: the mode is off.</p>
+          <p className="mt-2 text-body-sm text-muted">No comparison has run: the mode is off.</p>
         )}
       </div>
 
       {snapshot.rollback.length > 0 ? (
         <div className="rounded-lg border border-card-border bg-background/40 p-4">
           <div className="mb-1 flex items-center gap-2">
-            <span className="text-sm font-semibold">Rollback conditions raised</span>
+            <span className="text-body font-semibold">Rollback conditions raised</span>
             <Badge tone="warn">{snapshot.rollback.length}</Badge>
           </div>
-          <ul className="space-y-2 text-xs">
+          <ul className="space-y-2 text-body-sm">
             {snapshot.rollback.map((condition) => (
               <li
                 key={`${condition.code}:${condition.detail}`}
@@ -311,7 +311,7 @@ export function BankingRolloutPanel() {
                   type="button"
                   disabled={saving}
                   onClick={() => void apply(condition.suggested)}
-                  className="rounded-md border border-card-border px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+                  className="rounded-md border border-card-border px-2 py-1 text-body-sm font-medium text-muted transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
                 >
                   {condition.suggested.kind === "mode"
                     ? `Drop to ${condition.suggested.mode}`

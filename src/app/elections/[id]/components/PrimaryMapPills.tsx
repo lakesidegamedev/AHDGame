@@ -109,14 +109,14 @@ export function PrimaryMapPills({
           <Link
             key={p.partyId}
             href={tierPrimaryRoute(tier, p.partyId)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-card"
+            className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background px-3 py-1.5 text-body-sm font-medium transition-colors hover:bg-card"
           >
             🗺 {p.partyName} {TIER_LABEL[tier]}
           </Link>
         ))}
       </div>
       {activeParties.length === 0 && (
-        <div className="mt-2 text-[11px] italic text-muted/80">
+        <div className="mt-2 text-body-sm italic text-muted/80">
           No candidates have filed yet. The per-party {TIER_LABEL[tier]} pages still show the seeded
           race calendar and state map.
         </div>

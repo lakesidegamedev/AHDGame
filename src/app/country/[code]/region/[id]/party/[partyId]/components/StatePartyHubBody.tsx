@@ -226,7 +226,7 @@ export function StatePartyHubBody({
     return canInfluence ? (
       <div className="space-y-4">
         <div className="rounded-lg border border-card-border bg-card px-4 py-3">
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             Issue whips bill by bill and vote by vote from here. State parties can direct NPP voting
             pressure one target at a time.
           </p>
@@ -241,7 +241,7 @@ export function StatePartyHubBody({
         />
       </div>
     ) : (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted italic">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted italic">
         Whip directives are restricted to the State Chair and Vice Chair.
       </div>
     );
@@ -269,11 +269,11 @@ export function StatePartyHubBody({
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="text-sm font-semibold text-muted mb-4">Party resources</h2>
+          <h2 className="text-body font-semibold text-muted mb-4">Party resources</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">Treasury</span>
-              <span className="text-lg font-bold text-warning">
+              <span className="text-body text-muted">Treasury</span>
+              <span className="text-heading font-bold text-warning">
                 {fmt(stateParty.treasury, stateParty.countryId)}
               </span>
             </div>
@@ -289,9 +289,9 @@ export function StatePartyHubBody({
           <button
             type="button"
             onClick={() => setNppSubtab("recruitment")}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-md px-4 py-2 text-body font-medium transition-colors ${
               nppSubtab === "recruitment"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -300,9 +300,9 @@ export function StatePartyHubBody({
           <button
             type="button"
             onClick={() => setNppSubtab("management")}
-            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-md px-4 py-2 text-body font-medium transition-colors ${
               nppSubtab === "management"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -417,7 +417,7 @@ export function StatePartyHubBody({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead>
                 <tr className="border-b border-card-border text-left">
                   <th className="pb-3 pl-2 font-medium text-muted">Member</th>
@@ -459,7 +459,7 @@ export function StatePartyHubBody({
                               {m.name}
                             </Link>
                             {m.isNPP && (
-                              <span className="text-[10px] text-purple-400 font-medium bg-purple-500/10 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                              <span className="text-body-sm text-purple-400 font-medium bg-purple-500/10 px-1.5 py-0.5 rounded w-fit mt-0.5">
                                 <NppAbbr />
                               </span>
                             )}
@@ -478,7 +478,7 @@ export function StatePartyHubBody({
                       <td className="py-3 align-middle">
                         {role ? (
                           <span
-                            className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border"
+                            className="inline-flex items-center rounded-full px-2.5 py-1 text-body-sm font-medium border"
                             style={{
                               backgroundColor: `${stateParty.partyColor}15`,
                               color: stateParty.partyColor,
@@ -488,7 +488,7 @@ export function StatePartyHubBody({
                             {role}
                           </span>
                         ) : (
-                          <span className="text-muted text-xs">Member</span>
+                          <span className="text-muted text-body-sm">Member</span>
                         )}
                       </td>
                     </tr>

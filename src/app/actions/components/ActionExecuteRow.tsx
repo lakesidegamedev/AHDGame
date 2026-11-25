@@ -222,12 +222,12 @@ export default function ActionExecuteRow({
 
   const btnBase = compact
     ? "rounded-md px-2.5 py-1.5 text-body-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-    : "rounded-lg px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+    : "rounded-lg px-3 py-2 text-body font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
   const primary =
     isBusy && executingKey === execKey
       ? "bg-muted cursor-wait text-white"
-      : "bg-primary hover:bg-primary-dark text-white";
+      : "bg-primary hover:bg-primary-dark text-primary-foreground";
 
   const batchIdle =
     "border border-card-border bg-card-elevated text-foreground hover:bg-card-muted";
@@ -294,7 +294,7 @@ export default function ActionExecuteRow({
         </div>
 
         {batchHint && (
-          <p id={batchHintId} className="mt-1 text-body-xs text-muted">
+          <p id={batchHintId} className="mt-1 text-body-sm text-muted">
             {batchHint}
           </p>
         )}
@@ -315,10 +315,7 @@ export default function ActionExecuteRow({
               aria-modal="true"
               aria-labelledby="batch-confirm-title"
             >
-              <h2
-                id="batch-confirm-title"
-                className="text-heading-sm font-semibold text-foreground"
-              >
+              <h2 id="batch-confirm-title" className="text-heading font-semibold text-foreground">
                 {actionLabel} {confirmCount} times?
               </h2>
               <p className="mt-2 text-body-sm text-muted">
@@ -343,7 +340,7 @@ export default function ActionExecuteRow({
                 <button
                   type="button"
                   onClick={() => setConfirmCount(null)}
-                  className="rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-sm font-semibold text-foreground hover:bg-card-muted transition-colors"
+                  className="rounded-lg border border-card-border bg-card-elevated px-4 py-2 text-body font-semibold text-foreground hover:bg-card-muted transition-colors"
                 >
                   Cancel
                 </button>
@@ -355,7 +352,7 @@ export default function ActionExecuteRow({
                     onExecute(actionType, c);
                   }}
                   disabled={isBusy}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary-dark transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                 >
                   {actionLabel} {confirmCount} times
                 </button>

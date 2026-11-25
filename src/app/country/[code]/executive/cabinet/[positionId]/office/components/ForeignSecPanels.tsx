@@ -121,8 +121,8 @@ export function ForeignSecPanels({
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Trade envoy</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="text-heading font-semibold text-foreground">Trade envoy</h2>
+          <p className="mt-1 text-body text-muted">
             Designate a bilateral trade partner to receive a focused diplomatic and trade
             relationship bonus.
           </p>
@@ -132,7 +132,7 @@ export function ForeignSecPanels({
           <div className="flex-1">
             <label
               htmlFor="trade-envoy-select"
-              className="mb-1 block text-xs font-medium text-muted"
+              className="mb-1 block text-body-sm font-medium text-muted"
             >
               Partner country
             </label>
@@ -142,7 +142,7 @@ export function ForeignSecPanels({
               disabled={!canAct}
               onChange={(e) => setSelectedCountry(e.target.value)}
               className={[
-                "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm text-foreground",
+                "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body text-foreground",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
                 !canAct ? "cursor-not-allowed opacity-50" : "",
               ]
@@ -169,7 +169,7 @@ export function ForeignSecPanels({
             </Button>
             {countryFeedback && (
               <span
-                className={`text-sm ${countryFeedback.type === "success" ? "text-success" : "text-error"}`}
+                className={`text-body ${countryFeedback.type === "success" ? "text-success" : "text-error"}`}
               >
                 {countryFeedback.message}
               </span>
@@ -180,8 +180,8 @@ export function ForeignSecPanels({
 
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Aid priority</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="text-heading font-semibold text-foreground">Aid priority</h2>
+          <p className="mt-1 text-body text-muted">
             Set the strategic focus for the country&apos;s overseas development assistance.
           </p>
         </div>
@@ -207,12 +207,12 @@ export function ForeignSecPanels({
                   .trim()}
               >
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">{option.label}</span>
+                  <span className="text-body font-semibold text-foreground">{option.label}</span>
                   {isActive && (
                     <span className="text-body-sm font-medium text-primary">Active</span>
                   )}
                 </div>
-                <p className="text-xs leading-snug text-muted">{option.description}</p>
+                <p className="text-body-sm leading-snug text-muted">{option.description}</p>
               </button>
             );
           })}
@@ -229,7 +229,7 @@ export function ForeignSecPanels({
           </Button>
           {priorityFeedback && (
             <span
-              className={`text-sm ${priorityFeedback.type === "success" ? "text-success" : "text-error"}`}
+              className={`text-body ${priorityFeedback.type === "success" ? "text-success" : "text-error"}`}
             >
               {priorityFeedback.message}
             </span>

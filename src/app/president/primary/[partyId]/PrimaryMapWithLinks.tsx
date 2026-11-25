@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { PrimaryElectoralMap, type PrimaryStateData } from "@/components/PrimaryElectoralMap";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface PrimaryMapWithLinksProps {
   partyId: string;
@@ -53,11 +54,7 @@ export function PrimaryMapWithLinks({
       <button
         type="button"
         onClick={() => setMapMode("leader")}
-        className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
-          mapMode === "leader"
-            ? "border-primary bg-primary/10 text-primary"
-            : "border-card-border bg-card text-muted hover:text-foreground"
-        }`}
+        className={`px-2.5 py-1 text-body-sm ${pillClass(mapMode === "leader")}`}
         aria-pressed={mapMode === "leader"}
       >
         Leader
@@ -65,11 +62,7 @@ export function PrimaryMapWithLinks({
       <button
         type="button"
         onClick={() => setMapMode("delegates")}
-        className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
-          mapMode === "delegates"
-            ? "border-primary bg-primary/10 text-primary"
-            : "border-card-border bg-card text-muted hover:text-foreground"
-        }`}
+        className={`px-2.5 py-1 text-body-sm ${pillClass(mapMode === "delegates")}`}
         aria-pressed={mapMode === "delegates"}
       >
         Delegates

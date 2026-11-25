@@ -209,12 +209,12 @@ export function CongressBillsTab({
             size={52}
           />
           <div className="min-w-[9rem] flex-1">
-            <h2 className="truncate text-lg font-semibold leading-tight text-foreground">
+            <h2 className="truncate text-heading font-semibold leading-tight text-foreground">
               {/* Names the section, not just the chamber: the banner above already
                   carries the chamber name as its own heading. */}
               {chamber?.name ?? (activeTab === "senate" ? "Senate" : "House")} bills
             </h2>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 text-body-sm text-muted">
               {chamber?.seats != null && <>{chamber.seats} seats · </>}
               {openVotes === 0
                 ? "No open votes"
@@ -225,7 +225,7 @@ export function CongressBillsTab({
             <button
               onClick={() => setShowPropose(true)}
               title="Admin: opens to a vote in this chamber immediately"
-              className="shrink-0 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+              className="shrink-0 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-body font-medium text-primary hover:bg-primary/20 transition-colors"
             >
               Propose bill (admin)
             </button>
@@ -237,7 +237,7 @@ export function CongressBillsTab({
           {!adminOverride && (canPropose || (hasActiveBill && myChamber)) && (
             <button
               onClick={() => setShowPropose(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -251,11 +251,11 @@ export function CongressBillsTab({
             </button>
           )}
           {!canPropose && hasActiveBill && myChamber && (
-            <span className="shrink-0 text-xs text-muted">
+            <span className="shrink-0 text-body-sm text-muted">
               Bill in progress — wait for it to resolve before proposing another.
             </span>
           )}
-          <div className="flex min-w-0 max-w-full flex-1 rounded-lg border border-card-border text-sm overflow-x-auto">
+          <div className="flex min-w-0 max-w-full flex-1 rounded-lg border border-card-border text-body overflow-x-auto">
             {[
               { key: "all", label: "All" },
               { key: "active", label: "Voting" },
@@ -278,7 +278,7 @@ export function CongressBillsTab({
                 {label}
                 {!loading && statusCounts[key] > 0 && (
                   <span
-                    className={`rounded-full px-1.5 text-[10.5px] tabular-nums ${
+                    className={`rounded-full px-1.5 text-body-sm tabular-nums ${
                       statusFilter === key ? "bg-primary/25" : "bg-muted/15"
                     }`}
                   >
@@ -317,7 +317,7 @@ export function CongressBillsTab({
               canPropose ? (
                 <button
                   onClick={() => setShowPropose(true)}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                  className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   Propose bill
                 </button>

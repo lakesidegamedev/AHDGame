@@ -11,7 +11,7 @@ import {
 export type { RegionMapData };
 
 const MapFallback = () => (
-  <div className="flex h-full items-center justify-center text-sm text-muted">Loading map…</div>
+  <div className="flex h-full items-center justify-center text-body text-muted">Loading map…</div>
 );
 
 const USAMapPaths = dynamic(

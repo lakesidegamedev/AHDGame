@@ -48,7 +48,7 @@ function DeltaChip({
   const good = higherIsBetter ? delta >= 0 : delta <= 0;
   return (
     <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[10.5px] font-bold tabular-nums ${
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-body-sm font-bold tabular-nums ${
         good
           ? "border-success/30 bg-success/10 text-success"
           : "border-error/30 bg-error/10 text-error"
@@ -76,13 +76,13 @@ function Row({
   return (
     <div className="flex items-center gap-3 border-t border-card-border/60 py-2.5 first:border-t-0">
       <div className="min-w-0 flex-1">
-        <div className="text-[12.5px] font-semibold text-foreground">{label}</div>
-        <div className="mt-0.5 text-[10px] text-muted">
+        <div className="text-body-sm font-semibold text-foreground">{label}</div>
+        <div className="mt-0.5 text-body-sm text-muted">
           {note}
           {link ? <> · {link}</> : null}
         </div>
       </div>
-      <span className="font-mono text-sm font-bold tabular-nums text-foreground">{value}</span>
+      <span className="font-mono text-body font-bold tabular-nums text-foreground">{value}</span>
       {chip}
     </div>
   );
@@ -121,8 +121,8 @@ export function RealEconomyPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card px-5 py-4 shadow-sm">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-bold text-foreground">Real economy</h3>
-        <span className="text-[10px] text-muted">
+        <h3 className="text-body-lg font-bold text-foreground">Real economy</h3>
+        <span className="text-body-sm text-muted">
           budget factors + {regionWord}-weighted metrics
         </span>
       </div>

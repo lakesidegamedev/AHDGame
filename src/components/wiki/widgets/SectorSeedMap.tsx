@@ -165,9 +165,9 @@ export function SectorSeedMap() {
           <button
             key={c.id}
             onClick={() => setCountry(c.id)}
-            className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`rounded px-3 py-1 text-body-sm font-semibold transition-colors ${
               country === c.id
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >
@@ -180,7 +180,7 @@ export function SectorSeedMap() {
         <select
           value={sector}
           onChange={(e) => setSector(e.target.value as OperatingSectorType)}
-          className="rounded border border-card-border bg-card px-2 py-1 text-sm text-foreground"
+          className="rounded border border-card-border bg-card px-2 py-1 text-body text-foreground"
         >
           {OPERATING_SECTOR_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -194,11 +194,11 @@ export function SectorSeedMap() {
         {MapComponent ? (
           <MapComponent regionData={regionData} />
         ) : (
-          <p className="text-sm text-muted">No map available for this country.</p>
+          <p className="text-body text-muted">No map available for this country.</p>
         )}
       </div>
 
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         Darker = lower weight; brighter teal = higher sector seeding share.
       </p>
     </div>

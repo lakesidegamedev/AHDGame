@@ -94,7 +94,7 @@ export function PageMetadata({
 
   return (
     <div
-      className="mb-6 flex flex-wrap items-center gap-2 text-xs"
+      className="mb-6 flex flex-wrap items-center gap-2 text-body-sm"
       role="contentinfo"
       aria-label="Page metadata"
     >

@@ -75,13 +75,13 @@ export function SpeakerSection({
   return (
     <>
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Speaker of the House</h3>
+        <h3 className="text-body-lg font-semibold">Speaker of the House</h3>
         {leadersAdmin && (
           <div className="flex flex-wrap gap-2">
             {data?.election?.status !== "voting" && (
               <button
                 onClick={onStartElection}
-                className="rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 px-4 text-sm font-medium text-amber-400 hover:bg-amber-500/20"
+                className="rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 px-4 text-body font-medium text-amber-400 hover:bg-amber-500/20"
               >
                 Start 24-hour Speaker election
               </button>
@@ -89,14 +89,14 @@ export function SpeakerSection({
             {data?.election?.status === "voting" && (
               <button
                 onClick={onForceEnd}
-                className="rounded-xl border border-green-500/40 bg-green-500/10 py-2 px-4 text-sm font-medium text-green-400 hover:bg-green-500/20"
+                className="rounded-xl border border-green-500/40 bg-green-500/10 py-2 px-4 text-body font-medium text-green-400 hover:bg-green-500/20"
               >
                 Force end Speaker election
               </button>
             )}
             <button
               onClick={onReset}
-              className="rounded-xl border border-red-500/30 bg-red-500/10 py-2 px-4 text-sm font-medium text-red-400 hover:bg-red-500/20"
+              className="rounded-xl border border-red-500/30 bg-red-500/10 py-2 px-4 text-body font-medium text-red-400 hover:bg-red-500/20"
             >
               Reset Speaker election
             </button>
@@ -106,8 +106,8 @@ export function SpeakerSection({
           <SpeakerCard speaker={data.currentSpeaker} countryId={countryId} />
         ) : (
           <div className="rounded-xl border border-dashed border-card-border bg-card/50 p-6 text-center space-y-2">
-            <p className="text-sm font-medium text-muted">No Speaker elected</p>
-            <p className="text-xs text-muted/60">
+            <p className="text-body font-medium text-muted">No Speaker elected</p>
+            <p className="text-body-sm text-muted/60">
               A 24-hour election can be started by an admin. Any seated House member may run and
               vote; top vote-getter wins (plurality).
             </p>
@@ -117,10 +117,10 @@ export function SpeakerSection({
         {/* Motion to vacate the chair — mid-term Speaker removal by House majority. */}
         {motion?.status === "voting" ? (
           <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 space-y-2">
-            <p className="text-sm font-semibold text-red-400">
+            <p className="text-body font-semibold text-red-400">
               Motion to vacate {motion.targetSpeakerName ?? "the Speaker"}
             </p>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Filed by {motion.filedByName ?? "a member"}. An absolute majority of the chamber (
               {motion.threshold} of {motion.totalSeats}) carries it and vacates the chair.
               {motion.endsOnTurn != null || motion.endsAt ? (
@@ -139,7 +139,7 @@ export function SpeakerSection({
                 </>
               ) : null}
             </p>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-3 text-body-sm">
               <span className="font-medium text-red-400">Vacate: {motion.votesFor}</span>
               <span className="font-medium text-muted">Keep: {motion.votesAgainst}</span>
             </div>
@@ -147,7 +147,7 @@ export function SpeakerSection({
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   onClick={() => onVacateVote("for")}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                     motion.myVote === "for"
                       ? "border-red-500 bg-red-500/20 text-red-300"
                       : "border-red-500/30 text-red-400 hover:bg-red-500/10"
@@ -157,7 +157,7 @@ export function SpeakerSection({
                 </button>
                 <button
                   onClick={() => onVacateVote("against")}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                     motion.myVote === "against"
                       ? "border-green-500 bg-green-500/20 text-green-300"
                       : "border-card-border text-muted hover:bg-card-elevated"
@@ -190,7 +190,7 @@ export function SpeakerSection({
           motion?.canFile && (
             <button
               onClick={onFileVacate}
-              className="w-full rounded-xl border border-dashed border-red-500/30 bg-red-500/5 py-2.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+              className="w-full rounded-xl border border-dashed border-red-500/30 bg-red-500/5 py-2.5 text-body-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
             >
               Move to vacate the chair
             </button>
@@ -200,8 +200,8 @@ export function SpeakerSection({
           <div className="rounded-xl border border-card-border bg-card p-4 space-y-1">
             {data.election.status === "voting" && data.election.endsAt && (
               <>
-                <p className="text-sm font-medium">Speaker election in progress</p>
-                <p className="text-xs text-muted">
+                <p className="text-body font-medium">Speaker election in progress</p>
+                <p className="text-body-sm text-muted">
                   Voting ends{" "}
                   <LocalTime
                     value={
@@ -216,7 +216,7 @@ export function SpeakerSection({
               </>
             )}
             {data.election.status === "none" && leadersAdmin && (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 No election in progress. Use Start above to begin.
               </p>
             )}
@@ -277,13 +277,13 @@ export function SpeakerSection({
           <button
             onClick={onDeclare}
             disabled={declaring}
-            className="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 py-3 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
+            className="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 py-3 text-body font-medium text-primary hover:bg-primary/10 disabled:opacity-50 transition-colors"
           >
             {declaring ? "Declaring…" : "+ Declare your candidacy for speaker"}
           </button>
         )}
       {data?.isHouseMember && !data?.canRunForSpeaker && data?.election?.status === "voting" && (
-        <p className="text-xs text-muted rounded-xl border border-card-border bg-card/50 p-3">
+        <p className="text-body-sm text-muted rounded-xl border border-card-border bg-card/50 p-3">
           Only {data.speakerEligibilityLabel} may run and vote in the Speaker election.
         </p>
       )}

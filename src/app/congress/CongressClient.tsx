@@ -21,6 +21,7 @@ import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import type { CongressMembersResponse } from "@/lib/congress/types";
 import type { BillsResponse } from "@/lib/legislature/dto/billDisplay";
+import { PILL_SELECTED, PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 export function USCongressPage({ countryId }: { countryId: CountryId }) {
   const searchParams = useSearchParams();
@@ -230,7 +231,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
             <div className="absolute inset-0 flex flex-col justify-between px-5 sm:px-6 py-4 sm:py-5">
               {/* Top: chamber switcher */}
               <div
-                className="flex rounded-lg overflow-hidden w-fit border border-white/30 bg-black/60"
+                className="flex w-fit gap-1 rounded-full border border-white/30 bg-black/60 p-0.5"
                 role="tablist"
                 aria-label="Chamber"
               >
@@ -242,10 +243,10 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
                     aria-selected={activeTab === tab}
                     aria-controls="congress-content"
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-1.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    className={`px-4 py-1.5 text-body focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       activeTab === tab
-                        ? "bg-white/20 text-white"
-                        : "bg-transparent text-white/70 hover:text-white hover:bg-white/10"
+                        ? `${PILL_SHAPE} ${PILL_SELECTED}`
+                        : `${PILL_SHAPE} text-white/70 hover:bg-white/10 hover:text-white`
                     }`}
                   >
                     {tab === "senate" ? upperChamberLabel : lowerChamberLabel}
@@ -254,10 +255,10 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
               </div>
               {/* Bottom: title + tagline */}
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-2xl">
+                <h2 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-heading">
                   {hero.title}
                 </h2>
-                <p className="mt-1 text-sm text-white/90 drop-shadow sm:text-base">
+                <p className="mt-1 text-body text-white/90 drop-shadow sm:text-body-lg">
                   {hero.tagline}
                 </p>
               </div>
@@ -271,20 +272,20 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
               <span className="text-body-sm font-medium text-muted">Majority party</span>
               {majorityParty ? (
                 <span
-                  className="text-base font-bold tabular-nums"
+                  className="text-body-lg font-bold tabular-nums"
                   style={{ color: majorityParty.partyColor || undefined }}
                 >
                   {majorityParty.partyName}
                 </span>
               ) : (
-                <span className="text-base font-bold text-muted">—</span>
+                <span className="text-body-lg font-bold text-muted">—</span>
               )}
             </div>
 
             {/* Seats */}
             <div className="flex flex-col px-5 py-3 min-w-[100px]">
               <span className="text-body-sm font-medium text-muted">Seats</span>
-              <span className="text-base font-bold tabular-nums">
+              <span className="text-body-lg font-bold tabular-nums">
                 {loading ? "…" : `${majoritySeats} / ${totalSeats}`}
               </span>
             </div>
@@ -301,12 +302,12 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
                       ? `/politicians/npp/${speakerOrSML.sequentialId ?? speakerOrSML.characterId}`
                       : `/character/${speakerOrSML.sequentialId ?? speakerOrSML.characterId}`
                   }
-                  className="text-base font-bold text-primary hover:underline truncate"
+                  className="text-body-lg font-bold text-primary hover:underline truncate"
                 >
                   {speakerOrSML.characterName}
                 </Link>
               ) : (
-                <span className="text-base font-bold text-muted">Vacant</span>
+                <span className="text-body-lg font-bold text-muted">Vacant</span>
               )}
             </div>
 
@@ -320,13 +321,13 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
                       ? `/politicians/npp/${minorityLeader.sequentialId ?? minorityLeader.characterId}`
                       : `/character/${minorityLeader.sequentialId ?? minorityLeader.characterId}`
                   }
-                  className="text-base font-bold text-primary hover:underline truncate"
+                  className="text-body-lg font-bold text-primary hover:underline truncate"
                 >
                   {minorityLeader.characterName}
                 </Link>
               ) : (
                 <>
-                  <span className="text-base font-bold text-muted">Vacant</span>
+                  <span className="text-body-lg font-bold text-muted">Vacant</span>
                   <span className="max-w-[16rem] text-body-sm text-muted">
                     Filled by election among players of the party not in power. It stays vacant
                     until one of them stands.
@@ -341,9 +342,9 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
           <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-red-400">{error.message}</h3>
+                <h3 className="text-body-lg font-semibold text-red-400">{error.message}</h3>
                 {error.details.length > 0 && (
-                  <ul className="mt-2 space-y-1 text-xs text-red-300/80">
+                  <ul className="mt-2 space-y-1 text-body-sm text-red-300/80">
                     {error.details.map((detail, i) => (
                       <li key={i}>• {detail}</li>
                     ))}
@@ -352,7 +353,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
               </div>
               <button
                 onClick={fetchMembers}
-                className="shrink-0 rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/30 transition-colors"
+                className="shrink-0 rounded-lg bg-red-500/20 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors"
               >
                 Retry
               </button>
@@ -360,7 +361,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
           </div>
         )}
 
-        <div className="mb-6 flex rounded-lg border border-card-border overflow-x-auto overflow-y-hidden">
+        <div className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-card-border pb-2">
           {PAGE_TABS.map(({ key, label }) => (
             <button
               key={key}
@@ -369,11 +370,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
               aria-controls="congress-content"
               id={`page-tab-${key}`}
               onClick={() => setPageTab(key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                pageTab === key
-                  ? "bg-card-border text-foreground"
-                  : "bg-card text-muted hover:text-foreground"
-              }`}
+              className={`px-4 py-1.5 text-body focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${pillClass(pageTab === key)}`}
             >
               {label}
             </button>
@@ -439,7 +436,7 @@ export function USCongressPage({ countryId }: { countryId: CountryId }) {
         <div className="mt-8">
           <Link
             href="/dashboard"
-            className="text-sm text-muted hover:text-foreground transition-colors"
+            className="text-body text-muted hover:text-foreground transition-colors"
           >
             ← Back to dashboard
           </Link>

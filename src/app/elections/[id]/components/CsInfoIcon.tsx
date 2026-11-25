@@ -72,7 +72,7 @@ export function CsInfoIcon({ campaignId }: { campaignId: string | undefined | nu
       <span
         ref={ref}
         onClick={handleToggle}
-        className="inline-flex items-center justify-center ml-0.5 h-3.5 w-3.5 rounded-full bg-muted/30 text-muted hover:bg-muted/50 hover:text-foreground cursor-help transition-colors align-middle text-[10px] leading-none font-bold"
+        className="inline-flex items-center justify-center ml-0.5 h-3.5 w-3.5 rounded-full bg-muted/30 text-muted hover:bg-muted/50 hover:text-foreground cursor-help transition-colors align-middle text-body-sm leading-none font-bold"
         style={{ lineHeight: "14px" }}
       >
         i
@@ -82,7 +82,7 @@ export function CsInfoIcon({ campaignId }: { campaignId: string | undefined | nu
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             ref={cardRef}
-            className="fixed z-50 w-80 rounded-xl border border-card-border bg-card shadow-2xl p-4 text-xs"
+            className="fixed z-50 w-80 rounded-xl border border-card-border bg-card shadow-2xl p-4 text-body-sm"
             style={{
               left: "50%",
               top: "50%",
@@ -110,7 +110,7 @@ export function CsInfoIcon({ campaignId }: { campaignId: string | undefined | nu
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-card-border pb-2">
                   <div className="font-semibold text-foreground">Campaign strength</div>
-                  <div className="text-lg font-bold tabular-nums text-primary">
+                  <div className="text-heading font-bold tabular-nums text-primary">
                     {data.currentCS.toFixed(0)}
                   </div>
                 </div>
@@ -163,7 +163,7 @@ export function CsInfoIcon({ campaignId }: { campaignId: string | undefined | nu
                   </div>
                 </div>
 
-                <div className="text-[10px] text-muted/60 border-t border-card-border pt-2 leading-relaxed">
+                <div className="text-body-sm text-muted/60 border-t border-card-border pt-2 leading-relaxed">
                   <div>
                     CS boosts vote gain in primaries and generals (diminishing returns after ~50K).
                   </div>

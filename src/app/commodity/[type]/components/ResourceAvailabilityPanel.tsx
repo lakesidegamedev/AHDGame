@@ -59,7 +59,7 @@ export default function ResourceAvailabilityPanel({
   if (byCountry.length === 0) {
     return (
       <section className="mb-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
-        <h3 className="text-heading-sm font-semibold text-warning mb-1">Resource availability</h3>
+        <h3 className="text-body-lg font-semibold text-warning mb-1">Resource availability</h3>
         <p className="text-body-sm text-muted">
           No state extraction capacity configured for this commodity. Current supply is uncapped,
           which skews margin math. An admin can seed capacity from{" "}
@@ -73,7 +73,7 @@ export default function ResourceAvailabilityPanel({
     <section className="mb-6 rounded-xl border border-card-border bg-card p-4 shadow-card">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-heading-sm font-semibold">Resource availability</h3>
+          <h3 className="text-body-lg font-semibold">Resource availability</h3>
           <p className="text-body-sm text-muted">
             Per-state extraction ceilings (units/turn). Supply cannot exceed these caps.
           </p>
@@ -83,7 +83,7 @@ export default function ResourceAvailabilityPanel({
           <div className="text-body-lg font-bold tabular-nums">
             {totalCapacity.toLocaleString("en-US")}
           </div>
-          <div className="text-body-xs text-muted">{unit}/turn</div>
+          <div className="text-body-sm text-muted">{unit}/turn</div>
         </div>
       </div>
 
@@ -114,18 +114,18 @@ export default function ResourceAvailabilityPanel({
               >
                 <div className="flex items-center gap-2">
                   <span className="text-body-sm font-medium text-foreground">{countryId}</span>
-                  <span className="text-[10px] text-muted">
+                  <span className="text-body-sm text-muted">
                     {rows.length} state{rows.length !== 1 ? "s" : ""}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs tabular-nums text-foreground font-medium">
+                  <span className="text-body-sm tabular-nums text-foreground font-medium">
                     {countryTotal.toLocaleString("en-US")} {unit}
                   </span>
-                  <span className="text-[10px] text-muted tabular-nums">
+                  <span className="text-body-sm text-muted tabular-nums">
                     {countryShare.toFixed(1)}%
                   </span>
-                  <span className="text-muted text-xs">{isCollapsed ? "▶" : "▼"}</span>
+                  <span className="text-muted text-body-sm">{isCollapsed ? "▶" : "▼"}</span>
                 </div>
               </button>
 
@@ -134,12 +134,12 @@ export default function ResourceAvailabilityPanel({
                   <tbody>
                     {rows.map((row) => (
                       <tr key={row.stateId} className="border-t border-card-border/50">
-                        <td className="py-1.5 pl-4 font-medium text-xs">{row.name}</td>
-                        <td className="py-1.5 pr-4 text-right tabular-nums text-xs">
+                        <td className="py-1.5 pl-4 font-medium text-body-sm">{row.name}</td>
+                        <td className="py-1.5 pr-4 text-right tabular-nums text-body-sm">
                           {row.capacity.toLocaleString("en-US")}{" "}
                           <span className="text-muted">{unit}</span>
                         </td>
-                        <td className="py-1.5 pr-3 text-right tabular-nums text-[10px] text-muted w-14">
+                        <td className="py-1.5 pr-3 text-right tabular-nums text-body-sm text-muted w-14">
                           {(row.share * 100).toFixed(1)}%
                         </td>
                       </tr>

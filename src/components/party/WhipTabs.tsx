@@ -4,6 +4,7 @@ import { useState } from "react";
 import { NppWhipPanel } from "./NppWhipPanel";
 import { PlayerWhipPanel } from "./PlayerWhipPanel";
 import { WhipDefiancePanel } from "./WhipDefiancePanel";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 export interface WhipEndpointConfig {
   billsUrl: string;
@@ -52,20 +53,13 @@ export function WhipTabs({
 
   return (
     <div className="space-y-4">
-      <div
-        role="tablist"
-        className="flex gap-1 p-1 rounded-lg bg-background border border-card-border w-fit"
-      >
+      <div role="tablist" className={`${PILL_TRACK} w-fit`}>
         {showPlayerTab ? (
           <button
             role="tab"
             aria-selected={audience === "player"}
             onClick={() => setAudience("player")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              audience === "player"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 text-body ${pillClass(audience === "player")}`}
           >
             Players
           </button>
@@ -74,11 +68,7 @@ export function WhipTabs({
           role="tab"
           aria-selected={audience === "npp"}
           onClick={() => setAudience("npp")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            audience === "npp"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted hover:text-foreground"
-          }`}
+          className={`px-4 py-1.5 text-body ${pillClass(audience === "npp")}`}
         >
           NPPs
         </button>
@@ -86,11 +76,7 @@ export function WhipTabs({
           role="tab"
           aria-selected={audience === "defiance"}
           onClick={() => setAudience("defiance")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            audience === "defiance"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted hover:text-foreground"
-          }`}
+          className={`px-4 py-1.5 text-body ${pillClass(audience === "defiance")}`}
         >
           Defiance
         </button>

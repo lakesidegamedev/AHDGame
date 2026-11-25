@@ -301,9 +301,9 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
         <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <BackButton iconOnly fallbackLabel="Back" fallbackHref="/dashboard" />
           <div className="mt-8 rounded-xl border border-card-border bg-card p-12 text-center shadow-sm">
-            <div className="text-4xl mb-4 font-bold text-muted">¤</div>
-            <h1 className="text-2xl font-bold mb-2">Currency exchange</h1>
-            <p className="text-muted text-sm max-w-md mx-auto">
+            <div className="text-display mb-4 font-bold text-muted">¤</div>
+            <h1 className="text-heading font-bold mb-2">Currency exchange</h1>
+            <p className="text-muted text-body max-w-md mx-auto">
               The foreign exchange market is not yet open. Multi-currency trading will be available
               in a future update.
             </p>
@@ -352,7 +352,7 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
                     onClick={() => {
                       openTradeModal(defaultHomeCurrency, firstActiveCounter);
                     }}
-                    className="rounded-lg bg-black/60 border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:bg-black/70 transition-colors"
+                    className="rounded-lg bg-black/60 border border-white/30 px-4 py-1.5 text-body-sm font-semibold text-white hover:bg-black/70 transition-colors"
                   >
                     Trade
                   </button>
@@ -360,10 +360,10 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
               </div>
               <div className="flex items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs text-white/70 drop-shadow italic mb-1">
+                  <p className="text-body-sm text-white/70 drop-shadow italic mb-1">
                     Foreign exchange market
                   </p>
-                  <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+                  <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
                     Currency exchange
                   </h1>
                 </div>
@@ -379,7 +379,7 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
                 const sellNative = Math.round((r.sellVolume24 ?? 0) * r.rate);
                 const volNative = buyNative + sellNative;
                 return (
-                  <div key={r.currencyCode} className="flex items-center gap-2 text-xs">
+                  <div key={r.currencyCode} className="flex items-center gap-2 text-body-sm">
                     <span className="font-bold text-foreground">{r.currencyCode}</span>
                     <span className="font-mono tabular-nums text-foreground">
                       {r.rate != null
@@ -421,7 +421,7 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={`
-                    whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors
+                    whitespace-nowrap border-b-2 py-4 px-1 text-body font-medium transition-colors
                     ${
                       activeTab === tab.key
                         ? "border-primary text-primary"
@@ -432,7 +432,7 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
                   {tab.label}
                   {tab.count !== undefined && (
                     <span
-                      className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                      className={`ml-2 rounded-full px-2 py-0.5 text-body-sm ${
                         activeTab === tab.key
                           ? "bg-primary/10 text-primary"
                           : "bg-card-elevated text-muted"

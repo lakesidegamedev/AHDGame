@@ -29,6 +29,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 
 import MinimumWageFloorNote from "@/components/legislation/MinimumWageFloorNote";
+import { pillClass } from "@/components/ui/selectedState";
 export function renderLegacyProposeLegislationModalView(
   context: LegacyProposeLegislationModalViewContext
 ): ReactNode {
@@ -117,13 +118,13 @@ export function renderLegacyProposeLegislationModalView(
       <div className="my-auto w-full max-w-lg space-y-5 rounded-2xl border border-card-border bg-card p-6 shadow-modal">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Propose legislation</h2>
-            <p className="text-xs text-muted">
+            <h2 className="text-heading font-semibold">Propose legislation</h2>
+            <p className="text-body-sm text-muted">
               Costs {BILL_PROPOSE_ACTION_COST} action points and {npiCost} national influence.
             </p>
           </div>
           {adminOverride && (
-            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-body-sm font-medium text-warning">
               Admin
             </span>
           )}
@@ -140,33 +141,33 @@ export function renderLegacyProposeLegislationModalView(
             <BillAutoFailWarningBanner warning={selectedProposalWarning} />
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Title *</label>
+            <label className="mb-1 block text-body-sm font-medium text-muted">Title *</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
               placeholder="e.g. National Health Service Reform Act"
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Summary *</label>
+            <label className="mb-1 block text-body-sm font-medium text-muted">Summary *</label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               rows={3}
               maxLength={500}
               placeholder="Briefly describe what this bill does…"
-              className="w-full resize-none rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full resize-none rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Category *</label>
+              <label className="mb-1 block text-body-sm font-medium text-muted">Category *</label>
               <select
                 value={cat}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm capitalize text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body capitalize text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {availableCategories.map((c) => (
                   <option key={c} value={c} className="capitalize">
@@ -176,14 +177,14 @@ export function renderLegacyProposeLegislationModalView(
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label className="mb-1 block text-body-sm font-medium text-muted">
                 Originating chamber
               </label>
               <select
                 value={billChamber}
                 disabled={!chamberSelectable}
                 onChange={(e) => setBillChamber(e.target.value)}
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-default disabled:opacity-100"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-default disabled:opacity-100"
               >
                 {chambers.map((c) => (
                   <option key={c.value} value={c.value}>
@@ -195,7 +196,7 @@ export function renderLegacyProposeLegislationModalView(
           </div>
           {isCustomCat ? (
             /* ── Custom (flavor) bill: no provisions, no in-game effect ── */
-            <p className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted">
+            <p className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted">
               Custom bills have no in-game effect — for flavor / roleplay only. Just give it a title
               and summary.
             </p>
@@ -208,7 +209,7 @@ export function renderLegacyProposeLegislationModalView(
           ) : isTradeCat ? (
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted">
+                <label className="mb-1 block text-body-sm font-medium text-muted">
                   Restriction type
                 </label>
                 <div
@@ -223,11 +224,7 @@ export function renderLegacyProposeLegislationModalView(
                       role="tab"
                       aria-selected={tradeSubType === st}
                       onClick={() => setTradeSubType(st)}
-                      className={`rounded-md px-4 py-1.5 text-sm font-semibold capitalize transition-colors ${
-                        tradeSubType === st
-                          ? "bg-primary/15 text-foreground"
-                          : "text-muted hover:text-foreground"
-                      }`}
+                      className={`px-4 py-1.5 text-body capitalize ${pillClass(tradeSubType === st)}`}
                     >
                       {st}
                     </button>
@@ -253,12 +250,12 @@ export function renderLegacyProposeLegislationModalView(
           ) : isSubsidyCat ? (
             <div className="space-y-3">
               <div className="mb-2 flex items-center justify-between">
-                <label className="block text-xs text-muted">Subsidy provisions</label>
+                <label className="block text-body-sm text-muted">Subsidy provisions</label>
                 {subsidyProvisions.length < MAX_PROVISIONS && (
                   <button
                     type="button"
                     onClick={() => setSubsidyProvisions((prev) => [...prev, { ...EMPTY_SUBSIDY }])}
-                    className="text-xs text-primary hover:underline"
+                    className="text-body-sm text-primary hover:underline"
                   >
                     + Add provision
                   </button>
@@ -282,7 +279,7 @@ export function renderLegacyProposeLegislationModalView(
                           return next;
                         })
                       }
-                      className="flex-1 rounded-lg border border-card-border bg-card px-2 py-1.5 text-sm"
+                      className="flex-1 rounded-lg border border-card-border bg-card px-2 py-1.5 text-body"
                     >
                       <option value="subsidy">Grant subsidy</option>
                       <option value="end_subsidy">End subsidy</option>
@@ -293,7 +290,7 @@ export function renderLegacyProposeLegislationModalView(
                         onClick={() =>
                           setSubsidyProvisions((prev) => prev.filter((_, j) => j !== i))
                         }
-                        className="text-xs text-muted hover:text-red-400"
+                        className="text-body-sm text-muted hover:text-red-400"
                       >
                         Remove
                       </button>
@@ -312,7 +309,7 @@ export function renderLegacyProposeLegislationModalView(
                         return next;
                       })
                     }
-                    className="w-full rounded-lg border border-card-border bg-card px-2 py-1.5 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-card px-2 py-1.5 text-body"
                   >
                     <option value="economy_wide">Economy-wide</option>
                     <option value="sector">Specific sector</option>
@@ -327,7 +324,7 @@ export function renderLegacyProposeLegislationModalView(
                           return next;
                         })
                       }
-                      className="w-full rounded-lg border border-card-border bg-card px-2 py-1.5 text-sm"
+                      className="w-full rounded-lg border border-card-border bg-card px-2 py-1.5 text-body"
                     />
                   )}
                   <input
@@ -341,10 +338,10 @@ export function renderLegacyProposeLegislationModalView(
                       })
                     }
                     placeholder="Strategy filter (optional)"
-                    className="w-full rounded-lg border border-card-border bg-card px-2 py-1.5 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-card px-2 py-1.5 text-body"
                   />
                   {sp.type === "subsidy" && (
-                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <label className="flex cursor-pointer items-center gap-2 text-body">
                       <input
                         type="checkbox"
                         checked={sp.domesticOnly}
@@ -357,11 +354,11 @@ export function renderLegacyProposeLegislationModalView(
                         }
                         className="rounded"
                       />
-                      <span className="text-xs text-muted">{domesticOnlyLabel}</span>
+                      <span className="text-body-sm text-muted">{domesticOnlyLabel}</span>
                     </label>
                   )}
                   {sp.type === "subsidy" && (
-                    <p className="text-xs text-emerald-400/80">
+                    <p className="text-body-sm text-emerald-400/80">
                       +7.5% profit margin to qualifying sectors
                     </p>
                   )}
@@ -372,7 +369,7 @@ export function renderLegacyProposeLegislationModalView(
                   Inclusion is an explicit checkbox (code-review fix #15) — bias=0 is a valid,
                   legislatable reset to neutral, not just "don't propose one". */}
               <div className="space-y-2 rounded-lg border border-dashed border-purple-500/35 bg-purple-500/5 p-3">
-                <label className="flex items-center gap-2 text-xs font-medium text-muted cursor-pointer">
+                <label className="flex items-center gap-2 text-body-sm font-medium text-muted cursor-pointer">
                   <input
                     type="checkbox"
                     checked={includeUnionLaw}
@@ -388,7 +385,7 @@ export function renderLegacyProposeLegislationModalView(
                   onChange={(e) =>
                     setUnionLawAction(e.target.value as "bias" | "ban" | "repeal_ban")
                   }
-                  className="w-full rounded-md border border-card-border bg-card-elevated px-2 py-1.5 text-xs disabled:opacity-40"
+                  className="w-full rounded-md border border-card-border bg-card-elevated px-2 py-1.5 text-body-sm disabled:opacity-40"
                 >
                   <option value="bias">Set union-law bias (slider)</option>
                   <option value="ban">Ban unions nationally</option>
@@ -411,11 +408,11 @@ export function renderLegacyProposeLegislationModalView(
                     onInput={(e) => setUnionLawBias(Number((e.target as HTMLInputElement).value))}
                     className="flex-1 accent-purple-500 disabled:opacity-40"
                   />
-                  <span className="min-w-[64px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-xs">
+                  <span className="min-w-[64px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-body-sm">
                     {unionLawBias}
                   </span>
                 </div>
-                <p className="text-[11px] italic text-muted/60">
+                <p className="text-body-sm italic text-muted/60">
                   {!includeUnionLaw
                     ? "No union-law provision will be included in this bill."
                     : unionLawAction === "ban"
@@ -433,27 +430,27 @@ export function renderLegacyProposeLegislationModalView(
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
+                <label className="text-body font-medium">
                   Provisions ({rows.length}/{maxPolicyRows})
                 </label>
                 <button
                   type="button"
                   onClick={addRow}
                   disabled={rows.length >= maxPolicyRows}
-                  className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1 text-body-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 >
                   + Add provision
                 </button>
               </div>
               {hasStandaloneProvision && rows.some((r) => !r.legislationTypeId) && (
-                <p className="text-[11px] leading-snug text-muted">
+                <p className="text-body-sm leading-snug text-muted">
                   {rows.every((r) => !r.legislationTypeId)
                     ? "This bill carries no policy provision. It will be proposed with only the provision selected below, which is a complete statute on its own."
                     : "Provisions left blank will be dropped from this bill."}
                 </p>
               )}
               {rows.length === 0 && (
-                <p className="rounded-lg border border-dashed border-card-border bg-background/40 p-3 text-[11px] leading-snug text-muted">
+                <p className="rounded-lg border border-dashed border-card-border bg-background/40 p-3 text-body-sm leading-snug text-muted">
                   {hasStandaloneProvision
                     ? "No policy provisions. This bill carries only the provision selected below."
                     : "This bill has no provisions. Add one, or select a provision below, before proposing it."}
@@ -476,14 +473,14 @@ export function renderLegacyProposeLegislationModalView(
                         <button
                           type="button"
                           onClick={() => removeRow(idx)}
-                          className="text-xs text-red-500 hover:underline"
+                          className="text-body-sm text-red-500 hover:underline"
                         >
                           Remove
                         </button>
                       )}
                     </div>
                     <select
-                      className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground"
                       value={row.legislationTypeId}
                       onChange={(e) => {
                         const nextId = e.target.value;
@@ -525,7 +522,7 @@ export function renderLegacyProposeLegislationModalView(
                       />
                     ) : lt && options.length > 0 ? (
                       <select
-                        className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+                        className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground"
                         value={row.policyOptionId}
                         onChange={(e) => {
                           const nextId = e.target.value;
@@ -563,7 +560,7 @@ export function renderLegacyProposeLegislationModalView(
                       </select>
                     ) : lt ? (
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-muted">
+                        <label className="mb-1 block text-body-sm font-medium text-muted">
                           Direction:{" "}
                           {row.effectDirection === -1
                             ? "Left / Reduce"
@@ -581,7 +578,7 @@ export function renderLegacyProposeLegislationModalView(
                           }
                           variant="primary"
                         />
-                        <div className="mt-0.5 flex justify-between text-[10px] text-muted">
+                        <div className="mt-0.5 flex justify-between text-body-sm text-muted">
                           <span>Left / Reduce</span>
                           <span>Neutral</span>
                           <span>Right / Increase</span>
@@ -599,10 +596,14 @@ export function renderLegacyProposeLegislationModalView(
                             return (
                               <div className="space-y-1">
                                 {lt.description && (
-                                  <p className="text-xs italic text-muted/80">{lt.description}</p>
+                                  <p className="text-body-sm italic text-muted/80">
+                                    {lt.description}
+                                  </p>
                                 )}
                                 {selectedOption?.explanation && (
-                                  <p className="text-xs text-muted">{selectedOption.explanation}</p>
+                                  <p className="text-body-sm text-muted">
+                                    {selectedOption.explanation}
+                                  </p>
                                 )}
                               </div>
                             );
@@ -612,7 +613,7 @@ export function renderLegacyProposeLegislationModalView(
                           return (
                             <>
                               {explanation ? (
-                                <p className="text-xs italic text-muted/80">{explanation}</p>
+                                <p className="text-body-sm italic text-muted/80">{explanation}</p>
                               ) : null}
                               <MinimumWageFloorNote kaitz={selectedOption?.wageFloorKaitz} />
                             </>
@@ -667,7 +668,7 @@ export function renderLegacyProposeLegislationModalView(
             </div>
           )}
           {canProposeEuro && (
-            <label className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm">
+            <label className="flex items-center gap-2 rounded-lg border border-border p-3 text-body">
               <input
                 type="checkbox"
                 checked={includeEuroAdoption}
@@ -701,9 +702,9 @@ export function renderLegacyProposeLegislationModalView(
               registration regime, which is what the server enforces too. */}
           {isElectoralCat && (
             <div className="rounded-lg border border-dashed border-sky-500/35 bg-sky-500/5 p-3 space-y-3">
-              <p className="text-xs font-medium text-muted">Electoral law (optional)</p>
+              <p className="text-body-sm font-medium text-muted">Electoral law (optional)</p>
               <div className="space-y-1.5">
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+                <label className="flex cursor-pointer items-center gap-2 text-body-sm text-muted">
                   <input
                     type="checkbox"
                     checked={includeVotingAge}
@@ -725,13 +726,13 @@ export function renderLegacyProposeLegislationModalView(
                     }
                     className="flex-1 accent-sky-500 disabled:opacity-40"
                   />
-                  <span className="min-w-[48px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-xs">
+                  <span className="min-w-[48px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-body-sm">
                     {votingAge}
                   </span>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+                <label className="flex cursor-pointer items-center gap-2 text-body-sm text-muted">
                   <input
                     type="checkbox"
                     checked={includeRegAccess}
@@ -761,13 +762,13 @@ export function renderLegacyProposeLegislationModalView(
                     }
                     className="flex-1 accent-sky-500 disabled:opacity-40"
                   />
-                  <span className="min-w-[48px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-xs">
+                  <span className="min-w-[48px] rounded-md border border-card-border bg-card-elevated px-2 py-1 text-right font-mono text-body-sm">
                     {registrationAccess}
                   </span>
                 </div>
               </div>
               {canProposeJapanShugiinReform && (
-                <label className="flex cursor-pointer items-start gap-2 rounded-md border border-amber-500/30 p-2 text-xs text-muted">
+                <label className="flex cursor-pointer items-start gap-2 rounded-md border border-amber-500/30 p-2 text-body-sm text-muted">
                   <input
                     type="checkbox"
                     checked={includeJapanShugiinReform}
@@ -783,7 +784,7 @@ export function renderLegacyProposeLegislationModalView(
                   </span>
                 </label>
               )}
-              <p className="text-[11px] italic text-muted/60">
+              <p className="text-body-sm italic text-muted/60">
                 {!includeVotingAge && !includeRegAccess && !includeJapanShugiinReform
                   ? "No electoral-law provision will be included in this bill."
                   : [
@@ -803,12 +804,12 @@ export function renderLegacyProposeLegislationModalView(
             </div>
           )}
           {submitBlockedByActiveBill && (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-warning">
               You already have a bill being voted on — it must resolve before you can propose
               another.
             </div>
           )}
-          <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted">
+          <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted">
             {adminOverride ? (
               <span>Cost waived (admin).</span>
             ) : (
@@ -822,14 +823,14 @@ export function renderLegacyProposeLegislationModalView(
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-body font-medium text-muted transition-colors hover:text-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitDisabled}
-              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {submitting ? "Proposing…" : "Propose bill"}
             </button>

@@ -136,7 +136,7 @@ export default async function CountryLayout({ params, children }: Props) {
         {peacetime}
         {crisisNotice}
         {showAdminBanner && (
-          <div className="bg-warning/10 border-b border-warning/30 px-4 py-2 text-center text-sm text-warning">
+          <div className="bg-warning/10 border-b border-warning/30 px-4 py-2 text-center text-body text-warning">
             {access.econOnly
               ? "Econ-only nation — players can view every page here, but cannot act."
               : "This country is not registered. Only admins can see this."}
@@ -171,7 +171,7 @@ export default async function CountryLayout({ params, children }: Props) {
         {wartime}
         {peacetime}
         {crisisNotice}
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 text-center text-sm text-primary">
+        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 text-center text-body text-primary">
           {name} is an econ-only nation. You can view every page here, but you cannot run for
           office, join a party, or vote.
         </div>
@@ -184,7 +184,7 @@ export default async function CountryLayout({ params, children }: Props) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
       <CountryFlag country={countryId} width={60} height={40} />
-      <h1 className="text-2xl font-bold text-foreground">{name}</h1>
+      <h1 className="text-heading font-bold text-foreground">{name}</h1>
       <p className="max-w-md text-muted">
         This country is currently under development. Check back soon!
       </p>

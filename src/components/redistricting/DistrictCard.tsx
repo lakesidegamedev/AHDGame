@@ -60,9 +60,9 @@ export function DistrictCard({
     >
       {/* Header: district name + prominent lean indicator */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-card-border/60 bg-card-muted/30">
-        <span className="text-xs font-semibold">{district.cd}</span>
+        <span className="text-body-sm font-semibold">{district.cd}</span>
         <span
-          className="rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
+          className="rounded-full px-2 py-0.5 text-body-sm font-bold tabular-nums"
           style={{ backgroundColor: `${lean.color}22`, color: lean.color }}
         >
           {lean.text}
@@ -76,7 +76,7 @@ export function DistrictCard({
         <button
           type="button"
           onClick={() => setShowGrid((s) => !s)}
-          className="text-[10px] text-muted hover:text-foreground"
+          className="text-body-sm text-muted hover:text-foreground"
           aria-expanded={showGrid}
         >
           {showGrid ? "Hide grid" : "Show grid"}
@@ -96,7 +96,7 @@ export function DistrictCard({
       </div>
 
       {/* Holder footer */}
-      <div className="px-3 py-2 border-t border-card-border/60 text-xs text-muted flex items-center">
+      <div className="px-3 py-2 border-t border-card-border/60 text-body-sm text-muted flex items-center">
         {district.holderName ? (
           <span>
             <span className="text-foreground font-medium">{district.holderName}</span>
@@ -110,12 +110,12 @@ export function DistrictCard({
             type="button"
             onClick={campaignHere}
             disabled={busy}
-            className="ml-2 rounded border border-card-border px-2 py-0.5 text-[10px] hover:border-primary disabled:opacity-40"
+            className="ml-2 rounded border border-card-border px-2 py-0.5 text-body-sm hover:border-primary disabled:opacity-40"
           >
             {busy ? "…" : "Campaign here"}
           </button>
         )}
-        {msg && <span className="ml-2 text-[10px] text-muted">{msg}</span>}
+        {msg && <span className="ml-2 text-body-sm text-muted">{msg}</span>}
       </div>
     </div>
   );

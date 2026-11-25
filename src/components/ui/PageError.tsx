@@ -68,15 +68,17 @@ export function PageError({
           {/* Code badge */}
           <div className="flex items-center justify-center gap-3">
             <div className="h-px flex-1 bg-card-border" />
-            <span className="text-5xl font-black tabular-nums text-foreground">{codeLabel}</span>
+            <span className="text-display font-black tabular-nums text-foreground">
+              {codeLabel}
+            </span>
             <div className="h-px flex-1 bg-card-border" />
           </div>
 
           {/* Headlines */}
           <div className="space-y-1">
-            <h1 className="text-xl font-bold text-foreground">{copy.headline}</h1>
-            <p className="text-sm text-muted">{copy.subtext}</p>
-            <p className="font-mono text-xs text-muted" data-testid="error-code">
+            <h1 className="text-heading font-bold text-foreground">{copy.headline}</h1>
+            <p className="text-body text-muted">{copy.subtext}</p>
+            <p className="font-mono text-body-sm text-muted" data-testid="error-code">
               {copy.catalogCode}
             </p>
           </div>
@@ -84,10 +86,10 @@ export function PageError({
           {/* Admin detail */}
           {isAdmin && adminDetail && (
             <details className="text-left rounded-lg border border-yellow-500/30 bg-yellow-500/5 px-4 py-2">
-              <summary className="text-xs font-semibold text-yellow-400 cursor-pointer select-none">
+              <summary className="text-body-sm font-semibold text-yellow-400 cursor-pointer select-none">
                 Admin: error detail
               </summary>
-              <pre className="mt-2 whitespace-pre-wrap break-all text-xs text-yellow-300/80 font-mono">
+              <pre className="mt-2 whitespace-pre-wrap break-all text-body-sm text-yellow-300/80 font-mono">
                 {adminDetail}
               </pre>
             </details>
@@ -97,13 +99,13 @@ export function PageError({
           <div className="flex flex-wrap gap-3 justify-center pt-1">
             <Link
               href={backHref}
-              className="rounded-lg border border-card-border px-5 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="rounded-lg border border-card-border px-5 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               {backLabel}
             </Link>
             <Link
               href="/dashboard"
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              className="rounded-lg bg-primary px-5 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Dashboard
             </Link>

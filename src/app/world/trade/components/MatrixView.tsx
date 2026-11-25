@@ -25,11 +25,11 @@ export default function MatrixView({ ledger }: { ledger: WorldTradeLedger }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-bold text-foreground">
+        <h3 className="text-body-lg font-bold text-foreground">
           Bilateral net-balance matrix{" "}
           <span className="font-normal text-muted">· row&rsquo;s balance vs. column</span>
         </h3>
-        <span className="inline-flex items-center gap-3 text-[10px] text-muted">
+        <span className="inline-flex items-center gap-3 text-body-sm text-muted">
           <span className="inline-flex items-center gap-1">
             <span className="h-2.5 w-2.5 rounded-sm bg-success" />
             surplus
@@ -51,7 +51,7 @@ export default function MatrixView({ ledger }: { ledger: WorldTradeLedger }) {
             {countries.map((h) => (
               <div key={h.code} className="flex flex-1 justify-center">
                 <div
-                  className="flex h-6 w-6 items-center justify-center rounded-full font-mono text-[9px] font-bold"
+                  className="flex h-6 w-6 items-center justify-center rounded-full font-mono text-body-sm font-bold"
                   style={{ border: `1.5px solid ${h.hue}`, color: h.hue }}
                 >
                   {h.code}
@@ -68,12 +68,12 @@ export default function MatrixView({ ledger }: { ledger: WorldTradeLedger }) {
             <div key={row.code} className="flex items-center gap-1">
               <div className="flex w-32 flex-shrink-0 items-center gap-2">
                 <div
-                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-mono text-[9px] font-bold"
+                  className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full font-mono text-body-sm font-bold"
                   style={{ border: `1.5px solid ${row.hue}`, color: row.hue }}
                 >
                   {row.code}
                 </div>
-                <span className="truncate text-[11.5px] font-semibold text-foreground">
+                <span className="truncate text-body-sm font-semibold text-foreground">
                   {row.name}
                 </span>
               </div>
@@ -82,7 +82,7 @@ export default function MatrixView({ ledger }: { ledger: WorldTradeLedger }) {
                   return (
                     <div
                       key={col.code}
-                      className="flex h-10 flex-1 items-center justify-center rounded-md border border-card-border bg-card-elevated font-mono text-[11px] text-muted"
+                      className="flex h-10 flex-1 items-center justify-center rounded-md border border-card-border bg-card-elevated font-mono text-body-sm text-muted"
                     >
                       —
                     </div>
@@ -95,7 +95,7 @@ export default function MatrixView({ ledger }: { ledger: WorldTradeLedger }) {
                   <div
                     key={col.code}
                     title={`${row.name} ${v >= 0 ? "surplus" : "deficit"} with ${col.name}`}
-                    className="flex h-10 flex-1 items-center justify-center rounded-md border font-mono text-[11px] font-bold tabular-nums text-foreground"
+                    className="flex h-10 flex-1 items-center justify-center rounded-md border font-mono text-body-sm font-bold tabular-nums text-foreground"
                     style={{
                       background: `color-mix(in srgb, ${tone} ${(8 + inten * 50).toFixed(0)}%, transparent)`,
                       borderColor: `color-mix(in srgb, ${tone} ${(25 + inten * 30).toFixed(0)}%, transparent)`,
@@ -108,7 +108,7 @@ export default function MatrixView({ ledger }: { ledger: WorldTradeLedger }) {
                 );
               })}
               <span
-                className={`w-20 flex-shrink-0 text-right font-mono text-[12.5px] font-bold tabular-nums ${directionToneClass(
+                className={`w-20 flex-shrink-0 text-right font-mono text-body-sm font-bold tabular-nums ${directionToneClass(
                   netByCode.get(row.code) ?? 0
                 )}`}
               >

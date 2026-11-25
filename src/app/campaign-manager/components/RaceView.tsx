@@ -94,7 +94,7 @@ function UpcomingBody(props: RaceViewProps & { race: CmRace }) {
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <h3 style={{ ...EYEBROW, margin: 0 }}>{t("race.filers")}</h3>
         {byParty.size === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noFilersYet")}</p>
+          <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("race.noFilersYet")}</p>
         ) : (
           [...byParty.entries()].map(([partyId, g]) => (
             <div key={partyId} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -103,7 +103,7 @@ function UpcomingBody(props: RaceViewProps & { race: CmRace }) {
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 600,
                 }}
               >
@@ -113,7 +113,7 @@ function UpcomingBody(props: RaceViewProps & { race: CmRace }) {
                 />
                 {g.name}
               </span>
-              <ul style={{ listStyle: "none", margin: 0, padding: "0 0 0 16px", fontSize: 13 }}>
+              <ul style={{ listStyle: "none", margin: 0, padding: "0 0 0 16px", fontSize: 12 }}>
                 {g.people.map((c) => (
                   <li key={c.id}>
                     <button
@@ -126,7 +126,7 @@ function UpcomingBody(props: RaceViewProps & { race: CmRace }) {
                         background: "transparent",
                         cursor: "pointer",
                         fontFamily: FONT.sans,
-                        fontSize: 13,
+                        fontSize: 12,
                         color: BLEND.ink,
                       }}
                     >
@@ -222,7 +222,7 @@ function RaceBody(
       ) : null}
 
       {race.candidates.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.openPrimary")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("race.openPrimary")}</p>
       ) : race.stage === "primary" ? (
         <PrimaryNote race={race} />
       ) : null}
@@ -252,7 +252,7 @@ function RaceBody(
               display: "flex",
               justifyContent: "space-between",
               gap: 8,
-              fontSize: 13,
+              fontSize: 12,
             }}
           >
             <span>
@@ -270,9 +270,9 @@ function RaceBody(
           </p>
         </section>
       ) : race.candidates.length > 0 && race.stage === "general" ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noVotes")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("race.noVotes")}</p>
       ) : noCount && race.candidates.length > 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("race.noFinalVotes")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("race.noFinalVotes")}</p>
       ) : null}
 
       {seats ? (
@@ -305,7 +305,7 @@ function RaceBody(
                     width: `${w}%`,
                     background: color,
                     color: readableInk(color),
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     display: "flex",
                     alignItems: "center",
@@ -330,7 +330,7 @@ function RaceBody(
               }}
             />
           </div>
-          <p style={{ margin: 0, fontSize: 12.5, color: BLEND.muted }}>
+          <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>
             {(() => {
               const abbr = partyAbbr.get(seats.leaderPartyId)?.partyAbbr ?? "";
               const seatsHeld = seats.order[0].seats;
@@ -439,11 +439,11 @@ function RaceBody(
                       >
                         {c.name}
                         {c.isYou ? (
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: BLEND.accentInk }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: BLEND.accentInk }}>
                             {t("race.you")}
                           </span>
                         ) : !c.isNPP ? (
-                          <span style={{ fontSize: 10.5, fontWeight: 600, color: BLEND.muted }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: BLEND.muted }}>
                             {t("race.player")}
                           </span>
                         ) : null}
@@ -460,10 +460,10 @@ function RaceBody(
                         {party}
                       </span>
                       {marginNote ? (
-                        <span style={{ fontSize: 11, color: BLEND.muted }}>{marginNote}</span>
+                        <span style={{ fontSize: 12, color: BLEND.muted }}>{marginNote}</span>
                       ) : null}
                       {advancing ? (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: BLEND.positive }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: BLEND.positive }}>
                           {t("race.advancing")}
                         </span>
                       ) : null}
@@ -473,7 +473,7 @@ function RaceBody(
                             display: "flex",
                             flexWrap: "wrap",
                             gap: 6,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: BLEND.caution,
                           }}
                         >
@@ -489,7 +489,7 @@ function RaceBody(
                     </span>
                   </span>
                   {noCount ? null : (
-                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
                       {lineShare(c).toFixed(1)}%
                     </span>
                   )}
@@ -498,24 +498,24 @@ function RaceBody(
                       style={{
                         textAlign: "right",
                         fontFamily: FONT.mono,
-                        fontSize: 12.5,
+                        fontSize: 12,
                         color: d > 0 ? BLEND.positive : d < 0 ? BLEND.negative : BLEND.muted,
                       }}
                     >
                       {fmtDelta(d)}
                     </span>
                   ) : thirdCol === "votes" ? (
-                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
                       {Math.round(votes?.[c.id] ?? 0).toLocaleString("en-US")}
                     </span>
                   ) : null}
                   {props.compact ? null : (
-                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
                       {Math.round(c.favorability)}%
                     </span>
                   )}
                   {props.compact ? null : (
-                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12.5 }}>
+                    <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
                       {Math.round(c.influence)}%
                     </span>
                   )}
@@ -549,7 +549,7 @@ function RaceBody(
             turnLabel={race.stage === "primary" || isFinishedPrimary(race) ? "count" : "turn"}
           />
         ) : (
-          <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("chart.loading")}</p>
+          <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("chart.loading")}</p>
         )}
       </section>
 
@@ -583,9 +583,9 @@ function PartyResults({
       ? people.filter((c) => c.partyId === partyId).reduce((s, c) => s + (votes[c.id] ?? 0), 0)
       : null;
   const cols = votes ? "minmax(0,1fr) 56px 64px 80px" : "minmax(0,1fr) 56px 64px";
-  const cell = { textAlign: "right" as const, fontFamily: FONT.mono, fontSize: 12.5 };
+  const cell = { textAlign: "right" as const, fontFamily: FONT.mono, fontSize: 12 };
   return (
-    <div role="table" style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 13 }}>
+    <div role="table" style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 12 }}>
       <div role="row" style={{ display: "grid", gridTemplateColumns: cols, gap: 8, ...EYEBROW }}>
         <span role="columnheader">{t("race.colParty")}</span>
         <span role="columnheader" style={{ textAlign: "right" }}>
@@ -647,7 +647,7 @@ function PrimaryNote({ race }: { race: CmRace }) {
   const count = race.advanceCount ?? 1;
   const mine = race.isMine ? myRaceSummary(race) : null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
       <p style={{ margin: 0, color: BLEND.muted }}>
         {race.turnsLeft != null
           ? t("race.primaryNote", { party, count, n: race.turnsLeft })
@@ -737,7 +737,7 @@ function RaceWire({ items }: { items: RaceWireItem[] }) {
     <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <h3 style={{ ...EYEBROW, margin: 0 }}>{t("title")}</h3>
       {items.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>{t("empty")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("empty")}</p>
       ) : (
         <ul
           style={{
@@ -752,7 +752,7 @@ function RaceWire({ items }: { items: RaceWireItem[] }) {
           {items.map((item) => (
             <li
               key={`${item.timestamp}:${item.headline}`}
-              style={{ display: "flex", gap: 10, fontSize: 13 }}
+              style={{ display: "flex", gap: 10, fontSize: 12 }}
             >
               <time
                 dateTime={item.timestamp}
@@ -760,7 +760,7 @@ function RaceWire({ items }: { items: RaceWireItem[] }) {
                   flex: "none",
                   width: 64,
                   fontFamily: FONT.mono,
-                  fontSize: 11.5,
+                  fontSize: 12,
                   color: BLEND.mutedDim,
                 }}
               >

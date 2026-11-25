@@ -68,8 +68,8 @@ export function ContingentElectionPanel({
   return (
     <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-5 space-y-5">
       <div>
-        <h3 className="text-lg font-semibold text-amber-200">Contingent election</h3>
-        <p className="mt-1 text-sm text-muted">
+        <h3 className="text-body-lg font-semibold text-amber-200">Contingent election</h3>
+        <p className="mt-1 text-body text-muted">
           No candidate reached 270 electoral votes. Under the 12th Amendment, the House elected the
           President from the top three EV finishers (one vote per state delegation;{" "}
           {HOUSE_CONTINGENT_THRESHOLD} states needed). The District of Columbia has electoral votes
@@ -78,12 +78,12 @@ export function ContingentElectionPanel({
             ` The Senate elected the Vice President from the top two running mates (${SENATE_CONTINGENT_THRESHOLD} votes needed).`}
         </p>
         {houseBallots.length > 1 && finalHouseBallot && (
-          <p className="mt-2 text-sm text-amber-200/90">
+          <p className="mt-2 text-body text-amber-200/90">
             The House required {houseBallots.length} ballots. {finalHouseBallot.reason}.
           </p>
         )}
         {resolutionMode === "contingent_deadlock" && contingentResult.deadlockBreakerUsed && (
-          <p className="mt-2 text-sm text-amber-300/90">
+          <p className="mt-2 text-body text-amber-300/90">
             No chamber reached the required threshold on the simulated ballot. A deterministic
             deadlock breaker selected the winner
             {contingentResult.deadlockBreakerReason
@@ -96,7 +96,7 @@ export function ContingentElectionPanel({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-card-border bg-card/60 p-4">
           <div className="text-body-sm font-medium text-muted mb-2">President — House ballot</div>
-          <p className="text-sm font-semibold text-foreground mb-3">
+          <p className="text-body font-semibold text-foreground mb-3">
             {presidentWinnerName} — {houseWinnerVotes} state delegation
             {houseWinnerVotes === 1 ? "" : "s"}
             <span className="text-muted font-normal">
@@ -106,7 +106,7 @@ export function ContingentElectionPanel({
           </p>
           <div className="space-y-1.5">
             {houseRows.map(([id, votes]) => (
-              <div key={id} className="flex items-center justify-between text-sm">
+              <div key={id} className="flex items-center justify-between text-body">
                 <span style={{ color: colorMap.get(id) }} className="font-medium">
                   {candidateNames[id] ?? id}
                 </span>
@@ -122,7 +122,7 @@ export function ContingentElectionPanel({
               Vice president — Senate ballot
             </div>
             {vpWinnerName && contingentResult.vicePresidentWinnerId && (
-              <p className="text-sm font-semibold text-foreground mb-3">
+              <p className="text-body font-semibold text-foreground mb-3">
                 {vpWinnerName} —{" "}
                 {contingentResult.senateVoteTotals[contingentResult.vicePresidentWinnerId] ?? 0}{" "}
                 senator
@@ -134,7 +134,7 @@ export function ContingentElectionPanel({
             )}
             <div className="space-y-1.5">
               {senateRows.map(([vpId, votes]) => (
-                <div key={vpId} className="flex items-center justify-between text-sm">
+                <div key={vpId} className="flex items-center justify-between text-body">
                   <span className="font-medium text-foreground">
                     {resolveVpDisplayName(vpId, candidates, candidateNames)}
                   </span>
@@ -149,7 +149,7 @@ export function ContingentElectionPanel({
       {delegationEntries.length > 0 && (
         <div className="rounded-lg border border-card-border bg-card/60 p-4">
           <div className="text-body-sm font-medium text-muted mb-3">State delegation votes</div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-body">
             {delegationEntries.map(([stateId, choiceId]) => {
               if (stateId === CONTINGENT_EXCLUDED_HOUSE_STATE) return null;
               return (

@@ -414,7 +414,7 @@ export function StatusBar({
           {stats?.name ? (
             <Link
               href="/profile"
-              className="truncate max-w-[140px] sm:max-w-none text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="truncate max-w-[140px] sm:max-w-none text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               {stats.name}
             </Link>
@@ -429,7 +429,7 @@ export function StatusBar({
           {gameState && (
             // sm:shrink-0: on desktop the turn/price row keeps its width instead of
             // shrinking and painting its overflow over the online count beside it.
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted sm:shrink-0 sm:flex-nowrap sm:gap-x-4 sm:text-sm">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted sm:shrink-0 sm:flex-nowrap sm:gap-x-4 sm:text-body">
               <span className="shrink-0 tabular-nums text-muted" title="Current turn">
                 Turn {gameState.currentTurn}
               </span>
@@ -442,7 +442,7 @@ export function StatusBar({
                 }
               >
                 {gameState.preIterationActive && (
-                  <span className="mr-1.5 rounded bg-secondary/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                  <span className="mr-1.5 rounded bg-secondary/15 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-secondary">
                     Founding
                   </span>
                 )}
@@ -454,7 +454,7 @@ export function StatusBar({
               <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
                 {isProcessing ? (
                   <TurnStatusLink enabled={turnStatusLink}>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary/10 px-1.5 py-0.5 text-[11px] font-bold text-secondary sm:gap-1.5 sm:px-2 sm:py-1 sm:text-xs">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary/10 px-1.5 py-0.5 text-body-sm font-bold text-secondary sm:gap-1.5 sm:px-2 sm:py-1 sm:text-body-sm">
                       <svg
                         className="h-2.5 w-2.5 animate-spin sm:h-3 sm:w-3"
                         fill="none"
@@ -520,7 +520,7 @@ export function StatusBar({
               political world keeps turning, prices and corporations hold. Only
               rendered while the window is open. */}
           {gameState?.economyPause?.paused && gameState.economyPause.resumesAtTurn !== null && (
-            <span className="shrink-0 text-xs text-yellow-500">
+            <span className="shrink-0 text-body-sm text-yellow-500">
               Economy paused, resumes turn {gameState.economyPause.resumesAtTurn}
             </span>
           )}
@@ -533,7 +533,7 @@ export function StatusBar({
                 <span className="mx-3 hidden h-4 w-px shrink-0 bg-card-border/60 sm:block sm:mx-4" />
               )}
               <div
-                className={`hidden sm:flex min-w-0 items-center gap-2 text-sm text-muted ${isMinimalLayout ? "shrink-0" : "sm:ml-auto"}`}
+                className={`hidden sm:flex min-w-0 items-center gap-2 text-body text-muted ${isMinimalLayout ? "shrink-0" : "sm:ml-auto"}`}
               >
                 <OnlineStatusDot />
                 {labelledOnlineCount ? (
@@ -617,7 +617,7 @@ export function StatusBar({
               />
               <BreakdownRow label="Cap" value={String(actionCap)} />
             </div>
-            <div className="flex justify-between text-[11px] border-t border-card-border/60 pt-1.5">
+            <div className="flex justify-between text-body-sm border-t border-card-border/60 pt-1.5">
               <span className="text-muted">Remaining</span>
               <span className="font-bold text-primary tabular-nums">{stats?.actions ?? 0}</span>
             </div>
@@ -693,7 +693,7 @@ export function StatusBar({
                     />
                   )}
                 </div>
-                <div className="flex justify-between text-[11px] border-t border-card-border/60 pt-1.5">
+                <div className="flex justify-between text-body-sm border-t border-card-border/60 pt-1.5">
                   <span className="text-muted font-semibold">Net per turn</span>
                   <span
                     className={`font-bold tabular-nums ${
@@ -708,7 +708,7 @@ export function StatusBar({
                 </div>
               </>
             ) : (
-              <p className="text-[11px] text-muted mb-2">
+              <p className="text-body-sm text-muted mb-2">
                 Hourly CF income unavailable — open Profile for details.
               </p>
             )}
@@ -820,7 +820,7 @@ export function StatusBar({
                 }
                 value={
                   <>
-                    <span className="hidden sm:inline text-[10px] font-semibold text-indigo-400/60">
+                    <span className="hidden sm:inline text-body-sm font-semibold text-indigo-400/60">
                       PI
                     </span>
                     {statsPending ? PENDING_VALUE : `${Math.round(influence)}%`}
@@ -833,7 +833,7 @@ export function StatusBar({
                 }
               >
                 <p className="font-semibold text-foreground mb-2">Political influence</p>
-                <p className="text-[11px] text-muted leading-relaxed">
+                <p className="text-body-sm text-muted leading-relaxed">
                   A proxy for name recognition — how well-known you are as a political figure. High
                   influence is essential to winning elections. Maintaining this stat should be your
                   number one priority.
@@ -871,7 +871,7 @@ export function StatusBar({
                     }
                     value={
                       <>
-                        <span className="hidden sm:inline text-[10px] font-semibold opacity-60">
+                        <span className="hidden sm:inline text-body-sm font-semibold opacity-60">
                           FAV
                         </span>
                         {statsPending ? PENDING_VALUE : `${Math.round(fav)}%`}
@@ -882,7 +882,7 @@ export function StatusBar({
                     }
                   >
                     <p className="font-semibold text-foreground mb-2">Favorability</p>
-                    <p className="text-[11px] text-muted leading-relaxed">
+                    <p className="text-body-sm text-muted leading-relaxed">
                       How popular your politician is with the general public. High favorability
                       improves vote share, demographic appeal, and media coverage. Opponents can
                       attack this stat directly — watch it carefully.
@@ -931,7 +931,7 @@ export function StatusBar({
                           {elStats.myVotePct.toFixed(1)}%
                           {marginStr && (
                             <span
-                              className={`text-[10px] font-semibold ${isLeading ? "text-green-300" : "text-orange-300"}`}
+                              className={`text-body-sm font-semibold ${isLeading ? "text-green-300" : "text-orange-300"}`}
                             >
                               {marginStr}
                             </span>
@@ -957,7 +957,7 @@ export function StatusBar({
                       </div>
                       {voteHistory.length >= 2 && (
                         <div className="mt-1 mb-2">
-                          <p className="text-[10px] text-muted mb-1">
+                          <p className="text-body-sm text-muted mb-1">
                             Vote % (last {voteHistory.length} turns)
                           </p>
                           <Sparkline
@@ -1015,7 +1015,7 @@ export function StatusBar({
                       </div>
                       {seatHistory.length >= 2 && (
                         <div className="mt-1 mb-2">
-                          <p className="text-[10px] text-muted mb-1">
+                          <p className="text-body-sm text-muted mb-1">
                             Seats (last {seatHistory.length} turns)
                           </p>
                           <Sparkline data={seatHistory} color="#2dd4bf" width={188} height={30} />
@@ -1080,7 +1080,7 @@ export function StatusBar({
                   ariaLabel={`${stats.corp.name} stock price`}
                 >
                   <p className="font-semibold text-foreground mb-2">{stats.corp.name}</p>
-                  <div className="space-y-1 text-[11px] mb-2">
+                  <div className="space-y-1 text-body-sm mb-2">
                     <BreakdownRow
                       label={`Live share price${ceoCorpCurrency ? ` (${ceoCorpCurrency})` : ""}`}
                       value={formatListingPrice(stats.corp.sharePrice ?? 0, ceoCorpCurrency)}
@@ -1101,7 +1101,7 @@ export function StatusBar({
                   </div>
                   {sharePriceHistory.length >= 2 && (
                     <div className="mt-1 mb-2">
-                      <p className="text-[10px] text-muted mb-1">
+                      <p className="text-body-sm text-muted mb-1">
                         Share price (last {sharePriceHistory.length} turns)
                       </p>
                       <Sparkline
@@ -1147,7 +1147,7 @@ export function StatusBar({
                 }
                 value={
                   <>
-                    <span className="hidden sm:inline text-violet-400/60 font-semibold text-[10px]">
+                    <span className="hidden sm:inline text-violet-400/60 font-semibold text-body-sm">
                       MS
                     </span>
                     {stats.corp.marketingStrength >= 1_000_000
@@ -1167,13 +1167,13 @@ export function StatusBar({
                 />
                 {msHistory.length >= 2 && (
                   <div className="mt-2 mb-1">
-                    <p className="text-[10px] text-muted mb-1">
+                    <p className="text-body-sm text-muted mb-1">
                       MS (last {msHistory.length} turns)
                     </p>
                     <Sparkline data={msHistory} color="#a78bfa" width={208} height={30} />
                   </div>
                 )}
-                <p className="text-[11px] text-muted leading-relaxed mt-1">
+                <p className="text-body-sm text-muted leading-relaxed mt-1">
                   Sets how many plants and what odds you get when you split a rival&apos;s sector,
                   against their MS. Grows from daily marketing spend.
                 </p>
@@ -1188,7 +1188,7 @@ export function StatusBar({
           {isFullLayout && onlineStatus && (
             <>
               <div className="hidden sm:block w-px h-4 bg-card-border/60 mx-3 sm:mx-4" />
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted shrink-0">
+              <div className="hidden sm:flex items-center gap-2 text-body text-muted shrink-0">
                 <OnlineStatusDot />
                 <span>
                   <span className="font-medium text-foreground tabular-nums">

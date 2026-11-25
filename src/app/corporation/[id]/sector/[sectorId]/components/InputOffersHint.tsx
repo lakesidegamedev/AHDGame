@@ -50,7 +50,7 @@ export default function InputOffersHint({
 
   if (variant === "short" && loaded && stateName && inRegion === 0) {
     return (
-      <span data-no-input-offers={flow.commodity} className="text-body-xs text-muted">
+      <span data-no-input-offers={flow.commodity} className="text-body-sm text-muted">
         No offers for {flow.label} in {stateName}
         {sellers > 0 && (
           <>
@@ -77,12 +77,12 @@ export default function InputOffersHint({
   );
   if (variant === "short")
     return (
-      <span data-short-input-offers={flow.commodity} className="text-body-xs text-muted">
+      <span data-short-input-offers={flow.commodity} className="text-body-sm text-muted">
         {link}
       </span>
     );
   return (
-    <p className="mt-2 text-body-xs text-muted">
+    <p className="mt-2 text-body-sm text-muted">
       {flow.label} is your costliest input. {link}
     </p>
   );

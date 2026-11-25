@@ -32,7 +32,7 @@ export default function SectorWorkspaceTabs({
           role="tab"
           aria-selected={activeTab === id}
           onClick={() => onChange(id)}
-          className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+          className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-body font-medium transition-colors ${
             activeTab === id
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted hover:bg-card-elevated hover:text-foreground"

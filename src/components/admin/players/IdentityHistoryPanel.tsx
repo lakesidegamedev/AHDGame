@@ -86,7 +86,7 @@ function TrackSection({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted transition-colors hover:text-foreground"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm font-medium text-muted transition-colors hover:text-foreground"
       >
         <svg
           className={`h-3 w-3 flex-shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
@@ -104,15 +104,15 @@ function TrackSection({
 
       {open && (
         <div className="border-t border-card-border px-3 py-2">
-          {loading && <p className="text-xs text-muted">Loading...</p>}
-          <InlineError error={error} className="text-xs text-red-400" />
+          {loading && <p className="text-body-sm text-muted">Loading...</p>}
+          <InlineError error={error} className="text-body-sm text-red-400" />
           {data && !loading && data.rows.length === 0 && (
-            <p className="text-xs text-muted">No recorded history.</p>
+            <p className="text-body-sm text-muted">No recorded history.</p>
           )}
           {data && data.rows.length > 0 && (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-body-sm">
                   <thead className="text-muted">
                     <tr>
                       <th className="py-1 pr-3 text-left font-medium">Value</th>
@@ -159,7 +159,7 @@ function TrackSection({
               </div>
 
               {data.totalPages > 1 && (
-                <div className="mt-2 flex items-center gap-3 text-xs">
+                <div className="mt-2 flex items-center gap-3 text-body-sm">
                   <button
                     type="button"
                     disabled={data.page <= 1 || loading}

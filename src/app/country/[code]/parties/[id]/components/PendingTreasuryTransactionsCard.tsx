@@ -136,17 +136,17 @@ export function PendingTreasuryTransactionsCard({ countryCode, partyId, onActed 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Pending transactions</h3>
+        <h3 className="text-body-lg font-semibold">Pending transactions</h3>
         <button
           onClick={fetchPending}
-          className="text-xs text-muted hover:text-foreground"
+          className="text-body-sm text-muted hover:text-foreground"
           disabled={loading}
         >
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
-      <InlineError error={error} className="text-xs text-red-400" />
+      <InlineError error={error} className="text-body-sm text-red-400" />
 
       {loading && items.length === 0 ? (
         <div className="min-h-[8rem] space-y-3">
@@ -168,10 +168,10 @@ export function PendingTreasuryTransactionsCard({ countryCode, partyId, onActed 
           ))}
         </div>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted">No pending transactions.</p>
+        <p className="text-body text-muted">No pending transactions.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-body-sm">
             <thead className="text-muted">
               <tr>
                 <th className="text-left py-2 pr-3">Proposed by</th>
@@ -250,7 +250,7 @@ export function PendingTreasuryTransactionsCard({ countryCode, partyId, onActed 
                         <button
                           onClick={() => handleApprove(row.id)}
                           disabled={isBusy}
-                          className="px-3 py-1 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                          className="px-3 py-1 rounded bg-green-600 text-white text-body-sm font-medium hover:bg-green-700 disabled:opacity-50"
                         >
                           Approve
                         </button>
@@ -259,7 +259,7 @@ export function PendingTreasuryTransactionsCard({ countryCode, partyId, onActed 
                         <button
                           onClick={() => handleCancel(row.id)}
                           disabled={isBusy}
-                          className="px-3 py-1 rounded border border-card-border text-muted hover:text-foreground text-xs disabled:opacity-50"
+                          className="px-3 py-1 rounded border border-card-border text-muted hover:text-foreground text-body-sm disabled:opacity-50"
                         >
                           Cancel
                         </button>

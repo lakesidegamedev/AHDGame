@@ -87,9 +87,9 @@ function Chevron({ open }: { open: boolean }) {
 }
 
 function itemClass(active: boolean): string {
-  return `block rounded-md px-2.5 py-[3px] text-[13px] leading-snug ${
+  return `block rounded-md px-2.5 py-[3px] text-body-sm leading-snug ${
     active
-      ? "bg-primary font-semibold text-white"
+      ? "bg-primary font-semibold text-primary-foreground"
       : "text-muted hover:bg-card hover:text-foreground"
   }`;
 }
@@ -119,7 +119,7 @@ function SectionTree({ groups, pathname }: { groups: SectionTreeGroup[]; pathnam
 
   return (
     <nav aria-label="Wiki sections" data-wiki-tree className="px-2.5 py-5">
-      <div className="mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+      <div className="mb-2 px-2.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
         All sections
       </div>
       <div className="mb-3">{link("/wiki", "Wiki home")}</div>
@@ -131,7 +131,7 @@ function SectionTree({ groups, pathname }: { groups: SectionTreeGroup[]; pathnam
               type="button"
               onClick={() => toggle(g.id)}
               aria-expanded={expanded}
-              className="flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-[11px] font-bold text-foreground hover:bg-card"
+              className="flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-body-sm font-bold text-foreground hover:bg-card"
             >
               <span>{g.name}</span>
               <Chevron open={expanded} />
@@ -175,7 +175,7 @@ export function WikiShell({
         type="button"
         onClick={() => setSheetOpen(true)}
         aria-expanded={sheetOpen}
-        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-[13px] font-semibold text-foreground lg:hidden"
+        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-body-sm font-semibold text-foreground lg:hidden"
         style={{ background: "var(--card-muted)" }}
       >
         <span className="truncate">{barLabel}</span>
@@ -203,7 +203,7 @@ export function WikiShell({
             <button
               type="button"
               onClick={() => setSheetOpen(false)}
-              className="rounded-md px-2 py-1 text-[13px] text-muted hover:text-foreground"
+              className="rounded-md px-2 py-1 text-body-sm text-muted hover:text-foreground"
             >
               Close
             </button>

@@ -8,6 +8,7 @@ import type { FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { ROW_ACCENT, type Tone } from "./InlineViz";
 import { useCorpLedger } from "../ledger/LedgerContext";
 import { ProportionBar } from "../ledger/ProportionBar";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "../fillBand";
 
 /**
@@ -56,12 +57,12 @@ export function DenseSection({
           )}
           <h2
             className={`truncate font-semibold text-foreground ${
-              ledger ? "text-[17px] tracking-tight" : "text-sm"
+              ledger ? "text-body-lg tracking-tight" : "text-body"
             }`}
           >
             {title}
           </h2>
-          {meta != null && <span className="text-xs text-muted">{meta}</span>}
+          {meta != null && <span className="text-body-sm text-muted">{meta}</span>}
         </div>
         {actions != null && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
       </div>
@@ -111,7 +112,7 @@ export function KVRow({
       <dt
         // Labels wrap onto a second line rather than truncating; the figure
         // beside them never shrinks.
-        className={`break-words text-xs leading-tight ${lead ? "text-foreground/80" : "text-muted"} ${
+        className={`break-words text-body-sm leading-tight ${lead ? "text-foreground/80" : "text-muted"} ${
           ledger ? "min-w-0 shrink" : "min-w-0"
         }`}
       >
@@ -137,13 +138,13 @@ export function KVRow({
           // A figure never truncates; the label gives way first (it keeps its
           // full text on hover through the row title where one is set).
           className={`whitespace-nowrap font-medium tabular-nums text-foreground ${
-            lead ? "text-[15px] font-semibold tracking-tight" : "text-[13px]"
+            lead ? "text-body font-semibold tracking-tight" : "text-body-sm"
           } ${mono ? "font-mono" : ""}`}
         >
           {value}
         </span>
         {hint != null && (
-          <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">{hint}</span>
+          <span className="shrink-0 font-mono text-body-sm tabular-nums text-muted">{hint}</span>
         )}
         {action}
       </dd>
@@ -184,7 +185,7 @@ export function Th({
         } ${sorted ? "text-foreground" : ""}`}
       >
         <span>{children}</span>
-        <span aria-hidden className="w-2 text-[9px]">
+        <span aria-hidden className="w-2 text-body-sm">
           {sorted === "asc" ? "▲" : sorted === "desc" ? "▼" : ""}
         </span>
       </button>
@@ -198,7 +199,7 @@ export function Th({
       title={title}
       aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
       className={`whitespace-nowrap border-b border-card-border px-2 py-1.5 font-medium text-muted ${
-        ledger ? "text-[10px] uppercase tracking-[0.1em]" : "text-[11px]"
+        ledger ? "text-body-sm uppercase tracking-[0.1em]" : "text-body-sm"
       } ${alignClass} ${className}`}
     >
       {content}
@@ -234,7 +235,7 @@ export function Td({
     <td
       title={title}
       colSpan={colSpan}
-      className={`${wrap ? "" : "whitespace-nowrap"} border-b border-card-border/60 px-2 py-1.5 text-[13px] tabular-nums ${numeric ? "font-mono" : ""} ${alignClass} ${className}`}
+      className={`${wrap ? "" : "whitespace-nowrap"} border-b border-card-border/60 px-2 py-1.5 text-body-sm tabular-nums ${numeric ? "font-mono" : ""} ${alignClass} ${className}`}
     >
       {children}
     </td>
@@ -288,18 +289,18 @@ export function StatementLine({
   return (
     <tr className={strong ? "font-semibold" : undefined} title={title}>
       <td
-        className={`border-b border-card-border/60 py-1.5 pr-2 text-[13px] ${
+        className={`border-b border-card-border/60 py-1.5 pr-2 text-body-sm ${
           indent ? "pl-4 text-muted" : "text-foreground"
         }`}
       >
         {label}
       </td>
       <td
-        className={`whitespace-nowrap border-b border-card-border/60 px-2 py-1.5 text-right font-mono text-[13px] tabular-nums ${amountClass}`}
+        className={`whitespace-nowrap border-b border-card-border/60 px-2 py-1.5 text-right font-mono text-body-sm tabular-nums ${amountClass}`}
       >
         {amount}
       </td>
-      <td className="hidden whitespace-nowrap border-b border-card-border/60 px-2 py-1.5 text-right font-mono text-xs tabular-nums text-muted sm:table-cell">
+      <td className="hidden whitespace-nowrap border-b border-card-border/60 px-2 py-1.5 text-right font-mono text-body-sm tabular-nums text-muted sm:table-cell">
         {ledger && Number.isFinite(share) ? (
           <span className="inline-flex items-center justify-end gap-2">
             <ProportionBar pct={share} tone="muted" className="w-14" />
@@ -309,7 +310,7 @@ export function StatementLine({
           (pct ?? "")
         )}
       </td>
-      <td className="hidden border-b border-card-border/60 py-1.5 pl-2 text-xs text-muted md:table-cell">
+      <td className="hidden border-b border-card-border/60 py-1.5 pl-2 text-body-sm text-muted md:table-cell">
         {note}
       </td>
     </tr>
@@ -319,7 +320,7 @@ export function StatementLine({
 export function StatementGroup({ children }: { children: ReactNode }) {
   return (
     <tr>
-      <td colSpan={4} className="pb-1 pt-3 text-xs font-medium text-muted">
+      <td colSpan={4} className="pb-1 pt-3 text-body-sm font-medium text-muted">
         {children}
       </td>
     </tr>
@@ -372,7 +373,7 @@ export function TableScroll({ children }: { children: ReactNode }) {
           : "left-0 justify-start bg-gradient-to-r from-card via-card/80 to-transparent"
       }`}
     >
-      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-card-border bg-card-elevated text-sm leading-none text-foreground shadow-card">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-card-border bg-card-elevated text-body leading-none text-foreground shadow-card">
         {side === "right" ? "›" : "‹"}
       </span>
     </span>
@@ -410,7 +411,7 @@ export function SmallButton({
   const ledger = useCorpLedger();
   const toneClass =
     tone === "primary"
-      ? "border-primary bg-primary text-white hover:bg-primary/90"
+      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
       : tone === "danger"
         ? "border-error/50 text-error hover:bg-error/10"
         : "border-card-border text-foreground hover:bg-card-elevated";
@@ -421,7 +422,7 @@ export function SmallButton({
       disabled={disabled}
       title={title}
       aria-label={ariaLabel}
-      className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 border px-2.5 font-sans text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 border px-2.5 font-sans text-body-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         ledger ? "rounded-[calc(var(--corp-rad)-2px)]" : "rounded-md"
       } ${toneClass} ${className}`}
     >
@@ -444,15 +445,8 @@ export function Segmented<T extends string | number>({
   ariaLabel: string;
   disabled?: boolean;
 }) {
-  const ledger = useCorpLedger();
   return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      className={`inline-flex h-7 shrink-0 items-stretch overflow-hidden border border-card-border ${
-        ledger ? "rounded-[calc(var(--corp-rad)-2px)]" : "rounded-md"
-      }`}
-    >
+    <div role="radiogroup" aria-label={ariaLabel} className={`${PILL_TRACK} h-7 shrink-0`}>
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -464,12 +458,7 @@ export function Segmented<T extends string | number>({
             title={opt.title}
             disabled={disabled}
             onClick={() => onChange(opt.value)}
-            className={`border-r border-card-border px-2 text-xs tabular-nums transition-colors last:border-r-0 disabled:opacity-50 ${
-              // Same selected look as filter pills across the game.
-              active
-                ? "bg-primary/10 font-semibold text-primary"
-                : "text-muted hover:bg-card-elevated hover:text-foreground"
-            }`}
+            className={`h-6 px-2.5 text-body-sm tabular-nums disabled:opacity-50 ${pillClass(active)}`}
           >
             {opt.label}
           </button>
@@ -493,7 +482,10 @@ export function InlineStatus({
   const toneClass =
     tone === "success" ? "text-success" : tone === "error" ? "text-error" : "text-muted";
   return (
-    <p role={tone === "error" ? "alert" : "status"} className={`text-xs ${toneClass} ${className}`}>
+    <p
+      role={tone === "error" ? "alert" : "status"}
+      className={`text-body-sm ${toneClass} ${className}`}
+    >
       {message}
     </p>
   );

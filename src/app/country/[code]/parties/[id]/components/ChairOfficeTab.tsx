@@ -241,13 +241,13 @@ export function ChairOfficeTab({
           <HuListVacanciesCard partyId={party.id} onUpdate={onUpdate} />
         )}
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="text-lg font-semibold mb-4">Chair office</h2>
-          <p className="text-sm text-muted mb-6">
+          <h2 className="text-heading font-semibold mb-4">Chair office</h2>
+          <p className="text-body text-muted mb-6">
             {`As ${getPartyRoleLabel(countryId, "chair", party.leadershipTitles)}, you can customize your party's titles and appearance. Changes appear across party views.`}
           </p>
 
           {msg && (
-            <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(msg)}`}>{msg}</div>
+            <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(msg)}`}>{msg}</div>
           )}
 
           <PartyLeadershipTitlesControl
@@ -269,7 +269,7 @@ export function ChairOfficeTab({
 
           {/* Party Logo */}
           <div className="space-y-4 mb-8">
-            <h3 className="text-sm font-semibold text-muted">Party logo</h3>
+            <h3 className="text-body-lg font-semibold text-muted">Party logo</h3>
             <div className="flex items-center gap-6">
               <div className="shrink-0">
                 <PartyLogo
@@ -282,7 +282,7 @@ export function ChairOfficeTab({
                 />
               </div>
               <div className="flex-1 space-y-2">
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   Upload a logo for your party. {UPLOAD_IMAGE_HINTS.partyLogo.short}. Supports JPEG,
                   PNG, WebP, GIF, and SVG formats.
                 </p>
@@ -298,7 +298,7 @@ export function ChairOfficeTab({
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingLogo}
-                  className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+                  className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
                 >
                   {uploadingLogo ? "Uploading..." : party.logoUrl ? "Change logo" : "Upload logo"}
                 </button>
@@ -308,7 +308,7 @@ export function ChairOfficeTab({
 
           {/* Party Color */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-muted">Party color</h3>
+            <h3 className="text-body-lg font-semibold text-muted">Party color</h3>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <input
@@ -327,18 +327,18 @@ export function ChairOfficeTab({
                     }
                   }}
                   placeholder="#FF5733"
-                  className="w-24 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-mono"
+                  className="w-24 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-mono"
                 />
               </div>
               <button
                 onClick={handleColorSave}
                 disabled={savingColor || color === party.color || !/^#[0-9A-Fa-f]{6}$/.test(color)}
-                className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+                className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
               >
                 {savingColor ? "Saving..." : "Save color"}
               </button>
             </div>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Enter a valid hex color code (e.g., #FF5733). This color will be used in party chips,
               charts, and throughout the site.
             </p>
@@ -346,7 +346,7 @@ export function ChairOfficeTab({
 
           {/* Discord Link */}
           <div className="mt-8 space-y-4 border-t border-card-border pt-6">
-            <h3 className="text-sm font-semibold text-muted">Party Discord</h3>
+            <h3 className="text-body-lg font-semibold text-muted">Party Discord</h3>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <input
                 type="url"
@@ -354,7 +354,7 @@ export function ChairOfficeTab({
                 onChange={(e) => setDiscordInviteUrl(e.target.value)}
                 placeholder="https://discord.gg/your-invite"
                 aria-invalid={hasDiscordValidationError}
-                className={`flex-1 rounded-lg border bg-card px-3 py-2 text-sm ${
+                className={`flex-1 rounded-lg border bg-card px-3 py-2 text-body ${
                   hasDiscordValidationError ? "border-error/60" : "border-card-border"
                 }`}
               />
@@ -363,7 +363,7 @@ export function ChairOfficeTab({
                 disabled={
                   savingDiscordLink || !hasDiscordInviteChanged || hasDiscordValidationError
                 }
-                className="rounded-lg border border-secondary/40 bg-secondary/10 px-4 py-2 text-sm font-medium text-secondary hover:bg-secondary/20 disabled:opacity-50"
+                className="rounded-lg border border-secondary/40 bg-secondary/10 px-4 py-2 text-body font-medium text-secondary hover:bg-secondary/20 disabled:opacity-50"
               >
                 {savingDiscordLink
                   ? "Saving..."
@@ -374,7 +374,9 @@ export function ChairOfficeTab({
                       : "Save link"}
               </button>
             </div>
-            <p className={`text-xs ${hasDiscordValidationError ? "text-error" : "text-muted"}`}>
+            <p
+              className={`text-body-sm ${hasDiscordValidationError ? "text-error" : "text-muted"}`}
+            >
               {hasDiscordValidationError
                 ? "Enter a valid Discord invite URL such as https://discord.gg/your-invite or https://discord.com/invite/your-invite."
                 : "Add your party's Discord invite link here. This is shown on the national parties page and only supports Discord invite URLs."}
@@ -383,7 +385,7 @@ export function ChairOfficeTab({
 
           {/* Preview */}
           <div className="mt-8 pt-6 border-t border-card-border">
-            <h3 className="text-sm font-semibold text-muted mb-4">Preview</h3>
+            <h3 className="text-body-lg font-semibold text-muted mb-4">Preview</h3>
             <div className="flex items-center gap-4 p-4 rounded-lg bg-background border border-card-border">
               <PartyLogo
                 partyId={party.id}
@@ -396,7 +398,7 @@ export function ChairOfficeTab({
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{party.name}</span>
                 <span
-                  className="text-xs font-medium px-2 py-0.5 rounded-full"
+                  className="text-body-sm font-medium px-2 py-0.5 rounded-full"
                   style={{ backgroundColor: `${color}20`, color: color }}
                 >
                   {party.abbreviation}
@@ -409,8 +411,8 @@ export function ChairOfficeTab({
           {/* Purge Member */}
           {PARTY_PURGE_ENABLED && (
             <div className="mt-8 pt-6 border-t border-card-border">
-              <h3 className="text-sm font-semibold text-muted mb-2">Purge member</h3>
-              <p className="text-xs text-muted mb-4">
+              <h3 className="text-body-lg font-semibold text-muted mb-2">Purge member</h3>
+              <p className="text-body-sm text-muted mb-4">
                 Expel a member from the party. Costs you 25 infamy and half of their party
                 influence. 6-turn cooldown per expulsion.
               </p>
@@ -421,14 +423,14 @@ export function ChairOfficeTab({
                   setShowPurgeModal(true);
                 }}
                 disabled={purgeCooldownActive || purgeableMembers.length === 0}
-                className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-sm font-medium text-error hover:bg-error/20 disabled:opacity-50"
+                className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-body font-medium text-error hover:bg-error/20 disabled:opacity-50"
               >
                 {purgeCooldownActive
                   ? `Purge Member (${purgeTurnsRemaining} turn${purgeTurnsRemaining === 1 ? "" : "s"})`
                   : "Purge member"}
               </button>
               {purgeableMembers.length === 0 && !purgeCooldownActive && (
-                <p className="mt-2 text-xs text-muted">No purgeable members.</p>
+                <p className="mt-2 text-body-sm text-muted">No purgeable members.</p>
               )}
             </div>
           )}
@@ -452,16 +454,18 @@ export function ChairOfficeTab({
           }}
         >
           <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-6 shadow-xl">
-            <h2 className="text-lg font-bold mb-1">Purge party member</h2>
-            <p className="text-sm text-muted mb-5">
+            <h2 className="text-heading font-bold mb-1">Purge party member</h2>
+            <p className="text-body text-muted mb-5">
               Choose a member to expel. This action cannot be undone and imposes a 6-turn cooldown.
             </p>
 
-            <label className="block text-xs font-semibold text-muted mb-1">Select member</label>
+            <label className="block text-body-sm font-semibold text-muted mb-1">
+              Select member
+            </label>
             <select
               value={selectedMemberId}
               onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-4"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-4"
             >
               <option value="">— Choose a member —</option>
               {purgeableMembers.map((m) => (
@@ -472,9 +476,9 @@ export function ChairOfficeTab({
             </select>
 
             {selectedMember && (
-              <div className="mb-4 rounded-lg border border-error/30 bg-error/5 p-3 text-sm">
+              <div className="mb-4 rounded-lg border border-error/30 bg-error/5 p-3 text-body">
                 <p className="font-medium text-error mb-1">Cost to you</p>
-                <ul className="text-xs text-muted space-y-0.5">
+                <ul className="text-body-sm text-muted space-y-0.5">
                   <li>+25 infamy</li>
                   <li>
                     {influenceCost > 0
@@ -486,7 +490,7 @@ export function ChairOfficeTab({
             )}
 
             {purgeMsg && (
-              <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(purgeMsg)}`}>
+              <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(purgeMsg)}`}>
                 {purgeMsg}
               </div>
             )}
@@ -495,14 +499,14 @@ export function ChairOfficeTab({
               <button
                 onClick={() => setShowPurgeModal(false)}
                 disabled={purging}
-                className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-card-elevated disabled:opacity-50"
+                className="rounded-lg border border-card-border px-4 py-2 text-body hover:bg-card-elevated disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePurge}
                 disabled={!selectedMemberId || purging}
-                className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-sm font-medium text-error hover:bg-error/20 disabled:opacity-50"
+                className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-body font-medium text-error hover:bg-error/20 disabled:opacity-50"
               >
                 {purging
                   ? "Expelling..."

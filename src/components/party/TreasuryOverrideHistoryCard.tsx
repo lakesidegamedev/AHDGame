@@ -21,12 +21,12 @@ export function TreasuryOverrideHistoryCard({
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <div className="text-xs font-semibold text-muted">Emergency override history</div>
-        <h3 className="mt-1 text-heading-sm font-bold text-foreground">{title}</h3>
-        <p className="mt-2 text-sm text-muted">{description}</p>
+        <div className="text-body-sm font-semibold text-muted">Emergency override history</div>
+        <h3 className="mt-1 text-body-lg font-bold text-foreground">{title}</h3>
+        <p className="mt-2 text-body text-muted">{description}</p>
       </div>
       {items.length === 0 ? (
-        <div className="rounded-lg border border-card-border bg-background/40 px-4 py-3 text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-background/40 px-4 py-3 text-body text-muted">
           No reserve-piercing overrides have been logged recently.
         </div>
       ) : (
@@ -37,14 +37,14 @@ export function TreasuryOverrideHistoryCard({
               className="rounded-lg border border-card-border bg-background/40 px-4 py-3"
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold text-foreground">{item.actorLabel}</div>
+                <div className="text-body font-semibold text-foreground">{item.actorLabel}</div>
                 {item.amount !== null && (
-                  <div className="text-sm font-semibold text-warning">
+                  <div className="text-body font-semibold text-warning">
                     {formatCurrency(item.amount, currencyCode)}
                   </div>
                 )}
               </div>
-              <div className="mt-1 text-sm text-muted">{item.details}</div>
+              <div className="mt-1 text-body text-muted">{item.details}</div>
               <div className="mt-2 text-body-sm text-muted">
                 <GameMonthTime value={item.createdAt} />
               </div>

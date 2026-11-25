@@ -124,30 +124,30 @@ export function OpenShareOrdersPanel() {
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold text-foreground">My orders</h2>
-          <p className="text-xs text-muted mt-0.5">
+          <h2 className="text-body font-bold text-foreground">My orders</h2>
+          <p className="text-body-sm text-muted mt-0.5">
             Open buy and sell share orders across every corporation
           </p>
         </div>
         <button
           type="button"
           onClick={() => void load()}
-          className="text-xs font-semibold text-primary hover:underline"
+          className="text-body-sm font-semibold text-primary hover:underline"
         >
           Refresh
         </button>
       </div>
 
       {error && (
-        <div className="mx-5 mt-4 rounded-lg border border-error/20 bg-error/5 px-4 py-2 text-sm text-error">
+        <div className="mx-5 mt-4 rounded-lg border border-error/20 bg-error/5 px-4 py-2 text-body text-error">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="px-5 py-10 text-center text-sm text-muted">Loading your orders...</div>
+        <div className="px-5 py-10 text-center text-body text-muted">Loading your orders...</div>
       ) : groups.length === 0 ? (
-        <div className="px-5 py-10 text-center text-sm text-muted">
+        <div className="px-5 py-10 text-center text-body text-muted">
           You have no open share orders. Place a buy or sell order from any corporation to see it
           here.
         </div>
@@ -158,23 +158,25 @@ export function OpenShareOrdersPanel() {
               <div className="flex items-center justify-between gap-3 mb-3">
                 <Link
                   href={group.href}
-                  className="text-sm font-semibold text-foreground hover:text-primary"
+                  className="text-body font-semibold text-foreground hover:text-primary"
                 >
                   {group.corporationName}
                   {group.tickerSymbol ? (
-                    <span className="ml-2 text-xs font-mono text-muted">{group.tickerSymbol}</span>
+                    <span className="ml-2 text-body-sm font-mono text-muted">
+                      {group.tickerSymbol}
+                    </span>
                   ) : null}
                 </Link>
                 <Link
                   href={group.href}
-                  className="text-xs font-semibold text-primary hover:underline"
+                  className="text-body-sm font-semibold text-primary hover:underline"
                 >
                   View corporation
                 </Link>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <thead>
                     <tr className="text-left text-body-sm font-medium text-muted">
                       <th className="py-1 pr-4 font-medium">Side</th>
@@ -208,7 +210,7 @@ export function OpenShareOrdersPanel() {
                             />
                           )}
                           {order.sharesRemaining !== order.shares ? (
-                            <span className="text-xs text-muted">
+                            <span className="text-body-sm text-muted">
                               {" "}
                               / {formatShares(order.shares)}
                             </span>
@@ -219,7 +221,7 @@ export function OpenShareOrdersPanel() {
                         </td>
                         <td className="py-2 pr-4 text-muted">{formatDate(order.createdAt)}</td>
                         <td className="py-2 pr-4">
-                          <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          <span className="rounded bg-primary/10 px-2 py-0.5 text-body-sm font-medium text-primary">
                             Open
                           </span>
                         </td>
@@ -228,7 +230,7 @@ export function OpenShareOrdersPanel() {
                             type="button"
                             onClick={() => void handleCancel(order)}
                             disabled={cancelling === order._id}
-                            className="text-xs font-semibold text-error hover:underline disabled:opacity-50"
+                            className="text-body-sm font-semibold text-error hover:underline disabled:opacity-50"
                           >
                             {cancelling === order._id ? "Cancelling..." : "Cancel"}
                           </button>

@@ -34,8 +34,8 @@ export function OverviewTab(props: Props) {
   if (!props.officeHolderName) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-8">
-        <h2 className="text-lg font-semibold mb-2">Office vacant</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-heading font-semibold mb-2">Office vacant</h2>
+        <p className="text-body text-muted">
           No {props.regionalTitle.toLowerCase()} is currently in office for {props.stateName}.
         </p>
       </div>
@@ -45,10 +45,10 @@ export function OverviewTab(props: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <Card title="Office action points">
-        <div className="text-2xl font-bold tabular-nums">
+        <div className="text-heading font-bold tabular-nums">
           {props.gubernatorialActions} / {GUBERNATORIAL_ACTION_CAP}
         </div>
-        <div className="text-xs text-muted">
+        <div className="text-body-sm text-muted">
           Regenerates by 1 every {GUBERNATORIAL_ACTION_REGEN_INTERVAL} turns
         </div>
       </Card>
@@ -74,7 +74,7 @@ export function OverviewTab(props: Props) {
       </Card>
       {props.viewerIsAdmin && !props.viewerIsHolder && (
         <Card title="Admin notice">
-          <div className="text-sm text-muted">
+          <div className="text-body text-muted">
             You are viewing this office page as an admin. Actions remain restricted to the
             office-holder.
           </div>
@@ -94,7 +94,7 @@ function LegislationSummary({
   stateId: string;
 }) {
   if (!activity) {
-    return <div className="text-sm text-muted">No bill in flight.</div>;
+    return <div className="text-body text-muted">No bill in flight.</div>;
   }
   const status = describeActivity(activity);
   const billHref =
@@ -106,24 +106,24 @@ function LegislationSummary({
       {billHref ? (
         <Link
           href={billHref}
-          className="block text-sm font-medium truncate hover:underline"
+          className="block text-body font-medium truncate hover:underline"
           title={activity.title}
         >
           {activity.title}
         </Link>
       ) : (
-        <div className="text-sm font-medium truncate" title={activity.title}>
+        <div className="text-body font-medium truncate" title={activity.title}>
           {activity.title}
         </div>
       )}
       <div className="flex items-center gap-2">
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${status.pillClass}`}
+          className={`rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${status.pillClass}`}
         >
           {status.label}
         </span>
         {status.tally && (
-          <span className="text-[11px] tabular-nums text-muted">{status.tally}</span>
+          <span className="text-body-sm tabular-nums text-muted">{status.tally}</span>
         )}
       </div>
     </div>
@@ -170,13 +170,13 @@ function ExecutiveOrdersSummary({
 }) {
   return (
     <div className="space-y-1.5">
-      <div className="text-sm font-medium tabular-nums">
+      <div className="text-body font-medium tabular-nums">
         {activeOrders.length} / {EXEC_ORDER_SLOT_CAP} active
       </div>
       {activeOrders.length === 0 ? (
-        <div className="text-xs text-muted">No active orders.</div>
+        <div className="text-body-sm text-muted">No active orders.</div>
       ) : (
-        <ul className="space-y-1 text-xs">
+        <ul className="space-y-1 text-body-sm">
           {activeOrders.map((o) => (
             <li key={o._id} className="truncate" title={o.legislationTypeName}>
               <span className="text-foreground">{o.legislationTypeName}</span>
@@ -207,7 +207,7 @@ function AddressSummary({
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+          className={`rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${
             onCooldown ? "bg-card-border/40 text-muted" : "bg-success/20 text-success"
           }`}
         >
@@ -215,11 +215,11 @@ function AddressSummary({
         </span>
       </div>
       {mostRecentAddress ? (
-        <div className="text-xs text-muted">
+        <div className="text-body-sm text-muted">
           Last: {mostRecentAddress.deliveredByName} · T{mostRecentAddress.deliveredAtTurn}
         </div>
       ) : (
-        <div className="text-xs text-muted">No address delivered yet.</div>
+        <div className="text-body-sm text-muted">No address delivered yet.</div>
       )}
     </div>
   );
@@ -228,11 +228,11 @@ function AddressSummary({
 function EndorsementsSummary({ activeEndorsements }: { activeEndorsements: ActiveEndorsement[] }) {
   return (
     <div className="space-y-1.5">
-      <div className="text-sm font-medium tabular-nums">{activeEndorsements.length} active</div>
+      <div className="text-body font-medium tabular-nums">{activeEndorsements.length} active</div>
       {activeEndorsements.length === 0 ? (
-        <div className="text-xs text-muted">No active endorsements.</div>
+        <div className="text-body-sm text-muted">No active endorsements.</div>
       ) : (
-        <ul className="space-y-1 text-xs">
+        <ul className="space-y-1 text-body-sm">
           {activeEndorsements.slice(0, 3).map((e) => (
             <li key={e._id} className="truncate" title={`${e.candidateName} · ${e.electionTitle}`}>
               <span className="text-foreground">{e.candidateName}</span>
@@ -251,7 +251,7 @@ function EndorsementsSummary({ activeEndorsements }: { activeEndorsements: Activ
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="text-sm text-muted mb-2">{title}</h3>
+      <h3 className="text-body-lg text-muted mb-2">{title}</h3>
       {children}
     </div>
   );

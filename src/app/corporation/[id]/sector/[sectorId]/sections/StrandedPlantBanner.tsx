@@ -76,11 +76,11 @@ export default function StrandedPlantBanner({
       className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"
     >
       <div className="flex items-start gap-2">
-        <span aria-hidden className="text-base leading-none">
+        <span aria-hidden className="text-body-lg leading-none">
           ⚠️
         </span>
         <div>
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-body font-semibold text-foreground">
             {deliveryLimited
               ? "This plant cannot deliver its output"
               : split
@@ -89,7 +89,7 @@ export default function StrandedPlantBanner({
                   ? "This plant is not selling most of its output"
                   : "This plant cannot sell its output"}
           </p>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-0.5 text-body-sm text-muted">
             {warning.basis === "settlement"
               ? `Last turn buyers and the company's own sites took ${pct(warning.takenShare)}% of what this plant offered${
                   warning.turnsInRow != null
@@ -109,7 +109,7 @@ export default function StrandedPlantBanner({
             Its margin still looks healthy because margin only counts the units that do sell.
           </p>
           {isCeo && (
-            <p className="mt-1.5 text-xs text-muted">
+            <p className="mt-1.5 text-body-sm text-muted">
               {deliveryLimited
                 ? `Options: ${deliveryAction} Shrinking this plant gives up output the market is still short of.`
                 : split

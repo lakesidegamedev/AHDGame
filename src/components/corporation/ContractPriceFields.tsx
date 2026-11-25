@@ -68,7 +68,7 @@ export function ContractPriceFields(props: {
   const options: SupplyAgreementPriceMode[] = ["fixed", "indexed"];
   return (
     <div className="space-y-2" data-testid="contract-price-fields">
-      <div className="text-xs font-semibold text-foreground">{t("title")}</div>
+      <div className="text-body-sm font-semibold text-foreground">{t("title")}</div>
       <div className="flex gap-2" role="radiogroup" aria-label={t("modeLabel")}>
         {options.map((mode) => (
           <button
@@ -78,9 +78,9 @@ export function ContractPriceFields(props: {
             aria-checked={value.priceMode === mode}
             disabled={mode === "fixed" && !hasMarket}
             onClick={() => onChange({ ...value, priceMode: mode })}
-            className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
+            className={`rounded-md border px-3 py-1.5 text-body-sm font-medium ${
               value.priceMode === mode
-                ? "border-primary bg-primary text-white"
+                ? "border-primary bg-primary text-primary-foreground"
                 : "border-card-border text-muted hover:text-foreground"
             } disabled:opacity-50`}
           >
@@ -91,7 +91,7 @@ export function ContractPriceFields(props: {
       {value.priceMode === "fixed" ? (
         bounds ? (
           <div className="space-y-1">
-            <label className="flex items-center justify-between text-xs font-semibold text-foreground">
+            <label className="flex items-center justify-between text-body-sm font-semibold text-foreground">
               <span>{t("fixedLabel", { unit })}</span>
               <span className="tabular-nums text-primary">
                 {Number.isFinite(fixedPrice) ? formatPrice(fixedPrice) : ""}
@@ -107,7 +107,7 @@ export function ContractPriceFields(props: {
               onChange={(e) => onChange({ ...value, fixedPrice: e.target.value })}
               className="w-full accent-primary"
             />
-            <p className="text-[11px] text-muted">
+            <p className="text-body-sm text-muted">
               {t("fixedHelp", {
                 band: FIXED_PCT,
                 low: formatPrice(bounds.min),
@@ -118,11 +118,11 @@ export function ContractPriceFields(props: {
             </p>
           </div>
         ) : (
-          <p className="text-[11px] text-muted">{t("noMarket")}</p>
+          <p className="text-body-sm text-muted">{t("noMarket")}</p>
         )
       ) : (
         <div className="space-y-1">
-          <label className="flex items-center justify-between text-xs font-semibold text-foreground">
+          <label className="flex items-center justify-between text-body-sm font-semibold text-foreground">
             <span>{t("indexedLabel")}</span>
             <span className="tabular-nums text-primary">
               {value.percent > 0 ? "+" : value.percent < 0 ? "−" : ""}
@@ -139,11 +139,11 @@ export function ContractPriceFields(props: {
             onChange={(e) => onChange({ ...value, percent: Number(e.target.value) })}
             className="w-full accent-primary"
           />
-          <p className="text-[11px] text-muted">{t("indexedHelp", { band: INDEXED_PCT })}</p>
+          <p className="text-body-sm text-muted">{t("indexedHelp", { band: INDEXED_PCT })}</p>
         </div>
       )}
       {sides && (
-        <ul className="space-y-0.5 rounded-lg border border-card-border bg-card-elevated p-2 text-[11px] text-muted">
+        <ul className="space-y-0.5 rounded-lg border border-card-border bg-card-elevated p-2 text-body-sm text-muted">
           <li data-testid="contract-seller-side">
             {value.priceMode === "fixed"
               ? t("sellerFixed", { price: formatPrice(sides.sellerUnitPrice), unit })

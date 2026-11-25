@@ -49,7 +49,7 @@ function itemStyle(active: boolean): React.CSSProperties {
     border: 0,
     borderRadius: 6,
     font: "inherit",
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: active ? 600 : 500,
     textAlign: "left",
     cursor: "pointer",
@@ -67,7 +67,7 @@ function chipStyle(active: boolean): React.CSSProperties {
     color: active ? BLEND.accentInk : BLEND.muted,
     padding: "6px 11px",
     font: "inherit",
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: 600,
     whiteSpace: "nowrap",
     cursor: "pointer",
@@ -113,7 +113,7 @@ export function BlendRail({
             style={{
               marginTop: 3,
               fontFamily: FONT.sans,
-              fontSize: 13,
+              fontSize: 12,
               color: BLEND.muted,
             }}
           >
@@ -128,7 +128,7 @@ export function BlendRail({
               alignItems: "center",
               gap: 5,
               fontFamily: FONT.mono,
-              fontSize: 10,
+              fontSize: 12,
               color: status.color,
             }}
           >
@@ -158,7 +158,7 @@ export function BlendRail({
               style={itemStyle(it.id === selectedId)}
             >
               <span>{it.label}</span>
-              <span style={{ fontFamily: FONT.mono, fontSize: 10, color: BLEND.mutedDimmer }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDimmer }}>
                 {it.badge ?? ""}
               </span>
             </button>
@@ -175,7 +175,7 @@ export function BlendRail({
             paddingTop: 14,
             borderTop: `1px solid ${BLEND.hairline}`,
             fontFamily: FONT.sans,
-            fontSize: 13,
+            fontSize: 12,
             lineHeight: 1.55,
             color: BLEND.mutedDim,
           }}

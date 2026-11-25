@@ -176,7 +176,7 @@ export function NavairCommandClient({
   if (!rows.length) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-neutral-400">
+        <p className="text-body text-neutral-400">
           This country has no naval or air formations to command.
         </p>
       </div>
@@ -192,12 +192,12 @@ export function NavairCommandClient({
   return (
     <div className="space-y-6">
       {error && (
-        <p role="alert" className="rounded border border-red-800 bg-red-950/40 p-3 text-sm">
+        <p role="alert" className="rounded border border-red-800 bg-red-950/40 p-3 text-body">
           {error}
         </p>
       )}
 
-      <p className="text-xs text-neutral-500">
+      <p className="text-body-sm text-neutral-500">
         This page lists the {rows.length} naval and air formations only. The defence office counts
         every unit, including land, marine and space units, so its unit total and average readiness
         are wider than this list.
@@ -206,8 +206,8 @@ export function NavairCommandClient({
       {/* What this force is achieving, before any of the detail. A list of objects with
           dropdowns does not tell a commander what problem they are solving; this does. */}
       <section className="rounded border border-neutral-800 p-4">
-        <h2 className="text-sm text-neutral-400">Where you stand</h2>
-        <ul className="mt-2 space-y-1 text-sm text-neutral-200">
+        <h2 className="text-body text-neutral-400">Where you stand</h2>
+        <ul className="mt-2 space-y-1 text-body text-neutral-200">
           <li>
             {summary.holding.length > 0 ? (
               <>
@@ -254,7 +254,7 @@ export function NavairCommandClient({
         </ul>
       </section>
 
-      <p className="text-sm text-neutral-400">
+      <p className="text-body text-neutral-400">
         Orders are standing: a formation keeps its posture until you change it. Changes take effect
         at the next turn. Anything marked <span className="text-neutral-300">Auto</span> was posted
         by the staff and will keep being repositioned until you give it an order.
@@ -262,7 +262,7 @@ export function NavairCommandClient({
 
       {[...byStation.entries()].map(([stationName, group]) => (
         <section key={stationName}>
-          <h2 className="text-sm text-neutral-400">{stationName}</h2>
+          <h2 className="text-body text-neutral-400">{stationName}</h2>
           <ul className="mt-2 space-y-3">
             {group.map((f) => {
               const options = f.domain === "naval" ? navalMissions : airMissions;
@@ -271,8 +271,8 @@ export function NavairCommandClient({
               return (
                 <li key={f.id} className="rounded border border-neutral-800 p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-sm text-neutral-100">{f.name}</span>
-                    <span className="text-xs text-neutral-500">
+                    <span className="text-body text-neutral-100">{f.name}</span>
+                    <span className="text-body-sm text-neutral-500">
                       {f.type}
                       {f.auto && (
                         <span className="ml-2 rounded border border-neutral-700 px-1 text-neutral-400">
@@ -282,7 +282,7 @@ export function NavairCommandClient({
                     </span>
                   </div>
 
-                  <p className="mt-1 text-xs text-neutral-500 tabular-nums">
+                  <p className="mt-1 text-body-sm text-neutral-500 tabular-nums">
                     Condition {Math.round(f.integrity)}% · Readiness {Math.round(f.readiness)}% ·{" "}
                     <span className={f.supply <= 25 ? "text-red-400" : undefined}>
                       Supply {Math.round(f.supply)}%
@@ -290,7 +290,7 @@ export function NavairCommandClient({
                   </p>
 
                   {f.warnings.length > 0 && (
-                    <ul className="mt-1 space-y-0.5 text-xs">
+                    <ul className="mt-1 space-y-0.5 text-body-sm">
                       {f.warnings.map((w) => (
                         <li
                           key={w.text}
@@ -303,7 +303,7 @@ export function NavairCommandClient({
                   )}
 
                   <p
-                    className={`mt-1 text-xs ${
+                    className={`mt-1 text-body-sm ${
                       f.repair.mending ? "text-emerald-400" : "text-neutral-500"
                     }`}
                   >
@@ -311,7 +311,7 @@ export function NavairCommandClient({
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-3">
-                    <label className="text-xs text-neutral-400">
+                    <label className="text-body-sm text-neutral-400">
                       Orders
                       <select
                         className="ml-2 rounded border border-neutral-700 bg-neutral-900 p-1 text-neutral-100"
@@ -343,7 +343,7 @@ export function NavairCommandClient({
                     </label>
 
                     {selectedMission && missionNeedsTarget(selectedMission) && (
-                      <label className="text-xs text-neutral-400">
+                      <label className="text-body-sm text-neutral-400">
                         Target
                         <select
                           className="ml-2 rounded border border-neutral-700 bg-neutral-900 p-1 text-neutral-100"
@@ -375,7 +375,7 @@ export function NavairCommandClient({
                       </label>
                     )}
 
-                    <label className="text-xs text-neutral-400">
+                    <label className="text-body-sm text-neutral-400">
                       Station
                       <select
                         className="ml-2 rounded border border-neutral-700 bg-neutral-900 p-1 text-neutral-100"
@@ -413,14 +413,14 @@ export function NavairCommandClient({
                     })}
                   />
 
-                  {current && <p className="mt-2 text-xs text-neutral-400">{current.desc}</p>}
+                  {current && <p className="mt-2 text-body-sm text-neutral-400">{current.desc}</p>}
                   {strikeDrafts[f.id] && (
-                    <p className="mt-1 text-xs text-amber-400">
+                    <p className="mt-1 text-body-sm text-amber-400">
                       Select a target region to send this strike order.
                     </p>
                   )}
                   {saved === f.id && (
-                    <p className="mt-1 text-xs text-emerald-400">
+                    <p className="mt-1 text-body-sm text-emerald-400">
                       Order sent. Effective next turn.
                     </p>
                   )}

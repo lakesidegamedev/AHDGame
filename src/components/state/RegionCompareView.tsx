@@ -14,6 +14,7 @@ import type { RegionPoliticalMetricsResponse } from "@/lib/politicalMetrics/quer
 import { CategoryIcon } from "@/app/country/[code]/political-metrics/components/categoryIcons";
 import { LeanChip } from "@/app/country/[code]/political-metrics/components/LeanChip";
 import { scoreTone } from "@/app/country/[code]/political-metrics/components/tones";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 const CATEGORY_ICONS: Record<string, string> = {
   economy: "currency",
@@ -121,13 +122,13 @@ export function RegionCompareView({
         <Button variant="ghost" size="sm" onClick={onBack}>
           ← {home.regionName} overview
         </Button>
-        <span className="font-mono text-body-xs uppercase tracking-widest text-muted">
+        <span className="font-mono text-body-sm uppercase tracking-widest text-muted">
           Comparison · up to {MAX_PEERS} {home.regionLabelPlural.toLowerCase()}
         </span>
       </div>
 
       <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-        <div className="mb-2.5 font-mono text-body-xs uppercase tracking-widest text-muted">
+        <div className="mb-2.5 font-mono text-body-sm uppercase tracking-widest text-muted">
           Compare against
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -141,12 +142,8 @@ export function RegionCompareView({
                 disabled={full}
                 aria-pressed={on}
                 onClick={() => togglePeer(s.id)}
-                className={`rounded border px-2 py-1 font-mono text-body-xs transition-colors ${
-                  on
-                    ? "border-primary bg-primary/10 text-primary"
-                    : full
-                      ? "cursor-not-allowed border-card-border text-muted/40"
-                      : "border-card-border text-muted hover:border-muted hover:text-foreground"
+                className={`px-2.5 py-1 font-mono text-body-sm ${
+                  !on && full ? `${PILL_SHAPE} cursor-not-allowed text-muted/40` : pillClass(on)
                 }`}
               >
                 {s.name}
@@ -165,13 +162,13 @@ export function RegionCompareView({
         <table className="w-full min-w-[32rem] border-collapse">
           <thead>
             <tr className="border-b border-card-border">
-              <th className="px-4 py-2 text-left font-mono text-body-xs uppercase tracking-wider text-muted">
+              <th className="px-4 py-2 text-left font-mono text-body-sm uppercase tracking-wider text-muted">
                 Category
               </th>
               {columns.map((c) => (
                 <th
                   key={c.id}
-                  className={`px-4 py-2 text-right font-mono text-body-xs uppercase tracking-wider ${
+                  className={`px-4 py-2 text-right font-mono text-body-sm uppercase tracking-wider ${
                     c.self ? "text-primary" : "text-muted"
                   }`}
                 >

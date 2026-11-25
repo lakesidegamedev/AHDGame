@@ -77,12 +77,12 @@ export function AdminIntakePanel({ days }: { days: number }) {
   return (
     <section>
       <SectionLabel>New-player intake</SectionLabel>
-      <p className="mb-4 max-w-3xl text-sm text-muted">
+      <p className="mb-4 max-w-3xl text-body text-muted">
         Every new account in the window, from the game database, whatever the sign-in method or
         analytics choice. Return rates use a daily last-seen stamp that only exists from its
         rollout, so older cohorts read low.
       </p>
-      {error && <p className="text-sm text-error">Could not load intake: {error}</p>}
+      {error && <p className="text-body text-error">Could not load intake: {error}</p>}
       {t && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -92,8 +92,10 @@ export function AdminIntakePanel({ days }: { days: number }) {
                 className="rounded-xl border border-card-border bg-card p-4 shadow-sm"
               >
                 <p className="text-body-sm font-medium text-muted">{s.label}</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">{s.value}</p>
-                <p className="mt-0.5 text-xs text-muted">{s.sub}</p>
+                <p className="mt-1 text-heading font-bold tabular-nums text-foreground">
+                  {s.value}
+                </p>
+                <p className="mt-0.5 text-body-sm text-muted">{s.sub}</p>
               </div>
             ))}
           </div>
@@ -111,9 +113,9 @@ export function AdminIntakePanel({ days }: { days: number }) {
               >
                 <p className="mb-2 text-body-sm font-medium text-muted">{label}</p>
                 {Object.keys(map).length === 0 ? (
-                  <p className="text-xs text-muted">None recorded yet</p>
+                  <p className="text-body-sm text-muted">None recorded yet</p>
                 ) : (
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-1 text-body">
                     {topEntries(map).map(([key, count]) => (
                       <li key={key} className="flex justify-between gap-2">
                         <span className="truncate">{key}</span>
@@ -159,15 +161,15 @@ function OnboardingCohortTable({ cohorts }: { cohorts: OnboardingCohorts }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <p className="mb-1 text-body-sm font-medium text-muted">First days of new characters</p>
-      <p className="mb-3 text-xs text-muted">
+      <p className="mb-3 text-body-sm text-muted">
         Target for joiners of a running world: Campaign within 24h at 70% or more, no influence
         growth after 72h at 25% or less (45% before 1.16). From 1.16 new characters start at 10
         influence, so growth is measured against each character&apos;s own start; &quot;started at
         10&quot; counts them. Step counts exist from the stamp rollout onward.
       </p>
-      <table className="w-full text-sm">
+      <table className="w-full text-body">
         <thead>
-          <tr className="text-left text-xs text-muted">
+          <tr className="text-left text-body-sm text-muted">
             <th className="py-1 pr-3 font-medium">Cohort</th>
             <th className="py-1 pr-3 font-medium tabular-nums">Characters</th>
             <th className="py-1 pr-3 font-medium">Campaigned in 24h</th>

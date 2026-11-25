@@ -96,7 +96,9 @@ function GlanceCard({
     <div className="rounded-xl border border-card-border bg-card px-4 py-3">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-body-sm text-muted">{label}</span>
-        <span className="font-mono text-base font-bold tabular-nums text-foreground">{value}</span>
+        <span className="font-mono text-body-lg font-bold tabular-nums text-foreground">
+          {value}
+        </span>
       </div>
       {fill !== null && (
         <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-card-muted">
@@ -118,7 +120,7 @@ function GlanceCard({
         </div>
       )}
       <Sparkline points={history} color={color} />
-      <p className="mt-1 text-[11px] leading-snug text-muted">{caption}</p>
+      <p className="mt-1 text-body-sm leading-snug text-muted">{caption}</p>
     </div>
   );
 }
@@ -160,7 +162,7 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
   if (state.status === "error") {
     return (
       <section className="rounded-xl border border-card-border bg-card px-5 py-4 shadow-sm">
-        <h2 className="text-sm font-bold text-foreground">Economy at a glance</h2>
+        <h2 className="text-body font-bold text-foreground">Economy at a glance</h2>
         <p className="mt-2 text-body-sm text-muted">
           The economic figures did not load.{" "}
           <button
@@ -218,7 +220,7 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-heading-lg font-semibold tracking-tight text-foreground">
+        <h2 className="text-heading font-semibold tracking-tight text-foreground">
           Economy at a glance
         </h2>
         <Link
@@ -265,9 +267,13 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
           label="Unemployment"
           value={unemployment === null ? "No data" : `${unemployment.toFixed(1)}%`}
           caption={
-            data.realEconomy.unemployment.trend === null
-              ? "State-weighted national average."
-              : `State-weighted national average, trend ${signedPercent(data.realEconomy.unemployment.trend, 2)}.`
+            unemployment === null
+              ? data.realEconomy.unemploymentPublication === "awaiting_turn"
+                ? "The latest turn’s unemployment figure has not been published yet."
+                : "A national unemployment figure is unavailable."
+              : data.realEconomy.unemployment.trend === null
+                ? "National unemployment rate."
+                : `State-weighted national average, trend ${signedPercent(data.realEconomy.unemployment.trend, 2)}.`
           }
           tone={unemploymentTone}
           fill={unemployment === null ? null : position(unemployment, 0, 20)}

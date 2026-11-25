@@ -85,7 +85,7 @@ function getFavClass(fav: number): string {
 }
 
 const SELECT_CLASS =
-  "rounded-lg border border-card-border bg-background/50 px-3 py-1.5 text-xs font-medium focus:border-primary/60 focus:outline-none transition-all cursor-pointer hover:bg-card-elevated";
+  "rounded-lg border border-card-border bg-background/50 px-3 py-1.5 text-body-sm font-medium focus:border-primary/60 focus:outline-none transition-all cursor-pointer hover:bg-card-elevated";
 
 export default function PoliticiansClient({ initialPoliticians, initialStats }: Props) {
   const { code } = useParams<{ code: string }>();
@@ -271,11 +271,11 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
         {/* Compact header — operational page, no hero (density rule). */}
         <header className="mb-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="text-heading-lg font-extrabold tracking-tight">Politicians</h1>
+            <h1 className="text-heading font-extrabold tracking-tight">Politicians</h1>
             <span className="font-mono text-body-sm text-muted">
               {sortedPoliticians.length} of {politicians.length}
             </span>
-            <span className="font-mono text-body-xs text-muted/70">
+            <span className="font-mono text-body-sm text-muted/70">
               {stats.playerCount} players · {stats.nppCount} NPPs
             </span>
           </div>
@@ -298,7 +298,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
               placeholder="Search by name or location…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-card py-2 pl-9 pr-9 text-sm placeholder:text-muted focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+              className="w-full rounded-lg border border-card-border bg-card py-2 pl-9 pr-9 text-body placeholder:text-muted focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
             />
             {searchQuery && (
               <button
@@ -374,7 +374,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
-              className="text-xs text-primary transition-colors hover:text-primary-dark hover:underline"
+              className="text-body-sm text-primary transition-colors hover:text-primary-dark hover:underline"
             >
               Clear filters
             </button>
@@ -383,7 +383,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
           <button
             onClick={() => setHideNPPs((v) => !v)}
             aria-pressed={hideNPPs}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-body-sm font-semibold transition-all ${
               hideNPPs
                 ? "border-gold/45 bg-gold/10 text-gold"
                 : "border-card-border bg-background/50 text-muted hover:border-gold/30 hover:text-foreground"
@@ -407,7 +407,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
 
         {/* Error */}
         {error && (
-          <div className="mb-8 flex items-center gap-2 rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error">
+          <div className="mb-8 flex items-center gap-2 rounded-xl border border-error/30 bg-error/10 p-4 text-body text-error">
             <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -444,16 +444,14 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
           <>
             {sortedPoliticians.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-card-border bg-card p-16 text-center shadow-card">
-                <h3 className="text-heading-sm font-semibold text-foreground">
-                  No politicians found
-                </h3>
+                <h3 className="text-body-lg font-semibold text-foreground">No politicians found</h3>
                 <p className="mx-auto mt-1 max-w-sm text-muted">
                   We couldn&apos;t find any politicians matching your current filters. Try adjusting
                   your search criteria.
                 </p>
                 <button
                   onClick={resetFilters}
-                  className="mt-6 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                  className="mt-6 rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   Clear all filters
                 </button>
@@ -461,7 +459,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
             ) : (
               <div className="overflow-hidden rounded-xl border border-card-border bg-card">
                 {/* Column headers */}
-                <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_4.5rem] items-center gap-2.5 sm:grid-cols-[2.5rem_minmax(0,1.5fr)_8.5rem_5.5rem] sm:gap-3.5 border-b border-card-border bg-card-muted px-3 py-2 text-sm sm:px-4 font-semibold text-foreground lg:grid-cols-[2.75rem_minmax(0,1.5fr)_9rem_minmax(0,1fr)_8.5rem_5.5rem]">
+                <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_4.5rem] items-center gap-2.5 sm:grid-cols-[2.5rem_minmax(0,1.5fr)_8.5rem_5.5rem] sm:gap-3.5 border-b border-card-border bg-card-muted px-3 py-2 text-body sm:px-4 font-semibold text-foreground lg:grid-cols-[2.75rem_minmax(0,1.5fr)_9rem_minmax(0,1fr)_8.5rem_5.5rem]">
                   <span className="text-right">#</span>
                   <span>Name</span>
                   <span className="hidden lg:block">Party</span>
@@ -492,7 +490,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
                     >
                       {/* Rank */}
                       <span
-                        className={`text-right font-mono text-sm font-semibold tabular-nums ${
+                        className={`text-right font-mono text-body font-semibold tabular-nums ${
                           leader ? "text-gold" : isRankedSort ? "text-muted" : "text-muted/50"
                         }`}
                       >
@@ -509,26 +507,26 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
                         />
                         <span className="min-w-0">
                           <span className="flex items-center gap-1.5">
-                            <span className="truncate text-sm font-bold text-foreground">
+                            <span className="truncate text-body font-bold text-foreground">
                               {politician.name}
                             </span>
                             {!politician.isNPP && (
-                              <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-1.5 py-px text-[8px] font-bold tracking-wider text-gold">
+                              <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-1.5 py-px text-body-sm font-bold tracking-wider text-gold">
                                 PLAYER
                               </span>
                             )}
                             {politician.isAdmin && (
-                              <span className="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-warning">
+                              <span className="shrink-0 rounded-full border border-warning/30 bg-warning/10 px-1.5 py-px text-body-sm font-bold uppercase tracking-wider text-warning">
                                 Admin
                               </span>
                             )}
                             {politician.isModerator && !politician.isAdmin && (
-                              <span className="shrink-0 rounded-full border border-info/30 bg-info/10 px-1.5 py-px text-[8px] font-bold uppercase tracking-wider text-info">
+                              <span className="shrink-0 rounded-full border border-info/30 bg-info/10 px-1.5 py-px text-body-sm font-bold uppercase tracking-wider text-info">
                                 Moderator
                               </span>
                             )}
                           </span>
-                          <span className="block truncate text-[11px] text-muted">
+                          <span className="block truncate text-body-sm text-muted">
                             {politician.homeStateName}
                             <span className="sm:hidden">
                               {" · NPI "}
@@ -554,7 +552,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
                       </span>
 
                       {/* Office (own column ≥lg, from B) */}
-                      <span className="hidden truncate text-[13px] font-semibold text-foreground/90 lg:block">
+                      <span className="hidden truncate text-body-sm font-semibold text-foreground/90 lg:block">
                         {politician.currentOffice || (
                           <span className="font-normal italic text-muted">Private citizen</span>
                         )}
@@ -562,7 +560,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
 
                       {/* NPI rank ladder (folded into the subline on phones) */}
                       <span className="hidden min-w-0 sm:block">
-                        <span className="mb-1 flex items-baseline justify-between font-mono text-[10px] text-muted">
+                        <span className="mb-1 flex items-baseline justify-between font-mono text-body-sm text-muted">
                           <abbr
                             title="National Political Influence"
                             className="cursor-help no-underline"
@@ -585,7 +583,7 @@ export default function PoliticiansClient({ initialPoliticians, initialStats }: 
 
                       {/* Favorability (or funds when sorting by funds) */}
                       <span
-                        className={`text-right font-mono text-xs tabular-nums ${
+                        className={`text-right font-mono text-body-sm tabular-nums ${
                           showFunds ? "text-success" : getFavClass(politician.favorability)
                         }`}
                       >

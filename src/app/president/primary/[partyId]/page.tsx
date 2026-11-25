@@ -403,17 +403,17 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
         <div>
           <Link
             href={`/elections/${election._id.toString()}`}
-            className="text-xs text-muted hover:text-foreground transition-colors"
+            className="text-body-sm text-muted hover:text-foreground transition-colors"
           >
             ← Back to presidential election
           </Link>
           <div className="mt-1 flex items-center gap-2">
-            <h1 className="text-2xl font-bold" style={{ color: partyColor }}>
+            <h1 className="text-heading font-bold" style={{ color: partyColor }}>
               {party.name} Primary
             </h1>
             <WikiHelpLink screen="primaries" />
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             {family === "dem" ? "Democratic-family calendar" : "Republican-family calendar"} —{" "}
             {totalDelegates.toLocaleString()} total delegates, {majorityThreshold.toLocaleString()}{" "}
             to win outright
@@ -421,7 +421,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
         </div>
         <div className="text-right">
           <div className="text-body-sm font-medium text-muted">Phase</div>
-          <div className="text-sm font-semibold">
+          <div className="text-body font-semibold">
             {inStaggerWindow ? (
               <span className="text-amber-400">
                 Stagger — Wave {wavesRun}/{primaryWaveSchedule.waves.length}
@@ -453,7 +453,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
       </div>
 
       {nextWave && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-body">
           <span className="font-semibold text-amber-400">Next wave:</span> {nextWave.label} —{" "}
           {nextWave.states.join(", ")}
         </div>
@@ -461,15 +461,15 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
 
       {candidates.length === 0 && (
         <div className="mb-4 rounded-xl border border-dashed border-card-border p-6 sm:p-8 text-center">
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-body font-medium text-foreground">
             No candidates have entered this primary yet.
           </p>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             The calendar, map, and standings will populate once candidates file into the race.
           </p>
           <Link
             href={`/elections/${election._id.toString()}`}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Open the race page to enter →
           </Link>
@@ -489,15 +489,15 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
         <div className="mb-4 rounded-xl border border-card-border bg-card p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold">Campaign presence</h3>
-              <p className="mt-1 text-xs text-muted">
+              <h3 className="text-body-lg font-semibold">Campaign presence</h3>
+              <p className="mt-1 text-body-sm text-muted">
                 Per-state infrastructure you build across cycles. Maxing a state is +25% primary
                 vote weight there, independent of party-wide org.
               </p>
             </div>
             <Link
               href={`/elections/${election._id.toString()}#state-org`}
-              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Open builder
             </Link>
@@ -519,17 +519,17 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                   style={{ backgroundColor: colorForCandidate(s.candidate._id.toString()) }}
                 />
                 <span
-                  className={`text-sm font-medium ${i === 0 ? "text-foreground" : "text-muted"}`}
+                  className={`text-body font-medium ${i === 0 ? "text-foreground" : "text-muted"}`}
                 >
                   {s.candidate.characterName}:{" "}
                   <span className="tabular-nums">{s.projectedDelegates.toLocaleString()}</span>
                   {s.awardedDelegates > 0 && (
-                    <span className="ml-1 text-xs text-muted">
+                    <span className="ml-1 text-body-sm text-muted">
                       ({s.awardedDelegates.toLocaleString()} awarded)
                     </span>
                   )}
                   {i === 0 && standings.length > 1 && (
-                    <span className="ml-1 text-xs text-green-500 font-normal">(leading)</span>
+                    <span className="ml-1 text-body-sm text-green-500 font-normal">(leading)</span>
                   )}
                 </span>
               </div>
@@ -538,8 +538,8 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
         }
         footer={
           <div className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="mb-2 text-sm font-semibold text-foreground">Map legend</h3>
-            <div className="mb-2 flex flex-wrap gap-3 text-xs">
+            <h3 className="mb-2 text-body-lg font-semibold text-foreground">Map legend</h3>
+            <div className="mb-2 flex flex-wrap gap-3 text-body-sm">
               {standings.map((s) => (
                 <span key={s.candidate._id.toString()} className="flex items-center gap-1.5">
                   <span
@@ -550,7 +550,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                 </span>
               ))}
             </div>
-            <div className="flex flex-wrap gap-4 text-xs text-muted">
+            <div className="flex flex-wrap gap-4 text-body-sm text-muted">
               <span className="flex items-center gap-2">
                 <span className="inline-block h-3 w-3 rounded-sm bg-foreground/70" />
                 Solid — state voted
@@ -564,7 +564,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                 No projection available
               </span>
             </div>
-            <p className="mt-3 text-[11px] text-muted/70">
+            <p className="mt-3 text-body-sm text-muted/70">
               Use the <strong>Leader</strong>/<strong>Delegates</strong> toggle above to switch
               between projected/actual winners and per-state delegate counts. Delegates mode uses
               the same state-by-state allocation math shown above; once a state votes, its awarded
@@ -577,13 +577,13 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
 
       {candidates.length > 0 && (
         <div className="mt-6 rounded-xl border border-card-border bg-card overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-card-border bg-background text-sm font-semibold text-foreground">
+          <div className="px-4 py-2.5 border-b border-card-border bg-background text-body font-semibold text-foreground">
             Standings
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[820px] text-body">
               <thead>
-                <tr className="border-b border-card-border bg-background text-left text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border bg-background text-left text-body font-semibold text-foreground">
                   <th className="px-3 py-2">#</th>
                   <th className="px-3 py-2">Candidate</th>
                   <th className="px-3 py-2 text-right">Projected delegates</th>
@@ -638,7 +638,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                           {s.candidate.characterName}
                         </Link>
                         {s.candidate.isNPP && (
-                          <span className="ml-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-400">
+                          <span className="ml-2 rounded bg-purple-500/20 px-1.5 py-0.5 text-body-sm text-purple-400">
                             <NppAbbr />
                           </span>
                         )}
@@ -671,7 +671,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                             >
                               {s.endorsements}
                             </summary>
-                            <div className="absolute right-0 z-20 mt-1 min-w-40 rounded border border-border bg-surface p-2 text-xs text-foreground shadow-lg">
+                            <div className="absolute right-0 z-20 mt-1 min-w-40 rounded border border-border bg-surface p-2 text-body-sm text-foreground shadow-lg">
                               <p className="mb-1 font-semibold">Endorsed by</p>
                               <ul className="space-y-0.5">
                                 {s.endorsementNames.map((name, index) => (
@@ -686,11 +686,11 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                       </td>
                       <td className="px-3 py-2.5">
                         {s.campaignState ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-body-sm text-amber-400">
                             📍 {s.campaignState}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted">—</span>
+                          <span className="text-body-sm text-muted">—</span>
                         )}
                       </td>
                       {viewerIsLoggedInWithCharacter && viewerInParty && (
@@ -731,8 +731,8 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
       {candidates.length > 0 && (
         <div className="mt-6 rounded-xl border border-card-border bg-card p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Projected delegate race</h3>
-            <span className="text-xs text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">Projected delegate race</h3>
+            <span className="text-body-sm text-muted">
               {majorityThreshold.toLocaleString()} to clinch · {totalDelegates.toLocaleString()}{" "}
               total
             </span>
@@ -750,7 +750,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                   title={`${s.candidate.characterName}: ${s.projectedDelegates.toLocaleString()} projected delegates`}
                 >
                   {pct > 6 && (
-                    <span className="text-white font-bold text-xs tabular-nums drop-shadow">
+                    <span className="text-white font-bold text-body-sm tabular-nums drop-shadow">
                       {s.projectedDelegates.toLocaleString()}
                     </span>
                   )}
@@ -763,7 +763,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                 className="absolute top-0 bottom-0 w-px bg-white/50 pointer-events-none"
                 style={{ left: `${(majorityThreshold / totalDelegates) * 100}%` }}
               >
-                <div className="absolute top-0.5 left-1 text-[9px] font-bold text-white/70 whitespace-nowrap">
+                <div className="absolute top-0.5 left-1 text-body-sm font-bold text-white/70 whitespace-nowrap">
                   {majorityThreshold.toLocaleString()}
                 </div>
               </div>
@@ -776,11 +776,11 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
                   className="h-3 w-3 rounded-sm shrink-0"
                   style={{ backgroundColor: colorForCandidate(s.candidate._id.toString()) }}
                 />
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-body-sm font-medium text-foreground">
                   {s.candidate.characterName}
                 </span>
                 <span
-                  className="text-xs tabular-nums font-bold"
+                  className="text-body-sm tabular-nums font-bold"
                   style={{ color: colorForCandidate(s.candidate._id.toString()) }}
                 >
                   {s.projectedDelegates.toLocaleString()}

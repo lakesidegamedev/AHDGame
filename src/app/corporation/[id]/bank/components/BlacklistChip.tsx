@@ -15,7 +15,7 @@ export function BlacklistChip({
   canMutate: boolean;
 }) {
   return (
-    <li className="flex items-center justify-between gap-2 border-b border-card-border/60 py-1 text-[13px]">
+    <li className="flex items-center justify-between gap-2 border-b border-card-border/60 py-1 text-body-sm">
       {href ? (
         <Link href={href} className="min-w-0 truncate text-foreground hover:underline">
           {label}
@@ -28,7 +28,7 @@ export function BlacklistChip({
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${label}`}
-          className="shrink-0 text-[11px] text-muted hover:text-error"
+          className="shrink-0 text-body-sm text-muted hover:text-error"
         >
           Remove
         </button>

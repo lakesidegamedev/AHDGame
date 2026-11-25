@@ -45,10 +45,10 @@ export function VoteBar({
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-sm font-semibold">{label}</h3>
+        <h3 className="text-body-lg font-semibold">{label}</h3>
         {deadline && (
           <span
-            className={`text-xs tabular-nums font-mono ${countdown.expired ? "text-red-400" : countdown.pending ? "text-muted" : "text-yellow-400"}`}
+            className={`text-body-sm tabular-nums font-mono ${countdown.expired ? "text-red-400" : countdown.pending ? "text-muted" : "text-yellow-400"}`}
             title={deadlineTurn != null ? `Voting closes turn ${deadlineTurn}` : undefined}
           >
             ⏱ {countdown.text}
@@ -80,7 +80,7 @@ export function VoteBar({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-4 text-xs">
+      <div className="flex flex-wrap gap-4 text-body-sm">
         <span className="text-success">
           ✓ {votesFor} For ({pctFor.toFixed(0)}%)
         </span>
@@ -96,7 +96,7 @@ export function VoteBar({
       </div>
 
       {myVote && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Your vote:{" "}
           <span
             className={`font-semibold ${myVote === "for" ? "text-success" : myVote === "against" ? "text-error" : "text-muted"}`}
@@ -120,7 +120,7 @@ export function VoteBar({
             <button
               key={v}
               onClick={() => onVote(v)}
-              className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors capitalize ${
+              className={`flex-1 rounded-lg border py-2 text-body font-medium transition-colors capitalize ${
                 myVote === v
                   ? v === "for"
                     ? "border-success/50 bg-success/20 text-success"

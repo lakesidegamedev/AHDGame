@@ -79,18 +79,20 @@ export function VpActionPanel({
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Vice-presidential actions</h2>
-          <p className="mt-0.5 text-sm text-muted">
+          <h2 className="text-heading font-semibold text-foreground">Vice-presidential actions</h2>
+          <p className="mt-0.5 text-body text-muted">
             Use the office to steady the administration and build your own standing.
           </p>
         </div>
         <div className="shrink-0 text-right">
           <span
-            className={`text-sm font-semibold ${actionsRemaining > 0 ? "text-foreground" : "text-muted"}`}
+            className={`text-body font-semibold ${actionsRemaining > 0 ? "text-foreground" : "text-muted"}`}
           >
             {actionsRemaining} {actionsRemaining !== 1 ? "actions" : "action"} remaining
           </span>
-          {actionsRemaining < actionCap && <p className="mt-1 text-xs text-muted">{resetHint}</p>}
+          {actionsRemaining < actionCap && (
+            <p className="mt-1 text-body-sm text-muted">{resetHint}</p>
+          )}
           {canAct && (
             <OfficePoolTopUpButton
               className="mt-2"
@@ -106,7 +108,7 @@ export function VpActionPanel({
       </div>
 
       {!canAct && (
-        <p className="mb-4 rounded-lg border border-card-border bg-card-muted p-3 text-sm text-muted">
+        <p className="mb-4 rounded-lg border border-card-border bg-card-muted p-3 text-body text-muted">
           Only the sitting vice-president can take these actions.
         </p>
       )}
@@ -125,10 +127,10 @@ export function VpActionPanel({
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-foreground">{action.name}</h3>
-                  <p className="mt-1 text-xs leading-snug text-muted">{action.description}</p>
+                  <h3 className="text-body-lg font-semibold text-foreground">{action.name}</h3>
+                  <p className="mt-1 text-body-sm leading-snug text-muted">{action.description}</p>
                   {needsPresident && (
-                    <p className="mt-1 text-xs text-warning">
+                    <p className="mt-1 text-body-sm text-warning">
                       No sitting president to campaign for.
                     </p>
                   )}
@@ -146,7 +148,7 @@ export function VpActionPanel({
               </div>
               {actionFeedback && (
                 <p
-                  className={`mt-2 text-xs ${actionFeedback.type === "success" ? "text-success" : "text-error"}`}
+                  className={`mt-2 text-body-sm ${actionFeedback.type === "success" ? "text-success" : "text-error"}`}
                 >
                   {actionFeedback.message}
                 </p>

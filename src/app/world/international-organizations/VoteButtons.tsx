@@ -65,8 +65,8 @@ export function VoteButtons({ onVote, disabled, disabledReason, currentVote }: P
           Abstain
         </Button>
       </div>
-      {disabled && disabledReason && <p className="text-xs text-muted">{disabledReason}</p>}
-      <InlineError error={error} className="text-xs text-error" />
+      {disabled && disabledReason && <p className="text-body-sm text-muted">{disabledReason}</p>}
+      <InlineError error={error} className="text-body-sm text-error" />
     </div>
   );
 }

@@ -33,7 +33,7 @@ export default function RunningForOfficePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -50,8 +50,10 @@ export default function RunningForOfficePage() {
 
         {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Running for office: United States</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">
+            Running for office: United States
+          </h1>
+          <p className="mt-2 text-body text-muted">
             A player&apos;s strategy guide, from declaring candidacy to winning your first seat
           </p>
         </div>
@@ -62,15 +64,15 @@ export default function RunningForOfficePage() {
           {/* ── 1. Eligibility ── */}
           <section className="space-y-4">
             <SectionHeader id="eligibility">1. Eligibility & requirements</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Before you can file for any race, three conditions must be met: you need a character,
               you need to be a member of a political party, and the election must be accepting
               candidates.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Required</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Required</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Active character (created on profile)</li>
                   <li>• Party membership before filing</li>
                   <li>• Election must be in primary or active phase</li>
@@ -78,8 +80,8 @@ export default function RunningForOfficePage() {
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Restrictions</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Restrictions</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• One active race at a time</li>
                   <li>• Switching parties auto-withdraws your candidacy</li>
                   <li>• Entry closes once the primary phase ends</li>
@@ -99,14 +101,14 @@ export default function RunningForOfficePage() {
           {/* ── 2. Choosing Your Race ── */}
           <section className="space-y-4">
             <SectionHeader id="races">2. Choosing your race</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Local and state races are your entry point. They are shorter, cheaper to run, and, if
               you win, they grant a permanent bonus to your action count and Political Influence
               generation that carries into future campaigns. Avoid jumping straight for a Senate
               seat; the incumbency and influence gap is brutal without an existing base.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Race</th>
@@ -158,7 +160,7 @@ export default function RunningForOfficePage() {
               Irish races use the lighter election-detail page instead. Player endorsements only
               grant campaign actions in presidential races; NPP endorsements count in every race.
             </Callout>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The primary is your first hurdle: winning enough support within your own party to
               advance to the general. Use the{" "}
               <Link href="/elections" className="text-primary hover:underline">
@@ -168,7 +170,7 @@ export default function RunningForOfficePage() {
               <strong className="text-foreground">Declare candidacy</strong>.
             </p>
             <SubHeader>What to prioritize during the primary</SubHeader>
-            <ul className="space-y-2 text-sm text-muted">
+            <ul className="space-y-2 text-body text-muted">
               <li className="flex gap-2">
                 <span className="text-primary font-bold shrink-0">1.</span>
                 <span>
@@ -203,7 +205,7 @@ export default function RunningForOfficePage() {
             <Callout label="Endorsements matter.">
               Endorsements feed your campaign page&apos;s own action pool, not your character&apos;s
               per-turn actions: it earns{" "}
-              <code className="font-mono text-xs">baseline + floor(√endorsements × 3)</code>{" "}
+              <code className="font-mono text-body-sm">baseline + floor(√endorsements × 3)</code>{" "}
               campaign actions per turn, where the baseline is your base action rate (4). Actively
               seek endorsements from NPPs and allied players; even a handful meaningfully increases
               your campaign action rate.
@@ -213,23 +215,23 @@ export default function RunningForOfficePage() {
           {/* ── 4. The General Phase ── */}
           <section className="space-y-4">
             <SectionHeader id="general">4. The general phase</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               If you advance from the primary, the general campaign begins. All upgrade costs rise
               by 50%, so the general phase is about execution, not setup. Front-load your strategic
               decisions.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Do early</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Do early</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Upgrade media spending to your target level</li>
                   <li>• Set up opposition research if running against a strong incumbent</li>
                   <li>• Reinvest campaign income into ground game if polling close</li>
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">Final 4 turns</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">Final 4 turns</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>
                     • Media spending effectiveness{" "}
                     <strong className="text-foreground">doubles</strong>
@@ -254,7 +256,7 @@ export default function RunningForOfficePage() {
           {/* ── 5. What Wins Elections ── */}
           <section className="space-y-4">
             <SectionHeader id="vote-formula">5. What wins elections</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Votes are calculated per demographic group, not as a simple aggregate. Each group
               allocates votes among candidates in proportion to their relative appeal. Your total
               vote share is the sum of what you receive from each group.
@@ -265,12 +267,12 @@ Position Alignment = 25 × ((50 - |economic gap| × 5 - |social gap| × 5) / 50)
 Reach              = sqrt(min(100, PI) / 100)   (0 at PI 0, 1.0 at PI 100)
 Approval           = (favorability / 100)^0.8   (0% favorability = 0 votes)
 Party Org          = (party's state Org / total state Org)^0.2   (range 0 to 1)`}</FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               All four factors multiply together. A weakness in any one column drags down everything
               else:
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Factor</th>
@@ -315,7 +317,7 @@ Party Org          = (party's state Org / total state Org)^0.2   (range 0 to 1)`
               </table>
             </div>
             <SubHeader>FPTP and third-party spoilers</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Most races use First Past the Post. Under FPTP, the nearest major-party candidate
               loses approximately 4% of their vote share to you as a spoiler, but this is rarely
               enough to overcome the structural FPTP disadvantage. This spoiler effect disappears in
@@ -332,13 +334,13 @@ Party Org          = (party's state Org / total state Org)^0.2   (range 0 to 1)`
           {/* ── 6. Campaign Upgrades ── */}
           <section className="space-y-4">
             <SectionHeader id="upgrades">6. Campaign upgrades</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Upgrades are purchased with campaign funds, a separate pool from your personal cash.
               Campaign funds accumulate from passive fundraising income each turn plus any party
               contributions. You cannot convert campaign funds back to personal cash.
             </p>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">Upgrade</th>
@@ -386,7 +388,7 @@ Party Org          = (party's state Org / total state Org)^0.2   (range 0 to 1)`
             </div>
             <SubHeader>Passive fundraising income by level</SubHeader>
             <div className="overflow-x-auto rounded-xl border border-card-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border bg-card">
                     <th className="px-4 py-2.5 text-left font-semibold text-muted">
@@ -417,7 +419,7 @@ Party Org          = (party's state Org / total state Org)^0.2   (range 0 to 1)`
           {/* ── 7. Political Influence ── */}
           <section className="space-y-4">
             <SectionHeader id="influence">7. Political Influence</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Political Influence (PI) is your reach multiplier. At PI 0, you contact zero voters
               regardless of alignment or favorability. At PI 100, you reach every eligible voter in
               the state. PI decays over time and must be actively maintained.
@@ -443,15 +445,15 @@ Gains:
           {/* ── 8. Building Favorability ── */}
           <section className="space-y-4">
             <SectionHeader id="favorability">8. Building favorability</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Favorability is the easiest stat to neglect and the most punishing to ignore; a
               candidate at 5% favorability gets roughly 5% of the votes they would otherwise
               deserve. It decays passively and needs constant investment.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">What raises favorability</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">What raises favorability</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Spending campaign actions</li>
                   <li>• Media spending upgrades (+0.5%/level/turn)</li>
                   <li>• Endorsements from NPPs and players</li>
@@ -459,8 +461,8 @@ Gains:
                 </ul>
               </div>
               <div className="rounded-xl border border-card-border bg-card p-4 space-y-2">
-                <p className="text-sm font-semibold text-foreground">What lowers it</p>
-                <ul className="space-y-1 text-sm text-muted">
+                <p className="text-body font-semibold text-foreground">What lowers it</p>
+                <ul className="space-y-1 text-body text-muted">
                   <li>• Natural decay each turn</li>
                   <li>• Opponent opposition research (−0.5%/level/turn)</li>
                   <li>• Poor policy alignment visibility</li>
@@ -472,7 +474,7 @@ Gains:
           {/* ── 9. Quick Tips ── */}
           <section className="space-y-4">
             <SectionHeader id="tips">9. Quick tips</SectionHeader>
-            <ul className="space-y-3 text-sm text-muted">
+            <ul className="space-y-3 text-body text-muted">
               {[
                 [
                   "Join your party before elections open.",

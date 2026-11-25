@@ -131,11 +131,11 @@ export function CentralBankAdminPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Central banks</h2>
+        <h2 className="text-heading font-semibold text-foreground">Central banks</h2>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm text-error">
+        <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-body text-error">
           {error}
         </div>
       )}
@@ -154,12 +154,12 @@ export function CentralBankAdminPanel() {
                 <div>
                   <Link
                     href={centralBankUrl(bank.countryId)}
-                    className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                    className="text-body font-semibold text-foreground hover:text-primary transition-colors"
                   >
                     <CountryFlag country={bank.countryId} size="sm" className="mr-1" />{" "}
                     {bank.bankName}
                   </Link>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Prime rate: <span className="font-semibold">{bank.primeRate.toFixed(2)}%</span>
                   </p>
                 </div>
@@ -167,7 +167,7 @@ export function CentralBankAdminPanel() {
 
               {/* Current Chair */}
               <div className="rounded-lg border border-card-border/50 bg-card-muted p-3">
-                <p className="mb-2 text-xs font-medium text-muted">{bank.chairTitle}</p>
+                <p className="mb-2 text-body-sm font-medium text-muted">{bank.chairTitle}</p>
                 {bank.chair ? (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -179,32 +179,32 @@ export function CentralBankAdminPanel() {
                           className="h-8 w-8 rounded-lg border border-card-border object-cover"
                         />
                       ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border bg-card-elevated text-xs font-bold text-muted">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-card-border bg-card-elevated text-body-sm font-bold text-muted">
                           {bank.chair.name.charAt(0)}
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-medium text-foreground">{bank.chair.name}</p>
+                        <p className="text-body font-medium text-foreground">{bank.chair.name}</p>
                         {bank.chair.partyName && (
-                          <p className="text-xs text-muted">{bank.chair.partyName}</p>
+                          <p className="text-body-sm text-muted">{bank.chair.partyName}</p>
                         )}
                       </div>
                     </div>
                     <button
                       onClick={() => handleVacate(bank.countryId as CountryId)}
                       disabled={isActioning}
-                      className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/20 transition-colors disabled:opacity-40"
+                      className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-body-sm font-medium text-error hover:bg-error/20 transition-colors disabled:opacity-40"
                     >
                       {isActioning ? "..." : "Vacate"}
                     </button>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted italic">Vacant</p>
+                  <p className="text-body-sm text-muted italic">Vacant</p>
                 )}
               </div>
 
               {/* Nomination & Lobbying Stats */}
-              <div className="flex gap-4 text-xs text-muted">
+              <div className="flex gap-4 text-body-sm text-muted">
                 <span>
                   Nominations:{" "}
                   <span className="font-semibold text-foreground">
@@ -228,7 +228,7 @@ export function CentralBankAdminPanel() {
 
               {/* Appoint */}
               <div>
-                <p className="mb-1.5 text-xs font-medium text-muted">Appoint chair</p>
+                <p className="mb-1.5 text-body-sm font-medium text-muted">Appoint chair</p>
                 <PlayerSelector
                   placeholder="Search character..."
                   onSelect={(char) => handleAppoint(bank.countryId as CountryId, char.id)}
@@ -239,7 +239,7 @@ export function CentralBankAdminPanel() {
               <button
                 onClick={() => handleTriggerSelection(bank.countryId as CountryId)}
                 disabled={isActioning}
-                className="w-full rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary hover:bg-secondary/20 transition-colors disabled:opacity-40"
+                className="w-full rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-body-sm font-medium text-secondary hover:bg-secondary/20 transition-colors disabled:opacity-40"
               >
                 {isActioning ? "Processing..." : "Trigger selection"}
               </button>

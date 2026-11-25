@@ -104,19 +104,19 @@ export function StatMasthead({
               {identity.registry}
             </div>
             <h1
-              className={`mt-1.5 text-2xl font-bold leading-[1.1] tracking-tight text-white sm:text-3xl`}
+              className={`mt-1.5 text-heading font-bold leading-[1.1] tracking-tight text-white sm:text-display`}
             >
               {title}
             </h1>
             <div
-              className="mt-0.5 flex items-center gap-2 text-sm"
+              className="mt-0.5 flex items-center gap-2 text-body"
               style={{ color: "color-mix(in srgb, var(--stat-soft) 90%, transparent)" }}
             >
               {subtitle}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
-                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold text-white"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-body-sm font-semibold text-white"
                 style={{
                   borderColor: "color-mix(in srgb, var(--stat) 40%, transparent)",
                   background: "color-mix(in srgb, var(--stat) 25%, transparent)",
@@ -124,7 +124,7 @@ export function StatMasthead({
               >
                 {scopeLabel}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-xs font-medium text-white/80">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/80">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-success" aria-hidden />
                 Live · turn-weighted
               </span>
@@ -152,12 +152,12 @@ export function StatMasthead({
             <span className="whitespace-nowrap text-body-sm font-medium text-muted">{t.label}</span>
             <div className="flex flex-col">
               <span
-                className={`text-lg font-bold leading-tight tabular-nums ${t.tone === "accent" ? "" : toneClass(t.tone) || "text-foreground"}`}
+                className={`text-heading font-bold leading-tight tabular-nums ${t.tone === "accent" ? "" : toneClass(t.tone) || "text-foreground"}`}
                 style={t.tone === "accent" ? { color: "var(--stat-soft)" } : undefined}
               >
                 {t.value}
               </span>
-              {t.sub && <span className="text-[11px] text-muted">{t.sub}</span>}
+              {t.sub && <span className="text-body-sm text-muted">{t.sub}</span>}
             </div>
           </div>
         ))}

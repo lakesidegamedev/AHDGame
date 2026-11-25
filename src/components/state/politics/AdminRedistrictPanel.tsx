@@ -46,8 +46,8 @@ export function AdminRedistrictPanel({
     <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-red-400">Admin — Redistricting</h3>
-          <p className="mt-1 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-red-400">Admin — Redistricting</h3>
+          <p className="mt-1 text-body-sm text-muted">
             Reset this state&apos;s district map to a neutral baseline, then open the map editor.
             Normal governor, trifecta, and census-year gates are bypassed for admins.
           </p>
@@ -56,13 +56,13 @@ export function AdminRedistrictPanel({
           type="button"
           onClick={() => void handleTrigger()}
           disabled={triggering}
-          className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+          className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-body font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
         >
           {triggering ? "Preparing map…" : "Redistrict map →"}
         </button>
       </div>
       {error ? (
-        <p className="mt-3 text-xs text-destructive" role="alert">
+        <p className="mt-3 text-body-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}

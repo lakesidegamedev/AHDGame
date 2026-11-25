@@ -64,7 +64,7 @@ export function MetricCard({
     const color = isPositiveTrend ? "text-green-400" : "text-red-400";
     const arrow = trend > 0 ? "↑" : "↓";
     return (
-      <span className={`text-xs ${color}`}>
+      <span className={`text-body-sm ${color}`}>
         {arrow} {Math.abs(trend).toFixed(1)}%
       </span>
     );
@@ -94,20 +94,22 @@ export function MetricCard({
     <>
       <div className="mb-2 flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-foreground">{name}</h4>
-          {description && <p className="mt-0.5 text-xs text-muted line-clamp-1">{description}</p>}
+          <h4 className="text-body font-medium text-foreground">{name}</h4>
+          {description && (
+            <p className="mt-0.5 text-body-sm text-muted line-clamp-1">{description}</p>
+          )}
         </div>
         {getTrendIndicator()}
       </div>
 
       <div className="mb-2 flex items-baseline gap-2 flex-wrap">
         {isNullValue ? (
-          <span className="text-2xl font-bold text-muted">N/A</span>
+          <span className="text-heading font-bold text-muted">N/A</span>
         ) : (
           <>
-            <span className="text-2xl font-bold text-foreground">{formatValue(safeValue)}</span>
+            <span className="text-heading font-bold text-foreground">{formatValue(safeValue)}</span>
             {hasNatAvg && (
-              <span className={`text-sm ${getComparisonColor()}`}>
+              <span className={`text-body ${getComparisonColor()}`}>
                 {comparisonDiff >= 0 ? "+" : ""}
                 {comparisonPct.toFixed(1)}% vs avg
               </span>
@@ -116,10 +118,10 @@ export function MetricCard({
         )}
         {!isNullValue && hasTickRate && tickTooltipText && (
           <InfoTooltip
-            trigger={<span className={`text-xs font-medium ${tickColor}`}>{tickLabel}</span>}
+            trigger={<span className={`text-body-sm font-medium ${tickColor}`}>{tickLabel}</span>}
             width={224}
           >
-            <p className="text-[10px] text-muted leading-snug">{tickTooltipText}</p>
+            <p className="text-body-sm text-muted leading-snug">{tickTooltipText}</p>
           </InfoTooltip>
         )}
       </div>
@@ -139,7 +141,7 @@ export function MetricCard({
               style={{ width: `${getProgressWidth()}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-muted">
+          <div className="flex justify-between text-body-sm text-muted">
             <span>0</span>
             <span>National average: {formatValue(nationalAverage)}</span>
             <span>{formatValue(nationalAverage * 2)}</span>

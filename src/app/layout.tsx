@@ -39,13 +39,7 @@ import { CookieConsentBanner } from "@/components/CookieConsent";
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
-import {
-  DEFAULT_SITE_DESCRIPTION,
-  SITE_BRAND,
-  SITE_SUBTITLE,
-  buildSiteDescription,
-  getSiteUrl,
-} from "@/lib/siteMetadata";
+import { SITE_BRAND, SITE_SUBTITLE, buildSiteDescription, getSiteUrl } from "@/lib/siteMetadata";
 import { nationKeywords } from "@/lib/marketing/marketedWorld";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 import { getEraConfig } from "@/components/landing/eraThemes";
@@ -182,7 +176,6 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: SITE_BRAND,
-  description: DEFAULT_SITE_DESCRIPTION,
   applicationCategory: "Game",
   operatingSystem: "Web",
 };
@@ -346,7 +339,12 @@ export default async function RootLayout({
         <script
           id="ld-json"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({ ...jsonLd, description: buildSiteDescription(world) }).replace(
+              /</g,
+              "\\u003c"
+            ),
+          }}
         />
         <Script
           id="display-mode"
@@ -367,7 +365,7 @@ export default async function RootLayout({
         />
         <a
           href="#main-content"
-          className="absolute -top-24 left-4 z-[200] rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white outline-none transition-[top] duration-150 focus:top-4 focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+          className="absolute -top-24 left-4 z-[200] rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground outline-none transition-[top] duration-150 focus:top-4 focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
         >
           {t("skipToMainContent")}
         </a>

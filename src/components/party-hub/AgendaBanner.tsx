@@ -27,7 +27,7 @@ export function AgendaBanner({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm flex items-start gap-3">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-1 text-xs font-medium text-muted">
+        <div className="flex items-center gap-1.5 mb-1 text-body-sm font-medium text-muted">
           {partyColor ? (
             <span
               aria-hidden
@@ -37,14 +37,16 @@ export function AgendaBanner({
           ) : null}
           {partyAbbreviation ? `${partyAbbreviation} national agenda` : "National agenda"}
         </div>
-        <p className="text-sm font-semibold leading-snug truncate">{safeHeadline}</p>
-        {safeDetail ? <p className="mt-1 text-xs text-muted leading-snug">{safeDetail}</p> : null}
+        <p className="text-body font-semibold leading-snug truncate">{safeHeadline}</p>
+        {safeDetail ? (
+          <p className="mt-1 text-body-sm text-muted leading-snug">{safeDetail}</p>
+        ) : null}
       </div>
       {editable && onEdit ? (
         <button
           type="button"
           onClick={onEdit}
-          className="ml-2 shrink-0 rounded-md border border-card-border px-2 py-1 text-xs font-medium hover:bg-[var(--card-muted)]"
+          className="ml-2 shrink-0 rounded-md border border-card-border px-2 py-1 text-body-sm font-medium hover:bg-[var(--card-muted)]"
         >
           Edit
         </button>

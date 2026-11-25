@@ -159,15 +159,15 @@ export default function StrategyPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="text-lg font-bold text-foreground mb-1">Operating strategy</h2>
-      <p className="text-xs text-muted mb-4">
+      <h2 className="text-heading font-bold text-foreground mb-1">Operating strategy</h2>
+      <p className="text-body-sm text-muted mb-4">
         Changes commodity inputs and outputs. Switching costs{" "}
         {formatAmount(strategy.retoolCost, liquidCode)} and takes 12 turns to complete.
         {strategy.availableStrategies.some((s) => (s.retoolCostMultiplier ?? 1) < 1) &&
           " Your current method is retired, so switching to one of its successors costs less."}
       </p>
       {plantsCapacityUnits != null && plantsCapacityUnits > 0 && (
-        <p className="mb-4 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground">
+        <p className="mb-4 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-body-sm text-foreground">
           Retooling does not scrap or build anything. Your {formatUnitCount(plantsCapacityUnits)}{" "}
           units of capacity are re-counted in the new mix at the same value, so the unit number
           changes. Each option below shows what you would hold.
@@ -176,22 +176,24 @@ export default function StrategyPanel({
 
       {/* Current strategy name + transition badge */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <span className="text-sm font-medium text-foreground">{strategy.currentStrategyName}</span>
+        <span className="text-body font-medium text-foreground">
+          {strategy.currentStrategyName}
+        </span>
 
         {strategy.isTransitioning && !strategy.isReversing && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
+          <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-body-sm font-medium text-warning">
             {fromStrategyName} → {strategy.currentStrategyName} ({pct}%)
           </span>
         )}
 
         {strategy.isTransitioning && strategy.isReversing && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error/10 px-2.5 py-0.5 text-xs font-medium text-error">
+          <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error/10 px-2.5 py-0.5 text-body-sm font-medium text-error">
             Reversing → {strategy.currentStrategyName} ({pct}%)
           </span>
         )}
 
         {strategy.cooldownRemaining > 0 && !strategy.isTransitioning && (
-          <span className="ml-1 text-xs text-muted">
+          <span className="ml-1 text-body-sm text-muted">
             Cooldown: {strategy.cooldownRemaining} turns
           </span>
         )}
@@ -206,7 +208,7 @@ export default function StrategyPanel({
               style={{ width: `${pct}%` }}
             />
           </div>
-          <p className="text-[10px] text-warning mt-1">
+          <p className="text-body-sm text-warning mt-1">
             −{strategy.transitionMarginPenalty.toFixed(1)}% margin penalty during transition
           </p>
         </div>
@@ -220,14 +222,14 @@ export default function StrategyPanel({
               type="button"
               onClick={() => setShowCancelConfirm(true)}
               disabled={cancelTransitionLoading}
-              className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+              className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
             >
               Cancel transition ({formatAmount(strategy.cancelCost, liquidCode)})
             </button>
           ) : (
             <div className="rounded-lg border border-error/30 bg-error/10 p-3 space-y-2">
-              <p className="text-xs font-medium text-error">Cancel this transition?</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm font-medium text-error">Cancel this transition?</p>
+              <p className="text-body-sm text-muted">
                 Cost: {formatAmount(strategy.cancelCost, liquidCode)} · Reversal: ~
                 {strategy.reversalTurns} turns · Cannot cancel again once reversing.
               </p>
@@ -239,7 +241,7 @@ export default function StrategyPanel({
                     onCancelTransition();
                   }}
                   disabled={cancelTransitionLoading}
-                  className="rounded-lg bg-error px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-error/80 disabled:opacity-50"
+                  className="rounded-lg bg-error px-3 py-1.5 text-body-sm font-semibold text-white transition-colors hover:bg-error/80 disabled:opacity-50"
                 >
                   {cancelTransitionLoading ? "Cancelling..." : "Confirm cancel"}
                 </button>
@@ -247,7 +249,7 @@ export default function StrategyPanel({
                   type="button"
                   onClick={() => setShowCancelConfirm(false)}
                   disabled={cancelTransitionLoading}
-                  className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                  className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
                 >
                   Dismiss
                 </button>
@@ -262,9 +264,9 @@ export default function StrategyPanel({
         <div className="space-y-3">
           {/* Comparison table — margin and revenue legs plus the combined effect */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] border-collapse text-sm">
+            <table className="w-full min-w-[420px] border-collapse text-body">
               <thead>
-                <tr className="border-b border-card-border text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border text-body font-semibold text-foreground">
                   <th className="py-1.5 pr-2 text-left font-semibold">Strategy</th>
                   <th
                     className="px-2 py-1.5 text-right font-semibold"
@@ -340,7 +342,7 @@ export default function StrategyPanel({
                     >
                       <td className="py-2 pr-2">
                         <span className="block font-medium text-foreground">{s.name}</span>
-                        <span className="block text-[10px] text-muted">
+                        <span className="block text-body-sm text-muted">
                           {isCurrent
                             ? "current"
                             : zeroYield
@@ -355,13 +357,13 @@ export default function StrategyPanel({
                           !unavailable &&
                           s.retoolCost != null &&
                           (s.retoolCostMultiplier ?? 1) < 1 && (
-                            <span className="block text-[10px] font-medium text-success">
+                            <span className="block text-body-sm font-medium text-success">
                               Switch costs {formatAmount(s.retoolCost, liquidCode)}: retired method
                               discount
                             </span>
                           )}
                         {s.id === suggestedStrategyId && !isCurrent && !unavailable && (
-                          <span className="block text-[10px] font-medium text-info">
+                          <span className="block text-body-sm font-medium text-info">
                             Buyers here are short of what this makes
                           </span>
                         )}
@@ -370,7 +372,7 @@ export default function StrategyPanel({
                           !isCurrent &&
                           !unavailable &&
                           s.capacityAfterRetool != null && (
-                            <span className="block text-[10px] tabular-nums text-info">
+                            <span className="block text-body-sm tabular-nums text-info">
                               {formatUnitCount(s.capacityAfterRetool)} units after retool
                             </span>
                           )}
@@ -425,7 +427,7 @@ export default function StrategyPanel({
             </table>
           </div>
 
-          <p className="text-[11px] leading-snug text-muted">
+          <p className="text-body-sm leading-snug text-muted">
             Projections use today&apos;s commodity prices and assume your current market share.
             Prices move, so treat these as direction and rough size, not a promise. Switching costs{" "}
             {formatAmount(strategy.retoolCost, liquidCode)} and runs a{" "}
@@ -462,7 +464,7 @@ export default function StrategyPanel({
             strategy.availableStrategies
               .filter((s) => s.id === strategy.currentStrategyId)
               .map((s) => (
-                <p key={s.id} className="text-xs text-muted">
+                <p key={s.id} className="text-body-sm text-muted">
                   {s.description}
                 </p>
               ))}
@@ -475,7 +477,7 @@ export default function StrategyPanel({
           <select
             value={strategy.currentStrategyId}
             disabled
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-medium text-foreground opacity-70 cursor-not-allowed"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body font-medium text-foreground opacity-70 cursor-not-allowed"
           >
             {strategy.availableStrategies.map((s) => (
               <option key={s.id} value={s.id}>
@@ -486,7 +488,7 @@ export default function StrategyPanel({
           {strategy.availableStrategies
             .filter((s) => s.id === strategy.currentStrategyId)
             .map((s) => (
-              <p key={s.id} className="text-xs text-muted">
+              <p key={s.id} className="text-body-sm text-muted">
                 {s.description}
               </p>
             ))}

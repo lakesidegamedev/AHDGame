@@ -85,7 +85,7 @@ export function PresidentialCandidateTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       <div
-        className={`px-4 py-2 sm:px-5 sm:py-2.5 flex items-center justify-between text-xs font-medium ${
+        className={`px-4 py-2 sm:px-5 sm:py-2.5 flex items-center justify-between text-body-sm font-medium ${
           isEnded
             ? "bg-green-500/10 border-b border-green-500/20 text-green-400"
             : "bg-blue-500/10 border-b border-blue-500/20 text-blue-400"
@@ -106,9 +106,9 @@ export function PresidentialCandidateTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm lg:min-w-[720px]">
+        <table className="w-full text-body lg:min-w-[720px]">
           <thead>
-            <tr className="border-b border-card-border bg-background text-left text-sm font-semibold text-foreground">
+            <tr className="border-b border-card-border bg-background text-left text-body font-semibold text-foreground">
               <th className="px-3 py-3">#</th>
               <th className="px-3 py-3">Candidate</th>
               <th className="hidden px-3 py-3 lg:table-cell">Running mate</th>
@@ -178,27 +178,27 @@ export function PresidentialCandidateTable({
                           {c.characterName}
                         </Link>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs" style={{ color }}>
+                          <span className="text-body-sm" style={{ color }}>
                             {c.partyName}
                           </span>
                           {c.isYou && (
-                            <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">
+                            <span className="rounded bg-primary/20 px-1.5 py-0.5 text-body-sm text-primary">
                               You
                             </span>
                           )}
                           {isWinner && (
-                            <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] text-yellow-400">
+                            <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-body-sm text-yellow-400">
                               Winner
                             </span>
                           )}
                           {c.isNPP && (
-                            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[10px] text-purple-400">
+                            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-body-sm text-purple-400">
                               <NppAbbr />
                             </span>
                           )}
                           {c.campaignSuspended && (
                             <span
-                              className="rounded bg-warning/20 px-1.5 py-0.5 text-[10px] text-warning"
+                              className="rounded bg-warning/20 px-1.5 py-0.5 text-body-sm text-warning"
                               title={
                                 c.endorsementTargetWithdrawn
                                   ? "Endorsement target withdrew — transfers stopped"
@@ -226,7 +226,7 @@ export function PresidentialCandidateTable({
                         instead. */}
                     {showCampaignStrength &&
                       liveCampaignStrength(c, campaignStrengthOverrides) != null && (
-                        <div className="mt-1 text-[11px] text-muted lg:hidden">
+                        <div className="mt-1 text-body-sm text-muted lg:hidden">
                           CS{" "}
                           <span className="tabular-nums font-medium text-primary">
                             {formatCompactNumber(
@@ -238,12 +238,12 @@ export function PresidentialCandidateTable({
                       )}
                   </td>
 
-                  <td className="hidden px-3 py-3 text-xs text-muted lg:table-cell">
+                  <td className="hidden px-3 py-3 text-body-sm text-muted lg:table-cell">
                     {c.runningMateName ?? "—"}
                   </td>
 
                   <td className="px-3 py-3 text-right">
-                    <span className="font-bold tabular-nums text-lg" style={{ color }}>
+                    <span className="font-bold tabular-nums text-heading" style={{ color }}>
                       {ev}
                     </span>
                   </td>
@@ -254,18 +254,18 @@ export function PresidentialCandidateTable({
                     </span>
                   </td>
 
-                  <td className="px-3 py-3 text-right tabular-nums text-muted text-xs">
+                  <td className="px-3 py-3 text-right tabular-nums text-muted text-body-sm">
                     {formatVotes(votes)}
                   </td>
 
                   <td className="hidden px-3 py-3 text-right lg:table-cell">
-                    <span className="font-semibold tabular-nums text-xs text-yellow-400">
+                    <span className="font-semibold tabular-nums text-body-sm text-yellow-400">
                       {c.favorability.toFixed(0)}%
                     </span>
                   </td>
 
                   <td className="hidden px-3 py-3 text-right lg:table-cell">
-                    <span className="font-semibold tabular-nums text-xs text-blue-400">
+                    <span className="font-semibold tabular-nums text-body-sm text-blue-400">
                       {formatCompactNumber(c.nationalInfluence)}
                     </span>
                   </td>
@@ -279,23 +279,23 @@ export function PresidentialCandidateTable({
                             electionId: race?.id,
                             countryId: race?.countryId,
                           })}
-                          className="font-mono font-semibold tabular-nums text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                          className="font-mono font-semibold tabular-nums text-body-sm text-amber-400 hover:text-amber-300 transition-colors"
                         >
                           {formatFundsCompact(c.campaignFunds)}
                         </Link>
                       ) : (
-                        <span className="font-mono font-semibold tabular-nums text-xs text-amber-400">
+                        <span className="font-mono font-semibold tabular-nums text-body-sm text-amber-400">
                           {formatFundsCompact(c.campaignFunds)}
                         </span>
                       )
                     ) : (
-                      <span className="text-muted text-xs">—</span>
+                      <span className="text-muted text-body-sm">—</span>
                     )}
                   </td>
 
                   {showCampaignStrength && (
                     <td className="hidden px-3 py-3 text-right lg:table-cell">
-                      <span className="tabular-nums text-xs text-primary font-medium inline-flex items-center gap-1">
+                      <span className="tabular-nums text-body-sm text-primary font-medium inline-flex items-center gap-1">
                         {liveCampaignStrength(c, campaignStrengthOverrides) != null ? (
                           <>
                             {formatCompactNumber(
@@ -313,7 +313,7 @@ export function PresidentialCandidateTable({
                   <td className="hidden px-3 py-3 text-center lg:table-cell">
                     {c.endorsements.length > 0 ? (
                       <div className="flex items-center justify-center gap-1">
-                        <span className="font-semibold text-xs text-yellow-400">
+                        <span className="font-semibold text-body-sm text-yellow-400">
                           {c.endorsements.length}
                         </span>
                         <svg
@@ -325,19 +325,19 @@ export function PresidentialCandidateTable({
                         </svg>
                       </div>
                     ) : (
-                      <span className="text-muted text-xs">—</span>
+                      <span className="text-muted text-body-sm">—</span>
                     )}
                   </td>
 
                   {canEndorse && (
                     <td className="px-3 py-3 text-center">
                       {c.isYou ? (
-                        <span className="text-muted text-xs">—</span>
+                        <span className="text-muted text-body-sm">—</span>
                       ) : (
                         <button
                           onClick={() => onEndorse(c.id)}
                           disabled={endorsing}
-                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                          className={`rounded-md px-2.5 py-1 text-body-sm font-medium transition-colors ${
                             endorsedCandidateId === c.id
                               ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40"
                               : "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 hover:border-primary/50"
@@ -355,12 +355,12 @@ export function PresidentialCandidateTable({
                         <button
                           onClick={() => onSupport(c.campaignId!)}
                           disabled={supporting}
-                          className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 hover:border-primary/50 disabled:opacity-50"
+                          className="rounded-md px-2.5 py-1 text-body-sm font-medium transition-colors bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 hover:border-primary/50 disabled:opacity-50"
                         >
                           Support
                         </button>
                       ) : (
-                        <span className="text-muted text-xs">—</span>
+                        <span className="text-muted text-body-sm">—</span>
                       )}
                     </td>
                   )}
@@ -374,7 +374,7 @@ export function PresidentialCandidateTable({
       {/* Endorsements expansion */}
       {sorted.some((c) => c.endorsements.length > 0) && (
         <div className="border-t border-card-border p-4 bg-background/30">
-          <div className="text-xs font-medium text-muted mb-3">Endorsements</div>
+          <div className="text-body-sm font-medium text-muted mb-3">Endorsements</div>
           <div className="grid gap-3 sm:grid-cols-2">
             {sorted
               .filter((c) => c.endorsements.length > 0)
@@ -388,7 +388,7 @@ export function PresidentialCandidateTable({
                   .filter(Boolean)
                   .join(", ");
                 return (
-                  <div key={c.id} className="text-xs">
+                  <div key={c.id} className="text-body-sm">
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="font-semibold" style={{ color: colorMap.get(c.id)! }}>
                         {c.characterName}
@@ -419,7 +419,7 @@ export function PresidentialCandidateTable({
                             <span className="text-blue-400">{e.characterName}</span>
                           )}
                           <span
-                            className={`text-[9px] px-1 rounded ${
+                            className={`text-body-sm px-1 rounded ${
                               e.type === "npp"
                                 ? "text-yellow-600 bg-yellow-500/10"
                                 : "text-blue-600 bg-blue-500/10"

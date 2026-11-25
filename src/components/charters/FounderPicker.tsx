@@ -128,14 +128,14 @@ export function FounderPicker({
   if (value) {
     return (
       <div className="flex items-center gap-2">
-        <div className="flex-1 rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-sm">
+        <div className="flex-1 rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-body">
           <span className="font-medium">{displayName}</span>
-          <span className="ml-2 font-mono text-[10px] text-muted">{value.slice(0, 8)}…</span>
+          <span className="ml-2 font-mono text-body-sm text-muted">{value.slice(0, 8)}…</span>
         </div>
         <button
           type="button"
           onClick={handleClear}
-          className="rounded-md border border-card-border bg-card px-3 py-2 text-xs text-muted hover:text-foreground"
+          className="rounded-md border border-card-border bg-card px-3 py-2 text-body-sm text-muted hover:text-foreground"
         >
           Clear
         </button>
@@ -154,7 +154,7 @@ export function FounderPicker({
       />
       {open && (loading || results.length > 0) && (
         <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-card-border bg-card shadow-lg">
-          {loading && <li className="px-3 py-2 text-xs text-muted">Searching…</li>}
+          {loading && <li className="px-3 py-2 text-body-sm text-muted">Searching…</li>}
           {!loading &&
             results.map((r) => {
               const alreadyFounder = excludeCharacterIds.includes(r.id);
@@ -169,7 +169,7 @@ export function FounderPicker({
                     type="button"
                     onClick={() => !ineligible && handleSelect(r)}
                     disabled={ineligible}
-                    className={`flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm ${
+                    className={`flex w-full items-baseline gap-2 px-3 py-2 text-left text-body ${
                       ineligible ? "cursor-not-allowed text-muted/60" : "hover:bg-background/60"
                     }`}
                     title={
@@ -181,7 +181,7 @@ export function FounderPicker({
                     }
                   >
                     <span className="font-medium">{r.name}</span>
-                    <span className="text-xs text-muted">
+                    <span className="text-body-sm text-muted">
                       {displayCanadianRegionCode(r.homeState)}
                       {r.currentOffice ? ` · ${r.currentOffice}` : ""}
                     </span>
@@ -200,7 +200,7 @@ export function FounderPicker({
               );
             })}
           {!loading && results.length === 0 && query.trim().length >= 2 && (
-            <li className="px-3 py-2 text-xs text-muted">No matches</li>
+            <li className="px-3 py-2 text-body-sm text-muted">No matches</li>
           )}
         </ul>
       )}

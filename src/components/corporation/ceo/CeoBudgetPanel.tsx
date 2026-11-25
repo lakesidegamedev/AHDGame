@@ -254,7 +254,7 @@ export default function CeoBudgetPanel({
     const changed = daily[key] !== stored[key];
     return (
       <span className="inline-flex items-center gap-1">
-        <span className="text-xs text-muted">{symbol}</span>
+        <span className="text-body-sm text-muted">{symbol}</span>
         <input
           type="text"
           inputMode="numeric"
@@ -274,7 +274,7 @@ export default function CeoBudgetPanel({
               });
             }
           }}
-          className={`h-7 w-32 rounded-md border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none ${
+          className={`h-7 w-32 rounded-md border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none ${
             changed ? "border-foreground/70" : "border-card-border"
           }`}
         />
@@ -316,7 +316,7 @@ export default function CeoBudgetPanel({
       }
     >
       {corporation.autopilot != null && (
-        <div className="space-y-1 pb-2 text-xs text-muted" data-testid="budget-autopilot-note">
+        <div className="space-y-1 pb-2 text-body-sm text-muted" data-testid="budget-autopilot-note">
           <p>
             Autopilot sets these budgets every turn, so changes you save here are reset on the next
             turn. Turn autopilot off to set them yourself.

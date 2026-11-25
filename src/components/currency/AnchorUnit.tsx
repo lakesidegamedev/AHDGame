@@ -15,5 +15,5 @@ export function AnchorAmount({ children }: { children: ReactNode }) {
 
 /** One visible line explaining ₳, for panels that show amounts in it. */
 export function AnchorUnitNote({ className = "" }: { className?: string }) {
-  return <p className={`text-xs text-muted ${className}`.trim()}>{ANCHOR_UNIT_NOTE}</p>;
+  return <p className={`text-body-sm text-muted ${className}`.trim()}>{ANCHOR_UNIT_NOTE}</p>;
 }

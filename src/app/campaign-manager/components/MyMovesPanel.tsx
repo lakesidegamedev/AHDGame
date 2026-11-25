@@ -105,7 +105,7 @@ export function MyMovesPanel({
               textAlign: "center",
             }}
           >
-            <dt style={{ fontSize: 10.5, color: BLEND.muted }}>{s.label}</dt>
+            <dt style={{ fontSize: 12, color: BLEND.muted }}>{s.label}</dt>
             <dd
               style={{
                 margin: 0,
@@ -153,13 +153,13 @@ export function MyMovesPanel({
               padding: 0,
               color: BLEND.ink,
               cursor: "pointer",
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 700,
             }}
           >
             {myRaceTitle}
           </button>
-          <span style={{ fontFamily: FONT.mono, fontSize: 12.5 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 12 }}>
             {myRace?.multiSeat && abbr
               ? t("summaryParty", {
                   abbr,
@@ -180,7 +180,7 @@ export function MyMovesPanel({
           ) : null}
         </section>
       ) : (
-        <p style={{ margin: 0, fontSize: 12.5, color: BLEND.muted }}>{t("noRace")}</p>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>{t("noRace")}</p>
       )}
 
       {CATEGORY_ORDER.map((category) => {

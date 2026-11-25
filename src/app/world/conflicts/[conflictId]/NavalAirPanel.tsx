@@ -14,13 +14,13 @@ import type { NavalAirPanel as NavalAirPanelData } from "./conflictRecordView";
 export function NavalAirPanel({ data }: { data: NavalAirPanelData }) {
   return (
     <section aria-labelledby="navair-heading" className="rounded border border-neutral-800 p-4">
-      <h3 id="navair-heading" className="text-sm text-neutral-400">
+      <h3 id="navair-heading" className="text-body-lg text-neutral-400">
         Air and sea
       </h3>
 
-      <p className="mt-2 text-sm text-neutral-200">{data.airBand}</p>
+      <p className="mt-2 text-body text-neutral-200">{data.airBand}</p>
 
-      <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+      <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-body">
         <Figure label="Air superiority" value={`${Math.round(data.airSuperiority)}%`} />
         <Figure label="Sea control" value={`${Math.round(data.seaControl)}%`} />
         <Figure
@@ -35,8 +35,8 @@ export function NavalAirPanel({ data }: { data: NavalAirPanelData }) {
 
       {data.recentActions.length > 0 && (
         <div className="mt-4">
-          <h4 className="text-xs uppercase tracking-wide text-neutral-500">Surface actions</h4>
-          <ul className="mt-1 space-y-1 text-xs text-neutral-300">
+          <h4 className="text-body-sm uppercase tracking-wide text-neutral-500">Surface actions</h4>
+          <ul className="mt-1 space-y-1 text-body-sm text-neutral-300">
             {data.recentActions.map((a) => (
               <li key={`${a.turn}-${a.regionName}`}>
                 <span className="text-neutral-500 tabular-nums">T{a.turn}</span> {a.regionName}:{" "}
@@ -50,7 +50,7 @@ export function NavalAirPanel({ data }: { data: NavalAirPanelData }) {
         </div>
       )}
 
-      <p className="mt-3 text-xs text-neutral-400">
+      <p className="mt-3 text-body-sm text-neutral-400">
         {data.marinesSustained
           ? "Your marines here are supplied across the water and fight at full strength."
           : "Too little sea control to supply your marines here. They fight as light infantry."}

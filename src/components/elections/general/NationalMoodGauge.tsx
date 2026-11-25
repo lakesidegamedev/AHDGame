@@ -52,7 +52,7 @@ function ComponentRow({
   const t = useTranslations("elections");
   const isPositive = contributionPts >= 0;
   return (
-    <div className="flex items-baseline justify-between text-xs">
+    <div className="flex items-baseline justify-between text-body-sm">
       <span className="font-semibold">{label}</span>
       <span
         className="tabular-nums font-bold"
@@ -86,12 +86,12 @@ export function NationalMoodGauge({ data }: { data?: NationalMoodData | null }) 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-muted">{t("nationalMood.title")}</h3>
-        <span className="tabular-nums text-sm font-bold" style={{ color: barColor }}>
+        <h3 className="text-body-lg font-semibold text-muted">{t("nationalMood.title")}</h3>
+        <span className="tabular-nums text-body font-bold" style={{ color: barColor }}>
           {signed(data.sharePts)} {t("nationalMood.pts")}
         </span>
       </div>
-      <p className="mb-3 text-xs leading-snug text-muted">{t("nationalMood.subtitle")}</p>
+      <p className="mb-3 text-body-sm leading-snug text-muted">{t("nationalMood.subtitle")}</p>
 
       <div className="mb-1 flex items-baseline justify-between text-body-sm font-medium text-muted">
         <span>{t("nationalMood.againstIncumbent", { party: partyLabel })}</span>
@@ -116,7 +116,7 @@ export function NationalMoodGauge({ data }: { data?: NationalMoodData | null }) 
           }}
         />
       </div>
-      <p className="mt-1 text-[11px] leading-snug text-muted">
+      <p className="mt-1 text-body-sm leading-snug text-muted">
         {t("nationalMood.scaleNote", { clamp: REFERENDUM_SHARE_CLAMP })}
       </p>
 
@@ -138,13 +138,13 @@ export function NationalMoodGauge({ data }: { data?: NationalMoodData | null }) 
 
       {forgivenessPct > 0 ? (
         <div className="mt-2 rounded border border-card-border bg-background px-2 py-1.5">
-          <p className="text-[11px] leading-snug text-muted">
+          <p className="text-body-sm leading-snug text-muted">
             {t("nationalMood.responseCredit", { percent: forgivenessPct })}
           </p>
           {creditedTitles.length > 0 ? (
             <ul className="mt-1 flex flex-col gap-0.5">
               {creditedTitles.map((title) => (
-                <li key={title} className="text-[11px] leading-snug font-semibold">
+                <li key={title} className="text-body-sm leading-snug font-semibold">
                   {title}
                 </li>
               ))}
@@ -154,7 +154,7 @@ export function NationalMoodGauge({ data }: { data?: NationalMoodData | null }) 
       ) : null}
 
       {data.fatigueMultiplier > 1 ? (
-        <p className="mt-2 rounded border border-card-border bg-background px-2 py-1.5 text-[11px] leading-snug text-muted">
+        <p className="mt-2 rounded border border-card-border bg-background px-2 py-1.5 text-body-sm leading-snug text-muted">
           {t("nationalMood.fatigue", {
             term: fatigueTerm,
             multiplier: data.fatigueMultiplier.toFixed(2).replace(/0$/, ""),

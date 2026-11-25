@@ -19,8 +19,8 @@ export function TaxReformNotice({
       className="rounded-lg border border-warning/30 bg-warning/5 p-4"
       aria-label="Tax reform phase-in"
     >
-      <p className="text-sm font-semibold">Tax reform {phase > 0 ? "phasing in" : "scheduled"}</p>
-      <p className="mt-1 text-sm text-muted">
+      <p className="text-body font-semibold">Tax reform {phase > 0 ? "phasing in" : "scheduled"}</p>
+      <p className="mt-1 text-body text-muted">
         {phase > 0
           ? `Currently applying ${(phase * 100).toFixed(2)}% of the full tax liability.`
           : `Begins on turn ${start}.`}{" "}

@@ -93,7 +93,7 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading turn status...</span>
+          <span className="text-body text-muted">Loading turn status...</span>
         </div>
       </div>
     );
@@ -106,13 +106,13 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold">Turn system</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold">Turn system</h3>
+          <p className="text-body-sm text-muted">
             Pauses or resumes the hourly cron. Does not roll back or fast-forward any turn.
           </p>
         </div>
         <span
-          className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
+          className="rounded-full px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wider"
           style={{
             background: running ? "rgba(34, 197, 94, 0.15)" : "rgba(234, 179, 8, 0.15)",
             color: running ? "var(--success)" : "var(--warning)",
@@ -126,14 +126,14 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
           type="button"
           onClick={toggleTurns}
           disabled={busyKey !== null}
-          className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-body font-medium text-white transition-colors disabled:opacity-50"
           style={{ background: running ? "var(--warning)" : "var(--success)" }}
         >
           {busyKey === "turns" ? "Updating..." : running ? "Pause turns" : "Resume turns"}
         </button>
       )}
       {state && (
-        <div className="mt-3 space-y-1 text-xs text-muted">
+        <div className="mt-3 space-y-1 text-body-sm text-muted">
           <p>
             Current turn: <span className="font-medium text-foreground">{state.currentTurn}</span>
           </p>
@@ -144,7 +144,7 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
                 <LocalTime value={state.pausedAt} />
               </span>
               {state.pauseKind === "auto-drift" && (
-                <span className="ml-2 rounded bg-error/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-error">
+                <span className="ml-2 rounded bg-error/15 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-error">
                   Auto-paused
                 </span>
               )}
@@ -167,14 +167,14 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
       <div className="mt-5 border-t border-card-border pt-4">
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold">Corporation actions</h3>
-            <p className="text-xs text-muted">
+            <h3 className="text-body-lg font-semibold">Corporation actions</h3>
+            <p className="text-body-sm text-muted">
               When paused, corporate phases are skipped during turn processing. Player turns still
               run.
             </p>
           </div>
           <span
-            className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider"
+            className="rounded-full px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wider"
             style={{
               background: corpRunning ? "rgba(34, 197, 94, 0.15)" : "rgba(234, 179, 8, 0.15)",
               color: corpRunning ? "var(--success)" : "var(--warning)",
@@ -188,7 +188,7 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
             type="button"
             onClick={toggleCorp}
             disabled={busyKey !== null}
-            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-body font-medium text-white transition-colors disabled:opacity-50"
             style={{ background: corpRunning ? "var(--warning)" : "var(--success)" }}
           >
             {busyKey === "corp"
@@ -202,7 +202,7 @@ export function TurnPausePanel({ canChange = true }: { canChange?: boolean }) {
 
       {message && (
         <div
-          className={`mt-4 rounded-lg border px-3 py-2 text-xs ${
+          className={`mt-4 rounded-lg border px-3 py-2 text-body-sm ${
             message.startsWith("✓")
               ? "border-green-500/30 bg-green-500/10 text-green-400"
               : "border-error/30 bg-error/10 text-error"

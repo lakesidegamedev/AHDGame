@@ -47,12 +47,12 @@ function NoEligibleNppsDialog({ onClose }: { onClose: () => void }) {
       aria-modal="true"
     >
       <div className="w-full max-w-md rounded-2xl border border-card-border bg-card p-6 shadow-modal">
-        <h2 className="text-lg font-semibold mb-2">No eligible NPPs</h2>
-        <p className="text-sm text-muted mb-4">{t("noEligiblePartyNpp")}</p>
+        <h2 className="text-heading font-semibold mb-2">No eligible NPPs</h2>
+        <p className="text-body text-muted mb-4">{t("noEligiblePartyNpp")}</p>
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
+            className="rounded-lg px-3 py-1.5 text-body text-muted hover:bg-background/60"
           >
             Close
           </button>
@@ -254,19 +254,19 @@ function LegacyQueueBillModal({
       aria-labelledby="queue-bill-title"
     >
       <div className="w-full max-w-2xl rounded-2xl border border-card-border bg-card p-6 shadow-modal max-h-[90vh] overflow-y-auto">
-        <h2 id="queue-bill-title" className="text-lg font-semibold mb-3">
+        <h2 id="queue-bill-title" className="text-heading font-semibold mb-3">
           Queue a bill
         </h2>
-        <p className="text-xs text-muted mb-4">
+        <p className="text-body-sm text-muted mb-4">
           The chosen NPP will introduce this bill next turn. Costs the same as proposing a state
           bill directly; refunded on cancellation or auto-cancellation.
         </p>
 
-        <label className="block text-xs text-muted mb-1">Proposing NPP</label>
+        <label className="block text-body-sm text-muted mb-1">Proposing NPP</label>
         <select
           value={targetNppId}
           onChange={(e) => setTargetNppId(e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
           disabled={submitting}
         >
           <option value="">Select an NPP…</option>
@@ -277,30 +277,30 @@ function LegacyQueueBillModal({
           ))}
         </select>
 
-        <label className="block text-xs text-muted mb-1">Title</label>
+        <label className="block text-body-sm text-muted mb-1">Title</label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
           maxLength={200}
           disabled={submitting}
         />
 
-        <label className="block text-xs text-muted mb-1">Summary</label>
+        <label className="block text-body-sm text-muted mb-1">Summary</label>
         <textarea
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
           maxLength={2000}
           disabled={submitting}
         />
 
-        <label className="block text-xs text-muted mb-1">Category</label>
+        <label className="block text-body-sm text-muted mb-1">Category</label>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
           disabled={submitting}
         >
           {/* Custom (flavor) bills are not offered via the governor queue channel. */}
@@ -313,7 +313,7 @@ function LegacyQueueBillModal({
 
         {isSubsidyCat ? (
           <div className="mb-3 space-y-3">
-            <label className="block text-xs text-muted">Subsidy provisions</label>
+            <label className="block text-body-sm text-muted">Subsidy provisions</label>
             {subsidyProvisions.map((sp, i) => (
               <div
                 key={i}
@@ -328,7 +328,7 @@ function LegacyQueueBillModal({
                       return next;
                     })
                   }
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                   disabled={submitting}
                 >
                   <option value="subsidy">Grant Subsidy (+7.5% margin)</option>
@@ -347,7 +347,7 @@ function LegacyQueueBillModal({
                       return next;
                     })
                   }
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                   disabled={submitting}
                 >
                   <option value="economy_wide">Economy-Wide</option>
@@ -363,11 +363,11 @@ function LegacyQueueBillModal({
                         return next;
                       })
                     }
-                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
                   />
                 )}
                 {sp.type === "subsidy" && (
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <label className="flex items-center gap-2 text-body cursor-pointer">
                     <input
                       type="checkbox"
                       checked={sp.domesticOnly}
@@ -389,7 +389,7 @@ function LegacyQueueBillModal({
           </div>
         ) : (
           <>
-            <label className="block text-xs text-muted mb-1">Legislation type</label>
+            <label className="block text-body-sm text-muted mb-1">Legislation type</label>
             <select
               value={legId}
               onChange={(e) => {
@@ -412,7 +412,7 @@ function LegacyQueueBillModal({
                 setPolicyOptionId(firstEligible?.id ?? "");
                 setEffectDirection(firstEligible?.effectDirection ?? 0);
               }}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
               disabled={submitting || legislationTypes.length === 0}
             >
               <option value="">— None (general bill) —</option>
@@ -443,7 +443,7 @@ function LegacyQueueBillModal({
 
         {!isSubsidyCat && legId && !selectedType?.taxSliderEstimate && policyOptions.length > 0 && (
           <>
-            <label className="block text-xs text-muted mb-1">Policy option</label>
+            <label className="block text-body-sm text-muted mb-1">Policy option</label>
             <select
               value={policyOptionId}
               onChange={(e) => {
@@ -451,7 +451,7 @@ function LegacyQueueBillModal({
                 const opt = policyOptions.find((o) => o.id === e.target.value);
                 setEffectDirection(opt?.effectDirection ?? 0);
               }}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-2"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-2"
               disabled={submitting}
             >
               {policyOptions.map((opt, optIdx) => {
@@ -478,10 +478,12 @@ function LegacyQueueBillModal({
                 return (
                   <div className="mb-2 space-y-1 pb-2 border-b border-card-border/50">
                     {selectedType.description && (
-                      <p className="text-xs italic text-muted/80">{selectedType.description}</p>
+                      <p className="text-body-sm italic text-muted/80">
+                        {selectedType.description}
+                      </p>
                     )}
                     {selectedOpt?.explanation && (
-                      <p className="text-xs text-muted">{selectedOpt.explanation}</p>
+                      <p className="text-body-sm text-muted">{selectedOpt.explanation}</p>
                     )}
                   </div>
                 );
@@ -492,7 +494,7 @@ function LegacyQueueBillModal({
                 selectedType?.description ??
                 null;
               return explanation ? (
-                <p className="text-xs text-muted/80 italic mb-2 pb-2 border-b border-card-border/50">
+                <p className="text-body-sm text-muted/80 italic mb-2 pb-2 border-b border-card-border/50">
                   {explanation}
                 </p>
               ) : null;
@@ -526,7 +528,7 @@ function LegacyQueueBillModal({
           </>
         )}
 
-        <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted mb-3">
+        <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted mb-3">
           <span>
             Cost: {actionCost} actions + {npiCost} national influence · Voting: 24 hours
           </span>
@@ -550,19 +552,19 @@ function LegacyQueueBillModal({
           )}
         </div>
 
-        <InlineError error={error} className="text-sm text-error mb-3" />
+        <InlineError error={error} className="text-body text-error mb-3" />
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
+            className="rounded-lg px-3 py-1.5 text-body text-muted hover:bg-background/60"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={submitting || !canAfford || !targetNppId || !title.trim() || !summary.trim()}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Queuing…" : "Queue bill"}
           </button>

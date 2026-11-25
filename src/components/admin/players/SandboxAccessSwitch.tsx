@@ -50,18 +50,18 @@ export function SandboxAccessSwitch() {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-card-border bg-card px-4 py-3">
       <div>
-        <h3 className="text-sm font-semibold">Sandbox tester access</h3>
-        <p className="text-xs text-muted">
+        <h3 className="text-body-lg font-semibold">Sandbox tester access</h3>
+        <p className="text-body-sm text-muted">
           When on, accounts granted sandbox access (row menu: Grant sandbox) can open the sandbox
           without being supporters. No supporter perks are granted.
         </p>
-        {error && <p className="mt-1 text-xs text-error">{error}</p>}
+        {error && <p className="mt-1 text-body-sm text-error">{error}</p>}
       </div>
       <button
         type="button"
         onClick={toggle}
         disabled={saving}
-        className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+        className="inline-flex h-9 items-center rounded-lg px-4 text-body font-medium text-white transition-colors disabled:opacity-50"
         style={{ background: enabled ? "var(--muted)" : "var(--success)" }}
       >
         {saving ? "Updating..." : enabled ? "Turn off" : "Turn on"}

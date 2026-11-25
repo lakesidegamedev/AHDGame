@@ -279,7 +279,7 @@ export function PresidentialStage({
             cursor: "pointer",
             font: "inherit",
             fontFamily: FONT.mono,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: ".08em",
             textTransform: "uppercase",
             border: "none",
@@ -309,7 +309,7 @@ export function PresidentialStage({
           <div
             style={{
               fontFamily: FONT.mono,
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: ".16em",
               textTransform: "uppercase",
               color: BLEND.muted,
@@ -331,7 +331,7 @@ export function PresidentialStage({
           {title}
         </h1>
         {deck ? (
-          <p style={{ margin: "8px 0 0", fontSize: 15, lineHeight: 1.4, color: BLEND.muted }}>
+          <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.4, color: BLEND.muted }}>
             {deck}
           </p>
         ) : null}

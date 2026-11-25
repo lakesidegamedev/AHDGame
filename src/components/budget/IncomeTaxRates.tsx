@@ -18,7 +18,7 @@ export function IncomeTaxRates({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <h3 className="font-medium mb-3">{t("incomeTitle")}</h3>
-      <dl className="grid grid-cols-3 gap-3 text-sm">
+      <dl className="grid grid-cols-3 gap-3 text-body">
         {INCOME_TIERS.map((tier) => {
           const effective = incomeTaxRate(rates, tier);
           const target = pending?.[INCOME_TAX_KEYS[tier]];
@@ -28,7 +28,9 @@ export function IncomeTaxRates({
               <dd className="tabular-nums">
                 {effective}%
                 {target !== undefined && target !== effective && (
-                  <span className="block text-xs text-muted">{t("target", { rate: target })}</span>
+                  <span className="block text-body-sm text-muted">
+                    {t("target", { rate: target })}
+                  </span>
                 )}
               </dd>
             </div>
@@ -38,7 +40,7 @@ export function IncomeTaxRates({
       {INCOME_TIERS.some((tier) => rates[CAPITAL_GAINS_TAX_KEYS[tier]] !== undefined) && (
         <>
           <h3 className="font-medium mt-4 mb-3">{t("capitalGains")}</h3>
-          <dl className="grid grid-cols-3 gap-3 text-sm">
+          <dl className="grid grid-cols-3 gap-3 text-body">
             {INCOME_TIERS.map((tier) => {
               const rate = capitalGainsTaxRate(rates, tier);
               const target = pending?.[CAPITAL_GAINS_TAX_KEYS[tier]];
@@ -48,7 +50,7 @@ export function IncomeTaxRates({
                   <dd className="tabular-nums">
                     {rate}%
                     {target !== undefined && target !== rate && (
-                      <span className="block text-xs text-muted">
+                      <span className="block text-body-sm text-muted">
                         {t("target", { rate: target })}
                       </span>
                     )}

@@ -46,10 +46,10 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
   return (
     <div className="space-y-3 rounded-xl border border-dashed border-purple-500/35 bg-purple-500/5 p-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-purple-200/80">
+        <h4 className="text-body-sm font-semibold uppercase tracking-wider text-purple-200/80">
           Embargo provisions
         </h4>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {rows.length} / {MAX_PROVISIONS}
         </span>
       </div>
@@ -71,7 +71,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
 
           <div>
             <label
-              className="mb-1 block text-xs font-medium text-muted"
+              className="mb-1 block text-body-sm font-medium text-muted"
               htmlFor={`emb-action-${i}`}
             >
               Action
@@ -82,7 +82,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
               onChange={(e) =>
                 updateRow(i, { action: e.target.value as EmbargoProvisionInput["action"] })
               }
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
             >
               <option value="embargo">Impose embargo</option>
               <option value="end_embargo">Lift embargo (repeal)</option>
@@ -91,7 +91,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
 
           <div>
             <label
-              className="mb-1 block text-xs font-medium text-muted"
+              className="mb-1 block text-body-sm font-medium text-muted"
               htmlFor={`emb-target-${i}`}
             >
               Target country
@@ -104,7 +104,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
                   targetCountry: (e.target.value || "") as CountryId | "",
                 })
               }
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
             >
               <option value="">Select…</option>
               {targetOptions.map((id) => (
@@ -118,7 +118,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label
-                className="mb-1 block text-xs font-medium text-muted"
+                className="mb-1 block text-body-sm font-medium text-muted"
                 htmlFor={`emb-commodity-${i}`}
               >
                 Commodity
@@ -131,7 +131,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
                     commodity: e.target.value as EmbargoProvisionInput["commodity"],
                   })
                 }
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
               >
                 <option value="all">All commodities</option>
                 {COMMODITY_TYPES.map((c) => (
@@ -144,7 +144,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
 
             <div>
               <label
-                className="mb-1 block text-xs font-medium text-muted"
+                className="mb-1 block text-body-sm font-medium text-muted"
                 htmlFor={`emb-direction-${i}`}
               >
                 Direction
@@ -157,7 +157,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
                     direction: e.target.value as EmbargoProvisionInput["direction"],
                   })
                 }
-                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
               >
                 <option value="both">Both ways</option>
                 <option value="export">Our exports to them</option>
@@ -170,7 +170,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label
-                  className="mb-1 block text-xs font-medium text-muted"
+                  className="mb-1 block text-body-sm font-medium text-muted"
                   htmlFor={`emb-mode-${i}`}
                 >
                   Restriction
@@ -184,7 +184,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
                       ...(e.target.value === "block" ? { cap: undefined } : {}),
                     })
                   }
-                  className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                 >
                   <option value="block">Block (stop the flow)</option>
                   <option value="cap">Cap (limit the flow)</option>
@@ -194,7 +194,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
               {row.mode === "cap" && (
                 <div>
                   <label
-                    className="mb-1 block text-xs font-medium text-muted"
+                    className="mb-1 block text-body-sm font-medium text-muted"
                     htmlFor={`emb-cap-${i}`}
                   >
                     Cap (units)
@@ -210,7 +210,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
                         cap: e.target.value === "" ? undefined : Number(e.target.value),
                       })
                     }
-                    className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-right font-mono text-sm"
+                    className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-right font-mono text-body"
                     placeholder="0"
                   />
                 </div>
@@ -218,7 +218,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
             </div>
           )}
 
-          <p className="text-[11px] italic text-muted/60">
+          <p className="text-body-sm italic text-muted/60">
             {row.action === "end_embargo"
               ? "Repeals a matching legislated embargo on this country, commodity, and direction."
               : row.mode === "cap"
@@ -232,7 +232,7 @@ export function EmbargoProvisionEditor({ value, onChange, countryId, enabledCoun
         type="button"
         onClick={addRow}
         disabled={rows.length >= MAX_PROVISIONS}
-        className="w-full rounded-lg border border-dashed border-purple-500/40 bg-purple-500/10 px-3 py-2 text-xs font-medium text-purple-200 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full rounded-lg border border-dashed border-purple-500/40 bg-purple-500/10 px-3 py-2 text-body-sm font-medium text-purple-200 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
       >
         + Add another embargo provision
       </button>

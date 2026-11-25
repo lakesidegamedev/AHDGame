@@ -195,7 +195,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
             fallbackHref={`/country/${countryCode}/forex`}
           />
           <div className="mt-8 rounded-xl border border-card-border bg-card p-12 text-center shadow-sm">
-            <p className="text-muted text-sm">Currency exchange is not yet enabled.</p>
+            <p className="text-muted text-body">Currency exchange is not yet enabled.</p>
           </div>
         </main>
       </div>
@@ -212,7 +212,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
             fallbackHref={`/country/${countryCode}/forex`}
           />
           <div className="mt-8 rounded-xl border border-card-border bg-card p-12 text-center shadow-sm">
-            <p className="text-muted text-sm">
+            <p className="text-muted text-body">
               Couldn&apos;t load the currency market. Please try again.
             </p>
             <button
@@ -222,7 +222,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
                 setLoading(true);
                 fetchData();
               }}
-              className="mt-4 rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background"
+              className="mt-4 rounded-lg border border-card-border px-4 py-2 text-body hover:bg-background"
             >
               Retry
             </button>
@@ -281,7 +281,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
                   <button
                     type="button"
                     onClick={() => setTradeOpen(true)}
-                    className="rounded-lg bg-black/60 border border-white/30 px-4 py-1.5 text-xs font-semibold text-white hover:bg-black/70 transition-colors"
+                    className="rounded-lg bg-black/60 border border-white/30 px-4 py-1.5 text-body-sm font-semibold text-white hover:bg-black/70 transition-colors"
                   >
                     Trade
                   </button>
@@ -295,16 +295,16 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
                     className="rounded-md shadow-lg"
                   />
                   <div>
-                    <p className="text-xs text-white/70 italic mb-0.5">Currency exchange</p>
-                    <h1 className="text-xl font-bold text-white drop-shadow-md sm:text-3xl tabular-nums">
+                    <p className="text-body-sm text-white/70 italic mb-0.5">Currency exchange</p>
+                    <h1 className="text-heading font-bold text-white drop-shadow-md sm:text-display tabular-nums">
                       {sym} {currencyCode}
                     </h1>
-                    <p className="text-sm text-white/80">{name}</p>
+                    <p className="text-body text-white/80">{name}</p>
                   </div>
                 </div>
                 {rateEntry && (
                   <div className="text-right shrink-0">
-                    <div className="text-2xl font-bold tabular-nums text-white">
+                    <div className="text-heading font-bold tabular-nums text-white">
                       {rateEntry.rate != null
                         ? rateEntry.rate >= 10
                           ? rateEntry.rate.toFixed(2)
@@ -312,7 +312,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
                         : "—"}
                     </div>
                     <div
-                      className={`text-sm font-medium tabular-nums ${
+                      className={`text-body font-medium tabular-nums ${
                         strengthVsBase > 0
                           ? "text-green-400"
                           : strengthVsBase < 0
@@ -323,7 +323,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
                       {strengthVsBase > 0 ? "+" : ""}
                       {strengthVsBase.toFixed(2)}% strength vs base
                     </div>
-                    <div className="text-[10px] text-white/60">Higher rate = weaker currency</div>
+                    <div className="text-body-sm text-white/60">Higher rate = weaker currency</div>
                   </div>
                 )}
               </div>
@@ -333,7 +333,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
           {/* Stats strip */}
           {rateEntry && !loading && (
             <div className="border-t border-card-border bg-card-elevated/50 px-5 py-3 flex flex-wrap gap-x-8 gap-y-2 items-center justify-between">
-              <div className="flex gap-x-8 gap-y-2 flex-wrap text-xs">
+              <div className="flex gap-x-8 gap-y-2 flex-wrap text-body-sm">
                 <div>
                   <span className="text-muted">Buy Vol (24t)</span>{" "}
                   <span className="font-mono font-medium tabular-nums">
@@ -361,7 +361,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
               </div>
               <button
                 onClick={() => setTradeOpen(true)}
-                className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-4 py-1.5 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Trade {currencyCode}
               </button>
@@ -384,7 +384,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap border-b-2 px-1 py-3 text-body font-medium transition-colors ${
                   activeTab === t.key
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted hover:border-card-border hover:text-foreground"

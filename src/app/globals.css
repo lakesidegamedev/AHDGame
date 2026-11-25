@@ -11,9 +11,11 @@
   --landing-accent: #ff4d5e;
   --background: #14141c;
   --foreground: #e8e8ee;
-  --primary: #6d5dfc; /* Violet: actions, tabs and links only; red is reserved for loss */
-  --primary-dark: #5b4bdb;
-  --primary-ink: #8d80fd; /* Primary as text (links, ghost buttons, tabs): #6d5dfc measured 4.03:1 on the page */
+  --primary: #4f46e5; /* Indigo: actions, tabs and links only; red is reserved for loss */
+  --primary-dark: #4338ca;
+  --primary-ink: #a5b4fc; /* Primary as text (links, ghost buttons, outline text): 8.4:1 on the card */
+  --primary-border: #818cf8; /* Outline buttons and primary borders on the dark surfaces */
+  --primary-foreground: #ffffff; /* Text on a primary fill: 6.3:1 on #4f46e5 */
   --secondary: #1d4ed8;
   --secondary-dark: #1e3a8a;
   --accent: #e8e8ee;
@@ -74,8 +76,8 @@
   --blend-muted: #8f8f9d;
   --blend-mutedDim: #6b6b7a;
   --blend-mutedDimmer: #5f5f70;
-  --blend-accent: #6d5dfc;
-  --blend-accentInk: #c4bcff;
+  --blend-accent: #4f46e5;
+  --blend-accentInk: #a5b4fc;
   --blend-positive: #22c55e;
   --blend-caution: #eab308;
   --blend-gold: #d4af37;
@@ -84,6 +86,10 @@
 
 [data-theme] {
   --primary-ink: var(--primary);
+  /* Borders follow the readable primary shade, so an outline clears 3:1 wherever
+     the text shade was lifted. */
+  --primary-border: var(--primary-ink);
+  --primary-foreground: #ffffff;
   --blend-page: var(--background);
   --blend-rail: var(--card-muted);
   --blend-inset: var(--card-muted);
@@ -106,7 +112,8 @@
 }
 
 [data-theme="default"] {
-  --primary-ink: #8d80fd;
+  --primary-ink: #a5b4fc;
+  --primary-border: #818cf8;
   --blend-page: #0c0c12;
   --blend-rail: #101018;
   --blend-inset: #11111a;
@@ -120,8 +127,8 @@
   --blend-muted: #8f8f9d;
   --blend-mutedDim: #6b6b7a;
   --blend-mutedDimmer: #5f5f70;
-  --blend-accent: #6d5dfc;
-  --blend-accentInk: #c4bcff;
+  --blend-accent: #4f46e5;
+  --blend-accentInk: #a5b4fc;
   --blend-positive: #22c55e;
   --blend-caution: #eab308;
   --blend-gold: #d4af37;
@@ -180,6 +187,7 @@
   --background: #000000;
   --foreground: #ffffff;
   --primary: #7c6cff; /* Violet: actions, tabs and links only; red is reserved for loss */
+  --primary-foreground: #000000; /* White measured below 4.5:1 on this primary */
   --primary-dark: #6d5dfc;
   --secondary: #4d8cff;
   --secondary-dark: #2d6fd6;
@@ -242,6 +250,7 @@
   --background: #fdf4ff; /* Fuchsia 50 - Very soft pink/purple */
   --foreground: #4a044e; /* Fuchsia 950 - Deep purple text */
   --primary: #d946ef; /* Fuchsia 500 - Playful but readable */
+  --primary-foreground: #000000; /* White measured below 4.5:1 on this primary */
   --primary-dark: #c026d3; /* Fuchsia 600 */
   --primary-ink: #b412cd; /* Primary as text (links, ghost buttons, tabs): 4.5:1 or better on every surface */
   --secondary: #8b5cf6; /* Violet 500 */
@@ -279,6 +288,7 @@
   --background: #0e0b18;
   --foreground: #ede0ff;
   --primary: #c084fc;
+  --primary-foreground: #0e0b18; /* White measured below 4.5:1 on this primary */
   --primary-dark: #a855f7;
   --secondary: #67e8f9;
   --secondary-dark: #22d3ee;
@@ -302,6 +312,7 @@
   --background: #0a0f0a;
   --foreground: #b8e6b8;
   --primary: #4af626;
+  --primary-foreground: #0a0f0a; /* White measured below 4.5:1 on this primary */
   --primary-dark: #32c416;
   --secondary: #26f6ce;
   --secondary-dark: #1ac4a4;
@@ -335,6 +346,7 @@
   --background: #002028;
   --foreground: #eee8d5;
   --primary: #d65d0e;
+  --primary-foreground: #000000; /* White measured below 4.5:1 on this primary */
   --primary-dark: #af4a08;
   --primary-ink: #f6a570; /* Primary as text (links, ghost buttons, tabs): 4.5:1 or better on every surface */
   --secondary: #b58900;
@@ -439,6 +451,7 @@
   --background: #0a0906;
   --foreground: #f5c46a;
   --primary: #ff7849;
+  --primary-foreground: #0a0906; /* White measured below 4.5:1 on this primary */
   --primary-dark: #d15a30;
   --secondary: #6fa8dc;
   --secondary-dark: #4d85b8;
@@ -474,6 +487,7 @@
   --background: #050805;
   --foreground: #b8ffad;
   --primary: #39ff14;
+  --primary-foreground: #050805; /* White measured below 4.5:1 on this primary */
   --primary-dark: #1fcf0b;
   --secondary: #00ff41;
   --secondary-dark: #00bd31;
@@ -530,20 +544,14 @@
    identically. `static` emits every variable even when no utility reads it,
    because CSS modules and arbitrary values use var(--text-body-sm) directly. */
 @theme static {
-  --text-body-xs: 0.625rem; /* 10px */
-  --text-body-xs--line-height: calc(0.875 / 0.625); /* 14px */
   --text-body-sm: 0.75rem; /* 12px */
   --text-body-sm--line-height: calc(1 / 0.75); /* 16px */
   --text-body: 0.875rem; /* 14px */
   --text-body--line-height: calc(1.25 / 0.875); /* 20px */
   --text-body-lg: 1rem; /* 16px */
   --text-body-lg--line-height: calc(1.5 / 1); /* 24px */
-  --text-heading-sm: 1.125rem; /* 18px */
-  --text-heading-sm--line-height: calc(1.75 / 1.125); /* 28px */
   --text-heading: 1.25rem; /* 20px */
   --text-heading--line-height: calc(1.75 / 1.25); /* 28px */
-  --text-heading-lg: 1.5rem; /* 24px */
-  --text-heading-lg--line-height: calc(2 / 1.5); /* 32px */
   --text-display: 1.875rem; /* 30px */
   --text-display--line-height: calc(2.25 / 1.875); /* 36px */
 }
@@ -552,6 +560,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --border-color-primary: var(--primary-border);
   --text-color-primary: var(--primary-ink);
   --ring-color-primary: var(--primary-ink);
   --outline-color-primary: var(--primary-ink);
@@ -591,6 +601,15 @@
   --shadow-modal: var(--shadow-lg);
   /* Animation utilities */
   --animate-fade-in: fadeIn 0.3s ease forwards;
+}
+
+/* Third-level headings are 16px everywhere (the body-lg step). Components
+   size them with text-body-lg; this covers any h3 without a size class. */
+@layer base {
+  h3 {
+    font-size: var(--text-body-lg);
+    line-height: var(--text-body-lg--line-height);
+  }
 }
 
 /* Every focusable element shows a focus ring on every theme. Components that
@@ -888,7 +907,7 @@ html {
 
 /* Small sentence-case label above a section heading */
 .section-label {
-  font-size: 0.875rem;
+  font-size: var(--text-body);
   font-weight: 600;
   color: var(--muted);
 }
@@ -1770,7 +1789,7 @@ html[data-high-contrast="true"] :focus-visible {
   background: var(--card);
   color: var(--muted);
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
+  font-size: var(--text-body-sm);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   pointer-events: none;

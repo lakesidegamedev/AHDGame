@@ -114,7 +114,7 @@ export function WikiEditorToolbar({ onInsert, onInsertImage }: WikiEditorToolbar
             key={btn.label}
             type="button"
             onClick={() => onInsert(btn.before, btn.after, btn.placeholder)}
-            className="px-3 py-1.5 text-sm font-medium border border-card-border rounded hover:bg-muted transition-colors"
+            className="px-3 py-1.5 text-body font-medium border border-card-border rounded hover:bg-muted transition-colors"
             title={btn.label}
             aria-label={btn.label}
           >
@@ -127,7 +127,7 @@ export function WikiEditorToolbar({ onInsert, onInsertImage }: WikiEditorToolbar
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="px-3 py-1.5 text-sm font-medium border border-card-border rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 text-body font-medium border border-card-border rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Upload image"
               aria-label="Upload image"
             >
@@ -143,7 +143,9 @@ export function WikiEditorToolbar({ onInsert, onInsertImage }: WikiEditorToolbar
           </>
         )}
       </div>
-      {uploadError && <p className="text-xs text-red-500">Image upload failed: {uploadError}</p>}
+      {uploadError && (
+        <p className="text-body-sm text-red-500">Image upload failed: {uploadError}</p>
+      )}
     </div>
   );
 }

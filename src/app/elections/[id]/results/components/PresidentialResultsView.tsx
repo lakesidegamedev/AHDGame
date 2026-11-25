@@ -70,12 +70,12 @@ export function PresidentialResultsView({ data }: { data: ElectionResultsRespons
 
   return (
     <div className="space-y-4">
-      {election.ballotLabel && <p className="text-sm text-muted">{election.ballotLabel}</p>}
+      {election.ballotLabel && <p className="text-body text-muted">{election.ballotLabel}</p>}
       {election.totalEv ? (
         <div className="rounded-xl border border-card-border bg-card p-5">
           <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold">Electoral College</h3>
-            <span className="text-xs text-muted tabular-nums">
+            <h3 className="text-body-lg font-semibold">Electoral College</h3>
+            <span className="text-body-sm text-muted tabular-nums">
               {election.evNeeded} to win · solid = called, faded = leading
             </span>
           </div>
@@ -87,7 +87,10 @@ export function PresidentialResultsView({ data }: { data: ElectionResultsRespons
           />
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
             {segments.map((s) => (
-              <span key={s.id} className="inline-flex items-center gap-1.5 text-xs tabular-nums">
+              <span
+                key={s.id}
+                className="inline-flex items-center gap-1.5 text-body-sm tabular-nums"
+              >
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
                 <span className="font-medium">{s.label}</span>
                 <span className="text-muted">
@@ -111,7 +114,7 @@ export function PresidentialResultsView({ data }: { data: ElectionResultsRespons
           <ElectoralResultsMap units={units} candidatesById={candidatesById} />
         ) : (
           <div>
-            <h3 className="mb-2 text-sm font-semibold">Region by region</h3>
+            <h3 className="mb-2 text-body-lg font-semibold">Region by region</h3>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {boardUnits.map((unit, i) => (
                 <RaceResultCard

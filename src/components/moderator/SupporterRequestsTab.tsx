@@ -95,17 +95,17 @@ export function SupporterRequestsTab() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-500">
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-body text-red-500">
           {error}
         </div>
       )}
 
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-3">
+        <h2 className="text-heading font-bold text-foreground mb-3">
           Pending Supporter requests ({pending.length})
         </h2>
         {pending.length === 0 ? (
-          <p className="text-muted text-sm py-6 text-center">No pending supporter requests</p>
+          <p className="text-muted text-body py-6 text-center">No pending supporter requests</p>
         ) : (
           <div className="bg-card border border-card-border rounded-lg divide-y divide-card-border">
             {pending.map((r) => (
@@ -113,21 +113,23 @@ export function SupporterRequestsTab() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-foreground">{requestSummary(r)}</p>
-                    <p className="text-sm text-muted mt-1">
+                    <p className="text-body text-muted mt-1">
                       By {r.requesterName}
                       {r.requesterUsername ? ` (@${r.requesterUsername})` : ""} | Tier:{" "}
                       {tierLabel(r.requesterTier)} |{" "}
                       <LocalTime value={r.createdAt} options={{ dateStyle: "medium" }} />
                     </p>
                     {r.kind === "npp-rename" && r.nppSequentialId != null && (
-                      <p className="text-xs text-muted mt-1">Politician #{r.nppSequentialId}</p>
+                      <p className="text-body-sm text-muted mt-1">
+                        Politician #{r.nppSequentialId}
+                      </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => decide(r._id, "approve")}
                       disabled={busyId === r._id}
-                      className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                      className="rounded-lg bg-green-600 px-3 py-1.5 text-body font-medium text-white hover:bg-green-700 disabled:opacity-50"
                     >
                       Approve
                     </button>
@@ -137,7 +139,7 @@ export function SupporterRequestsTab() {
                         setRejectReason("");
                       }}
                       disabled={busyId === r._id}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="rounded-lg bg-red-600 px-3 py-1.5 text-body font-medium text-white hover:bg-red-700 disabled:opacity-50"
                     >
                       Reject
                     </button>
@@ -151,12 +153,12 @@ export function SupporterRequestsTab() {
                       onChange={(e) => setRejectReason(e.target.value)}
                       placeholder="Rejection reason (optional)"
                       maxLength={500}
-                      className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm text-foreground"
+                      className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body text-foreground"
                     />
                     <button
                       onClick={() => decide(r._id, "reject", rejectReason.trim() || undefined)}
                       disabled={busyId === r._id}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      className="rounded-lg bg-red-600 px-3 py-1.5 text-body font-medium text-white hover:bg-red-700 disabled:opacity-50"
                     >
                       Confirm reject
                     </button>
@@ -169,15 +171,15 @@ export function SupporterRequestsTab() {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-3">Recently decided</h3>
+        <h3 className="text-body-lg font-semibold text-foreground mb-3">Recently decided</h3>
         {decided.length === 0 ? (
-          <p className="text-muted text-sm">No decided requests yet</p>
+          <p className="text-muted text-body">No decided requests yet</p>
         ) : (
           <div className="bg-card border border-card-border rounded-lg divide-y divide-card-border">
             {decided.map((r) => (
-              <div key={r._id} className="p-3 text-sm">
+              <div key={r._id} className="p-3 text-body">
                 <span
-                  className={`mr-2 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  className={`mr-2 inline-block rounded-full px-2 py-0.5 text-body-sm font-semibold ${
                     r.status === "approved"
                       ? "bg-green-500/15 text-green-500"
                       : "bg-red-500/15 text-red-500"

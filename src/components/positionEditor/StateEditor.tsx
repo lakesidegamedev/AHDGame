@@ -78,12 +78,12 @@ export function StateEditor({
 
   if (notFound && !ed.config)
     return (
-      <p className="p-6 text-sm text-muted">
+      <p className="p-6 text-body text-muted">
         No Layer-1 model for {country} {era}
       </p>
     );
 
-  if (!ed.config || !derived) return <p className="p-6 text-sm text-muted">Loading {state}…</p>;
+  if (!ed.config || !derived) return <p className="p-6 text-body text-muted">Loading {state}…</p>;
   const cfg = ed.config;
 
   const invalidDims = getInvalidDims(cfg);
@@ -128,14 +128,14 @@ export function StateEditor({
       <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-b border-card-border bg-card/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <Link
           href="/control/world/position-editor"
-          className="text-sm text-muted transition-colors hover:text-foreground"
+          className="text-body text-muted transition-colors hover:text-foreground"
         >
           ← Map
         </Link>
-        <h1 className="text-xl text-foreground">
+        <h1 className="text-heading text-foreground">
           {state} · {era}
         </h1>
-        <span className={`text-xs ${ed.dirty ? "text-warning" : "text-success"}`}>
+        <span className={`text-body-sm ${ed.dirty ? "text-warning" : "text-success"}`}>
           {ed.dirty ? "Saving…" : "Saved"}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -167,7 +167,7 @@ export function StateEditor({
       </div>
 
       {!sharesValid && (
-        <div className="mt-3 rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-sm text-error">
+        <div className="mt-3 rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-body text-error">
           Dimension shares must each sum to 100 before saving or exporting.{" "}
           {invalidDims.map(({ dim, sum }) => `${dim} Σ ${sum}`).join(" · ")}
         </div>
@@ -180,7 +180,7 @@ export function StateEditor({
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-2 text-sm transition-colors ${
+                className={`px-3 py-2 text-body transition-colors ${
                   tab === t
                     ? "border-b-2 border-primary text-foreground"
                     : "text-muted hover:text-foreground"
@@ -216,7 +216,7 @@ export function StateEditor({
         title="Apply to global seed defaults?"
         onClose={() => setConfirmOpen(false)}
       >
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Apply these positions and turnout rates as the global{" "}
           <span className="font-semibold text-foreground">{era}</span> seed defaults? This affects
           every state when the world is reseeded with the flag on. (Per-state Layer-1 shares stay

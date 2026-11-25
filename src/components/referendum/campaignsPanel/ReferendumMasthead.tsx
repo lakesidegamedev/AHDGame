@@ -111,13 +111,13 @@ export function ReferendumMasthead({
           )}
           <div className="min-w-[200px] flex-1">
             <div className="text-body-sm font-medium text-muted">{registry}</div>
-            <h1 className="mt-1 text-2xl font-extrabold leading-tight tracking-tight text-foreground">
+            <h1 className="mt-1 text-heading font-extrabold leading-tight tracking-tight text-foreground">
               {title}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {subtitle && <span className="text-sm text-muted">{subtitle}</span>}
+              {subtitle && <span className="text-body text-muted">{subtitle}</span>}
               {statusPill && <CampaignStatusPill status={statusPill} />}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background/40 px-2.5 py-1 text-[11px] font-semibold text-muted">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background/40 px-2.5 py-1 text-body-sm font-semibold text-muted">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" aria-hidden />
                 Live · turn-weighted
               </span>
@@ -147,13 +147,13 @@ export function ReferendumMasthead({
           >
             <span className="truncate text-body-sm font-medium text-muted">{t.label}</span>
             <span
-              className={`truncate font-mono text-lg font-extrabold leading-tight ${
+              className={`truncate font-mono text-heading font-extrabold leading-tight ${
                 TILE_TONE[t.tone ?? "fg"]
               }`}
             >
               {t.value}
             </span>
-            {t.sub && <span className="truncate text-[11px] text-muted">{t.sub}</span>}
+            {t.sub && <span className="truncate text-body-sm text-muted">{t.sub}</span>}
           </div>
         ))}
       </div>

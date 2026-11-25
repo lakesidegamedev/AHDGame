@@ -391,7 +391,7 @@ export function WikiEditorClient({
       {pendingNotice && (
         <div
           role="status"
-          className="rounded-md border border-card-border bg-card/60 p-4 text-sm text-foreground"
+          className="rounded-md border border-card-border bg-card/60 p-4 text-body text-foreground"
         >
           {pendingNotice}
         </div>
@@ -399,7 +399,7 @@ export function WikiEditorClient({
       {restorableDraft && (
         <div
           role="status"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-foreground"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-body text-foreground"
         >
           <span>You have unsaved text from {draftAgeMinutes} minutes ago.</span>
           <span className="flex gap-3">
@@ -418,7 +418,7 @@ export function WikiEditorClient({
       )}
       {/* Title */}
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-foreground">
+        <label htmlFor="title" className="block text-body font-medium text-foreground">
           Title
         </label>
         <input
@@ -429,12 +429,12 @@ export function WikiEditorClient({
           className="mt-1 block w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           placeholder="Page title"
         />
-        {state.errors.title && <p className="mt-1 text-sm text-red-500">{state.errors.title}</p>}
+        {state.errors.title && <p className="mt-1 text-body text-red-500">{state.errors.title}</p>}
       </div>
 
       {/* Slug (auto-generated, read-only) */}
       <div>
-        <label htmlFor="slug" className="block text-sm font-medium text-foreground">
+        <label htmlFor="slug" className="block text-body font-medium text-foreground">
           Slug
         </label>
         <input
@@ -445,12 +445,12 @@ export function WikiEditorClient({
           className="mt-1 block w-full rounded-md border border-card-border bg-muted px-3 py-2 text-muted shadow-sm cursor-not-allowed"
           placeholder="Auto-generated from title"
         />
-        {state.errors.slug && <p className="mt-1 text-sm text-red-500">{state.errors.slug}</p>}
+        {state.errors.slug && <p className="mt-1 text-body text-red-500">{state.errors.slug}</p>}
       </div>
 
       {/* Description */}
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-foreground">
+        <label htmlFor="description" className="block text-body font-medium text-foreground">
           Description
         </label>
         <textarea
@@ -464,7 +464,7 @@ export function WikiEditorClient({
           placeholder="Brief description of the page"
         />
         {state.errors.description && (
-          <p className="mt-1 text-sm text-red-500">{state.errors.description}</p>
+          <p className="mt-1 text-body text-red-500">{state.errors.description}</p>
         )}
       </div>
 
@@ -479,13 +479,13 @@ export function WikiEditorClient({
       {/* Content */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label htmlFor="content" className="block text-sm font-medium text-foreground">
+          <label htmlFor="content" className="block text-body font-medium text-foreground">
             Content
           </label>
           <button
             type="button"
             onClick={() => setShowPreview(!showPreview)}
-            className="text-sm text-primary hover:text-primary/80"
+            className="text-body text-primary hover:text-primary/80"
           >
             {showPreview ? "Edit" : "Preview"}
           </button>
@@ -516,7 +516,7 @@ export function WikiEditorClient({
                   setLink(findWikilinkQuery(e.target.value, e.target.selectionStart));
                 }}
                 rows={20}
-                className="block w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-mono text-sm"
+                className="block w-full rounded-md border border-card-border bg-card px-3 py-2 text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary font-mono text-body"
                 placeholder="Write your content here in markdown. Type [[ to link another page."
               />
               {linkResults.length > 0 && (
@@ -533,7 +533,7 @@ export function WikiEditorClient({
                           e.preventDefault();
                           pickLink(r);
                         }}
-                        className={`block w-full px-3 py-2 text-left text-sm text-foreground ${
+                        className={`block w-full px-3 py-2 text-left text-body text-foreground ${
                           i === linkIndex ? "bg-primary/20" : "hover:bg-muted"
                         }`}
                       >
@@ -547,13 +547,13 @@ export function WikiEditorClient({
           )}
         </div>
         {state.errors.content && (
-          <p className="mt-1 text-sm text-red-500">{state.errors.content}</p>
+          <p className="mt-1 text-body text-red-500">{state.errors.content}</p>
         )}
       </div>
 
       {/* Tags */}
       <div>
-        <label htmlFor="tags" className="block text-sm font-medium text-foreground">
+        <label htmlFor="tags" className="block text-body font-medium text-foreground">
           Tags
         </label>
         <div className="mt-1 flex gap-2">
@@ -584,7 +584,7 @@ export function WikiEditorClient({
             {state.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-card border border-card-border rounded-full text-sm"
+                className="inline-flex items-center gap-1 px-3 py-1 bg-card border border-card-border rounded-full text-body"
               >
                 {tag}
                 <button
@@ -598,12 +598,12 @@ export function WikiEditorClient({
             ))}
           </div>
         )}
-        {state.errors.tags && <p className="mt-1 text-sm text-red-500">{state.errors.tags}</p>}
+        {state.errors.tags && <p className="mt-1 text-body text-red-500">{state.errors.tags}</p>}
       </div>
 
       {/* Category — required for non-admin submissions */}
       <div>
-        <label htmlFor="category" className="block text-sm font-medium text-foreground">
+        <label htmlFor="category" className="block text-body font-medium text-foreground">
           Category {!isAdmin && <span className="text-red-500">*</span>}
         </label>
         <select
@@ -625,16 +625,18 @@ export function WikiEditorClient({
           })}
         </select>
         {state.errors.category && (
-          <p className="mt-1 text-sm text-red-500">{state.errors.category}</p>
+          <p className="mt-1 text-body text-red-500">{state.errors.category}</p>
         )}
         {state.category && (
-          <p className="mt-1 text-xs text-muted">{getCategoryById(state.category)?.description}</p>
+          <p className="mt-1 text-body-sm text-muted">
+            {getCategoryById(state.category)?.description}
+          </p>
         )}
       </div>
 
       {/* Difficulty */}
       <div>
-        <label htmlFor="difficulty" className="block text-sm font-medium text-foreground">
+        <label htmlFor="difficulty" className="block text-body font-medium text-foreground">
           Difficulty (optional)
         </label>
         <select
@@ -669,7 +671,7 @@ export function WikiEditorClient({
               }
               className="h-4 w-4 rounded border-card-border text-primary focus:ring-primary"
             />
-            <label htmlFor="featured" className="text-sm font-medium text-foreground">
+            <label htmlFor="featured" className="text-body font-medium text-foreground">
               Featured
             </label>
           </div>
@@ -683,9 +685,9 @@ export function WikiEditorClient({
               }
               className="h-4 w-4 rounded border-card-border text-warning focus:ring-warning"
             />
-            <label htmlFor="private" className="text-sm font-medium text-foreground">
+            <label htmlFor="private" className="text-body font-medium text-foreground">
               Private
-              <span className="ml-1 text-xs text-muted">(admin-only visibility)</span>
+              <span className="ml-1 text-body-sm text-muted">(admin-only visibility)</span>
             </label>
           </div>
         </div>
@@ -694,7 +696,7 @@ export function WikiEditorClient({
       {/* Form errors */}
       {state.errors._form && (
         <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-800">{state.errors._form}</p>
+          <p className="text-body text-red-800">{state.errors._form}</p>
         </div>
       )}
 
@@ -710,7 +712,7 @@ export function WikiEditorClient({
         <button
           type="submit"
           disabled={state.isSaving}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed"
         >
           {state.isSaving ? "Saving..." : mode === "create" ? "Create page" : "Save changes"}
         </button>

@@ -9,15 +9,15 @@ export function MaastrichtPanel({ org }: { org: OrgSummary }) {
   if (!state) return null;
   return (
     <section className="rounded-xl border border-card-border bg-card p-4">
-      <h3 className="text-sm font-semibold">{t("title")}</h3>
-      <p className="mt-2 text-sm text-muted">{t(state.stage)}</p>
-      <p className="mt-2 text-sm text-muted">{t("commonMarket")}</p>
+      <h3 className="text-body-lg font-semibold">{t("title")}</h3>
+      <p className="mt-2 text-body text-muted">{t(state.stage)}</p>
+      <p className="mt-2 text-body text-muted">{t("commonMarket")}</p>
       {(state.stage === "community" || state.source === "ratified-treaty") && (
         <ul className="mt-3 space-y-3">
           {org.members.map((member) => {
             const decision = state.ratifications[member.countryId];
             return (
-              <li key={member.countryId} className="text-sm">
+              <li key={member.countryId} className="text-body">
                 <span className="font-medium">
                   {member.flagEmoji} {member.countryName}
                 </span>

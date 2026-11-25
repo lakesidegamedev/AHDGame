@@ -87,18 +87,6 @@ export function getStrategyAvailability(
   if (strategy.minDecade && !isDecadeReached(strategy.minDecade, currentYear)) {
     return { locked: true, reason: "era" };
   }
-  if (world.diffusion) {
-    const country = countryDiffusionContext(
-      world.diffusion.snapshot,
-      world.diffusion.countryId,
-      world.diffusion.adopter,
-      strategy.id
-    );
-    const opensYear = country ? strategyOpenYear(strategy, country) : undefined;
-    if (opensYear !== undefined && currentYear < opensYear) {
-      return { locked: true, reason: "diffusion", opensYear };
-    }
-  }
   if (strategy.requiresTechUnlock) {
     // Merge DB-stored nodes with auto-granted past-decade nodes so that:
     // (a) corps founded before tech trees (empty unlockedTechNodeIds) and
@@ -112,6 +100,18 @@ export function getStrategyAvailability(
     };
     if (!getUnlockedStrategyIds(effectiveView).includes(strategy.id)) {
       return { locked: true, reason: "tech" };
+    }
+  }
+  if (world.diffusion && (world.diffusion.adopter === "npp" || !strategy.requiresTechUnlock)) {
+    const country = countryDiffusionContext(
+      world.diffusion.snapshot,
+      world.diffusion.countryId,
+      world.diffusion.adopter,
+      strategy.id
+    );
+    const opensYear = country ? strategyOpenYear(strategy, country) : undefined;
+    if (opensYear !== undefined && currentYear < opensYear) {
+      return { locked: true, reason: "diffusion", opensYear };
     }
   }
   if (!isBreakthroughReached(strategy, world.sectorResearch)) {

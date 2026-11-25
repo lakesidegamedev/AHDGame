@@ -31,6 +31,7 @@ import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabu
 import type { SectorDetail } from "./CorporationPageTypes";
 import { StateFlag } from "./SectorRowComponents";
 import { resolveSectorStrategy, typeFacilityCount } from "./sectorTypeMetrics";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** The design shows the five heaviest inputs; past that the list stops scanning. */
 const MAX_DEMAND_ROWS = 5;
@@ -65,13 +66,13 @@ function CommodityChain({
         <tr>
           <th
             scope="col"
-            className="border-b border-card-border py-1 text-left text-xs font-medium text-muted"
+            className="border-b border-card-border py-1 text-left text-body-sm font-medium text-muted"
           >
             {title}
           </th>
           <th
             scope="col"
-            className="border-b border-card-border py-1 text-right text-xs font-medium text-muted"
+            className="border-b border-card-border py-1 text-right text-body-sm font-medium text-muted"
             title="Units per 100 units of output"
           >
             Per 100 output
@@ -81,17 +82,17 @@ function CommodityChain({
       <tbody>
         {rows.length === 0 && (
           <tr>
-            <td colSpan={2} className="py-1 text-xs text-muted">
+            <td colSpan={2} className="py-1 text-body-sm text-muted">
               Nothing
             </td>
           </tr>
         )}
         {rows.map(([commodity, rate]) => (
           <tr key={commodity}>
-            <td className="truncate border-b border-card-border/60 py-1 text-xs text-foreground">
+            <td className="truncate border-b border-card-border/60 py-1 text-body-sm text-foreground">
               {COMMODITY_LABELS[commodity as CommodityType] ?? commodity}
             </td>
-            <td className="border-b border-card-border/60 py-1 text-right font-mono text-xs tabular-nums text-foreground">
+            <td className="border-b border-card-border/60 py-1 text-right font-mono text-body-sm tabular-nums text-foreground">
               {Math.round((rate ?? 0) * 100)}
             </td>
           </tr>
@@ -182,8 +183,8 @@ export function SectorStrategyPanel({
     <section className="min-w-0">
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-card-border pb-1.5">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <h2 className="text-sm font-semibold text-foreground">Operating strategies</h2>
-          <span className="text-xs text-muted">
+          <h2 className="text-body font-semibold text-foreground">Operating strategies</h2>
+          <span className="text-body-sm text-muted">
             pick a strategy to see what {label} sites make and use with it. The number is how many
             of your sites run it
           </span>
@@ -192,7 +193,7 @@ export function SectorStrategyPanel({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="text-xs text-muted hover:text-foreground"
+          className="text-body-sm text-muted hover:text-foreground"
         >
           {open ? "Hide" : "Show"}
         </button>
@@ -222,16 +223,10 @@ export function SectorStrategyPanel({
                       ? `${count} ${count === 1 ? "site" : "sites"} running ${strategy.name}, holding ${typeFacilityCount(running).toLocaleString("en-US")} ${plural}`
                       : `No active ${plural} are using the ${strategy.name} strategy. Switch one to it, or build one with this strategy.`
                   }
-                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs transition-colors ${
-                    on
-                      ? "bg-card-elevated font-medium text-foreground"
-                      : isActive
-                        ? "text-foreground hover:bg-card-elevated/60"
-                        : "text-muted hover:bg-card-elevated/60"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-body-sm ${pillClass(on)}`}
                 >
                   {strategy.name}
-                  <span className="font-mono text-xs tabular-nums text-muted">{count}</span>
+                  <span className="font-mono text-body-sm tabular-nums opacity-70">{count}</span>
                 </button>
               );
             })}
@@ -242,18 +237,18 @@ export function SectorStrategyPanel({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <span
-                    className={`block text-[13px] font-medium ${sites.length ? "text-foreground" : "text-muted"}`}
+                    className={`block text-body-sm font-medium ${sites.length ? "text-foreground" : "text-muted"}`}
                   >
                     {active.name}
                   </span>
-                  <span className="block text-xs text-muted">{countLine}</span>
+                  <span className="block text-body-sm text-muted">{countLine}</span>
                 </div>
               </div>
 
-              <p className="m-0 text-xs text-muted">{active.description}</p>
+              <p className="m-0 text-body-sm text-muted">{active.description}</p>
 
               {sites.length === 0 && (
-                <p className="m-0 text-xs text-muted">
+                <p className="m-0 text-body-sm text-muted">
                   None of your {plural} currently run {active.name}. Pick a {singular} in the table
                   below and change its strategy there, or build a new one and switch it over.
                 </p>
@@ -265,7 +260,7 @@ export function SectorStrategyPanel({
                     <Link
                       key={site._id}
                       href={`/corporation/${corpId}/sector/${site._id}`}
-                      className="inline-flex items-center gap-1.5 text-xs text-foreground hover:underline"
+                      className="inline-flex items-center gap-1.5 text-body-sm text-foreground hover:underline"
                     >
                       <StateFlag stateId={site.stateId} stateName={site.stateName} />
                       {site.displayName || site.stateName}

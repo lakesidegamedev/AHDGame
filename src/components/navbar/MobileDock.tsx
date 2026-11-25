@@ -145,11 +145,11 @@ export function MobileDock({ tabs, openSheet, onOpenSheet, sheets }: MobileDockP
             className="fixed inset-x-0 bottom-[var(--mobile-dock-height,0px)] top-[calc(env(safe-area-inset-top,0px)+3.5rem)] z-[45] flex flex-col overflow-hidden rounded-t-2xl border-t border-card-border bg-card shadow-modal"
           >
             <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-3">
-              <h2 className="truncate text-[17px] font-bold text-foreground">{sheet.title}</h2>
+              <h2 className="truncate text-body-lg font-bold text-foreground">{sheet.title}</h2>
               <button
                 type="button"
                 onClick={() => onOpenSheet(null)}
-                className="min-h-9 rounded-lg border border-card-border px-3 text-xs font-medium text-muted hover:text-foreground"
+                className="min-h-9 rounded-lg border border-card-border px-3 text-body-sm font-medium text-muted hover:text-foreground"
               >
                 {t("dock.close")}
               </button>
@@ -177,7 +177,7 @@ export function MobileDock({ tabs, openSheet, onOpenSheet, sheets }: MobileDockP
         <ul className="mx-auto flex h-14 max-w-xl">
           {tabs.map((tab) => {
             const lit = tab.sheet ? openSheet === tab.sheet : tab.active && !openSheet;
-            const className = `relative flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-[10.5px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-primary ${lit ? "text-foreground" : "text-muted hover:text-foreground"}`;
+            const className = `relative flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-body-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-primary ${lit ? "text-foreground" : "text-muted hover:text-foreground"}`;
             const content = (
               <>
                 {lit && (
@@ -251,7 +251,7 @@ function DockSectionView({
   return (
     <section className="mt-2">
       {section.title && (
-        <h3 className="px-1 pb-2 pt-3 text-xs font-bold uppercase tracking-wider text-fg-2">
+        <h3 className="px-1 pb-2 pt-3 text-body-lg font-bold uppercase tracking-wider text-fg-2">
           {section.title}
         </h3>
       )}
@@ -280,7 +280,7 @@ function DockGroup({
   if (items.length === 0) return null;
   return (
     <div className="mt-3">
-      <div className="px-1 pb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-muted">
+      <div className="px-1 pb-1.5 text-body-sm font-bold uppercase tracking-wider text-muted">
         {label}
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -310,11 +310,11 @@ function DockCard({
         <PixelNavIcon name={item.icon ?? pixelIconForLink(item.id)} className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
+        <span className="block text-body-sm font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
           {item.label}
         </span>
         {item.description && (
-          <span className="mt-0.5 block text-[11px] leading-snug text-muted [overflow-wrap:anywhere]">
+          <span className="mt-0.5 block text-body-sm leading-snug text-muted [overflow-wrap:anywhere]">
             {item.description}
           </span>
         )}

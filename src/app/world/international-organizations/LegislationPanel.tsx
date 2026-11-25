@@ -140,8 +140,8 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Free-trade agreements</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Free-trade agreements</h3>
+          <p className="text-body-sm text-muted">
             Active FTAs zero out tariffs between every party in the agreement.
           </p>
         </div>
@@ -158,8 +158,10 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
 
       {showForm && proposerIsMember && proposer && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Propose a free-trade agreement</h4>
-          <p className="mt-1 text-xs text-muted">
+          <h4 className="text-body font-semibold text-foreground">
+            Propose a free-trade agreement
+          </h4>
+          <p className="mt-1 text-body-sm text-muted">
             {entityName(proposer)} is automatically included. Select the other parties (must all be{" "}
             {org.def.shortName} members).
           </p>
@@ -173,7 +175,7 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
                     key={m.countryId}
                     type="button"
                     onClick={() => toggle(m.countryId)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`rounded-full border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                       active
                         ? "border-primary bg-primary/15 text-foreground"
                         : "border-card-border bg-card text-muted hover:text-foreground"
@@ -185,7 +187,7 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
                 );
               })}
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Submit for ratification
@@ -208,18 +210,18 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
       <div className="space-y-3">
         <h4 className="text-body-sm font-medium text-muted">Active</h4>
         {withdrawSuccess && (
-          <div className="rounded-xl border border-success/30 bg-success/5 p-4 text-sm text-success">
+          <div className="rounded-xl border border-success/30 bg-success/5 p-4 text-body text-success">
             {withdrawSuccess}
           </div>
         )}
         {withdrawError && (
-          <div className="rounded-xl border border-error/30 bg-error/5 p-4 text-sm text-error">
+          <div className="rounded-xl border border-error/30 bg-error/5 p-4 text-body text-error">
             {withdrawError}
           </div>
         )}
         {activeFtas.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No active free-trade agreements.</p>
+            <p className="text-body text-muted">No active free-trade agreements.</p>
           </div>
         ) : (
           activeFtas.map((l) => (
@@ -229,13 +231,13 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                  <p className="mt-1 text-xs text-muted">
+                  <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                  <p className="mt-1 text-body-sm text-muted">
                     Parties: {(l.parties as CountryId[]).map((p) => entityName(p)).join(", ")}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                  <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-body-sm font-medium text-success">
                     In force
                   </span>
                   {viewerFmCountry != null &&
@@ -259,7 +261,7 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
                     )}
                   {(pendingWithdrawalLegislationIds.has(l._id.toString()) ||
                     pendingWithdrawalIdsLocal.has(l._id.toString())) && (
-                    <p className="max-w-xs text-right text-xs text-muted">
+                    <p className="max-w-xs text-right text-body-sm text-muted">
                       A withdrawal measure for this agreement is already pending in the legislature.
                     </p>
                   )}
@@ -275,7 +277,7 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
         <h4 className="text-body-sm font-medium text-muted">Awaiting ratification</h4>
         {pendingFtas.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No pending legislation.</p>
+            <p className="text-body text-muted">No pending legislation.</p>
           </div>
         ) : (
           pendingFtas.map((l) => {
@@ -321,22 +323,22 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
               >
                 <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                    <p className="mt-0.5 text-body-sm text-muted">
                       Parties: {(l.parties as CountryId[]).map((p) => entityName(p)).join(", ")}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-body-sm text-muted">
                       Introduced by {l.proposedByCharacterName} · closes in {turnsLeft} turn
                       {turnsLeft === 1 ? "" : "s"}
                     </p>
                   </div>
-                  <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                  <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
                     Voting
                   </span>
                 </div>
 
                 <div className="mb-3">
-                  <div className="mb-1 flex items-center justify-between text-xs text-muted">
+                  <div className="mb-1 flex items-center justify-between text-body-sm text-muted">
                     <span>
                       {yesCount} / {votingParties.length} parties yes, {requirement}
                     </span>

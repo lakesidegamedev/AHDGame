@@ -68,8 +68,8 @@ export function StateDrawer({
       <aside className="fixed right-0 top-0 z-50 h-full w-full max-w-sm overflow-y-auto border-l border-card-border bg-card p-5 pt-[max(1.25rem,env(safe-area-inset-top))] shadow-xl">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <div className="text-lg font-bold">{row.name}</div>
-            <div className="text-xs text-muted">State party</div>
+            <div className="text-heading font-bold">{row.name}</div>
+            <div className="text-body-sm text-muted">State party</div>
           </div>
           <button className="text-muted hover:text-foreground" onClick={onClose} aria-label="Close">
             ✕
@@ -79,8 +79,8 @@ export function StateDrawer({
         {/* Org readout */}
         <div className="mb-4 rounded-lg border border-card-border bg-background/50 p-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted">Organization</span>
-            <span className="text-xl font-bold" style={{ color: toneColor(t.tone) }}>
+            <span className="text-body-sm text-muted">Organization</span>
+            <span className="text-heading font-bold" style={{ color: toneColor(t.tone) }}>
               {row.organization.toFixed(1)}%
             </span>
           </div>
@@ -90,7 +90,7 @@ export function StateDrawer({
               style={{ width: `${row.organization}%`, backgroundColor: toneColor(t.tone) }}
             />
           </span>
-          <div className="mt-1 text-xs text-muted">{t.label}</div>
+          <div className="mt-1 text-body-sm text-muted">{t.label}</div>
         </div>
 
         {/* Mini grid */}
@@ -109,15 +109,15 @@ export function StateDrawer({
 
         {/* Leadership */}
         <div className="mb-4">
-          <div className="mb-1 text-xs text-muted">Leadership</div>
+          <div className="mb-1 text-body-sm text-muted">Leadership</div>
           {row.chairName ? (
-            <div className="text-sm">{row.chairName} · State chair</div>
+            <div className="text-body">{row.chairName} · State chair</div>
           ) : (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted italic">Vacant · state chair</span>
+              <span className="text-body text-muted italic">Vacant · state chair</span>
               <Link
                 href={`${regionPartyUrl(countryCode, row.regionId, partyId)}?tab=overview`}
-                className="rounded-md border border-card-border px-2 py-1 text-xs hover:bg-card-elevated"
+                className="rounded-md border border-card-border px-2 py-1 text-body-sm hover:bg-card-elevated"
               >
                 Appoint
               </Link>
@@ -128,7 +128,7 @@ export function StateDrawer({
         {/* Fund */}
         {canManage && (
           <div className="mb-4">
-            <div className="mb-1 text-xs text-muted">Fund this state party</div>
+            <div className="mb-1 text-body-sm text-muted">Fund this state party</div>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -136,7 +136,7 @@ export function StateDrawer({
                 value={fund}
                 onChange={(e) => setFund(Math.max(0, +e.target.value))}
                 aria-label="Fund amount"
-                className="w-full rounded-md border border-card-border bg-background px-2 py-1 text-sm"
+                className="w-full rounded-md border border-card-border bg-background px-2 py-1 text-body"
               />
               <button
                 disabled={busy || fund <= 0}
@@ -148,7 +148,7 @@ export function StateDrawer({
                     setBusy(false);
                   }
                 }}
-                className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-md bg-primary px-3 py-1 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
               >
                 Transfer
               </button>
@@ -158,7 +158,7 @@ export function StateDrawer({
                 <button
                   key={v}
                   onClick={() => setFund(v)}
-                  className="rounded-md border border-card-border px-2 py-0.5 text-xs hover:bg-card-elevated"
+                  className="rounded-md border border-card-border px-2 py-0.5 text-body-sm hover:bg-card-elevated"
                 >
                   {fmtMoney(v)}
                 </button>
@@ -174,7 +174,7 @@ export function StateDrawer({
               disabled={priorityLocked}
               onClick={() => onTogglePriority(row.regionId)}
               title={priorityLocked ? "Priority region is locked this turn" : undefined}
-              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-50 ${
+              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-body disabled:opacity-50 ${
                 row.isTarget
                   ? "border-primary bg-primary/5"
                   : "border-card-border hover:bg-card-elevated"
@@ -185,7 +185,7 @@ export function StateDrawer({
             </button>
             <button
               onClick={() => onRecruit(row.regionId)}
-              className="flex w-full items-center justify-between rounded-lg border border-card-border px-3 py-2 text-left text-sm hover:bg-card-elevated"
+              className="flex w-full items-center justify-between rounded-lg border border-card-border px-3 py-2 text-left text-body hover:bg-card-elevated"
             >
               <span>Recruit NPP here</span>
               <span className="text-muted">›</span>
@@ -195,7 +195,7 @@ export function StateDrawer({
 
         <Link
           href={regionPartyUrl(countryCode, row.regionId, partyId)}
-          className="mt-3 block rounded-lg border border-card-border px-3 py-2 text-center text-sm hover:bg-card-elevated"
+          className="mt-3 block rounded-lg border border-card-border px-3 py-2 text-center text-body hover:bg-card-elevated"
         >
           Open full state party page
         </Link>
@@ -208,7 +208,7 @@ function Mini({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-card-border bg-background/50 p-2">
       <div className="text-body-sm text-muted">{label}</div>
-      <div className="text-sm font-semibold tabular-nums">{value}</div>
+      <div className="text-body font-semibold tabular-nums">{value}</div>
     </div>
   );
 }

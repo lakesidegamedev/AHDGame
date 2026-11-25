@@ -70,7 +70,7 @@ export function SubTabBar<T extends string>({
       type="button"
       data-tab-id={opt.id}
       onClick={() => onChange(opt.id)}
-      className={`shrink-0 cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors sm:px-4 sm:py-2.5 sm:text-sm ${
+      className={`shrink-0 cursor-pointer rounded-lg px-3 py-2 text-body-sm font-medium transition-colors sm:px-4 sm:py-2.5 sm:text-body ${
         active === opt.id
           ? "bg-primary text-primary-foreground"
           : "text-muted hover:bg-white/5 hover:text-foreground"

@@ -48,9 +48,13 @@ export interface MarketedWorld {
   /** Simulated and browsable, but not open to play. Curated, not exhaustive. */
   economy: MarketedNation[];
   registeredCountryCount: number;
+  /** Countries present on the running preset’s public world roster. */
+  presentCountryCount: number;
+  /** Additional countries with a full, computer-run simulation. */
+  simulatedNpp: MarketedNation[];
 }
 
-export const DEFAULT_SEED_YEAR = 1979;
+export const DEFAULT_SEED_YEAR = 2027;
 
 /** Era ids the landing configs know about, newest first for the fallback pick. */
 export function toEraId(seedYear: number): EraId {
@@ -66,12 +70,19 @@ export function toEraId(seedYear: number): EraId {
  * manifest on every run, so it cannot silently rot. Reusing it here means the
  * globe and the prose can never name different countries.
  */
-export function eraRoster(eraId: EraId): { player: CountryId[]; econ: CountryId[] } {
+export function eraRoster(eraId: EraId): {
+  player: CountryId[];
+  econ: CountryId[];
+  npp: CountryId[];
+  presentCount: number;
+} {
   const nations = ERA_CONFIGS[eraId].nations;
   const known = (id: string): id is CountryId => Object.hasOwn(COUNTRY_CLIENT_CONFIGS, id);
   return {
     player: nations.filter((n) => n.tier === "player" && known(n.id)).map((n) => n.id as CountryId),
     econ: nations.filter((n) => n.tier === "econ" && known(n.id)).map((n) => n.id as CountryId),
+    npp: nations.filter((n) => n.tier === "npp" && known(n.id)).map((n) => n.id as CountryId),
+    presentCount: nations.length,
   };
 }
 
@@ -83,9 +94,7 @@ export function toNations(ids: readonly CountryId[], presetId: string): Marketed
  * The answer without a database: the era roster as authored.
  *
  * Used by the paths that cannot await Mongo (module-scope JSON-LD, error
- * pages) and as the failure mode for the ones that can. The `player` tier has
- * been US/UK/RU/DD across every authored era, so this is wrong only in the
- * window between an admin opening a country and the next release.
+ * pages) and as the failure mode for the ones that can.
  */
 export function fallbackMarketedWorld(seedYear: number = DEFAULT_SEED_YEAR): MarketedWorld {
   const eraId = toEraId(seedYear);
@@ -103,6 +112,8 @@ export function fallbackMarketedWorld(seedYear: number = DEFAULT_SEED_YEAR): Mar
     ),
     economy: toNations(roster.econ, presetId),
     registeredCountryCount: REGISTERED_COUNTRY_COUNT,
+    presentCountryCount: roster.presentCount,
+    simulatedNpp: toNations(roster.npp, presetId),
   };
 }
 

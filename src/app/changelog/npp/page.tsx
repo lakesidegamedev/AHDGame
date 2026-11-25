@@ -27,35 +27,35 @@ export default function NppChangelogPage() {
     <div className="mx-auto max-w-4xl px-4 py-8 pb-20">
       <header className="mb-8 overflow-hidden rounded-2xl border border-card-border bg-card shadow-lg">
         <div className="p-6">
-          <h1 className="mb-1 text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="mb-1 text-heading font-bold tracking-tight text-foreground">
             NPP engine changelog
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             How non-player politicians decide, version by version, and what is planned next.
           </p>
         </div>
         <HeroStatsStrip>
           <div className="flex min-w-max flex-col px-5 py-3">
             <span className="text-body-sm font-medium text-muted">Engine</span>
-            <span className="text-base font-bold tabular-nums text-primary">
+            <span className="text-body-lg font-bold tabular-nums text-primary">
               {NPP_ENGINE_VERSION}
             </span>
           </div>
           <div className="flex min-w-max flex-col px-5 py-3">
             <span className="text-body-sm font-medium text-muted">Runs at autonomy</span>
-            <span className="text-base font-bold tabular-nums text-foreground">
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
               {NPP_ENGINE_LEVEL} and above
             </span>
           </div>
           <div className="flex min-w-max flex-col px-5 py-3">
             <span className="text-body-sm font-medium text-muted">Versions</span>
-            <span className="text-base font-bold tabular-nums text-foreground">{versions}</span>
+            <span className="text-body-lg font-bold tabular-nums text-foreground">{versions}</span>
           </div>
           <div className="flex min-w-max flex-col px-5 py-3">
             <span className="text-body-sm font-medium text-muted">Game releases</span>
             <Link
               href="/changelog"
-              className="text-base font-bold text-foreground hover:text-primary"
+              className="text-body-lg font-bold text-foreground hover:text-primary"
             >
               Main changelog
             </Link>

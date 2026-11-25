@@ -101,7 +101,7 @@ export function DeliveryLimitedPill({
   // shortage light, and the tooltip does not exist on touch at all.
   return (
     <span
-      className={`inline-flex max-w-full flex-wrap items-center justify-end gap-x-1 text-right text-[11px] font-medium leading-tight text-warning ${className}`.trim()}
+      className={`inline-flex max-w-full flex-wrap items-center justify-end gap-x-1 text-right text-body-sm font-medium leading-tight text-warning ${className}`.trim()}
       title={`${label} limited. For the worst-affected good this sector makes, ${formatFillPercent(fraction)} could not reach buyers outside this state. Its other goods may be moving fine, so this is not the share of the whole sector's output. ${explanation} ${action} Cutting production is not the fix.`}
     >
       {label}
@@ -217,7 +217,7 @@ export function BuildQueueBadge({
     const label = buildProgressLabel(queue, plantUnits, plantSingular, plantPlural);
     return (
       <span
-        className={`flex flex-col text-[11px] font-medium tabular-nums text-primary ${className}`.trim()}
+        className={`flex flex-col text-body-sm font-medium tabular-nums text-primary ${className}`.trim()}
         aria-label={label}
         title={label}
       >
@@ -238,7 +238,7 @@ export function BuildQueueBadge({
   }
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-primary ${className}`.trim()}
+      className={`inline-flex items-center gap-1 text-body-sm font-medium tabular-nums text-primary ${className}`.trim()}
       aria-label={buildQueueBadgeLabel(queue)}
       title={buildQueueBadgeLabel(queue)}
     >
@@ -383,7 +383,7 @@ export function RunningSoldReading({
   if (plantCount === 0) {
     return (
       <span
-        className={`text-[11px] text-muted ${className}`.trim()}
+        className={`text-body-sm text-muted ${className}`.trim()}
         title="No plants are built yet, so nothing was made or sold."
       >
         Not running yet
@@ -393,7 +393,7 @@ export function RunningSoldReading({
   const used = capacityUsedFraction(produced, capacity);
   const exactFill = fill != null && Number.isFinite(fill);
   return (
-    <span className={`inline-flex flex-col text-[11px] leading-tight ${className}`.trim()}>
+    <span className={`inline-flex flex-col text-body-sm leading-tight ${className}`.trim()}>
       {used != null && (
         <span
           className="tabular-nums"
@@ -461,7 +461,7 @@ export function MothballedPill({
   const sites = facilityPlural(sectorType);
   return (
     <span
-      className={`inline-flex items-center text-[11px] font-medium text-muted ${className}`.trim()}
+      className={`inline-flex items-center text-body-sm font-medium text-muted ${className}`.trim()}
       title={`Mothballed. ${capitalizeFacility(sites)} here produce nothing and pay reduced upkeep. Reactivating is free.`}
     >
       Mothballed

@@ -126,7 +126,7 @@ const clampPolicy = (n: number) => Math.max(POLICY_MIN, Math.min(POLICY_MAX, Mat
 const perTurn = (daily: number) => Math.round(scaleMoney(daily, "turn"));
 
 const cellInput =
-  "h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border bg-background px-1.5 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
+  "h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border bg-background px-1.5 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
 
 /** A value the CEO just saved, shown until the refreshed sector catches up. */
 interface Pending<T> {
@@ -299,9 +299,9 @@ function OperationsRow({
             )}
             <span className="truncate">{sector.displayName ?? sector.stateName}</span>
           </Link>
-          {sector.mothballed && <span className="ml-1.5 text-[11px] text-muted">mothballed</span>}
+          {sector.mothballed && <span className="ml-1.5 text-body-sm text-muted">mothballed</span>}
           {sector.embargoSuspended && (
-            <span className="ml-1.5 text-[11px] text-error">embargo</span>
+            <span className="ml-1.5 text-body-sm text-error">embargo</span>
           )}
         </Td>
         <Td className="text-muted">{sector.sectorLabel}</Td>
@@ -313,7 +313,7 @@ function OperationsRow({
           {fmtSigned(scale(sectorDisplayProfit(sector)))}
           {sector.ownSiteMemoValue != null && sector.ownSiteMemoValue > 0 && (
             <span
-              className="block text-[11px] text-muted"
+              className="block text-body-sm text-muted"
               title="Free transfers book no sale. This is what this site sent your own sites, at its own asking price. This estimate is separate from revenue, profit and net margin."
             >
               {fmt(scale(sector.ownSiteMemoValue))} to own sites
@@ -385,7 +385,7 @@ function OperationsRow({
             className="inline-flex items-center gap-1"
             title={`At the active level: revenue ${effects.revenue.label}, output ${effects.output.label}, inputs ${effects.input.label}. The level moves 1 point per turn toward the target.`}
           >
-            <span className={`text-[12px] ${signTone(active)}`}>{signedPct(active)}</span>
+            <span className={`text-body-sm ${signTone(active)}`}>{signedPct(active)}</span>
             <span aria-hidden className="text-muted/60">
               →
             </span>
@@ -414,7 +414,7 @@ function OperationsRow({
               value={postureValue == null ? "auto" : String(postureValue)}
               disabled={busy}
               onChange={(e) => void commitPosture(e.target.value)}
-              className="h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+              className="h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-body-sm text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
             >
               <option value="auto">Auto</option>
               {POSTURE_STEPS.map((p) => (
@@ -445,7 +445,7 @@ function OperationsRow({
             />
           </Td>
         )}
-        <Td align="right" numeric={false} className="text-xs">
+        <Td align="right" numeric={false} className="text-body-sm">
           <span className="inline-flex items-center justify-end gap-2">
             {status && (
               <span
@@ -470,7 +470,10 @@ function OperationsRow({
       {growthPreview && (
         <tr>
           <td colSpan={columnCount} className="border-b border-card-border/60 px-2 py-1.5">
-            <div className="flex flex-wrap items-center justify-end gap-2 text-xs" role="status">
+            <div
+              className="flex flex-wrap items-center justify-end gap-2 text-body-sm"
+              role="status"
+            >
               <span className="text-foreground">
                 Growth {growthPreview.target}%: about {fmt(perTurn(growthPreview.projected))}/turn
                 once ramped, now {fmt(perTurn(growthPreview.current))}/turn (
@@ -620,7 +623,7 @@ function BulkBar({
     }
   }
 
-  const fieldLabel = "flex items-center gap-1.5 text-xs text-muted";
+  const fieldLabel = "flex items-center gap-1.5 text-body-sm text-muted";
 
   return (
     <div className="space-y-1.5 border-b border-card-border/60 py-2">
@@ -636,7 +639,7 @@ function BulkBar({
               setCapacityPreview(null);
               setMessage(null);
             }}
-            className="h-7 max-w-[16rem] rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
+            className="h-7 max-w-[16rem] rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-body-sm text-foreground focus:border-foreground focus:outline-none"
           >
             {scopes.map((s) => (
               <option key={s.key} value={s.key}>
@@ -684,7 +687,7 @@ function BulkBar({
                 setPosture(e.target.value);
                 setPricingPreview(null);
               }}
-              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none"
+              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-body-sm text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="auto">Auto</option>
               {POSTURE_STEPS.map((p) => (
@@ -779,7 +782,7 @@ function BulkBar({
       </div>
 
       {preview && (
-        <div className="flex flex-wrap items-center gap-2 text-xs" role="status">
+        <div className="flex flex-wrap items-center gap-2 text-body-sm" role="status">
           <span className="text-foreground">
             Growth {preview.target}% on {preview.matched} sectors: about{" "}
             {fmt(perTurn(preview.projected))}/turn once ramped, now {fmt(perTurn(preview.current))}
@@ -805,7 +808,7 @@ function BulkBar({
         </div>
       )}
       {capacityPreview && (
-        <div className="flex flex-wrap items-center gap-2 text-xs" role="status">
+        <div className="flex flex-wrap items-center gap-2 text-body-sm" role="status">
           <span className="text-foreground">
             {capacityPreview.action === "mothball" ? "Mothball" : "Reactivate"}{" "}
             {capacityPreview.eligible} sectors. Production and upkeep adjust next turn.
@@ -833,7 +836,7 @@ function BulkBar({
       )}
       {pricingPreview && (
         <div
-          className="space-y-2 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border/70 bg-background/60 p-2 text-xs"
+          className="space-y-2 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border/70 bg-background/60 p-2 text-body-sm"
           role="status"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1010,7 +1013,7 @@ export default function CeoOperationsTable({
       meta={`${sectors.length} sector${sectors.length === 1 ? "" : "s"}, per turn`}
     >
       {sectors.length === 0 ? (
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           No sectors yet. Found the first plant from the Sectors tab.
         </p>
       ) : (

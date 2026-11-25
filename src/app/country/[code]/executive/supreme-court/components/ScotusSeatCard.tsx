@@ -44,7 +44,7 @@ function LeanBar({ label, value }: { label: string; value: number | null }) {
           />
         )}
       </div>
-      <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-muted">
+      <span className="w-8 shrink-0 text-right text-body-sm tabular-nums text-muted">
         {value != null ? value.toFixed(1) : "-"}
       </span>
     </div>
@@ -115,7 +115,7 @@ export function ScotusSeatCard({
       <div className="flex items-start justify-between gap-2">
         <span className="text-body-sm font-medium text-muted">Seat #{seat.seatNumber}</span>
         {seat.isDivergent && (
-          <span className="rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+          <span className="rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
             Divergent
           </span>
         )}
@@ -123,8 +123,8 @@ export function ScotusSeatCard({
 
       {seat.vacant ? (
         <div className="mt-3">
-          <p className="text-sm italic text-muted">Vacant</p>
-          <p className="mt-1 text-xs text-muted">{vacancyNotice(seat)}</p>
+          <p className="text-body italic text-muted">Vacant</p>
+          <p className="mt-1 text-body-sm text-muted">{vacancyNotice(seat)}</p>
           {canNominate && (
             <Button variant="secondary" onClick={onNominate} className="mt-3">
               Nominate
@@ -136,7 +136,7 @@ export function ScotusSeatCard({
           <div className="flex items-start gap-3">
             <JusticePortrait name={seat.justiceName} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">{seat.justiceName}</p>
+              <p className="truncate text-body font-semibold text-foreground">{seat.justiceName}</p>
               {partyName && partyColor && (
                 <div className="mt-1">
                   <PartyChip
@@ -147,7 +147,7 @@ export function ScotusSeatCard({
                 </div>
               )}
               {seat.originalRoster && (
-                <p className="mt-1 text-[10px] italic text-muted">Original roster</p>
+                <p className="mt-1 text-body-sm italic text-muted">Original roster</p>
               )}
             </div>
           </div>
@@ -155,12 +155,12 @@ export function ScotusSeatCard({
             <InfoTooltip
               width={260}
               trigger={
-                <p className="cursor-help text-[11px] font-medium text-warning">
+                <p className="cursor-help text-body-sm font-medium text-warning">
                   {formatDivergentDeathChance(seat.deathChance, "compact")}
                 </p>
               }
             >
-              <p className="text-left text-sm text-muted">
+              <p className="text-left text-body text-muted">
                 After about two years on the bench, a Divergent Justice has a{" "}
                 {formatDeathChancePercent()} chance each turn of dying in office. The seat then goes
                 vacant for a new nomination.

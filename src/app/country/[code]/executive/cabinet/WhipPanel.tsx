@@ -156,7 +156,7 @@ export function WhipPanel({ countryId }: { countryId: string }) {
     >
       <h2
         id="cabinet-whip-heading"
-        className="text-sm font-semibold uppercase tracking-widest text-muted"
+        className="text-body font-semibold uppercase tracking-widest text-muted"
       >
         Party whip
       </h2>
@@ -164,7 +164,7 @@ export function WhipPanel({ countryId }: { countryId: string }) {
       {error && (
         <p
           role="alert"
-          className="mt-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
+          className="mt-2 rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error"
         >
           {error}
         </p>
@@ -181,7 +181,7 @@ export function WhipPanel({ countryId }: { countryId: string }) {
           onChange={(e) => setCharacterId(e.target.value)}
           placeholder="Character ID of the rebel MP"
           disabled={acting["withdraw"] === true}
-          className="flex-1 rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted disabled:opacity-50"
+          className="flex-1 rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted disabled:opacity-50"
         />
         <Button
           variant="secondary"
@@ -194,13 +194,13 @@ export function WhipPanel({ countryId }: { countryId: string }) {
       </div>
 
       <div className="mt-4">
-        <h3 className="text-sm font-semibold text-muted">Suspended MPs</h3>
+        <h3 className="text-body-lg font-semibold text-muted">Suspended MPs</h3>
         {loading ? (
-          <p className="mt-2 text-sm text-muted" aria-live="polite">
+          <p className="mt-2 text-body text-muted" aria-live="polite">
             Loading suspensions...
           </p>
         ) : withdrawn.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No MPs are currently suspended.</p>
+          <p className="mt-2 text-body text-muted">No MPs are currently suspended.</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {withdrawn.map((mp) => (
@@ -211,11 +211,11 @@ export function WhipPanel({ countryId }: { countryId: string }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground">
                     {mp.characterName}{" "}
-                    <span className="ml-1 rounded bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+                    <span className="ml-1 rounded bg-warning/15 px-2 py-0.5 text-body-sm font-medium text-warning">
                       Whip withdrawn
                     </span>
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     {mp.constituency ?? "Unknown seat"} · Reselection risk: {mp.reselectionRisk}
                   </p>
                 </div>

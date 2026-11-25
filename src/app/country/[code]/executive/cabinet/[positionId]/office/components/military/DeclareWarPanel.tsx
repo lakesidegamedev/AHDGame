@@ -139,13 +139,13 @@ export function DeclareWarPanel({
       }
     >
       {filed ? (
-        <p className="text-[12px] text-success" role="status">
+        <p className="text-body-sm text-success" role="status">
           Declaration filed. It now goes before the legislature, which must pass it by a two-thirds
           supermajority before the war begins.
         </p>
       ) : (
         <>
-          <p className="mb-3 text-[12px] text-muted">
+          <p className="mb-3 text-body-sm text-muted">
             Passing this does not begin a war on its own. It puts a declaration before the
             legislature, which must carry it by a{" "}
             <strong>two-thirds supermajority of votes cast</strong> in every chamber. Only the head
@@ -163,7 +163,7 @@ export function DeclareWarPanel({
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               disabled={!canAct}
-              className="min-w-[160px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+              className="min-w-[160px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
             >
               <option value="">
                 {targets.length === 0 ? "Loading countries…" : "Select a country…"}
@@ -185,7 +185,7 @@ export function DeclareWarPanel({
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               disabled={!canAct}
-              className="min-w-[160px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+              className="min-w-[160px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
             >
               <option value="">Select a war goal…</option>
               {WAR_GOALS.map((g) => (
@@ -201,16 +201,16 @@ export function DeclareWarPanel({
           </div>
 
           {noOpenTarget && (
-            <p className="mt-2 text-[11px] text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               Every other country open to players is greyed out: war can only be declared on a
               country players can run, and each of those is currently an ally or under a truce.
             </p>
           )}
 
-          {selectedGoal && <p className="mt-2 text-[11px] text-muted">{selectedGoal.blurb}</p>}
+          {selectedGoal && <p className="mt-2 text-body-sm text-muted">{selectedGoal.blurb}</p>}
 
           {targetIsAlly && (
-            <p className="mt-2 text-[11px] text-warning">
+            <p className="mt-2 text-body-sm text-warning">
               {alliance
                 ? `You and that country are both members of the ${alliance}. You cannot declare war on an ally. Withdraw from the alliance first.`
                 : "You and that country belong to the same alliance bloc. You cannot declare war on an ally."}
@@ -218,14 +218,14 @@ export function DeclareWarPanel({
           )}
 
           {trucedUntil !== undefined && (
-            <p className="mt-2 text-[11px] text-warning">
+            <p className="mt-2 text-body-sm text-warning">
               A truce with that country holds until turn {trucedUntil}. You cannot declare war on
               them before then.
             </p>
           )}
 
           {error && (
-            <p role="alert" className="mt-2 text-[11px] text-error">
+            <p role="alert" className="mt-2 text-body-sm text-error">
               {error}
             </p>
           )}
@@ -234,7 +234,7 @@ export function DeclareWarPanel({
             type="button"
             onClick={submit}
             disabled={!canAct || !ready}
-            className="mt-3 w-full rounded-lg bg-[var(--gov)] py-2.5 text-[12px] font-bold text-[#1a1200] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 w-full rounded-lg bg-[var(--gov)] py-2.5 text-body-sm font-bold text-[#1a1200] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? "Filing…" : "File declaration of war"}
           </button>

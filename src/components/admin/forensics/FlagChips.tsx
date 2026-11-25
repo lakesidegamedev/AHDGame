@@ -20,7 +20,7 @@ function labelFor(flag: string): string {
 
 export function FlagChips({ flags, activeFlag, onSelect, size = "xs" }: FlagChipsProps) {
   if (!flags || flags.length === 0) return null;
-  const pad = size === "sm" ? "px-2 py-0.5 text-xs" : "px-1.5 py-0.5 text-[10px]";
+  const pad = size === "sm" ? "px-2 py-0.5 text-body-sm" : "px-1.5 py-0.5 text-body-sm";
 
   return (
     <div className="flex flex-wrap gap-1">

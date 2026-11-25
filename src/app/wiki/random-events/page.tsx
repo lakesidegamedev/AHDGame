@@ -49,7 +49,7 @@ export default async function RandomEventsWikiPage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-primary">
           Wiki
         </Link>
@@ -58,7 +58,7 @@ export default async function RandomEventsWikiPage() {
       </nav>
 
       <header className="mb-8 border-b border-card-border pb-6">
-        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           Random events
         </h1>
         <p className="mt-3 max-w-2xl text-muted">
@@ -72,14 +72,14 @@ export default async function RandomEventsWikiPage() {
       {events.length === 0 ? (
         <div className="rounded-xl border border-dashed border-card-border bg-card/40 p-12 text-center">
           <p className="font-medium text-muted">No approved events found.</p>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             Run <strong>Reseed &amp; approve all</strong> from Admin → World → Random Events to
             populate this page.
           </p>
         </div>
       ) : (
         <>
-          <p className="mb-6 text-sm text-muted">{events.length} events</p>
+          <p className="mb-6 text-body text-muted">{events.length} events</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {events.map((ev) => (
               <EventCard key={ev._id} event={ev} />
@@ -99,7 +99,7 @@ function EventCard({ event }: { event: EventDef }) {
           <Image src={event.image} alt={event.title} fill className="object-cover" unoptimized />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-card to-card/40">
-            <span className="tabular-nums text-xs text-muted">{event.kind}</span>
+            <span className="tabular-nums text-body-sm text-muted">{event.kind}</span>
           </div>
         )}
       </div>
@@ -111,14 +111,14 @@ function EventCard({ event }: { event: EventDef }) {
           {event.eligibility.map((e) => (
             <span
               key={e}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${ELIGIBILITY_STYLES[e] ?? "bg-muted/15 text-muted"}`}
+              className={`rounded-full px-2 py-0.5 text-body-sm font-semibold ${ELIGIBILITY_STYLES[e] ?? "bg-muted/15 text-muted"}`}
             >
               {e}
             </span>
           ))}
         </div>
 
-        <p className="mt-2 line-clamp-3 text-sm text-muted">{event.body}</p>
+        <p className="mt-2 line-clamp-3 text-body text-muted">{event.body}</p>
       </div>
     </div>
   );

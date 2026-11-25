@@ -8,7 +8,7 @@ export function ModelledMarginMark({ modelled }: { modelled?: boolean }) {
     <span
       data-testid="modelled-margin-mark"
       title={MODELLED_MARGIN_TITLE}
-      className="ml-1 cursor-help font-sans text-[10px] font-normal text-muted"
+      className="ml-1 cursor-help font-sans text-body-sm font-normal text-muted"
     >
       est.
     </span>

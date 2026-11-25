@@ -168,7 +168,7 @@ function CreditCompositeChart({ points }: { points: CorpHistoryPoint[] }) {
   );
   if (creditPts.length < 2) {
     return (
-      <p className="py-2 text-xs text-muted">
+      <p className="py-2 text-body-sm text-muted">
         Composite history appears after at least two hourly turns with credit snapshots saved.
       </p>
     );
@@ -298,16 +298,16 @@ function WhatIfDebtPanel({
   return (
     <DenseSection title="What-if debt" meta="simplified, ignores issuance fees">
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Raise or repay face value at your current average coupon. Cash moves one for one with the
           debt. Repayments are spread proportionally across existing bonds; estimated future income
           stays fixed.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor="credit-debt-delta" className="text-xs text-muted">
+          <label htmlFor="credit-debt-delta" className="text-body-sm text-muted">
             Change in debt
           </label>
-          <span className="font-mono text-[13px] tabular-nums text-foreground">
+          <span className="font-mono text-body-sm tabular-nums text-foreground">
             {clampedDebtDelta >= 0 ? "+" : ""}
             {formatAmount(clampedDebtDelta)}
           </span>
@@ -324,11 +324,11 @@ function WhatIfDebtPanel({
             className="w-full accent-primary"
           />
         ) : (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             No range to explore: no debt to repay and no room to issue more, or debt is at the cap.
           </p>
         )}
-        <div className="flex flex-wrap justify-between gap-2 font-mono text-[11px] tabular-nums text-muted">
+        <div className="flex flex-wrap justify-between gap-2 font-mono text-body-sm tabular-nums text-muted">
           <span>Repay up to {formatAmount(bondInfo.totalDebt)}</span>
           <span>
             Issue up to {formatAmount(debtSliderBounds.max)} (
@@ -421,7 +421,7 @@ export default function CreditRatingTab({
 
   if (!bondInfo?.creditRating || !hasCreditRatingDetails(bondInfo.creditRating)) {
     return (
-      <p className="border-y border-card-border py-2 text-xs text-muted">
+      <p className="border-y border-card-border py-2 text-body-sm text-muted">
         Credit rating data not available.{" "}
         <a href="#corp-bonds" className="text-foreground underline underline-offset-2">
           Bonds {bondsArrow}
@@ -450,7 +450,7 @@ export default function CreditRatingTab({
     <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 space-y-6">
         {bondInfo.bondDefaultCreditPenalty?.active && (
-          <p role="status" className="border-y border-error/40 py-2 text-xs text-foreground">
+          <p role="status" className="border-y border-error/40 py-2 text-body-sm text-foreground">
             <span className="font-semibold text-error">Default penalty.</span> The rating is held at
             CCC after a bond default
             {bondInfo.bondDefaultCreditPenalty.untilTurn != null
@@ -466,7 +466,7 @@ export default function CreditRatingTab({
           actions={
             <a
               href="#corp-bonds"
-              className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+              className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
             >
               Bonds and issuance {bondsArrow}
             </a>
@@ -537,7 +537,7 @@ export default function CreditRatingTab({
           <div className="pb-1 pt-3">
             <RatingScale rating={cr.rating} />
           </div>
-          {hint && <p className="pt-1.5 text-xs text-muted">{hint}</p>}
+          {hint && <p className="pt-1.5 text-body-sm text-muted">{hint}</p>}
           <table className="mt-2 w-full border-collapse">
             <thead>
               <tr>
@@ -590,7 +590,9 @@ export default function CreditRatingTab({
                           </span>
                         </span>
                       </Td>
-                      <Td className="hidden text-xs text-muted sm:table-cell">{detail ?? ""}</Td>
+                      <Td className="hidden text-body-sm text-muted sm:table-cell">
+                        {detail ?? ""}
+                      </Td>
                     </tr>
                   );
                 }
@@ -630,7 +632,7 @@ export default function CreditRatingTab({
         )}
 
         <DenseSection title="History" meta="end-of-turn composite">
-          <p className="py-1 text-xs text-muted">
+          <p className="py-1 text-body-sm text-muted">
             Tier changes also go out on the{" "}
             <Link href="/news" className="text-foreground underline underline-offset-2">
               wire
@@ -734,7 +736,7 @@ export default function CreditRatingTab({
             </TableScroll>
             {isFiniteNumber(peerStats.you.composite) &&
               isFiniteNumber(peerStats.countryPeers?.avgComposite) && (
-                <p className="pt-1.5 text-xs text-muted">
+                <p className="pt-1.5 text-body-sm text-muted">
                   You are{" "}
                   <span className="font-mono text-foreground">
                     {(peerStats.you.composite - peerStats.countryPeers.avgComposite).toFixed(1)}
@@ -765,7 +767,7 @@ export default function CreditRatingTab({
                     <Td className={current ? "text-foreground" : "text-muted"}>
                       {grade}
                       {current && (
-                        <span className="ml-1.5 text-[11px] font-normal text-muted">you</span>
+                        <span className="ml-1.5 text-body-sm font-normal text-muted">you</span>
                       )}
                     </Td>
                     <Td align="right" className={current ? "text-foreground" : "text-muted"}>

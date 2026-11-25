@@ -27,7 +27,7 @@ describe("marketedWorld", () => {
 
   it("falls back to a known era when the seed year has no landing config", () => {
     expect(toEraId(1953)).toBe("1953");
-    expect(toEraId(1861)).toBe("1979");
+    expect(toEraId(1861)).toBe("2027");
   });
 
   it("derives the era roster from the landing configs", () => {
@@ -35,6 +35,13 @@ describe("marketedWorld", () => {
     expect(roster.player).toEqual(["US", "UK", "RU", "DD"]);
     expect(roster.econ).toContain("DE");
     expect(roster.econ).not.toContain("US");
+  });
+
+  it("describes the current 22-country world by default", () => {
+    const world = fallbackMarketedWorld();
+    expect(world.presentCountryCount).toBe(22);
+    expect(world.playable.map(({ id }) => id).sort()).toEqual(["CA", "US"]);
+    expect(world.simulatedNpp.map(({ id }) => id).sort()).toEqual(["CN", "DE", "JP", "UK"]);
   });
 
   it("names countries for the era, not for the present day", () => {

@@ -75,16 +75,16 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-card-border bg-card p-6">
-        <h2 className="text-sm text-muted">{t(keys.desire)}</h2>
-        <div className="mt-2 text-5xl font-bold tabular-nums">{data.previous.toFixed(2)}</div>
-        <p className="mt-2 text-sm tabular-nums text-muted">
+        <h2 className="text-body text-muted">{t(keys.desire)}</h2>
+        <div className="mt-2 text-display font-bold tabular-nums">{data.previous.toFixed(2)}</div>
+        <p className="mt-2 text-body tabular-nums text-muted">
           {t("lastTurn", { value: formatDesireDrift(data.trend) })}
         </p>
-        <p className="mt-1 text-xs text-muted">{t("scale")}</p>
-        <p className="mt-3 text-sm tabular-nums">
+        <p className="mt-1 text-body-sm text-muted">{t("scale")}</p>
+        <p className="mt-3 text-body tabular-nums">
           {t("annualForecast", { value: formatDesireDrift(forecast.annualChange) })}
         </p>
-        <p className="mt-1 text-sm tabular-nums">
+        <p className="mt-1 text-body tabular-nums">
           {forecast.turnsToThreshold === 0
             ? t("thresholdMet", { threshold: forecast.threshold })
             : forecast.turnsToThreshold != null
@@ -95,7 +95,7 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
                 })
               : t("thresholdNotReached", { threshold: forecast.threshold })}
         </p>
-        <p className="mt-1 text-xs text-muted">{t("forecastHelp")}</p>
+        <p className="mt-1 text-body-sm text-muted">{t("forecastHelp")}</p>
         <div className="mt-4 h-3 overflow-hidden rounded-full bg-card-border" aria-hidden>
           <div
             className="h-full bg-primary"
@@ -111,14 +111,14 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
           ] as const
         ).map(([label, policy]) => (
           <section key={label} className="rounded-xl border border-card-border bg-card p-4">
-            <h3 className="text-xs text-muted">{t(label)}</h3>
+            <h3 className="text-body-lg text-muted">{t(label)}</h3>
             <p className="mt-1 font-semibold">{t(stanceMessageKey(data.stateId, policy))}</p>
           </section>
         ))}
       </div>
       <section className="rounded-xl border border-card-border bg-card p-6">
-        <h2 className="text-sm text-muted">{t("drivers")}</h2>
-        <ul className="mt-3 space-y-2 text-sm">
+        <h2 className="text-body text-muted">{t("drivers")}</h2>
+        <ul className="mt-3 space-y-2 text-body">
           {rows.map(([label, value]) => (
             <li key={label} className="flex justify-between gap-4">
               <span>{label}</span>
@@ -130,11 +130,11 @@ export function DevolutionDesireReadout({ data }: { data: DesireReadoutData }) {
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex justify-between gap-4 border-t border-card-border pt-3 text-sm font-medium">
+        <div className="mt-4 flex justify-between gap-4 border-t border-card-border pt-3 text-body font-medium">
           <span>{t("net")}</span>
           <span className="tabular-nums">{formatDesireDrift(data.delta)}</span>
         </div>
-        <p className="mt-3 text-xs text-muted">{t(keys.policyHelp)}</p>
+        <p className="mt-3 text-body-sm text-muted">{t(keys.policyHelp)}</p>
       </section>
     </div>
   );

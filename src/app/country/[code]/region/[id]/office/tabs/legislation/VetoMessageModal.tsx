@@ -69,10 +69,10 @@ export function VetoMessageModal({
       aria-labelledby="veto-modal-title"
     >
       <div className="w-full max-w-lg rounded-2xl border border-card-border bg-card p-6 shadow-modal">
-        <h2 id="veto-modal-title" className="text-lg font-semibold mb-1">
+        <h2 id="veto-modal-title" className="text-heading font-semibold mb-1">
           Veto &ldquo;{billTitle}&rdquo;
         </h2>
-        <p className="text-sm text-muted mb-4">
+        <p className="text-body text-muted mb-4">
           A public message is required. It will appear in the news feed and on the bill page.
         </p>
         <textarea
@@ -80,12 +80,12 @@ export function VetoMessageModal({
           onChange={(e) => setMessage(e.target.value)}
           maxLength={VETO_MESSAGE_MAX_LENGTH}
           rows={4}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           placeholder="Why are you vetoing this bill?"
           disabled={submitting}
           aria-label="Veto message"
         />
-        <div className="mt-1 flex justify-between text-xs text-muted">
+        <div className="mt-1 flex justify-between text-body-sm text-muted">
           <span>
             {trimmedLength < VETO_MESSAGE_MIN_LENGTH
               ? `Minimum ${VETO_MESSAGE_MIN_LENGTH} characters`
@@ -95,19 +95,19 @@ export function VetoMessageModal({
             {trimmedLength}/{VETO_MESSAGE_MAX_LENGTH}
           </span>
         </div>
-        <InlineError error={error} className="mt-3 text-sm text-error" />
+        <InlineError error={error} className="mt-3 text-body text-error" />
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
+            className="rounded-lg px-3 py-1.5 text-body text-muted hover:bg-background/60"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit || submitting}
-            className="rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/80 disabled:opacity-50"
+            className="rounded-lg bg-error px-3 py-1.5 text-body font-medium text-white hover:bg-error/80 disabled:opacity-50"
           >
             {submitting ? "Vetoing…" : "Veto with message"}
           </button>

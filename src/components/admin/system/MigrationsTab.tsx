@@ -225,15 +225,15 @@ export function MigrationsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Database migrations</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-heading font-semibold">Database migrations</h2>
+        <p className="mt-1 text-body text-muted">
           Run one-time database migrations. Each migration should only be run once.
         </p>
       </div>
 
       {message && (
         <div
-          className={`rounded-lg p-4 text-sm ${
+          className={`rounded-lg p-4 text-body ${
             message.type === "success"
               ? "bg-green-500/10 border border-green-500/30 text-green-400"
               : "bg-red-500/10 border border-red-500/30 text-red-400"
@@ -251,7 +251,7 @@ export function MigrationsTab() {
                 <div className="flex items-center gap-3">
                   <h3 className="font-medium">{migration.name}</h3>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${
                       migration.status === "completed"
                         ? "bg-green-500/20 text-green-400"
                         : migration.status === "failed"
@@ -264,21 +264,21 @@ export function MigrationsTab() {
                     {migration.status === "running" ? "Running..." : migration.status}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted">{migration.description}</p>
+                <p className="mt-1 text-body text-muted">{migration.description}</p>
                 {migration.completedAt && (
-                  <p className="mt-2 text-xs text-muted">
+                  <p className="mt-2 text-body-sm text-muted">
                     Completed: <LocalTime value={migration.completedAt} />
                   </p>
                 )}
                 {migration.result && migration.status === "completed" && (
-                  <p className="mt-1 text-xs text-green-400">{migration.result}</p>
+                  <p className="mt-1 text-body-sm text-green-400">{migration.result}</p>
                 )}
                 {migration.result && migration.status === "failed" && (
-                  <p className="mt-1 text-xs text-red-400">{migration.result}</p>
+                  <p className="mt-1 text-body-sm text-red-400">{migration.result}</p>
                 )}
                 {migration.diagnoseResult && (
                   <p
-                    className={`mt-1 text-xs ${migration.diagnoseResult.status === "ok" ? "text-green-400" : "text-yellow-400"}`}
+                    className={`mt-1 text-body-sm ${migration.diagnoseResult.status === "ok" ? "text-green-400" : "text-yellow-400"}`}
                   >
                     Diagnosis: {migration.diagnoseResult.message}
                   </p>
@@ -289,7 +289,7 @@ export function MigrationsTab() {
                   <button
                     onClick={() => runDiagnose(migration)}
                     disabled={loading !== null || diagnosing !== null}
-                    className="min-h-[44px] rounded-lg border border-card-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
+                    className="min-h-[44px] rounded-lg border border-card-border bg-background px-4 py-2 text-body font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
                   >
                     {diagnosing === migration.id ? "Diagnosing..." : "Diagnose"}
                   </button>
@@ -297,7 +297,7 @@ export function MigrationsTab() {
                 {migration.status === "failed" && (
                   <button
                     onClick={() => deleteMigrationRecord(migration.id)}
-                    className="min-h-[44px] rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
+                    className="min-h-[44px] rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-body font-medium text-red-400 transition-colors hover:bg-red-500/20"
                   >
                     Delete record
                   </button>
@@ -307,10 +307,10 @@ export function MigrationsTab() {
                   disabled={
                     loading !== null || diagnosing !== null || migration.status === "completed"
                   }
-                  className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`min-h-[44px] rounded-lg px-4 py-2 text-body font-medium transition-colors ${
                     migration.status === "completed"
                       ? "bg-muted/20 text-muted cursor-not-allowed"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   }`}
                 >
                   {loading === migration.id
@@ -329,7 +329,7 @@ export function MigrationsTab() {
         <div className="space-y-4">
           <div>
             <h3 className="text-md font-semibold">Old migration records</h3>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               These migration records exist in the database but are no longer defined. You can
               delete them to clean up.
             </p>
@@ -338,15 +338,15 @@ export function MigrationsTab() {
             <div key={record.id} className="rounded-xl border border-card-border bg-card/50 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-mono text-sm">{record.id}</p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="font-mono text-body">{record.id}</p>
+                  <p className="mt-1 text-body-sm text-muted">
                     Completed: <LocalTime value={record.completedAt} />
                   </p>
-                  {record.result && <p className="mt-1 text-xs text-muted">{record.result}</p>}
+                  {record.result && <p className="mt-1 text-body-sm text-muted">{record.result}</p>}
                 </div>
                 <button
                   onClick={() => deleteMigrationRecord(record.id)}
-                  className="min-h-[44px] rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20"
+                  className="min-h-[44px] rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-body font-medium text-red-400 transition-colors hover:bg-red-500/20"
                 >
                   Delete record
                 </button>
@@ -356,7 +356,7 @@ export function MigrationsTab() {
         </div>
       )}
 
-      <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-400">
+      <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-body text-yellow-400">
         <strong>Warning:</strong> Migrations modify the database directly. Make sure to back up your
         data before running migrations in production.
       </div>

@@ -28,6 +28,7 @@ import {
   sovereigntyRegionIn,
 } from "@/lib/referendum/rules/sovereigntyRegions";
 import { TabFallback } from "@/components/state/TabFallback";
+import { pillClass } from "@/components/ui/selectedState";
 
 // Only the Overview tab is open on arrival; the others are one click away and
 // each pulls its own heavy tree (the legislation tab drags the metric catalog
@@ -174,12 +175,12 @@ export function GovernorOfficeClient(props: Props) {
             <div className="absolute inset-0 flex flex-col justify-between px-6 py-5">
               <Link
                 href={regionUrl(props.countryId, props.stateId)}
-                className="self-start text-xs text-white/80 hover:text-white drop-shadow"
+                className="self-start text-body-sm text-white/80 hover:text-white drop-shadow"
                 aria-label={`Back to ${props.stateName}`}
               >
                 ← {props.stateName}
               </Link>
-              <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+              <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
                 {officePageHeading}
               </h1>
             </div>
@@ -198,17 +199,19 @@ export function GovernorOfficeClient(props: Props) {
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card-border text-xs text-muted shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card-border text-body-sm text-muted shrink-0">
                     {props.officeHolderName.charAt(0)}
                   </div>
                 )}
                 <div className="flex flex-col min-w-0">
                   <span className="text-body-sm font-medium text-muted">{props.regionalTitle}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold truncate">{props.officeHolderName}</span>
+                    <span className="text-body font-semibold truncate">
+                      {props.officeHolderName}
+                    </span>
                     {props.officeHolderPartyAbbreviation && (
                       <span
-                        className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white"
+                        className="rounded-full px-1.5 py-0.5 text-body-sm font-semibold text-white"
                         style={{
                           backgroundColor: props.officeHolderPartyColor ?? "#666",
                         }}
@@ -226,7 +229,7 @@ export function GovernorOfficeClient(props: Props) {
             )}
             <div className="flex flex-col px-5 py-3">
               <span className="text-body-sm font-medium text-muted">Office action points</span>
-              <span className="text-base font-bold tabular-nums">
+              <span className="text-body-lg font-bold tabular-nums">
                 {props.gubernatorialActions}/{GUBERNATORIAL_ACTION_CAP}
               </span>
               {props.viewerIsHolder && (
@@ -244,23 +247,19 @@ export function GovernorOfficeClient(props: Props) {
             {props.viewerIsAdmin && !props.viewerIsHolder && (
               <div className="flex flex-col px-5 py-3">
                 <span className="text-body-sm font-medium text-muted">Mode</span>
-                <span className="text-base font-bold text-primary">Admin view</span>
+                <span className="text-body-lg font-bold text-primary">Admin view</span>
               </div>
             )}
           </div>
           <nav
-            className="flex overflow-x-auto scrollbar-hide border-t border-card-border"
+            className="flex gap-1 overflow-x-auto scrollbar-hide border-t border-card-border p-2"
             aria-label="Office sections"
           >
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setSelectedTab(tab.key)}
-                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
-                  active === tab.key
-                    ? "border-b-2 border-primary text-foreground font-medium"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${pillClass(active === tab.key)}`}
                 aria-current={active === tab.key ? "page" : undefined}
               >
                 {tab.label}

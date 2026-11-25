@@ -67,8 +67,8 @@ export default async function WikiEditPage({ params }: EditPageProps) {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-[1100px] px-4 py-7 sm:px-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Edit wiki page</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-heading font-bold text-foreground">Edit wiki page</h1>
+          <p className="mt-1 text-body text-muted">
             {canPublishDirectly
               ? "Edit and publish changes immediately."
               : "Submit changes for admin review."}

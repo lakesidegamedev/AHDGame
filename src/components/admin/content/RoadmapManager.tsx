@@ -287,9 +287,9 @@ export function RoadmapManager() {
 
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-bold text-foreground">Roadmap manager</h2>
+      <h2 className="text-heading font-bold text-foreground">Roadmap manager</h2>
       {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-sm text-red-400">
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-body text-red-400">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">
             dismiss
@@ -303,7 +303,7 @@ export function RoadmapManager() {
           onClick={() => setCatOpen(!catOpen)}
           className="flex w-full items-center justify-between text-left"
         >
-          <h3 className="text-lg font-semibold text-foreground">Manage categories</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">Manage categories</h3>
           <span className="text-muted">{catOpen ? "▲" : "▼"}</span>
         </button>
 
@@ -317,24 +317,24 @@ export function RoadmapManager() {
                   className="rounded-lg border border-card-border bg-background p-3"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium text-foreground text-sm flex-1">{cat.name}</span>
+                    <span className="font-medium text-foreground text-body flex-1">{cat.name}</span>
                     <button
                       onClick={() => moveCat(cat, "up")}
                       disabled={idx === 0}
-                      className="text-xs text-muted hover:text-foreground disabled:opacity-30"
+                      className="text-body-sm text-muted hover:text-foreground disabled:opacity-30"
                     >
                       ▲
                     </button>
                     <button
                       onClick={() => moveCat(cat, "down")}
                       disabled={idx === categories.length - 1}
-                      className="text-xs text-muted hover:text-foreground disabled:opacity-30"
+                      className="text-body-sm text-muted hover:text-foreground disabled:opacity-30"
                     >
                       ▼
                     </button>
                     <button
                       onClick={() => deleteCategory(cat)}
-                      className="text-xs text-red-400 hover:text-red-300"
+                      className="text-body-sm text-red-400 hover:text-red-300"
                     >
                       ✕
                     </button>
@@ -343,7 +343,7 @@ export function RoadmapManager() {
                     {cat.subcategories.map((sub) => (
                       <span
                         key={sub}
-                        className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                        className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-body-sm text-primary"
                       >
                         {sub}
                         <button
@@ -363,12 +363,12 @@ export function RoadmapManager() {
                         setNewSubcatInputs((p) => ({ ...p, [cat._id]: e.target.value }))
                       }
                       placeholder="Add subcategory..."
-                      className="flex-1 rounded border border-card-border bg-card px-2 py-1 text-xs text-foreground placeholder:text-muted"
+                      className="flex-1 rounded border border-card-border bg-card px-2 py-1 text-body-sm text-foreground placeholder:text-muted"
                       onKeyDown={(e) => e.key === "Enter" && addSubcategory(cat)}
                     />
                     <button
                       onClick={() => addSubcategory(cat)}
-                      className="rounded bg-primary/20 px-2 py-1 text-xs text-primary hover:bg-primary/30"
+                      className="rounded bg-primary/20 px-2 py-1 text-body-sm text-primary hover:bg-primary/30"
                     >
                       Add
                     </button>
@@ -382,13 +382,13 @@ export function RoadmapManager() {
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
                 placeholder="New category name..."
-                className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted"
+                className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body text-foreground placeholder:text-muted"
                 onKeyDown={(e) => e.key === "Enter" && addCategory()}
               />
               <button
                 onClick={addCategory}
                 disabled={!newCatName.trim()}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+                className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 Add category
               </button>
@@ -409,11 +409,11 @@ export function RoadmapManager() {
         return (
           <div key={phase.id} className="rounded-xl border border-card-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-body-lg font-semibold text-foreground">
                 {phase.label}{" "}
-                <span className="text-sm font-normal text-muted">({phase.version})</span>
+                <span className="text-body font-normal text-muted">({phase.version})</span>
               </h3>
-              <span className="text-sm text-muted">
+              <span className="text-body text-muted">
                 {completed}/{total} complete ({pct}%)
               </span>
             </div>
@@ -439,7 +439,7 @@ export function RoadmapManager() {
                   <button
                     onClick={() => toggleStatus(item)}
                     aria-label={`Status: ${item.status}. Click to cycle.`}
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-body-sm ${
                       item.status === "completed"
                         ? "border-green-500 bg-green-500/20 text-green-400"
                         : item.status === "in-progress"
@@ -454,20 +454,22 @@ export function RoadmapManager() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-sm font-medium ${item.status === "completed" ? "line-through text-muted" : "text-foreground"}`}
+                        className={`text-body font-medium ${item.status === "completed" ? "line-through text-muted" : "text-foreground"}`}
                       >
                         {item.title}
                       </span>
                       {item.category && (
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-body-sm text-primary">
                           {item.category}
                           {item.subcategory ? ` / ${item.subcategory}` : ""}
                         </span>
                       )}
                     </div>
-                    {item.description && <p className="text-xs text-muted">{item.description}</p>}
+                    {item.description && (
+                      <p className="text-body-sm text-muted">{item.description}</p>
+                    )}
                     {item.completedAt && (
-                      <p className="text-xs text-green-400/70">
+                      <p className="text-body-sm text-green-400/70">
                         Completed{" "}
                         <LocalTime value={item.completedAt} options={{ dateStyle: "medium" }} />
                       </p>
@@ -481,7 +483,7 @@ export function RoadmapManager() {
                       const val = e.target.value || null;
                       updateItemCategory(item, val, null);
                     }}
-                    className="rounded border border-card-border bg-background px-1.5 py-0.5 text-xs text-foreground"
+                    className="rounded border border-card-border bg-background px-1.5 py-0.5 text-body-sm text-foreground"
                     title="Category"
                   >
                     <option value="">None</option>
@@ -501,7 +503,7 @@ export function RoadmapManager() {
                           onChange={(e) =>
                             updateItemCategory(item, item.category!, e.target.value || null)
                           }
-                          className="rounded border border-card-border bg-background px-1.5 py-0.5 text-xs text-foreground"
+                          className="rounded border border-card-border bg-background px-1.5 py-0.5 text-body-sm text-foreground"
                           title="Subcategory"
                         >
                           <option value="">None</option>
@@ -520,7 +522,7 @@ export function RoadmapManager() {
                     disabled={idx === 0}
                     aria-label="Move up"
                     title="Move up"
-                    className="text-xs text-muted hover:text-foreground disabled:opacity-30"
+                    className="text-body-sm text-muted hover:text-foreground disabled:opacity-30"
                   >
                     ▲
                   </button>
@@ -529,7 +531,7 @@ export function RoadmapManager() {
                     disabled={idx === phaseItems.length - 1}
                     aria-label="Move down"
                     title="Move down"
-                    className="text-xs text-muted hover:text-foreground disabled:opacity-30"
+                    className="text-body-sm text-muted hover:text-foreground disabled:opacity-30"
                   >
                     ▼
                   </button>
@@ -537,7 +539,7 @@ export function RoadmapManager() {
                   {/* Delete */}
                   <button
                     onClick={() => deleteItem(item._id)}
-                    className="text-xs text-red-400 hover:text-red-300"
+                    className="text-body-sm text-red-400 hover:text-red-300"
                     title="Delete"
                     aria-label="Delete"
                   >
@@ -555,7 +557,7 @@ export function RoadmapManager() {
                   value={newTitle[phase.id]}
                   onChange={(e) => setNewTitle((p) => ({ ...p, [phase.id]: e.target.value }))}
                   placeholder="New item title..."
-                  className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted"
+                  className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body text-foreground placeholder:text-muted"
                   onKeyDown={(e) => e.key === "Enter" && addItem(phase.id)}
                 />
                 <input
@@ -563,7 +565,7 @@ export function RoadmapManager() {
                   value={newDesc[phase.id]}
                   onChange={(e) => setNewDesc((p) => ({ ...p, [phase.id]: e.target.value }))}
                   placeholder="Description (optional)"
-                  className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted"
+                  className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body text-foreground placeholder:text-muted"
                   onKeyDown={(e) => e.key === "Enter" && addItem(phase.id)}
                 />
               </div>
@@ -574,7 +576,7 @@ export function RoadmapManager() {
                     setNewCategory((p) => ({ ...p, [phase.id]: e.target.value }));
                     setNewSubcategory((p) => ({ ...p, [phase.id]: "" }));
                   }}
-                  className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm text-foreground"
+                  className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body text-foreground"
                 >
                   <option value="">No category</option>
                   {categories.map((c) => (
@@ -589,7 +591,7 @@ export function RoadmapManager() {
                     onChange={(e) =>
                       setNewSubcategory((p) => ({ ...p, [phase.id]: e.target.value }))
                     }
-                    className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm text-foreground"
+                    className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body text-foreground"
                   >
                     <option value="">No subcategory</option>
                     {selectedCat.subcategories.map((s) => (
@@ -602,7 +604,7 @@ export function RoadmapManager() {
                 <button
                   onClick={() => addItem(phase.id)}
                   disabled={!newTitle[phase.id]?.trim() || saving}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                 >
                   Add
                 </button>

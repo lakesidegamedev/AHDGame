@@ -170,13 +170,13 @@ export function BondsAdminPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold">Bonds</h2>
+        <h2 className="text-heading font-semibold">Bonds</h2>
         <div className="flex flex-wrap gap-2">
           {(["", "sovereign", "corporate"] as const).map((t) => (
             <button
               key={t || "all"}
               onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
                 typeFilter === t
                   ? "bg-primary text-primary-foreground"
                   : "bg-card border border-card-border text-muted hover:text-foreground"
@@ -185,12 +185,12 @@ export function BondsAdminPanel() {
               {t === "" ? "All" : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
-          <span className="text-muted text-xs self-center">·</span>
+          <span className="text-muted text-body-sm self-center">·</span>
           {COUNTRY_PILLS.map((pill) => (
             <button
               key={pill.id || "all-c"}
               onClick={() => setCountryFilter(pill.id)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
                 countryFilter === pill.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-card border border-card-border text-muted hover:text-foreground"
@@ -206,11 +206,13 @@ export function BondsAdminPanel() {
       <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-foreground">Reconcile sovereign debt</span>
+            <span className="text-body font-semibold text-foreground">
+              Reconcile sovereign debt
+            </span>
             <select
               value={reconcileCountry}
               onChange={(e) => setReconcileCountry(e.target.value)}
-              className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+              className="rounded border border-card-border bg-background px-2 py-1 text-body"
             >
               {COUNTRY_PILLS.filter((c) => c.id).map((c) => (
                 <option key={c.id} value={c.id}>
@@ -222,7 +224,7 @@ export function BondsAdminPanel() {
           <button
             onClick={handleReconcile}
             disabled={reconcileLoading}
-            className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="text-body-sm px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
           >
             {reconcileLoading ? "Reconciling…" : "Reconcile"}
           </button>
@@ -230,13 +232,13 @@ export function BondsAdminPanel() {
         {reconcileResult && (
           <div className="space-y-2">
             <p
-              className={`text-sm ${reconcileResult.totalIssued > 0 ? "text-success" : "text-muted"}`}
+              className={`text-body ${reconcileResult.totalIssued > 0 ? "text-success" : "text-muted"}`}
             >
               {reconcileResult.message}
             </p>
             {reconcileResult.totalIssued > 0 && (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-body">
                   {[
                     { label: "Gap", value: fmt(reconcileResult.gap) },
                     { label: "Issued", value: fmt(reconcileResult.totalIssued) },
@@ -252,7 +254,7 @@ export function BondsAdminPanel() {
                     </div>
                   ))}
                 </div>
-                <div className="text-sm space-y-1">
+                <div className="text-body space-y-1">
                   <p className="text-body-sm font-medium text-muted">Tranches</p>
                   <div className="grid gap-2">
                     {reconcileResult.tranches.map((t) => (
@@ -298,7 +300,7 @@ export function BondsAdminPanel() {
             >
               <p className="text-body-sm font-medium text-muted">{card.label}</p>
               <p
-                className={`text-lg font-semibold ${card.highlight ? "text-warning" : "text-foreground"}`}
+                className={`text-heading font-semibold ${card.highlight ? "text-warning" : "text-foreground"}`}
               >
                 {card.value}
               </p>
@@ -307,17 +309,20 @@ export function BondsAdminPanel() {
         </div>
       )}
 
-      <InlineError error={error} className="text-sm text-error bg-error/10 rounded-lg px-4 py-3" />
+      <InlineError
+        error={error}
+        className="text-body text-error bg-error/10 rounded-lg px-4 py-3"
+      />
       {actionError && (
-        <p className="text-sm text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
+        <p className="text-body text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
       )}
 
       {loading ? (
-        <div className="text-muted text-sm py-8 text-center">Loading…</div>
+        <div className="text-muted text-body py-8 text-center">Loading…</div>
       ) : (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead className="bg-background/50">
                 <tr>
                   {[
@@ -346,11 +351,13 @@ export function BondsAdminPanel() {
                     <tr className="hover:bg-background/40 transition-colors duration-150">
                       <td className="px-4 py-3">
                         <div className="font-medium">{row.issuerName}</div>
-                        {row.countryId && <div className="text-xs text-muted">{row.countryId}</div>}
+                        {row.countryId && (
+                          <div className="text-body-sm text-muted">{row.countryId}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                          className={`text-body-sm font-semibold px-2 py-0.5 rounded ${
                             row.issuerType === "sovereign"
                               ? "bg-primary/20 text-primary"
                               : "bg-muted/20 text-muted"
@@ -378,7 +385,7 @@ export function BondsAdminPanel() {
                       <td className="px-4 py-3">{row.holderCount}</td>
                       <td className="px-4 py-3">
                         {row.matured ? (
-                          <span className="text-[10px] font-semibold bg-error/20 text-error px-1.5 py-0.5 rounded">
+                          <span className="text-body-sm font-semibold bg-error/20 text-error px-1.5 py-0.5 rounded">
                             Matured
                           </span>
                         ) : (
@@ -398,7 +405,7 @@ export function BondsAdminPanel() {
                                 : { id: row.id, step: "input", value: String(row.couponRate) }
                             )
                           }
-                          className="text-xs px-2 py-1 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
+                          className="text-body-sm px-2 py-1 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
                         >
                           Override rate
                         </button>
@@ -414,7 +421,7 @@ export function BondsAdminPanel() {
                         >
                           {rateEdit.step === "input" ? (
                             <div className="flex items-center gap-3 flex-wrap">
-                              <span className="text-xs text-muted">New coupon rate (%):</span>
+                              <span className="text-body-sm text-muted">New coupon rate (%):</span>
                               <input
                                 type="number"
                                 step="0.1"
@@ -424,24 +431,24 @@ export function BondsAdminPanel() {
                                 onChange={(e) =>
                                   setRateEdit({ ...rateEdit, value: e.target.value })
                                 }
-                                className="w-24 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                                className="w-24 rounded border border-card-border bg-background px-2 py-1 text-body"
                               />
                               <button
                                 onClick={() => setRateEdit({ ...rateEdit, step: "confirm" })}
-                                className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90"
+                                className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90"
                               >
                                 Review
                               </button>
                               <button
                                 onClick={() => setRateEdit(null)}
-                                className="text-xs text-muted hover:text-foreground"
+                                className="text-body-sm text-muted hover:text-foreground"
                               >
                                 Cancel
                               </button>
                             </div>
                           ) : (
                             <div className="flex items-center gap-3 flex-wrap">
-                              <span className="text-sm">
+                              <span className="text-body">
                                 Set coupon rate for <strong>{row.issuerName}</strong> to{" "}
                                 <strong>{rateEdit.value}%</strong>? This is permanent.
                               </span>
@@ -450,13 +457,13 @@ export function BondsAdminPanel() {
                                   handleRateConfirm(row.id, parseFloat(rateEdit.value))
                                 }
                                 disabled={actionLoading === row.id}
-                                className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
+                                className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground font-medium hover:opacity-90"
                               >
                                 Confirm
                               </button>
                               <button
                                 onClick={() => setRateEdit({ ...rateEdit, step: "input" })}
-                                className="text-xs text-muted hover:text-foreground"
+                                className="text-body-sm text-muted hover:text-foreground"
                               >
                                 Back
                               </button>
@@ -478,7 +485,7 @@ export function BondsAdminPanel() {
             </table>
           </div>
           {currentTurn > 0 && (
-            <div className="border-t border-card-border bg-background/30 px-4 py-2 text-xs text-muted">
+            <div className="border-t border-card-border bg-background/30 px-4 py-2 text-body-sm text-muted">
               Current turn: {currentTurn}
             </div>
           )}

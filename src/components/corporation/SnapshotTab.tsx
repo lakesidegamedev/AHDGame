@@ -143,7 +143,7 @@ export default function SnapshotTab({
   if (data?.isPrivate) {
     return (
       <DenseSection title="Snapshot compare">
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           Private corporation. Historical financials are not publicly disclosed.
         </p>
       </DenseSection>
@@ -153,7 +153,7 @@ export default function SnapshotTab({
   if (!data || data.points.length < 2) {
     return (
       <DenseSection title="Snapshot compare">
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           Not enough history yet. The snapshot compare needs at least two turns of recorded history.
           Check back after a few more turns of activity.
         </p>
@@ -186,7 +186,7 @@ export default function SnapshotTab({
   const barScale = Math.max(0, ...(deltas ?? []).map((row) => Math.abs(row.pctDelta ?? 0)));
 
   const selectClass =
-    "h-7 rounded-md border border-card-border bg-background px-2 font-mono text-xs text-foreground focus:border-foreground focus:outline-none";
+    "h-7 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none";
 
   return (
     <DenseSection
@@ -205,7 +205,7 @@ export default function SnapshotTab({
               setFromTurn(preset.from);
             }}
           />
-          <label className="flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-body-sm text-muted">
             From
             <select
               value={fromTurn ?? ""}
@@ -219,7 +219,7 @@ export default function SnapshotTab({
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-body-sm text-muted">
             to
             <select
               value={toTurn ?? ""}
@@ -236,7 +236,7 @@ export default function SnapshotTab({
         </>
       }
     >
-      <p className="py-1 text-xs text-muted">
+      <p className="py-1 text-body-sm text-muted">
         Turn-over-turn change across the corporation&apos;s recorded history. Pick two turns or a
         lookback window.
       </p>
@@ -244,7 +244,7 @@ export default function SnapshotTab({
         (point) =>
           (point.turn === earlierTurn || point.turn === laterTurn) && point.incomeIsEstimated
       ) && (
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Bond payments were not recorded for one of these turns. Retained income includes accrued
           coupons and may differ from cash received.
         </p>
@@ -309,7 +309,7 @@ export default function SnapshotTab({
         </table>
       </TableScroll>
 
-      <p className="pt-2 text-xs text-muted">
+      <p className="pt-2 text-body-sm text-muted">
         Values are per-turn snapshots recorded during turn processing. Revenue and net income are
         per-turn flows; multiply by 24 to compare with the daily Financial Statement.
       </p>

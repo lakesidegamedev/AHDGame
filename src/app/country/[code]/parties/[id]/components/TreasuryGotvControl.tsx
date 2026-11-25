@@ -74,7 +74,7 @@ export function TreasuryGotvControl({
             d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
           />
         </svg>
-        <div className="text-xs font-semibold text-muted">GOTV (get out the vote)</div>
+        <div className="text-body-sm font-semibold text-muted">GOTV (get out the vote)</div>
       </div>
       <p className="text-body-sm text-muted mb-3 ml-6">
         Nationwide voter mobilization. Spending is divided equally across all {regionCount}{" "}
@@ -96,7 +96,9 @@ export function TreasuryGotvControl({
           variant="primary"
           className="flex-1 max-w-48"
         />
-        <span className="text-lg font-bold tabular-nums w-12 text-right">{gotvForm.percent}%</span>
+        <span className="text-heading font-bold tabular-nums w-12 text-right">
+          {gotvForm.percent}%
+        </span>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -106,7 +108,7 @@ export function TreasuryGotvControl({
             dispatch({ type: "SET_GOTV", field: "category", value: e.target.value });
             dispatch({ type: "SET_GOTV", field: "group", value: "" });
           }}
-          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="">Category…</option>
           {categories.map((category) => (
@@ -119,7 +121,7 @@ export function TreasuryGotvControl({
           value={gotvForm.group}
           onChange={(e) => dispatch({ type: "SET_GOTV", field: "group", value: e.target.value })}
           disabled={!gotvForm.category}
-          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
         >
           <option value="">Demographic…</option>
           {groupsForGotvCat.map((d) => (
@@ -132,7 +134,7 @@ export function TreasuryGotvControl({
           <button
             onClick={onSave}
             disabled={gotvForm.saving || gotvNeedsTarget}
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-1.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {gotvForm.saving ? "Saving…" : "Save"}
           </button>
@@ -140,7 +142,7 @@ export function TreasuryGotvControl({
       </div>
 
       {gotvNeedsTarget && (
-        <p className="mt-2 text-xs text-error flex items-center gap-1.5 ml-6">
+        <p className="mt-2 text-body-sm text-error flex items-center gap-1.5 ml-6">
           <svg
             className="h-3 w-3 shrink-0"
             fill="none"
@@ -159,13 +161,13 @@ export function TreasuryGotvControl({
       )}
       {gotvForm.percent > 0 && selectedGotvDemo && (
         <div className="mt-3 ml-6 rounded-lg bg-background/50 border border-card-border/30 p-3 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">Total spending</span>
             <span className="font-semibold tabular-nums">
               {fmt(gotvSpend, party.countryId)} / hr
             </span>
           </div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">
               Per {isUs ? "state" : "region"} ({regionCount})
             </span>
@@ -173,7 +175,7 @@ export function TreasuryGotvControl({
               {fmt(gotvRawPerState, party.countryId)} / hr
             </span>
           </div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">Alignment efficacy</span>
             <span
               className={`font-semibold tabular-nums ${gotvAlignMult >= 0.5 ? "text-success" : "text-warning"}`}
@@ -181,7 +183,7 @@ export function TreasuryGotvControl({
               {Math.round(gotvAlignMult * 100)}%
             </span>
           </div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">Est. boost / state</span>
             <span className="font-bold tabular-nums text-success">
               +{gotvEstBoost.toFixed(3)}% / turn

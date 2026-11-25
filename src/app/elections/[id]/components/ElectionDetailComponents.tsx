@@ -37,7 +37,7 @@ function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
     <div className="px-4 sm:px-5 pb-4 pt-1 border-t border-card-border">
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="text-body-sm font-medium text-muted">Projected delegate race</div>
-        <span className="text-[11px] text-muted">
+        <span className="text-body-sm text-muted">
           Awarded delegates locked, remaining states projected
         </span>
       </div>
@@ -53,7 +53,7 @@ function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
                   title={`${candidate.characterName}: ${pct.toFixed(1)}% projected delegate share`}
                 >
                   {pct >= 18 && (
-                    <span className="text-[10px] font-semibold text-white/95 tabular-nums drop-shadow">
+                    <span className="text-body-sm font-semibold text-white/95 tabular-nums drop-shadow">
                       {pct.toFixed(1)}%
                     </span>
                   )}
@@ -63,7 +63,7 @@ function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
           </div>
           <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
             {candidates.map(({ candidate, color, pct }) => (
-              <span key={candidate.id} className="flex items-center gap-1.5 text-xs">
+              <span key={candidate.id} className="flex items-center gap-1.5 text-body-sm">
                 <span
                   className="h-2.5 w-2.5 rounded-full shrink-0 ring-1 ring-black/20"
                   style={{ backgroundColor: color }}
@@ -75,7 +75,7 @@ function PresidentialPrimaryDelegateRace({ group }: { group: PartyGroup }) {
           </div>
         </>
       ) : (
-        <div className="flex items-center justify-center h-24 text-xs text-muted/50 italic">
+        <div className="flex items-center justify-center h-24 text-body-sm text-muted/50 italic">
           Delegate projection appears once candidates have live primary share data
         </div>
       )}
@@ -125,7 +125,7 @@ export function PartySection({
         size="h-4 w-4"
       />
       <span className="truncate font-semibold">{group.partyName}</span>
-      <span className="hidden shrink-0 text-xs font-normal text-muted sm:inline">
+      <span className="hidden shrink-0 text-body-sm font-normal text-muted sm:inline">
         Econ {group.partyEcon >= 0 ? "+" : ""}
         {group.partyEcon} · Social {group.partySocial >= 0 ? "+" : ""}
         {group.partySocial}
@@ -139,7 +139,7 @@ export function PartySection({
       padding="none"
       action={
         isGuaranteedAdvance ? (
-          <span className="text-xs italic text-muted">
+          <span className="text-body-sm italic text-muted">
             {isUncontested ? "Uncontested" : "All advance"}
           </span>
         ) : undefined
@@ -147,14 +147,14 @@ export function PartySection({
     >
       <div className="px-4 py-3 sm:px-5">
         {inPrimary && group.primaryShareBasis && (
-          <p className="mb-3 text-xs text-muted">
+          <p className="mb-3 text-body-sm text-muted">
             {group.primaryShareBasis === "counted"
               ? "Share of primary votes counted so far"
               : `Estimated share before votes are counted. ${PRIMARY_ESTIMATE_NOTE}`}
           </p>
         )}
         {group.candidates.length === 0 ? (
-          <div className="text-sm text-muted italic py-1">No candidates declared</div>
+          <div className="text-body text-muted italic py-1">No candidates declared</div>
         ) : (
           <div className="space-y-3">
             {group.candidates.map((c, i) => {
@@ -180,28 +180,28 @@ export function PartySection({
                         {c.characterName}
                       </Link>
                       {c.isYou && (
-                        <span className="rounded-full bg-primary/20 border border-primary/40 px-1.5 py-0.5 text-[10px] text-primary shrink-0">
+                        <span className="rounded-full bg-primary/20 border border-primary/40 px-1.5 py-0.5 text-body-sm text-primary shrink-0">
                           You
                         </span>
                       )}
                       {c.isNPP && (
-                        <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 text-[10px] text-purple-400 shrink-0">
+                        <span className="rounded-full bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 text-body-sm text-purple-400 shrink-0">
                           <NppAbbr />
                         </span>
                       )}
                       {c.travelState && (
                         <span
-                          className="ml-2 text-xs text-muted/60 font-normal"
+                          className="ml-2 text-body-sm text-muted/60 font-normal"
                           title={`Currently campaigning in ${c.travelState}`}
                         >
                           📍 {c.travelState}
                         </span>
                       )}
                       {isUncontested && (
-                        <span className="text-[10px] text-muted italic shrink-0">Uncontested</span>
+                        <span className="text-body-sm text-muted italic shrink-0">Uncontested</span>
                       )}
                       {isAdvancing && !isUncontested && inPrimary && (
-                        <span className="rounded-full bg-green-500/20 border border-green-500/40 px-1.5 py-0.5 text-[10px] text-green-400 shrink-0 font-medium">
+                        <span className="rounded-full bg-green-500/20 border border-green-500/40 px-1.5 py-0.5 text-body-sm text-green-400 shrink-0 font-medium">
                           {isGuaranteedAdvance ? "Advancing" : "Projected to advance"}
                         </span>
                       )}
@@ -210,12 +210,12 @@ export function PartySection({
                     <div className="flex items-center gap-2 shrink-0">
                       {inPrimary && (
                         <span
-                          className={`tabular-nums text-sm ${isAdvancing ? "font-bold" : "font-medium text-muted"}`}
+                          className={`tabular-nums text-body ${isAdvancing ? "font-bold" : "font-medium text-muted"}`}
                           style={isAdvancing ? { color: candidateColor } : undefined}
                         >
                           {rawPct.toFixed(1)}%
                           {c.primaryVotesCounted != null && (
-                            <span className="block text-right text-xs font-normal text-muted">
+                            <span className="block text-right text-body-sm font-normal text-muted">
                               {c.primaryVotesCounted.toLocaleString("en-US")} votes
                             </span>
                           )}
@@ -248,7 +248,7 @@ export function PartySection({
                   {inPrimary &&
                     group.primaryShareBasis === "estimate" &&
                     nppCandidateIsHalved(c, group.candidates) && (
-                      <p className="mt-1 text-[11px] text-muted">{NPP_HALF_STRENGTH_NOTE}</p>
+                      <p className="mt-1 text-body-sm text-muted">{NPP_HALF_STRENGTH_NOTE}</p>
                     )}
 
                   {inPrimary && c.primaryScoreBreakdown && (
@@ -262,7 +262,7 @@ export function PartySection({
         )}
 
         {isPresident && group.candidates.length > 0 && (
-          <div className="text-[11px] text-muted mt-2">
+          <div className="text-body-sm text-muted mt-2">
             {group.candidates.length} candidates · Running mates shown on hover
           </div>
         )}

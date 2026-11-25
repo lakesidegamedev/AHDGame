@@ -39,7 +39,7 @@ export interface ErrorPanelProps {
 }
 
 const BUTTON_BASE =
-  "rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "rounded-lg px-4 py-2 text-body font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false);
@@ -53,7 +53,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
           .catch(() => {});
         setTimeout(() => setDone(false), 2000);
       }}
-      className="rounded-md border border-card-border px-2 py-1 text-xs text-muted transition-colors hover:text-foreground"
+      className="rounded-md border border-card-border px-2 py-1 text-body-sm text-muted transition-colors hover:text-foreground"
     >
       {done ? "Copied" : label}
     </button>
@@ -78,7 +78,7 @@ function StaffDetails({
     ["Sentry event", reported.eventId],
   ];
   return (
-    <details className="rounded-lg border border-card-border bg-card-muted/40 text-left text-xs">
+    <details className="rounded-lg border border-card-border bg-card-muted/40 text-left text-body-sm">
       <summary className="cursor-pointer px-3 py-2 font-medium text-muted hover:text-foreground">
         Staff details
       </summary>
@@ -142,14 +142,16 @@ export function ErrorPanel({
     >
       <div className="w-full max-w-lg space-y-4 rounded-xl border border-card-border bg-card p-6">
         <div className="space-y-1.5">
-          <h1 className="text-lg font-semibold text-foreground">{heading}</h1>
-          <p className="text-sm text-foreground/90">{lead}</p>
-          {showExplanation && <p className="text-sm text-muted">{copy.explanation}</p>}
+          <h1 className="text-heading font-semibold text-foreground">{heading}</h1>
+          <p className="text-body text-foreground/90">{lead}</p>
+          {showExplanation && <p className="text-body text-muted">{copy.explanation}</p>}
         </div>
 
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">What you can do</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-muted">
+          <p className="text-body-sm font-medium uppercase tracking-wide text-muted">
+            What you can do
+          </p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-body text-muted">
             {copy.steps.map((s) => (
               <li key={s}>{s}</li>
             ))}
@@ -160,7 +162,7 @@ export function ErrorPanel({
           <button
             type="button"
             onClick={onRetry}
-            className={`${BUTTON_BASE} bg-primary text-white hover:bg-primary/90`}
+            className={`${BUTTON_BASE} bg-primary text-primary-foreground hover:bg-primary/90`}
           >
             Try again
           </button>
@@ -177,7 +179,7 @@ export function ErrorPanel({
             <Link
               key={link.href}
               href={link.href}
-              className="px-2 py-2 text-sm text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
+              className="px-2 py-2 text-body text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
             >
               {link.label}
             </Link>
@@ -185,7 +187,7 @@ export function ErrorPanel({
         </div>
 
         <div className="flex items-start justify-between gap-3 border-t border-card-border pt-3">
-          <div className="min-w-0 text-xs text-muted">
+          <div className="min-w-0 text-body-sm text-muted">
             <span className="font-mono" data-testid="error-code">
               {reported.code}
             </span>

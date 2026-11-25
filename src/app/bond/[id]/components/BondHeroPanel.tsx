@@ -48,7 +48,7 @@ export function BondHeroPanel({
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-foreground">
+              <h1 className="text-heading font-bold text-foreground">
                 {corpHref ? (
                   <Link href={corpHref} className="hover:text-primary transition-colors">
                     {bond.corporationName}
@@ -58,16 +58,16 @@ export function BondHeroPanel({
                 )}{" "}
                 Bond
               </h1>
-              <span className="px-2 py-0.5 rounded-md bg-card-elevated border border-card-border text-xs font-bold uppercase tracking-wide text-muted">
+              <span className="px-2 py-0.5 rounded-md bg-card-elevated border border-card-border text-body-sm font-bold uppercase tracking-wide text-muted">
                 Series {bond.maturityLabel}
               </span>
               {bond.issuerType === "sovereign" && (
-                <span className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-secondary text-xs font-bold uppercase tracking-wide">
+                <span className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-secondary text-body-sm font-bold uppercase tracking-wide">
                   Sovereign
                 </span>
               )}
               {bond.defaulted && (
-                <span className="px-2 py-0.5 rounded-md bg-error/10 border border-error/20 text-error text-xs font-bold uppercase tracking-wide">
+                <span className="px-2 py-0.5 rounded-md bg-error/10 border border-error/20 text-error text-body-sm font-bold uppercase tracking-wide">
                   Defaulted
                 </span>
               )}
@@ -75,25 +75,25 @@ export function BondHeroPanel({
                 !bond.defaulted &&
                 (bond.defaultCure && bond.defaultedAtTurn != null ? (
                   <span
-                    className="px-2 py-0.5 rounded-md bg-warning/10 border border-warning/20 text-warning text-xs font-bold uppercase tracking-wide"
+                    className="px-2 py-0.5 rounded-md bg-warning/10 border border-warning/20 text-warning text-body-sm font-bold uppercase tracking-wide"
                     title={`Defaulted on turn ${bond.defaultedAtTurn}, cured on turn ${bond.defaultCure.curedAtTurn} via ${bond.defaultCure.cureMethod.replace("_", " ")}`}
                   >
                     Default cured
                   </span>
                 ) : bond.defaultCure?.cureMethod === "parent_payoff" ? (
                   <span
-                    className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-secondary text-xs font-bold uppercase tracking-wide"
+                    className="px-2 py-0.5 rounded-md bg-secondary/10 border border-secondary/20 text-secondary text-body-sm font-bold uppercase tracking-wide"
                     title={`Settled by parent corporation on turn ${bond.defaultCure.curedAtTurn}`}
                   >
                     Parent paid off
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-md bg-muted/10 border border-muted/20 text-muted text-xs font-bold uppercase tracking-wide">
+                  <span className="px-2 py-0.5 rounded-md bg-muted/10 border border-muted/20 text-muted text-body-sm font-bold uppercase tracking-wide">
                     Matured
                   </span>
                 ))}
             </div>
-            <p className="text-sm text-muted mt-0.5">
+            <p className="text-body text-muted mt-0.5">
               {bond.couponRate.toFixed(2)}% coupon
               <span className="mx-1.5 text-card-border">·</span>
               {bond.matured ? "Matured" : `${bond.turnsRemaining} turns remaining`}
@@ -112,14 +112,14 @@ export function BondHeroPanel({
         <div className="flex items-center gap-4 shrink-0">
           <div className="text-right">
             <p className="text-body-sm font-medium text-muted">Yield to maturity</p>
-            <p className="text-2xl font-mono font-bold tabular-nums text-success">
+            <p className="text-heading font-mono font-bold tabular-nums text-success">
               {yieldToMaturity.toFixed(2)}%
             </p>
           </div>
           {onTrade && (
             <button
               onClick={onTrade}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Trade
             </button>
@@ -161,7 +161,7 @@ export function BondHeroPanel({
             <span className="text-body-sm font-medium text-muted" title={hint}>
               {label}
             </span>
-            <span className="text-base font-bold tabular-nums text-foreground">{value}</span>
+            <span className="text-body-lg font-bold tabular-nums text-foreground">{value}</span>
           </div>
         ))}
       </div>

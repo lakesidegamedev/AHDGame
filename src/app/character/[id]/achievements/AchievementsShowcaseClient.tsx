@@ -127,10 +127,8 @@ export function AchievementsShowcaseClient({
                 key={tier}
                 className="rounded-lg border border-card-border bg-card-elevated p-2 text-center"
               >
-                <div className="text-heading-sm font-bold text-foreground">
-                  {rarityCounts[tier]}
-                </div>
-                <div className="text-body-xs capitalize text-muted">{tier}</div>
+                <div className="text-heading font-bold text-foreground">{rarityCounts[tier]}</div>
+                <div className="text-body-sm capitalize text-muted">{tier}</div>
               </div>
             ))}
           </div>
@@ -142,7 +140,7 @@ export function AchievementsShowcaseClient({
 
       {nearlyThere.length > 0 && (
         <section>
-          <h2 className="text-heading-lg text-foreground">Nearly there</h2>
+          <h2 className="text-heading text-foreground">Nearly there</h2>
           <p className="mt-1 text-body text-muted">The closest achievements still in reach.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {nearlyThere.map((item) => {
@@ -186,7 +184,7 @@ export function AchievementsShowcaseClient({
         if (!categoryItems.length) return null;
         return (
           <section key={category}>
-            <h2 className="text-heading-lg text-foreground">{LABELS[category]}</h2>
+            <h2 className="text-heading text-foreground">{LABELS[category]}</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {categoryItems.map((item) => {
                 const hidden = !item.earned && item.isHidden;
@@ -220,7 +218,7 @@ export function AchievementsShowcaseClient({
                           {hidden ? "Hidden achievement" : item.description}
                         </p>
                         <p
-                          className="mt-3 text-body-xs font-semibold"
+                          className="mt-3 text-body-sm font-semibold"
                           style={{ color: rarity.borderColor }}
                         >
                           {item.rarity.toFixed(1)}% of player accounts have this, {rarity.label}

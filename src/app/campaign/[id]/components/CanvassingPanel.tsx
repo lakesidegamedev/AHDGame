@@ -272,14 +272,14 @@ export function CanvassingPanel({
 
   const QUANTITY_OPTIONS = [1, 5, 10];
   const previewCopy = previewError ? (
-    <p role="status" className="text-sm my-3">
+    <p role="status" className="text-body my-3">
       {previewError}{" "}
       <button type="button" onClick={() => setPreviewRevision((value) => value + 1)}>
         {t("refresh")}
       </button>
     </p>
   ) : preview ? (
-    <p className="text-sm my-3" aria-live="polite">
+    <p className="text-body my-3" aria-live="polite">
       {t("canvassPreview", {
         boost: preview.bucketBoost.toFixed(2),
         before: preview.turnoutBefore.toFixed(2),
@@ -294,11 +294,11 @@ export function CanvassingPanel({
   const shellClass = blend ? "" : "rounded-lg border border-card-border bg-card p-6";
 
   const heading = blend ? (
-    <h3 style={{ margin: "0 0 8px", fontFamily: FONT.sans, fontSize: 17, fontWeight: 600 }}>
+    <h3 style={{ margin: "0 0 8px", fontFamily: FONT.sans, fontSize: 16, fontWeight: 600 }}>
       Voter canvassing
     </h3>
   ) : (
-    <h3 className="text-xl font-bold text-foreground mb-4">Voter canvassing</h3>
+    <h3 className="text-body-lg font-bold text-foreground mb-4">Voter canvassing</h3>
   );
 
   if (eligibility.status === "loading") {
@@ -324,11 +324,11 @@ export function CanvassingPanel({
       <div className={shellClass} style={shellStyle}>
         {heading}
         {blend ? (
-          <p style={{ margin: 0, fontFamily: FONT.sans, fontSize: 13.5, color: BLEND.muted }}>
+          <p style={{ margin: 0, fontFamily: FONT.sans, fontSize: 14, color: BLEND.muted }}>
             {eligibility.message}
           </p>
         ) : (
-          <p className="text-sm text-muted">{eligibility.message}</p>
+          <p className="text-body text-muted">{eligibility.message}</p>
         )}
       </div>
     );
@@ -366,7 +366,7 @@ export function CanvassingPanel({
           style={{
             margin: "0 0 14px",
             fontFamily: FONT.sans,
-            fontSize: 13.5,
+            fontSize: 14,
             lineHeight: 1.55,
             color: BLEND.muted,
           }}
@@ -446,7 +446,7 @@ export function CanvassingPanel({
               style={{
                 marginTop: 8,
                 fontFamily: FONT.mono,
-                fontSize: 10.5,
+                fontSize: 12,
                 color: BLEND.mutedDim,
               }}
             >
@@ -472,7 +472,7 @@ export function CanvassingPanel({
                 borderLeft: `2px solid ${BLEND.hairlineStrong}`,
                 background: "rgba(255,255,255,.02)",
                 fontFamily: FONT.sans,
-                fontSize: 13,
+                fontSize: 12,
                 lineHeight: 1.55,
                 color: BLEND.ink,
                 whiteSpace: "pre-line",
@@ -496,7 +496,7 @@ export function CanvassingPanel({
               margin: "8px 0 0",
               paddingLeft: 18,
               fontFamily: FONT.sans,
-              fontSize: 13,
+              fontSize: 12,
               lineHeight: 1.6,
               color: BLEND.muted,
             }}
@@ -519,7 +519,7 @@ export function CanvassingPanel({
   return (
     <div className={shellClass}>
       {heading}
-      <p className="text-sm text-muted mb-4">
+      <p className="text-body text-muted mb-4">
         Canvassing in <span className="font-semibold text-foreground">{activeStateName}</span>.{" "}
         {description}
       </p>
@@ -527,7 +527,7 @@ export function CanvassingPanel({
       {previewCopy}
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-body font-medium text-foreground mb-2">
             Demographic category
           </label>
           <select
@@ -550,7 +550,9 @@ export function CanvassingPanel({
         {/* Group selector. */}
         {activeCategory && (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Specific group</label>
+            <label className="block text-body font-medium text-foreground mb-2">
+              Specific group
+            </label>
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
@@ -568,16 +570,16 @@ export function CanvassingPanel({
 
         {/* Quantity selector */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Quantity</label>
+          <label className="block text-body font-medium text-foreground mb-2">Quantity</label>
           <div className="flex gap-2">
             {QUANTITY_OPTIONS.map((n) => (
               <button
                 key={n}
                 onClick={() => setCount(n)}
                 disabled={n > maxCanvasses}
-                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-4 py-2 text-body font-medium transition-colors ${
                   count === n
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : n > maxCanvasses
                       ? "bg-muted/20 text-muted cursor-not-allowed"
                       : "bg-card-muted text-foreground hover:bg-primary/20"
@@ -589,9 +591,9 @@ export function CanvassingPanel({
             <button
               onClick={() => setCount(maxCanvasses)}
               disabled={maxCanvasses < 1}
-              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-md px-4 py-2 text-body font-medium transition-colors ${
                 count === maxCanvasses && !QUANTITY_OPTIONS.includes(maxCanvasses)
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : maxCanvasses < 1
                     ? "bg-muted/20 text-muted cursor-not-allowed"
                     : "bg-card-muted text-foreground hover:bg-primary/20"
@@ -600,14 +602,14 @@ export function CanvassingPanel({
               Max ({maxCanvasses})
             </button>
           </div>
-          <div className="mt-2 text-xs text-muted">Total cost: {costSuffix}</div>
+          <div className="mt-2 text-body-sm text-muted">Total cost: {costSuffix}</div>
         </div>
 
         {/* Canvass button */}
         <button
           onClick={handleCanvass}
           disabled={!selectedGroup || loading || !canAfford}
-          className="w-full bg-primary hover:bg-primary-dark disabled:bg-muted/50 text-white font-medium py-3 px-4 rounded-md transition-colors disabled:cursor-not-allowed"
+          className="w-full bg-primary hover:bg-primary-dark disabled:bg-muted/50 text-primary-foreground font-medium py-3 px-4 rounded-md transition-colors disabled:cursor-not-allowed"
         >
           {loading
             ? "Canvassing..."
@@ -616,17 +618,17 @@ export function CanvassingPanel({
 
         {/* Message */}
         {message && (
-          <div className="rounded-md bg-card-muted p-3 text-sm text-foreground whitespace-pre-line">
+          <div className="rounded-md bg-card-muted p-3 text-body text-foreground whitespace-pre-line">
             {message}
           </div>
         )}
       </div>
 
       <div className="mt-6 rounded-md bg-info/10 p-4">
-        <p className="text-sm text-foreground">
+        <p className="text-body text-foreground">
           <strong>How canvassing works:</strong>
         </p>
-        <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted">
+        <ul className="mt-2 list-inside list-disc space-y-1 text-body text-muted">
           <li>Effectiveness scales with your alignment to the demographic</li>
           <li>2x more effective during active campaign season (4 turns before election)</li>
           <li>Boosts turnout for this demographic in {activeStateName}</li>

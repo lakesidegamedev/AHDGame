@@ -72,10 +72,10 @@ export function CampaignSongSection({ character, onCharacterUpdate }: Props) {
 
   return (
     <>
-      <p className="text-sm text-muted mb-6">{t("campaignSong.intro")}</p>
+      <p className="text-body text-muted mb-6">{t("campaignSong.intro")}</p>
       <form onSubmit={handleCampaignSongSave} className="space-y-4">
         <div>
-          <label htmlFor="campaignSongUrl" className="block text-sm font-medium mb-1.5">
+          <label htmlFor="campaignSongUrl" className="block text-body font-medium mb-1.5">
             {t("campaignSong.urlLabel")}
           </label>
           <input
@@ -84,7 +84,7 @@ export function CampaignSongSection({ character, onCharacterUpdate }: Props) {
             value={campaignSongUrl}
             onChange={(e) => setCampaignSongUrl(e.target.value)}
             placeholder={t("campaignSong.urlPlaceholder")}
-            className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+            className={`w-full rounded-xl border px-4 py-2.5 text-body focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
               campaignSongUrl && campaignSongValidation.valid
                 ? "border-success/60 focus:ring-success/30 bg-background"
                 : campaignSongUrl && !campaignSongValidation.valid
@@ -93,9 +93,9 @@ export function CampaignSongSection({ character, onCharacterUpdate }: Props) {
             }`}
             disabled={campaignSongSaving}
           />
-          <p className="mt-1 text-xs text-muted">{t("campaignSong.hint")}</p>
+          <p className="mt-1 text-body-sm text-muted">{t("campaignSong.hint")}</p>
           {campaignSongUrl && !campaignSongValidation.valid && (
-            <p className="mt-1 text-xs text-error">{t("campaignSong.invalid")}</p>
+            <p className="mt-1 text-body-sm text-error">{t("campaignSong.invalid")}</p>
           )}
           {campaignSongValidation.videoId && (
             <div className="mt-3 flex items-center gap-3 rounded-xl border border-card-border bg-background p-3">
@@ -107,8 +107,8 @@ export function CampaignSongSection({ character, onCharacterUpdate }: Props) {
                 className="rounded-lg object-cover bg-muted/20 shrink-0"
               />
               <div className="min-w-0">
-                <p className="text-xs text-muted">{t("campaignSong.preview")}</p>
-                <p className="text-sm font-medium text-foreground truncate">
+                <p className="text-body-sm text-muted">{t("campaignSong.preview")}</p>
+                <p className="text-body font-medium text-foreground truncate">
                   youtube.com/watch?v={campaignSongValidation.videoId}
                 </p>
               </div>
@@ -125,7 +125,7 @@ export function CampaignSongSection({ character, onCharacterUpdate }: Props) {
         <button
           type="submit"
           disabled={campaignSongSaving}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="rounded-xl bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed flex items-center gap-2"
         >
           <span className="flex items-center gap-2">
             {campaignSongSaved ? <CheckIcon /> : campaignSongSaving ? <SpinnerIcon /> : null}

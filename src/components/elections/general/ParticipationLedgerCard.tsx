@@ -19,14 +19,14 @@ export function ParticipationLedgerCard({ data }: { data?: ParticipationSummary 
   return (
     <section className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-1 flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-muted">Why people are voting</h3>
-        <span className="text-xs tabular-nums text-muted">{data.calibrationId}</span>
+        <h3 className="text-body-lg font-semibold text-muted">Why people are voting</h3>
+        <span className="text-body-sm tabular-nums text-muted">{data.calibrationId}</span>
       </div>
-      <p className="mb-3 text-xs leading-snug text-muted">
+      <p className="mb-3 text-body-sm leading-snug text-muted">
         Turnout starts with this electorate&apos;s usual rate, then responds to the race and
         campaign.
       </p>
-      <div className="space-y-1.5 text-xs">
+      <div className="space-y-1.5 text-body-sm">
         <div className="flex justify-between gap-3 border-b border-card-border pb-1.5">
           <span className="font-medium">Usual turnout</span>
           <span className="tabular-nums">{data.baseline.toFixed(1)}%</span>

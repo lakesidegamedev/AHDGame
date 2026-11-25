@@ -24,7 +24,7 @@ export function HubBriefing({
   return (
     <div className="overflow-hidden rounded-xl border border-card-border bg-card shadow-card">
       <div
-        className={`grid ${COLS} gap-3.5 border-b border-card-border bg-background/40 px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-muted`}
+        className={`grid ${COLS} gap-3.5 border-b border-card-border bg-background/40 px-5 py-3 text-body-sm font-bold uppercase tracking-wider text-muted`}
       >
         <div>Nation / Question</div>
         <div>Trend (recent)</div>
@@ -45,16 +45,16 @@ export function HubBriefing({
                 <CountryFlag country={countryId} size="sm" />
               </div>
               <div>
-                <div className="text-[14.5px] font-bold tracking-tight">{c.regionName}</div>
-                <div className="mt-0.5 text-[11px] text-muted">{kindLabel(c.kind)}</div>
+                <div className="text-body font-bold tracking-tight">{c.regionName}</div>
+                <div className="mt-0.5 text-body-sm text-muted">{kindLabel(c.kind)}</div>
               </div>
             </div>
             <div className="h-[34px]">
               <Sparkline history={c.pollHistory} />
             </div>
             <div className="font-mono">
-              <span className="text-base font-extrabold text-[var(--ref-yes)]">{yes}%</span>{" "}
-              <span className="text-[11px] text-muted">Yes</span>
+              <span className="text-body-lg font-extrabold text-[var(--ref-yes)]">{yes}%</span>{" "}
+              <span className="text-body-sm text-muted">Yes</span>
             </div>
             <div>
               <MomentumIndicator momentum={computeReferendumMomentum(c.pollHistory)} />

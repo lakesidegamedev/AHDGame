@@ -142,14 +142,14 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
         </div>
 
         {!motion && !isFinale && (
-          <p className="pointer-events-none absolute inset-x-0 bottom-4 z-30 text-center text-[12px] text-white/60">
+          <p className="pointer-events-none absolute inset-x-0 bottom-4 z-30 text-center text-body-sm text-white/60">
             Tap to continue
           </p>
         )}
 
         {/* Header */}
         <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 pt-7">
-          <span className="text-[13px] font-semibold tracking-tight text-white/80">
+          <span className="text-body-sm font-semibold tracking-tight text-white/80">
             A House Divided
           </span>
           <div className="flex items-center gap-1">
@@ -206,19 +206,19 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
                 <button
                   type="button"
                   onClick={share}
-                  className="flex-1 rounded-full bg-white px-5 py-3 text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
+                  className="flex-1 rounded-full bg-white px-5 py-3 text-body font-semibold text-black transition-opacity hover:opacity-90"
                 >
                   {copied ? "Link copied" : "Share"}
                 </button>
                 <a
                   href={`/wrapped/${recap.characterId}/story-image`}
                   download={`${recap.name} ${season} Wrapped.png`}
-                  className="flex-1 rounded-full border border-white/25 px-5 py-3 text-center text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
+                  className="flex-1 rounded-full border border-white/25 px-5 py-3 text-center text-body font-semibold text-white transition-colors hover:bg-white/10"
                 >
                   Save image
                 </a>
               </div>
-              <div className="mt-3 flex justify-between text-[13px] text-white/55">
+              <div className="mt-3 flex justify-between text-body-sm text-white/55">
                 <button
                   type="button"
                   onClick={() => player.goTo(0)}

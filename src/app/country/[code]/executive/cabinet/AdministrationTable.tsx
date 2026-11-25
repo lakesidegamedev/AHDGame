@@ -184,8 +184,8 @@ export function AdministrationTable({
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted">
+          <h2 className="text-body font-semibold text-foreground">{title}</h2>
+          <p className="mt-0.5 text-body-sm text-muted">
             {description ?? (
               <>
                 {filled} of {positions.length} cabinet seats filled
@@ -206,9 +206,9 @@ export function AdministrationTable({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+        <table className="w-full min-w-[640px] border-collapse text-body">
           <thead>
-            <tr className="border-b border-card-border bg-card-muted text-left text-[11px] font-medium text-muted">
+            <tr className="border-b border-card-border bg-card-muted text-left text-body-sm font-medium text-muted">
               <th scope="col" className="w-[34%] px-4 py-2 font-medium">
                 Office
               </th>
@@ -229,7 +229,7 @@ export function AdministrationTable({
           {cabinet.loading && !data ? (
             <tbody>
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-sm italic text-muted">
+                <td colSpan={5} className="px-4 py-6 text-center text-body italic text-muted">
                   Loading the administration...
                 </td>
               </tr>
@@ -241,7 +241,7 @@ export function AdministrationTable({
                   <th
                     scope="colgroup"
                     colSpan={5}
-                    className={`bg-card-muted/50 px-4 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/80 ${
+                    className={`bg-card-muted/50 px-4 py-1.5 text-left text-body-sm font-semibold uppercase tracking-wider text-muted/80 ${
                       sectionIndex > 0 ? "border-t border-card-border" : ""
                     }`}
                   >
@@ -274,7 +274,7 @@ export function AdministrationTable({
                     !member &&
                     !position.appointedWithoutConfirmation &&
                     position.actingChargeSpent ? (
-                      <span className="block text-[10px] leading-snug text-muted">
+                      <span className="block text-body-sm leading-snug text-muted">
                         Acting appointment used. It can only be filled by confirmation now.
                       </span>
                     ) : null;
@@ -339,13 +339,13 @@ export function AdministrationTable({
 
       {data?.isSenator && cabinet.activeNominations.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-info/30 bg-card">
-          <div className="border-b border-card-border bg-info/5 px-4 py-2 text-xs font-semibold text-foreground">
+          <div className="border-b border-card-border bg-info/5 px-4 py-2 text-body-sm font-semibold text-foreground">
             Your Senate votes
             <span className="ml-2 font-normal text-muted">
               24-hour simple-majority confirmation
             </span>
           </div>
-          <table className="w-full min-w-[560px] border-collapse text-sm">
+          <table className="w-full min-w-[560px] border-collapse text-body">
             <tbody>
               {cabinet.activeNominations.map((position) => (
                 <CabinetVoteRow
@@ -456,7 +456,7 @@ function OfficeRow({
     <tr className="border-t border-card-border/50 align-middle transition-colors hover:bg-card-muted/40">
       <td className="px-4 py-2.5">
         <div className="leading-snug">{office}</div>
-        {note && <div className="mt-0.5 text-[11px] text-muted">{note}</div>}
+        {note && <div className="mt-0.5 text-body-sm text-muted">{note}</div>}
       </td>
       <td className="px-3 py-2.5">
         {nominee && !holder ? (
@@ -466,7 +466,7 @@ function OfficeRow({
               className="h-8 w-8 shrink-0 rounded-lg border border-dashed border-card-border"
             />
             <span className="min-w-0 wrap-anywhere text-muted">
-              <span className="text-[11px]">Nominee </span>
+              <span className="text-body-sm">Nominee </span>
               <span className="font-medium text-foreground/80">{nominee.name}</span>
             </span>
           </div>
@@ -489,13 +489,15 @@ function OfficeRow({
       </td>
       <td className="px-3 py-2.5">
         {status.label === "Vacant" ? (
-          <span className="text-xs text-muted">Vacant</span>
+          <span className="text-body-sm text-muted">Vacant</span>
         ) : (
           <Badge color={status.tone} variant="tag">
             {status.label}
           </Badge>
         )}
-        {statusNote && <div className="mt-1 text-[10px] leading-snug text-muted">{statusNote}</div>}
+        {statusNote && (
+          <div className="mt-1 text-body-sm leading-snug text-muted">{statusNote}</div>
+        )}
       </td>
       <td className="px-4 py-2.5">
         <div className="flex flex-wrap items-center justify-end gap-1.5">{actions}</div>
@@ -526,7 +528,7 @@ function RowButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneClass}`}
+      className={`whitespace-nowrap rounded-md border px-2.5 py-1 text-body-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneClass}`}
     >
       {children}
     </button>

@@ -166,7 +166,7 @@ export default function SponsoredFundPanel({
   if (!availability || availability.corpId !== corpId) return null;
   const fundContext =
     availability.funds.length > 0 ? (
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         This corporation sponsors{" "}
         {availability.funds.map((fund, index) => (
           <span key={fund.id}>
@@ -185,9 +185,9 @@ export default function SponsoredFundPanel({
     <section className="min-w-0 space-y-2">
       {fundContext}
       <div className="flex min-h-8 items-baseline border-b border-card-border pb-1.5">
-        <h2 className="text-sm font-semibold text-foreground">Charter a sponsored fund</h2>
+        <h2 className="text-body font-semibold text-foreground">Charter a sponsored fund</h2>
       </div>
-      <p className="mb-3 text-xs text-muted">
+      <p className="mb-3 text-body-sm text-muted">
         Launch an index fund your corporation runs. You choose the scope and the fee; the index
         machinery picks and rebalances the constituents. Chartering costs a{" "}
         {fmt(FUND_CHARTER_FEE_ANCHOR)} fee paid to the treasury plus at least{" "}
@@ -197,7 +197,7 @@ export default function SponsoredFundPanel({
       </p>
 
       {chartered ? (
-        <p className="text-xs font-semibold text-foreground">
+        <p className="text-body-sm font-semibold text-foreground">
           {chartered.ticker} is chartered and trading.{" "}
           <Link href={fundHref} className="text-foreground underline underline-offset-2">
             View the fund
@@ -206,7 +206,7 @@ export default function SponsoredFundPanel({
       ) : (
         <form onSubmit={charter} className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex min-w-56 flex-1 flex-col text-xs text-foreground">
+            <label className="flex min-w-56 flex-1 flex-col text-body-sm text-foreground">
               Fund name
               <input
                 type="text"
@@ -215,11 +215,11 @@ export default function SponsoredFundPanel({
                 placeholder="e.g. Meridian National Index"
                 minLength={4}
                 maxLength={60}
-                className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+                className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
                 required
               />
             </label>
-            <label className="flex flex-col text-xs text-foreground">
+            <label className="flex flex-col text-body-sm text-foreground">
               Ticker (3 to 8 letters)
               <input
                 type="text"
@@ -227,31 +227,31 @@ export default function SponsoredFundPanel({
                 onChange={(e) => setTicker(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
                 placeholder="MERX"
                 maxLength={8}
-                className="mt-1 h-7 w-28 rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+                className="mt-1 h-7 w-28 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
                 required
               />
             </label>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col text-xs text-foreground">
+            <label className="flex flex-col text-body-sm text-foreground">
               Scope
               <select
                 value={scope}
                 onChange={(e) => setScope(e.target.value as "country" | "global")}
-                className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
               >
                 <option value="country">One country</option>
                 <option value="global">Global</option>
               </select>
             </label>
             {scope === "country" && (
-              <label className="flex flex-col text-xs text-foreground">
+              <label className="flex flex-col text-body-sm text-foreground">
                 Country
                 <select
                   value={countryId}
                   onChange={(e) => setCountryId(e.target.value)}
-                  className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                  className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                   required
                 >
                   <option value="">Pick a country…</option>
@@ -263,24 +263,24 @@ export default function SponsoredFundPanel({
                 </select>
               </label>
             )}
-            <label className="flex flex-col text-xs text-foreground">
+            <label className="flex flex-col text-body-sm text-foreground">
               Kind
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as "broad" | "sector")}
-                className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
               >
                 <option value="broad">Broad market</option>
                 <option value="sector">One industry</option>
               </select>
             </label>
             {kind === "sector" && (
-              <label className="flex flex-col text-xs text-foreground">
+              <label className="flex flex-col text-body-sm text-foreground">
                 Industry
                 <select
                   value={sectorType}
                   onChange={(e) => setSectorType(e.target.value)}
-                  className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                  className="mt-1 h-7 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                   required
                 >
                   <option value="">Pick an industry…</option>
@@ -295,7 +295,7 @@ export default function SponsoredFundPanel({
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col text-xs text-foreground">
+            <label className="flex flex-col text-body-sm text-foreground">
               Expense ratio (% per year)
               <input
                 type="number"
@@ -304,11 +304,11 @@ export default function SponsoredFundPanel({
                 min={minPct}
                 max={maxPct}
                 step="0.01"
-                className="mt-1 h-7 w-32 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="mt-1 h-7 w-32 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                 required
               />
             </label>
-            <label className="flex flex-col text-xs text-foreground">
+            <label className="flex flex-col text-body-sm text-foreground">
               {money.code ? `Seed capital, ${money.code}` : "Seed capital"}
               <input
                 type="number"
@@ -316,26 +316,26 @@ export default function SponsoredFundPanel({
                 onChange={(e) => setSeedCapital(e.target.value)}
                 min={minSeedLocal}
                 step="any"
-                className="mt-1 h-7 w-44 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="mt-1 h-7 w-44 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                 required
               />
             </label>
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {busy ? "Chartering…" : `Charter for ${fmt(totalCost)}`}
             </button>
           </div>
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             Paid from corporate cash: the {fmt(FUND_CHARTER_FEE_ANCHOR)} fee is never refunded; the
             seed capital buys fund units. Sponsor units stay invested while other investors or
             withdrawals remain.
           </p>
         </form>
       )}
-      <InlineError error={error} className="mt-2 text-xs text-error" />
+      <InlineError error={error} className="mt-2 text-body-sm text-error" />
     </section>
   );
 }

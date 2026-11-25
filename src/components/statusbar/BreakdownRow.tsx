@@ -9,7 +9,7 @@ interface BreakdownRowProps {
 
 export function BreakdownRow({ label, value, valueClass = "text-foreground" }: BreakdownRowProps) {
   return (
-    <div className="flex justify-between text-[11px]">
+    <div className="flex justify-between text-body-sm">
       <span className="text-muted">{label}</span>
       <span className={`font-medium tabular-nums ${valueClass}`}>{value}</span>
     </div>

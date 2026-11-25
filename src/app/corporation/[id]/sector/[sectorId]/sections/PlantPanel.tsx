@@ -166,7 +166,7 @@ export default function PlantPanel({
       {/* Header ─────────────────────────────────────────────────────────────*/}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-heading-sm font-bold text-foreground">
+          <h2 className="flex items-center gap-2 text-heading font-bold text-foreground">
             <Factory className="h-4 w-4 text-muted" aria-hidden />
             Your {sites}
           </h2>
@@ -219,7 +219,7 @@ export default function PlantPanel({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {mothballed && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-muted/40 bg-muted/10 px-2.5 py-1 text-body-xs font-semibold uppercase tracking-wide text-muted">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-muted/40 bg-muted/10 px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wide text-muted">
               <PauseCircle className="h-3 w-3" aria-hidden /> Mothballed
             </span>
           )}
@@ -227,7 +227,7 @@ export default function PlantPanel({
             <InfoTooltip
               width={280}
               trigger={
-                <span className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-info/30 bg-info/10 px-2.5 py-1 text-body-xs font-semibold uppercase tracking-wide text-info">
+                <span className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-info/30 bg-info/10 px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wide text-info">
                   <ShieldCheck className="h-3 w-3" aria-hidden /> Market support ·{" "}
                   {plants.governor.turnsRemaining}
                 </span>
@@ -303,7 +303,7 @@ export default function PlantPanel({
               productionPolicyLevel={productionPolicyLevel}
             />
             {primaryMediaSupply && (
-              <div className="mt-3 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-body-xs text-foreground">
+              <div className="mt-3 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-body-sm text-foreground">
                 <p className="font-semibold">
                   Commodity ledger output: {primaryMediaSupply.label}{" "}
                   {fmtUnits(primaryMediaSupply.units)} {primaryMediaSupply.unit}/day
@@ -313,7 +313,7 @@ export default function PlantPanel({
               </div>
             )}
             {countedCampaigns != null && (
-              <p className="mt-2 text-body-xs text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 {t("advertisingCampaignsCounted", {
                   units: fmtUnits(countedCampaigns),
                   factor: fmtPct(mediaAdvertisingCampaignFactor),
@@ -483,7 +483,7 @@ export default function PlantPanel({
                           ? `${fmtUnits(Math.floor(sitesDelivered + 1e-9))} of ${fmtUnits(sitesOrdered)} ${orderedNoun} finished`
                           : `${fmtUnits(sitesOrdered)} ${orderedNoun}`}
                       </p>
-                      <p className="text-body-xs text-muted">
+                      <p className="text-body-sm text-muted">
                         {plants.buildQueue.length > 1 ? `Ordered turn ${o.startTurn} · ` : ""}
                         {o.turnsRemaining > 0
                           ? sitesPerTurn != null
@@ -503,7 +503,7 @@ export default function PlantPanel({
                         disabled={busy}
                         title={`Cancel the order placed on turn ${o.startTurn}. You keep what is already built and get 75% of what you paid for the unbuilt part back: ${moneyWithAnchor(orderMoney.refund)}.`}
                         aria-label={`Cancel the order placed on turn ${o.startTurn}`}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-card-border px-2 py-1 text-body-xs font-medium text-muted transition-colors hover:border-error/40 hover:text-error disabled:opacity-40"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-card-border px-2 py-1 text-body-sm font-medium text-muted transition-colors hover:border-error/40 hover:text-error disabled:opacity-40"
                       >
                         <X className="h-3 w-3" aria-hidden /> Cancel
                       </button>
@@ -522,7 +522,7 @@ export default function PlantPanel({
                       style={{ width: `${o.progress * 100}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-body-xs text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     Bar: {Math.round(o.progress * 100)}% of the ordered capacity has arrived. A{" "}
                     {vocab.singular} only runs once it is finished, and the bar is not the share
                     paid.
@@ -531,7 +531,7 @@ export default function PlantPanel({
               );
             })}
           </ul>
-          <p className="mt-2 text-body-xs text-muted">{t("cancelHelp")}</p>
+          <p className="mt-2 text-body-sm text-muted">{t("cancelHelp")}</p>
         </div>
       )}
 
@@ -553,7 +553,7 @@ export default function PlantPanel({
               <PauseCircle className="mr-1.5 h-4 w-4" aria-hidden /> Mothball
             </Button>
           )}
-          <p className="w-full text-body-xs text-muted sm:w-auto sm:flex-1">
+          <p className="w-full text-body-sm text-muted sm:w-auto sm:flex-1">
             {t("mothballHelp", { percent: COLD_CAPACITY_UPKEEP_FRACTION * 100 })}
           </p>
         </div>
@@ -599,7 +599,7 @@ function Stat({
       <InfoTooltip
         width={260}
         trigger={
-          <span className="cursor-help border-b border-dotted border-muted/40 text-sm font-semibold text-foreground">
+          <span className="cursor-help border-b border-dotted border-muted/40 text-body font-semibold text-foreground">
             {label}
           </span>
         }
@@ -608,7 +608,7 @@ function Stat({
         <p className="text-muted">{help}</p>
       </InfoTooltip>
       <p className="mt-1 text-body-lg font-bold tabular-nums text-foreground">{value}</p>
-      <div className="text-body-xs text-muted">{sub}</div>
+      <div className="text-body-sm text-muted">{sub}</div>
     </div>
   );
 }

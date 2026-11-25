@@ -90,15 +90,15 @@ export function ApiAbuseTab() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-base font-semibold">API Abuse</h2>
-        <p className="mt-0.5 text-xs text-muted">
+        <h2 className="text-body-lg font-semibold">API Abuse</h2>
+        <p className="mt-0.5 text-body-sm text-muted">
           Scraping / enumeration / polling patterns in API traffic. Report-only — nothing is
           throttled or blocked.
         </p>
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="text-xs text-muted">
+        <div className="text-body-sm text-muted">
           {view?.detectedAt ? (
             <>
               {view.source === "live" ? "Live scan" : "Last scan"}:{" "}
@@ -113,28 +113,28 @@ export function ApiAbuseTab() {
           type="button"
           onClick={() => void load(true)}
           disabled={loading}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          className="rounded-md bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           {loading ? "Scanning…" : "Re-scan now"}
         </button>
       </div>
 
       {error && (
-        <div className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+        <div className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-body text-danger">
           {error}
         </div>
       )}
 
       {!loading && view && view.findings.length === 0 && (
-        <div className="rounded-md border border-card-border bg-card px-4 py-8 text-center text-sm text-muted">
+        <div className="rounded-md border border-card-border bg-card px-4 py-8 text-center text-body text-muted">
           No abuse patterns flagged in this window.
         </div>
       )}
 
       {view && view.findings.length > 0 && (
         <div className="overflow-hidden rounded-md border border-card-border bg-card">
-          <table className="w-full text-sm">
-            <thead className="border-b border-card-border text-left text-xs text-muted">
+          <table className="w-full text-body">
+            <thead className="border-b border-card-border text-left text-body-sm text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Actor</th>
                 <th className="px-4 py-2 font-medium">Type</th>
@@ -145,15 +145,15 @@ export function ApiAbuseTab() {
             <tbody>
               {view.findings.map((f) => (
                 <tr key={`${f.actorType}:${f.actor}`} className="border-b border-card-border/50">
-                  <td className="px-4 py-2 font-mono text-xs">{f.actor}</td>
+                  <td className="px-4 py-2 font-mono text-body-sm">{f.actor}</td>
                   <td className="px-4 py-2">
-                    <span className="rounded bg-background px-1.5 py-0.5 text-xs">
+                    <span className="rounded bg-background px-1.5 py-0.5 text-body-sm">
                       {f.actorType}
                     </span>
                   </td>
                   <td className="px-4 py-2 tabular-nums">{f.requestCount}</td>
                   <td className="px-4 py-2">
-                    <ul className="list-disc space-y-0.5 pl-4 text-xs">
+                    <ul className="list-disc space-y-0.5 pl-4 text-body-sm">
                       {f.signals.map((s, i) => (
                         <li key={i}>{describeSignal(s)}</li>
                       ))}

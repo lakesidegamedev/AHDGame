@@ -135,7 +135,7 @@ export function PolicyBook({
           scopeName={scope === "state" ? region?.name : undefined}
         />
       ) : records.length === 0 && !showTaxFallback ? (
-        <div className="rounded-xl border border-card-border bg-card p-12 text-center text-sm italic text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-12 text-center text-body italic text-muted">
           {emptyText}
         </div>
       ) : (

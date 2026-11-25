@@ -37,7 +37,7 @@ function BalanceRail({
           </div>
           <div className={`mt-1 text-heading font-semibold ${accentClass}`}>{axis.label}</div>
         </div>
-        <div className="font-mono text-heading-lg font-semibold tabular-nums text-foreground">
+        <div className="font-mono text-heading font-semibold tabular-nums text-foreground">
           {Math.round(axis.value)}
         </div>
       </div>
@@ -215,7 +215,7 @@ export function GovernanceStyleCard({
             </div>
             <h2
               id="governance-style-heading"
-              className="mt-3 text-heading-lg font-bold leading-tight text-foreground"
+              className="mt-3 text-heading font-bold leading-tight text-foreground"
             >
               {flavor.headline}
             </h2>

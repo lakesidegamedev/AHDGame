@@ -85,13 +85,15 @@ export function AppearanceSection({
 
   return (
     <>
-      <p className="text-sm text-muted mb-5">{t("appearance.intro")}</p>
+      <p className="text-body text-muted mb-5">{t("appearance.intro")}</p>
 
       {/* ── Carousel ───────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-card-border bg-card-muted p-4 mb-2">
         <div className="flex items-baseline justify-between mb-3">
-          <span className="text-sm font-medium text-foreground">{t("appearance.themeLabel")}</span>
-          <span className="text-xs text-muted">{t("appearance.themeMeta")}</span>
+          <span className="text-body font-medium text-foreground">
+            {t("appearance.themeLabel")}
+          </span>
+          <span className="text-body-sm text-muted">{t("appearance.themeMeta")}</span>
         </div>
 
         <div className="relative">
@@ -145,7 +147,7 @@ export function AppearanceSection({
                     {/* Header */}
                     <div className="flex items-center justify-between mb-2">
                       <span
-                        className="text-[11px] font-semibold leading-none tracking-tight"
+                        className="text-body-sm font-semibold leading-none tracking-tight"
                         style={{
                           color: opt.fg,
                         }}
@@ -154,7 +156,7 @@ export function AppearanceSection({
                       </span>
                       {isActive && (
                         <span
-                          className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                          className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-body-sm font-bold text-white"
                           style={{ background: opt.primary }}
                         >
                           ✓
@@ -176,7 +178,7 @@ export function AppearanceSection({
                         style={{ background: opt.fg2 }}
                       />
                       <span
-                        className="text-[9px] font-bold font-mono tabular-nums"
+                        className="text-body-sm font-bold font-mono tabular-nums"
                         style={{ color: isLight ? opt.fg : opt.fg }}
                       >
                         58%
@@ -225,7 +227,7 @@ export function AppearanceSection({
 
         {/* Dots + status */}
         <div className="flex items-center justify-between mt-3">
-          <span className="text-xs text-muted font-mono">
+          <span className="text-body-sm text-muted font-mono">
             {t("appearance.selectedLabel")}{" "}
             <span className="text-foreground">
               {t(`appearance.themes.${selectedTheme?.value ?? "default"}`)}
@@ -252,7 +254,7 @@ export function AppearanceSection({
       {/* ── Interface ───────────────────────────────────────────────────── */}
       <div className="border-t border-card-border pt-6">
         <div className="flex items-center gap-2 mb-3">
-          <h3 className="text-sm font-medium">{t("appearance.interfaceTitle")}</h3>
+          <h3 className="text-body-lg font-medium">{t("appearance.interfaceTitle")}</h3>
         </div>
         <fieldset
           className="grid gap-3 sm:grid-cols-2"
@@ -283,20 +285,20 @@ export function AppearanceSection({
                   onChange={() => onInterfaceModeChange(mode)}
                   className="sr-only"
                 />
-                <span className="flex items-center justify-between gap-3 text-sm font-semibold text-foreground">
+                <span className="flex items-center justify-between gap-3 text-body font-semibold text-foreground">
                   {t(`appearance.${mode}Ui`)}
                   <span
                     aria-hidden
-                    className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
+                    className={`flex h-4 w-4 items-center justify-center rounded-full border text-body-sm ${
                       selected
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-card-border text-transparent"
                     }`}
                   >
                     ✓
                   </span>
                 </span>
-                <span className="mt-1 block text-xs leading-relaxed text-muted">
+                <span className="mt-1 block text-body-sm leading-relaxed text-muted">
                   {t(`appearance.${mode}UiHint`)}
                 </span>
               </label>
@@ -307,8 +309,8 @@ export function AppearanceSection({
 
       {/* ── Corporation overview ───────────────────────────────────────── */}
       <div className="border-t border-card-border pt-6">
-        <h3 className="mb-1 text-sm font-medium">{t("appearance.corpOverviewTitle")}</h3>
-        <p className="mb-3 text-xs text-muted">{t("appearance.corpOverviewHint")}</p>
+        <h3 className="mb-1 text-body-lg font-medium">{t("appearance.corpOverviewTitle")}</h3>
+        <p className="mb-3 text-body-sm text-muted">{t("appearance.corpOverviewHint")}</p>
         <fieldset
           className="grid gap-3 sm:grid-cols-2"
           aria-label={t("appearance.corpOverviewTitle")}
@@ -334,20 +336,20 @@ export function AppearanceSection({
                   onChange={() => setCorpOverviewMode(mode)}
                   className="sr-only"
                 />
-                <span className="flex items-center justify-between gap-3 text-sm font-semibold text-foreground">
+                <span className="flex items-center justify-between gap-3 text-body font-semibold text-foreground">
                   {t(`appearance.corpOverview.${mode}`)}
                   <span
                     aria-hidden
-                    className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
+                    className={`flex h-4 w-4 items-center justify-center rounded-full border text-body-sm ${
                       selected
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-card-border text-transparent"
                     }`}
                   >
                     ✓
                   </span>
                 </span>
-                <span className="mt-1 block text-xs leading-relaxed text-muted">
+                <span className="mt-1 block text-body-sm leading-relaxed text-muted">
                   {t(`appearance.corpOverview.${mode}Hint`)}
                 </span>
               </label>
@@ -358,8 +360,8 @@ export function AppearanceSection({
 
       {/* ── Status Bar ──────────────────────────────────────────────────── */}
       <div className="border-t border-card-border pt-6">
-        <h3 className="text-sm font-medium mb-1">{t("appearance.statusBar")}</h3>
-        <p className="text-xs text-muted mb-4">{t("appearance.statusBarHint")}</p>
+        <h3 className="text-body-lg font-medium mb-1">{t("appearance.statusBar")}</h3>
+        <p className="text-body-sm text-muted mb-4">{t("appearance.statusBarHint")}</p>
         <div className="flex gap-3 flex-wrap">
           {(["standard", "corp", "elections", "full", "minimal"] as StatusBarLayout[])
             .map((value) => ({
@@ -373,28 +375,28 @@ export function AppearanceSection({
                 type="button"
                 onClick={() => handleLayoutChange(opt.value)}
                 aria-pressed={statusBarLayout === opt.value}
-                className={`flex-1 min-w-[140px] rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                className={`flex-1 min-w-[140px] rounded-xl border px-4 py-3 text-left text-body transition-all ${
                   statusBarLayout === opt.value
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-card-border bg-background text-muted hover:border-card-border hover:bg-card-elevated hover:text-foreground"
                 }`}
               >
                 <span className="block font-medium mb-0.5">{opt.label}</span>
-                <span className="block text-xs opacity-70">{opt.desc}</span>
+                <span className="block text-body-sm opacity-70">{opt.desc}</span>
               </button>
             ))}
         </div>
         {statusBarLayout === "corp" && (
-          <p className="mt-3 text-xs text-muted">{t("appearance.corpNote")}</p>
+          <p className="mt-3 text-body-sm text-muted">{t("appearance.corpNote")}</p>
         )}
         {statusBarLayout === "elections" && (
-          <p className="mt-3 text-xs text-muted">{t("appearance.electionsNote")}</p>
+          <p className="mt-3 text-body-sm text-muted">{t("appearance.electionsNote")}</p>
         )}
         {statusBarLayout === "full" && (
-          <p className="mt-3 text-xs text-muted">{t("appearance.fullNote")}</p>
+          <p className="mt-3 text-body-sm text-muted">{t("appearance.fullNote")}</p>
         )}
         {statusBarLayout === "minimal" && (
-          <p className="mt-3 text-xs text-muted">{t("appearance.minimalNote")}</p>
+          <p className="mt-3 text-body-sm text-muted">{t("appearance.minimalNote")}</p>
         )}
       </div>
     </>

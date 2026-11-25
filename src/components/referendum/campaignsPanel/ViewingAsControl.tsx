@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pillClass } from "@/components/ui/selectedState";
 
 const ROLES: { id: string; label: string }[] = [
   { id: "auto", label: "Auto" },
@@ -22,7 +23,7 @@ export function ViewingAsControl({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-[var(--ref-gold)]">
+      <span className="mr-1 text-body-sm font-bold uppercase tracking-wider text-[var(--ref-gold)]">
         Viewing as
       </span>
       {ROLES.map((r) => (
@@ -30,11 +31,7 @@ export function ViewingAsControl({
           key={r.id}
           href={hrefFor(r.id)}
           aria-current={active === r.id ? "true" : undefined}
-          className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
-            active === r.id
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-card-border text-muted hover:text-foreground"
-          }`}
+          className={`px-2.5 py-1 text-body-sm ${pillClass(active === r.id)}`}
         >
           {r.label}
         </Link>

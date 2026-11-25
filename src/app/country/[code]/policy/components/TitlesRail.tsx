@@ -3,6 +3,7 @@
 import { positionBucketHex } from "@/lib/utils/politics";
 import type { NationalAxes } from "@/lib/policy/nationalAxes";
 import { dominantAxis, getDomainLabel } from "./policyView";
+import { pillClass } from "@/components/ui/selectedState";
 
 const EUROPEAN_COLOUR_COUNTRIES = new Set(["UK", "DE"]);
 
@@ -35,7 +36,7 @@ export function TitlesRail({
       aria-label="Titles"
       className="flex gap-1.5 overflow-x-auto rounded-xl border border-card-border bg-card p-1.5 lg:sticky lg:top-24 lg:block lg:gap-0 lg:self-start lg:overflow-visible lg:p-0"
     >
-      <div className="hidden border-b border-card-border bg-card-muted px-4 py-2 text-sm font-semibold text-foreground lg:block">
+      <div className="hidden border-b border-card-border bg-card-muted px-4 py-2 text-body font-semibold text-foreground lg:block">
         Titles
       </div>
       {domains.map(({ domain, axes }) => {
@@ -48,16 +49,12 @@ export function TitlesRail({
             type="button"
             onClick={() => onSelect(domain)}
             aria-current={active ? "true" : undefined}
-            className={`flex shrink-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors lg:w-full lg:rounded-none lg:border-l-2 lg:px-4 ${
-              active
-                ? "bg-primary/10 text-foreground lg:border-primary lg:bg-primary/5"
-                : "text-muted hover:bg-card-elevated/40 hover:text-foreground lg:border-transparent"
-            }`}
+            className={`flex shrink-0 items-center justify-between gap-3 px-3 py-2 text-left text-body-sm lg:w-full lg:px-4 ${pillClass(active)}`}
           >
             <span className="truncate">{getDomainLabel(domain)}</span>
             {lean ? (
               <span
-                className="shrink-0 font-mono text-[10px] font-semibold"
+                className="shrink-0 font-mono text-body-sm font-semibold"
                 // Bucket ramp hex, the established chart-colour exception. The
                 // axis is printed so the colour has a stated rule: it is the
                 // same left/right or liberal/traditional scale as the compass.
@@ -71,7 +68,7 @@ export function TitlesRail({
                 {lean.value.toFixed(1)}
               </span>
             ) : (
-              <span className="font-mono text-[10px] text-muted/50">—</span>
+              <span className="font-mono text-body-sm text-muted/50">—</span>
             )}
           </button>
         );

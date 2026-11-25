@@ -184,7 +184,7 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
   const linkStyle = {
     marginTop: 10,
     display: "block",
-    fontSize: 13,
+    fontSize: 12,
     color: BLEND.accentInk,
     textDecoration: "none",
   } as const;
@@ -199,10 +199,10 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
     >
       <div style={BLEND_LABEL}>Your campaign here</div>
       <div style={{ marginTop: 6, display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontFamily: FONT.mono, fontSize: 22, fontWeight: 600, color: mine.color }}>
+        <span style={{ fontFamily: FONT.mono, fontSize: 20, fontWeight: 600, color: mine.color }}>
           {level}
         </span>
-        <span style={{ fontSize: 12.5, color: BLEND.muted }}>Campaign Presence level</span>
+        <span style={{ fontSize: 12, color: BLEND.muted }}>Campaign Presence level</span>
       </div>
       {mine.canBuild && row ? (
         <button
@@ -215,7 +215,7 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
             padding: "8px 10px",
             cursor: mine.busy === stateId || row.builtThisTurn ? "not-allowed" : "pointer",
             font: "inherit",
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 600,
             color: "#fff",
             background: BLEND.accent,
@@ -231,7 +231,7 @@ export function MyCampaignStateBlock({ mine, stateId }: { mine: MyCampaign; stat
         </button>
       ) : null}
       {mine.error ? (
-        <p role="alert" style={{ margin: "8px 0 0", fontSize: 12.5, color: BLEND.negative }}>
+        <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, color: BLEND.negative }}>
           {mine.error}
         </p>
       ) : null}

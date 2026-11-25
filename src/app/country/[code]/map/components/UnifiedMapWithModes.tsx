@@ -133,10 +133,10 @@ export function UnifiedMapWithModes({
         <div className="mb-4 sm:mb-6 flex items-center gap-3">
           <BackButton iconOnly />
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
+            <h1 className="text-heading sm:text-heading font-bold tracking-tight truncate">
               {displayName} Map
             </h1>
-            <p className="mt-0.5 text-xs sm:text-sm text-muted">{subtitle}</p>
+            <p className="mt-0.5 text-body-sm sm:text-body text-muted">{subtitle}</p>
           </div>
         </div>
 
@@ -149,7 +149,7 @@ export function UnifiedMapWithModes({
                   setMode(m.id);
                   setLeanDetailId(null);
                 }}
-                className={`shrink-0 rounded-lg border px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
+                className={`shrink-0 rounded-lg border px-3 py-1.5 sm:px-4 sm:py-2 text-body-sm sm:text-body font-medium transition-colors ${
                   mode === m.id
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-card-border bg-card text-muted hover:border-primary/50 hover:text-foreground"
@@ -166,9 +166,9 @@ export function UnifiedMapWithModes({
                   <button
                     key={r}
                     onClick={() => setResourceType(r)}
-                    className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                    className={`rounded px-2 py-1 text-body-sm font-medium transition-colors ${
                       resourceType === r
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card-elevated text-muted hover:text-foreground"
                     }`}
                   >
@@ -181,9 +181,9 @@ export function UnifiedMapWithModes({
                   <button
                     key={tog}
                     onClick={() => setResourceToggle(tog)}
-                    className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                    className={`rounded px-2 py-1 text-body-sm font-medium transition-colors ${
                       resourceToggle === tog
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card-elevated text-muted hover:text-foreground"
                     }`}
                   >
@@ -198,7 +198,7 @@ export function UnifiedMapWithModes({
             </div>
           )}
           {mode === "logistics" && (
-            <p className="mt-3 text-xs text-muted">
+            <p className="mt-3 text-body-sm text-muted">
               {freightHaulLoadCaption(Object.keys(freightData.states).length > 0)}
             </p>
           )}
@@ -212,7 +212,7 @@ export function UnifiedMapWithModes({
               <button
                 key={ax}
                 onClick={() => setLeanAxis(ax)}
-                className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
+                className={`rounded border px-2 py-1 text-body-sm font-medium transition-colors ${
                   leanAxis === ax
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-card-border bg-card text-muted hover:text-foreground"
@@ -249,7 +249,7 @@ export function UnifiedMapWithModes({
             <div className={styles.mapFooter}>
               <span>Hover a region for details. Select one to inspect it.</span>
               <div className={styles.zoomControls}>
-                <label className="mr-2 flex items-center gap-1 text-xs">
+                <label className="mr-2 flex items-center gap-1 text-body-sm">
                   <input
                     type="checkbox"
                     checked={showLabels}
@@ -273,7 +273,7 @@ export function UnifiedMapWithModes({
                   +
                 </button>
                 <button
-                  className="ml-2 text-xs"
+                  className="ml-2 text-body-sm"
                   onClick={() => {
                     setZoom(1);
                     setResetKey((k) => k + 1);
@@ -304,14 +304,14 @@ export function UnifiedMapWithModes({
                       className="h-3 w-3 shrink-0 rounded-sm"
                       style={{ backgroundColor: selectedCell?.color ?? "#334155" }}
                     />
-                    <h2 className="text-lg font-semibold">{selectedRegion.name}</h2>
+                    <h2 className="text-heading font-semibold">{selectedRegion.name}</h2>
                   </div>
                   {selectedCell?.label && selectedCell.label !== selectedRegion.name && (
-                    <p className="mt-1 text-sm text-foreground">{selectedCell.label}</p>
+                    <p className="mt-1 text-body text-foreground">{selectedCell.label}</p>
                   )}
-                  <p className="mt-1 text-xs text-muted">{selectedRegion.secondaryLabel}</p>
+                  <p className="mt-1 text-body-sm text-muted">{selectedRegion.secondaryLabel}</p>
                   {selectedCell?.tooltip && selectedCell.tooltip.length > 0 && (
-                    <ul className="mt-3 space-y-1 text-xs text-muted">
+                    <ul className="mt-3 space-y-1 text-body-sm text-muted">
                       {selectedCell.tooltip
                         .filter((line) => line !== selectedRegion.name)
                         .map((line, i) => (
@@ -322,12 +322,12 @@ export function UnifiedMapWithModes({
                   <div className="mt-4 flex gap-2">
                     <Link
                       href={regionUrl(countryConfig.countryId, selectedRegion.id)}
-                      className="rounded-lg border border-card-border px-3 py-1.5 text-sm font-medium hover:border-primary/50"
+                      className="rounded-lg border border-card-border px-3 py-1.5 text-body font-medium hover:border-primary/50"
                     >
                       Open region
                     </Link>
                     <button
-                      className="text-xs text-muted hover:text-foreground"
+                      className="text-body-sm text-muted hover:text-foreground"
                       onClick={() => {
                         setSelectedId(null);
                         setLeanDetailId(null);
@@ -338,7 +338,7 @@ export function UnifiedMapWithModes({
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   Select a region on the map to see its details for this layer.
                 </p>
               )}
@@ -362,12 +362,14 @@ export function UnifiedMapWithModes({
                     style={{ backgroundColor: d?.color ?? "#334155" }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                    <div className="truncate text-body font-medium text-foreground group-hover:text-primary transition-colors">
                       {region.name}
                     </div>
-                    <div className="truncate text-[10px] text-muted">{d?.label ?? region.name}</div>
+                    <div className="truncate text-body-sm text-muted">
+                      {d?.label ?? region.name}
+                    </div>
                   </div>
-                  <span className="text-sm text-muted">{region.secondaryLabel}</span>
+                  <span className="text-body text-muted">{region.secondaryLabel}</span>
                 </Link>
               );
             })}
@@ -386,7 +388,7 @@ export function UnifiedMapWithModes({
         <div className="mt-6 flex flex-wrap items-center gap-3 pt-4 border-t border-card-border/40">
           <Link
             href={config.overviewPath}
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
           >
             ← {displayName} Overview
           </Link>

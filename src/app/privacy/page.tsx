@@ -16,14 +16,14 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Privacy policy</h1>
-          <p className="mt-2 text-sm text-muted">Effective date: {EFFECTIVE_DATE}</p>
+          <h1 className="text-display font-bold tracking-tight">Privacy policy</h1>
+          <p className="mt-2 text-body text-muted">Effective date: {EFFECTIVE_DATE}</p>
         </div>
 
         <div className="rounded-xl border border-card-border bg-card p-6 sm:p-8 space-y-8">
           <section>
-            <h2 className="text-lg font-bold mb-3">1. Introduction</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">1. Introduction</h2>
+            <p className="text-body text-muted leading-relaxed">
               This Privacy Policy describes how A House Divided (&ldquo;we&rdquo;, &ldquo;us&rdquo;,
               or &ldquo;our&rdquo;) collects, uses, and handles your information when you use our
               website and game at{" "}
@@ -36,8 +36,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">2. Information We Collect</h2>
-            <div className="space-y-4 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">2. Information We Collect</h2>
+            <div className="space-y-4 text-body text-muted leading-relaxed">
               <div>
                 <p className="font-semibold text-foreground mb-1">Account data</p>
                 <p>
@@ -134,8 +134,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section id="cookies">
-            <h2 className="text-lg font-bold mb-3">3. Cookies</h2>
-            <div className="space-y-3 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">3. Cookies</h2>
+            <div className="space-y-3 text-body text-muted leading-relaxed">
               <div>
                 <p className="font-semibold text-foreground mb-1">Authentication cookie</p>
                 <p>
@@ -148,7 +148,7 @@ export default function PrivacyPolicyPage() {
                 <p className="font-semibold text-foreground mb-1">Anonymous traffic cookie</p>
                 <p>
                   We may set an HTTP-only cookie named{" "}
-                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-xs">
+                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-body-sm">
                     __ahd_track
                   </code>{" "}
                   with a random identifier. It is used for duplicate-account signals and aggregate
@@ -160,14 +160,14 @@ export default function PrivacyPolicyPage() {
                 <p>
                   If you arrive from another website or a tagged link, we may set an HTTP-only
                   cookie named{" "}
-                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-xs">
+                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-body-sm">
                     __ahd_src
                   </code>{" "}
                   for up to 30 days. It holds only the referring site&apos;s domain (for example
                   reddit.com), any campaign tags in the link, and the date. If you create an
                   account, that summary is saved with it so we can see which channels bring new
                   players. A short-lived{" "}
-                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-xs">
+                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-body-sm">
                     ahd-new-account
                   </code>{" "}
                   cookie naming your sign-in provider is also set for 15 minutes after a new Google,
@@ -197,7 +197,7 @@ export default function PrivacyPolicyPage() {
                 <p className="font-semibold text-foreground mb-1">Display preference cookie</p>
                 <p>
                   We store your UI layout preference in a cookie named{" "}
-                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-xs">
+                  <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-body-sm">
                     ahd-display-mode
                   </code>
                   . This contains no personal data.
@@ -207,8 +207,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">4. How We Use Your Data</h2>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">4. How We Use Your Data</h2>
+            <ul className="list-disc pl-5 space-y-1 text-body text-muted leading-relaxed">
               <li>To create and operate your account and in-game character</li>
               <li>To run and simulate the game world</li>
               <li>
@@ -221,12 +221,12 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">5. Third-Party Services</h2>
-            <p className="text-sm text-muted leading-relaxed mb-4">
+            <h2 className="text-heading font-bold mb-3">5. Third-Party Services</h2>
+            <p className="text-body text-muted leading-relaxed mb-4">
               We use the following third-party services. Each has its own privacy policy.
             </p>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+              <table className="w-full text-body border-collapse">
                 <thead>
                   <tr className="border-b border-card-border">
                     <th className="py-2 pr-4 text-left font-semibold text-foreground">Service</th>
@@ -288,8 +288,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">6. Data Retention</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">6. Data Retention</h2>
+            <p className="text-body text-muted leading-relaxed">
               Account and gameplay data is retained for as long as your account is active. You may
               delete your account at any time from the{" "}
               <Link href="/settings" className="text-primary hover:underline">
@@ -300,8 +300,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">7. Children&apos;s Privacy</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">7. Children&apos;s Privacy</h2>
+            <p className="text-body text-muted leading-relaxed">
               A House Divided is not directed at children under the age of 13. We do not knowingly
               collect personal information from anyone under 13. If you believe a person under 13
               has provided us with personal information, please contact us via Discord and we will
@@ -310,8 +310,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">8. Your Rights</h2>
-            <div className="space-y-3 text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">8. Your Rights</h2>
+            <div className="space-y-3 text-body text-muted leading-relaxed">
               <p>
                 You may delete your account and associated data at any time via the{" "}
                 <Link href="/settings" className="text-primary hover:underline">
@@ -357,8 +357,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">9. Contact</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">9. Contact</h2>
+            <p className="text-body text-muted leading-relaxed">
               For privacy-related questions, email us at{" "}
               <a href="mailto:admin@ahousedividedgame.com" className="text-primary hover:underline">
                 admin@ahousedividedgame.com
@@ -377,8 +377,8 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-3">10. Changes to This Policy</h2>
-            <p className="text-sm text-muted leading-relaxed">
+            <h2 className="text-heading font-bold mb-3">10. Changes to This Policy</h2>
+            <p className="text-body text-muted leading-relaxed">
               We may update this Privacy Policy from time to time. The effective date at the top of
               this page will be updated to reflect any changes. Continued use of the service after
               changes are posted constitutes your acceptance of the updated policy.
@@ -386,7 +386,7 @@ export default function PrivacyPolicyPage() {
           </section>
         </div>
 
-        <p className="mt-6 text-center text-xs text-muted">
+        <p className="mt-6 text-center text-body-sm text-muted">
           See also:{" "}
           <Link href="/terms" className="text-primary hover:underline">
             Terms of service

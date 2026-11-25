@@ -112,7 +112,7 @@ export function ConstituentsPanel({
   return (
     <div className="overflow-hidden rounded-xl border border-card-border bg-card shadow-sm">
       <div className="flex items-center justify-between gap-4 border-b border-card-border px-5 py-4">
-        <h2 className="text-sm font-semibold">Constituents</h2>
+        <h2 className="text-body font-semibold">Constituents</h2>
         <div className="flex gap-0.5 rounded-lg border border-card-border bg-card-elevated p-0.5">
           {(
             [
@@ -127,7 +127,7 @@ export function ConstituentsPanel({
                 setView(v.key);
                 setPage(1);
               }}
-              className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              className={`rounded-md border px-2.5 py-1 text-body-sm font-semibold transition-all ${
                 view === v.key
                   ? "border-primary/45 bg-primary/14 text-primary"
                   : "border-transparent text-muted hover:text-foreground"
@@ -150,8 +150,8 @@ export function ConstituentsPanel({
                 style={{ background: colorFor(r.id) }}
                 aria-hidden
               />
-              <span className="font-mono text-[11px] font-semibold">{r.tickerSymbol ?? "—"}</span>
-              <span className="ml-auto font-mono tabular-nums text-[11px] text-muted">
+              <span className="font-mono text-body-sm font-semibold">{r.tickerSymbol ?? "—"}</span>
+              <span className="ml-auto font-mono tabular-nums text-body-sm text-muted">
                 {(r.weightActual * 100).toFixed(1)}%
               </span>
             </div>
@@ -272,7 +272,7 @@ function DonutChart({
         ))}
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-2xl font-bold">{rows.length}</span>
+        <span className="font-mono text-heading font-bold">{rows.length}</span>
         <span className="text-body-sm font-medium text-muted">holdings</span>
       </div>
     </div>
@@ -341,7 +341,7 @@ function ActualHoldings({
             <span className="text-right text-body-sm font-medium text-muted">Dividends</span>
           </div>
           {rows.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted">No active holdings.</div>
+            <div className="px-5 py-8 text-center text-body text-muted">No active holdings.</div>
           ) : (
             rows.map((r, i) => (
               <ActualDesktopRow
@@ -357,7 +357,7 @@ function ActualHoldings({
             ))
           )}
           {rows.length > 0 && (
-            <div className="flex justify-between border-t border-card-border bg-card-elevated px-5 py-2.5 text-[11px] text-muted">
+            <div className="flex justify-between border-t border-card-border bg-card-elevated px-5 py-2.5 text-body-sm text-muted">
               <span>Total holdings value</span>
               <span className="font-mono tabular-nums font-semibold text-foreground">
                 {totalHoldingsLabel}
@@ -370,7 +370,7 @@ function ActualHoldings({
       {/* Mobile cards */}
       <div className="block sm:hidden">
         {rows.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-muted">No active holdings.</div>
+          <div className="px-5 py-8 text-center text-body text-muted">No active holdings.</div>
         ) : (
           <div className="divide-y divide-card-border">
             {rows.map((r, i) => (
@@ -388,7 +388,7 @@ function ActualHoldings({
           </div>
         )}
         {rows.length > 0 && (
-          <div className="flex justify-between border-t border-card-border bg-card-elevated px-5 py-2.5 text-[11px] text-muted">
+          <div className="flex justify-between border-t border-card-border bg-card-elevated px-5 py-2.5 text-body-sm text-muted">
             <span>Total holdings value</span>
             <span className="font-mono tabular-nums font-semibold text-foreground">
               {totalHoldingsLabel}
@@ -397,7 +397,7 @@ function ActualHoldings({
         )}
       </div>
       {rows.length > 0 && (
-        <p className="border-t border-card-border px-5 py-2 text-[11px] text-muted">
+        <p className="border-t border-card-border px-5 py-2 text-body-sm text-muted">
           Avg cost is what the fund paid per share, not today&apos;s quote. Values use the
           fund&apos;s last mark in its own currency.
         </p>
@@ -434,27 +434,27 @@ function ActualDesktopRow({
         gridTemplateColumns: "26px minmax(0,1.5fr) 150px 90px 90px 100px 80px 90px",
       }}
     >
-      <span className="font-mono text-[11px] text-muted">{i + 1}</span>
+      <span className="font-mono text-body-sm text-muted">{i + 1}</span>
       <NameCell corporationName={r.corporationName} tickerSymbol={r.tickerSymbol} />
       <WeightBar weight={r.weightActual} barPct={barPct} color={colorFor(r.id)} />
-      <span className="text-right font-mono tabular-nums text-xs">
+      <span className="text-right font-mono tabular-nums text-body-sm">
         {r.shares.toLocaleString("en-US")}
       </span>
-      <span className="text-right font-mono tabular-nums text-xs text-muted">
+      <span className="text-right font-mono tabular-nums text-body-sm text-muted">
         {r.avgCostPerShareAnchor != null && price != null
           ? formatPrice(r.avgCostPerShareAnchor, ccy)
           : "—"}
       </span>
-      <span className="text-right font-mono tabular-nums text-xs font-semibold">
+      <span className="text-right font-mono tabular-nums text-body-sm font-semibold">
         {formatAmount(r.valueAnchor, ccy)}
       </span>
       <span
-        className="text-right font-mono tabular-nums text-xs font-semibold"
+        className="text-right font-mono tabular-nums text-body-sm font-semibold"
         style={{ color: retColor }}
       >
         {r.returnPct == null ? "—" : `${r.returnPct >= 0 ? "+" : ""}${r.returnPct.toFixed(1)}%`}
       </span>
-      <span className="text-right font-mono tabular-nums text-xs text-muted">
+      <span className="text-right font-mono tabular-nums text-body-sm text-muted">
         {r.dividendsReceivedAnchor ? formatAmount(r.dividendsReceivedAnchor, ccy) : "—"}
       </span>
     </div>
@@ -485,13 +485,13 @@ function ActualMobileCard({
   return (
     <div className="px-5 py-3 transition-colors hover:bg-card-elevated">
       <div className="flex items-center gap-3">
-        <span className="font-mono text-[11px] text-muted">{i + 1}</span>
+        <span className="font-mono text-body-sm text-muted">{i + 1}</span>
         <NameCell corporationName={r.corporationName} tickerSymbol={r.tickerSymbol} />
       </div>
       <div className="mt-2">
         <WeightBar weight={r.weightActual} barPct={barPct} color={colorFor(r.id)} />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-body-sm">
         <MobileMetric label="Shares" value={r.shares.toLocaleString("en-US")} />
         <MobileMetric
           label="Avg cost"
@@ -563,7 +563,9 @@ function TargetHoldings({
             <span className="text-right text-body-sm font-medium text-muted">Drift vs actual</span>
           </div>
           {rows.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted">No target constituents.</div>
+            <div className="px-5 py-8 text-center text-body text-muted">
+              No target constituents.
+            </div>
           ) : (
             rows.map((r, i) => (
               <TargetDesktopRow
@@ -576,7 +578,7 @@ function TargetHoldings({
               />
             ))
           )}
-          <div className="border-t border-card-border px-5 py-2.5 text-[11px] text-muted">
+          <div className="border-t border-card-border px-5 py-2.5 text-body-sm text-muted">
             Drift is actual weight minus the index target. The fund trades toward target at each
             rebalance.
           </div>
@@ -586,7 +588,7 @@ function TargetHoldings({
       {/* Mobile cards */}
       <div className="block sm:hidden">
         {rows.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-muted">No target constituents.</div>
+          <div className="px-5 py-8 text-center text-body text-muted">No target constituents.</div>
         ) : (
           <div className="divide-y divide-card-border">
             {rows.map((r, i) => (
@@ -601,7 +603,7 @@ function TargetHoldings({
             ))}
           </div>
         )}
-        <div className="border-t border-card-border px-5 py-2.5 text-[11px] text-muted">
+        <div className="border-t border-card-border px-5 py-2.5 text-body-sm text-muted">
           Drift is actual weight minus the index target. The fund trades toward target at each
           rebalance.
         </div>
@@ -633,14 +635,14 @@ function TargetDesktopRow({
       className="grid items-center gap-3 border-t border-card-border px-5 py-2.5 transition-colors hover:bg-card-elevated"
       style={{ gridTemplateColumns: "26px minmax(0,1.5fr) 170px 110px 110px" }}
     >
-      <span className="font-mono text-[11px] text-muted">{i + 1}</span>
+      <span className="font-mono text-body-sm text-muted">{i + 1}</span>
       <NameCell corporationName={r.corporationName} tickerSymbol={r.tickerSymbol} />
       <WeightBar weight={r.targetWeight} barPct={barPct} color={colorFor(r.id)} />
-      <span className="text-right font-mono tabular-nums text-xs">
+      <span className="text-right font-mono tabular-nums text-body-sm">
         {r.marketCapAnchor != null ? formatAmount(r.marketCapAnchor) : "—"}
       </span>
       <span
-        className="text-right font-mono tabular-nums text-xs font-semibold"
+        className="text-right font-mono tabular-nums text-body-sm font-semibold"
         style={{ color: driftColor }}
       >
         {driftPts >= 0 ? "+" : "−"}
@@ -671,13 +673,13 @@ function TargetMobileCard({
   return (
     <div className="px-5 py-3 transition-colors hover:bg-card-elevated">
       <div className="flex items-center gap-3">
-        <span className="font-mono text-[11px] text-muted">{i + 1}</span>
+        <span className="font-mono text-body-sm text-muted">{i + 1}</span>
         <NameCell corporationName={r.corporationName} tickerSymbol={r.tickerSymbol} />
       </div>
       <div className="mt-2">
         <WeightBar weight={r.targetWeight} barPct={barPct} color={colorFor(r.id)} />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-body-sm">
         <MobileMetric
           label="Market cap"
           value={r.marketCapAnchor != null ? formatAmount(r.marketCapAnchor) : "—"}
@@ -704,9 +706,9 @@ function NameCell({
 }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
-      <span className="truncate text-[12.5px] font-semibold">{corporationName}</span>
+      <span className="truncate text-body-sm font-semibold">{corporationName}</span>
       {tickerSymbol && (
-        <span className="shrink-0 font-mono text-[10.5px] font-semibold text-primary">
+        <span className="shrink-0 font-mono text-body-sm font-semibold text-primary">
           {tickerSymbol}
         </span>
       )}
@@ -720,7 +722,7 @@ function WeightBar({ weight, barPct, color }: { weight: number; barPct: number; 
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-track">
         <div className="h-full rounded-full" style={{ width: `${barPct}%`, background: color }} />
       </div>
-      <span className="w-[42px] shrink-0 text-right font-mono tabular-nums text-[11.5px]">
+      <span className="w-[42px] shrink-0 text-right font-mono tabular-nums text-body-sm">
         {(weight * 100).toFixed(1)}%
       </span>
     </div>

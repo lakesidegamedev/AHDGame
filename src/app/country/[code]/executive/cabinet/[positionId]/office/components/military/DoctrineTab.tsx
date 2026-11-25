@@ -81,14 +81,14 @@ export function DoctrineTab({
         sub={`Adopt era-gated doctrines to shape the force. Current era: ${ERASHORT[currentEra] ?? "—"}`}
         right={
           <div className="text-right">
-            <div className="tabular text-3xl font-black leading-none text-gov-soft">
+            <div className="tabular text-display font-black leading-none text-gov-soft">
               {state.points}
             </div>
             <div className="dossier-label text-muted">Doctrine points</div>
           </div>
         }
       >
-        <p className="-mt-1 mb-3 text-[11px] leading-relaxed text-muted">
+        <p className="-mt-1 mb-3 text-body-sm leading-relaxed text-muted">
           Your country starts with 12 doctrine points and gains 1 more at the start of each game
           year. Adoption spends that pool; there is no refund.
         </p>
@@ -105,7 +105,7 @@ export function DoctrineTab({
                   setSelCatId(c.id);
                   setSelKey(null);
                 }}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold ${
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-body-sm font-semibold ${
                   active
                     ? "border-[color-mix(in_srgb,var(--gov)_55%,transparent)] bg-[color-mix(in_srgb,var(--gov)_12%,transparent)] text-foreground"
                     : "border-card-border bg-card-elevated text-muted hover:text-foreground"
@@ -116,7 +116,7 @@ export function DoctrineTab({
                   style={{ background: c.color }}
                 />
                 <span className="truncate">{c.name}</span>
-                <span className="tabular shrink-0 text-[10px] text-muted">
+                <span className="tabular shrink-0 text-body-sm text-muted">
                   {adopted}/{total}
                 </span>
               </button>
@@ -164,11 +164,11 @@ export function DoctrineTab({
                                 className="h-2 w-2 shrink-0 rounded-full"
                                 style={{ background: STATUS_DOT[st] }}
                               />
-                              <span className="tabular text-[9px] text-muted">
+                              <span className="tabular text-body-sm text-muted">
                                 {DECADES[node.d]}
                               </span>
                             </div>
-                            <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-foreground">
+                            <span className="line-clamp-2 text-body-sm font-semibold leading-tight text-foreground">
                               {node.name}
                             </span>
                           </button>
@@ -185,7 +185,7 @@ export function DoctrineTab({
         {/* detail + active effects */}
         <div className="w-full space-y-4 lg:w-[340px] lg:shrink-0">
           {adoptError && (
-            <p role="alert" className="text-[11px] text-error">
+            <p role="alert" className="text-body-sm text-error">
               {adoptError}
             </p>
           )}
@@ -203,7 +203,7 @@ export function DoctrineTab({
             />
           ) : (
             <SectionCard title="Doctrine detail">
-              <p className="text-[12px] text-muted">
+              <p className="text-body-sm text-muted">
                 Select a doctrine node to review its effects, prerequisites, and cost.
               </p>
             </SectionCard>
@@ -214,7 +214,7 @@ export function DoctrineTab({
             sub="Force-wide modifiers from adopted doctrines"
           >
             {pillGroups.length === 0 ? (
-              <p className="text-[12px] text-muted">No active doctrine effects.</p>
+              <p className="text-body-sm text-muted">No active doctrine effects.</p>
             ) : (
               <div className="space-y-3">
                 {pillGroups.map((g) => (
@@ -226,7 +226,7 @@ export function DoctrineTab({
                       {g.items.map((i) => (
                         <div
                           key={i.label + i.src}
-                          className="flex items-start gap-1.5 text-[11px] text-foreground/80"
+                          className="flex items-start gap-1.5 text-body-sm text-foreground/80"
                         >
                           <span style={{ color: g.color }}>▸</span>
                           <span>{i.label}</span>
@@ -288,13 +288,13 @@ function DetailCard({
       right={<Badge tone={statusTone}>{statusLabel}</Badge>}
     >
       <div className="space-y-3">
-        {f.node.desc && <p className="text-[12px] text-foreground/80">{f.node.desc}</p>}
+        {f.node.desc && <p className="text-body-sm text-foreground/80">{f.node.desc}</p>}
 
         <div>
           <div className="dossier-label mb-1 text-muted">Effects</div>
           <div className="flex flex-col gap-1">
             {effects.map((e) => (
-              <div key={e} className="flex items-start gap-1.5 text-[12px] text-foreground/85">
+              <div key={e} className="flex items-start gap-1.5 text-body-sm text-foreground/85">
                 <span className="text-gov-soft">▸</span>
                 <span>{e}</span>
               </div>
@@ -309,7 +309,7 @@ function DetailCard({
               {reqs.map((r) => (
                 <div
                   key={r.label}
-                  className={`flex items-center gap-1.5 text-[12px] ${r.ok ? "text-success" : "text-error"}`}
+                  className={`flex items-center gap-1.5 text-body-sm ${r.ok ? "text-success" : "text-error"}`}
                 >
                   <span>{r.ok ? "✓" : "✕"}</span>
                   <span>{r.label}</span>
@@ -322,7 +322,7 @@ function DetailCard({
         {f.node.x && f.node.x.length > 0 && (
           <div className="flex flex-col gap-1">
             {f.node.x.map((x) => (
-              <div key={x} className="text-[11px] text-error/90">
+              <div key={x} className="text-body-sm text-error/90">
                 Conflicts with {x}
               </div>
             ))}
@@ -340,14 +340,14 @@ function DetailCard({
         )}
 
         {st === "adopted" ? (
-          <div className="rounded-lg border border-success/40 bg-success/10 py-2 text-center text-[12px] font-semibold text-success">
+          <div className="rounded-lg border border-success/40 bg-success/10 py-2 text-center text-body-sm font-semibold text-success">
             ✓ Doctrine adopted
           </div>
         ) : (
           <button
             onClick={onAdopt}
             disabled={!canAdopt}
-            className={`w-full rounded-lg py-2.5 text-[12px] font-bold ${
+            className={`w-full rounded-lg py-2.5 text-body-sm font-bold ${
               canAdopt
                 ? "bg-[var(--gov)] text-[#1a1200] hover:brightness-110"
                 : "cursor-not-allowed border border-card-border bg-card-elevated text-muted"
@@ -367,7 +367,7 @@ function DetailCard({
         {/* Name what is actually blocking the node. The button stays on one line,
             so the prerequisite list goes underneath it. */}
         {st === "locked" && missing.length > 0 && (
-          <div className="text-center text-[11px] text-muted">Requires: {missing.join(", ")}</div>
+          <div className="text-center text-body-sm text-muted">Requires: {missing.join(", ")}</div>
         )}
 
         {/* cost/points context bar */}
@@ -379,7 +379,7 @@ function DetailCard({
             color="var(--gov)"
             height={6}
           />
-          <span className="tabular text-[11px] text-muted">
+          <span className="tabular text-body-sm text-muted">
             {f.node.cost} / {points}
           </span>
         </div>

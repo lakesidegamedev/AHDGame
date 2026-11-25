@@ -93,13 +93,13 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-card-border px-4 py-3 sm:px-6 sm:py-4">
           <div>
-            <h2 id={titleId} className="text-base font-bold text-foreground">
+            <h2 id={titleId} className="text-body-lg font-bold text-foreground">
               {plantsMode ? "Build a new sector" : "Expand into new market"}
             </h2>
             {step === "suggestions" && !plantsMode && (
               <button
                 type="button"
-                className="text-xs text-muted hover:text-foreground mt-0.5 transition-colors"
+                className="text-body-sm text-muted hover:text-foreground mt-0.5 transition-colors"
                 onClick={() => setStep("selectType")}
               >
                 Back to sector type selection
@@ -109,7 +109,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full w-7 h-7 flex items-center justify-center text-muted hover:text-foreground hover:bg-card-elevated transition-colors text-sm"
+            className="rounded-full w-7 h-7 flex items-center justify-center text-muted hover:text-foreground hover:bg-card-elevated transition-colors text-body"
             aria-label="Close"
           >
             ✕
@@ -120,7 +120,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
           {/* Step 1: Select sector type */}
           {step === "selectType" && (
             <div className="space-y-4">
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 {plantsMode
                   ? "Choose what you want to make. The next step shows which markets have demand nobody is meeting yet."
                   : "Choose the sector type to find the best split opportunities."}
@@ -137,7 +137,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       key={t}
                       type="button"
                       onClick={() => setSelectedType(t)}
-                      className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-left transition-colors border ${
+                      className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-body text-left transition-colors border ${
                         isSelected
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-card-border bg-card-elevated/40 text-foreground hover:border-primary/40 hover:bg-primary/5"
@@ -146,17 +146,17 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       <span className="font-medium">{OPERATING_SECTOR_TYPE_LABELS[t]}</span>
                       <span className="flex items-center gap-1.5 shrink-0 ml-2">
                         {isPrimary && (
-                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-primary/20 text-primary">
+                          <span className="rounded px-1.5 py-0.5 text-body-sm font-semibold bg-primary/20 text-primary">
                             Primary
                           </span>
                         )}
                         {isSecondary && (
-                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-success/20 text-success">
+                          <span className="rounded px-1.5 py-0.5 text-body-sm font-semibold bg-success/20 text-success">
                             Secondary
                           </span>
                         )}
                         {!isPrimary && !isSecondary && (
-                          <span className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-warning/10 text-warning">
+                          <span className="rounded px-1.5 py-0.5 text-body-sm font-medium bg-warning/10 text-warning">
                             -15% margin
                           </span>
                         )}
@@ -166,7 +166,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                 })}
               </div>
 
-              <InlineError error={suggestionError} className="text-sm text-error" />
+              <InlineError error={suggestionError} className="text-body text-error" />
 
               <button
                 type="button"
@@ -180,7 +180,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                     ownershipFilter
                   );
                 }}
-                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-body font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed transition-colors"
               >
                 {loadingSuggestions
                   ? "Loading..."
@@ -196,14 +196,14 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-body font-semibold text-foreground">
                     {plantsMode
                       ? confirming && activeSuggestion
                         ? `Review ${activeSuggestion.stateName}`
                         : "Choose a market"
                       : `${OPERATING_SECTOR_TYPE_LABELS[selectedType]} markets`}
                   </p>
-                  <p className="mt-0.5 text-xs text-muted">
+                  <p className="mt-0.5 text-body-sm text-muted">
                     {plantsMode
                       ? `${OPERATING_SECTOR_TYPE_LABELS[selectedType]} sector · ${formatTreasuryAmount(fetchedLiquidCapital)} company cash`
                       : suggestionMode === "playerCorp"
@@ -215,7 +215,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                   <button
                     type="button"
                     onClick={() => setConfirming(false)}
-                    className="shrink-0 rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                    className="shrink-0 rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:text-foreground"
                   >
                     Back to markets
                   </button>
@@ -223,14 +223,14 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
               </div>
 
               {suggestionError && (
-                <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
+                <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error">
                   {suggestionError}
                 </p>
               )}
 
               {/* Mode toggle */}
               <div
-                className={`${plantsMode ? "hidden" : "flex"} rounded-lg border border-card-border overflow-hidden text-xs font-medium`}
+                className={`${plantsMode ? "hidden" : "flex"} rounded-lg border border-card-border overflow-hidden text-body-sm font-medium`}
               >
                 <button
                   type="button"
@@ -238,7 +238,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                   disabled={loadingSuggestions}
                   className={`flex-1 px-3 py-1.5 transition-colors ${
                     suggestionMode === "unowned"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated/40 text-muted hover:text-foreground"
                   }`}
                 >
@@ -250,7 +250,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                   disabled={loadingSuggestions}
                   className={`flex-1 px-3 py-1.5 transition-colors border-l border-card-border ${
                     suggestionMode === "playerCorp"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated/40 text-muted hover:text-foreground"
                   }`}
                 >
@@ -269,7 +269,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                     type="button"
                     onClick={() => void handleOwnershipSwitch(opt.value)}
                     disabled={loadingSuggestions}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors border disabled:opacity-50 ${
+                    className={`rounded-md px-2.5 py-1 text-body-sm font-medium transition-colors border disabled:opacity-50 ${
                       ownershipFilter === opt.value
                         ? "border-primary bg-primary/15 text-primary"
                         : "border-card-border text-muted hover:text-foreground hover:border-muted"
@@ -284,8 +284,8 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
               <div
                 className={`${plantsMode ? "hidden" : "flex"} rounded-lg border border-card-border bg-card-elevated/30 px-3 py-2 items-center justify-between`}
               >
-                <span className="text-xs text-muted">Company cash</span>
-                <span className="text-xs font-bold text-foreground">
+                <span className="text-body-sm text-muted">Company cash</span>
+                <span className="text-body-sm font-bold text-foreground">
                   {formatTreasuryAmount(fetchedLiquidCapital)}
                 </span>
               </div>
@@ -300,7 +300,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       onChange={(event) =>
                         selectPlantSectorType(event.target.value as OperatingSectorType)
                       }
-                      className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-xs text-foreground disabled:opacity-50"
+                      className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body-sm text-foreground disabled:opacity-50"
                     >
                       {orderedTypes.map((t) => {
                         const suffix =
@@ -326,7 +326,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       onChange={(event) =>
                         void handleModeSwitch(event.target.value as SuggestionMode)
                       }
-                      className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-xs text-foreground disabled:opacity-50"
+                      className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body-sm text-foreground disabled:opacity-50"
                     >
                       <option value="unowned">Best affordable fit</option>
                       <option value="playerCorp">Largest established</option>
@@ -340,7 +340,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       onChange={(event) =>
                         void handleOwnershipSwitch(event.target.value as OwnershipFilter)
                       }
-                      className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-xs text-foreground disabled:opacity-50"
+                      className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body-sm text-foreground disabled:opacity-50"
                     >
                       <option value="unowned">New markets</option>
                       <option value="all">All markets</option>
@@ -354,7 +354,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                         value={countryFilters.size === 1 ? [...countryFilters][0] : ""}
                         disabled={loadingSuggestions}
                         onChange={(event) => selectCountry(event.target.value)}
-                        className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-xs text-foreground disabled:opacity-50"
+                        className="w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body-sm text-foreground disabled:opacity-50"
                       >
                         <option value="">All countries</option>
                         {availableCountries.map((country) => (
@@ -365,7 +365,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       </select>
                     </label>
                   )}
-                  <p className="col-span-2 text-[11px] leading-snug text-muted">
+                  <p className="col-span-2 text-body-sm leading-snug text-muted">
                     {suggestionMode === "unowned"
                       ? countrySharedDemand
                         ? "This daily demand estimate is shared across reachable markets in the country. It is not a sales guarantee."
@@ -377,11 +377,11 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
 
               {loadingSuggestions ? (
                 <div className="rounded-xl border border-card-border bg-card-elevated/30 p-6 text-center">
-                  <p className="text-sm text-muted">Finding the strongest markets...</p>
+                  <p className="text-body text-muted">Finding the strongest markets...</p>
                 </div>
               ) : suggestionError && suggestions.length === 0 ? null : suggestions.length === 0 ? (
                 <div className="rounded-xl border border-card-border bg-card-elevated/30 p-6 text-center">
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     {plantsMode
                       ? suggestionMode === "playerCorp"
                         ? "No established markets found for this sector type."
@@ -403,7 +403,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                     <button
                       type="button"
                       onClick={clearCountryFilter}
-                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors border ${
+                      className={`rounded-md px-2.5 py-1 text-body-sm font-medium transition-colors border ${
                         countryFilters.size === 0
                           ? "border-primary bg-primary/15 text-primary"
                           : "border-card-border text-muted hover:text-foreground hover:border-muted"
@@ -416,7 +416,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                         key={c.id}
                         type="button"
                         onClick={() => toggleCountry(c.id)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors border ${
+                        className={`rounded-md px-2.5 py-1 text-body-sm font-medium transition-colors border ${
                           countryFilters.has(c.id)
                             ? "border-primary bg-primary/15 text-primary"
                             : "border-card-border text-muted hover:text-foreground hover:border-muted"
@@ -435,7 +435,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       down a column rather than by clicking through them. */}
                   {plantsMode && !confirming && (
                     <div className="overflow-hidden rounded-lg border border-card-border">
-                      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 border-b border-card-border bg-card-elevated/40 px-3 py-2 text-sm font-semibold text-foreground">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 border-b border-card-border bg-card-elevated/40 px-3 py-2 text-body font-semibold text-foreground">
                         <span>Market</span>
                         <span
                           className="text-right"
@@ -474,7 +474,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                             <li key={s.stateId}>
                               {groupStarts && (
                                 <p
-                                  className={`border-b border-card-border/40 bg-card-elevated/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${open ? "text-success" : "text-muted"}`}
+                                  className={`border-b border-card-border/40 bg-card-elevated/20 px-3 py-1 text-body-sm font-semibold uppercase tracking-wide ${open ? "text-success" : "text-muted"}`}
                                 >
                                   {open ? "Can enter now" : "Not available now"}
                                 </p>
@@ -493,17 +493,17 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                 <span className="min-w-0">
                                   <span className="flex items-center gap-1.5">
                                     <span
-                                      className={`truncate text-xs font-semibold ${activeIndex === i ? "text-primary" : "text-foreground"}`}
+                                      className={`truncate text-body-sm font-semibold ${activeIndex === i ? "text-primary" : "text-foreground"}`}
                                     >
                                       {s.stateName}
                                     </span>
                                     {i === bestFitIndex && (
-                                      <span className="shrink-0 rounded bg-success/15 px-1 py-0.5 text-[9px] font-bold text-success">
+                                      <span className="shrink-0 rounded bg-success/15 px-1 py-0.5 text-body-sm font-bold text-success">
                                         Best fit
                                       </span>
                                     )}
                                   </span>
-                                  <span className="mt-0.5 block truncate text-[10px] text-muted">
+                                  <span className="mt-0.5 block truncate text-body-sm text-muted">
                                     {countryName}
                                     {s.ownedSectorId
                                       ? " · You operate here"
@@ -512,7 +512,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                         : ` · ${s.competitors.length} competitor${s.competitors.length === 1 ? "" : "s"}`}
                                   </span>
                                 </span>
-                                <span className="text-right text-xs font-semibold tabular-nums text-foreground">
+                                <span className="text-right text-body-sm font-semibold tabular-nums text-foreground">
                                   <span
                                     title={
                                       showCountryEstimate
@@ -528,7 +528,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                         )
                                       : ""}
                                   </span>
-                                  <span className="block text-[9px] font-normal text-muted">
+                                  <span className="block text-body-sm font-normal text-muted">
                                     {sharedRoom
                                       ? showCountryEstimate
                                         ? `new ${facilityPlural(selectedType)}, shared across ${countryName}`
@@ -536,7 +536,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                       : `new ${facilityPlural(selectedType)}`}
                                   </span>
                                   {open && showCountryEstimate && verdict !== "room" && (
-                                    <span className="mt-0.5 block text-[9px] font-normal leading-snug text-warning">
+                                    <span className="mt-0.5 block text-body-sm font-normal leading-snug text-warning">
                                       {verdict === "none"
                                         ? "Do not build here for sales: buyers have no unmet demand"
                                         : "Room to build is not measured yet"}
@@ -544,12 +544,14 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                   )}
                                 </span>
                                 <span
-                                  className={`text-right text-xs tabular-nums ${open ? "text-foreground" : "text-error"}`}
+                                  className={`text-right text-body-sm tabular-nums ${open ? "text-foreground" : "text-error"}`}
                                 >
                                   {s.foundingTotalAnchor != null
                                     ? formatTreasuryAmount(s.foundingTotalAnchor)
                                     : "Not quoted"}
-                                  <span className="block text-[9px] font-normal">{blockLabel}</span>
+                                  <span className="block text-body-sm font-normal">
+                                    {blockLabel}
+                                  </span>
                                 </span>
                               </button>
                             </li>
@@ -563,10 +565,10 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                     <div className="sticky bottom-0 -mx-4 border-t border-card-border bg-card/95 px-4 pb-1 pt-3 backdrop-blur sm:-mx-6 sm:px-6">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold text-foreground">
+                          <p className="truncate text-body-sm font-semibold text-foreground">
                             {activeSuggestion.stateName}
                           </p>
-                          <p className="text-[11px] text-muted">
+                          <p className="text-body-sm text-muted">
                             {activeSuggestion.buildDemand
                               ? t("fundedAdvice.allOutputRoom")
                               : "Room to build"}
@@ -580,13 +582,13 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                               : "Price unavailable"}
                           </p>
                           {activeBlockMessage && !activeSuggestion.ownedSectorId && (
-                            <p className="text-[11px] text-error">{activeBlockMessage}</p>
+                            <p className="text-body-sm text-error">{activeBlockMessage}</p>
                           )}
                         </div>
                         <button
                           type="button"
                           onClick={() => setConfirming(true)}
-                          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+                          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                         >
                           Review {facilitySingular(selectedType)}
                         </button>
@@ -601,7 +603,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                         key={s.stateId}
                         type="button"
                         onClick={() => setActiveIndex(i)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors border ${
+                        className={`rounded-md px-2.5 py-1 text-body-sm font-medium transition-colors border ${
                           activeIndex === i
                             ? "border-primary bg-primary/15 text-primary"
                             : "border-card-border text-muted hover:text-foreground hover:border-muted"
@@ -619,19 +621,19 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       {/* State header */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-semibold text-foreground text-sm">
+                          <p className="font-semibold text-foreground text-body">
                             {activeSuggestion.stateName}
                           </p>
-                          <p className="text-xs text-muted mt-0.5">
+                          <p className="text-body-sm text-muted mt-0.5">
                             {OPERATING_SECTOR_TYPE_LABELS[selectedType]}
                           </p>
                         </div>
                         {activeSuggestion.ownedSectorId ? (
-                          <span className="shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold bg-success/15 text-success border border-success/20">
+                          <span className="shrink-0 rounded px-2 py-0.5 text-body-sm font-semibold bg-success/15 text-success border border-success/20">
                             You operate here
                           </span>
                         ) : (
-                          <span className="shrink-0 rounded px-2 py-0.5 text-[10px] font-medium bg-muted/10 text-muted border border-card-border">
+                          <span className="shrink-0 rounded px-2 py-0.5 text-body-sm font-medium bg-muted/10 text-muted border border-card-border">
                             Not entered
                           </span>
                         )}
@@ -663,7 +665,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                 : "Room to build"}
                             </p>
                             <p
-                              className="text-sm font-bold text-foreground tabular-nums"
+                              className="text-body font-bold text-foreground tabular-nums"
                               title={`${formatUnits(activeDemandUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
                             >
                               {roomPlantsFigure(
@@ -672,7 +674,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                 t("fundedAdvice.unknown")
                               )}
                             </p>
-                            <p className="text-[10px] text-muted">
+                            <p className="text-body-sm text-muted">
                               {activeSuggestion.roomScope === "country" || countrySharedDemand
                                 ? `new ${facilityPlural(selectedType)}, shared across the country`
                                 : `new ${facilityPlural(selectedType)}`}
@@ -682,9 +684,9 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                             <p className="text-body-sm font-medium text-muted">
                               Your first {facilitySingular(selectedType)}
                             </p>
-                            <p className="text-sm font-bold text-success tabular-nums">1</p>
+                            <p className="text-body font-bold text-success tabular-nums">1</p>
                             <p
-                              className="text-[10px] text-muted"
+                              className="text-body-sm text-muted"
                               title={`${formatUnits(foundingQuote.starterUnits)} ${CAPACITY_UNIT_LABEL} at full run`}
                             >
                               {facilitySingular(selectedType)}
@@ -692,10 +694,10 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                           </div>
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
                             <p className="text-body-sm font-medium text-muted">Comes online</p>
-                            <p className="text-sm font-bold text-foreground tabular-nums">
+                            <p className="text-body font-bold text-foreground tabular-nums">
                               {foundingQuote.foundingBuildTurns}
                             </p>
-                            <p className="text-[10px] text-muted">
+                            <p className="text-body-sm text-muted">
                               turn{foundingQuote.foundingBuildTurns === 1 ? "" : "s"}
                             </p>
                           </div>
@@ -712,7 +714,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                             >
                               Total competitor revenue
                             </span>
-                            <span className="text-sm font-bold text-foreground">
+                            <span className="text-body font-bold text-foreground">
                               {formatMarketAmount(
                                 Math.round(activeSuggestion.totalCompetitorRevenue / 24)
                               )}
@@ -747,12 +749,12 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                         : `/corporation/${c.corpId}`
                                     }
                                     onClick={onClose}
-                                    className="text-xs font-medium text-foreground hover:text-primary transition-colors truncate"
+                                    className="text-body-sm font-medium text-foreground hover:text-primary transition-colors truncate"
                                   >
                                     {c.name}
                                   </Link>
                                 </div>
-                                <span className="text-xs text-muted shrink-0">
+                                <span className="text-body-sm text-muted shrink-0">
                                   {formatMarketAmount(Math.round(c.revenue / 24))}/turn
                                 </span>
                               </div>
@@ -762,7 +764,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                       )}
 
                       {activeSuggestion.competitors.length === 0 && (
-                        <p className="text-[11px] text-success">
+                        <p className="text-body-sm text-success">
                           {t("fundedAdvice.noLocalCompetitors")}
                         </p>
                       )}
@@ -774,18 +776,18 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                             <Link
                               href={`/corporation/${corpId}/sector/${activeSuggestion.ownedSectorId}?build=1`}
                               onClick={onClose}
-                              className="block w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-center text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+                              className="block w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-center text-body font-medium text-primary hover:bg-primary/20 transition-colors"
                             >
                               You already have {facilityPlural(selectedType)} here. Build more
                               capacity.
                             </Link>
                           ) : (
                             <div className="space-y-2 rounded-lg border border-card-border bg-background/60 p-3">
-                              <p className="text-xs font-semibold text-foreground">
+                              <p className="text-body-sm font-semibold text-foreground">
                                 {selectedFacilityAction} your first {facilitySingular(selectedType)}{" "}
                                 in {activeSuggestion.stateName}
                               </p>
-                              <div className="space-y-0.5 text-xs text-muted">
+                              <div className="space-y-0.5 text-body-sm text-muted">
                                 <div className="flex justify-between gap-3">
                                   <span>Entry fee (land, permits, licences)</span>
                                   <span className="tabular-nums">
@@ -831,7 +833,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                 const enough = headroom >= foundingQuote.starterUnits;
                                 return (
                                   <p
-                                    className={`rounded-md border px-2 py-1.5 text-[11px] leading-snug ${
+                                    className={`rounded-md border px-2 py-1.5 text-body-sm leading-snug ${
                                       enough
                                         ? "border-success/30 bg-success/10 text-success"
                                         : "border-warning/30 bg-warning/10 text-warning"
@@ -866,19 +868,19 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                 );
                               })()}
 
-                              <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-body-xs">
+                              <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-body-sm">
                                 <p className="font-semibold text-warning">{t("buildRiskTitle")}</p>
                                 <p className="mt-1 text-muted">{t("buildRisk")}</p>
                               </div>
 
                               {activeBlockMessage && (
-                                <p className="rounded-md border border-error/30 bg-error/10 px-2 py-1.5 text-[11px] text-error">
+                                <p className="rounded-md border border-error/30 bg-error/10 px-2 py-1.5 text-body-sm text-error">
                                   {activeBlockMessage}
                                 </p>
                               )}
 
                               {foundingError && (
-                                <p className="rounded-md border border-error/30 bg-error/10 px-2 py-1.5 text-[11px] text-error">
+                                <p className="rounded-md border border-error/30 bg-error/10 px-2 py-1.5 text-body-sm text-error">
                                   {foundingError}
                                 </p>
                               )}
@@ -887,7 +889,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                 <button
                                   type="button"
                                   onClick={() => setConfirming(false)}
-                                  className="flex-1 rounded-lg border border-card-border px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-card-elevated"
+                                  className="flex-1 rounded-lg border border-card-border px-3 py-2 text-body-sm font-medium text-muted transition-colors hover:bg-card-elevated"
                                 >
                                   Back
                                 </button>
@@ -895,7 +897,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                                   type="button"
                                   onClick={() => void handleFoundFirstPlant()}
                                   disabled={foundingBusy || !activeCanEnter}
-                                  className={`flex-1 rounded-lg px-3 py-2 text-center text-xs font-semibold text-white transition-colors ${
+                                  className={`flex-1 rounded-lg px-3 py-2 text-center text-body-sm font-semibold text-white transition-colors ${
                                     activeCanEnter
                                       ? "bg-primary hover:bg-primary/90"
                                       : "bg-primary/40"

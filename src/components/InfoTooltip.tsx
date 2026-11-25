@@ -128,7 +128,7 @@ export function InfoTooltip({ trigger, children, width = 256, className }: InfoT
     <div
       ref={tooltipRef}
       style={{ position: "fixed", top, bottom, left, width, zIndex: 9999 }}
-      className="rounded-xl border border-card-border bg-card shadow-modal p-3 text-xs pointer-events-auto"
+      className="rounded-xl border border-card-border bg-card shadow-modal p-3 text-body-sm pointer-events-auto"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

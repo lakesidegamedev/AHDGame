@@ -111,7 +111,7 @@ export function StatePageTabs({
           regionApprovalBase={regionApprovalBase}
         />
       ) : (
-        <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
           Overview data not yet available for this region. Try the Politics or Economy tab in the
           meantime.
         </div>

@@ -110,13 +110,13 @@ function isEasternBloc(governmentType: GovernmentType | undefined): boolean {
 }
 
 const PRIMARY_BUTTON_CLASSES =
-  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4.5 h-11 text-sm font-semibold text-white transition-all duration-150 hover:bg-primary-dark active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4.5 h-11 text-body font-semibold text-primary-foreground transition-all duration-150 hover:bg-primary-dark active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const SECONDARY_BUTTON_CLASSES =
-  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-card-border bg-card px-4.5 h-11 text-sm font-medium text-foreground transition-all duration-150 hover:border-muted/40 active:scale-[0.98]";
+  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-card-border bg-card px-4.5 h-11 text-body font-medium text-foreground transition-all duration-150 hover:border-muted/40 active:scale-[0.98]";
 
 const GHOST_BUTTON_CLASSES =
-  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg px-4.5 h-11 text-sm font-medium text-muted transition-all duration-150 hover:text-foreground active:scale-[0.98]";
+  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg px-4.5 h-11 text-body font-medium text-muted transition-all duration-150 hover:text-foreground active:scale-[0.98]";
 
 /** Public sideload mirror for the Android beta build;  */
 const ANDROID_BETA_APK_URL = "https://ops.lakesidegames.net/downloads/a-house-divided-0.3.1.apk";
@@ -456,7 +456,7 @@ export function SandboxHome({
                   year={eraConfig.year}
                   currentYear={currentYear}
                 />
-                <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70 sm:text-[1.0625rem]">
+                <p className="mt-5 max-w-lg text-body-lg leading-relaxed text-white/70 sm:text-body-lg">
                   {eraConfig.heroDek}
                 </p>
               </>
@@ -579,7 +579,7 @@ export function SandboxHome({
 
           {/* The nations of the era, by bloc, each with a plain playability word */}
           <div id="world" className="mt-12">
-            <h3 className="text-heading font-semibold text-foreground">
+            <h3 className="text-body-lg font-semibold text-foreground">
               {t("landing.worldInYear", { year: eraConfig.year })}
             </h3>
             <p className="mt-1 max-w-2xl text-body leading-relaxed text-muted">
@@ -693,7 +693,7 @@ export function SandboxHome({
         {/* Closing CTA */}
         <section className="border-t border-card-border">
           <div className="mx-auto max-w-7xl px-5 py-16 text-center sm:px-8 sm:py-24">
-            <h2 className="text-heading-lg font-semibold tracking-tight text-foreground sm:text-display">
+            <h2 className="text-heading font-semibold tracking-tight text-foreground sm:text-display">
               {eraConfig.closingHeadline}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-body-lg text-muted">{eraConfig.closingDek}</p>
@@ -754,7 +754,7 @@ export function SandboxHome({
             >
               {footer.map((col) => (
                 <div key={col.headingKey}>
-                  <h3 className="mb-2 text-sm font-semibold text-muted">{col.heading}</h3>
+                  <h3 className="mb-2 text-body-lg font-semibold text-muted">{col.heading}</h3>
                   <ul className="space-y-1.5">
                     {col.links.map((link) => (
                       <li key={link.href}>
@@ -793,7 +793,7 @@ export function SandboxHome({
               />
               <span>{t("landing.byLakeside")}</span>
             </a>
-            <p className="mx-auto mt-3 max-w-3xl text-body-xs leading-relaxed text-muted">
+            <p className="mx-auto mt-3 max-w-3xl text-body-sm leading-relaxed text-muted">
               {t("landing.attribution")}
             </p>
           </div>

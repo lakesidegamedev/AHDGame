@@ -13,6 +13,7 @@ import { MarketSharePanel } from "./MarketSharePanel";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { DenseSection, MiniSparkline, TableScroll, Td, Th, signTone } from "./dense/DenseKit";
 import { DenseLineChart, type LineSeries } from "./dense/DenseLineChart";
+import { pillClass } from "@/components/ui/selectedState";
 
 type ChartMetric =
   | "marketCap"
@@ -89,6 +90,10 @@ interface MetricSeries {
   format: (v: number) => string;
   /** Change column: percent change, or percentage points for a rate. */
   changeIn: "pct" | "pp";
+}
+
+function metricLinkClass(selected: boolean): string {
+  return `text-left text-foreground hover:underline ${selected ? "font-semibold" : ""}`;
 }
 
 export default function ChartsTab({
@@ -321,19 +326,17 @@ export default function ChartsTab({
                       type="button"
                       aria-pressed={selected}
                       onClick={() => selectMetric(m.key)}
-                      className={`text-left hover:underline ${
-                        selected ? "font-semibold text-foreground" : "text-foreground"
-                      }`}
+                      className={metricLinkClass(selected)}
                     >
                       {m.label}
                     </button>
                     {m.key === "marketShare" && marketShareDiscovery.isNew && (
-                      <span className="ml-1.5 text-[10px] font-medium text-primary">new</span>
+                      <span className="ml-1.5 text-body-sm font-medium text-primary">new</span>
                     )}
                   </Td>
                   <Td align="right">
                     {m.key === "marketShare" ? (
-                      <span className="font-sans text-xs text-muted">by commodity</span>
+                      <span className="font-sans text-body-sm text-muted">by commodity</span>
                     ) : m.key === "cashOnHand" && s && historyLagging && live ? (
                       <span
                         title={`Current balance. The recorded history ends at turn ${latestPoint.turn}.`}
@@ -342,7 +345,7 @@ export default function ChartsTab({
                           live.liquidCapital,
                           (live.currencyCode ?? undefined) as CurrencyCode | undefined
                         )}
-                        <span className="ml-1 font-sans text-[10px] text-muted">
+                        <span className="ml-1 font-sans text-body-sm text-muted">
                           now (history ends T{latestPoint.turn})
                         </span>
                       </span>
@@ -388,11 +391,7 @@ export default function ChartsTab({
             role="radio"
             aria-checked={active}
             onClick={() => selectMetric(m.key)}
-            className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs transition-colors ${
-              active
-                ? "border-foreground bg-foreground font-semibold text-background"
-                : "border-card-border text-muted hover:bg-card-elevated hover:text-foreground"
-            }`}
+            className={`h-7 px-2.5 text-body-sm ${pillClass(active)}`}
           >
             {m.label}
           </button>
@@ -409,7 +408,7 @@ export default function ChartsTab({
   } else if (!hasHistory) {
     chartPanel = (
       <DenseSection title={metricConfig.label}>
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           Not enough historical data yet. Time-series charts will appear after a few turns of
           activity. Market share is available now.
         </p>
@@ -523,7 +522,7 @@ export default function ChartsTab({
 
     chartPanel = (
       <DenseSection title={metricConfig.label} meta={`${periodTurns} turns`}>
-        <p className="py-1 text-xs text-muted">{metricConfig.description}</p>
+        <p className="py-1 text-body-sm text-muted">{metricConfig.description}</p>
         <DenseLineChart
           turns={history.map((p) => p.turn)}
           series={lines}
@@ -531,7 +530,7 @@ export default function ChartsTab({
           ariaLabel={`${metricConfig.label} by turn`}
           tooltip={tooltip}
         />
-        <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-card-border pt-1.5 text-xs">
+        <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-card-border pt-1.5 text-body-sm">
           <div className="flex items-baseline gap-1.5">
             <dt className="text-muted">High</dt>
             <dd className="font-mono tabular-nums text-foreground">{series.format(high)}</dd>

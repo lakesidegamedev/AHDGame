@@ -118,11 +118,11 @@ export function StateLeanPanel({
     <div className="mt-4 rounded-xl border border-card-border bg-card p-4 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold truncate">
+          <h2 className="text-heading font-semibold truncate">
             {displayCanadianRegionCode(data?.stateName ?? stateId)} lean breakdown
           </h2>
           {data && (
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               {data.leanDisplay ? (
                 <span className="font-semibold text-foreground">{data.leanDisplay.label}</span>
               ) : (
@@ -138,14 +138,14 @@ export function StateLeanPanel({
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href={regionUrl(countryCode, stateId)}
-            className="rounded-lg border border-card-border bg-card-elevated px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card-elevated px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
           >
             Open state page →
           </Link>
           <button
             onClick={onClose}
             aria-label="Close breakdown"
-            className="rounded-lg border border-card-border px-2.5 py-1.5 text-xs text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border px-2.5 py-1.5 text-body-sm text-muted hover:text-foreground transition-colors"
           >
             ✕
           </button>
@@ -153,9 +153,9 @@ export function StateLeanPanel({
       </div>
 
       {error && (
-        <p className="mt-4 text-sm text-muted">No demographic data available for this state.</p>
+        <p className="mt-4 text-body text-muted">No demographic data available for this state.</p>
       )}
-      {!data && !error && <p className="mt-4 text-sm text-muted">Loading demographics…</p>}
+      {!data && !error && <p className="mt-4 text-body text-muted">Loading demographics…</p>}
 
       {data && sections.length > 0 && (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -164,8 +164,8 @@ export function StateLeanPanel({
               key={cat.id}
               className="rounded-lg border border-card-border/60 bg-card-elevated/40 p-3"
             >
-              <h3 className="text-sm font-semibold text-muted">{cat.name}</h3>
-              <table className="mt-2 w-full text-xs">
+              <h3 className="text-body-lg font-semibold text-muted">{cat.name}</h3>
+              <table className="mt-2 w-full text-body-sm">
                 <thead>
                   <tr className="text-left text-body-sm font-medium text-muted">
                     <th className="pb-1 font-medium">Group</th>
@@ -203,7 +203,7 @@ export function StateLeanPanel({
       )}
 
       {data && (
-        <p className="mt-3 text-[10px] text-muted">
+        <p className="mt-3 text-body-sm text-muted">
           State lean is the turnout-weighted average of these census groups, on the −5…+5 position
           ruler.
         </p>

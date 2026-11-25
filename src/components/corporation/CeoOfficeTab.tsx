@@ -224,7 +224,7 @@ export default function CeoOfficeTab({
       <GroupSupplyOffice corpId={corpId} />
       <nav
         aria-label="CEO Office sections"
-        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted"
+        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted"
       >
         <span className="font-medium text-foreground">CEO Office</span>
         {SECTION_LINKS.map((link) => (

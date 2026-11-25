@@ -84,7 +84,7 @@ export function BackgroundCountryOverview({ view, name, startingYear, clock }: P
           <div className="px-5 pt-5 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <CountryFlag country={view.countryId as CountryId} width={48} height={32} />
-              <h1 className="min-w-0 break-words text-display font-bold tracking-tight text-foreground sm:text-[2.25rem] sm:leading-tight">
+              <h1 className="min-w-0 break-words text-display font-bold tracking-tight text-foreground sm:text-display sm:leading-tight">
                 {name}
               </h1>
             </div>

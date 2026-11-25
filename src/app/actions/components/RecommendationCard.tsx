@@ -88,11 +88,11 @@ export function RecommendationCard({
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2 min-w-0">
             <span
-              className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${config.badgeClass}`}
+              className={`text-body-sm font-semibold px-2 py-0.5 rounded-full ${config.badgeClass}`}
             >
               {config.label}
             </span>
-            <span className="text-[11px] text-muted">
+            <span className="text-body-sm text-muted">
               {categoryLabels[recommendation.category] ?? recommendation.category}
             </span>
           </div>
@@ -114,15 +114,15 @@ export function RecommendationCard({
         </div>
 
         {/* Title */}
-        <p className="text-sm font-semibold text-foreground mb-1.5">{recommendation.title}</p>
+        <p className="text-body font-semibold text-foreground mb-1.5">{recommendation.title}</p>
 
         {/* Why */}
-        <p className="text-xs text-muted leading-relaxed mb-3">{recommendation.why}</p>
+        <p className="text-body-sm text-muted leading-relaxed mb-3">{recommendation.why}</p>
 
         {/* Details (expanded) */}
         {expanded && (
           <div className="mb-3 p-3 rounded-lg bg-card-muted border border-card-border space-y-2">
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-body-sm">
               {apCost > 0 || fundsCost > 0 ? (
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted font-medium">Cost:</span>
@@ -146,7 +146,7 @@ export function RecommendationCard({
               </div>
             </div>
             {(recommendation.action.targetState || recommendation.action.targetSectorType) && (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm">
                 <span className="text-muted font-medium">Target:</span>
                 <span className="text-foreground">
                   {recommendation.action.targetStateName ?? recommendation.action.targetState}
@@ -163,7 +163,7 @@ export function RecommendationCard({
               </div>
             )}
             {recommendation.action.targetPartyName && (
-              <div className="flex items-center gap-1.5 text-xs">
+              <div className="flex items-center gap-1.5 text-body-sm">
                 <span className="text-muted font-medium">Party:</span>
                 <span className="text-foreground">{recommendation.action.targetPartyName}</span>
               </div>
@@ -177,14 +177,14 @@ export function RecommendationCard({
             <button
               onClick={() => onExecute!(recommendation)}
               disabled={isRunning || !!executing}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-body-sm font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed transition-colors"
             >
               {isRunning ? "Executing…" : "Execute"}
             </button>
           ) : (
             <Link
               href={recommendation.link}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="text-body-sm font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Go to page →
             </Link>
@@ -192,13 +192,13 @@ export function RecommendationCard({
 
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-card-border bg-card hover:bg-card-elevated transition-colors text-muted hover:text-foreground"
+            className="text-body-sm font-medium px-3 py-1.5 rounded-lg border border-card-border bg-card hover:bg-card-elevated transition-colors text-muted hover:text-foreground"
           >
             {expanded ? "Hide" : "Details"}
           </button>
 
           {recommendation.expiresAt && (
-            <span className="text-[11px] text-muted ml-auto">
+            <span className="text-body-sm text-muted ml-auto">
               Expires turn {recommendation.expiresAt}
             </span>
           )}

@@ -222,8 +222,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
         ? loadSectorFrontierResearch(db, sectorType)
         : undefined,
       loadPrerequisiteLaneResearch(db, [targetStrategy], techTreesEnabled),
-      // Diffusion worlds: the method must have reached the sector's country.
-      // A player company may license it early where a foreign company runs it.
+      // Some methods follow country diffusion. Player research unlocks are worldwide.
       loadStrategyDiffusionWorld(db, {
         preset: gameState?.preset,
         techTreesEnabled,

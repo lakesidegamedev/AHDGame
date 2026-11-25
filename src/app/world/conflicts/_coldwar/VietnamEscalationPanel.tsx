@@ -53,13 +53,13 @@ export function VietnamEscalationPanel({ summary }: { summary: VietnamEscalation
               margin: 0,
               fontFamily: headingFont,
               fontWeight: 700,
-              fontSize: 22,
+              fontSize: 20,
               color: "#f3f1ea",
             }}
           >
             {summary.rungLabel}
           </h2>
-          <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5, color: "#9595a4" }}>
+          <p style={{ margin: "6px 0 0", fontSize: 12, lineHeight: 1.5, color: "#9595a4" }}>
             {summary.rungSummary}
           </p>
         </div>

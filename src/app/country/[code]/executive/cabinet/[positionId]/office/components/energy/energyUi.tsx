@@ -119,7 +119,7 @@ export function AggTile({
       {ring != null && <Ring value={ring} size={42} stroke={5} />}
       <div>
         <div className="dossier-label text-muted">{label}</div>
-        <div className={`tabular mt-0.5 text-lg font-bold ${toneClass}`}>{value}</div>
+        <div className={`tabular mt-0.5 text-heading font-bold ${toneClass}`}>{value}</div>
       </div>
     </div>
   );

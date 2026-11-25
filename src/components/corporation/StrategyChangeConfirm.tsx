@@ -204,8 +204,8 @@ export default function StrategyChangeConfirm({
     <div className="rounded-lg border border-primary/30 bg-card p-3 shadow-lg space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-foreground">Switch to {target.name}?</span>
-        <span className="text-xs text-error font-medium">
+        <span className="text-body font-semibold text-foreground">Switch to {target.name}?</span>
+        <span className="text-body-sm text-error font-medium">
           Retooling cost {fmtMoney(retoolCost)}
           {sunsetDiscount && (
             <span className="ml-1 text-success">
@@ -216,9 +216,9 @@ export default function StrategyChangeConfirm({
       </div>
 
       {/* Description */}
-      <p className="text-xs text-muted">{target.description}</p>
+      <p className="text-body-sm text-muted">{target.description}</p>
       {downsideCharge > 0 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Downside charge {fmtMoney(downsideCharge)}, included above
           {target.downside ? `: ${target.downside}` : "."}
         </p>
@@ -227,7 +227,7 @@ export default function StrategyChangeConfirm({
       {/* Commodity changes table */}
       <table className="w-full border-collapse">
         <thead>
-          <tr className="text-xs font-semibold text-foreground border-b border-card-border">
+          <tr className="text-body-sm font-semibold text-foreground border-b border-card-border">
             <th className="text-left py-1 font-semibold">Commodity</th>
             <th
               className="text-right py-1 pr-1.5 font-semibold"
@@ -258,10 +258,10 @@ export default function StrategyChangeConfirm({
               const status = m ? getMarketStatus(m.globalSupply, m.globalDemand) : undefined;
 
               return (
-                <tr key={commodity} className="text-xs border-b border-card-border/30">
+                <tr key={commodity} className="text-body-sm border-b border-card-border/30">
                   <td className="py-0.5 pr-1">
                     <span className="flex items-center gap-1">
-                      <span className="inline-flex h-4 w-4 items-center justify-center rounded bg-card-elevated text-[8px] font-bold text-muted">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded bg-card-elevated text-body-sm font-bold text-muted">
                         {COMMODITY_ICONS[commodity]}
                       </span>
                       <span
@@ -320,7 +320,7 @@ export default function StrategyChangeConfirm({
                   </td>
                   <td className="py-0.5 text-right">
                     {status && (
-                      <span className={`text-xs ${STATUS_STYLE[status]}`}>
+                      <span className={`text-body-sm ${STATUS_STYLE[status]}`}>
                         {STATUS_LABEL[status]}
                       </span>
                     )}
@@ -334,7 +334,7 @@ export default function StrategyChangeConfirm({
 
       {/* Margin estimate */}
       {marginDelta != null && (
-        <div className="flex items-center justify-between text-xs bg-background rounded px-2 py-1">
+        <div className="flex items-center justify-between text-body-sm bg-background rounded px-2 py-1">
           <span
             className="text-muted"
             title="Rough estimate from current world prices. Percentage points of margin."
@@ -371,7 +371,7 @@ export default function StrategyChangeConfirm({
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-0.5">
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {buildDelay > 0 && `Runs your current method for ${buildDelay} turns while it is built. `}
           Phases in over {STRATEGY_TRANSITION_TURNS} turns, costs{" "}
           {Math.abs(STRATEGY_TRANSITION_MARGIN_PENALTY)} points of margin meanwhile, and locks
@@ -382,7 +382,7 @@ export default function StrategyChangeConfirm({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded border border-card-border px-2.5 py-1 text-xs text-muted hover:bg-card-elevated disabled:opacity-50"
+            className="rounded border border-card-border px-2.5 py-1 text-body-sm text-muted hover:bg-card-elevated disabled:opacity-50"
           >
             Cancel
           </button>
@@ -390,7 +390,7 @@ export default function StrategyChangeConfirm({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="rounded bg-primary px-3 py-1 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {loading ? "Switching" : "Switch strategy"}
           </button>

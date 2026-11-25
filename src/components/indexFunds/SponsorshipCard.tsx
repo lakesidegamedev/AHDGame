@@ -57,8 +57,8 @@ export function SponsorshipCard({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
-      <h2 className="text-sm font-semibold">Sponsored fund</h2>
-      <p className="mt-1 text-[11px] leading-relaxed text-muted">
+      <h2 className="text-body font-semibold">Sponsored fund</h2>
+      <p className="mt-1 text-body-sm leading-relaxed text-muted">
         Run by <span className="font-medium text-foreground">{fund.sponsorName}</span>, which takes
         a management fee each game year.{" "}
         {fund.seedAccounting === "paid_units"
@@ -66,7 +66,7 @@ export function SponsorshipCard({
           : "Its legacy seed money has no units and any cash left after payouts returns to the sponsor."}
       </p>
 
-      <div className="mt-3 space-y-1.5 text-xs">
+      <div className="mt-3 space-y-1.5 text-body-sm">
         {fund.expenseRatioAnnual != null && (
           <div className="flex justify-between">
             <span className="text-muted">Expense ratio</span>
@@ -99,18 +99,18 @@ export function SponsorshipCard({
       </div>
 
       {windingDown && !delisted && (
-        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning">
+        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-body-sm text-warning">
           Winding down since turn {fund.windDownStartedAtTurn ?? "?"}. Holdings are being sold,
           holders will be paid at the final value.
         </p>
       )}
 
       {message && (
-        <p className="mt-3 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-[11px] text-success">
+        <p className="mt-3 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-body-sm text-success">
           {message}
         </p>
       )}
-      <InlineError error={error} className="mt-3 text-[11px] text-error" />
+      <InlineError error={error} className="mt-3 text-body-sm text-error" />
 
       {canWindUp && !message && (
         <div className="mt-4 border-t border-card-border pt-3">
@@ -118,13 +118,13 @@ export function SponsorshipCard({
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="w-full rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-xs font-semibold text-error transition-colors hover:bg-error/10"
+              className="w-full rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-body-sm font-semibold text-error transition-colors hover:bg-error/10"
             >
               Wind up this fund
             </button>
           ) : (
             <div className="space-y-2">
-              <p className="text-[11px] leading-relaxed text-muted">
+              <p className="text-body-sm leading-relaxed text-muted">
                 This closes {fund.tickerSymbol} for good. The fund stops taking subscriptions, sells
                 its holdings over the coming turns, and pays every holder at the final value. This
                 cannot be undone.
@@ -134,7 +134,7 @@ export function SponsorshipCard({
                   type="button"
                   disabled={busy}
                   onClick={() => void windUp()}
-                  className="flex-1 rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white transition-opacity disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-error px-3 py-2 text-body-sm font-semibold text-white transition-opacity disabled:opacity-50"
                 >
                   {busy ? "Winding up…" : "Yes, wind it up"}
                 </button>
@@ -142,7 +142,7 @@ export function SponsorshipCard({
                   type="button"
                   disabled={busy}
                   onClick={() => setConfirming(false)}
-                  className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2 text-xs font-semibold text-muted transition-colors hover:text-foreground"
+                  className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm font-semibold text-muted transition-colors hover:text-foreground"
                 >
                   Keep the fund
                 </button>

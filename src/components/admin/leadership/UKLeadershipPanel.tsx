@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { EmptyState } from "@/components/ui";
 import { LocalTime } from "@/components/time/LocalTime";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface ConfidenceVoteRow {
   id: string;
@@ -62,7 +63,7 @@ function StatusBadge({ status }: { status: string }) {
   const color = STATUS_COLORS[status] ?? "bg-muted/20 text-muted";
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${color}`}
+      className={`inline-block rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase ${color}`}
     >
       {status}
     </span>
@@ -112,21 +113,14 @@ export function UKLeadershipPanel() {
   return (
     <div className="space-y-4">
       {/* Inner tab bar */}
-      <div
-        role="tablist"
-        className="flex gap-1 p-1 rounded-lg bg-background border border-card-border w-fit"
-      >
+      <div role="tablist" className={`${PILL_TRACK} w-fit`}>
         {INNER_TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={innerTab === t.id}
             onClick={() => setInnerTab(t.id)}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-              innerTab === t.id
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted hover:text-foreground"
-            }`}
+            className={`whitespace-nowrap px-3 py-1 text-body-sm ${pillClass(innerTab === t.id)}`}
           >
             {t.label}
           </button>
@@ -136,14 +130,14 @@ export function UKLeadershipPanel() {
       {/* Status message */}
       {message && (
         <p
-          className={`text-sm ${message.startsWith("Error") ? "text-red-400" : "text-emerald-400"}`}
+          className={`text-body ${message.startsWith("Error") ? "text-red-400" : "text-emerald-400"}`}
         >
           {message}
         </p>
       )}
 
       {/* Loading state */}
-      {loading && <p className="text-sm text-muted">Loading...</p>}
+      {loading && <p className="text-body text-muted">Loading...</p>}
 
       {/* Content */}
       {!loading && innerTab === "confidence_vote" && (
@@ -170,19 +164,19 @@ function ActionButtons({
     <div className="flex gap-2 flex-shrink-0">
       <button
         onClick={() => onAction(id, "pass")}
-        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+        className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-body-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
       >
         Pass
       </button>
       <button
         onClick={() => onAction(id, "fail")}
-        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-body-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
       >
         Fail
       </button>
       <button
         onClick={() => onAction(id, "cancel")}
-        className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-xs font-medium text-muted hover:bg-muted/20 transition-colors"
+        className="rounded-lg border border-card-border bg-muted/10 px-3 py-1.5 text-body-sm font-medium text-muted hover:bg-muted/20 transition-colors"
       >
         Cancel
       </button>
@@ -209,20 +203,20 @@ function ConfidenceVoteList({
             <div className="flex-1 min-w-0">
               {/* Title row */}
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-semibold text-foreground">
+                <span className="text-body font-semibold text-foreground">
                   {VOTE_TYPE_LABELS[v.voteType] ?? v.voteType}
                 </span>
                 <StatusBadge status={v.status} />
               </div>
 
               {/* Nominee */}
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 <span className="text-foreground font-medium">{v.nomineeName}</span> &mdash;{" "}
                 {v.party}
               </p>
 
               {/* Votes */}
-              <p className="text-xs text-muted mt-1">
+              <p className="text-body-sm text-muted mt-1">
                 <span className="text-emerald-400">&#10003; {v.votesFor}</span>{" "}
                 <span className="text-red-400">&#10007; {v.votesAgainst}</span>
                 {v.threshold != null && (
@@ -231,7 +225,7 @@ function ConfidenceVoteList({
               </p>
 
               {/* Date */}
-              <p className="text-[11px] text-muted mt-1">
+              <p className="text-body-sm text-muted mt-1">
                 {v.status === "active" && v.closesAt ? (
                   <>
                     Deadline: <LocalTime value={v.closesAt} options={UK_DATE_OPTS} />
@@ -277,23 +271,23 @@ function NoConfidenceVoteList({
             <div className="flex-1 min-w-0">
               {/* Title row */}
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-semibold text-foreground">
+                <span className="text-body font-semibold text-foreground">
                   No confidence in {v.pmName}
                 </span>
                 <StatusBadge status={v.status} />
               </div>
 
               {/* Ruling party */}
-              <p className="text-xs text-muted">Ruling party: {v.rulingParty}</p>
+              <p className="text-body-sm text-muted">Ruling party: {v.rulingParty}</p>
 
               {/* Votes */}
-              <p className="text-xs text-muted mt-1">
+              <p className="text-body-sm text-muted mt-1">
                 <span className="text-emerald-400">&#10003; {v.votesFor}</span>{" "}
                 <span className="text-red-400">&#10007; {v.votesAgainst}</span>
               </p>
 
               {/* Date */}
-              <p className="text-[11px] text-muted mt-1">
+              <p className="text-body-sm text-muted mt-1">
                 {v.status === "active" && v.closesAt ? (
                   <>
                     Deadline: <LocalTime value={v.closesAt} options={UK_DATE_OPTS} />

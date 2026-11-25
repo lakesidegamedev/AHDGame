@@ -74,11 +74,11 @@ function Row({
 
       {/* Time / turn */}
       <div
-        className="w-20 flex-shrink-0 text-xs tabular-nums text-muted"
+        className="w-20 flex-shrink-0 text-body-sm tabular-nums text-muted"
         title={formatTimestamp(record.ts)}
       >
         <div className="font-medium text-foreground">{formatRelative(record.ts)}</div>
-        <div className="mt-0.5 text-[10px]">Turn {record.turn}</div>
+        <div className="mt-0.5 text-body-sm">Turn {record.turn}</div>
       </div>
 
       {/* Category dot */}
@@ -89,9 +89,9 @@ function Row({
 
       {/* Summary + meta */}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-foreground">{summarizeRecord(record)}</div>
-        <div className="mt-0.5 flex items-center gap-2 overflow-hidden whitespace-nowrap text-xs text-muted">
-          <span className="font-mono text-[11px]">{record.action}</span>
+        <div className="truncate text-body text-foreground">{summarizeRecord(record)}</div>
+        <div className="mt-0.5 flex items-center gap-2 overflow-hidden whitespace-nowrap text-body-sm text-muted">
+          <span className="font-mono text-body-sm">{record.action}</span>
           {flagged && (
             <span className="min-w-0 overflow-hidden">
               <FlagChips flags={record.flags} activeFlag={activeFlag} onSelect={onFlagSelect} />
@@ -103,7 +103,7 @@ function Row({
       {/* Amount */}
       {isFiniteNumber(record.amount) && (
         <div
-          className={`hidden flex-shrink-0 font-mono text-sm tabular-nums sm:block ${
+          className={`hidden flex-shrink-0 font-mono text-body tabular-nums sm:block ${
             record.amount < 0 ? "text-red-400" : "text-green-400"
           }`}
         >
@@ -113,7 +113,7 @@ function Row({
 
       {/* Outcome */}
       <span
-        className={`hidden flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide md:inline-block ${OUTCOME_META[record.outcome].badge}`}
+        className={`hidden flex-shrink-0 rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide md:inline-block ${OUTCOME_META[record.outcome].badge}`}
       >
         {OUTCOME_META[record.outcome].label}
       </span>
@@ -126,7 +126,7 @@ function Row({
           e.stopPropagation();
           onFollowTrace();
         }}
-        className="flex-shrink-0 rounded-md border border-card-border px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+        className="flex-shrink-0 rounded-md border border-card-border px-2 py-1 text-body-sm font-medium text-muted transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
       >
         Trace →
       </button>
@@ -175,7 +175,7 @@ export function AuditTable({
       {/* Slim status strip: keeps the stream scannable without a heavy header. */}
       <div className="flex items-baseline justify-between border-b border-card-border/70 bg-card-elevated/40 px-3 py-2">
         <span className="text-body-sm font-medium text-muted">Action stream</span>
-        <span className="text-[11px] tabular-nums text-muted">
+        <span className="text-body-sm tabular-nums text-muted">
           {total > 0 ? `${total.toLocaleString("en-US")}${hasMore ? "+" : ""} actions` : "loading…"}
         </span>
       </div>

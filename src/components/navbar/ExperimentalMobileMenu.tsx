@@ -197,8 +197,8 @@ export function ExperimentalMobileMenu({
             />
           </div>
           <div className="min-w-0 pb-0.5">
-            <div className="truncate text-sm font-semibold">{profileDisplayName}</div>
-            <div className="truncate text-xs text-muted">@{user.username}</div>
+            <div className="truncate text-body font-semibold">{profileDisplayName}</div>
+            <div className="truncate text-body-sm text-muted">@{user.username}</div>
           </div>
         </div>
         <div className="border-t border-card-border p-1.5">
@@ -207,7 +207,7 @@ export function ExperimentalMobileMenu({
               key={link.href}
               href={link.href}
               onClick={onClose}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-foreground hover:bg-white/5"
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body text-foreground hover:bg-white/5"
             >
               <NavIcon name={link.icon} />
               {link.label}
@@ -218,7 +218,7 @@ export function ExperimentalMobileMenu({
               key={item.id}
               href={item.href}
               onClick={onClose}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-primary hover:bg-white/5"
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body text-primary hover:bg-white/5"
             >
               <NavIcon name="Nation" />
               {t(item.labelKey)}
@@ -244,7 +244,7 @@ export function ExperimentalMobileMenu({
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full border-t border-card-border px-4 py-3 text-left text-sm text-muted"
+            className="w-full border-t border-card-border px-4 py-3 text-left text-body text-muted"
           >
             {t("common.signOut")}
           </button>
@@ -302,21 +302,21 @@ export function ExperimentalMobileMenu({
             </div>
             <div className="flex items-center gap-3 px-3.5 pb-3.5 pt-9">
               <div className="min-w-0 flex-1 pl-12">
-                <div className="truncate text-sm font-semibold text-foreground">
+                <div className="truncate text-body font-semibold text-foreground">
                   {profileDisplayName}
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <Link
                     href="/profile"
                     onClick={onClose}
-                    className="text-xs text-muted transition-colors hover:text-foreground"
+                    className="text-body-sm text-muted transition-colors hover:text-foreground"
                   >
                     {t("common.profile")}
                   </Link>
                   <Link
                     href="/notifications"
                     onClick={onClose}
-                    className="text-xs text-muted transition-colors hover:text-foreground"
+                    className="text-body-sm text-muted transition-colors hover:text-foreground"
                   >
                     {t("common.notifications")}
                     {unreadCount > 0 ? ` (${unreadBadgeLabel(unreadCount)})` : ""}
@@ -324,14 +324,14 @@ export function ExperimentalMobileMenu({
                   <Link
                     href="/settings"
                     onClick={onClose}
-                    className="text-xs text-muted transition-colors hover:text-foreground"
+                    className="text-body-sm text-muted transition-colors hover:text-foreground"
                   >
                     {t("common.settings")}
                   </Link>
                   <Link
                     href="/portfolio?tab=currency"
                     onClick={onClose}
-                    className="text-xs text-muted transition-colors hover:text-foreground"
+                    className="text-body-sm text-muted transition-colors hover:text-foreground"
                   >
                     {t("common.wallet")}
                   </Link>
@@ -340,7 +340,7 @@ export function ExperimentalMobileMenu({
                       key={item.id}
                       href={item.href}
                       onClick={onClose}
-                      className="text-xs text-primary transition-colors hover:text-foreground"
+                      className="text-body-sm text-primary transition-colors hover:text-foreground"
                     >
                       {t(item.labelKey)}
                     </Link>
@@ -415,7 +415,7 @@ export function ExperimentalMobileMenu({
                   type="button"
                   onClick={() => toggleMobileSub(subKey)}
                   aria-expanded={isSubOpen}
-                  className={`flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/5 ${
+                  className={`flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-left text-body transition-colors hover:bg-white/5 ${
                     active || isSubOpen ? "bg-card font-semibold text-foreground" : "text-fg-2"
                   }`}
                 >
@@ -432,7 +432,7 @@ export function ExperimentalMobileMenu({
                           href={link.href}
                           onClick={onClose}
                           aria-current={isNavActive(pathname, link.href) ? "page" : undefined}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {link.label}
                         </Link>
@@ -442,7 +442,7 @@ export function ExperimentalMobileMenu({
                         <Link
                           href={regionUrl(homeState.countryId, homeState.id)}
                           onClick={onClose}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {t("state.overview")}
                         </Link>
@@ -454,7 +454,7 @@ export function ExperimentalMobileMenu({
                               currentParty.id
                             )}
                             onClick={onClose}
-                            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             {homeState.name} · {currentParty.name}
                           </Link>
@@ -462,21 +462,21 @@ export function ExperimentalMobileMenu({
                         <Link
                           href={`${regionUrl(homeState.countryId, homeState.id)}?tab=economy`}
                           onClick={onClose}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {t("state.economy")}
                         </Link>
                         <Link
                           href={regionElectionsUrl(homeState.countryId, homeState.id)}
                           onClick={onClose}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {t("state.elections")}
                         </Link>
                         <Link
                           href={regionLegislatureUrl(homeState.countryId, homeState.id)}
                           onClick={onClose}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {stateLegislatureLabel}
                         </Link>
@@ -484,7 +484,7 @@ export function ExperimentalMobileMenu({
                           <Link
                             href={`${regionUrl(homeState.countryId.toLowerCase(), homeState.id.toLowerCase())}/office`}
                             onClick={onClose}
-                            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             {t("state.governorOffice")}
                           </Link>
@@ -493,10 +493,10 @@ export function ExperimentalMobileMenu({
                           <Link
                             href={`/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}/office`}
                             onClick={onClose}
-                            className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center justify-between rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             <span>{t("menus.nation.cabinetOffice")}</span>
-                            <span className="ml-2 max-w-[120px] truncate text-xs text-muted">
+                            <span className="ml-2 max-w-[120px] truncate text-body-sm text-muted">
                               {cabinetOffice.positionName}
                             </span>
                           </Link>
@@ -505,15 +505,15 @@ export function ExperimentalMobileMenu({
                           <Link
                             href={campaignManagerHref({ race: activeElection.id })}
                             onClick={onClose}
-                            className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center justify-between rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             <span>{t("state.myElection")}</span>
-                            <span className="ml-2 max-w-[120px] truncate text-xs text-primary">
+                            <span className="ml-2 max-w-[120px] truncate text-body-sm text-primary">
                               {activeElection.label}
                             </span>
                           </Link>
                         ) : (
-                          <div className="flex items-center rounded-lg px-3 py-2 text-sm text-muted opacity-50">
+                          <div className="flex items-center rounded-lg px-3 py-2 text-body text-muted opacity-50">
                             {t("state.myElectionNone")}
                           </div>
                         )}
@@ -529,7 +529,7 @@ export function ExperimentalMobileMenu({
                             key={sub.id}
                             href={sub.href}
                             onClick={onClose}
-                            className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
+                            className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${
                               sub.primary ? "text-primary" : "text-muted"
                             }`}
                           >
@@ -543,14 +543,14 @@ export function ExperimentalMobileMenu({
                             collapsible
                             defaultOpen={false}
                             className="mt-2"
-                            labelClassName="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted/70"
+                            labelClassName="px-3 pb-1 text-body-sm font-medium uppercase tracking-wider text-muted/70"
                           >
                             {group.items.map((item) => (
                               <Link
                                 key={item.id}
                                 href={item.href}
                                 onClick={onClose}
-                                className={`flex items-center rounded-lg py-2 text-sm text-muted transition-colors hover:bg-white/5 ${
+                                className={`flex items-center rounded-lg py-2 text-body text-muted transition-colors hover:bg-white/5 ${
                                   item.parentId != null
                                     ? "ml-4 border-l border-card-border pl-3 pr-3"
                                     : "px-3"
@@ -569,7 +569,7 @@ export function ExperimentalMobileMenu({
                         <Link
                           href={countryUrl(userCountry as CountryId)}
                           onClick={onClose}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {t("menus.nation.homeNation")}
                         </Link>
@@ -580,7 +580,7 @@ export function ExperimentalMobileMenu({
                               cabinetOffice.positionId
                             )}
                             onClick={onClose}
-                            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             {t("menus.nation.cabinetOffice")}
                           </Link>
@@ -589,7 +589,7 @@ export function ExperimentalMobileMenu({
                           <Link
                             href={scotusJusticeOfficeUrl(justiceOffice.countryCode)}
                             onClick={onClose}
-                            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             {t("menus.nation.justiceOffice")}
                           </Link>
@@ -598,7 +598,7 @@ export function ExperimentalMobileMenu({
                           <Link
                             href={partyUrl(currentParty.countryId ?? pageCountry, currentParty.id)}
                             onClick={onClose}
-                            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             {t("menus.nation.myParty")} · {currentParty.name}
                           </Link>
@@ -607,7 +607,7 @@ export function ExperimentalMobileMenu({
                           <Link
                             href="/political-operations"
                             onClick={onClose}
-                            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                           >
                             {t("menus.nation.myPoliticalOperations")}
                           </Link>
@@ -632,7 +632,7 @@ export function ExperimentalMobileMenu({
               href={item.href}
               onClick={onClose}
               aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-2 rounded-[10px] px-3 py-2.5 text-sm transition-colors hover:bg-white/5 ${
+              className={`flex items-center gap-2 rounded-[10px] px-3 py-2.5 text-body transition-colors hover:bg-white/5 ${
                 active ? "bg-card font-semibold text-foreground" : "text-fg-2"
               }`}
             >
@@ -650,7 +650,7 @@ export function ExperimentalMobileMenu({
         type="button"
         onClick={() => toggleMobileSub("country")}
         aria-expanded={!!mobileSubOpen.country}
-        className="flex w-full items-center gap-3 rounded-[10px] px-3.5 py-3 text-[15px] font-medium text-fg-2 transition-colors hover:bg-white/5"
+        className="flex w-full items-center gap-3 rounded-[10px] px-3.5 py-3 text-body font-medium text-fg-2 transition-colors hover:bg-white/5"
       >
         <CountryFlag country={pageCountry} size="md" />
         <span>{countryName(pageCountry as CountryId)}</span>
@@ -667,7 +667,7 @@ export function ExperimentalMobileMenu({
                 href={countryUrl(c)}
                 onClick={onClose}
                 aria-current={isCurrent ? "true" : undefined}
-                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${
                   isCurrent ? "font-medium text-foreground" : "text-muted"
                 }`}
               >
@@ -675,7 +675,7 @@ export function ExperimentalMobileMenu({
                 <span>{countryName(c)}</span>
                 <span className="ml-auto flex items-center gap-1.5">
                   {isHome && (
-                    <span className="text-[10px] font-medium text-muted">
+                    <span className="text-body-sm font-medium text-muted">
                       {t("countrySwitcher.homeBadge")}
                     </span>
                   )}
@@ -704,7 +704,7 @@ export function ExperimentalMobileMenu({
           href="/contests"
           onClick={onClose}
           aria-current={isNavActive(pathname, "/contests") ? "page" : undefined}
-          className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-3 text-[15px] font-medium transition-colors hover:bg-white/5 ${
+          className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-3 text-body font-medium transition-colors hover:bg-white/5 ${
             isNavActive(pathname, "/contests") ? "bg-card text-foreground" : "text-fg-2"
           }`}
         >
@@ -717,7 +717,7 @@ export function ExperimentalMobileMenu({
       <button
         type="button"
         onClick={() => toggleMobileSub("help")}
-        className="flex w-full items-center justify-between rounded-[10px] px-3.5 py-3 text-[15px] font-medium text-fg-2 transition-colors hover:bg-white/5"
+        className="flex w-full items-center justify-between rounded-[10px] px-3.5 py-3 text-body font-medium text-fg-2 transition-colors hover:bg-white/5"
         aria-expanded={!!mobileSubOpen.help}
       >
         <div className="flex items-center gap-3">
@@ -731,21 +731,21 @@ export function ExperimentalMobileMenu({
           <Link
             href={showWiki ? "https://wiki.ahousedividedgame.com" : "/guides"}
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {showWiki ? t("help.wikiGuides") : t("help.guides")}
           </Link>
           <Link
             href="/about"
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.about")}
           </Link>
           <Link
             href="/feedback"
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.suggestions")}
           </Link>
@@ -757,7 +757,7 @@ export function ExperimentalMobileMenu({
                 onOpenFeedback();
               }}
               disabled={feedbackCapturing}
-              className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-white/5 disabled:cursor-wait disabled:opacity-70"
+              className="flex w-full items-center rounded-lg px-3 py-2 text-left text-body text-muted transition-colors hover:bg-white/5 disabled:cursor-wait disabled:opacity-70"
             >
               {feedbackCapturing ? t("common.capturingScreenshot") : t("common.quickSuggest")}
             </button>
@@ -767,7 +767,7 @@ export function ExperimentalMobileMenu({
             target="_blank"
             rel="noopener noreferrer"
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             Discord
           </a>
@@ -776,7 +776,7 @@ export function ExperimentalMobileMenu({
             target="_blank"
             rel="noopener noreferrer"
             onClick={onClose}
-            className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.patreon")}
           </a>
@@ -785,14 +785,14 @@ export function ExperimentalMobileMenu({
             target="_blank"
             rel="noopener noreferrer"
             onClick={onClose}
-            className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.supporterWall")}
           </a>
           <a
             href={HELP_SUPPORT_EMAIL}
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.emailSupport")}
           </a>
@@ -800,14 +800,14 @@ export function ExperimentalMobileMenu({
           <Link
             href="/privacy"
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.privacy")}
           </Link>
           <Link
             href="/terms"
             onClick={onClose}
-            className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+            className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
           >
             {t("help.terms")}
           </Link>
@@ -820,7 +820,7 @@ export function ExperimentalMobileMenu({
           <button
             type="button"
             onClick={() => toggleMobileSub("staff")}
-            className="flex w-full items-center justify-between rounded-[10px] px-3.5 py-3 text-[15px] font-medium text-fg-2 transition-colors hover:bg-white/5"
+            className="flex w-full items-center justify-between rounded-[10px] px-3.5 py-3 text-body font-medium text-fg-2 transition-colors hover:bg-white/5"
             aria-expanded={!!mobileSubOpen.staff}
           >
             <span>{t("common.staff")}</span>
@@ -836,7 +836,7 @@ export function ExperimentalMobileMenu({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={onClose}
-                    className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                    className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                   >
                     {t(item.labelKey)}
                   </a>
@@ -845,7 +845,7 @@ export function ExperimentalMobileMenu({
                     key={item.label}
                     href={item.href}
                     onClick={onClose}
-                    className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                    className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                   >
                     {t(item.labelKey)}
                   </Link>
@@ -861,14 +861,14 @@ export function ExperimentalMobileMenu({
           <Link
             href="/login"
             onClick={onClose}
-            className="flex items-center justify-center rounded-lg border border-card-border bg-card py-2.5 text-sm font-medium text-foreground"
+            className="flex items-center justify-center rounded-lg border border-card-border bg-card py-2.5 text-body font-medium text-foreground"
           >
             {t("common.signIn")}
           </Link>
           <Link
             href="/register"
             onClick={onClose}
-            className="flex items-center justify-center rounded-lg bg-primary py-2.5 text-sm font-semibold text-white"
+            className="flex items-center justify-center rounded-lg bg-primary py-2.5 text-body font-semibold text-primary-foreground"
           >
             {t("common.register")}
           </Link>
@@ -884,7 +884,7 @@ function MobileVersionLink({ onClose }: { onClose: () => void }) {
     <Link
       href="/changelog"
       onClick={onClose}
-      className="mt-auto flex shrink-0 items-center justify-center border-t border-card-border px-4 py-2 text-center text-xs text-muted transition-colors hover:text-foreground"
+      className="mt-auto flex shrink-0 items-center justify-center border-t border-card-border px-4 py-2 text-center text-body-sm text-muted transition-colors hover:text-foreground"
     >
       v{process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"} ·{" "}
       {process.env.NEXT_PUBLIC_GIT_COMMIT ?? "dev"}
@@ -927,10 +927,10 @@ export function MobileCharacterSwitcher({
             key={char.id}
             href="/profile"
             onClick={onClose}
-            className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-white/5"
+            className="flex items-center justify-between rounded-lg px-2 py-2 text-body text-foreground transition-colors hover:bg-white/5"
           >
             <span>{char.name}</span>
-            <span className="text-xs font-medium text-primary">{t("common.active")}</span>
+            <span className="text-body-sm font-medium text-primary">{t("common.active")}</span>
           </Link>
         ) : (
           <button
@@ -943,10 +943,10 @@ export function MobileCharacterSwitcher({
                 : handleSwitchCharacter(char.id));
             }}
             disabled={isImperialMode ? switchingImperial : switchingCharacter}
-            className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+            className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-body text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
           >
             <span>{char.name}</span>
-            <span className="text-xs text-muted/60">{char.countryId}</span>
+            <span className="text-body-sm text-muted/60">{char.countryId}</span>
           </button>
         )
       )}
@@ -956,10 +956,10 @@ export function MobileCharacterSwitcher({
             <Link
               href={`/imperial/${imperialCharacter.id}`}
               onClick={onClose}
-              className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-white/5"
+              className="flex items-center justify-between rounded-lg px-2 py-2 text-body text-foreground transition-colors hover:bg-white/5"
             >
               <span>{imperialCharacter.name}</span>
-              <span className="text-xs font-medium text-primary">{t("common.active")}</span>
+              <span className="text-body-sm font-medium text-primary">{t("common.active")}</span>
             </Link>
           ) : (
             <button
@@ -969,10 +969,10 @@ export function MobileCharacterSwitcher({
                 void handleSwitchImperial("imperial");
               }}
               disabled={switchingImperial}
-              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
+              className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-body text-muted transition-colors hover:bg-white/5 disabled:opacity-50"
             >
               <span>{imperialCharacter.name}</span>
-              <span className="text-xs text-amber-400/70">{t("common.imperial")}</span>
+              <span className="text-body-sm text-amber-400/70">{t("common.imperial")}</span>
             </button>
           )}
         </div>
@@ -981,7 +981,7 @@ export function MobileCharacterSwitcher({
         <Link
           href="/create-character"
           onClick={onClose}
-          className="mt-1 flex items-center rounded-lg px-2 py-2 text-sm font-medium text-primary transition-colors hover:bg-white/5"
+          className="mt-1 flex items-center rounded-lg px-2 py-2 text-body font-medium text-primary transition-colors hover:bg-white/5"
         >
           {t("userMenu.newCharacter")}
         </Link>

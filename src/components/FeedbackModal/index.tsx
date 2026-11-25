@@ -297,7 +297,7 @@ export function FeedbackModal({
           className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col rounded-2xl border border-card-border bg-card shadow-modal overflow-hidden"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-card-border bg-card px-6 py-4">
-            <h2 id="feedback-title" className="text-lg font-semibold">
+            <h2 id="feedback-title" className="text-heading font-semibold">
               {isBugMode ? "Report a bug" : "Submit a suggestion"}
             </h2>
             <button

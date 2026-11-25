@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const base = publicPageMetadata({
     title: "News & events | A House Divided",
     description:
-      "In-character news wire, player posts, and headlines from the live simulation in the US, UK, Soviet Union, and East Germany. Refreshes as the hourly game clock advances.",
+      "In-character news wire, player posts, and headlines from the live simulation. Refreshes as the hourly game clock advances.",
     pathname: "/news",
   });
 
@@ -73,8 +73,8 @@ async function CrisisWire() {
 
   return (
     <section className="rounded-xl border border-card-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-foreground">Crisis wire</h2>
-      <ul className="mt-2 space-y-1 text-sm text-muted">
+      <h2 className="text-body font-semibold text-foreground">Crisis wire</h2>
+      <ul className="mt-2 space-y-1 text-body text-muted">
         {events.map((event) => (
           <li key={event._id.toString()}>
             <span className="mr-2 font-medium text-foreground">

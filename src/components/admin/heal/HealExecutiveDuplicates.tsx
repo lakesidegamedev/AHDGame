@@ -21,8 +21,8 @@ export function HealExecutiveDuplicates() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal executive duplicates</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal executive duplicates</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Fixes duplicate President/VP records. Clears characters who claim executive office but
           aren&apos;t the actual holder, and removes duplicate electedOfficials records.
         </p>
@@ -31,7 +31,7 @@ export function HealExecutiveDuplicates() {
       <HealPanelActions loading={loading} onDiagnose={runDiagnostic} onHeal={runHeal} />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 text-xs space-y-2">
+        <div className="rounded-lg border border-card-border bg-background p-3 text-body-sm space-y-2">
           <div>
             <span className="font-medium">Actual holders:</span>
             {diagnostic.actualExecutives.length === 0 ? (

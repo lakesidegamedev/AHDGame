@@ -102,7 +102,7 @@ export function PrimaryLineGraph({
   });
   if (points.length < 2) {
     return (
-      <div className="flex items-center justify-center h-24 text-xs text-muted/50 italic">
+      <div className="flex items-center justify-center h-24 text-body-sm text-muted/50 italic">
         Not enough history yet — snapshots recorded hourly
       </div>
     );
@@ -225,7 +225,7 @@ export function PrimaryLineGraph({
       </svg>
       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
         {series.map(({ cand, color }) => (
-          <span key={cand.id} className="flex items-center gap-1 text-xs">
+          <span key={cand.id} className="flex items-center gap-1 text-body-sm">
             <PartyLogo
               partyId={cand.party}
               partyColor={color}
@@ -726,10 +726,10 @@ export function LineGraph({
         >
           <div className="mb-1 text-body-sm font-medium text-muted">{xLabel(active)}</div>
           {readout.length === 0 ? (
-            <div className="text-xs text-muted italic">Nothing counted yet</div>
+            <div className="text-body-sm text-muted italic">Nothing counted yet</div>
           ) : (
             readout.map((r) => (
-              <div key={r.se.id} className="flex items-baseline justify-between gap-3 text-xs">
+              <div key={r.se.id} className="flex items-baseline justify-between gap-3 text-body-sm">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
@@ -791,7 +791,7 @@ export function GeneralVoteCharts({
 
   if (!hasEvChart && !hasSnapshotsChart) {
     return (
-      <div className="flex items-center justify-center h-20 text-xs text-muted/50 italic">
+      <div className="flex items-center justify-center h-20 text-body-sm text-muted/50 italic">
         Charts appear once two or more turns have been counted
       </div>
     );
@@ -838,7 +838,7 @@ export function GeneralVoteCharts({
             <button
               type="button"
               onClick={() => setActiveChart("ev")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
                 chartToShow === "ev"
                   ? "bg-primary/20 border-primary/50 text-primary"
                   : "bg-card border-card-border text-muted hover:text-foreground"
@@ -852,7 +852,7 @@ export function GeneralVoteCharts({
             type="button"
             disabled={!hasSnapshotsChart}
             onClick={() => hasSnapshotsChart && setActiveChart("share")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
               chartToShow === "share"
                 ? "bg-primary/20 border-primary/50 text-primary"
                 : "bg-card border-card-border text-muted hover:text-foreground"
@@ -865,7 +865,7 @@ export function GeneralVoteCharts({
             type="button"
             disabled={!hasSnapshotsChart}
             onClick={() => hasSnapshotsChart && setActiveChart("votes")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
               chartToShow === "votes"
                 ? "bg-primary/20 border-primary/50 text-primary"
                 : "bg-card border-card-border text-muted hover:text-foreground"
@@ -878,7 +878,7 @@ export function GeneralVoteCharts({
             <button
               type="button"
               onClick={() => setActiveChart("seats")}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
                 chartToShow === "seats"
                   ? "bg-primary/20 border-primary/50 text-primary"
                   : "bg-card border-card-border text-muted hover:text-foreground"
@@ -890,7 +890,7 @@ export function GeneralVoteCharts({
           )}
         </div>
         {chartToShow === "share" && isZoomed && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/10 border border-secondary/30 text-secondary text-[10px] font-medium">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/10 border border-secondary/30 text-secondary text-body-sm font-medium">
             <ZoomIn className="h-3 w-3" />
             Auto-scaled
           </span>
@@ -899,7 +899,7 @@ export function GeneralVoteCharts({
 
       <div className="flex flex-wrap gap-x-5 gap-y-1.5 mb-3 p-2 rounded-lg bg-card-muted border border-card-border">
         {series.map((s) => (
-          <span key={s.id} className="flex items-center gap-1.5 text-xs">
+          <span key={s.id} className="flex items-center gap-1.5 text-body-sm">
             {s.partyId ? (
               <PartyLogo
                 partyId={s.partyId}

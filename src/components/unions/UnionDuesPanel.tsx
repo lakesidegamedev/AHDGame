@@ -136,24 +136,24 @@ export function UnionDuesPanel({
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Dues</h3>
-        <span className="text-xs text-muted tabular-nums">
+        <h3 className="text-body-lg font-semibold text-foreground">Dues</h3>
+        <span className="text-body-sm text-muted tabular-nums">
           {cash(duesPerWorkerAnnual)}/member/year
         </span>
       </div>
 
       {!isHead ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Members pay {cash(duesPerWorkerAnnual)} a year each, bringing in about{" "}
           {cash(currentIncome)} a turn.
         </p>
       ) : !wageKnown ? (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Waiting on wage data from this union&apos;s sectors before dues can be set.
         </p>
       ) : (
         <>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             What each member pays, as a share of their pay. Dues are the treasury&apos;s standing
             income, and the treasury is what funds services, organizing drives and bargaining.
             Raising the rate brings in more per turn and costs approval: members judge the bargain,
@@ -169,17 +169,17 @@ export function UnionDuesPanel({
               disabled={saving || suspended || duesLocked}
               aria-label="Annual dues as a percent of member wages"
             />
-            <div className="flex justify-between text-[11px] text-muted">
+            <div className="flex justify-between text-body-sm text-muted">
               <span>0%</span>
               <span>Max {maxPercent}% of wages</span>
             </div>
             {duesLocked && (
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 Dues cannot be set until the union represents a paid workforce.
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex flex-wrap gap-4 text-body">
             <div>
               <span className="text-muted">Dues rate:</span>{" "}
               <span className="font-semibold tabular-nums">
@@ -206,7 +206,7 @@ export function UnionDuesPanel({
             type="button"
             disabled={saving || suspended || !dirty}
             onClick={handleSave}
-            className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+            className="w-fit rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {saving ? "Saving…" : "Set dues"}
           </button>
@@ -216,7 +216,7 @@ export function UnionDuesPanel({
       {result && (
         <p
           role={result.ok ? "status" : "alert"}
-          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${
+          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-body font-medium ${
             result.ok
               ? "border-success/30 bg-success/10 text-success"
               : "border-error/30 bg-error/10 text-error"

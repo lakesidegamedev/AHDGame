@@ -16,6 +16,7 @@ import {
   type ActionAuditRecord,
 } from "@/components/admin/forensics/types";
 import { OVERLINE_CLS, PANEL_CLS } from "./dossierTypes";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 interface RecentActionsPanelProps {
   recentActions: ActionAuditRecord[];
@@ -52,7 +53,7 @@ export function RecentActionsPanel({ recentActions, flaggedActions }: RecentActi
       </div>
 
       {rows.length === 0 ? (
-        <p className="py-6 text-center text-xs text-muted">
+        <p className="py-6 text-center text-body-sm text-muted">
           {mode === "flagged" ? "No flagged actions — clean stream." : "No audited actions yet."}
         </p>
       ) : (
@@ -66,21 +67,24 @@ export function RecentActionsPanel({ recentActions, flaggedActions }: RecentActi
                   className={`mt-1.5 inline-block h-2 w-2 flex-shrink-0 rounded-full ${cat.dot}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs text-foreground/90" title={summarizeRecord(row)}>
+                  <p
+                    className="truncate text-body-sm text-foreground/90"
+                    title={summarizeRecord(row)}
+                  >
                     {summarizeRecord(row)}
                   </p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span
-                      className={`rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wide ${cat.badge}`}
+                      className={`rounded px-1 py-px text-body-sm font-semibold uppercase tracking-wide ${cat.badge}`}
                     >
                       {cat.label}
                     </span>
-                    <span className="font-mono text-[10px] tracking-tight text-muted">
+                    <span className="font-mono text-body-sm tracking-tight text-muted">
                       {row.action}
                     </span>
                     {row.outcome !== "ok" && (
                       <span
-                        className={`text-[10px] font-semibold uppercase ${
+                        className={`text-body-sm font-semibold uppercase ${
                           row.outcome === "error" ? "text-red-400" : "text-amber-400"
                         }`}
                       >
@@ -91,7 +95,7 @@ export function RecentActionsPanel({ recentActions, flaggedActions }: RecentActi
                   </div>
                 </div>
                 <span
-                  className="flex-shrink-0 whitespace-nowrap text-right text-[10px] tabular-nums text-muted"
+                  className="flex-shrink-0 whitespace-nowrap text-right text-body-sm tabular-nums text-muted"
                   title={formatTimestamp(row.ts)}
                 >
                   t{row.turn}
@@ -123,12 +127,8 @@ function StreamButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`px-2.5 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none ${
-        active
-          ? "bg-card-elevated text-foreground"
-          : danger
-            ? "text-red-400/80 hover:text-red-400"
-            : "text-muted hover:text-foreground"
+      className={`px-2.5 py-1 text-body-sm motion-reduce:transition-none ${
+        danger && !active ? `${PILL_SHAPE} text-red-400/80 hover:text-red-400` : pillClass(active)
       }`}
     >
       {label}

@@ -53,7 +53,7 @@ export function ExchangeSelector({
             onClick={onToggleCompare}
             aria-expanded={compareOpen ?? false}
             title="Compare exchanges by listings and market cap"
-            className={`rounded-lg px-3 py-1.5 border text-xs font-bold uppercase tracking-wider transition-colors ${
+            className={`rounded-lg px-3 py-1.5 border text-body-sm font-bold uppercase tracking-wider transition-colors ${
               compareOpen
                 ? "bg-primary/20 border-primary/40 text-white"
                 : "bg-black border-white/10 text-white/70 hover:text-white"
@@ -73,9 +73,9 @@ export function ExchangeSelector({
               <button
                 key={key}
                 onClick={() => onSelect(key)}
-                className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${
+                className={`px-3 py-1 rounded-md text-body-sm font-bold uppercase tracking-wider transition-colors ${
                   exchangeFilter === key
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-white/70 hover:text-white"
                 }`}
               >
@@ -97,7 +97,7 @@ export function ExchangeSelector({
       {compareOpen && (
         <div className="w-full min-w-64 rounded-lg border border-white/15 bg-black shadow-xl py-1">
           {compareLoading && (
-            <p className="px-3 py-2 text-xs text-white/60">Loading exchange sizes…</p>
+            <p className="px-3 py-2 text-body-sm text-white/60">Loading exchange sizes…</p>
           )}
           {!compareLoading &&
             entries.map(([key, val]) => {
@@ -109,7 +109,7 @@ export function ExchangeSelector({
                   key={key}
                   type="button"
                   onClick={() => onSelect(key)}
-                  className={`w-full flex items-center justify-between gap-4 px-3 py-2 text-xs transition-colors ${
+                  className={`w-full flex items-center justify-between gap-4 px-3 py-2 text-body-sm transition-colors ${
                     active ? "bg-primary/30 text-white" : "text-white/80 hover:bg-white/10"
                   }`}
                 >
@@ -247,7 +247,7 @@ function MobileExchangeDropdown({
               onSelect(key);
               setOpen(false);
             }}
-            className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+            className={`w-full text-left px-3 py-2 text-body-sm font-bold uppercase tracking-wider transition-colors ${
               active ? "bg-primary/30 text-white" : "text-white/80 hover:bg-white/10"
             }`}
           >
@@ -267,7 +267,7 @@ function MobileExchangeDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`Exchange filter, currently ${currentLabel}`}
-        className="flex items-center gap-1.5 bg-black rounded-lg px-3 py-1.5 border border-white/10 text-xs font-bold uppercase tracking-wider text-white"
+        className="flex items-center gap-1.5 bg-black rounded-lg px-3 py-1.5 border border-white/10 text-body-sm font-bold uppercase tracking-wider text-white"
       >
         <span>{currentLabel}</span>
         <svg

@@ -52,7 +52,7 @@ function ForecastChip({
   return (
     <div className={`rounded-lg border px-3 py-2 ${toneClasses[tone]}`}>
       <div className="text-body-sm font-semibold">{label}</div>
-      <div className="mt-1 text-sm font-bold tabular-nums">{value}</div>
+      <div className="mt-1 text-body font-bold tabular-nums">{value}</div>
     </div>
   );
 }
@@ -90,9 +90,9 @@ export function TreasuryPlanningCard({
       <div className="border-b border-card-border/40 bg-card-muted/20 px-6 py-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="text-xs font-semibold text-muted">Treasurer planning</div>
-            <h3 className="mt-1 text-heading-sm font-bold text-foreground">{title}</h3>
-            <p className="mt-2 max-w-3xl text-sm text-muted">{description}</p>
+            <div className="text-body-sm font-semibold text-muted">Treasurer planning</div>
+            <h3 className="mt-1 text-body-lg font-bold text-foreground">{title}</h3>
+            <p className="mt-2 max-w-3xl text-body text-muted">{description}</p>
           </div>
           <div className="rounded-lg border border-card-border bg-background/60 px-4 py-3">
             <div className="text-body-sm font-semibold text-muted">Combined reserve target</div>
@@ -175,7 +175,7 @@ export function TreasuryPlanningCard({
                   Apply a preset to auto-fill reserve targets and the treasury ratios below.
                 </p>
               </div>
-              <div className="text-xs text-muted">
+              <div className="text-body-sm text-muted">
                 Current posture:{" "}
                 <span className="font-semibold text-foreground">
                   {treasuryPreset === "custom"
@@ -200,8 +200,8 @@ export function TreasuryPlanningCard({
                         : "border-card-border bg-card hover:border-primary/50"
                     } disabled:opacity-50`}
                   >
-                    <div className="text-sm font-semibold text-foreground">{option.label}</div>
-                    <div className="mt-1 text-xs text-muted">{option.description}</div>
+                    <div className="text-body font-semibold text-foreground">{option.label}</div>
+                    <div className="mt-1 text-body-sm text-muted">{option.description}</div>
                   </button>
                 );
               })}
@@ -275,7 +275,7 @@ export function TreasuryPlanningCard({
               </span>
             </div>
             {!canEdit && (
-              <div className="text-xs font-medium text-warning">
+              <div className="text-body-sm font-medium text-warning">
                 Treasurer or Admin required to update reserve targets.
               </div>
             )}
@@ -283,7 +283,7 @@ export function TreasuryPlanningCard({
           <button
             onClick={onSave}
             disabled={!canEdit || saveDisabled}
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${toneBg("action")}`}
+            className={`rounded-lg px-4 py-2 text-body font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${toneBg("action")}`}
           >
             {saving ? "Saving…" : "Save treasurer plan"}
           </button>

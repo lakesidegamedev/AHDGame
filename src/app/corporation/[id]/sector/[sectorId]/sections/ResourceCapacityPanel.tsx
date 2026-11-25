@@ -70,24 +70,27 @@ export default function ResourceCapacityPanel({
     <section className="rounded-xl border border-card-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-bold text-foreground">Resource availability</h2>
-          <p className="text-xs text-muted mt-0.5">
+          <h2 className="text-heading font-bold text-foreground">Resource availability</h2>
+          <p className="text-body-sm text-muted mt-0.5">
             Extractable deposits in this state. Zero-capacity resources produce no output regardless
             of sector revenue.
           </p>
-          <p className="text-xs text-muted mt-1">
+          <p className="text-body-sm text-muted mt-1">
             Capacity is set per state per resource. Output above reachable capacity is clamped.
             Scarce-resource shortages raise prices until new capacity is worth working.
           </p>
         </div>
-        <Link href={resourcesTabHref} className="shrink-0 text-xs text-primary hover:underline">
+        <Link
+          href={resourcesTabHref}
+          className="shrink-0 text-body-sm text-primary hover:underline"
+        >
           Contracts & capacity →
         </Link>
       </div>
 
       {signpost.length > 0 && (
         <div className="mb-5 rounded-lg border border-warning/30 bg-warning/10 p-4">
-          <p className="text-sm font-semibold text-warning">
+          <p className="text-body font-semibold text-warning">
             This deposit is limiting your output. Room to grow elsewhere.
           </p>
           <div className="mt-3 space-y-3">
@@ -97,12 +100,12 @@ export default function ResourceCapacityPanel({
               const label = COMMODITY_LABELS[resource] ?? opp.resource;
               return (
                 <div key={opp.resource}>
-                  <p className="text-xs text-foreground">
+                  <p className="text-body-sm text-foreground">
                     {label} is nearly tapped out in this state. States with the most free capacity:
                   </p>
                   <ul className="mt-1.5 space-y-1">
                     {opp.states.map((s) => (
-                      <li key={s.stateId} className="text-xs">
+                      <li key={s.stateId} className="text-body-sm">
                         <Link
                           href={`${regionUrl(s.countryId as CountryId, s.stateId)}?tab=resources`}
                           className="text-primary hover:underline"
@@ -120,7 +123,7 @@ export default function ResourceCapacityPanel({
               );
             })}
           </div>
-          <p className="mt-3 text-[11px] text-muted">
+          <p className="mt-3 text-body-sm text-muted">
             Place or move a mine into one of these states, or switch this sector to a focus that
             matches the deposits here.
           </p>
@@ -128,7 +131,7 @@ export default function ResourceCapacityPanel({
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="text-muted text-body-sm font-medium">
               <th className="text-left font-medium pb-2">Resource</th>
@@ -167,11 +170,11 @@ export default function ResourceCapacityPanel({
                   )}
                   <td className="py-2 text-right">
                     {available ? (
-                      <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                      <span className="rounded-full bg-success/15 px-2 py-0.5 text-body-sm font-medium text-success">
                         Available
                       </span>
                     ) : (
-                      <span className="rounded-full bg-error/15 px-2 py-0.5 text-xs font-medium text-error">
+                      <span className="rounded-full bg-error/15 px-2 py-0.5 text-body-sm font-medium text-error">
                         No deposits
                       </span>
                     )}
@@ -182,7 +185,7 @@ export default function ResourceCapacityPanel({
                         <button
                           type="button"
                           onClick={() => setProspectResource(resource)}
-                          className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/15 transition-colors"
+                          className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-body-sm font-medium text-primary hover:bg-primary/15 transition-colors"
                         >
                           Prospect
                         </button>

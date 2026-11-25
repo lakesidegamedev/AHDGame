@@ -73,7 +73,7 @@ export function SubscribeButton({ characterId }: SubscribeButtonProps) {
 
   if (!hasCharacter) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted">
+      <div className="flex items-center gap-2 text-body text-muted">
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             strokeLinecap="round"
@@ -94,7 +94,7 @@ export function SubscribeButton({ characterId }: SubscribeButtonProps) {
       <button
         onClick={toggle}
         disabled={toggling}
-        className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+        className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-body font-medium transition-colors disabled:opacity-50 ${
           subscribed
             ? "border-primary/50 bg-primary/10 text-primary hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400"
             : "border-card-border bg-card text-muted hover:border-primary/50 hover:text-primary"
@@ -111,7 +111,7 @@ export function SubscribeButton({ characterId }: SubscribeButtonProps) {
         </svg>
         {toggling ? "..." : subscribed ? "Subscribed" : "Subscribe"}
       </button>
-      <span className="text-sm text-muted">
+      <span className="text-body text-muted">
         {subscriberCount} subscriber{subscriberCount !== 1 ? "s" : ""}
       </span>
     </div>

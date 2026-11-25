@@ -35,8 +35,8 @@ export function IntakeClosedPanel({
             <Image src={CDN_LOGO_URL} unoptimized alt="A House Divided" width={64} height={64} />
           </Link>
         </div>
-        <h1 className="mb-3 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
-        <div className="mb-6 text-sm leading-relaxed text-muted sm:text-base">{body}</div>
+        <h1 className="mb-3 text-heading font-bold tracking-tight sm:text-display">{title}</h1>
+        <div className="mb-6 text-body leading-relaxed text-muted sm:text-body-lg">{body}</div>
         {expectedEnd && <MaintenanceCountdown expectedEnd={expectedEnd} />}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           {actions}
@@ -44,7 +44,7 @@ export function IntakeClosedPanel({
             href={COMMUNITY_DISCORD_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#5865F2] px-5 text-sm font-medium text-white transition-colors hover:bg-[#4752C4]"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#5865F2] px-5 text-body font-medium text-white transition-colors hover:bg-[#4752C4]"
           >
             Get notified on Discord
           </a>

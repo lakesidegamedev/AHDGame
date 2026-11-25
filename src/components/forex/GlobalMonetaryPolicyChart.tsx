@@ -12,6 +12,7 @@ import {
 } from "@/components/forex/forexChartTimeframe";
 import { alignSeries, collectTurns } from "@/components/forex/chartSeriesUtils";
 import { CURRENCY_COLORS } from "@/components/forex/currencyDisplay";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface Props {
   countries: CountryMacroSnapshot[];
@@ -256,7 +257,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
     return (
       <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-card-border flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-sm font-bold text-foreground">Global monetary policy</h2>
+          <h2 className="text-body font-bold text-foreground">Global monetary policy</h2>
           <ForexChartTimeframeTabs
             value={timeframe}
             onChange={(tf: ForexChartTimeframe) => {
@@ -266,7 +267,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
             idPrefix="macro-chart"
           />
         </div>
-        <div className="p-6 text-center text-muted text-sm">
+        <div className="p-6 text-center text-muted text-body">
           No macro snapshots in this range — choose a longer window or wait for more turns.
         </div>
       </div>
@@ -299,7 +300,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
-          <h2 className="text-sm font-bold text-foreground">Global monetary policy</h2>
+          <h2 className="text-body font-bold text-foreground">Global monetary policy</h2>
           <ForexChartTimeframeTabs
             value={timeframe}
             onChange={(tf: ForexChartTimeframe) => {
@@ -309,7 +310,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
             idPrefix="macro-chart"
           />
           <div
-            className="flex flex-wrap gap-1 rounded-lg border border-card-border bg-card-muted p-1"
+            className={`${PILL_TRACK} flex-wrap`}
             role={singleCountryOverlay ? "group" : "tablist"}
             aria-label={
               singleCountryOverlay
@@ -325,11 +326,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
                 aria-pressed={singleCountryOverlay ? selectedMetrics.has(m) : undefined}
                 aria-selected={singleCountryOverlay ? undefined : selectedMetrics.has(m)}
                 onClick={() => toggleMetric(m)}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  selectedMetrics.has(m)
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 text-body-sm ${pillClass(selectedMetrics.has(m))}`}
               >
                 {METRIC_LABELS[m]}
               </button>
@@ -337,7 +334,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
           </div>
           {selectedMetrics.has("gdp") && (
             <div
-              className="flex flex-wrap gap-1 rounded-lg border border-card-border bg-card-muted p-1 w-fit"
+              className={`${PILL_TRACK} w-fit flex-wrap`}
               role="tablist"
               aria-label="GDP growth basis"
             >
@@ -346,11 +343,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
                 role="tab"
                 aria-selected={gdpMode === "nominal"}
                 onClick={() => setGdpMode("nominal")}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  gdpMode === "nominal"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 text-body-sm ${pillClass(gdpMode === "nominal")}`}
               >
                 Nominal
               </button>
@@ -359,17 +352,13 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
                 role="tab"
                 aria-selected={gdpMode === "real"}
                 onClick={() => setGdpMode("real")}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  gdpMode === "real"
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 text-body-sm ${pillClass(gdpMode === "real")}`}
               >
                 Real GDP growth
               </button>
             </div>
           )}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {singleCountryOverlay ? (
               <>
                 With one nation on the chart, select multiple indicators to overlay them on the same
@@ -409,22 +398,18 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
                       : `${cfg.name}: hidden — click to show`
                   }
                   onClick={() => toggleCountryOnChart(c.countryId)}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                    visible
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-card-border bg-card-muted/50 text-muted hover:border-card-border hover:text-foreground"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-body-sm ${pillClass(visible)}`}
                 >
                   <CountryFlag country={c.countryId} size="sm" />
                   <span>{cfg.name}</span>
-                  <span className="font-normal text-muted/80">({c.currencyCode})</span>
+                  <span className="font-normal opacity-80">({c.currencyCode})</span>
                 </button>
               );
             })}
           </div>
           {moreCountries.length > 0 && (
             <details className="group w-full sm:w-auto sm:max-w-md">
-              <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-end gap-1.5 text-xs text-muted hover:text-foreground transition-colors">
+              <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-end gap-1.5 text-body-sm text-muted hover:text-foreground transition-colors">
                 <span
                   className="select-none transition-transform duration-200 group-open:rotate-90"
                   aria-hidden
@@ -449,15 +434,11 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
                           : `${cfg.name}: hidden — click to show`
                       }
                       onClick={() => toggleCountryOnChart(c.countryId)}
-                      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                        visible
-                          ? "border-primary/40 bg-primary/10 text-primary"
-                          : "border-card-border bg-card-muted/50 text-muted hover:border-card-border hover:text-foreground"
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-body-sm ${pillClass(visible)}`}
                     >
                       <CountryFlag country={c.countryId} size="sm" />
                       <span>{cfg.name}</span>
-                      <span className="font-normal text-muted/80">({c.currencyCode})</span>
+                      <span className="font-normal opacity-80">({c.currencyCode})</span>
                     </button>
                   );
                 })}
@@ -468,7 +449,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
             <button
               type="button"
               onClick={showAllCountries}
-              className="self-end text-xs text-muted underline-offset-2 transition-colors hover:text-primary hover:underline"
+              className="self-end text-body-sm text-muted underline-offset-2 transition-colors hover:text-primary hover:underline"
             >
               Show all countries
             </button>
@@ -591,7 +572,7 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
         </svg>
 
         {hoverIdx !== null && (
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-1 text-xs text-muted">
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-1 text-body-sm text-muted">
             {chartSeries.map((row, seriesIdx) => {
               const v = seriesValues[seriesIdx]?.[hoverIdx];
               const turn = turns[hoverIdx];

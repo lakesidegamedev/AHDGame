@@ -60,9 +60,9 @@ export function ChamberComposition({
     <div className="space-y-4 rounded-xl border border-card-border bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">{chamber.name}</h2>
+          <h2 className="text-body font-semibold">{chamber.name}</h2>
           {isUpper && activeSenateClass != null && (
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 text-body-sm text-muted">
               {t("chamberComposition.classContested", {
                 className: CLASS_ROMAN[activeSenateClass - 1] ?? activeSenateClass,
               })}
@@ -71,7 +71,7 @@ export function ChamberComposition({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {chamber.inGeneral && <span className="h-1.5 w-1.5 rounded-full bg-muted" aria-hidden />}
-          <span className="text-[10px] text-muted">{chartLabel}</span>
+          <span className="text-body-sm text-muted">{chartLabel}</span>
         </div>
       </div>
 
@@ -80,7 +80,7 @@ export function ChamberComposition({
 
       {chamber.inGeneral && (
         <div className="space-y-1">
-          <span className="text-[10px] text-muted">{t("chamberComposition.currentBefore")}</span>
+          <span className="text-body-sm text-muted">{t("chamberComposition.currentBefore")}</span>
           <SeatBar seats={current} total={total} />
         </div>
       )}
@@ -89,7 +89,9 @@ export function ChamberComposition({
       <MajorityBanner seats={chartSeats} total={total} chamberLabel={chamber.name} />
 
       {chamber.inGeneral && (
-        <p className="text-[10px] italic text-muted/50">{t("chamberComposition.projectionNote")}</p>
+        <p className="text-body-sm italic text-muted/50">
+          {t("chamberComposition.projectionNote")}
+        </p>
       )}
     </div>
   );

@@ -136,8 +136,8 @@ export function CommandingGeneralClient({
     <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
       <div className="rounded-xl border border-card-border bg-card p-5">
         <div className="dossier-label text-muted">Commanding general</div>
-        <h1 className="text-lg font-semibold text-foreground">{command.name}</h1>
-        <p className="mt-1 text-[12px] text-muted">
+        <h1 className="text-heading font-semibold text-foreground">{command.name}</h1>
+        <p className="mt-1 text-body-sm text-muted">
           Post your generals to Conflicts and designate who is in charge of each front. The units
           the Secretary of Defense assigns to a general follow them to their posting.
         </p>
@@ -145,7 +145,7 @@ export function CommandingGeneralClient({
             nothing about what it does. Both effects are real and worth knowing
             before choosing: canActAtTheater locks the front to the TC once one
             exists, and THEATER_COMMAND.bonusShare spreads their edge front-wide. */}
-        <p className="mt-2 text-[12px] text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           One general at each conflict can be its{" "}
           <strong className="text-foreground">Theater commander (TC)</strong>. Only the TC may
           declare offensives at that front — naming one takes that authority out of the Secretary of
@@ -160,12 +160,12 @@ export function CommandingGeneralClient({
         {defenceOffice && (
           <a
             href={defenceOffice.href}
-            className="mt-2 inline-block text-[11px] font-semibold text-muted underline decoration-dotted underline-offset-2 hover:text-gov-soft"
+            className="mt-2 inline-block text-body-sm font-semibold text-muted underline decoration-dotted underline-offset-2 hover:text-gov-soft"
           >
             This command is built in the {defenceOffice.seatName}&rsquo;s office →
           </a>
         )}
-        <div className="mt-3 flex items-center gap-3 text-[11px]">
+        <div className="mt-3 flex items-center gap-3 text-body-sm">
           {saving && <span className="text-muted">Saving…</span>}
           {saved && !saving && !error && <span className="text-success">Saved</span>}
           {error && <span className="text-error">{error}</span>}
@@ -179,7 +179,7 @@ export function CommandingGeneralClient({
       <section aria-label="Postings">
         {generals.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-[13px] text-muted">
+            <p className="text-body-sm text-muted">
               Your command has no generals yet. The Secretary of Defense assigns commanders to a
               command.
             </p>
@@ -192,14 +192,14 @@ export function CommandingGeneralClient({
               return (
                 <div key={g.id} className="rounded-xl border border-card-border bg-card p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                    <span className="min-w-0 flex-1 truncate text-body font-semibold text-foreground">
                       {g.name}
                     </span>
                     <span className="dossier-label text-muted">
                       {g.spec} · Lvl {g.level}
                     </span>
                     {posting?.inCharge && (
-                      <span className="rounded-full border border-[var(--gov)] px-2 py-0.5 text-[10px] font-semibold text-gov-soft">
+                      <span className="rounded-full border border-[var(--gov)] px-2 py-0.5 text-body-sm font-semibold text-gov-soft">
                         ◉ THEATER COMMANDER
                       </span>
                     )}
@@ -210,7 +210,7 @@ export function CommandingGeneralClient({
                       aria-label={`Post ${g.name} to a conflict`}
                       value={posting?.theaterId ?? ""}
                       onChange={(e) => setPosting(g.id, e.target.value || null)}
-                      className="min-w-0 flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px] text-foreground"
+                      className="min-w-0 flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm text-foreground"
                     >
                       <option value="">Not posted to a conflict</option>
                       {conflicts.map((c) => (
@@ -225,7 +225,7 @@ export function CommandingGeneralClient({
                         onClick={() => setInCharge(g.id)}
                         aria-label={`Put ${g.name} in charge of ${theaterName(posting.theaterId)}`}
                         title="Make theater commander — only they may declare offensives at this front"
-                        className="shrink-0 rounded-md border border-card-border px-2.5 py-1.5 text-[11px] font-semibold text-muted hover:text-foreground"
+                        className="shrink-0 rounded-md border border-card-border px-2.5 py-1.5 text-body-sm font-semibold text-muted hover:text-foreground"
                       >
                         MAKE TC
                       </button>
@@ -238,7 +238,7 @@ export function CommandingGeneralClient({
                         Force at {theaterName(posting.theaterId)} · {led.length}
                       </div>
                       {led.length === 0 ? (
-                        <p className="text-[11px] text-muted">
+                        <p className="text-body-sm text-muted">
                           No units assigned to this general yet — the Secretary of Defense assigns
                           units to generals.
                         </p>
@@ -247,7 +247,7 @@ export function CommandingGeneralClient({
                           {led.map((u) => (
                             <span
                               key={String(u._id)}
-                              className="rounded-md border border-card-border px-2 py-1 text-[11px] text-muted"
+                              className="rounded-md border border-card-border px-2 py-1 text-body-sm text-muted"
                             >
                               {u.name}
                             </span>

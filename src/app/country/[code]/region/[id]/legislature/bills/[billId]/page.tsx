@@ -150,8 +150,8 @@ function StateBillDetailContent() {
   if (error && !bill) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-error text-sm">{error}</p>
-        <Link href={backHref} className="text-sm text-primary hover:underline">
+        <p className="text-error text-body">{error}</p>
+        <Link href={backHref} className="text-body text-primary hover:underline">
           ← Back to legislature
         </Link>
       </div>
@@ -196,7 +196,7 @@ function StateBillDetailContent() {
       <main className="mx-auto max-w-4xl px-6 py-8 space-y-6">
         <Link
           href={backHref}
-          className="text-sm text-muted hover:text-foreground transition-colors"
+          className="text-body text-muted hover:text-foreground transition-colors"
         >
           ← Back to legislature
         </Link>
@@ -205,27 +205,29 @@ function StateBillDetailContent() {
           <div className="flex flex-wrap items-start gap-3">
             <div className="flex-1 min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] font-medium text-muted">
+                <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm font-medium text-muted">
                   {statusLabel}
                 </span>
                 {bill.adminProposed && (
-                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-body-sm font-medium text-amber-300">
                     Admin proposed
                   </span>
                 )}
                 {bill.legislationTypeName && (
-                  <span className="text-[10px] text-cyan-400/90">{bill.legislationTypeName}</span>
+                  <span className="text-body-sm text-cyan-400/90">{bill.legislationTypeName}</span>
                 )}
               </div>
-              <h1 className="text-3xl font-semibold leading-tight tracking-tight">{bill.title}</h1>
+              <h1 className="text-display font-semibold leading-tight tracking-tight">
+                {bill.title}
+              </h1>
             </div>
           </div>
 
-          <p className="whitespace-pre-wrap break-words text-sm text-muted leading-relaxed">
+          <p className="whitespace-pre-wrap break-words text-body text-muted leading-relaxed">
             {bill.summary}
           </p>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted pt-1 border-t border-card-border/40">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted pt-1 border-t border-card-border/40">
             <span>
               Sponsored by{" "}
               {bill.sponsorId ? (
@@ -262,7 +264,7 @@ function StateBillDetailContent() {
                 type="button"
                 disabled={voting}
                 onClick={() => handleGovernorAction("signed")}
-                className="rounded-lg border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/20"
+                className="rounded-lg border border-success/30 bg-success/10 px-3 py-1.5 text-body-sm font-medium text-success hover:bg-success/20"
               >
                 Sign into law
               </button>
@@ -270,7 +272,7 @@ function StateBillDetailContent() {
                 type="button"
                 disabled={voting}
                 onClick={() => handleGovernorAction("vetoed")}
-                className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/20"
+                className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-body-sm font-medium text-error hover:bg-error/20"
               >
                 Veto…
               </button>
@@ -279,9 +281,9 @@ function StateBillDetailContent() {
 
           {bill.vetoMessage && (
             <div className="mt-2 rounded-xl border border-error/40 bg-error/5 p-4">
-              <h3 className="text-sm text-foreground font-semibold">Veto message</h3>
-              <p className="mt-1 text-sm italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
-              <p className="mt-2 text-xs text-muted">
+              <h3 className="text-body-lg text-foreground font-semibold">Veto message</h3>
+              <p className="mt-1 text-body italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
+              <p className="mt-2 text-body-sm text-muted">
                 — {getRegionalBillAssentTitleForState(bill.countryId as CountryId, bill.stateId)}
                 &apos;s office
               </p>
@@ -302,19 +304,19 @@ function StateBillDetailContent() {
         />
 
         {message && (
-          <div className="rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-sm text-success">
+          <div className="rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-body text-success">
             {message}
           </div>
         )}
         {error && (
-          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-sm text-error">
+          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-body text-error">
             {error}
           </div>
         )}
 
         <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_340px]">
           <aside className="min-w-0 self-start rounded-xl border border-card-border bg-card p-5 space-y-4 lg:order-2">
-            <h3 className="text-sm font-semibold text-muted">Progress</h3>
+            <h3 className="text-body-lg font-semibold text-muted">Progress</h3>
             <BillTimeline
               status={timelineStatus}
               originChamber="state"
@@ -345,7 +347,7 @@ function StateBillDetailContent() {
           <div className="min-w-0 space-y-6 lg:order-1">
             {hasChamberTally && bill.eligibleSeats > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-5">
-                <h3 className="mb-3 text-sm font-semibold text-muted">Chamber · floor vote</h3>
+                <h3 className="mb-3 text-body-lg font-semibold text-muted">Chamber · floor vote</h3>
                 <VoteSeatingChart
                   style="hemicycle"
                   votes={{
@@ -379,7 +381,7 @@ function StateBillDetailContent() {
 
             {isOverrideStage && (
               <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
-                <h3 className="text-sm font-semibold">Veto override</h3>
+                <h3 className="text-body-lg font-semibold">Veto override</h3>
                 <VoteBar
                   label="Override vote (2/3 required)"
                   votesFor={bill.overrideVotesFor}
@@ -414,14 +416,14 @@ function StateBillDetailContent() {
 
             {bill.voteByParty.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-5">
-                <h3 className="text-sm font-semibold mb-3">Vote tally by party</h3>
+                <h3 className="text-body-lg font-semibold mb-3">Vote tally by party</h3>
                 <VoteTallyTable voteByParty={bill.voteByParty} chamberLabel="Chamber" />
               </div>
             )}
 
             {bill.voteByPartyOverride.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-5">
-                <h3 className="text-sm font-semibold mb-3">Override vote tally by party</h3>
+                <h3 className="text-body-lg font-semibold mb-3">Override vote tally by party</h3>
                 <VoteTallyTable voteByParty={bill.voteByPartyOverride} chamberLabel="Override" />
               </div>
             )}

@@ -93,7 +93,7 @@ export default function NationalizationSurfacePage() {
                   className={`text-heading font-semibold ${inDebt ? "text-error" : "text-success"}`}
                 >
                   {natMoney(balance, pendingData?.currencyCode ?? "USD")}
-                  <span className="ml-2 text-body-xs font-normal text-muted">
+                  <span className="ml-2 text-body-sm font-normal text-muted">
                     {inDebt ? "national debt" : "surplus"}
                   </span>
                 </div>

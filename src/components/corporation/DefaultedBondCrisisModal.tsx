@@ -222,12 +222,12 @@ export default function DefaultedBondCrisisModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 text-muted hover:text-foreground text-sm"
+          className="absolute right-3 top-3 text-muted hover:text-foreground text-body"
         >
           Close
         </button>
 
-        <h2 id="bond-default-title" className="text-heading-sm font-semibold text-error pr-10">
+        <h2 id="bond-default-title" className="text-heading font-semibold text-error pr-10">
           Bond default: action required
         </h2>
         <p className="mt-2 text-body-sm text-muted">
@@ -288,7 +288,7 @@ export default function DefaultedBondCrisisModal({
             {(!data.cash.canPay ||
               !data.refinance.canRefinance ||
               data.refinance.imfRestructuring) && (
-              <p className="text-body-xs text-muted">
+              <p className="text-body-sm text-muted">
                 {!data.cash.canPay && `Paying in cash needs ${formatAmount(data.cash.cost)}. `}
                 {data.refinance.imfRestructuring
                   ? "Refinancing is closed while the IMF restructuring program runs."
@@ -300,7 +300,7 @@ export default function DefaultedBondCrisisModal({
             {data.cash.canPay && (
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
                 <div className="font-medium text-foreground mb-2">1. Pay cash</div>
-                <p className="text-muted text-body-xs mb-2">
+                <p className="text-muted text-body-sm mb-2">
                   Pay the full defaulted principal from corporate cash. Bondholders receive
                   principal and defaulted bonds are closed.
                 </p>
@@ -317,7 +317,7 @@ export default function DefaultedBondCrisisModal({
             {data.refinance.canRefinance && !data.refinance.imfRestructuring && (
               <div className="rounded-lg border border-secondary/30 bg-secondary/5 p-3">
                 <div className="font-medium text-foreground mb-2">2. Refinance</div>
-                <p className="text-muted text-body-xs mb-2">
+                <p className="text-muted text-body-sm mb-2">
                   Roll defaulted bondholders into a new {formatAmount(data.refinance.requiredFace)}{" "}
                   bond at par, clearing the default and restoring holders&apos; claim to face value.
                   This is a debt-for-debt swap. No cash is added to the corporation. Holders keep
@@ -345,7 +345,7 @@ export default function DefaultedBondCrisisModal({
                     </>
                   )}
                 </p>
-                <label className="block text-body-xs text-muted mb-1">Maturity</label>
+                <label className="block text-body-sm text-muted mb-1">Maturity</label>
                 <select
                   value={maturityTurns}
                   onChange={(e) => setMaturityTurns(Number(e.target.value) as BondMaturityTurns)}
@@ -371,13 +371,13 @@ export default function DefaultedBondCrisisModal({
             {data.restructure.feasible && (
               <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
                 <div className="font-medium text-foreground mb-2">3. Restructure</div>
-                <p className="text-muted text-body-xs mb-2">
+                <p className="text-muted text-body-sm mb-2">
                   Sell off the minimum number of sectors needed to repay defaulted bondholders{" "}
                   <em>in full</em>, then clear the default. The corporation survives with its
                   remaining sectors and cash. Liquidated sectors recover 85% of their estimated
                   value.
                 </p>
-                <div className="text-body-xs text-muted mb-2 space-y-0.5">
+                <div className="text-body-sm text-muted mb-2 space-y-0.5">
                   <div>
                     Repays bondholders: {formatAmount(data.restructure.cost)} (100% of defaulted
                     principal)
@@ -406,14 +406,14 @@ export default function DefaultedBondCrisisModal({
 
             <div className="rounded-lg border border-warning/40 bg-warning/10 p-3">
               <div className="font-medium text-warning mb-2">4. Dissolve &amp; settle</div>
-              <p className="text-muted text-body-xs mb-2">
+              <p className="text-muted text-body-sm mb-2">
                 Liquidate using liquid capital plus sector NPV. Bondholders are paid pro-rata up to
                 available assets; remaining assets are distributed to <em>all</em> shareholders
                 pro-rata by shares: characters to their cash, corporate equity holders to their
                 liquid capital, and the public float slice to the country&apos;s central bank
                 reserve. This cannot be undone.
               </p>
-              <div className="text-body-xs text-muted mb-2 space-y-0.5">
+              <div className="text-body-sm text-muted mb-2 space-y-0.5">
                 <div>
                   Est. bond recovery pool: {formatAmount(data.dissolve.preview.bondRecoveryPool)} (
                   {data.dissolve.preview.bondRecoveryPct}% of claims)
@@ -426,7 +426,7 @@ export default function DefaultedBondCrisisModal({
               {(data.dissolve.shareholders.length > 0 ||
                 data.dissolve.corporateShareholders.length > 0 ||
                 data.dissolve.publicFloat) && (
-                <div className="mb-3 max-h-40 overflow-y-auto rounded border border-card-border bg-card p-2 text-body-xs">
+                <div className="mb-3 max-h-40 overflow-y-auto rounded border border-card-border bg-card p-2 text-body-sm">
                   <div className="text-muted mb-1">Distribution (est.)</div>
                   {data.dissolve.shareholders.map((r) => (
                     <div key={`c-${r.characterId}`} className="flex justify-between gap-2">
@@ -464,7 +464,7 @@ export default function DefaultedBondCrisisModal({
                 </Button>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-error text-body-xs font-medium">
+                  <p className="text-error text-body-sm font-medium">
                     Confirm: permanently dissolve the corporation and distribute proceeds as
                     estimated above?
                   </p>

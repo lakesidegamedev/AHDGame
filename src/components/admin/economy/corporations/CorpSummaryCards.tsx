@@ -26,7 +26,7 @@ export function CorpSummaryCards({ summary }: { summary: Summary }) {
         >
           <p className="text-body-sm font-medium text-muted">{card.label}</p>
           <p
-            className={`text-xl font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
+            className={`text-heading font-semibold ${card.highlight ? "text-error" : "text-foreground"}`}
           >
             {card.value}
           </p>

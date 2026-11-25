@@ -6,6 +6,7 @@ import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import { LEGAL_STRUCTURES } from "@/lib/constants/legalStructures";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { InlineStatus, SmallButton } from "../dense/DenseKit";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface VotingIdentity {
   kind: "character" | "corporation";
@@ -254,10 +255,10 @@ export function CorporationVoteCard({
   return (
     <div className="mb-2 space-y-2 rounded-[var(--corp-rad,6px)] border border-card-border bg-card-muted/40 p-3 last:mb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <p className="text-[13px] font-medium text-foreground">
+        <p className="text-body-sm font-medium text-foreground">
           {typeLabel(vote.type)}: {proposalSummary(vote)}
         </p>
-        <span className={`text-xs ${statusTone}`}>
+        <span className={`text-body-sm ${statusTone}`}>
           {vote.status === "open"
             ? turnsRemaining > 0
               ? `Open, ${turnsRemaining} turn${turnsRemaining !== 1 ? "s" : ""} left`
@@ -285,7 +286,7 @@ export function CorporationVoteCard({
             style={{ left: `${Math.min(thresholdPct, 100)}%` }}
           />
         </div>
-        <div className="flex flex-wrap justify-between gap-x-4 text-xs tabular-nums">
+        <div className="flex flex-wrap justify-between gap-x-4 text-body-sm tabular-nums">
           <span className="text-success">
             Yes {yesShares.toLocaleString("en-US")} ({yesPct.toFixed(1)}%)
           </span>
@@ -301,7 +302,7 @@ export function CorporationVoteCard({
 
       {vote.status === "open" && (
         <div className="space-y-2">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             You hold {viewerShares.toLocaleString("en-US")} shares
             {myVotingPower !== viewerShares
               ? ` (${myVotingPower.toLocaleString("en-US")} votes)`
@@ -310,7 +311,7 @@ export function CorporationVoteCard({
           </p>
 
           {identities.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            <div className="flex flex-wrap items-center gap-1.5 text-body-sm text-muted">
               Vote as
               {identities.map((ident) => {
                 const isSelected = ident.id === selectedIdentityId;
@@ -321,11 +322,9 @@ export function CorporationVoteCard({
                     disabled={ident.hasVoted}
                     onClick={() => setSelectedIdentityId(ident.id)}
                     aria-pressed={isSelected}
-                    className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:line-through disabled:opacity-50 ${
+                    className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2 text-body-sm transition-colors disabled:cursor-not-allowed disabled:line-through disabled:opacity-50 ${pillClass(
                       isSelected
-                        ? "border-foreground bg-foreground font-medium text-background"
-                        : "border-card-border text-foreground hover:bg-card-elevated"
-                    }`}
+                    )}`}
                   >
                     {ident.name} ({ident.votingPower.toLocaleString("en-US")})
                   </button>
@@ -337,7 +336,7 @@ export function CorporationVoteCard({
           {identities.length === 1 &&
             selectedIdentity &&
             selectedIdentity.kind === "corporation" && (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Voting as <span className="text-foreground">{selectedIdentity.name}</span> (
                 {selectedIdentity.votingPower.toLocaleString("en-US")} votes)
               </p>
@@ -355,10 +354,12 @@ export function CorporationVoteCard({
               </>
             )}
             {!canVote && identities.length > 0 && identities.every((i) => i.hasVoted) && (
-              <span className="text-xs text-muted">You have voted on this proposal.</span>
+              <span className="text-body-sm text-muted">You have voted on this proposal.</span>
             )}
             {!canVote && identities.length === 0 && directableFunds.length === 0 && !isCeo && (
-              <span className="text-xs text-muted">You hold no shares in this corporation.</span>
+              <span className="text-body-sm text-muted">
+                You hold no shares in this corporation.
+              </span>
             )}
             {isCeo && (
               <SmallButton tone="danger" onClick={cancelVote} disabled={loading}>
@@ -369,7 +370,7 @@ export function CorporationVoteCard({
 
           {directableFunds.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Funds you direct. An uninstructed fund votes with the majority of everyone else, or
                 abstains when there is none.
               </p>
@@ -377,7 +378,7 @@ export function CorporationVoteCard({
                 <tbody>
                   {directableFunds.map((fund) => (
                     <tr key={fund.fundId}>
-                      <td className="border-b border-card-border/60 py-1.5 pr-2 text-xs text-foreground">
+                      <td className="border-b border-card-border/60 py-1.5 pr-2 text-body-sm text-foreground">
                         {fund.name}
                         {fund.tickerSymbol ? (
                           <span className="ml-1 text-muted">{fund.tickerSymbol}</span>

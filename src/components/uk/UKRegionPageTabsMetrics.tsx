@@ -137,7 +137,7 @@ export function UKRegionPageTabsMetrics({ regionId }: { regionId: string }) {
             />
           </svg>
           <p className="font-medium">Regional metrics coming soon</p>
-          <p className="text-sm mt-1">
+          <p className="text-body mt-1">
             Economic, education, healthcare, and other metrics for UK regions will be available when
             the UK metrics dataset is seeded.
           </p>
@@ -175,7 +175,7 @@ export function UKRegionPageTabsMetrics({ regionId }: { regionId: string }) {
         {approvalHistory.length > 0 ? (
           <ApprovalChart history={approvalHistory} />
         ) : (
-          <p className="py-6 text-center text-sm text-muted">
+          <p className="py-6 text-center text-body text-muted">
             Approval history accumulates each turn — check back after the next turn.
           </p>
         )}

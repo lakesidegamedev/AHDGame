@@ -4,6 +4,7 @@ import {
   FOREX_CHART_TIMEFRAME_LABELS,
   type ForexChartTimeframe,
 } from "@/components/forex/forexChartTimeframe";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface TimeframeTabsProps {
   value: ForexChartTimeframe;
@@ -19,11 +20,7 @@ export function ForexChartTimeframeTabs({
 }: TimeframeTabsProps) {
   const order: ForexChartTimeframe[] = ["24h", "48h", "5y", "all"];
   return (
-    <div
-      className="flex flex-wrap gap-1 rounded-lg border border-card-border bg-card-muted p-1"
-      role="tablist"
-      aria-label="Chart timeframe"
-    >
+    <div className={`${PILL_TRACK} flex-wrap`} role="tablist" aria-label="Chart timeframe">
       {order.map((tf) => (
         <button
           key={tf}
@@ -32,9 +29,7 @@ export function ForexChartTimeframeTabs({
           id={`${idPrefix}-tf-${tf}`}
           aria-selected={value === tf}
           onClick={() => onChange(tf)}
-          className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
-            value === tf ? "bg-primary/15 text-primary" : "text-muted hover:text-foreground"
-          }`}
+          className={`whitespace-nowrap px-2.5 py-1.5 text-body-sm ${pillClass(value === tf)}`}
         >
           {FOREX_CHART_TIMEFRAME_LABELS[tf]}
         </button>

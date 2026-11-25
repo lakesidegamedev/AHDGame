@@ -121,7 +121,7 @@ export function ExtractionAdminPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading extraction settings…</span>
+          <span className="text-body text-muted">Loading extraction settings…</span>
         </div>
       </div>
     );
@@ -129,20 +129,20 @@ export function ExtractionAdminPanel() {
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-      <h3 className="text-sm font-semibold">Resource prospecting & extraction contracts</h3>
-      <p className="mt-1 mb-4 text-xs text-muted">
+      <h3 className="text-body-lg font-semibold">Resource prospecting & extraction contracts</h3>
+      <p className="mt-1 mb-4 text-body-sm text-muted">
         Ships flag-off. Both flags default to off for existing saves and can be enabled
         independently, though contract issuance without prospecting still works (governments can
         still contract out existing capacity).
       </p>
 
       {error ? (
-        <p className="mb-3 text-xs text-destructive" role="alert">
+        <p className="mb-3 text-body-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
       {message ? (
-        <p className="mb-3 text-xs text-success" role="status">
+        <p className="mb-3 text-body-sm text-success" role="status">
           {message}
         </p>
       ) : null}
@@ -157,10 +157,10 @@ export function ExtractionAdminPanel() {
               className="flex items-start justify-between gap-4 rounded-lg border border-card-border bg-background p-3"
             >
               <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">{toggle.label}</div>
-                <p className="mt-0.5 text-xs text-muted">{toggle.description}</p>
+                <div className="text-body font-medium text-foreground">{toggle.label}</div>
+                <p className="mt-0.5 text-body-sm text-muted">{toggle.description}</p>
                 {lastChange && (
-                  <p className="mt-1 text-[11px] text-muted/70">
+                  <p className="mt-1 text-body-sm text-muted/70">
                     Last changed by {lastChange.by} (<LocalTime value={lastChange.at} />)
                   </p>
                 )}

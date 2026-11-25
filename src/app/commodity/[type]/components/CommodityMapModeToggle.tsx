@@ -24,7 +24,7 @@ export default function CommodityMapModeToggle({
     <div className="flex items-center gap-1 bg-card p-1 rounded-lg border border-card-border shadow-sm">
       <button
         onClick={() => onModeChange("supply")}
-        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+        className={`px-3 py-1.5 text-body-sm font-bold uppercase tracking-wider rounded-md transition-all ${
           mode === "supply"
             ? "bg-success text-white shadow-sm"
             : "text-muted hover:text-foreground hover:bg-card-elevated"
@@ -34,7 +34,7 @@ export default function CommodityMapModeToggle({
       </button>
       <button
         onClick={() => onModeChange("demand")}
-        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+        className={`px-3 py-1.5 text-body-sm font-bold uppercase tracking-wider rounded-md transition-all ${
           mode === "demand"
             ? "bg-error text-white shadow-sm"
             : "text-muted hover:text-foreground hover:bg-card-elevated"
@@ -44,9 +44,9 @@ export default function CommodityMapModeToggle({
       </button>
       <button
         onClick={() => onModeChange("price")}
-        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+        className={`px-3 py-1.5 text-body-sm font-bold uppercase tracking-wider rounded-md transition-all ${
           mode === "price"
-            ? "bg-primary text-white shadow-sm"
+            ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted hover:text-foreground hover:bg-card-elevated"
         }`}
       >
@@ -56,7 +56,7 @@ export default function CommodityMapModeToggle({
         <button
           onClick={() => onModeChange("reachable")}
           title="Demand each country's own producers can actually sell into, after imports and exports. Embargoed and untraded supply is excluded."
-          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+          className={`px-3 py-1.5 text-body-sm font-bold uppercase tracking-wider rounded-md transition-all ${
             mode === "reachable"
               ? "bg-foreground text-card shadow-sm"
               : "text-muted hover:text-foreground hover:bg-card-elevated"
@@ -68,7 +68,7 @@ export default function CommodityMapModeToggle({
       {showCapacity && (
         <button
           onClick={() => onModeChange("capacity")}
-          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${
+          className={`px-3 py-1.5 text-body-sm font-bold uppercase tracking-wider rounded-md transition-all ${
             mode === "capacity"
               ? "bg-warning text-white shadow-sm"
               : "text-muted hover:text-foreground hover:bg-card-elevated"

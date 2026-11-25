@@ -197,11 +197,11 @@ export default function SupplyDemandChart({ history, unit }: SupplyDemandChartPr
       <div className="flex items-center gap-4 mt-1 justify-center">
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-6 rounded-full bg-success/70" />
-          <span className="text-xs text-muted">Supply</span>
+          <span className="text-body-sm text-muted">Supply</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-0 w-6 border-t-2 border-dashed border-error/70" />
-          <span className="text-xs text-muted">Demand</span>
+          <span className="text-body-sm text-muted">Demand</span>
         </div>
       </div>
     </div>

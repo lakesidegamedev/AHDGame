@@ -104,10 +104,10 @@ export function PrivateDepositModal({
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-card-border bg-card shadow-modal">
         <div className="flex items-start justify-between border-b border-card-border px-6 py-4">
           <div>
-            <h2 id={titleId} className="text-base font-semibold text-foreground">
+            <h2 id={titleId} className="text-body-lg font-semibold text-foreground">
               Deposit with {bank.name}
             </h2>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               Savings at this bank earn {formatRatePercent(bank.saverApyPercent)}. This routes your{" "}
               {bank.currency} savings balance to this bank.
             </p>
@@ -118,7 +118,7 @@ export function PrivateDepositModal({
             className="ml-4 -mt-0.5 text-muted transition-colors hover:text-foreground"
             aria-label="Close"
           >
-            <span className="text-xl leading-none" aria-hidden>
+            <span className="text-heading leading-none" aria-hidden>
               ×
             </span>
           </button>
@@ -131,14 +131,14 @@ export function PrivateDepositModal({
             void submit();
           }}
         >
-          <div className="rounded-xl border border-card-border bg-background/45 p-4 text-sm">
+          <div className="rounded-xl border border-card-border bg-background/45 p-4 text-body">
             <div className="flex items-center justify-between gap-4">
               <span className="text-muted">Available wallet balance</span>
               <span className="font-mono font-semibold tabular-nums text-foreground">
                 {formatBankMoney(availableCash, bank.currency)}
               </span>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-muted">
+            <p className="mt-2 text-body-sm leading-relaxed text-muted">
               The deposit moves cash into savings, then sets this bank as the holder for this
               currency. Your existing savings balance stays in the account.
             </p>
@@ -159,7 +159,7 @@ export function PrivateDepositModal({
             />
           </label>
 
-          <InlineError error={error} className="text-sm text-error" />
+          <InlineError error={error} className="text-body text-error" />
 
           <div className="flex justify-end gap-2 border-t border-card-border pt-4">
             <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>

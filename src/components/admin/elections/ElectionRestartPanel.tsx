@@ -4,7 +4,7 @@ import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 const BUTTON_CLASS =
-  "rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium hover:bg-background disabled:opacity-50 transition-colors";
+  "rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium hover:bg-background disabled:opacity-50 transition-colors";
 
 const SPAWN_BUTTONS = [
   {
@@ -108,7 +108,7 @@ export function ElectionRestartPanel() {
           >
             {busy.restart ? "Checking…" : "Spawn missing elections"}
           </button>
-          <p className="text-xs text-muted mt-1.5 max-w-xs">
+          <p className="text-body-sm text-muted mt-1.5 max-w-xs">
             Scans all states and fills any elections that should exist but aren&apos;t running. Safe
             to run at any time — won&apos;t duplicate existing races.
           </p>
@@ -123,7 +123,7 @@ export function ElectionRestartPanel() {
             >
               {busy[key] ? "…" : label}
             </button>
-            <p className="text-xs text-muted mt-1.5 max-w-xs">{help}</p>
+            <p className="text-body-sm text-muted mt-1.5 max-w-xs">{help}</p>
           </div>
         ))}
       </div>
@@ -148,10 +148,10 @@ export function ElectionRestartPanel() {
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
           <div>
-            <p className="text-sm font-medium text-amber-400 mb-2">
+            <p className="text-body font-medium text-amber-400 mb-2">
               Reset and reinitialize all elections
             </p>
-            <ul className="text-xs text-muted space-y-0.5 list-disc list-inside">
+            <ul className="text-body-sm text-muted space-y-0.5 list-disc list-inside">
               <li>Resets turn to 1, year to 2020</li>
               <li>Deletes ALL elections, candidates, vote tallies, and campaigns</li>
               <li>Recreates with correct time scales (48 turns = 1 year)</li>
@@ -172,7 +172,7 @@ export function ElectionRestartPanel() {
         <button
           onClick={handleSyncDate}
           disabled={busy.restart || busy.sync}
-          className="rounded-lg border border-amber-500/50 bg-amber-500/20 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
+          className="rounded-lg border border-amber-500/50 bg-amber-500/20 px-4 py-2 text-body font-medium text-amber-400 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
         >
           {busy.sync ? "Resetting…" : "Reset and reinitialize all elections"}
         </button>
@@ -180,7 +180,7 @@ export function ElectionRestartPanel() {
 
       {result && (
         <div
-          className={`mt-4 rounded-lg p-3 text-sm ${result.ok ? "bg-green-500/10 border border-green-500/30 text-green-400" : "bg-red-500/10 border border-red-500/30 text-red-400"}`}
+          className={`mt-4 rounded-lg p-3 text-body ${result.ok ? "bg-green-500/10 border border-green-500/30 text-green-400" : "bg-red-500/10 border border-red-500/30 text-red-400"}`}
         >
           {result.message}
         </div>

@@ -80,7 +80,7 @@ export function PlayerReportsTab() {
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
-            className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1 text-body-sm font-medium transition-colors ${
               statusFilter === s
                 ? "border border-primary/30 bg-primary/20 text-primary"
                 : "text-muted hover:text-foreground"
@@ -91,9 +91,9 @@ export function PlayerReportsTab() {
         ))}
       </div>
 
-      {loading && <p className="py-4 text-center text-sm text-muted">Loading reports…</p>}
+      {loading && <p className="py-4 text-center text-body text-muted">Loading reports…</p>}
       {!loading && reports.length === 0 && (
-        <p className="py-4 text-center text-sm text-muted">No reports found.</p>
+        <p className="py-4 text-center text-body text-muted">No reports found.</p>
       )}
 
       {!loading &&
@@ -102,9 +102,9 @@ export function PlayerReportsTab() {
             key={report._id}
             className="space-y-3 rounded-xl border border-card-border bg-card p-4"
           >
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <div className="flex flex-wrap items-center gap-2 text-body-sm text-muted">
               <span
-                className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                className={`rounded px-1.5 py-0.5 text-body-sm font-semibold uppercase ${
                   report.status === "pending"
                     ? "bg-yellow-500/20 text-yellow-400"
                     : report.status === "dismissed"
@@ -120,7 +120,7 @@ export function PlayerReportsTab() {
               />
               <span>· seen on {report.context}</span>
             </div>
-            <p className="text-sm">
+            <p className="text-body">
               <Link
                 href={`/character/${report.targetCharacterId}`}
                 target="_blank"
@@ -132,12 +132,12 @@ export function PlayerReportsTab() {
               <span className="text-muted">· {REASON_LABELS[report.reason] ?? report.reason}</span>
             </p>
             {report.details && (
-              <p className="whitespace-pre-wrap rounded-lg bg-background/60 p-3 text-sm">
+              <p className="whitespace-pre-wrap rounded-lg bg-background/60 p-3 text-body">
                 {report.details}
               </p>
             )}
             {report.adminNote && (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 <span className="font-semibold">Staff note:</span> {report.adminNote}
               </p>
             )}
@@ -149,19 +149,19 @@ export function PlayerReportsTab() {
                   placeholder="Staff note (optional)"
                   value={notes[report._id] ?? ""}
                   onChange={(e) => setNotes((n) => ({ ...n, [report._id]: e.target.value }))}
-                  className="min-w-0 flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm"
+                  className="min-w-0 flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body"
                 />
                 <button
                   disabled={busyId === report._id}
                   onClick={() => close(report._id, "actioned")}
-                  className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 disabled:opacity-50"
+                  className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-body-sm font-medium text-green-400 disabled:opacity-50"
                 >
                   Mark actioned
                 </button>
                 <button
                   disabled={busyId === report._id}
                   onClick={() => close(report._id, "dismissed")}
-                  className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted disabled:opacity-50"
+                  className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted disabled:opacity-50"
                 >
                   Dismiss
                 </button>

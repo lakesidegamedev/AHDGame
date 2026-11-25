@@ -306,7 +306,7 @@ export function ElectionsManageTab() {
             {i === 1 && <span className="mx-0.5 h-5 border-l border-card-border" />}
             <button
               onClick={() => dispatch({ type: "SET_SELECTED_COUNTRY", value: tab.id })}
-              className={`rounded-lg border px-3 py-1.5 text-[11px] transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-body-sm transition-colors ${
                 selectedCountry === tab.id
                   ? "border-primary/50 bg-primary/20 text-primary"
                   : "border-card-border text-muted hover:border-card-border/80 hover:text-foreground"
@@ -317,7 +317,7 @@ export function ElectionsManageTab() {
             </button>
           </span>
         ))}
-        <span className="ml-auto text-[11px] text-muted">
+        <span className="ml-auto text-body-sm text-muted">
           {currentTurn !== null && `Turn ${currentTurn}`}
         </span>
       </div>
@@ -389,7 +389,7 @@ export function ElectionsManageTab() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-3 flex items-center justify-center gap-2 text-xs">
+          <div className="mt-3 flex items-center justify-center gap-2 text-body-sm">
             <button
               onClick={() => dispatch({ type: "SET_PAGE", value: currentPage - 1 })}
               disabled={currentPage <= 1}
@@ -413,12 +413,14 @@ export function ElectionsManageTab() {
 
       {/* Feedback message */}
       {message && (
-        <div className={`mt-3 rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>
+        <div className={`mt-3 rounded-lg p-3 text-body ${getMessageStyle(message)}`}>
           {message}
           {messageDetails.length > 0 && (
             <details className="mt-1">
-              <summary className="cursor-pointer text-xs text-muted">Per-country details</summary>
-              <ul className="mt-1 text-xs text-muted">
+              <summary className="cursor-pointer text-body-sm text-muted">
+                Per-country details
+              </summary>
+              <ul className="mt-1 text-body-sm text-muted">
                 {messageDetails.map((d, i) => (
                   <li key={i}>{d}</li>
                 ))}

@@ -45,7 +45,7 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
 
   return (
     <div className="mx-auto max-w-[860px] min-w-0 px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-foreground transition-colors">
           Wiki
         </Link>
@@ -59,16 +59,16 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
 
       <div className="mb-8">
         <div className="flex items-center justify-between gap-4 mb-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+          <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
             Learning path
           </p>
-          {diff && <span className="text-xs font-medium text-muted">{diff}</span>}
+          {diff && <span className="text-body-sm font-medium text-muted">{diff}</span>}
         </div>
-        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="mb-2 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {path.title}
         </h1>
-        <p className="mb-4 text-lg text-muted">{path.description}</p>
-        <div className="flex items-center gap-4 tabular-nums text-sm text-muted">
+        <p className="mb-4 text-heading text-muted">{path.description}</p>
+        <div className="flex items-center gap-4 tabular-nums text-body text-muted">
           <span>{totalPages} pages</span>
           <span>·</span>
           <span>{path.estimatedTime}</span>
@@ -77,7 +77,7 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
 
       {/* Progress */}
       <div className="mb-8 ">
-        <div className="mb-3 flex items-center justify-between text-sm">
+        <div className="mb-3 flex items-center justify-between text-body">
           <span className="font-medium text-foreground">Your progress</span>
           <span className="tabular-nums text-muted">
             {completedCount} / {totalPages} pages
@@ -90,7 +90,7 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
           />
         </div>
         {progressPercentage > 0 && (
-          <p className="mt-2 tabular-nums text-xs text-muted">
+          <p className="mt-2 tabular-nums text-body-sm text-muted">
             {Math.round(progressPercentage)}% complete
           </p>
         )}
@@ -99,7 +99,7 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
       {/* Page List */}
       {totalPages === 0 ? (
         <div className=" text-center">
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             No pages are available in this learning path for your current country access level.
           </p>
         </div>
@@ -114,8 +114,10 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
                 className="group flex items-start gap-4  transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card/60 hover:shadow-md"
               >
                 <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full tabular-nums text-sm font-bold ${
-                    isCompleted ? "bg-primary text-white" : "bg-card-elevated text-muted"
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full tabular-nums text-body font-bold ${
+                    isCompleted
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card-elevated text-muted"
                   }`}
                 >
                   {isCompleted ? (
@@ -136,8 +138,8 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
                   <h3 className="font-medium text-foreground transition-colors group-hover:text-primary">
                     {page.title}
                   </h3>
-                  <p className="text-sm text-muted">{page.description}</p>
-                  <p className="mt-1 tabular-nums text-xs text-muted">
+                  <p className="text-body text-muted">{page.description}</p>
+                  <p className="mt-1 tabular-nums text-body-sm text-muted">
                     {page.estimatedMinutes} min
                   </p>
                 </div>

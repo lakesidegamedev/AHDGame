@@ -65,39 +65,39 @@ export function WikiChartView({ spec }: { spec: WikiChartSpec }) {
         type={cats ? "category" : "number"}
         domain={cats ? undefined : ["dataMin", "dataMax"]}
         tickFormatter={tickFormatter}
-        tick={{ fontSize: 11, fill: "var(--muted)" }}
+        tick={{ fontSize: 12, fill: "var(--muted)" }}
         stroke="var(--card-border)"
         label={{
           value: spec.xLabel,
           position: "insideBottom",
           offset: -12,
-          style: { fontSize: 11, fill: "var(--muted)" },
+          style: { fontSize: 12, fill: "var(--muted)" },
         }}
       />
       <YAxis
         yAxisId="left"
-        tick={{ fontSize: 11, fill: "var(--muted)" }}
+        tick={{ fontSize: 12, fill: "var(--muted)" }}
         stroke="var(--card-border)"
         width={56}
         label={{
           value: axisLabel(spec.yLabel, spec.unit),
           angle: -90,
           position: "insideLeft",
-          style: { fontSize: 11, fill: "var(--muted)", textAnchor: "middle" },
+          style: { fontSize: 12, fill: "var(--muted)", textAnchor: "middle" },
         }}
       />
       {hasRight && (
         <YAxis
           yAxisId="right"
           orientation="right"
-          tick={{ fontSize: 11, fill: "var(--muted)" }}
+          tick={{ fontSize: 12, fill: "var(--muted)" }}
           stroke="var(--card-border)"
           width={56}
           label={{
             value: axisLabel(spec.y2Label ?? "", spec.y2Unit),
             angle: 90,
             position: "insideRight",
-            style: { fontSize: 11, fill: "var(--muted)", textAnchor: "middle" },
+            style: { fontSize: 12, fill: "var(--muted)", textAnchor: "middle" },
           }}
         />
       )}
@@ -125,7 +125,7 @@ export function WikiChartView({ spec }: { spec: WikiChartSpec }) {
           y={m.y}
           stroke="var(--muted)"
           strokeDasharray="4 4"
-          label={{ value: m.label, fontSize: 10, fill: "var(--muted)", position: "insideTopRight" }}
+          label={{ value: m.label, fontSize: 12, fill: "var(--muted)", position: "insideTopRight" }}
         />
       ))}
     </>
@@ -133,7 +133,7 @@ export function WikiChartView({ spec }: { spec: WikiChartSpec }) {
 
   return (
     <figure className="my-6 rounded-lg border border-card-border bg-card/40 p-4">
-      <figcaption className="mb-3 text-sm font-semibold text-foreground">{spec.title}</figcaption>
+      <figcaption className="mb-3 text-body font-semibold text-foreground">{spec.title}</figcaption>
       <div role="img" aria-label={describe(spec)} className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           {spec.kind === "bar" ? (
@@ -172,7 +172,7 @@ export function WikiChartView({ spec }: { spec: WikiChartSpec }) {
           )}
         </ResponsiveContainer>
       </div>
-      {spec.caption && <p className="mt-2 text-xs text-muted">{spec.caption}</p>}
+      {spec.caption && <p className="mt-2 text-body-sm text-muted">{spec.caption}</p>}
     </figure>
   );
 }

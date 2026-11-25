@@ -91,18 +91,18 @@ export function NominationChoicePrompt() {
       />
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-card-border bg-card shadow-2xl">
         <div className="px-5 pt-5 pb-4">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-heading font-semibold text-foreground">
             A cabinet seat is yours to decide on
           </h2>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             The Senate passed your nomination for {offer.positionName}, but you currently hold a{" "}
             {offer.office}, and the game does not allow both at once.
           </p>
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             Take the seat and give up the {offer.office}, or stay where you are. If you do not
             answer, the offer lapses and the seat returns to the President.
           </p>
-          {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+          {error && <p className="mt-2 text-body text-red-500">{error}</p>}
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <Button
               className="border border-card-border bg-transparent"

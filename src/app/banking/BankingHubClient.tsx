@@ -309,9 +309,9 @@ function HubTabs({
             aria-controls={`banking-panel-${tab.id}`}
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(tab.id)}
-            className={`flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+            className={`flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-body font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               active
-                ? "bg-primary text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >
@@ -319,7 +319,7 @@ function HubTabs({
             {tab.label}
             {typeof tab.count === "number" && (
               <span
-                className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] ${
+                className={`rounded-full px-1.5 py-0.5 font-mono text-body-sm ${
                   active ? "bg-white/15 text-white" : "bg-card-elevated text-muted"
                 }`}
               >
@@ -344,10 +344,10 @@ function SectionHeading({ id, title, description, aside }: SectionHeadingProps) 
   return (
     <div className="flex items-end justify-between gap-4">
       <div className="min-w-0">
-        <h2 id={id} className="text-xl font-bold tracking-tight text-foreground">
+        <h2 id={id} className="text-heading font-bold tracking-tight text-foreground">
           {title}
         </h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>
+        <p className="mt-1 max-w-2xl text-body text-muted">{description}</p>
       </div>
       {aside && <div className="hidden shrink-0 sm:block">{aside}</div>}
     </div>
@@ -465,9 +465,9 @@ function CentralBanksTable({ banks }: { banks: HubCentralBank[] }) {
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-card">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-[640px] text-body">
         <thead>
-          <tr className="border-b border-card-border bg-card-elevated/45 text-sm font-semibold text-foreground">
+          <tr className="border-b border-card-border bg-card-elevated/45 text-body font-semibold text-foreground">
             <SortableTh
               label="Bank"
               column="name"
@@ -518,17 +518,17 @@ function CentralBanksTable({ banks }: { banks: HubCentralBank[] }) {
                     <span className="block truncate font-semibold text-foreground transition-colors group-hover:text-primary">
                       {bank.bankName}
                     </span>
-                    <span className="block text-xs text-muted">{bank.countryName}</span>
+                    <span className="block text-body-sm text-muted">{bank.countryName}</span>
                   </span>
                 </Link>
               </td>
-              <td className="px-4 py-3.5 font-mono text-xs font-semibold text-muted">
+              <td className="px-4 py-3.5 font-mono text-body-sm font-semibold text-muted">
                 {bank.currency}
               </td>
-              <td className="px-4 py-3.5 text-right font-mono text-sm font-bold tabular-nums text-foreground">
+              <td className="px-4 py-3.5 text-right font-mono text-body font-bold tabular-nums text-foreground">
                 {formatRatePercent(bank.primeRate)}
               </td>
-              <td className="px-4 py-3.5 text-right font-mono text-sm font-bold tabular-nums text-success">
+              <td className="px-4 py-3.5 text-right font-mono text-body font-bold tabular-nums text-success">
                 {formatRatePercent(bank.savingsApyPercent)}
               </td>
               <td className="px-5 py-3.5 text-right">
@@ -540,7 +540,7 @@ function CentralBanksTable({ banks }: { banks: HubCentralBank[] }) {
                   <Link
                     href={bank.href}
                     aria-label={`Open ${bank.bankName}`}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="inline-flex items-center gap-1 text-body-sm font-semibold text-muted transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     Open desk
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -607,9 +607,9 @@ function PrivateBanksTable({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-card">
-      <table className="w-full min-w-[960px] text-sm">
+      <table className="w-full min-w-[960px] text-body">
         <thead>
-          <tr className="border-b border-card-border bg-card-elevated/45 text-sm font-semibold text-foreground">
+          <tr className="border-b border-card-border bg-card-elevated/45 text-body font-semibold text-foreground">
             <SortableTh
               label="Bank"
               column="name"
@@ -725,7 +725,7 @@ function GetLoanForm({
           description="Borrow personally or for a corporation you lead."
         />
         <div className="space-y-4 p-5">
-          <div className="rounded-xl border border-card-border bg-background/45 px-4 py-3 text-sm leading-relaxed text-muted">
+          <div className="rounded-xl border border-card-border bg-background/45 px-4 py-3 text-body leading-relaxed text-muted">
             <p className="font-semibold text-foreground">Clear terms before you submit</p>
             <p className="mt-1">
               Choose Personal loan or Corporation loan. The review screen shows the lender, quoted
@@ -770,9 +770,9 @@ function YourLoansSection({ loans }: { loans: HubLoan[] }) {
         />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[640px] text-body">
             <thead>
-              <tr className="border-b border-card-border text-left text-sm font-semibold text-foreground">
+              <tr className="border-b border-card-border text-left text-body font-semibold text-foreground">
                 <th className="px-5 py-3 font-semibold">Bank</th>
                 <th className="px-4 py-3 font-semibold">Borrower</th>
                 <th className="px-4 py-3 font-semibold">Credited to</th>
@@ -795,11 +795,11 @@ function YourLoansSection({ loans }: { loans: HubLoan[] }) {
                     >
                       {loan.bankName}
                     </Link>
-                    <p className="font-mono text-[11px] text-muted">{loan.currency}</p>
+                    <p className="font-mono text-body-sm text-muted">{loan.currency}</p>
                   </td>
                   <td className="px-4 py-3">
                     {loan.borrowerName}
-                    <p className="text-[11px] text-muted">
+                    <p className="text-body-sm text-muted">
                       {loan.borrowerType === "character" ? "Personal" : "Corporation"}
                     </p>
                   </td>
@@ -888,18 +888,18 @@ function AdminUnwindPanel({
 
   return (
     <section className="space-y-3 rounded-xl border border-error/30 bg-error/5 p-5">
-      <h2 className="text-lg font-semibold text-error">Admin: unwind bank</h2>
-      <p className="text-sm text-muted">
+      <h2 className="text-heading font-semibold text-error">Admin: unwind bank</h2>
+      <p className="text-body text-muted">
         Operator escape hatch. Works even when private banking is frozen. Admin only.
       </p>
       {banks.length === 0 ? (
-        <p className="text-sm text-muted">No active bank charters to unwind.</p>
+        <p className="text-body text-muted">No active bank charters to unwind.</p>
       ) : (
         <div className="grid gap-3 max-w-xl">
-          <label className="block space-y-1 text-xs text-muted">
+          <label className="block space-y-1 text-body-sm text-muted">
             Bank corporation
             <select
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
               value={corpId}
               onChange={(e) => setCorpId(e.target.value)}
               aria-label="Bank to unwind"
@@ -912,7 +912,7 @@ function AdminUnwindPanel({
               ))}
             </select>
           </label>
-          <label className="block space-y-1 text-xs text-muted">
+          <label className="block space-y-1 text-body-sm text-muted">
             Reason
             <Input
               value={reason}

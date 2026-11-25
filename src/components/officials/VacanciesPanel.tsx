@@ -42,7 +42,7 @@ export default function VacanciesPanel({
   return (
     <>
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Current vacancies</h2>
+        <h2 className="mb-4 text-heading font-semibold text-foreground">Current vacancies</h2>
 
         {senateVacancies.length > 0 && (
           <div className="mb-4">
@@ -56,13 +56,13 @@ export default function VacanciesPanel({
                     key={index}
                     className="flex items-center justify-between rounded-lg bg-card-elevated border border-card-border px-3 py-2"
                   >
-                    <span className="text-sm text-foreground">
+                    <span className="text-body text-foreground">
                       {displayCanadianRegionCode(vacancy.state)}, Class {vacancy.senateClass}
                     </span>
                     {canAppoint && (
                       <button
                         onClick={() => handleAppointClick(vacancy)}
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark transition-colors"
+                        className="rounded-md bg-primary px-3 py-1 text-body-sm font-medium text-primary-foreground hover:bg-primary-dark transition-colors"
                       >
                         Appoint replacement
                       </button>
@@ -81,7 +81,7 @@ export default function VacanciesPanel({
               {houseVacancies.map((vacancy, index) => (
                 <div
                   key={index}
-                  className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-sm text-foreground"
+                  className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-body text-foreground"
                 >
                   {displayCanadianRegionCode(vacancy.state)}
                   {vacancy.district ? `-${vacancy.district}` : ""} (vacant)
@@ -98,7 +98,7 @@ export default function VacanciesPanel({
               {governorVacancies.map((vacancy, index) => (
                 <div
                   key={index}
-                  className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-sm text-foreground"
+                  className="rounded-lg bg-card-elevated border border-card-border px-3 py-2 text-body text-foreground"
                 >
                   {displayCanadianRegionCode(vacancy.state)} (vacant)
                 </div>

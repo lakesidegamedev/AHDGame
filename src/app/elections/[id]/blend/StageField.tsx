@@ -100,7 +100,7 @@ function PartyMark({ row, countryId }: { row: StageFieldRow; countryId: string }
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 400,
           color: BLEND.mutedDim,
         }}
@@ -249,7 +249,7 @@ export function StageField({
                 <span
                   style={{
                     fontFamily: FONT.mono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: BLEND.accentInk,
                     flex: "0 0 auto",
                   }}
@@ -272,7 +272,7 @@ export function StageField({
             }}
           >
             {r.sub ? (
-              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: BLEND.mutedDim }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDim }}>
                 {r.sub}
               </span>
             ) : null}
@@ -280,7 +280,7 @@ export function StageField({
               <Link
                 href={r.campaignHref}
                 className="hover:underline"
-                style={{ ...linkStyle, fontSize: 11.5, color: BLEND.accentInk, flexShrink: 0 }}
+                style={{ ...linkStyle, fontSize: 12, color: BLEND.accentInk, flexShrink: 0 }}
               >
                 Campaign
               </Link>

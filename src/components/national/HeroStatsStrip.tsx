@@ -96,12 +96,12 @@ export function HeroStatsStrip({ stats, currency }: HeroStatsStripProps) {
         <div key={t.label} className="bg-card px-4 py-3">
           <div className="text-body-sm font-medium text-muted">{t.label}</div>
           <div
-            className={`mt-1 text-heading-sm font-semibold tabular-nums ${TONE[t.valueTone ?? "foreground"]}`}
+            className={`mt-1 text-heading font-semibold tabular-nums ${TONE[t.valueTone ?? "foreground"]}`}
           >
             {t.value}
           </div>
           {t.sub && (
-            <div className={`text-body-xs tabular-nums ${TONE[t.subTone ?? "muted"]}`}>{t.sub}</div>
+            <div className={`text-body-sm tabular-nums ${TONE[t.subTone ?? "muted"]}`}>{t.sub}</div>
           )}
         </div>
       ))}

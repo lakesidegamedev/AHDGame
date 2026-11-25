@@ -9,7 +9,7 @@ export default function NewsLayout({ children }: { children: React.ReactNode }) 
       <div
         role="note"
         aria-label="In-character content notice"
-        className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-900 sm:text-sm dark:text-amber-200"
+        className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-body-sm text-amber-900 sm:text-body dark:text-amber-200"
       >
         <span className="font-semibold uppercase tracking-wide">In-character</span>
         <span className="mx-2 opacity-50">·</span>

@@ -15,6 +15,7 @@ import type {
   ResetMetricCountry,
   ResetMetricRow,
 } from "./ResetMetricBoard";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 const MAX_REGION_PEERS = 3;
 
@@ -86,7 +87,7 @@ function Score({ value }: { value: number | null }) {
   return (
     <span className={`font-bold tabular-nums ${tone.text}`}>
       {Math.round(value)}
-      <span className="text-[10px] font-normal text-muted">/100</span>
+      <span className="text-body-sm font-normal text-muted">/100</span>
     </span>
   );
 }
@@ -260,7 +261,7 @@ export function ResetMetricCompare({
         <Button variant="ghost" size="sm" onClick={onBack}>
           ← {homeName} overview
         </Button>
-        <span className="font-mono text-body-xs uppercase tracking-widest text-muted">
+        <span className="font-mono text-body-sm uppercase tracking-widest text-muted">
           {isNational
             ? "Compare national registries"
             : `Compare up to ${MAX_REGION_PEERS} ${regionLabel.toLowerCase()} peers`}
@@ -268,7 +269,7 @@ export function ResetMetricCompare({
       </div>
 
       <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-        <div className="mb-2.5 font-mono text-body-xs uppercase tracking-widest text-muted">
+        <div className="mb-2.5 font-mono text-body-sm uppercase tracking-widest text-muted">
           Compare against
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -282,12 +283,8 @@ export function ResetMetricCompare({
                 aria-pressed={on}
                 disabled={full}
                 onClick={() => toggleTarget(target.key)}
-                className={`rounded border px-2.5 py-1 font-mono text-body-xs transition-colors ${
-                  on
-                    ? "border-primary bg-primary/10 text-primary"
-                    : full
-                      ? "cursor-not-allowed border-card-border text-muted/40"
-                      : "border-card-border text-muted hover:border-muted hover:text-foreground"
+                className={`px-2.5 py-1 font-mono text-body-sm ${
+                  !on && full ? `${PILL_SHAPE} cursor-not-allowed text-muted/40` : pillClass(on)
                 }`}
               >
                 {target.name}
@@ -307,13 +304,13 @@ export function ResetMetricCompare({
         <table className="w-full min-w-[44rem] border-collapse">
           <thead>
             <tr className="border-b border-card-border">
-              <th className="px-4 py-2 text-left font-mono text-body-xs uppercase tracking-wider text-muted">
+              <th className="px-4 py-2 text-left font-mono text-body-sm uppercase tracking-wider text-muted">
                 Outcome domain
               </th>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-4 py-2 text-right font-mono text-body-xs uppercase tracking-wider ${column.key === homeKey ? "text-primary" : "text-muted"}`}
+                  className={`px-4 py-2 text-right font-mono text-body-sm uppercase tracking-wider ${column.key === homeKey ? "text-primary" : "text-muted"}`}
                 >
                   {column.name}
                 </th>
@@ -328,9 +325,9 @@ export function ResetMetricCompare({
               {columns.map((column) => (
                 <td key={column.key} className="px-4 py-2.5 text-right text-body">
                   {boards[column.key] === undefined || boards[column.key] === "loading" ? (
-                    <span className="text-body-xs text-muted">loading...</span>
+                    <span className="text-body-sm text-muted">loading...</span>
                   ) : boards[column.key] === null ? (
-                    <span className="text-body-xs text-error">unavailable</span>
+                    <span className="text-body-sm text-error">unavailable</span>
                   ) : (
                     <Score
                       value={conditionAverage(boards[column.key] as ResetMetricBoardResponse)}
@@ -398,7 +395,7 @@ export function ResetMetricCompare({
                                   <div className="text-body-sm font-medium text-muted">
                                     <Score value={comparisonMetric.conditionScore} /> condition
                                   </div>
-                                  <div className="text-body-xs text-muted">
+                                  <div className="text-body-sm text-muted">
                                     {metricFreshnessLabel(
                                       comparisonMetric.observation.lastUpdatedTurn,
                                       comparisonMetric.observation.source.includes(
@@ -423,7 +420,7 @@ export function ResetMetricCompare({
         </table>
       </div>
 
-      <p className="text-body-xs leading-relaxed text-muted">
+      <p className="text-body-sm leading-relaxed text-muted">
         Condition scores provide the common 0 to 100 comparison. Expanded rows retain each
         registry&apos;s actual units and local currency, so equal scores do not imply identical raw
         values or institutions.

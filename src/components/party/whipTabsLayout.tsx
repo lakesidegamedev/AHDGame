@@ -6,6 +6,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useRuntimeCountryConfig } from "@/hooks/useRuntimeCountryConfig";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 export type WhipSubTarget = "bills" | "leadership" | "cabinet";
 
@@ -83,10 +84,7 @@ export function WhipTabsLayout({
 
   return (
     <div className="space-y-4">
-      <div
-        role="tablist"
-        className="flex gap-1 p-1 rounded-lg bg-background border border-card-border w-fit"
-      >
+      <div role="tablist" className={`${PILL_TRACK} w-fit`}>
         {targets
           .filter((t) => t.show)
           .map((t) => (
@@ -95,11 +93,7 @@ export function WhipTabsLayout({
               role="tab"
               aria-selected={subTarget === t.key}
               onClick={() => setSubTarget(t.key)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                subTarget === t.key
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted hover:text-foreground"
-              }`}
+              className={`whitespace-nowrap px-4 py-1.5 text-body ${pillClass(subTarget === t.key)}`}
             >
               {t.label}
             </button>
@@ -113,7 +107,7 @@ export function WhipTabsLayout({
               <button
                 key={c.key}
                 onClick={() => setUserSelectedChamberKey(c.key)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                className={`px-3 py-1 rounded-full text-body-sm font-medium border transition-colors ${
                   chamberKey === c.key
                     ? "bg-primary/20 border-primary text-primary"
                     : "bg-card border-card-border text-muted hover:text-foreground"

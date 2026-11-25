@@ -136,7 +136,7 @@ export function PartyOrgManager() {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <p className="mb-6 text-sm text-muted">
+        <p className="mb-6 text-body text-muted">
           Manage party strength in each state. Organization (0-100) is the state-party&apos;s share
           of the statewide Org pool. It determines campaign effectiveness and candidate
           availability.
@@ -144,11 +144,11 @@ export function PartyOrgManager() {
 
         {/* State Selector */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-medium">Select state</label>
+          <label className="mb-2 block text-body font-medium">Select state</label>
           <select
             value={selectedState}
             onChange={(e) => setSelectedState(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm w-48"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body w-48"
           >
             <option value="">-- Select state --</option>
             {sortByRegionLabel(US_STATES, (s) => s).map((s) => (
@@ -161,7 +161,9 @@ export function PartyOrgManager() {
 
         {/* Message */}
         {message && (
-          <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+          <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(message)}`}>
+            {message}
+          </div>
         )}
 
         {loading && (
@@ -204,12 +206,12 @@ export function PartyOrgManager() {
                         style={{ backgroundColor: party.color }}
                       />
                       <span className="font-medium">{party.name}</span>
-                      <span className="text-sm text-muted">({party.abbreviation})</span>
+                      <span className="text-body text-muted">({party.abbreviation})</span>
                     </div>
                     <button
                       onClick={() => handleSave(String(party.sequentialId))}
                       disabled={loading}
-                      className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-1.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       Save
                     </button>
@@ -217,8 +219,8 @@ export function PartyOrgManager() {
 
                   <div>
                     <div className="mb-2 flex items-center justify-between">
-                      <label className="text-sm text-muted">Organization</label>
-                      <span className={`text-sm font-medium ${orgLabel.color}`}>
+                      <label className="text-body text-muted">Organization</label>
+                      <span className={`text-body font-medium ${orgLabel.color}`}>
                         {orgLabel.label}
                       </span>
                     </div>
@@ -244,7 +246,7 @@ export function PartyOrgManager() {
                             parseInt(e.target.value) || 0
                           )
                         }
-                        className="w-16 rounded border border-card-border bg-background px-2 py-1 text-center text-sm"
+                        className="w-16 rounded border border-card-border bg-background px-2 py-1 text-center text-body"
                       />
                     </div>
                     <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-background">
@@ -255,7 +257,7 @@ export function PartyOrgManager() {
                         }}
                       />
                     </div>
-                    <div className="mt-1 text-xs text-muted">{currentData.organization}%</div>
+                    <div className="mt-1 text-body-sm text-muted">{currentData.organization}%</div>
                   </div>
                 </div>
               );

@@ -209,7 +209,7 @@ export function StateLegislatureClient({
       <main className="mx-auto max-w-7xl px-4 py-8">
         {/* Hero */}
         <div className="rounded-2xl border border-card-border bg-card p-6 mb-6">
-          <div className="flex items-center gap-2 text-sm text-muted mb-2">
+          <div className="flex items-center gap-2 text-body text-muted mb-2">
             <Link
               href={ukContext ? ukContext.backHref : regionUrl(countryId, stateId)}
               className="hover:text-primary"
@@ -219,13 +219,13 @@ export function StateLegislatureClient({
             <span>/</span>
             <span>Legislature</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">{chamberLabel}</h1>
+          <h1 className="text-heading font-bold text-foreground mb-2">{chamberLabel}</h1>
           <p className="text-muted">
             {data ? displayChamberTotal(totalSeats, data.state.filledSeats) : totalSeats} Seats
             {data && ` · ${data.state.filledSeats} Filled`}
           </p>
           {!ukContext && data?.governor && (
-            <p className="text-sm text-muted mt-1">
+            <p className="text-body text-muted mt-1">
               {getRegionalBillAssentTitleForState(countryId as CountryId, stateId)}:{" "}
               {data.governor.characterId ? (
                 <Link
@@ -260,7 +260,7 @@ export function StateLegislatureClient({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`px-4 py-2 text-body font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted hover:text-foreground"

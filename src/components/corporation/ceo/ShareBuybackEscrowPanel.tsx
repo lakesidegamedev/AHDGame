@@ -117,7 +117,7 @@ export function ShareBuybackEscrowPanel({
   return (
     <DenseSection title="Buyback escrow">
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {managedMarketActive
             ? "At-market trades settle against the currency market pool. Escrow left over from the old buyback desk can be moved back to the treasury."
             : "Choose whether share sell-backs settle from the treasury or from a funded escrow."}
@@ -154,7 +154,7 @@ export function ShareBuybackEscrowPanel({
         </dl>
 
         {!managedMarketActive && (
-          <p className="text-[11px] leading-snug text-muted">
+          <p className="text-body-sm leading-snug text-muted">
             On dissolution or buyout the escrow settles first. A positive balance returns to the
             treasury and is paid out with everything else; a negative balance is covered from the
             corporation&apos;s assets, and any shortfall falls on shareholders.
@@ -164,7 +164,7 @@ export function ShareBuybackEscrowPanel({
         {!managedMarketActive && (
           <div className="space-y-1">
             {isEscrowMode && (
-              <label className="flex items-center justify-between gap-2 text-xs text-muted">
+              <label className="flex items-center justify-between gap-2 text-body-sm text-muted">
                 Auto-fund per turn
                 <span className="inline-flex items-center gap-1">
                   <span>{sym}</span>
@@ -176,13 +176,13 @@ export function ShareBuybackEscrowPanel({
                     onChange={(e) => setEditEscrowFundingPerTurn(e.target.value)}
                     disabled={!isEscrowMode}
                     placeholder="0"
-                    className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+                    className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
                   />
                 </span>
               </label>
             )}
             {showFundingWarning && (
-              <p className="text-[11px] leading-snug text-warning">
+              <p className="text-body-sm leading-snug text-warning">
                 This is more than recent net income (~{fmtLocal(recentNetIncome)}/turn). The desk
                 will sweep the whole treasury into escrow each turn and leave cash at 0.
               </p>
@@ -198,7 +198,7 @@ export function ShareBuybackEscrowPanel({
         {canWithdraw && (
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted">{sym}</span>
+              <span className="text-body-sm text-muted">{sym}</span>
               <input
                 type="number"
                 min={1}
@@ -208,7 +208,7 @@ export function ShareBuybackEscrowPanel({
                 disabled={!canWithdraw}
                 placeholder="0"
                 aria-label="Escrow withdrawal amount"
-                className="h-7 min-w-0 flex-1 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+                className="h-7 min-w-0 flex-1 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
               />
               <SmallButton
                 onClick={handleWithdraw}
@@ -219,7 +219,7 @@ export function ShareBuybackEscrowPanel({
                 {withdrawing ? "Withdrawing" : "Withdraw to treasury"}
               </SmallButton>
             </div>
-            <p className="text-[11px] text-muted">
+            <p className="text-body-sm text-muted">
               {onCooldown
                 ? `Available again in ${cooldownRemaining} turns.`
                 : escrowBalance <= 0

@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Tooltip } from "@/components/Tooltip";
+import { PILL_IDLE, PILL_SELECTED, PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 /**
  * Shared two-level tab navigation (super-tabs + sub-tabs).
@@ -45,30 +46,13 @@ export interface ResolvedTabs {
 /** Legacy `?tab=<id>` values mapped onto their current (super, sub) home. */
 export type LegacyTabMap = Record<string, ResolvedTabs>;
 
-const ACCENT_ACTIVE: Record<TabAccent, string> = {
-  primary: "border-primary text-primary",
-  warning: "border-warning text-warning",
-  error: "border-error text-error",
-};
-
+// Every selected tab is the same filled primary pill (selectedState.ts). An
+// accent only tints the unselected label, so a tab that needs attention still
+// stands out before it is opened.
 const ACCENT_IDLE: Record<TabAccent, string> = {
-  primary: "border-transparent text-muted hover:border-muted hover:text-foreground",
-  warning: "border-transparent text-warning/70 hover:border-warning/50 hover:text-warning",
-  error: "border-transparent text-error/70 hover:border-error/50 hover:text-error",
-};
-
-// Sub-tabs are a second, quieter level: smaller text and a filled active state
-// instead of a second underline, so the two bars never read as equals.
-const SUB_ACTIVE: Record<TabAccent, string> = {
-  primary: "bg-card-elevated font-medium text-foreground",
-  warning: "bg-warning/10 font-medium text-warning",
-  error: "bg-error/10 font-medium text-error",
-};
-
-const SUB_IDLE: Record<TabAccent, string> = {
-  primary: "text-muted hover:bg-card-elevated/60 hover:text-foreground",
-  warning: "text-warning/70 hover:text-warning",
-  error: "text-error/70 hover:text-error",
+  primary: PILL_IDLE,
+  warning: "text-warning/80 hover:bg-card-elevated hover:text-warning",
+  error: "text-error/80 hover:bg-card-elevated hover:text-error",
 };
 
 function findTab(tabs: NavSuperTabDef[], id: string): NavSuperTabDef | undefined {
@@ -158,18 +142,6 @@ export interface SuperTabNavProps {
   sticky?: boolean;
 }
 
-const FOLDER_TOP: Record<TabAccent, string> = {
-  primary: "border-t-primary",
-  warning: "border-t-warning",
-  error: "border-t-error",
-};
-
-const FOLDER_IDLE_TEXT: Record<TabAccent, string> = {
-  primary: "text-muted hover:text-foreground",
-  warning: "text-warning/80 hover:text-warning",
-  error: "text-error/80 hover:text-error",
-};
-
 export function SuperTabNav({
   tabs,
   legacyMap = {},
@@ -241,13 +213,13 @@ export function SuperTabNav({
         <div
           ref={tabBarRef}
           data-sticky-tabs={sticky ? "" : undefined}
-          className={`relative z-[1] -mb-px ${
+          className={`relative z-[1] mb-2 ${
             sticky
               ? "sticky top-[var(--site-navbar-h,0px)] z-30 -mx-4 bg-background px-4 pt-1.5 sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:pt-0"
               : ""
           }`}
         >
-          <nav className="flex flex-wrap items-end gap-0.5">
+          <nav className="flex flex-wrap items-center gap-1">
             {tabs.map((tab) => {
               const accent = tab.accent ?? "primary";
               const isActive = activeSuper === tab.id;
@@ -257,10 +229,8 @@ export function SuperTabNav({
                   onClick={() => setSuperTab(tab.id)}
                   aria-current={isActive ? "page" : undefined}
                   data-folder-tab={isActive ? "active" : "idle"}
-                  className={`flex min-h-12 items-center gap-2 rounded-t-[var(--corp-rad,6px)] border border-t-[3px] px-4 text-sm font-semibold transition-colors lg:px-5 ${
-                    isActive
-                      ? `border-card-border border-b-card bg-card text-foreground ${FOLDER_TOP[accent]}`
-                      : `border-transparent ${FOLDER_IDLE_TEXT[accent]}`
+                  className={`flex min-h-10 items-center gap-2 px-4 text-body font-semibold lg:px-5 ${PILL_SHAPE} ${
+                    isActive ? PILL_SELECTED : ACCENT_IDLE[accent]
                   }`}
                 >
                   {tab.icon}
@@ -278,7 +248,7 @@ export function SuperTabNav({
 
         <div
           data-folder-panel
-          className="min-w-0 rounded-b-[var(--corp-rad,6px)] rounded-tr-[var(--corp-rad,6px)] border border-card-border bg-card px-3.5 pb-5 lg:px-6 lg:pb-7"
+          className="min-w-0 rounded-[var(--corp-rad,6px)] border border-card-border bg-card px-3.5 pb-5 lg:px-6 lg:pb-7"
         >
           {visibleSubTabs.length > 1 && (
             <div
@@ -289,7 +259,7 @@ export function SuperTabNav({
               }`}
               data-sticky-subtabs={sticky ? "" : undefined}
             >
-              <nav className="flex flex-wrap items-center gap-x-6">
+              <nav className="flex flex-wrap items-center gap-1 py-2">
                 {visibleSubTabs.map((sub) => {
                   const isActive = activeSub === sub.id;
                   const button = (
@@ -297,11 +267,9 @@ export function SuperTabNav({
                       type="button"
                       onClick={() => navigate(activeSuper, sub.id)}
                       aria-current={isActive ? "page" : undefined}
-                      className={`-mb-px flex min-h-11 items-center gap-1.5 border-b-2 text-[13px] font-semibold transition-colors ${
+                      className={`flex min-h-9 items-center gap-1.5 px-3 text-body-sm font-semibold ${pillClass(
                         isActive
-                          ? "border-primary text-foreground"
-                          : "border-transparent text-muted hover:text-foreground"
-                      }`}
+                      )}`}
                     >
                       {sub.label}
                       {sub.badge}
@@ -327,8 +295,8 @@ export function SuperTabNav({
       {preTabContent}
 
       {/* Super-tab bar: flex-wrap per design system (no horizontal scroll) */}
-      <div className="border-b border-card-border">
-        <nav className="flex flex-wrap items-center gap-x-1">
+      <div className="border-b border-card-border pb-2">
+        <nav className="flex flex-wrap items-center gap-1">
           {tabs.map((tab) => {
             const accent = tab.accent ?? "primary";
             const isActive = activeSuper === tab.id;
@@ -337,12 +305,8 @@ export function SuperTabNav({
                 type="button"
                 onClick={() => setSuperTab(tab.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? accent === "primary"
-                      ? "border-primary text-foreground"
-                      : ACCENT_ACTIVE[accent]
-                    : ACCENT_IDLE[accent]
+                className={`flex items-center gap-2 px-3 py-1.5 text-body font-medium ${PILL_SHAPE} ${
+                  isActive ? PILL_SELECTED : ACCENT_IDLE[accent]
                 }`}
               >
                 {tab.icon}
@@ -370,8 +334,8 @@ export function SuperTabNav({
                   type="button"
                   onClick={() => navigate(activeSuper, sub.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] transition-colors ${
-                    isActive ? SUB_ACTIVE[accent] : SUB_IDLE[accent]
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-body-sm ${PILL_SHAPE} ${
+                    isActive ? PILL_SELECTED : ACCENT_IDLE[accent]
                   }`}
                 >
                   {sub.label}

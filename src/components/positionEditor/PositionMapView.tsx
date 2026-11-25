@@ -159,8 +159,8 @@ export function PositionMapView() {
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <div className="flex flex-col gap-3 border-b border-card-border py-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl text-foreground">Position editor</h1>
-          <p className="mt-0.5 text-sm text-muted">
+          <h1 className="text-heading text-foreground">Position editor</h1>
+          <p className="mt-0.5 text-body text-muted">
             Author Layer-1 demographic positions and turnout by state.
           </p>
         </div>
@@ -210,7 +210,7 @@ export function PositionMapView() {
       </div>
 
       {states.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+        <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-body text-warning">
           No Layer-1 model for {country} {era}. (Only 2019 is populated until a preset reseed runs.)
         </div>
       ) : (
@@ -223,10 +223,10 @@ export function PositionMapView() {
           <div>
             {selected ? (
               <div className="sticky top-4 rounded-xl border border-card-border bg-card p-4 shadow-card">
-                <h2 className="text-lg text-foreground">
+                <h2 className="text-heading text-foreground">
                   {displayCanadianRegionCode(selected.stateId)}
                 </h2>
-                <div className="mt-3 space-y-2 text-sm">
+                <div className="mt-3 space-y-2 text-body">
                   <div className="flex justify-between">
                     <span className="text-muted">Economic</span>
                     <span className="tabular-nums text-foreground">
@@ -256,13 +256,13 @@ export function PositionMapView() {
                   // Era and country come from picker values (DOM text), so every
                   // part of the URL is encoded rather than trusted.
                   href={`/control/world/position-editor/${encodeURIComponent(country)}/${encodeURIComponent(selected.stateId)}?era=${encodeURIComponent(era)}`}
-                  className="mt-4 block rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+                  className="mt-4 block rounded-lg bg-primary px-3 py-2 text-center text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark"
                 >
                   Edit state demographics →
                 </Link>
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-card-border bg-card/40 px-4 py-8 text-center text-sm text-muted">
+              <div className="rounded-xl border border-dashed border-card-border bg-card/40 px-4 py-8 text-center text-body text-muted">
                 Click a state on the map to inspect its lean.
               </div>
             )}
@@ -290,7 +290,7 @@ function ToolbarSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
+        className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-foreground transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

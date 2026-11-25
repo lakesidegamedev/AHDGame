@@ -88,7 +88,7 @@ export function ApprovalTooltip({
         transform: "translateX(-50%)",
         zIndex: 9999,
       }}
-      className="w-72 rounded-xl border border-card-border bg-card shadow-modal p-3 text-xs pointer-events-auto"
+      className="w-72 rounded-xl border border-card-border bg-card shadow-modal p-3 text-body-sm pointer-events-auto"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -208,7 +208,9 @@ export function ApprovalTooltip({
       </div>
 
       {href && (
-        <p className="mt-2 text-center text-muted/70 text-[10px]">Click to view full breakdown →</p>
+        <p className="mt-2 text-center text-muted/70 text-body-sm">
+          Click to view full breakdown →
+        </p>
       )}
     </div>
   );

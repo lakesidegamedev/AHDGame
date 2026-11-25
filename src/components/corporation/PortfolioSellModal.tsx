@@ -139,7 +139,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
     >
       <div className="w-full max-w-md rounded-2xl border border-card-border bg-card shadow-2xl">
         <div className="border-b border-card-border px-6 py-4 flex items-center justify-between">
-          <h2 id={titleId} className="text-base font-semibold text-foreground">
+          <h2 id={titleId} className="text-body-lg font-semibold text-foreground">
             Sell {props.type === "stock" ? props.holding.corporationName : props.holding.issuerName}
           </h2>
           <button
@@ -161,7 +161,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
         {/* Position summary */}
         <div className="px-6 py-4 border-b border-card-border bg-card-muted/20">
           {props.type === "stock" ? (
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-body">
               <div>
                 <div className="text-body-sm font-medium text-muted mb-1">Shares held</div>
                 <div className="font-mono font-semibold">
@@ -189,7 +189,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                         ? `${props.holding.unrealizedPnl >= 0 ? "+" : ""}${formatAmount(norm(props.holding.unrealizedPnl, holdingCcy))}`
                         : "n/a"}
                       {props.holding.unrealizedPnlPct !== null && (
-                        <span className="text-xs ml-1">
+                        <span className="text-body-sm ml-1">
                           ({formatSignedPercent(props.holding.unrealizedPnlPct)})
                         </span>
                       )}
@@ -199,7 +199,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-body">
               <div>
                 <div className="text-body-sm font-medium text-muted mb-1">Units held</div>
                 <div className="font-mono font-semibold">
@@ -228,13 +228,13 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {props.type === "stock" && (
-            <div className="flex rounded-lg overflow-hidden border border-card-border text-sm">
+            <div className="flex rounded-lg overflow-hidden border border-card-border text-body">
               <button
                 type="button"
                 onClick={() => setMode("instant")}
                 className={`flex-1 py-2 font-medium transition-colors ${
                   mode === "instant"
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >
@@ -245,7 +245,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                 onClick={() => setMode("limit")}
                 className={`flex-1 py-2 font-medium transition-colors ${
                   mode === "limit"
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >
@@ -259,7 +259,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
               <div>
                 <label
                   htmlFor={`${idBase}-shares`}
-                  className="block text-xs font-medium text-muted mb-1.5"
+                  className="block text-body-sm font-medium text-muted mb-1.5"
                 >
                   Shares to sell
                 </label>
@@ -270,9 +270,9 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                   max={props.holding.shares}
                   value={shares}
                   onChange={(e) => setShares(e.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-body font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
-                <p className="text-[11px] text-muted mt-1">
+                <p className="text-body-sm text-muted mt-1">
                   {props.holding.shares.toLocaleString("en-US")} shares available
                 </p>
               </div>
@@ -280,7 +280,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                 <div>
                   <label
                     htmlFor={`${idBase}-limit-price`}
-                    className="block text-xs font-medium text-muted mb-1.5"
+                    className="block text-body-sm font-medium text-muted mb-1.5"
                   >
                     Limit price per share
                   </label>
@@ -291,7 +291,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                     step={0.01}
                     value={limitPrice}
                     onChange={(e) => setLimitPrice(e.target.value)}
-                    className="w-full rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-body font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
               )}
@@ -300,7 +300,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
             <div>
               <label
                 htmlFor={`${idBase}-units`}
-                className="block text-xs font-medium text-muted mb-1.5"
+                className="block text-body-sm font-medium text-muted mb-1.5"
               >
                 Units to sell
               </label>
@@ -311,16 +311,16 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                 max={props.holding.units}
                 value={units}
                 onChange={(e) => setUnits(e.target.value)}
-                className="w-full rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full rounded-lg border border-card-border bg-card-muted/40 px-3 py-2 text-body font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
-              <p className="text-[11px] text-muted mt-1">
+              <p className="text-body-sm text-muted mt-1">
                 {props.holding.units.toLocaleString("en-US")} units available
               </p>
             </div>
           )}
 
           {error && (
-            <p className="rounded-lg bg-error/10 border border-error/20 px-3 py-2 text-sm text-error">
+            <p className="rounded-lg bg-error/10 border border-error/20 px-3 py-2 text-body text-error">
               {error}
             </p>
           )}
@@ -329,14 +329,14 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
             <button
               type="button"
               onClick={props.onClose}
-              className="flex-1 rounded-lg border border-card-border px-4 py-2.5 text-sm font-medium text-muted hover:text-foreground transition-colors"
+              className="flex-1 rounded-lg border border-card-border px-4 py-2.5 text-body font-medium text-muted hover:text-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
             >
               {submitting ? "Selling…" : mode === "limit" ? "Place order" : "Sell"}
             </button>

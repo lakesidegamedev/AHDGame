@@ -104,7 +104,7 @@ export function MilitaryRosterTab({
 
   if (!branch) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
         No branches configured.
       </div>
     );
@@ -113,7 +113,7 @@ export function MilitaryRosterTab({
   return (
     <div className="space-y-4">
       {actionError && (
-        <p role="alert" className="text-[11px] text-error">
+        <p role="alert" className="text-body-sm text-error">
           {actionError}
         </p>
       )}
@@ -130,7 +130,7 @@ export function MilitaryRosterTab({
                   setBranchId(b.id);
                   setRecruiting(false);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-semibold ${
                   active ? "text-black" : "bg-card-muted text-muted hover:text-foreground"
                 }`}
                 style={active ? { background: "var(--gov)" } : undefined}
@@ -138,7 +138,7 @@ export function MilitaryRosterTab({
                 <MilIcon name={domainIcon(b.domain)} className="h-4 w-4" />
                 <span>{b.name}</span>
                 <span
-                  className={`rounded-full px-1.5 text-[10px] ${active ? "bg-black/20" : "bg-card-border"}`}
+                  className={`rounded-full px-1.5 text-body-sm ${active ? "bg-black/20" : "bg-card-border"}`}
                 >
                   {count}
                 </span>
@@ -165,7 +165,7 @@ export function MilitaryRosterTab({
         strip has no room for is the consequence, which is what a minister needs here.
       */}
       {arrearsRatio > 0 && (
-        <div className="rounded-xl border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-3 text-[12px] text-foreground">
+        <div className="rounded-xl border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_8%,transparent)] p-3 text-body-sm text-foreground">
           The defence appropriation could not fund {Math.round(arrearsRatio * 100)}% of this
           force&apos;s upkeep. Readiness is settling toward a baseline{" "}
           {Math.round(arrearsRatio * ARREARS_READINESS_WEIGHT * 100)}% lower than each unit&apos;s
@@ -174,7 +174,7 @@ export function MilitaryRosterTab({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">{branch.name} · order of battle</h2>
+        <h2 className="text-body font-semibold text-foreground">{branch.name} · order of battle</h2>
         <div className="flex flex-wrap items-center gap-2">
           {canAct && commanders.length > 0 && branchUnits.length > 0 && (
             <select
@@ -189,7 +189,7 @@ export function MilitaryRosterTab({
                   assignedGeneralId: v === "__staff__" ? null : v,
                 });
               }}
-              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-[12px] text-foreground disabled:opacity-50"
+              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm text-foreground disabled:opacity-50"
             >
               <option value="">Assign entire {branch.name}…</option>
               {commanders.map((c) => (
@@ -203,7 +203,7 @@ export function MilitaryRosterTab({
           <button
             onClick={() => setRecruiting(true)}
             disabled={!canAct || busy}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-[12px] font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-body-sm font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Recruit unit
           </button>
@@ -233,7 +233,7 @@ export function MilitaryRosterTab({
 
       <div className="space-y-2.5">
         {branchUnits.length === 0 && (
-          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
             No active units in this branch. Recruit one to begin.
           </div>
         )}

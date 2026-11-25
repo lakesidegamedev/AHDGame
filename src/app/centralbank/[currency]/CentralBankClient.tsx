@@ -37,6 +37,7 @@ import type { BankData } from "./components/centralBankTypes";
 import type { CentralBankMember } from "./components/CentralBankMembersTab";
 import { CentralBankHeader } from "./components/CentralBankHeader";
 import { CB_TH, CentralBankFigure, CentralBankSection } from "./components/CentralBankSection";
+import { pillClass } from "@/components/ui/selectedState";
 
 export type { CentralBankMember };
 
@@ -103,11 +104,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-        active
-          ? "border-primary text-primary"
-          : "border-transparent text-muted hover:text-foreground"
-      }`}
+      className={`px-3 py-1.5 text-body font-medium ${pillClass(active)}`}
     >
       {label}
     </button>
@@ -504,7 +501,7 @@ export default function CentralBankClient({ countryId, apiBasePath, members, chr
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mb-8 flex flex-wrap items-center gap-x-1 gap-y-0 border-b border-card-border">
+        <div className="mb-8 flex flex-wrap items-center gap-1 border-b border-card-border pb-2">
           <TabButton
             active={activeTab === "overview"}
             onClick={() => setActiveTab("overview")}

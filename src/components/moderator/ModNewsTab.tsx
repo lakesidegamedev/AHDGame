@@ -78,11 +78,11 @@ export function ModNewsTab() {
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-4">
         <h3 className="font-semibold text-foreground mb-2">News moderation</h3>
-        <p className="text-sm text-muted">{posts.length} posts loaded</p>
+        <p className="text-body text-muted">{posts.length} posts loaded</p>
       </div>
 
       {actionError && (
-        <div className="rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error">
+        <div className="rounded-xl border border-error/30 bg-error/5 p-3 text-body text-error">
           {actionError}
         </div>
       )}
@@ -101,21 +101,21 @@ export function ModNewsTab() {
         </div>
       ) : error ? (
         <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-body text-error">{error}</p>
           <button
             onClick={() => {
               setError(null);
               setLoading(true);
               fetchPosts(0, false).finally(() => setLoading(false));
             }}
-            className="mt-3 text-xs text-primary hover:underline"
+            className="mt-3 text-body-sm text-primary hover:underline"
           >
             Try again
           </button>
         </div>
       ) : posts.length === 0 ? (
         <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-          <p className="text-sm text-muted">No news posts to moderate.</p>
+          <p className="text-body text-muted">No news posts to moderate.</p>
         </div>
       ) : (
         <>
@@ -130,7 +130,7 @@ export function ModNewsTab() {
                     <h4 className="font-semibold text-foreground truncate">
                       {post.title || "Untitled"}
                     </h4>
-                    <span className="text-xs text-muted shrink-0">
+                    <span className="text-body-sm text-muted shrink-0">
                       by{" "}
                       <Link
                         href={`/character/${post.authorSequentialId ?? post.authorId}`}
@@ -140,8 +140,8 @@ export function ModNewsTab() {
                       </Link>
                     </span>
                   </div>
-                  <p className="text-sm text-muted mb-2">{truncateText(post.content, 200)}</p>
-                  <p className="text-xs text-muted/60">
+                  <p className="text-body text-muted mb-2">{truncateText(post.content, 200)}</p>
+                  <p className="text-body-sm text-muted/60">
                     <LocalTime
                       value={post.createdAt}
                       options={{
@@ -157,7 +157,7 @@ export function ModNewsTab() {
                 <button
                   onClick={() => handleDelete(post._id)}
                   disabled={deleting === post._id}
-                  className="px-3 py-2 rounded-lg bg-error/10 text-error text-sm font-medium hover:bg-error/20 disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
+                  className="px-3 py-2 rounded-lg bg-error/10 text-error text-body font-medium hover:bg-error/20 disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
                 >
                   {deleting === post._id ? "Deleting…" : "Delete"}
                 </button>
@@ -169,7 +169,7 @@ export function ModNewsTab() {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="w-full rounded-xl border border-card-border bg-card py-3 text-sm text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
+              className="w-full rounded-xl border border-card-border bg-card py-3 text-body text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
             >
               {loadingMore ? "Loading…" : "Load more"}
             </button>

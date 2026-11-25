@@ -24,7 +24,7 @@ const sectionTitle: CSSProperties = {
   fontFamily: FONT.mono,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
-  fontSize: 11,
+  fontSize: 12,
   margin: "0 0 8px",
 };
 
@@ -40,7 +40,7 @@ function choiceButton(active: boolean, disabled: boolean): CSSProperties {
     padding: "0 14px",
     borderRadius: 6,
     fontFamily: FONT.sans,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
     cursor: disabled || active ? "default" : "pointer",
     color: active ? BLEND.ink : BLEND.accentInk,
@@ -153,7 +153,7 @@ export function ContingentHouseVotePanel({ electionId, colorMap }: ContingentHou
         <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.caution }}>{heading}</span>
       </div>
 
-      <p style={{ margin: "6px 0 0", fontSize: 13, color: BLEND.muted }}>
+      <p style={{ margin: "6px 0 0", fontSize: 12, color: BLEND.muted }}>
         {open ? (
           <>
             No candidate won a majority of electoral votes, so the House is choosing. The Senate
@@ -227,7 +227,7 @@ export function ContingentHouseVotePanel({ electionId, colorMap }: ContingentHou
           </p>
           {vote.viewer.canWhip.map((g) => (
             <div key={`${g.scope}:${g.sequentialId}`} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
                 {g.name}{" "}
                 <span style={{ ...BLEND_LABEL, fontFamily: FONT.mono }}>
                   {g.scope === "party" ? "party" : "coalition"}
@@ -273,7 +273,7 @@ export function ContingentHouseVotePanel({ electionId, colorMap }: ContingentHou
           <h4 style={sectionTitle}>Whips in force</h4>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4 }}>
             {vote.whips.map((w) => (
-              <li key={w.key} style={{ fontSize: 13 }}>
+              <li key={w.key} style={{ fontSize: 12 }}>
                 <span style={{ fontWeight: 500 }}>{w.name}</span>{" "}
                 <span style={{ color: BLEND.muted }}>
                   {w.scope === "party" ? "party" : "coalition"} whip: {whipLabel(w.candidateId)},
@@ -315,7 +315,7 @@ export function ContingentHouseVotePanel({ electionId, colorMap }: ContingentHou
                     padding: "6px 0",
                     borderRadius: 4,
                     fontFamily: FONT.mono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: color ? BLEND.ink : BLEND.mutedDim,
                     background: color ? `${color}33` : BLEND.inset,
                     border: `1px solid ${color ?? (d.tied ? BLEND.caution : BLEND.hairline)}`,
@@ -355,7 +355,7 @@ export function ContingentHouseVotePanel({ electionId, colorMap }: ContingentHou
           <h4 style={sectionTitle}>Members who defied their whip</h4>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4 }}>
             {vote.defiances.map((d) => (
-              <li key={`${d.stateId}:${d.name}`} style={{ fontSize: 13, color: BLEND.muted }}>
+              <li key={`${d.stateId}:${d.name}`} style={{ fontSize: 12, color: BLEND.muted }}>
                 <span style={{ color: BLEND.ink }}>{d.name}</span> ({d.stateId}) votes{" "}
                 {nameOf(d.candidateId)}, whip said {nameOf(d.whipCandidateId)}
               </li>

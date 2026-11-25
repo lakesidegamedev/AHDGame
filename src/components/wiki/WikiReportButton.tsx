@@ -90,23 +90,23 @@ export function WikiReportButton({ slug, label = "Report page issue" }: WikiRepo
       <Modal open={open} onClose={close} title="Report page issue" maxWidthClass="max-w-sm">
         {status === "done" ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted">Thanks. We logged the report for this page.</p>
+            <p className="text-body text-muted">Thanks. We logged the report for this page.</p>
             <Button type="button" variant="secondary" size="sm" onClick={close}>
               Close
             </Button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               Tell us what is wrong with <span className="font-medium text-foreground">{slug}</span>
               .
             </p>
-            <label className="block text-xs font-medium text-foreground">
+            <label className="block text-body-sm font-medium text-foreground">
               Reason
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value as WikiReportReason)}
-                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-sm text-foreground"
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body text-foreground"
               >
                 {WIKI_REPORT_REASONS.map((value) => (
                   <option key={value} value={value}>
@@ -115,29 +115,29 @@ export function WikiReportButton({ slug, label = "Report page issue" }: WikiRepo
                 ))}
               </select>
             </label>
-            <label className="block text-xs font-medium text-foreground">
+            <label className="block text-body-sm font-medium text-foreground">
               The wrong text (optional)
               <textarea
                 value={quote}
                 onChange={(e) => setQuote(e.target.value)}
                 maxLength={WIKI_REPORT_QUOTE_MAX}
                 rows={2}
-                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-sm text-foreground"
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body text-foreground"
                 placeholder="Highlight text on the page before reporting to fill this in"
               />
             </label>
-            <label className="block text-xs font-medium text-foreground">
+            <label className="block text-body-sm font-medium text-foreground">
               Note (optional)
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={2000}
                 rows={4}
-                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-sm text-foreground"
+                className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-body text-foreground"
                 placeholder="What should change?"
               />
             </label>
-            <InlineError error={error} className="text-sm text-error" />
+            <InlineError error={error} className="text-body text-error" />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={close}>
                 Cancel

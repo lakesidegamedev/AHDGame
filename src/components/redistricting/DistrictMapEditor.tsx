@@ -183,11 +183,11 @@ export function DistrictMapEditor({
   return (
     <div className="space-y-4">
       {/* How it works */}
-      <details className="rounded-lg border border-card-border bg-card px-4 py-3 text-sm">
+      <details className="rounded-lg border border-card-border bg-card px-4 py-3 text-body">
         <summary className="cursor-pointer text-body-sm font-medium text-muted">
           How redistricting works
         </summary>
-        <div className="mt-2 space-y-2 text-xs text-muted">
+        <div className="mt-2 space-y-2 text-body-sm text-muted">
           <p>
             Each district holds 16 voter blocks: <span style={{ color: COLORS.left }}>Left</span>,{" "}
             <span style={{ color: COLORS.right }}>Right</span>, and{" "}
@@ -227,14 +227,14 @@ export function DistrictMapEditor({
               type="button"
               onClick={undo}
               disabled={history.length === 0}
-              className="rounded-md border border-card-border px-2.5 py-1 text-xs hover:border-primary disabled:opacity-40"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm hover:border-primary disabled:opacity-40"
             >
               Undo
             </button>
             <button
               type="button"
               onClick={resetToCurrent}
-              className="rounded-md border border-card-border px-2.5 py-1 text-xs hover:border-primary"
+              className="rounded-md border border-card-border px-2.5 py-1 text-body-sm hover:border-primary"
             >
               Reset to current map
             </button>
@@ -258,7 +258,7 @@ export function DistrictMapEditor({
                     : s.hint
                 }
                 onClick={() => applyStrategy(s.id)}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
+                className={`rounded-md border px-3 py-1.5 text-body-sm font-medium ${
                   blocked
                     ? "cursor-not-allowed border-card-border/60 bg-card-muted/10 text-muted opacity-60"
                     : "border-card-border bg-card-muted/30 hover:border-primary"
@@ -269,7 +269,7 @@ export function DistrictMapEditor({
             );
           })}
         </div>
-        {autoNote && <p className="text-xs text-foreground">{autoNote}</p>}
+        {autoNote && <p className="text-body-sm text-foreground">{autoNote}</p>}
       </div>
 
       {/* Paint tool + budget meter */}
@@ -281,7 +281,7 @@ export function DistrictMapEditor({
               key={p}
               type="button"
               onClick={() => setTool(p)}
-              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${
+              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-body-sm font-medium ${
                 tool === p ? "border-primary bg-card-muted/40" : "border-card-border"
               }`}
             >
@@ -295,19 +295,19 @@ export function DistrictMapEditor({
           <button
             type="button"
             onClick={() => setTool("cycle")}
-            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+            className={`rounded-md border px-2.5 py-1 text-body-sm font-medium ${
               tool === "cycle" ? "border-primary bg-card-muted/40" : "border-card-border"
             }`}
           >
             Cycle
           </button>
-          <span className="text-[11px] text-muted">
+          <span className="text-body-sm text-muted">
             {tool === "cycle"
               ? "Click a block to cycle Left → Right → Swing."
               : "Click or drag across blocks to paint them."}
           </span>
         </div>
-        <div className="flex flex-wrap gap-3 text-xs">
+        <div className="flex flex-wrap gap-3 text-body-sm">
           {(["left", "right", "grey"] as Pool[]).map((p) => (
             <span key={p} className="flex items-center gap-1.5">
               <span
@@ -347,12 +347,12 @@ export function DistrictMapEditor({
               key={districts[di].index}
               className="rounded-lg border border-card-border bg-card overflow-hidden"
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-card-border/60 bg-card-muted/30 text-xs font-semibold">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-card-border/60 bg-card-muted/30 text-body-sm font-semibold">
                 <span>District {districts[di].index}</span>
                 <span className="flex items-center gap-1.5 font-medium">
                   <span style={{ color: indicator.color }}>{indicator.text}</span>
                   <span
-                    className="rounded-sm px-1.5 py-0.5 text-[10px] text-white"
+                    className="rounded-sm px-1.5 py-0.5 text-body-sm text-white"
                     style={{ backgroundColor: category.color }}
                   >
                     {category.label}
@@ -386,17 +386,17 @@ export function DistrictMapEditor({
       <div className="rounded-lg border border-card-border bg-card px-4 py-3 space-y-2">
         <span className="text-body-sm font-medium text-muted">Map check</span>
         {!conserved && (
-          <p className="text-xs text-error">
+          <p className="text-body-sm text-error">
             • Every voter block must be placed — see the &quot;still to place&quot; counts above.
           </p>
         )}
         {legality.violations.map((v, i) => (
-          <p key={i} className="text-xs text-error">
+          <p key={i} className="text-body-sm text-error">
             • {v}
           </p>
         ))}
         {conserved && legality.legal && (
-          <p className="text-xs text-success">
+          <p className="text-body-sm text-success">
             This map is legal{dirty ? " and ready to submit" : " (no changes yet)"}.
           </p>
         )}
@@ -405,12 +405,12 @@ export function DistrictMapEditor({
             type="button"
             onClick={submit}
             disabled={!canSubmit}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {submitting ? "Submitting…" : "Submit map"}
           </button>
           {result && (
-            <span className={`text-xs ${result.ok ? "text-success" : "text-error"}`}>
+            <span className={`text-body-sm ${result.ok ? "text-success" : "text-error"}`}>
               {result.text}
             </span>
           )}

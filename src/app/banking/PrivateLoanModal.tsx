@@ -275,10 +275,10 @@ export function PrivateLoanModal({
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-card-border bg-card shadow-modal">
         <div className="flex items-start justify-between border-b border-card-border px-6 py-4">
           <div>
-            <h2 id={titleId} className="text-base font-semibold text-foreground">
+            <h2 id={titleId} className="text-body-lg font-semibold text-foreground">
               Arrange private-bank credit
             </h2>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               Choose who receives the money, then review the exact rate, payment, and cap before
               submitting.
             </p>
@@ -289,21 +289,21 @@ export function PrivateLoanModal({
             className="ml-4 -mt-0.5 text-muted transition-colors hover:text-foreground"
             aria-label="Close"
           >
-            <span className="text-xl leading-none" aria-hidden>
+            <span className="text-heading leading-none" aria-hidden>
               ×
             </span>
           </button>
         </div>
 
         <div className="border-b border-card-border px-6 py-4">
-          <div className="flex overflow-hidden rounded-lg border border-card-border text-sm">
+          <div className="flex overflow-hidden rounded-lg border border-card-border text-body">
             <button
               type="button"
               onClick={() => chooseBorrower("character")}
               disabled={!hasCharacter}
               className={`flex-1 border-r border-card-border px-3 py-2.5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                 borrowerType === "character"
-                  ? "bg-primary font-semibold text-white"
+                  ? "bg-primary font-semibold text-primary-foreground"
                   : "bg-card-elevated text-muted hover:text-foreground"
               }`}
             >
@@ -315,14 +315,14 @@ export function PrivateLoanModal({
               disabled={eligibleCorporations.length === 0}
               className={`flex-1 px-3 py-2.5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                 borrowerType === "corporation"
-                  ? "bg-primary font-semibold text-white"
+                  ? "bg-primary font-semibold text-primary-foreground"
                   : "bg-card-elevated text-muted hover:text-foreground"
               }`}
             >
               Corporation loan
             </button>
           </div>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-body-sm text-muted">
             {borrowerType === "character"
               ? "Funds go to your personal cash and are separate from savings and corporate capital."
               : "Funds go directly to the selected corporation's liquid capital and never to your personal cash."}
@@ -333,7 +333,7 @@ export function PrivateLoanModal({
           <label className="block space-y-1.5 text-body-sm font-medium text-muted">
             Lending bank
             <select
-              className="h-10 w-full rounded-lg border border-card-border bg-background px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="h-10 w-full rounded-lg border border-card-border bg-background px-3 text-body font-normal normal-case tracking-normal text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={bankId}
               onChange={(event) => {
                 setBankId(event.target.value);
@@ -353,8 +353,8 @@ export function PrivateLoanModal({
             <div className="rounded-xl border border-card-border bg-background/45 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold text-foreground">Rate breakdown</p>
-                  <dl className="mt-2 space-y-1 text-xs">
+                  <p className="text-body-sm font-semibold text-foreground">Rate breakdown</p>
+                  <dl className="mt-2 space-y-1 text-body-sm">
                     <div className="flex justify-between gap-5">
                       <dt className="text-muted">Bank posted rate</dt>
                       <dd className="font-mono font-semibold tabular-nums text-foreground">
@@ -387,7 +387,7 @@ export function PrivateLoanModal({
                 />
               </div>
               {selectedBank.requireApproval && (
-                <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-warning">
                   This bank reviews requests manually. Your request will be queued and no money
                   moves until its CEO approves it.
                 </p>
@@ -400,7 +400,7 @@ export function PrivateLoanModal({
               Borrowing corporation
               {eligibleCorporations.length > 0 ? (
                 <select
-                  className="h-10 w-full rounded-lg border border-card-border bg-background px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="h-10 w-full rounded-lg border border-card-border bg-background px-3 text-body font-normal normal-case tracking-normal text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                   value={corpId}
                   onChange={(event) => {
                     setCorpId(event.target.value);
@@ -415,7 +415,7 @@ export function PrivateLoanModal({
                   ))}
                 </select>
               ) : (
-                <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-normal normal-case tracking-normal text-warning">
+                <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm font-normal normal-case tracking-normal text-warning">
                   No corporation you lead has a {selectedBank?.currency ?? "matching"} treasury.
                   Choose a bank in that corporation&apos;s currency.
                 </p>
@@ -424,14 +424,14 @@ export function PrivateLoanModal({
           )}
 
           {borrowerType === "corporation" && selectedCorporation ? (
-            <div className="rounded-lg border border-primary/20 bg-primary/[0.06] px-3 py-2.5 text-xs leading-relaxed text-muted">
+            <div className="rounded-lg border border-primary/20 bg-primary/[0.06] px-3 py-2.5 text-body-sm leading-relaxed text-muted">
               <span className="font-semibold text-foreground">Destination:</span>{" "}
               {selectedCorporation.name}
               liquid capital, currently{" "}
               {formatBankMoney(selectedCorporation.liquidCapital, selectedCorporation.currency)}.
             </div>
           ) : (
-            <div className="rounded-lg border border-primary/20 bg-primary/[0.06] px-3 py-2.5 text-xs leading-relaxed text-muted">
+            <div className="rounded-lg border border-primary/20 bg-primary/[0.06] px-3 py-2.5 text-body-sm leading-relaxed text-muted">
               <span className="font-semibold text-foreground">Destination:</span> your personal
               cash, currently{" "}
               {selectedBank
@@ -466,7 +466,7 @@ export function PrivateLoanModal({
           </div>
 
           {selectedBank && (
-            <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 text-xs leading-relaxed text-muted">
+            <div className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2.5 text-body-sm leading-relaxed text-muted">
               <div className="flex justify-between gap-3">
                 <span>Private-bank maximum</span>
                 <span className="font-mono font-semibold tabular-nums text-foreground">
@@ -480,7 +480,7 @@ export function PrivateLoanModal({
             </div>
           )}
 
-          <div className="rounded-lg border border-card-border bg-background/45 px-3 py-2.5 text-xs">
+          <div className="rounded-lg border border-card-border bg-background/45 px-3 py-2.5 text-body-sm">
             {selectedBank && feeQuote && principalNumber > 0 && (
               <div className="mb-2 space-y-1">
                 <div className="flex justify-between gap-3">
@@ -515,7 +515,7 @@ export function PrivateLoanModal({
           {error && (
             <p
               role="alert"
-              className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error"
+              className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error"
             >
               {error}
             </p>

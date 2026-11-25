@@ -63,18 +63,18 @@ export function UsersTable({
       render: (u) => (
         <div className="flex flex-wrap items-center gap-2">
           {u.isAdmin && (
-            <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-xs font-medium text-yellow-400">
+            <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-body-sm font-medium text-yellow-400">
               Admin
             </span>
           )}
           {u.isBanned && (
-            <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-xs font-medium text-red-400">
+            <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-body-sm font-medium text-red-400">
               Banned
             </span>
           )}
           {getLatestNoteText(u) && (
             <span
-              className="rounded bg-blue-500/20 px-1.5 py-0.5 text-xs font-medium text-blue-400"
+              className="rounded bg-blue-500/20 px-1.5 py-0.5 text-body-sm font-medium text-blue-400"
               title={getLatestNoteText(u) ?? undefined}
             >
               Note
@@ -103,7 +103,7 @@ export function UsersTable({
             render: (u: UserData) => (
               <>
                 <div className="font-medium">{u.username}</div>
-                <div className="text-xs text-muted">{u.email}</div>
+                <div className="text-body-sm text-muted">{u.email}</div>
               </>
             ),
           },
@@ -115,21 +115,21 @@ export function UsersTable({
       render: (u) =>
         isModeratorContext ? (
           u.lastFingerprintKey || u.registrationFingerprintKey ? (
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               Hidden
               {u.fingerprintCount > 1 ? ` (${u.fingerprintCount})` : ""}
             </span>
           ) : (
-            <span className="text-muted text-xs">--</span>
+            <span className="text-muted text-body-sm">--</span>
           )
         ) : u.lastFingerprint ? (
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-primary truncate max-w-[120px] md:max-w-none">
+            <span className="font-mono text-body-sm text-primary truncate max-w-[120px] md:max-w-none">
               {u.lastFingerprint}
             </span>
             {u.fingerprintCount > 1 && (
               <span
-                className="text-xs text-yellow-400"
+                className="text-body-sm text-yellow-400"
                 title={`${u.fingerprintCount} unique fingerprints`}
               >
                 ({u.fingerprintCount})
@@ -137,7 +137,7 @@ export function UsersTable({
             )}
           </div>
         ) : (
-          <span className="text-muted text-xs">--</span>
+          <span className="text-muted text-body-sm">--</span>
         ),
       hideOnMobile: true,
     },
@@ -147,13 +147,13 @@ export function UsersTable({
       render: (u) => (
         <div className="flex flex-wrap items-center gap-1.5">
           {u.discordUsername || u.discordId ? (
-            <span className="text-xs text-muted">{u.discordUsername ?? "Linked"}</span>
+            <span className="text-body-sm text-muted">{u.discordUsername ?? "Linked"}</span>
           ) : (
-            <span className="text-xs text-muted">--</span>
+            <span className="text-body-sm text-muted">--</span>
           )}
           {u.appleLinked && (
             <span
-              className="rounded bg-slate-500/25 px-1.5 py-0.5 text-xs font-medium text-slate-300"
+              className="rounded bg-slate-500/25 px-1.5 py-0.5 text-body-sm font-medium text-slate-300"
               title={APPLE_EXEMPT_LABEL}
             >
               Apple
@@ -167,7 +167,7 @@ export function UsersTable({
       key: "lastLogin",
       header: "Last login",
       render: (u) => (
-        <span className="text-sm text-muted">
+        <span className="text-body text-muted">
           {u.lastLogin ? formatDate(u.lastLogin) : "Never"}
         </span>
       ),
@@ -176,7 +176,7 @@ export function UsersTable({
       key: "lastLogout",
       header: "Last logout",
       render: (u) => (
-        <span className="text-sm text-muted">
+        <span className="text-body text-muted">
           {u.lastLogout ? formatDate(u.lastLogout) : "Never"}
         </span>
       ),
@@ -187,11 +187,11 @@ export function UsersTable({
       header: "VPN",
       render: (u) => {
         if (u.vpnFlag === null || u.vpnFlag === undefined) {
-          return <span className="text-xs text-muted">--</span>;
+          return <span className="text-body-sm text-muted">--</span>;
         }
         return u.vpnFlag ? (
           <span
-            className="inline-flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-xs font-medium text-red-400"
+            className="inline-flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-body-sm font-medium text-red-400"
             title={
               u.ipDetails
                 ? `VPN/Proxy/Tor detected (${u.ipDetails.checkedAt})`
@@ -201,7 +201,7 @@ export function UsersTable({
             ⚠️ VPN
           </span>
         ) : (
-          <span className="text-xs text-green-400">Clean</span>
+          <span className="text-body-sm text-green-400">Clean</span>
         );
       },
       hideOnMobile: true,
@@ -217,7 +217,7 @@ export function UsersTable({
         header: "Registration IP",
         mobileLabel: "Reg. IP",
         render: (u) => (
-          <span className="font-mono text-sm break-all">
+          <span className="font-mono text-body break-all">
             {u.registrationIp || <span className="text-muted">--</span>}
           </span>
         ),
@@ -228,7 +228,7 @@ export function UsersTable({
         header: "Last known IP",
         mobileLabel: "Last IP",
         render: (u) => (
-          <span className="font-mono text-sm break-all">
+          <span className="font-mono text-body break-all">
             {u.lastKnownIp || <span className="text-muted">--</span>}
           </span>
         ),
@@ -446,7 +446,7 @@ function MenuItem({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`block w-full cursor-pointer px-3 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneCls}`}
+      className={`block w-full cursor-pointer px-3 py-1.5 text-left text-body-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneCls}`}
     >
       {label}
     </button>

@@ -368,7 +368,7 @@ export function CampaignBlendClient({
               paddingBottom: 9,
               borderBottom: `1px solid ${BLEND.hairline}`,
               fontFamily: FONT.sans,
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: ".2em",
               textTransform: "uppercase",
               color: BLEND.muted,
@@ -383,7 +383,7 @@ export function CampaignBlendClient({
             style={{
               marginTop: 11,
               fontFamily: FONT.sans,
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 600,
               letterSpacing: "-0.02em",
             }}
@@ -476,7 +476,7 @@ export function CampaignBlendClient({
               <span
                 style={{
                   fontFamily: FONT.mono,
-                  fontSize: 32,
+                  fontSize: 30,
                   fontWeight: 500,
                   color: BLEND.accent,
                   letterSpacing: "-0.03em",
@@ -503,7 +503,7 @@ export function CampaignBlendClient({
               style={{
                 margin: "10px 0 14px",
                 fontFamily: FONT.sans,
-                fontSize: 13.5,
+                fontSize: 14,
                 lineHeight: 1.5,
                 color: BLEND.muted,
               }}
@@ -527,7 +527,7 @@ export function CampaignBlendClient({
                   background: "transparent",
                   padding: 9,
                   fontFamily: FONT.mono,
-                  fontSize: 10.5,
+                  fontSize: 12,
                   letterSpacing: ".08em",
                   fontWeight: 700,
                   color: vm.strength.canContribute ? BLEND.accent : BLEND.muted,

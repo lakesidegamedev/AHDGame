@@ -18,6 +18,7 @@ import {
   stateOrgBonusFraction,
 } from "@/lib/elections/engine/constants";
 import { formatStatePresenceCost, statePresenceNextCost } from "@/lib/campaigns/statePresenceCost";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface StateOrgRow {
   builtThisTurn?: boolean;
@@ -282,18 +283,18 @@ export function StateOrganizationTab({
           {showHubLink && canBuild && (
             <Link
               href="/political-operations"
-              className="text-xs font-medium text-primary hover:underline"
+              className="text-body-sm font-medium text-primary hover:underline"
             >
               Political Operations hub →
             </Link>
           )}
         </div>
-        {!canBuild && <p className="mt-1 text-sm text-muted">{t("readOnly")}</p>}
+        {!canBuild && <p className="mt-1 text-body text-muted">{t("readOnly")}</p>}
         {canBuild && needsCampaign && (
-          <p className="mt-1 text-sm text-muted">{t("needsCampaign")}</p>
+          <p className="mt-1 text-body text-muted">{t("needsCampaign")}</p>
         )}
         {canBuild && !needsCampaign && (
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             Build per-state infrastructure for the presidential race. It counts in the primary{" "}
             <strong>and</strong> in the general election. Each level costs {STATE_ORG_COST_ACTIONS}{" "}
             campaign actions plus an escalating price from your campaign treasury, starting near $
@@ -313,11 +314,7 @@ export function StateOrganizationTab({
                 type="button"
                 onClick={() => setViewingCharacterId(null)}
                 aria-pressed={viewedCandidate === null}
-                className={`rounded border px-2 py-1 text-xs transition-colors ${
-                  viewedCandidate === null
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-card-border text-muted hover:text-primary"
-                }`}
+                className={`px-2.5 py-1 text-body-sm ${pillClass(viewedCandidate === null)}`}
               >
                 You
               </button>
@@ -328,11 +325,7 @@ export function StateOrganizationTab({
                 type="button"
                 onClick={() => setViewingCharacterId(c.characterId)}
                 aria-pressed={viewedCandidate?.characterId === c.characterId}
-                className={`rounded border px-2 py-1 text-xs transition-colors ${
-                  viewedCandidate?.characterId === c.characterId
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-card-border text-muted hover:text-primary"
-                }`}
+                className={`px-2.5 py-1 text-body-sm ${pillClass(viewedCandidate?.characterId === c.characterId)}`}
               >
                 {c.name}
                 {c.isSelf ? " (you)" : ""}
@@ -341,7 +334,7 @@ export function StateOrganizationTab({
           </div>
         )}
         {canBuild && (
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             Build early and keep building. Levels do not reset when the primary ends, so what you
             put in before the primary keeps working through the general. You can also keep building
             during the general. Levels drop to 25% only after the presidential general resolves.
@@ -349,14 +342,14 @@ export function StateOrganizationTab({
             yours.
           </p>
         )}
-        <p className="mt-2 text-xs text-muted">{t("inspect")}</p>
+        <p className="mt-2 text-body-sm text-muted">{t("inspect")}</p>
         {!canBuild && !racePresence.length && !error && (
-          <p className="mt-2 text-sm text-muted">{t("empty")}</p>
+          <p className="mt-2 text-body text-muted">{t("empty")}</p>
         )}
       </div>
 
       {rows.some((row) => row.builtThisTurn) && (
-        <p className="mb-3 text-sm text-success">
+        <p className="mb-3 text-body text-success">
           Built this turn:{" "}
           {rows
             .filter((row) => row.builtThisTurn)
@@ -365,7 +358,7 @@ export function StateOrganizationTab({
         </p>
       )}
       {error && (
-        <div className="mb-3 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+        <div className="mb-3 rounded border border-danger/40 bg-danger/10 px-3 py-2 text-body text-danger">
           {error}
         </div>
       )}
@@ -374,22 +367,22 @@ export function StateOrganizationTab({
         <PrimaryElectoralMap stateData={stateData} onStateClick={setSelectedState} />
 
         <aside className="rounded-xl border border-card-border bg-card p-4 self-start">
-          {!selectedState && <p className="text-sm text-muted">{t("selectState")}</p>}
+          {!selectedState && <p className="text-body text-muted">{t("selectState")}</p>}
           {selectedState && selectedRow && (
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <h4 className="text-lg font-semibold">{selectedName}</h4>
+                <h4 className="text-heading font-semibold">{selectedName}</h4>
                 {selectedState === homeState && (
-                  <span className="text-xs text-muted">(home state)</span>
+                  <span className="text-body-sm text-muted">(home state)</span>
                 )}
               </div>
 
               {!viewingOther && selectedRow.builtThisTurn && (
-                <p className="mt-2 text-sm text-success">
+                <p className="mt-2 text-body text-success">
                   Built this turn. Available again next turn.
                 </p>
               )}
-              <dl className="mt-3 space-y-2 text-sm">
+              <dl className="mt-3 space-y-2 text-body">
                 <div className="flex items-center justify-between">
                   <dt className="text-muted">Level</dt>
                   <dd className="font-mono">{selectedRow.level}</dd>
@@ -431,7 +424,7 @@ export function StateOrganizationTab({
                   type="button"
                   disabled={busy === selectedState || viewingOther || selectedRow.builtThisTurn}
                   onClick={() => build(selectedState)}
-                  className="mt-4 w-full rounded border border-primary/60 px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 w-full rounded border border-primary/60 px-3 py-2 text-body text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                   title={
                     viewingOther
                       ? "You are viewing another candidate's presence"

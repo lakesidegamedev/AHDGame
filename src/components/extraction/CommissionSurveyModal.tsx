@@ -99,7 +99,7 @@ export function CommissionSurveyModal({
   return (
     <Modal open title="Commission geological survey" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           Fund a state survey crew to search for new extraction capacity. Takes{" "}
           {PROSPECT_DURATION_TURNS} turns and succeeds{" "}
           {Math.round(PROSPECT_GOVT_SUCCESS_CHANCE * 100)}% of the time. On success, capacity grows
@@ -108,9 +108,9 @@ export function CommissionSurveyModal({
 
         {!fixedStateId && stateOptions && (
           <div>
-            <label className="mb-1 block text-sm font-medium">State</label>
+            <label className="mb-1 block text-body font-medium">State</label>
             <select
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
               value={stateId}
               onChange={(e) => setStateId(e.target.value)}
               required
@@ -125,9 +125,9 @@ export function CommissionSurveyModal({
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium">Resource</label>
+          <label className="mb-1 block text-body font-medium">Resource</label>
           <select
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
             value={resource}
             onChange={(e) => setResource(e.target.value as ExtractableResource)}
           >
@@ -139,20 +139,20 @@ export function CommissionSurveyModal({
           </select>
         </div>
 
-        <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3 text-sm">
+        <div className="rounded-lg border border-card-border bg-card-elevated/40 p-3 text-body">
           <div className="flex items-center justify-between">
             <span className="text-muted">Starting cost</span>
             <span className="font-medium tabular-nums text-foreground">
               {formatAmount(PROSPECT_BASE_COST_ANCHOR)}
             </span>
           </div>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Cost escalates the more this state has already been successfully surveyed for this
             resource (up to 4x). The exact cost is confirmed on launch.
           </p>
         </div>
 
-        <InlineError error={error} className="text-sm text-error" />
+        <InlineError error={error} className="text-body text-error" />
 
         <div className="flex gap-3 pt-1">
           <Button type="submit" disabled={submitting} className="flex-1">

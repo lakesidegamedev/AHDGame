@@ -109,15 +109,15 @@ export function PlayerBannerAdsTab() {
   }
 
   if (error) {
-    return <p className="text-sm text-error py-4">{error}</p>;
+    return <p className="text-body text-error py-4">{error}</p>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Player banner ads</h3>
-          <p className="mt-0.5 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Player banner ads</h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             {ads.length} ad{ads.length !== 1 ? "s" : ""} total ·{" "}
             {ads.filter((a) => a.isActive).length} active ·{" "}
             {ads.filter((a) => a.moderationStatus === "pending").length} pending review
@@ -125,10 +125,10 @@ export function PlayerBannerAdsTab() {
         </div>
       </div>
 
-      <InlineError error={actionError} className="text-sm text-error" />
+      <InlineError error={actionError} className="text-body text-error" />
 
       {ads.length === 0 ? (
-        <p className="text-sm text-muted py-4">No player ads have been submitted yet.</p>
+        <p className="text-body text-muted py-4">No player ads have been submitted yet.</p>
       ) : (
         <div className="space-y-3">
           {ads.map((ad) => (
@@ -160,28 +160,28 @@ export function PlayerBannerAdsTab() {
                 {/* Meta */}
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-medium text-foreground">{ad.characterName}</p>
-                    <span className="text-xs text-muted">({ad.countryId})</span>
+                    <p className="text-body font-medium text-foreground">{ad.characterName}</p>
+                    <span className="text-body-sm text-muted">({ad.countryId})</span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${
                         ad.isActive ? "bg-success/15 text-success" : "bg-muted/15 text-muted"
                       }`}
                     >
                       {ad.isActive ? "Active" : "Paused"}
                     </span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${MODERATION_BADGE[ad.moderationStatus].className}`}
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${MODERATION_BADGE[ad.moderationStatus].className}`}
                     >
                       {MODERATION_BADGE[ad.moderationStatus].label}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
                     <span>{ad.viewCount.toLocaleString("en-US")} views</span>
                     <span>Cost paid: {fmt(ad.costPaid, ad.currencyCode)}</span>
                     <span>Submitted {relativeDate(ad.createdAt)}</span>
                   </div>
                   {ad.linkUrl && (
-                    <p className="text-xs text-muted truncate">
+                    <p className="text-body-sm text-muted truncate">
                       Link:{" "}
                       <a
                         href={ad.linkUrl}
@@ -193,7 +193,9 @@ export function PlayerBannerAdsTab() {
                       </a>
                     </p>
                   )}
-                  {ad.altText && <p className="text-xs text-muted truncate">Alt: {ad.altText}</p>}
+                  {ad.altText && (
+                    <p className="text-body-sm text-muted truncate">Alt: {ad.altText}</p>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -202,7 +204,7 @@ export function PlayerBannerAdsTab() {
                     <button
                       type="button"
                       onClick={() => void setModeration(ad._id, "approved")}
-                      className="rounded-lg border border-success/40 bg-success/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:bg-success/15"
+                      className="rounded-lg border border-success/40 bg-success/10 px-3 py-1.5 text-body-sm font-medium text-success transition-colors hover:bg-success/15"
                     >
                       Approve
                     </button>
@@ -211,7 +213,7 @@ export function PlayerBannerAdsTab() {
                     <button
                       type="button"
                       onClick={() => void setModeration(ad._id, "rejected")}
-                      className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10"
+                      className="rounded-lg border border-error/30 px-3 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/10"
                     >
                       Reject
                     </button>
@@ -219,7 +221,7 @@ export function PlayerBannerAdsTab() {
                   <button
                     type="button"
                     onClick={() => void toggleActive(ad._id, !ad.isActive)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                       ad.isActive
                         ? "border-card-border text-muted hover:border-primary/40 hover:text-foreground"
                         : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
@@ -230,7 +232,7 @@ export function PlayerBannerAdsTab() {
                   <button
                     type="button"
                     onClick={() => void removeAd(ad._id)}
-                    className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10"
+                    className="rounded-lg border border-error/30 px-3 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/10"
                   >
                     Remove
                   </button>

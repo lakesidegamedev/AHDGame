@@ -35,7 +35,7 @@ export function DistrictLeanBar({
         return (
           <div
             key={pool}
-            className="flex items-center justify-center text-[11px] font-bold text-white transition-[width]"
+            className="flex items-center justify-center text-body-sm font-bold text-white transition-[width]"
             style={{ width: `${pct}%`, backgroundColor: POOL_COLORS[pool] }}
             title={`${count} ${label}`}
           >

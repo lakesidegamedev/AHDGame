@@ -61,23 +61,23 @@ export function HealingTools() {
         closeOnEscape={!isRunning}
       >
         <div className="space-y-4">
-          <p className="text-sm text-muted">Fix known data issues from bugs. Use with caution!</p>
+          <p className="text-body text-muted">Fix known data issues from bugs. Use with caution!</p>
 
           <div className="space-y-2">
             <Label htmlFor="healing-type">Healing operation</Label>
             <select
               id="healing-type"
               disabled
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-body disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="nationalization-shares">Bug #0803: Nationalization share loss</option>
             </select>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Fixes corporations that lost shares when nationalized
             </p>
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <label className="flex items-center gap-2 text-body font-medium">
             <input
               type="checkbox"
               checked={dryRun}
@@ -88,7 +88,7 @@ export function HealingTools() {
           </label>
 
           {results && (
-            <div className="rounded-md border border-border bg-card p-3 text-sm font-mono">
+            <div className="rounded-md border border-border bg-card p-3 text-body font-mono">
               <pre className="whitespace-pre-wrap break-all">{results}</pre>
             </div>
           )}

@@ -424,7 +424,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
   const stageRailTop = (
     <div>
       <ElectionNavigation election={election} showLiveLink={presidentialResultsLive(election)} />
-      <p className="mb-1 text-xs text-muted">
+      <p className="mb-1 text-body-sm text-muted">
         <Link href="/wiki/reference-offices" className="text-primary hover:underline">
           What the presidency can do
         </Link>
@@ -449,7 +449,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
           <button
             onClick={handleEnter}
             disabled={actionLoading}
-            className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="flex-1 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {actionLoading ? "…" : "Enter race"}
           </button>
@@ -458,7 +458,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
           <button
             onClick={handleWithdraw}
             disabled={actionLoading}
-            className="flex-1 rounded-lg border border-error/50 bg-error/10 px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-error/50 bg-error/10 px-4 py-2 text-body font-semibold text-error transition-colors hover:bg-error/20 disabled:opacity-50"
           >
             {actionLoading ? "…" : "Withdraw"}
           </button>
@@ -468,7 +468,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
       !localIsEnded &&
       !localIsUpcoming &&
       raceEntry.entryBlock === "nominationsUnavailable" ? (
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {closedFilingLine(election.primaryEndTurn)} Open races in your home region are listed under
         your country&apos;s elections.
       </p>

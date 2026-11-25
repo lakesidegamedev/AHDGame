@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
 import type { MoneyHistoryRow, MoneyHistoryWallet } from "@/lib/character/moneyHistory/rules";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface HistoryPage {
   rows: MoneyHistoryRow[];
@@ -65,7 +66,7 @@ export function MoneyHistoryPanel() {
     <div className="mt-6 border-t border-card-border pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-body font-semibold">{t("title")}</h3>
+          <h3 className="text-body-lg font-semibold">{t("title")}</h3>
           <p className="text-body-sm text-muted">{t("subtitle")}</p>
         </div>
         <button
@@ -87,9 +88,7 @@ export function MoneyHistoryPanel() {
                 type="button"
                 onClick={() => pick(f)}
                 aria-pressed={filter === f}
-                className={`px-1 py-1 text-body-sm ${
-                  filter === f ? "font-semibold text-foreground" : "text-muted"
-                }`}
+                className={`px-3 py-1 text-body-sm ${pillClass(filter === f)}`}
               >
                 {t(f)}
               </button>

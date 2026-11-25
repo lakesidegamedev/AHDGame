@@ -10,9 +10,10 @@ import { groupOverviewHistory } from "@/lib/corporations/groups/rules/overview";
 import type { GroupBalanceSheet } from "@/lib/corporations/groups/groupBalanceSheet";
 import type { GroupManagementView } from "./useGroupManagement";
 import styles from "./GroupPage.module.css";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 const colors = ["var(--gold)", "var(--info)", "var(--secondary)", "var(--success)"];
 const link =
-  "inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium hover:bg-card-elevated";
+  "inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium hover:bg-card-elevated";
 export function GroupOverviewDashboard({
   data,
   sheet,
@@ -68,7 +69,7 @@ export function GroupOverviewDashboard({
   ];
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-body-sm text-muted">
         <p>
           {current ? t("completedTurn", { turn: current.turn }) : t("completeHistoryUnavailable")}
         </p>
@@ -79,34 +80,30 @@ export function GroupOverviewDashboard({
       <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((m) => (
           <div key={m.label} className="min-w-0 border-l-2 border-card-border pl-4">
-            <dt className="text-xs text-muted">{m.label}</dt>
-            <dd className="mt-1 break-words font-mono text-2xl font-semibold tabular-nums">
+            <dt className="text-body-sm text-muted">{m.label}</dt>
+            <dd className="mt-1 break-words font-mono text-heading font-semibold tabular-nums">
               {m.value}
             </dd>
-            <p className="mt-1 text-xs text-muted">{m.note}</p>
+            <p className="mt-1 text-body-sm text-muted">{m.note}</p>
           </div>
         ))}
       </dl>
       <div>
-        <h2 className="text-lg font-semibold">{t("atGlance")}</h2>
-        <p className="mt-1 text-xs text-muted">{t("overviewBasis")}</p>
+        <h2 className="text-heading font-semibold">{t("atGlance")}</h2>
+        <p className="mt-1 text-body-sm text-muted">{t("overviewBasis")}</p>
       </div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
         <section className="min-w-0 rounded-xl border border-card-border bg-card p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="font-semibold">{t("revenueTrend")}</h3>
-            <div
-              className="inline-flex rounded-lg border border-card-border p-1"
-              role="group"
-              aria-label={t("trendRange")}
-            >
+            <div className={PILL_TRACK} role="group" aria-label={t("trendRange")}>
               {([12, 24, 48] as const).map((turns) => (
                 <button
                   key={turns}
                   type="button"
                   aria-pressed={lookback === turns}
                   onClick={() => setLookback(turns)}
-                  className={`rounded-md px-2 py-1 text-xs focus-visible:outline-2 focus-visible:outline-info ${lookback === turns ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"}`}
+                  className={`px-2.5 py-1 text-body-sm focus-visible:outline-2 focus-visible:outline-info ${pillClass(lookback === turns)}`}
                 >
                   {t("turnRange", { count: turns })}
                 </button>
@@ -133,17 +130,19 @@ export function GroupOverviewDashboard({
               )}
             />
           ) : (
-            <p className="flex min-h-48 items-center justify-center text-sm text-muted">
+            <p className="flex min-h-48 items-center justify-center text-body text-muted">
               {t("trendUnavailable")}
             </p>
           )}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {t("trendCoverage", { count: overview.points.length, range: lookback })}
           </p>
           <details>
-            <summary className="cursor-pointer text-xs text-info">{t("viewTrendData")}</summary>
+            <summary className="cursor-pointer text-body-sm text-info">
+              {t("viewTrendData")}
+            </summary>
             <div className="mt-3 overflow-x-auto">
-              <table className="text-sm">
+              <table className="text-body">
                 <caption className="sr-only">{t("revenueTrend")}</caption>
                 <thead>
                   <tr>
@@ -170,7 +169,7 @@ export function GroupOverviewDashboard({
           {contributions ? (
             data.members.map((m, i) => (
               <div key={m.id} className="space-y-2">
-                <div className="flex justify-between gap-2 text-xs">
+                <div className="flex justify-between gap-2 text-body-sm">
                   <span className="min-w-0 break-words">{m.name}</span>
                   <span className="shrink-0 font-mono tabular-nums">
                     {t("percentage", { percent: Number(contributions![i].toFixed(1)) })}
@@ -187,14 +186,14 @@ export function GroupOverviewDashboard({
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted">{t("contributionUnavailable")}</p>
+            <p className="text-body text-muted">{t("contributionUnavailable")}</p>
           )}
-          <p className="text-xs text-muted">{t("combinedOverviewNote")}</p>
+          <p className="text-body-sm text-muted">{t("combinedOverviewNote")}</p>
         </section>
       </div>
       <div>
-        <h2 className="text-lg font-semibold">{t("distinctBusinesses")}</h2>
-        <p className="mt-1 text-xs text-muted">{t("separateBusinesses")}</p>
+        <h2 className="text-heading font-semibold">{t("distinctBusinesses")}</h2>
+        <p className="mt-1 text-body-sm text-muted">{t("separateBusinesses")}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {data.members.map((m, i) => {
@@ -211,12 +210,12 @@ export function GroupOverviewDashboard({
               style={{ borderTopColor: colors[i % colors.length] }}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-[10px] text-muted">
+                <span className="font-mono text-body-sm text-muted">
                   {m.tickerSymbol ??
                     member?.tickerSymbol ??
                     t(m.isRoot ? "parentLabel" : "subsidiaryLabel")}
                 </span>
-                <span className="rounded border border-card-border px-2 py-1 text-[10px] text-muted">
+                <span className="rounded border border-card-border px-2 py-1 text-body-sm text-muted">
                   {t(m.operator === "npp" ? "npp" : "player")}
                 </span>
               </div>
@@ -225,10 +224,10 @@ export function GroupOverviewDashboard({
                 <h3 className="min-w-0 break-words font-semibold">{m.name}</h3>
               </div>
               {m.isRoot ? (
-                <p className="text-xs text-muted">{t("parentCorporation")}</p>
+                <p className="text-body-sm text-muted">{t("parentCorporation")}</p>
               ) : (
                 parent && (
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     {t("parentVotingControl", {
                       parent: parent.name,
                       percent: m.parentControl!.votingPercent,
@@ -236,7 +235,7 @@ export function GroupOverviewDashboard({
                   </p>
                 )
               )}
-              <dl className="space-y-2 text-xs">
+              <dl className="space-y-2 text-body-sm">
                 <div className="flex justify-between gap-2 border-b border-card-border pb-2">
                   <dt className="text-muted">{t("turnRevenue")}</dt>
                   <dd className="font-mono tabular-nums">
@@ -272,12 +271,12 @@ export function GroupOverviewDashboard({
                 </div>
               </dl>
               {snapshot && (
-                <p className="text-[10px] text-muted">
+                <p className="text-body-sm text-muted">
                   {t("observationTurn", { turn: snapshot.turn })}
                 </p>
               )}
               <Link
-                className="inline-flex items-center gap-1 text-xs font-medium text-info hover:underline"
+                className="inline-flex items-center gap-1 text-body-sm font-medium text-info hover:underline"
                 href={"/corporation/" + m.pathId}
               >
                 {t("viewCorporation")}
@@ -294,8 +293,8 @@ export function GroupOverviewDashboard({
         >
           <Compass size={18} className="shrink-0 text-gold" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold">{t("directionWithoutMicromanagement")}</p>
-            <p className="mt-1 text-xs text-muted">{t("directionNote")}</p>
+            <p className="text-body font-semibold">{t("directionWithoutMicromanagement")}</p>
+            <p className="mt-1 text-body-sm text-muted">{t("directionNote")}</p>
           </div>
         </a>
         <a
@@ -304,8 +303,10 @@ export function GroupOverviewDashboard({
         >
           <Network size={18} className="shrink-0 text-info" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold">{t("supplyTitle")}</p>
-            <p className="mt-1 text-xs text-muted">{t("policies." + data.settings.supplyPolicy)}</p>
+            <p className="text-body font-semibold">{t("supplyTitle")}</p>
+            <p className="mt-1 text-body-sm text-muted">
+              {t("policies." + data.settings.supplyPolicy)}
+            </p>
           </div>
         </a>
       </div>

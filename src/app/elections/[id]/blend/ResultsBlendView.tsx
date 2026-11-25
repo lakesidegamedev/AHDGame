@@ -122,7 +122,7 @@ function EvBar({ vm, height }: { vm: ResultsBlendVM; height: number }) {
               color: "#fff",
               fontFamily: FONT.mono,
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 12,
             }}
           >
             {s.label}
@@ -146,7 +146,7 @@ function EvBar({ vm, height }: { vm: ResultsBlendVM; height: number }) {
           display: "flex",
           justifyContent: "space-between",
           fontFamily: FONT.mono,
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: ".1em",
           color: BLEND.mutedDimmer,
         }}
@@ -177,10 +177,10 @@ function TileBoard({ vm, columns }: { vm: ResultsBlendVM; columns: number }) {
             background: t.background,
           }}
         >
-          <span style={{ fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 700 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 12, fontWeight: 700 }}>
             {displayCanadianRegionCode(t.stateId)}
           </span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 9, opacity: 0.75 }}>{t.ev}</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 12, opacity: 0.75 }}>{t.ev}</span>
         </div>
       ))}
     </div>
@@ -206,13 +206,13 @@ function TicketRows({ vm }: { vm: ResultsBlendVM }) {
                 flex: 1,
                 minWidth: 0,
                 fontFamily: FONT.sans,
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: 600,
               }}
             >
               {c.name}
             </span>
-            <span style={{ fontFamily: FONT.mono, fontSize: 15 }}>{c.ev}</span>
+            <span style={{ fontFamily: FONT.mono, fontSize: 14 }}>{c.ev}</span>
             {c.isWinner ? <span style={{ color: BLEND.gold }}>★</span> : null}
           </div>
           <div style={{ marginTop: 7, height: 4, background: BLEND.trackAlt }}>
@@ -231,7 +231,7 @@ function TicketRows({ vm }: { vm: ResultsBlendVM }) {
               display: "flex",
               justifyContent: "space-between",
               fontFamily: FONT.mono,
-              fontSize: 10.5,
+              fontSize: 12,
               color: BLEND.mutedDim,
             }}
           >
@@ -262,7 +262,7 @@ function ClosestRows({ vm }: { vm: ResultsBlendVM }) {
           }}
         >
           <span style={{ fontFamily: FONT.sans, fontSize: 14 }}>{s.name}</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 11, color: s.color }}>{s.margin}</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 12, color: s.color }}>{s.margin}</span>
         </div>
       ))}
     </>
@@ -410,7 +410,7 @@ export function ResultsBlendView({
         >
           <span style={{ fontFamily: FONT.sans, fontSize: 16, fontWeight: 600 }}>{s.name}</span>
           <span
-            style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13, color: BLEND.muted }}
+            style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}
           >
             {s.ev} EV
           </span>
@@ -420,7 +420,7 @@ export function ResultsBlendView({
               alignItems: "center",
               gap: 8,
               fontFamily: FONT.sans,
-              fontSize: 13.5,
+              fontSize: 14,
               color: BLEND.muted,
             }}
           >
@@ -431,7 +431,7 @@ export function ResultsBlendView({
             style={{
               textAlign: "right",
               fontFamily: FONT.mono,
-              fontSize: 13,
+              fontSize: 12,
               color: s.marginColor,
             }}
           >
@@ -606,11 +606,11 @@ export function ResultsBlendView({
                 >
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                     <i style={{ width: 8, height: 8, display: "block", background: s.dot }} />
-                    <span style={{ fontFamily: FONT.sans, fontSize: 15, fontWeight: 600 }}>
+                    <span style={{ fontFamily: FONT.sans, fontSize: 14, fontWeight: 600 }}>
                       {s.name}
                     </span>
                   </span>
-                  <span style={{ fontFamily: FONT.mono, fontSize: 11.5, color: s.marginColor }}>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 12, color: s.marginColor }}>
                     {s.winner === "Not reporting" ? "—" : `+${s.marginPct}%`} · {s.ev} EV
                   </span>
                 </div>

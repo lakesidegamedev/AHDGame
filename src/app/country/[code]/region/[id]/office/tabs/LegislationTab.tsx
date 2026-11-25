@@ -128,12 +128,12 @@ export function LegislationTab({
     <div className="space-y-6">
       <section className="rounded-xl border border-card-border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">Your queued bill</h2>
+          <h2 className="text-body font-semibold">Your queued bill</h2>
           {!slotOccupied && (
             <button
               onClick={() => setQueueModalOpen(true)}
               disabled={!viewerCanManage}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs text-white disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm text-primary-foreground disabled:bg-card-border disabled:text-muted"
               title={
                 !viewerCanManage
                   ? "Office-holder only."
@@ -146,7 +146,7 @@ export function LegislationTab({
             </button>
           )}
         </div>
-        <InlineError error={queueError} className="text-sm text-error mb-2" />
+        <InlineError error={queueError} className="text-body text-error mb-2" />
         {legislationActivity ? (
           <ActivityRow
             activity={legislationActivity}
@@ -157,7 +157,7 @@ export function LegislationTab({
             onCancel={cancelQueueClick}
           />
         ) : (
-          <p className="text-sm text-muted">No bill queued.</p>
+          <p className="text-body text-muted">No bill queued.</p>
         )}
       </section>
 
@@ -175,14 +175,14 @@ export function LegislationTab({
       />
 
       <section className="rounded-xl border border-card-border bg-card p-5">
-        <h2 className="text-sm font-semibold">Bills to sign or veto</h2>
-        <p className="mt-1 mb-3 text-sm text-muted">
+        <h2 className="text-body font-semibold">Bills to sign or veto</h2>
+        <p className="mt-1 mb-3 text-body text-muted">
           After the legislature passes a bill, the office can sign it into law or veto it. A veto
           sends the bill back to the legislature for an override vote.
         </p>
-        <InlineError error={signError} className="mb-3 text-sm text-error" />
+        <InlineError error={signError} className="mb-3 text-body text-error" />
         {awaitingAssentBills.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             No bills are currently waiting for a signature or veto.
           </p>
         ) : (
@@ -192,7 +192,7 @@ export function LegislationTab({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-medium truncate">{b.title}</h3>
-                    <p className="text-xs text-muted mt-0.5">
+                    <p className="text-body-sm text-muted mt-0.5">
                       Sponsored by{" "}
                       {b.sponsorId ? (
                         <Link
@@ -212,14 +212,14 @@ export function LegislationTab({
                     <button
                       onClick={() => sign(b._id)}
                       disabled={!viewerCanManage || signingBillId === b._id}
-                      className="rounded-lg bg-success px-3 py-1.5 text-sm font-medium text-white hover:bg-success/80 disabled:opacity-50"
+                      className="rounded-lg bg-success px-3 py-1.5 text-body font-medium text-white hover:bg-success/80 disabled:opacity-50"
                     >
                       {signingBillId === b._id ? "Signing…" : "Sign"}
                     </button>
                     <button
                       onClick={() => setVetoModalBillId(b._id)}
                       disabled={!viewerCanManage}
-                      className="rounded-lg border border-error/40 px-3 py-1.5 text-sm font-medium text-error hover:bg-error/10 disabled:opacity-50"
+                      className="rounded-lg border border-error/40 px-3 py-1.5 text-body font-medium text-error hover:bg-error/10 disabled:opacity-50"
                     >
                       Veto…
                     </button>
@@ -276,7 +276,7 @@ function ActivityRow({
           ) : (
             <div className="font-medium">{activity.title}</div>
           )}
-          <p className="text-xs text-muted mt-1">
+          <p className="text-body-sm text-muted mt-1">
             → {activity.targetNppName}
             {activity.kind === "pending"
               ? ` introduces next turn (queued T+${activity.queuedAtTurn})`
@@ -289,7 +289,7 @@ function ActivityRow({
         <button
           onClick={onCancel}
           disabled={!viewerCanManage || cancellingQueue}
-          className="mt-2 text-xs text-error hover:underline disabled:opacity-50"
+          className="mt-2 text-body-sm text-error hover:underline disabled:opacity-50"
         >
           {cancellingQueue ? "Cancelling…" : "Cancel & refund"}
         </button>
@@ -301,7 +301,7 @@ function ActivityRow({
 function StatusPill({ activity }: { activity: NonNullable<LegislationActivity> }) {
   if (activity.kind === "pending") {
     return (
-      <span className="shrink-0 rounded-full bg-card-border/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+      <span className="shrink-0 rounded-full bg-card-border/40 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-muted">
         Queued
       </span>
     );
@@ -309,10 +309,10 @@ function StatusPill({ activity }: { activity: NonNullable<LegislationActivity> }
   if (activity.status === "active") {
     return (
       <div className="shrink-0 text-right">
-        <span className="rounded-full bg-info/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-info">
+        <span className="rounded-full bg-info/20 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-info">
           Voting
         </span>
-        <div className="mt-1 text-[11px] tabular-nums text-muted">
+        <div className="mt-1 text-body-sm tabular-nums text-muted">
           {activity.votesFor}-{activity.votesAgainst}
           {activity.votingEndsAt && ` · ${formatVotingRemaining(activity.votingEndsAt)}`}
         </div>
@@ -321,7 +321,7 @@ function StatusPill({ activity }: { activity: NonNullable<LegislationActivity> }
   }
   if (activity.status === "passed") {
     return (
-      <span className="shrink-0 rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning">
+      <span className="shrink-0 rounded-full bg-warning/20 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-warning">
         Awaiting assent
       </span>
     );
@@ -329,10 +329,10 @@ function StatusPill({ activity }: { activity: NonNullable<LegislationActivity> }
   // veto_override
   return (
     <div className="shrink-0 text-right">
-      <span className="rounded-full bg-error/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-error">
+      <span className="rounded-full bg-error/20 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-error">
         Override voting
       </span>
-      <div className="mt-1 text-[11px] tabular-nums text-muted">
+      <div className="mt-1 text-body-sm tabular-nums text-muted">
         {activity.overrideVotesFor}-{activity.overrideVotesAgainst}
         {activity.overrideVotingEndsAt &&
           ` · ${formatVotingRemaining(activity.overrideVotingEndsAt)}`}

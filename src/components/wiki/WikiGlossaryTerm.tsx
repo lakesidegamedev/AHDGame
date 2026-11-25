@@ -127,7 +127,7 @@ export function WikiGlossaryTerm({ term, definition, label }: WikiGlossaryTermPr
               width: coords.width,
               zIndex: 9999,
             }}
-            className="rounded-lg border border-card-border bg-card px-3 py-2 text-left text-xs font-normal normal-case tracking-normal text-foreground shadow-lg"
+            className="rounded-lg border border-card-border bg-card px-3 py-2 text-left text-body-sm font-normal normal-case tracking-normal text-foreground shadow-lg"
           >
             <span className="mb-0.5 block font-semibold text-foreground">{term}</span>
             {definition}

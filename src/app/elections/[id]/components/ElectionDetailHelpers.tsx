@@ -118,24 +118,24 @@ export function PhaseTag({
 }) {
   if (isEnded)
     return (
-      <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-1 text-xs font-medium text-muted">
+      <span className="rounded-full border border-card-border bg-card-elevated px-2.5 py-1 text-body-sm font-medium text-muted">
         Completed
       </span>
     );
   if (isUpcoming)
     return (
-      <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-400">
+      <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-body-sm font-medium text-blue-400">
         Upcoming
       </span>
     );
   if (inPrimary)
     return (
-      <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
+      <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-body-sm font-medium text-warning">
         Primary phase
       </span>
     );
   return (
-    <span className="rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
+    <span className="rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-body-sm font-medium text-success">
       General election
     </span>
   );

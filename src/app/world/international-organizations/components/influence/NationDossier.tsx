@@ -81,7 +81,7 @@ export function NationDossier({ view, target, orgId, viewerCountryId, onCommitte
           remainderLabel={view.remainderLabel}
           size="lead"
         />
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-xs">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm">
           {view.poles.map((p) => (
             <span
               key={p.id}
@@ -172,7 +172,7 @@ export function NationDossier({ view, target, orgId, viewerCountryId, onCommitte
           priced.
         </p>
       ) : (
-        <p className="text-body-xs text-muted">
+        <p className="text-body-sm text-muted">
           {t("pricing", {
             nation: target.name,
             cap: turnCap,
@@ -305,7 +305,7 @@ function CommitPlayForm({
         <span className="text-body-sm font-medium text-muted">
           Paid from the {view.fundCurrencyCountryId} organisation fund
         </span>
-        <span className="font-mono text-body-xs tabular-nums text-foreground">
+        <span className="font-mono text-body-sm tabular-nums text-foreground">
           {inFundCurrency(view.fundBalanceLocal)} available
         </span>
       </div>
@@ -362,7 +362,7 @@ function CommitPlayForm({
         </p>
       )}
 
-      <p className="text-body-xs text-muted">{t("settlement")}</p>
+      <p className="text-body-sm text-muted">{t("settlement")}</p>
 
       <InlineError error={error} className="text-body-sm text-error" />
     </form>

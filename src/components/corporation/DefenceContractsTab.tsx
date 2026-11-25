@@ -6,6 +6,7 @@ import { Fragment, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CorporationDefenceView } from "./CorporationPageTypes";
 import { DenseSection, InlineStatus, SmallButton, TableScroll, Td, Th } from "./dense/DenseKit";
+import { pillClass } from "@/components/ui/selectedState";
 
 const GRADE_LABEL = ["None", "Legacy", "Modernised", "Cutting-edge"];
 
@@ -123,8 +124,8 @@ export default function DefenceContractsTab({
 
   const figure = (label: string, value: string, title?: string) => (
     <div className="min-w-0" title={title}>
-      <dt className="truncate text-[11px] text-muted">{label}</dt>
-      <dd className="mt-0.5 truncate font-mono text-sm font-medium tabular-nums text-foreground">
+      <dt className="truncate text-body-sm text-muted">{label}</dt>
+      <dd className="mt-0.5 truncate font-mono text-body font-medium tabular-nums text-foreground">
         {value}
       </dd>
     </div>
@@ -145,7 +146,7 @@ export default function DefenceContractsTab({
           {figure("Margin after build cost", formatAmount(defence?.totalNetMargin ?? 0))}
           {figure("Committed by buyers", formatAmount(defence?.totalEncumbered ?? 0))}
         </dl>
-        <p className="border-t border-card-border/60 py-1.5 text-xs text-muted">
+        <p className="border-t border-card-border/60 py-1.5 text-body-sm text-muted">
           <span className="font-medium text-foreground">Delivery grade </span>
           <span className="font-medium text-foreground">{GRADE_LABEL[grade]}</span>
           <span className="font-mono tabular-nums"> ({grade} of 3)</span>. The best quality this
@@ -159,7 +160,7 @@ export default function DefenceContractsTab({
 
       {isCeo && pending.length > 0 && (
         <DenseSection title="Offers awaiting your answer" meta={`${pending.length}`}>
-          <p className="py-1 text-xs text-muted">
+          <p className="py-1 text-body-sm text-muted">
             A government has offered these orders. Nothing is built and nothing is paid until you
             accept. Once you do, the plant&apos;s output goes to the arsenal instead of the open
             market.
@@ -223,7 +224,7 @@ export default function DefenceContractsTab({
                     </tr>
                     {c.projectedLotsPerTurn === 0 && (
                       <tr>
-                        <td colSpan={isCeo ? 6 : 5} className="pb-1.5 pl-2 text-xs text-error">
+                        <td colSpan={isCeo ? 6 : 5} className="pb-1.5 pl-2 text-body-sm text-error">
                           This plant is currently producing nothing, so accepting would not start
                           deliveries until its output recovers.
                         </td>
@@ -238,12 +239,12 @@ export default function DefenceContractsTab({
       )}
 
       <DenseSection title="Order book" meta={contracts.length ? `${contracts.length}` : undefined}>
-        <p className="py-1 text-xs text-muted">
+        <p className="py-1 text-body-sm text-muted">
           Every order this corporation has been offered. Each pays per lot on delivery. Nothing is
           paid up front, and a plant re-tooled off its contracted component stops earning.
         </p>
         {contracts.length === 0 ? (
-          <p className="py-2 text-xs text-muted">
+          <p className="py-2 text-body-sm text-muted">
             {isCeo
               ? "No government has offered this corporation a contract. Defence ministers award them from their own cabinet office; a plant running a line that builds materiel is what makes you eligible."
               : "This corporation holds no government procurement contracts."}
@@ -339,7 +340,7 @@ export default function DefenceContractsTab({
                           {c.lotsDelivered.toLocaleString("en-US")} /{" "}
                           {c.lotsOrdered.toLocaleString("en-US")}
                         </Td>
-                        <Td className="text-xs text-muted">
+                        <Td className="text-body-sm text-muted">
                           {c.status === "active"
                             ? `${remaining.toLocaleString("en-US")} outstanding, ${formatRate(c.projectedLotsPerTurn)}/turn`
                             : c.status === "pending"
@@ -375,7 +376,7 @@ export default function DefenceContractsTab({
                         <tr>
                           <td
                             colSpan={8}
-                            className="space-y-1 border-b border-card-border/60 pb-2 pl-4 pr-2 text-xs"
+                            className="space-y-1 border-b border-card-border/60 pb-2 pl-4 pr-2 text-body-sm"
                           >
                             {notes.map((n) => (
                               <p key={n.text} className={n.tone}>
@@ -393,11 +394,7 @@ export default function DefenceContractsTab({
                                       disabled={busyId === c._id || n === c.assignedFactories}
                                       onClick={() => void setFactories(c._id, n)}
                                       aria-pressed={n === c.assignedFactories}
-                                      className={`inline-flex h-6 min-w-6 items-center justify-center rounded border px-1.5 font-mono text-[11px] ${
-                                        n === c.assignedFactories
-                                          ? "border-foreground bg-foreground font-medium text-background"
-                                          : "border-card-border text-foreground hover:bg-card-elevated disabled:opacity-60"
-                                      }`}
+                                      className={`inline-flex h-6 min-w-6 items-center justify-center px-1.5 font-mono text-body-sm disabled:opacity-60 ${pillClass(n === c.assignedFactories)}`}
                                     >
                                       {n}
                                     </button>

@@ -243,7 +243,7 @@ export function WarsawPactBoard() {
                   margin: 0,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 28,
+                  fontSize: 30,
                   lineHeight: 1.05,
                   color: "#f3f1ea",
                 }}
@@ -353,7 +353,7 @@ export function WarsawPactBoard() {
                   style={{
                     fontFamily: headingFont,
                     fontWeight: 700,
-                    fontSize: 28,
+                    fontSize: 30,
                     color: "#f3f1ea",
                     lineHeight: 1,
                   }}
@@ -433,7 +433,7 @@ export function WarsawPactBoard() {
                 </div>
                 <div style={{ marginTop: 3, font: `700 16px ${mono}`, color: "#e8e8ee" }}>
                   {fmtN(cp.effCP)}{" "}
-                  <span style={{ fontSize: 8.5, color: "#8a8a9a" }}>
+                  <span style={{ fontSize: 12, color: "#8a8a9a" }}>
                     ×{cp.cohFactor.toFixed(2)} coh
                   </span>
                 </div>
@@ -456,7 +456,7 @@ export function WarsawPactBoard() {
                   PARTY CAPITAL
                 </div>
                 <div style={{ marginTop: 3, font: `700 14px ${mono}`, color: "#d9bd6b" }}>
-                  {pc} <span style={{ fontSize: 8, color: "#6f8a5a" }}>+{PC_REGEN}/turn</span>
+                  {pc} <span style={{ fontSize: 12, color: "#6f8a5a" }}>+{PC_REGEN}/turn</span>
                 </div>
                 <div style={{ font: `600 8px ${mono}`, color: "#8a8a9a", marginTop: 1 }}>
                   order cost {delta === 0 ? "no change" : `−${pcCost} PC`}
@@ -695,7 +695,7 @@ export function WarsawPactBoard() {
                     color: "#e8e8ee",
                   }}
                 >
-                  <span style={{ fontSize: 15 }}>{r.flag}</span>
+                  <span style={{ fontSize: 14 }}>{r.flag}</span>
                   <span>{r.name}</span>
                   {r.you && (
                     <span

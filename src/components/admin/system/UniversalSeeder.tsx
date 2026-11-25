@@ -710,7 +710,7 @@ export function UniversalSeeder() {
           style={{ transform: resetMode ? "translateX(1.25rem)" : "translateX(0)" }}
         />
       </button>
-      <span className="text-sm">
+      <span className="text-body">
         Reset mode{" "}
         <span className={resetMode ? "font-semibold text-red-400" : "text-muted"}>
           {resetMode
@@ -727,24 +727,24 @@ export function UniversalSeeder() {
     <div className="space-y-6">
       {/* ── Year Tabs ──────────────────────────────────────────────── */}
       <div className="rounded-xl border border-card-border bg-card p-5 sm:p-6 shadow-sm">
-        <h3 className="mb-3 text-lg font-semibold">Seed data</h3>
-        <p className="mb-4 text-sm text-muted">
+        <h3 className="mb-3 text-body-lg font-semibold">Seed data</h3>
+        <p className="mb-4 text-body text-muted">
           Select a year baseline and seed mode. Each year tab contains reference data calibrated to
           that historical starting point.
         </p>
 
         {/* Year selector */}
         <div className="mb-4 flex items-center gap-3">
-          <span className="text-sm font-medium text-muted">Year:</span>
+          <span className="text-body font-medium text-muted">Year:</span>
           <div className="flex rounded-lg border border-card-border p-0.5">
             {YEAR_TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveYear(tab.id)}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-md px-4 py-1.5 text-body font-medium transition-colors ${
                   activeYear === tab.id
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:text-foreground hover:bg-card-elevated"
                 }`}
               >
@@ -753,7 +753,7 @@ export function UniversalSeeder() {
             ))}
           </div>
         </div>
-        <p className="mb-4 text-xs text-muted">
+        <p className="mb-4 text-body-sm text-muted">
           {YEAR_TABS.find((t) => t.id === activeYear)?.description}
         </p>
 
@@ -762,7 +762,7 @@ export function UniversalSeeder() {
           <button
             type="button"
             onClick={() => setSeedMode("full")}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-md px-4 py-1.5 text-body font-medium transition-colors ${
               seedMode === "full"
                 ? "bg-green-600 text-white"
                 : "text-muted hover:text-foreground hover:bg-card-elevated"
@@ -773,7 +773,7 @@ export function UniversalSeeder() {
           <button
             type="button"
             onClick={() => setSeedMode("partial")}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-md px-4 py-1.5 text-body font-medium transition-colors ${
               seedMode === "partial"
                 ? "bg-blue-600 text-white"
                 : "text-muted hover:text-foreground hover:bg-card-elevated"
@@ -786,14 +786,14 @@ export function UniversalSeeder() {
         {/* ── Full Seed Panel ──────────────────────────────────────── */}
         {seedMode === "full" && (
           <div>
-            <p className="mb-4 text-sm text-muted">
+            <p className="mb-4 text-body text-muted">
               Seeds all game data for the selected scope. Idempotent — skips collections that
               already have data unless reset mode is enabled.
             </p>
 
             {/* Scope toggle */}
             <div className="mb-4 flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-muted">Scope:</span>
+              <span className="text-body font-medium text-muted">Scope:</span>
               <div className="flex flex-wrap rounded-lg border border-card-border p-0.5">
                 {[...registered, "all" as const].map((s) => {
                   const hasTargets =
@@ -806,9 +806,9 @@ export function UniversalSeeder() {
                       key={s}
                       type="button"
                       onClick={() => setScope(s)}
-                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      className={`rounded-md px-3 py-1.5 text-body font-medium transition-colors ${
                         scope === s
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "text-muted hover:text-foreground hover:bg-card-elevated"
                       } ${!hasTargets ? "opacity-50" : ""}`}
                       title={
@@ -816,12 +816,14 @@ export function UniversalSeeder() {
                       }
                     >
                       {s === "all" ? "All" : (COUNTRY_CLIENT_CONFIGS[s as CountryId]?.name ?? s)}
-                      {!hasTargets && <span className="ml-1 text-xs opacity-60">(no data)</span>}
+                      {!hasTargets && (
+                        <span className="ml-1 text-body-sm opacity-60">(no data)</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 {countryHasFeature("usUi", scope) &&
                   "50 states + DC, policies, demographics, parties, etc."}
                 {countryHasFeature("ukUi", scope) &&
@@ -847,7 +849,7 @@ export function UniversalSeeder() {
             <button
               onClick={handleFullSeed}
               disabled={loading}
-              className="min-h-[44px] rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50 transition-colors"
+              className="min-h-[44px] rounded-lg bg-green-600 px-5 py-2.5 text-body font-medium text-white hover:bg-green-500 disabled:opacity-50 transition-colors"
             >
               {loading ? "Seeding..." : "Run full seed"}
             </button>
@@ -857,7 +859,7 @@ export function UniversalSeeder() {
         {/* ── Partial Seed Panel ───────────────────────────────────── */}
         {seedMode === "partial" && (
           <div>
-            <p className="mb-3 text-sm text-muted">
+            <p className="mb-3 text-body text-muted">
               Choose specific datasets to seed. Useful for updating individual collections without
               touching everything.
             </p>
@@ -867,7 +869,7 @@ export function UniversalSeeder() {
               <button
                 type="button"
                 onClick={() => setPartialFilter(null)}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                   partialFilter === null
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-card-border text-muted hover:text-foreground"
@@ -885,7 +887,7 @@ export function UniversalSeeder() {
                       hasTargets ? setPartialFilter(partialFilter === cid ? null : cid) : undefined
                     }
                     disabled={!hasTargets}
-                    className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                       partialFilter === cid
                         ? "border-primary bg-primary/10 text-foreground"
                         : "border-card-border text-muted hover:text-foreground"
@@ -904,14 +906,14 @@ export function UniversalSeeder() {
               <button
                 type="button"
                 onClick={selectAll}
-                className="rounded-md border border-card-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+                className="rounded-md border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
               >
                 Select all
               </button>
               <button
                 type="button"
                 onClick={selectNone}
-                className="rounded-md border border-card-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors"
+                className="rounded-md border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
               >
                 Clear
               </button>
@@ -954,12 +956,12 @@ export function UniversalSeeder() {
                               className="mt-0.5 h-4 w-4 shrink-0 rounded border-card-border accent-primary"
                             />
                             <div className="min-w-0">
-                              <span className="text-sm font-medium">{target.label}</span>
-                              <p className="mt-0.5 text-xs text-muted leading-snug">
+                              <span className="text-body font-medium">{target.label}</span>
+                              <p className="mt-0.5 text-body-sm text-muted leading-snug">
                                 {target.description}
                               </p>
                               {resetMode && target.destructiveWarning && (
-                                <p className="mt-1 text-xs text-red-400 leading-snug">
+                                <p className="mt-1 text-body-sm text-red-400 leading-snug">
                                   Reset: {target.destructiveWarning}
                                 </p>
                               )}
@@ -975,7 +977,7 @@ export function UniversalSeeder() {
             <button
               onClick={handlePartialSeed}
               disabled={loading || selectedTargets.size === 0}
-              className="min-h-[44px] rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+              className="min-h-[44px] rounded-lg bg-blue-600 px-5 py-2.5 text-body font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
             >
               {loading
                 ? "Seeding..."
@@ -1004,14 +1006,14 @@ export function UniversalSeeder() {
             />
           </svg>
         </div>
-        <h3 className="mb-1 text-lg font-semibold">Migrations</h3>
-        <p className="mb-4 text-sm text-muted">
+        <h3 className="mb-1 text-body-lg font-semibold">Migrations</h3>
+        <p className="mb-4 text-body text-muted">
           One-time data migrations. Safe to re-run — only fills in missing data, never overwrites
           admin-defined values.
         </p>
 
         <div className="space-y-4">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Pre-reset migrations have been removed. Use the Migrations tab for database index setup.
           </p>
         </div>
@@ -1020,7 +1022,7 @@ export function UniversalSeeder() {
       {/* ── Result output ───────────────────────────────────────────── */}
       {result && (
         <div
-          className={`rounded-xl border p-4 text-sm ${
+          className={`rounded-xl border p-4 text-body ${
             result.success
               ? "border-green-500/30 bg-green-500/10"
               : "border-red-500/30 bg-red-500/10"
@@ -1030,10 +1032,10 @@ export function UniversalSeeder() {
             {result.success ? "Success" : "Error"}: {result.message}
           </p>
           {result.targets && result.targets.length > 0 && (
-            <p className="mt-1 text-xs text-muted">Targets: {result.targets.join(", ")}</p>
+            <p className="mt-1 text-body-sm text-muted">Targets: {result.targets.join(", ")}</p>
           )}
           {result.logs && result.logs.length > 0 && (
-            <ul className="mt-3 space-y-0.5 text-xs opacity-80 font-mono">
+            <ul className="mt-3 space-y-0.5 text-body-sm opacity-80 font-mono">
               {result.logs.map((l: string, i: number) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="text-green-500/60 shrink-0">{">"}</span>

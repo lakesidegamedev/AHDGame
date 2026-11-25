@@ -19,6 +19,7 @@ import {
   type OfferView,
 } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { pillClass } from "@/components/ui/selectedState";
 
 type OfferFilters = OfferView;
 
@@ -79,7 +80,7 @@ export function PremiumChip({ premium, side }: { premium: number; side: "buy" | 
         : "bg-error/15 text-error";
   return (
     <span
-      className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold tabular-nums ${tone}`}
+      className={`inline-flex rounded px-1.5 py-0.5 text-body-sm font-semibold tabular-nums ${tone}`}
       title={offerPremiumDescription(premium)}
     >
       {offerPremiumLabel(premium)}
@@ -100,13 +101,13 @@ export function SideBadge({ side }: { side: "buy" | "sell" }) {
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
       <span
-        className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-bold uppercase ${
+        className={`inline-flex rounded px-1.5 py-0.5 text-body-sm font-bold uppercase ${
           side === "sell" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning"
         }`}
       >
         {side === "sell" ? "Offering" : "Seeking"}
       </span>
-      <span className="text-[11px] text-muted">{takerSideText(side)}</span>
+      <span className="text-body-sm text-muted">{takerSideText(side)}</span>
     </span>
   );
 }
@@ -115,7 +116,7 @@ function NppBadge() {
   return (
     <span
       title="Computer-run company"
-      className="rounded bg-card-elevated px-1.5 py-0.5 text-[11px] font-medium text-muted"
+      className="rounded bg-card-elevated px-1.5 py-0.5 text-body-sm font-medium text-muted"
     >
       NPP
     </span>
@@ -125,7 +126,7 @@ function NppBadge() {
 /** One line on how computer-run offers are sized and priced. */
 export function ComputerRunOfferNote() {
   return (
-    <p data-testid="computer-run-offer-note" className="mt-1 text-xs text-muted">
+    <p data-testid="computer-run-offer-note" className="mt-1 text-body-sm text-muted">
       Offers marked NPP come from computer-run companies. Their size is set by rule, not chosen: a
       sell offer is a fixed share of the seller&apos;s spare contractable capacity and a buy offer
       is its unmet input need, so many goods show the same quantity. Their premium follows stock and
@@ -148,14 +149,14 @@ export function OfferIdentity({ offer }: { offer: SupplyListingView }) {
         <div className="flex items-center gap-1.5">
           <Link
             href={`/corporation/${offer.corporationId}`}
-            className="truncate text-sm font-semibold text-foreground hover:underline"
+            className="truncate text-body font-semibold text-foreground hover:underline"
           >
             {offer.corporationName}
           </Link>
           {offer.ai && <NppBadge />}
         </div>
         {!offer.ai && offer.ceoName && (
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted">
+          <div className="mt-0.5 flex items-center gap-1 text-body-sm text-muted">
             <Avatar url={offer.ceoAvatarUrl} name={offer.ceoName} size="h-4 w-4" />
             <span className="truncate">{offer.ceoName}</span>
           </div>
@@ -186,13 +187,9 @@ function Segmented<T extends string>({
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`rounded-md border font-medium ${
-            prominent ? "h-9 px-4 text-sm" : "h-8 px-2.5 text-xs"
-          } ${
+          className={`font-medium ${prominent ? "h-9 px-4 text-body" : "h-8 px-2.5 text-body-sm"} ${pillClass(
             value === o.value
-              ? "border-primary bg-primary text-white"
-              : "border-card-border text-foreground hover:bg-card-elevated"
-          }`}
+          )}`}
         >
           {o.label}
         </button>
@@ -202,7 +199,7 @@ function Segmented<T extends string>({
 }
 
 const selectCls =
-  "h-8 rounded-md border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none";
+  "h-8 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none";
 
 export function SupplyFilterBar({
   filters,
@@ -240,7 +237,7 @@ export function SupplyFilterBar({
         ]}
       />
       {showCommodity && (
-        <label className="flex items-center gap-1.5 text-xs text-muted">
+        <label className="flex items-center gap-1.5 text-body-sm text-muted">
           Commodity
           <select
             className={selectCls}
@@ -256,7 +253,7 @@ export function SupplyFilterBar({
           </select>
         </label>
       )}
-      <label className="flex items-center gap-1.5 text-xs text-muted">
+      <label className="flex items-center gap-1.5 text-body-sm text-muted">
         Sort by
         <select
           className={selectCls}

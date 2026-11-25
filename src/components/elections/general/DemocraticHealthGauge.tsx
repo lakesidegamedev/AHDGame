@@ -37,12 +37,12 @@ export function DemocraticHealthGauge({ data }: { data?: DemocraticHealthData | 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-muted">{t("democraticHealth.title")}</h3>
-        <span className="tabular-nums text-sm font-bold" style={{ color }}>
+        <h3 className="text-body-lg font-semibold text-muted">{t("democraticHealth.title")}</h3>
+        <span className="tabular-nums text-body font-bold" style={{ color }}>
           {value.toFixed(1)} / 100
         </span>
       </div>
-      <p className="mb-3 text-xs leading-snug text-muted">
+      <p className="mb-3 text-body-sm leading-snug text-muted">
         {t("democraticHealth.subtitle", { party: partyLabel })}
       </p>
       <div
@@ -56,9 +56,9 @@ export function DemocraticHealthGauge({ data }: { data?: DemocraticHealthData | 
           style={{ width: `${value}%`, background: color }}
         />
       </div>
-      <p className="mt-1 text-[11px] leading-snug text-muted">{t("democraticHealth.scaleNote")}</p>
+      <p className="mt-1 text-body-sm leading-snug text-muted">{t("democraticHealth.scaleNote")}</p>
 
-      <div className="mt-3 flex flex-col gap-1.5 text-xs">
+      <div className="mt-3 flex flex-col gap-1.5 text-body-sm">
         <div className="flex items-baseline justify-between gap-3">
           <span className="font-semibold">{t("democraticHealth.partyEffect")}</span>
           <span className="tabular-nums font-bold text-negative">
@@ -80,12 +80,12 @@ export function DemocraticHealthGauge({ data }: { data?: DemocraticHealthData | 
       </div>
 
       {!data.currentRulerInRace ? (
-        <p className="mt-2 rounded border border-card-border bg-background px-2 py-1.5 text-[11px] leading-snug text-muted">
+        <p className="mt-2 rounded border border-card-border bg-background px-2 py-1.5 text-body-sm leading-snug text-muted">
           {t("democraticHealth.rulerNotRunning")}
         </p>
       ) : null}
       {data.currentRulerReliefPct > 0 ? (
-        <p className="mt-2 rounded border border-card-border bg-background px-2 py-1.5 text-[11px] leading-snug text-muted">
+        <p className="mt-2 rounded border border-card-border bg-background px-2 py-1.5 text-body-sm leading-snug text-muted">
           {t("democraticHealth.relief", { percent: data.currentRulerReliefPct.toFixed(0) })}
         </p>
       ) : null}

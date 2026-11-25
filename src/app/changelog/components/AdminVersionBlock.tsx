@@ -43,18 +43,18 @@ export function AdminVersionBlock({
       >
         <div className="flex items-center gap-3">
           <span
-            className={`rounded px-2.5 py-1 font-mono text-base font-bold ${
+            className={`rounded px-2.5 py-1 font-mono text-body-lg font-bold ${
               isLatest ? "bg-primary/20 text-primary" : "bg-zinc-500/15 text-foreground"
             }`}
           >
             {block.version === "Unreleased" ? "Unreleased" : `v${block.version}`}
           </span>
-          {block.date && <span className="text-sm text-muted">{formatDate(block.date)}</span>}
-          <span className="text-xs text-muted">
+          {block.date && <span className="text-body text-muted">{formatDate(block.date)}</span>}
+          <span className="text-body-sm text-muted">
             {totalItems} change{totalItems !== 1 ? "s" : ""}
           </span>
           {isLatest && (
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-medium text-primary">
               Latest
             </span>
           )}
@@ -81,7 +81,7 @@ export function AdminVersionBlock({
               return (
                 <span
                   key={`${heading}-${idx}`}
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${color.bg} ${color.text} ${isCollapsed ? "opacity-50" : ""}`}
+                  className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${color.bg} ${color.text} ${isCollapsed ? "opacity-50" : ""}`}
                 >
                   {heading} ({count})
                 </span>
@@ -124,22 +124,22 @@ export function AdminVersionBlock({
                 {/* Section heading */}
                 <div className="mb-2.5 flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${color.dot}`} />
-                  <span className={`text-xs font-bold uppercase tracking-wider ${color.text}`}>
+                  <span className={`text-body-sm font-bold uppercase tracking-wider ${color.text}`}>
                     {section.heading}
                   </span>
-                  <span className="text-xs text-zinc-600">
+                  <span className="text-body-sm text-zinc-600">
                     {classified.filter((i) => i.indent === 0).length}
                   </span>
                 </div>
 
                 {/* Items */}
-                <div className="space-y-0.5 font-mono text-xs leading-relaxed">
+                <div className="space-y-0.5 font-mono text-body-sm leading-relaxed">
                   {renderGroups.map((group, gi) => (
                     <div key={gi}>
                       {hasBoth && group.label && (
                         <div className="mb-1 mt-2 flex items-center gap-2 first:mt-0">
                           <span
-                            className={`text-[10px] font-bold uppercase tracking-widest ${
+                            className={`text-body-sm font-bold uppercase tracking-widest ${
                               group.label === "Major" ? "text-zinc-400" : "text-zinc-600"
                             }`}
                           >
@@ -162,7 +162,7 @@ export function AdminVersionBlock({
                               </span>
                               <span className="flex-1">{renderMarkdownText(item.text)}</span>
                               <span
-                                className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium leading-tight ${tagStyle.classes}`}
+                                className={`shrink-0 rounded border px-1.5 py-0.5 text-body-sm font-medium leading-tight ${tagStyle.classes}`}
                               >
                                 {tagStyle.label}
                               </span>

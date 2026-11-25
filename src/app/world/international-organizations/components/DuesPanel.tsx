@@ -77,8 +77,8 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Treasury &amp; dues</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Treasury &amp; dues</h3>
+          <p className="text-body-sm text-muted">
             Members are assessed <span className="font-semibold text-foreground">{ratePct}</span> of
             GDP / year (about{" "}
             <span className="font-semibold text-foreground">{annualDuesDisplay}/yr</span> across{" "}
@@ -103,9 +103,9 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
 
       {showForm && proposerIsMember && proposer && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Propose a dues rate</h4>
+          <h4 className="text-body font-semibold text-foreground">Propose a dues rate</h4>
           <div className="mt-3 max-w-xs">
-            <label className="text-xs font-medium text-muted" htmlFor="dues-rate">
+            <label className="text-body-sm font-medium text-muted" htmlFor="dues-rate">
               Annual dues (% of member GDP)
             </label>
             <input
@@ -116,11 +116,11 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
               step={0.001}
               value={pct}
               onChange={(e) => setPct(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
             />
-            <p className="mt-1 text-[11px] text-muted">Max {MAX_DUES_PCT}% / year.</p>
+            <p className="mt-1 text-body-sm text-muted">Max {MAX_DUES_PCT}% / year.</p>
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Submit for a vote
@@ -136,7 +136,7 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
         <h4 className="text-body-sm font-medium text-muted">Pending dues votes</h4>
         {pending.length === 0 ? (
           <div className="rounded-xl border border-card-border bg-card p-5">
-            <p className="text-sm text-muted">No pending dues changes.</p>
+            <p className="text-body text-muted">No pending dues changes.</p>
           </div>
         ) : (
           pending.map((l) => {
@@ -152,8 +152,8 @@ export function DuesPanel({ org, viewer, currentTurn, votingWindowTurns, onChang
                 votingWindowTurns={votingWindowTurns}
                 onVote={vote}
               >
-                <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                <p className="mt-0.5 text-xs text-muted">
+                <h5 className="text-body font-semibold text-foreground">{l.title}</h5>
+                <p className="mt-0.5 text-body-sm text-muted">
                   Proposed: {((l.duesRateAnnual ?? 0) * 100).toFixed(3)}% of GDP / year · tabled by{" "}
                   {l.proposedByCharacterName} · closes in {turnsLeft} turn
                   {turnsLeft === 1 ? "" : "s"}

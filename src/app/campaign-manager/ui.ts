@@ -4,22 +4,23 @@ import { readableInk, shadeColorForTier } from "@/lib/elections/marginTierShade"
 import type { MarginTier } from "@/lib/elections/generalViewModel";
 
 /**
- * Shared Campaign Manager styling, on Blend tokens. A selected chip inverts to
- * ink on the page colour; resting chips sit on the field ground.
+ * Shared Campaign Manager styling, on Blend tokens. A selected chip or segment
+ * is the site's filled primary pill (see components/ui/selectedState.ts);
+ * resting chips sit on the field ground.
  */
 
 export function chipStyle(on: boolean, extra: CSSProperties = {}): CSSProperties {
   return {
     minHeight: 34,
     padding: "0 10px",
-    borderRadius: 8,
+    borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
-    background: on ? BLEND.ink : BLEND.field,
-    color: on ? BLEND.page : BLEND.ink,
-    border: `1px solid ${on ? BLEND.ink : BLEND.hairlineStrong}`,
+    background: on ? "var(--primary)" : BLEND.field,
+    color: on ? "var(--primary-foreground)" : BLEND.ink,
+    border: `1px solid ${on ? "var(--primary)" : BLEND.hairlineStrong}`,
     ...extra,
   };
 }
@@ -28,26 +29,26 @@ export function segmentStyle(on: boolean): CSSProperties {
   return {
     minHeight: 32,
     border: 0,
-    borderRadius: 7,
+    borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 600,
-    background: on ? BLEND.ink : "transparent",
-    color: on ? BLEND.page : BLEND.muted,
+    background: on ? "var(--primary)" : "transparent",
+    color: on ? "var(--primary-foreground)" : BLEND.muted,
   };
 }
 
 export const EYEBROW: CSSProperties = {
   fontFamily: FONT.sans,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
   color: BLEND.muted,
 };
 
-export const MONO_COUNT: CSSProperties = { fontFamily: FONT.mono, fontSize: 11, opacity: 0.75 };
+export const MONO_COUNT: CSSProperties = { fontFamily: FONT.mono, fontSize: 12, opacity: 0.75 };
 
 /** A party's shade at a tier on this ground, with an ink that reads on it. */
 export function tierShade(
@@ -64,7 +65,7 @@ export function ratingChipStyle(fill: string, ink: string): CSSProperties {
     flex: "none",
     alignSelf: "flex-start",
     fontFamily: FONT.sans,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     padding: "3px 8px",
     borderRadius: 6,

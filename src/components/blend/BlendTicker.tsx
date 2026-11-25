@@ -57,7 +57,7 @@ export function BlendTicker({
           padding: "8px 14px",
           background: tagColor,
           fontFamily: FONT.mono,
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: ".16em",
           fontWeight: 700,
           color: tagInk,
@@ -72,7 +72,7 @@ export function BlendTicker({
           overflow: "hidden",
           padding: "8px 0",
           fontFamily: FONT.mono,
-          fontSize: 11,
+          fontSize: 12,
           color: BLEND.muted,
         }}
       >

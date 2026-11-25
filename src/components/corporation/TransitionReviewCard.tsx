@@ -96,7 +96,7 @@ export function TransitionReviewCard({
   return (
     <DenseSection title="New market: sectors to review">
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           These sectors lost money or sold nothing since the market changed. For {turnsLeft} more
           turns you can mothball them with no upkeep, or convert them to another industry for free
           in the sector list. Nothing changes unless you choose.
@@ -113,10 +113,10 @@ export function TransitionReviewCard({
               className="flex flex-wrap items-center justify-between gap-2 py-1.5"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm text-foreground">
+                <p className="truncate text-body text-foreground">
                   {sector.sectorLabel} in {sector.stateName}
                 </p>
-                <p className="text-xs text-muted">{REASON_LABEL[transition.reason]}</p>
+                <p className="text-body-sm text-muted">{REASON_LABEL[transition.reason]}</p>
               </div>
               <SmallButton
                 disabled={busy}

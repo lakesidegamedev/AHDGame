@@ -217,11 +217,11 @@ export function NppEconomyAdminPanel() {
         >
           <div>
             <p
-              className={`text-sm font-semibold ${status.enabled ? "text-success" : "text-error"}`}
+              className={`text-body font-semibold ${status.enabled ? "text-success" : "text-error"}`}
             >
               NPP economy: {status.enabled ? "ON" : "OFF"}
             </p>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-body-sm text-muted mt-0.5">
               {status.enabled
                 ? `Fund generation runs each turn. Next action processing: turn ${status.nextProcessingTurn}.`
                 : "Fund generation and action processing are paused."}
@@ -230,7 +230,7 @@ export function NppEconomyAdminPanel() {
           <button
             onClick={() => handleToggle(!status.enabled)}
             disabled={toggling}
-            className={`text-xs px-4 py-2 rounded font-medium transition-colors disabled:opacity-50 ${
+            className={`text-body-sm px-4 py-2 rounded font-medium transition-colors disabled:opacity-50 ${
               status.enabled
                 ? "bg-error/20 text-error hover:bg-error/30"
                 : "bg-success/20 text-success hover:bg-success/30"
@@ -258,7 +258,7 @@ export function NppEconomyAdminPanel() {
               className="rounded-xl border border-card-border bg-card p-4 space-y-1"
             >
               <p className="text-body-sm font-medium text-muted">{card.label}</p>
-              <p className="text-lg font-semibold">{card.value}</p>
+              <p className="text-heading font-semibold">{card.value}</p>
             </div>
           ))}
         </div>
@@ -267,18 +267,21 @@ export function NppEconomyAdminPanel() {
       {/* V1 autonomy seeded-readiness diagnostic */}
       <NppV1ReadinessPanel />
 
-      <InlineError error={error} className="text-sm text-error bg-error/10 rounded-lg px-4 py-3" />
+      <InlineError
+        error={error}
+        className="text-body text-error bg-error/10 rounded-lg px-4 py-3"
+      />
       {actionError && (
-        <p className="text-sm text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
+        <p className="text-body text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
       )}
 
-      {loading && <div className="text-muted text-sm py-8 text-center">Loading…</div>}
+      {loading && <div className="text-muted text-body py-8 text-center">Loading…</div>}
 
       {!loading && npps.length > 0 && (
         <>
           {/* Per-country breakdown */}
           <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead className="bg-background/50">
                 <tr>
                   {["Country", "NPP Count", "Total Funds", "Avg Action Points"].map((h) => (
@@ -303,10 +306,10 @@ export function NppEconomyAdminPanel() {
 
           {/* AP histogram */}
           <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
-            <p className="text-sm font-medium">Action points distribution</p>
+            <p className="text-body font-medium">Action points distribution</p>
             <div className="space-y-2">
               {apBuckets.map((b) => (
-                <div key={b.label} className="flex items-center gap-3 text-xs">
+                <div key={b.label} className="flex items-center gap-3 text-body-sm">
                   <span className="w-14 text-muted text-right">{b.label}</span>
                   <div className="flex-1 h-5 bg-muted/10 rounded overflow-hidden">
                     <div
@@ -320,7 +323,7 @@ export function NppEconomyAdminPanel() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               {npps.filter((n) => n.actionPoints >= 100).length} at cap (100)
             </p>
           </div>
@@ -335,7 +338,7 @@ export function NppEconomyAdminPanel() {
                   setPartyFilter("all");
                   setPage(1);
                 }}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
                   countryFilter === c
                     ? "bg-primary text-primary-foreground"
                     : "bg-card border border-card-border text-muted hover:text-foreground"
@@ -346,7 +349,7 @@ export function NppEconomyAdminPanel() {
             ))}
             {partyPills.length > 0 && (
               <>
-                <span className="text-muted text-xs self-center">·</span>
+                <span className="text-muted text-body-sm self-center">·</span>
                 {partyPills.map((p) => (
                   <button
                     key={p}
@@ -354,7 +357,7 @@ export function NppEconomyAdminPanel() {
                       setPartyFilter(partyFilter === p ? "all" : p);
                       setPage(1);
                     }}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
                       partyFilter === p
                         ? "bg-primary text-primary-foreground"
                         : "bg-card border border-card-border text-muted hover:text-foreground"
@@ -370,7 +373,7 @@ export function NppEconomyAdminPanel() {
           {/* NPP table */}
           <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead className="bg-background/50">
                   <tr>
                     {[
@@ -398,13 +401,13 @@ export function NppEconomyAdminPanel() {
                       <tr className="hover:bg-background/40 transition-colors duration-150">
                         <td className="px-4 py-3">
                           <div className="font-medium">{npp.name}</div>
-                          <div className="text-xs text-muted">
+                          <div className="text-body-sm text-muted">
                             {npp.countryId}
                             {npp.currentOffice ? ` · ${npp.currentOffice}` : ""}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs">{npp.party}</td>
-                        <td className="px-4 py-3 text-xs">{npp.homeState}</td>
+                        <td className="px-4 py-3 text-body-sm">{npp.party}</td>
+                        <td className="px-4 py-3 text-body-sm">{npp.homeState}</td>
                         <td className="px-4 py-3">{fmt(npp.funds)}</td>
                         <td className="px-4 py-3">
                           <span
@@ -415,7 +418,7 @@ export function NppEconomyAdminPanel() {
                           </span>
                         </td>
                         <td className="px-4 py-3">{npp.donorBaseLevel}</td>
-                        <td className="px-4 py-3 text-xs text-muted">
+                        <td className="px-4 py-3 text-body-sm text-muted">
                           {npp.lastActionProcessedTurn != null
                             ? `T${npp.lastActionProcessedTurn}`
                             : "—"}
@@ -431,19 +434,19 @@ export function NppEconomyAdminPanel() {
                                 onChange={(e) =>
                                   setGrantFunds({ nppId: npp.id, amount: e.target.value })
                                 }
-                                className="w-24 rounded border border-card-border bg-background px-2 py-1 text-xs"
+                                className="w-24 rounded border border-card-border bg-background px-2 py-1 text-body-sm"
                                 placeholder="Amount"
                               />
                               <button
                                 onClick={handleGrantFunds}
                                 disabled={actionLoading === npp.id || !grantFunds.amount}
-                                className="text-xs px-2 py-1 rounded bg-success/20 text-success hover:bg-success/30 disabled:opacity-40"
+                                className="text-body-sm px-2 py-1 rounded bg-success/20 text-success hover:bg-success/30 disabled:opacity-40"
                               >
                                 Grant
                               </button>
                               <button
                                 onClick={() => setGrantFunds(null)}
-                                className="text-xs text-muted hover:text-foreground"
+                                className="text-body-sm text-muted hover:text-foreground"
                               >
                                 ✕
                               </button>
@@ -452,7 +455,7 @@ export function NppEconomyAdminPanel() {
                             <div className="flex gap-1 flex-wrap">
                               <button
                                 onClick={() => setGrantFunds({ nppId: npp.id, amount: "" })}
-                                className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                                className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                               >
                                 + Funds
                               </button>
@@ -464,7 +467,7 @@ export function NppEconomyAdminPanel() {
                                     nppName: npp.name,
                                   })
                                 }
-                                className="text-xs px-2 py-1 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
+                                className="text-body-sm px-2 py-1 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
                               >
                                 Reset AP
                               </button>
@@ -476,7 +479,7 @@ export function NppEconomyAdminPanel() {
                                     nppName: npp.name,
                                   })
                                 }
-                                className="text-xs px-2 py-1 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
+                                className="text-body-sm px-2 py-1 rounded border border-warning/40 text-warning hover:bg-warning/10 transition-colors"
                               >
                                 Drain
                               </button>
@@ -488,7 +491,7 @@ export function NppEconomyAdminPanel() {
                                     nppName: npp.name,
                                   })
                                 }
-                                className="text-xs px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
+                                className="text-body-sm px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
                               >
                                 Delete
                               </button>
@@ -509,7 +512,7 @@ export function NppEconomyAdminPanel() {
                             }`}
                           >
                             <div className="flex items-center gap-3 flex-wrap">
-                              <span className="text-sm">
+                              <span className="text-body">
                                 {confirm.type === "delete" ? (
                                   <>
                                     Permanently delete <strong>{confirm.nppName}</strong>? This
@@ -529,7 +532,7 @@ export function NppEconomyAdminPanel() {
                               <button
                                 onClick={handleConfirm}
                                 disabled={actionLoading === npp.id}
-                                className={`text-xs px-3 py-1 rounded font-medium disabled:opacity-50 ${
+                                className={`text-body-sm px-3 py-1 rounded font-medium disabled:opacity-50 ${
                                   confirm.type === "delete"
                                     ? "bg-error text-error-foreground hover:opacity-90"
                                     : "bg-warning text-warning-foreground hover:opacity-90"
@@ -539,7 +542,7 @@ export function NppEconomyAdminPanel() {
                               </button>
                               <button
                                 onClick={() => setConfirm(null)}
-                                className="text-xs text-muted hover:text-foreground"
+                                className="text-body-sm text-muted hover:text-foreground"
                               >
                                 Cancel
                               </button>
@@ -562,7 +565,7 @@ export function NppEconomyAdminPanel() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="border-t border-card-border bg-background/30 px-4 py-2 flex items-center gap-3 text-xs text-muted">
+              <div className="border-t border-card-border bg-background/30 px-4 py-2 flex items-center gap-3 text-body-sm text-muted">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}

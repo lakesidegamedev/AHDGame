@@ -12,6 +12,7 @@ import { STRATEGIC_REGIONS, groupRegionsByTheater, getRegion } from "@/lib/milit
 import { MAP_FILTERS } from "@/lib/military/config";
 import { coverageStatus, commandsOfRegion } from "@/lib/military/calc";
 import { SectionCard, Badge } from "../../dossier";
+import { pillClass } from "@/components/ui/selectedState";
 
 type Tone = "muted" | "gov" | "up" | "down" | "warning" | "info" | "success";
 
@@ -92,7 +93,7 @@ export function RegionAssignment({
         state.assignMode ? (
           <Badge tone="gov">◉ Assign mode · click to toggle</Badge>
         ) : (
-          <span className="text-[11px] text-muted">Click a region to inspect</span>
+          <span className="text-body-sm text-muted">Click a region to inspect</span>
         )
       }
     >
@@ -106,11 +107,7 @@ export function RegionAssignment({
               type="button"
               onClick={() => dispatch({ type: "SET_FILTER", filter: f.id })}
               aria-pressed={active}
-              className={`rounded-md border px-2 py-1 text-[10px] font-semibold tracking-wide ${
-                active
-                  ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] text-gov-soft"
-                  : "border-card-border text-muted hover:text-foreground"
-              }`}
+              className={`px-2 py-1 text-body-sm tracking-wide ${pillClass(active)}`}
             >
               {f.label}
             </button>
@@ -147,7 +144,7 @@ export function RegionAssignment({
                         : "border-card-border bg-card"
                     } ${d.dim ? "opacity-50" : ""}`}
                   >
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+                    <span className="min-w-0 flex-1 truncate text-body-sm font-medium text-foreground">
                       {star && <span className="mr-1 text-gov-soft">★</span>}
                       {r.name}
                     </span>
@@ -167,7 +164,7 @@ export function RegionAssignment({
           <div className="dossier-label mb-1.5 text-muted">Global scope · no map region</div>
           <div className="flex flex-wrap gap-1.5">
             {globalCmds.length === 0 ? (
-              <span className="text-[11px] text-muted">None</span>
+              <span className="text-body-sm text-muted">None</span>
             ) : (
               globalCmds.map((c) => (
                 <Badge key={c.id} tone="muted">
@@ -187,7 +184,7 @@ export function RegionAssignment({
         >
           <div className="mb-2 flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-foreground">{detail.name}</div>
+              <div className="truncate text-body font-semibold text-foreground">{detail.name}</div>
               <div className="dossier-label text-muted">
                 {detail.macro} · {detail.terrain}
               </div>
@@ -201,7 +198,7 @@ export function RegionAssignment({
               ✕
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-1 text-[12px] sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-1 text-body-sm sm:grid-cols-2">
             {(
               [
                 ["Infra", String(detail.infra)],
@@ -220,7 +217,7 @@ export function RegionAssignment({
               </div>
             ))}
           </div>
-          <div className="mt-2 text-[11px] text-muted">
+          <div className="mt-2 text-body-sm text-muted">
             Assigned to:{" "}
             {commandsOfRegion(state, detail.id).length
               ? commandsOfRegion(state, detail.id)
@@ -234,7 +231,7 @@ export function RegionAssignment({
               onClick={() =>
                 dispatch({ type: "TOGGLE_REGION", commandId: selected.id, regionId: detail.id })
               }
-              className={`mt-2 w-full rounded-lg border px-3 py-2 text-[12px] font-semibold ${
+              className={`mt-2 w-full rounded-lg border px-3 py-2 text-body-sm font-semibold ${
                 selected.regionIds.includes(detail.id)
                   ? "border-warning/50 text-warning"
                   : "border-[var(--gov)] bg-[var(--gov)] text-[#1a1200]"
@@ -245,7 +242,7 @@ export function RegionAssignment({
                 : `Assign to ${selected.name}`}
             </button>
           ) : canWrite ? (
-            <div className="mt-2 text-[11px] text-muted">
+            <div className="mt-2 text-body-sm text-muted">
               Select a command to assign this region.
             </div>
           ) : null}

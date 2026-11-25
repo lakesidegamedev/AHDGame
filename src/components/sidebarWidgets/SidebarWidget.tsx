@@ -71,14 +71,14 @@ function Frame({ icon, title, href, openLabel, compact, onNavigate, children }: 
     >
       <header className="mb-2 flex items-center gap-2">
         <PixelNavIcon name={icon} className="h-4 w-4 shrink-0 text-muted" />
-        <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-fg-2">
+        <h3 className="min-w-0 flex-1 truncate text-body-lg font-semibold uppercase tracking-wide text-fg-2">
           {title}
         </h3>
         {href && (
           <Link
             href={href}
             onClick={onNavigate}
-            className="shrink-0 text-xs font-medium text-muted hover:text-foreground hover:underline"
+            className="shrink-0 text-body-sm font-medium text-muted hover:text-foreground hover:underline"
           >
             {openLabel}
             <span aria-hidden="true"> ›</span>
@@ -119,7 +119,7 @@ function StaffBody({ data, onNavigate }: { data: StaffQueuesWidgetData; onNaviga
           <Link
             href={row.href}
             onClick={onNavigate}
-            className="flex items-center justify-between gap-2 rounded px-1 py-1.5 text-xs hover:bg-white/5"
+            className="flex items-center justify-between gap-2 rounded px-1 py-1.5 text-body-sm hover:bg-white/5"
           >
             <span className="text-foreground">{row.label}</span>
             <span

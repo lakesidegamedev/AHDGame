@@ -80,31 +80,31 @@ function CandidateRow({
         aria-hidden
       />
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <span className="min-w-0 truncate text-base text-foreground">
+        <span className="min-w-0 truncate text-body-lg text-foreground">
           {row.name}
           {row.isYou && <span className="text-muted"> (you)</span>}
         </span>
         {row.isWinner && (
-          <span className="shrink-0 whitespace-nowrap rounded bg-warning/20 px-1.5 py-px text-[10px] font-bold tracking-wider text-warning">
+          <span className="shrink-0 whitespace-nowrap rounded bg-warning/20 px-1.5 py-px text-body-sm font-bold tracking-wider text-warning">
             WINNER
           </span>
         )}
       </span>
-      <span className="w-9 shrink-0 text-right text-[10px] font-extrabold tracking-widest text-muted">
+      <span className="w-9 shrink-0 text-right text-body-sm font-extrabold tracking-widest text-muted">
         {row.partyAbbr}
       </span>
-      <span className="w-14 shrink-0 text-right text-lg font-bold tabular-nums text-foreground">
+      <span className="w-14 shrink-0 text-right text-heading font-bold tabular-nums text-foreground">
         {row.pctStr}%
       </span>
       {showSeats && (
-        <span className="w-10 shrink-0 text-right text-[17px] font-bold tabular-nums text-foreground">
+        <span className="w-10 shrink-0 text-right text-body-lg font-bold tabular-nums text-foreground">
           {row.seatsCell}
         </span>
       )}
       {showDelta && (
         <span
           title="Change in vote share since the previous turn"
-          className={`w-10 shrink-0 text-right text-[11px] tabular-nums ${
+          className={`w-10 shrink-0 text-right text-body-sm tabular-nums ${
             row.deltaPts === null
               ? "text-muted/60"
               : row.deltaPts > 0
@@ -139,7 +139,7 @@ export function BlendRaceCard({
         className={`flex items-center gap-2.5 border-b border-card-border px-4 py-3 ${chipBackground(card.phase)}`}
       >
         <span
-          className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] ${chipClasses(card.phase)}`}
+          className={`shrink-0 rounded border px-1.5 py-0.5 text-body-sm font-black uppercase tracking-[0.16em] ${chipClasses(card.phase)}`}
         >
           {card.callTag}
         </span>
@@ -147,7 +147,7 @@ export function BlendRaceCard({
           {card.title}
         </span>
         {card.seatLine && (
-          <span className="shrink-0 text-[11px] font-bold tabular-nums text-muted">
+          <span className="shrink-0 text-body-sm font-bold tabular-nums text-muted">
             {card.seatLine}
           </span>
         )}
@@ -156,10 +156,10 @@ export function BlendRaceCard({
       <div className="px-4 pb-4 pt-[18px]">
         {/* ── Editorial count: kicker, verdict, standfirst ── */}
         <div className="text-body-sm font-medium text-muted">{card.kicker}</div>
-        <h3 className="mt-1.5 text-2xl font-bold leading-[1.18] tracking-tight text-foreground">
+        <h3 className="mt-1.5 text-body-lg font-bold leading-[1.18] tracking-tight text-foreground">
           {card.verdict}
         </h3>
-        <p className="mt-2.5 text-[15px] leading-relaxed text-muted">{card.standfirst}</p>
+        <p className="mt-2.5 text-body leading-relaxed text-muted">{card.standfirst}</p>
 
         {card.meta.length > 0 && (
           <div className="mt-4 flex flex-wrap items-baseline gap-x-[18px] gap-y-1.5 border-b border-card-border/80 pb-2.5">
@@ -168,11 +168,11 @@ export function BlendRaceCard({
                 <span className="whitespace-nowrap text-body-sm font-medium font-black text-muted">
                   {chip.key}
                 </span>
-                <span className="text-sm font-black tabular-nums text-foreground">
+                <span className="text-body font-black tabular-nums text-foreground">
                   {chip.value}
                 </span>
                 {chip.sub && (
-                  <span className="text-[10px] tabular-nums text-muted">{chip.sub}</span>
+                  <span className="text-body-sm tabular-nums text-muted">{chip.sub}</span>
                 )}
               </div>
             ))}
@@ -190,13 +190,13 @@ export function BlendRaceCard({
                     style={{ background: group.color }}
                     aria-hidden
                   />
-                  <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                  <span className="text-body-sm font-semibold text-foreground">{group.label}</span>
                   <div className="flex-1" />
                   {/* Ballots accrue only over the primary's closing window and
                       only where the region has registration data, so the count
                       appears where one genuinely exists. */}
                   {group.partyVotes > 0 && (
-                    <span className="whitespace-nowrap text-[10px] tabular-nums text-muted">
+                    <span className="whitespace-nowrap text-body-sm tabular-nums text-muted">
                       {group.partyVotesStr} primary votes
                     </span>
                   )}
@@ -211,23 +211,23 @@ export function BlendRaceCard({
                       style={{ background: row.color }}
                       aria-hidden
                     />
-                    <span className="min-w-0 flex-1 truncate text-base text-foreground">
+                    <span className="min-w-0 flex-1 truncate text-body-lg text-foreground">
                       {row.name}
                       {row.isYou && <span className="text-muted"> (you)</span>}
                     </span>
                     {row.votes > 0 && (
-                      <span className="w-[76px] shrink-0 text-right text-[11px] tabular-nums text-muted">
+                      <span className="w-[76px] shrink-0 text-right text-body-sm tabular-nums text-muted">
                         {row.votesStr}
                       </span>
                     )}
-                    <span className="w-[66px] shrink-0 text-right text-[19px] font-bold tabular-nums text-foreground">
+                    <span className="w-[66px] shrink-0 text-right text-heading font-bold tabular-nums text-foreground">
                       {row.pctStr}%
                     </span>
                   </div>
                 ))}
               </div>
             ))}
-            <p className="text-[11px] leading-snug text-muted/70">
+            <p className="text-body-sm leading-snug text-muted/70">
               Each figure is a share of that party&apos;s own primary vote, not of the regional
               total.
             </p>
@@ -252,20 +252,20 @@ export function BlendRaceCard({
                       style={{ background: row.color }}
                       aria-hidden
                     />
-                    <span className="text-sm font-bold text-foreground">
+                    <span className="text-body font-bold text-foreground">
                       {row.name}
                       {row.isYou && <span className="text-muted"> (you)</span>}
                     </span>
-                    <span className="text-[10px] font-extrabold tracking-wider text-muted">
+                    <span className="text-body-sm font-extrabold tracking-wider text-muted">
                       {row.partyAbbr}
                     </span>
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-[11px] text-muted/70">No candidates have filed yet.</p>
+              <p className="text-body-sm text-muted/70">No candidates have filed yet.</p>
             )}
-            <div className="text-[11px] text-muted/70">Filing is open, no ballots cast yet.</div>
+            <div className="text-body-sm text-muted/70">Filing is open, no ballots cast yet.</div>
           </div>
         )}
 
@@ -278,7 +278,7 @@ export function BlendRaceCard({
                   <div
                     key={`${seg.title}-${i}`}
                     title={seg.title}
-                    className="flex items-center justify-center overflow-hidden text-[11px] font-black text-background"
+                    className="flex items-center justify-center overflow-hidden text-body-sm font-black text-background"
                     style={{ width: `${seg.widthPct}%`, background: seg.color }}
                   >
                     {seg.label}
@@ -287,7 +287,7 @@ export function BlendRaceCard({
               </div>
             )}
 
-            <div className="mt-0.5 flex items-baseline gap-2 border-b border-card-border px-0 pb-1.5 pt-3.5 text-sm font-semibold text-foreground">
+            <div className="mt-0.5 flex items-baseline gap-2 border-b border-card-border px-0 pb-1.5 pt-3.5 text-body font-semibold text-foreground">
               <span className="w-2 shrink-0" aria-hidden />
               <span className="min-w-0 flex-1">Candidate</span>
               <span className="w-9 shrink-0 text-right">Party</span>
@@ -320,7 +320,7 @@ export function BlendRaceCard({
           <div className="mt-3">
             <Link
               href={card.href}
-              className="block text-xs font-medium text-primary hover:underline"
+              className="block text-body-sm font-medium text-primary hover:underline"
             >
               {card.omittedLabel}
             </Link>
@@ -331,7 +331,7 @@ export function BlendRaceCard({
       {/* ── Footer: the clock, and the way through to the full count ── */}
       <div className="mt-auto flex items-center gap-2.5 border-t border-card-border bg-card-muted px-4 py-2.5">
         <span className="text-body-sm font-medium text-muted">{closed ? "Closed" : "Closes"}</span>
-        <span className={`text-xs font-semibold ${closed ? "text-success" : "text-warning"}`}>
+        <span className={`text-body-sm font-semibold ${closed ? "text-success" : "text-warning"}`}>
           {closed ? "Result certified" : (closesIn ?? "—")}
         </span>
         <div className="flex-1" />
@@ -340,7 +340,7 @@ export function BlendRaceCard({
             type="button"
             onClick={() => onWithdraw(card.electionId)}
             disabled={entryLoading}
-            className="rounded-md border border-error/50 bg-error/10 px-2.5 py-1 text-[11px] font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+            className="rounded-md border border-error/50 bg-error/10 px-2.5 py-1 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
           >
             {entryLoading ? "Processing..." : "Withdraw"}
           </button>
@@ -350,14 +350,14 @@ export function BlendRaceCard({
             type="button"
             onClick={() => onEnterRace(card.electionId)}
             disabled={entryLoading}
-            className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-md bg-primary px-2.5 py-1 text-body-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {entryLoading ? "Joining..." : "Enter race"}
           </button>
         )}
         <Link
           href={card.href}
-          className="border-b border-primary pb-0.5 text-sm text-primary transition-colors hover:border-primary/60 hover:text-primary/80"
+          className="border-b border-primary pb-0.5 text-body text-primary transition-colors hover:border-primary/60 hover:text-primary/80"
         >
           Read the full count &rarr;
         </Link>

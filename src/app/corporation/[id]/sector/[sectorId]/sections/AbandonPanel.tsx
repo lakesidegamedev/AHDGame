@@ -35,14 +35,14 @@ export default function AbandonPanel({
       <div className="rounded-xl border border-error/20 bg-error/5 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-error">Abandon sector</h3>
-            <p className="text-xs text-muted mt-0.5">
+            <h3 className="text-body-lg font-semibold text-error">Abandon sector</h3>
+            <p className="text-body-sm text-muted mt-0.5">
               An NPP operator takes over most of its built plants. This cannot be undone.
             </p>
           </div>
           <button
             onClick={onShowConfirm}
-            className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20"
+            className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-body font-medium text-error transition-colors hover:bg-error/20"
           >
             Abandon
           </button>
@@ -54,15 +54,15 @@ export default function AbandonPanel({
   return (
     <div className="rounded-xl border border-error/20 bg-error/5 p-6">
       <div className="space-y-3">
-        <p className="text-sm text-error font-medium">
+        <p className="text-body text-error font-medium">
           Abandon {sector.sectorLabel} in {sector.stateName}?
         </p>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {financials
             ? `You give up ${fmtMoney(settledSectorRevenuePerTurn(financials))}/turn in revenue, the settled figure on the sector overview.`
             : "This cannot be undone."}
         </p>
-        <ul className="list-disc space-y-1 pl-4 text-xs text-muted">
+        <ul className="list-disc space-y-1 pl-4 text-body-sm text-muted">
           <li>
             Cash: abandoning pays nothing for built plants. Build orders not yet delivered are
             cancelled and refunded at 75% of what you paid.
@@ -82,14 +82,14 @@ export default function AbandonPanel({
           <button
             onClick={onConfirm}
             disabled={abandoning}
-            className="rounded-lg bg-error px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error/90 disabled:opacity-50"
+            className="rounded-lg bg-error px-4 py-2 text-body font-medium text-white transition-colors hover:bg-error/90 disabled:opacity-50"
           >
             {abandoning ? "Abandoning..." : "Confirm abandon"}
           </button>
           <button
             onClick={onCancel}
             disabled={abandoning}
-            className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+            className="rounded-lg border border-card-border px-4 py-2 text-body font-medium text-muted transition-colors hover:text-foreground"
           >
             Cancel
           </button>

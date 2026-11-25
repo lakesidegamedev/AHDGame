@@ -13,7 +13,7 @@ export function TrackingPoll({ history }: { history: PollPoint[] }) {
   const d = buildPollPath(history, W, H);
   if (!d) {
     return (
-      <div className="flex h-[180px] items-center justify-center rounded-xl border border-dashed border-card-border text-sm text-muted">
+      <div className="flex h-[180px] items-center justify-center rounded-xl border border-dashed border-card-border text-body text-muted">
         Tracking poll opens once the campaign has polled for a few turns.
       </div>
     );
@@ -60,7 +60,7 @@ export function TrackingPoll({ history }: { history: PollPoint[] }) {
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <div className="mt-1 flex items-center justify-between text-[11px] text-muted">
+      <div className="mt-1 flex items-center justify-between text-body-sm text-muted">
         <span>Campaign open</span>
         <span className="text-[var(--ref-amber)]">50% to pass</span>
         <span>Now</span>

@@ -35,8 +35,8 @@ export function HealDroppedNppParties() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal dropped NPP parties</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal dropped NPP parties</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Restores party affiliations for system-generated NPPs that incorrectly became
           independents. Uses policy positions to infer the correct party.
         </p>
@@ -51,7 +51,7 @@ export function HealDroppedNppParties() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-3 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-3 text-body-sm">
           {diagnostic.status === "ok" ? (
             <p className="text-success">{diagnostic.message}</p>
           ) : (
@@ -74,7 +74,7 @@ export function HealDroppedNppParties() {
                       <span className="text-success font-medium">{npp.inferredPartyName}</span>
                     </div>
                     {npp.currentOffice && (
-                      <div className="text-[10px] text-muted mt-0.5">
+                      <div className="text-body-sm text-muted mt-0.5">
                         Office: {npp.currentOffice}
                       </div>
                     )}
@@ -82,7 +82,7 @@ export function HealDroppedNppParties() {
                 ))}
               </div>
               {diagnostic.totalAffected > 100 && (
-                <p className="text-muted text-[10px]">
+                <p className="text-muted text-body-sm">
                   Showing first 100 of {diagnostic.totalAffected} affected NPPs.
                 </p>
               )}

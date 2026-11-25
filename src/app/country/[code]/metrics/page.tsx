@@ -145,7 +145,7 @@ function InterestRateMiniChart({ history }: { history: { turn: number; rate: num
           className="text-primary"
         />
       </svg>
-      <div className="shrink-0 text-[10px] tabular-nums text-muted">{history.length} turns</div>
+      <div className="shrink-0 text-body-sm tabular-nums text-muted">{history.length} turns</div>
     </div>
   );
 }
@@ -405,7 +405,7 @@ export default function MetricsPage() {
       <main className="mx-auto max-w-7xl overflow-x-hidden px-4 py-8 sm:px-6">
         {/* Breadcrumb */}
         {runtimeGovType !== "presidential" && (
-          <nav className="mb-3 flex items-center gap-2 text-xs text-muted">
+          <nav className="mb-3 flex items-center gap-2 text-body-sm text-muted">
             <Link
               href={`/country/${config.code.toLowerCase()}`}
               className="transition-colors hover:text-foreground"
@@ -429,7 +429,7 @@ export default function MetricsPage() {
             <p className="text-red-400">{error}</p>
             <button
               onClick={fetchMetrics}
-              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+              className="mt-4 rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
             >
               Try again
             </button>
@@ -470,9 +470,9 @@ export default function MetricsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveCategory(tab.id)}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                    className={`rounded-lg px-4 py-2 text-body font-medium transition-all ${
                       activeCategory === tab.id
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card-muted text-muted hover:bg-card-elevated hover:text-foreground"
                     }`}
                   >
@@ -487,7 +487,7 @@ export default function MetricsPage() {
               <div className="flex justify-end">
                 <Link
                   href={economyUrl(country)}
-                  className="text-xs font-semibold text-primary hover:underline"
+                  className="text-body-sm font-semibold text-primary hover:underline"
                 >
                   Full economic outlook &rarr;
                 </Link>
@@ -503,17 +503,17 @@ export default function MetricsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-muted">
+                      <h3 className="text-body-lg font-semibold text-muted">
                         Interest rate ({centralBankData.abbreviation})
                       </h3>
-                      <div className="mt-1 text-2xl font-bold tabular-nums text-foreground">
+                      <div className="mt-1 text-heading font-bold tabular-nums text-foreground">
                         {(centralBankData.primeRate ?? 0).toFixed(2)}%
                       </div>
-                      <p className="mt-1 text-xs text-muted">
+                      <p className="mt-1 text-body-sm text-muted">
                         {centralBankData.bankName} prime rate
                       </p>
                     </div>
-                    <span className="flex items-center gap-1 text-xs font-medium text-primary">
+                    <span className="flex items-center gap-1 text-body-sm font-medium text-primary">
                       View {centralBankData.abbreviation}
                     </span>
                   </div>
@@ -530,9 +530,9 @@ export default function MetricsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-muted">Inflation rate</h3>
+                      <h3 className="text-body-lg font-semibold text-muted">Inflation rate</h3>
                       <div
-                        className={`mt-1 text-2xl font-bold tabular-nums ${
+                        className={`mt-1 text-heading font-bold tabular-nums ${
                           (centralBankData.currentInflation ?? 0) > 4
                             ? "text-error"
                             : (centralBankData.currentInflation ?? 0) > 3
@@ -542,9 +542,11 @@ export default function MetricsPage() {
                       >
                         {(centralBankData.currentInflation ?? 0).toFixed(2)}%
                       </div>
-                      <p className="mt-1 text-xs text-muted">Annual, updated each fiscal year</p>
+                      <p className="mt-1 text-body-sm text-muted">
+                        Annual, updated each fiscal year
+                      </p>
                     </div>
-                    <span className="flex items-center gap-1 text-xs font-medium text-primary">
+                    <span className="flex items-center gap-1 text-body-sm font-medium text-primary">
                       Trends
                     </span>
                   </div>
@@ -582,13 +584,13 @@ export default function MetricsPage() {
           <div className="mt-8 flex items-center gap-3 border-t border-card-border/40 pt-4">
             <Link
               href={`/country/${config.code.toLowerCase()}`}
-              className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+              className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted transition-colors hover:text-foreground"
             >
               ← {config.name} Overview
             </Link>
             <Link
               href={config.mapPath}
-              className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+              className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted transition-colors hover:text-foreground"
             >
               {config.regionLabel} Map
             </Link>

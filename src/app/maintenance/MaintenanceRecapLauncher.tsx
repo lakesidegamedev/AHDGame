@@ -20,7 +20,7 @@ export function MaintenanceRecapLauncher({ recap }: { recap: CharacterRecap }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-bold text-white shadow-lg transition-transform hover:scale-[1.03]"
+        className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-body font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.03]"
       >
         ✨ Watch your {season} Wrapped
       </button>

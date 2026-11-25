@@ -24,7 +24,7 @@ export function NPPsList({
 
   return (
     <section className="min-w-0 rounded-xl border border-purple-500/30 bg-purple-500/5 p-5 sm:p-6">
-      <h2 className="mb-3 text-heading-sm font-semibold text-foreground">Non-player politicians</h2>
+      <h2 className="mb-3 text-heading font-semibold text-foreground">Non-player politicians</h2>
       <div className={`overflow-x-auto overflow-y-auto ${!nppsExpanded ? "max-h-60" : ""}`}>
         <div className="flex items-center border-b border-purple-500/20 py-2 text-body-sm text-muted">
           <div className="flex-1">Name</div>

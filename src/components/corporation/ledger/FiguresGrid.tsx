@@ -69,18 +69,18 @@ export function FiguresGrid({
             c.lead ? "bg-card md:row-span-2 md:justify-center" : "bg-background"
           } ${i === cells.length - 1 && !c.lead ? lastSpan : ""}`}
         >
-          <dt className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+          <dt className="truncate text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
             {c.label}
           </dt>
           <dd
             className={`m-0 truncate font-mono font-semibold tabular-nums text-foreground ${
-              c.lead ? "text-3xl tracking-tight" : "text-lg"
+              c.lead ? "text-display tracking-tight" : "text-heading"
             }`}
           >
             {c.value}
           </dd>
           {c.meter}
-          {c.sub != null && <dd className="m-0 text-xs text-muted">{c.sub}</dd>}
+          {c.sub != null && <dd className="m-0 text-body-sm text-muted">{c.sub}</dd>}
         </div>
       ))}
     </dl>

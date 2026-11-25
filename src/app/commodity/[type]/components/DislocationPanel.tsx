@@ -113,7 +113,7 @@ export default function DislocationPanel({
   const stateRow = (id: string, right: string) => {
     const countryId = stateCountryMap[id] as CountryId;
     return (
-      <li key={id} className="flex items-center justify-between gap-2 py-0.5 text-xs">
+      <li key={id} className="flex items-center justify-between gap-2 py-0.5 text-body-sm">
         <span className="flex items-center gap-1.5 text-foreground">
           <CountryFlag country={countryId} size="sm" />
           {getStateDisplayName(countryId, id)}
@@ -125,15 +125,17 @@ export default function DislocationPanel({
 
   return (
     <div className="mb-6 rounded-xl border border-card-border bg-card p-4">
-      <h3 className="text-sm font-semibold text-foreground">Where this market is out of balance</h3>
-      <p className="mt-0.5 text-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-foreground">
+        Where this market is out of balance
+      </h3>
+      <p className="mt-0.5 text-body-sm text-muted">
         Shipping costs money, so one map can be short in one state and cheap in another. Short
         states pay more for every unit; cheap states have more on offer than local buyers order.
       </p>
       <div className="mt-3 grid gap-4">
         {short.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-foreground">Short: buyers pay a premium</p>
+            <p className="text-body-sm font-medium text-foreground">Short: buyers pay a premium</p>
             <ul className="mt-1 divide-y divide-card-border/60">
               {short.map((s) => stateRow(s.id, `${priceLabel(s.id)}${shortDetail(s.id)}`))}
             </ul>
@@ -141,10 +143,10 @@ export default function DislocationPanel({
         )}
         {stranded.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-foreground">
+            <p className="text-body-sm font-medium text-foreground">
               Cheap: more offered than local buyers order
             </p>
-            <p className="text-[10px] text-muted">
+            <p className="text-body-sm text-muted">
               The extra can still ship to other states or abroad, at lower margins.
             </p>
             <ul className="mt-1 divide-y divide-card-border/60">
@@ -156,7 +158,7 @@ export default function DislocationPanel({
         )}
         {room.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-foreground">Deposits with room to grow</p>
+            <p className="text-body-sm font-medium text-foreground">Deposits with room to grow</p>
             <ul className="mt-1 divide-y divide-card-border/60">
               {room.map((s) => stateRow(s.id, `${formatUnits(s.headroom, unit)}/turn free`))}
             </ul>

@@ -62,7 +62,7 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
   if (state.kind === "loading") {
     return (
       <div className="rounded-lg border border-card-border bg-card p-4">
-        <h3 className="text-sm font-semibold text-foreground">{heading}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{heading}</h3>
         <div className="mt-2 min-h-[160px]">
           <div className="flex items-baseline gap-2">
             <Skeleton className="h-8 w-16" />
@@ -105,12 +105,14 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
 
   return (
     <div className="rounded-lg border border-card-border bg-card p-4">
-      <h3 className="text-sm font-semibold text-foreground">{heading}</h3>
+      <h3 className="text-body-lg font-semibold text-foreground">{heading}</h3>
       <div className="mt-2 flex items-baseline gap-2">
-        <span className={`text-2xl font-bold tabular-nums ${ratioColor}`}>{ratio.toFixed(2)}</span>
-        <span className="text-xs text-muted">demand ratio</span>
+        <span className={`text-heading font-bold tabular-nums ${ratioColor}`}>
+          {ratio.toFixed(2)}
+        </span>
+        <span className="text-body-sm text-muted">demand ratio</span>
       </div>
-      <p className="mt-1 text-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         {ratio >= 1.0
           ? "Full subscription expected"
           : ratio >= 0.7
@@ -119,24 +121,24 @@ export function BondMarketDemandWidget({ countryCode, countryLabel }: Props) {
       </p>
       {dsa ? (
         <div className="mt-2 flex items-baseline justify-between border-t border-card-border pt-2">
-          <span className="text-xs text-muted">Sustainability index</span>
-          <span className={`text-sm font-bold tabular-nums ${dsaColor}`}>
+          <span className="text-body-sm text-muted">Sustainability index</span>
+          <span className={`text-body font-bold tabular-nums ${dsaColor}`}>
             {dsa.score.toFixed(0)} / 100{" "}
-            <span className="ml-1 text-xs font-normal text-muted">
+            <span className="ml-1 text-body-sm font-normal text-muted">
               ({dsa.band === "crisis" ? "severe risk" : dsa.band})
             </span>
           </span>
         </div>
       ) : null}
       {crisisState && (
-        <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-muted">
+        <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-body-sm text-muted">
           <span>{CRISIS_STATUS[crisisState]}</span>
           {consecutiveFailedAuctions != null && (
             <span>Consecutive failed auctions {consecutiveFailedAuctions}</span>
           )}
         </div>
       )}
-      <table className="mt-3 w-full text-xs">
+      <table className="mt-3 w-full text-body-sm">
         <tbody>
           {demand.components.map((c) => (
             <tr key={c.id} className="border-t border-card-border">

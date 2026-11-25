@@ -101,11 +101,11 @@ export default function AppointPMModal({
   return (
     <Modal open={open} title={`Nominate a ${executiveTitle}`} onClose={onClose}>
       {loadingCandidates ? (
-        <p className="mb-4 text-sm text-muted">Loading candidates…</p>
+        <p className="mb-4 text-body text-muted">Loading candidates…</p>
       ) : error ? (
-        <p className="mb-4 text-sm text-error">{error}</p>
+        <p className="mb-4 text-body text-error">{error}</p>
       ) : candidates.length === 0 ? (
-        <p className="mb-4 text-sm text-muted italic">
+        <p className="mb-4 text-body text-muted italic">
           No eligible candidates available at this time.
         </p>
       ) : (
@@ -113,7 +113,7 @@ export default function AppointPMModal({
           <select
             value={selectedId ?? ""}
             onChange={(e) => setSelectedId(e.target.value || null)}
-            className="w-full rounded-lg border border-card-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-card-border bg-background px-4 py-3 text-body text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">Select a candidate…</option>
             {candidates.map((c) => (
@@ -127,7 +127,7 @@ export default function AppointPMModal({
       )}
 
       {error && !loadingCandidates && candidates.length > 0 && (
-        <p className="mb-3 text-sm text-error">{error}</p>
+        <p className="mb-3 text-body text-error">{error}</p>
       )}
 
       <div className="flex gap-2">
@@ -135,7 +135,7 @@ export default function AppointPMModal({
           type="button"
           onClick={onClose}
           disabled={submitting}
-          className="flex-1 rounded-lg border border-card-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted/10 disabled:opacity-50"
+          className="flex-1 rounded-lg border border-card-border bg-background px-4 py-2 text-body font-medium hover:bg-muted/10 disabled:opacity-50"
         >
           Cancel
         </button>
@@ -143,7 +143,7 @@ export default function AppointPMModal({
           type="button"
           onClick={handleNominate}
           disabled={!selectedId || submitting || loadingCandidates}
-          className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {submitting ? "Nominating…" : "Nominate"}
         </button>

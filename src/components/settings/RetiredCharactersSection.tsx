@@ -68,14 +68,14 @@ export function RetiredCharactersSection() {
     return (
       <div className="flex items-center gap-3 py-4">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="text-sm text-muted">Loading retired characters...</span>
+        <span className="text-body text-muted">Loading retired characters...</span>
       </div>
     );
   }
 
   if (retired.length === 0) {
     return (
-      <p className="text-sm text-muted py-2">
+      <p className="text-body text-muted py-2">
         No retired characters. When you retire a character, their record will appear here.
       </p>
     );
@@ -83,7 +83,7 @@ export function RetiredCharactersSection() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         Your previously retired characters are preserved as historical records.
       </p>
       {retired.map((rc) => {
@@ -116,7 +116,7 @@ export function RetiredCharactersSection() {
                     unoptimized={bypassNextImageOptimization(snap.avatarUrl)}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-muted text-lg font-semibold">
+                  <div className="flex h-full w-full items-center justify-center text-muted text-heading font-semibold">
                     {snap.name.charAt(0)}
                   </div>
                 )}
@@ -125,9 +125,9 @@ export function RetiredCharactersSection() {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm font-semibold text-foreground">{snap.name}</h4>
+                  <h4 className="text-body font-semibold text-foreground">{snap.name}</h4>
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${reasonInfo.color}`}
+                    className={`rounded-full border px-2 py-0.5 text-body-sm font-semibold ${reasonInfo.color}`}
                   >
                     {reasonInfo.label}
                   </span>
@@ -135,26 +135,28 @@ export function RetiredCharactersSection() {
                     <button
                       type="button"
                       onClick={() => setOpenRecap(rc.recap ?? null)}
-                      className="pointer-events-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/20"
+                      className="pointer-events-auto rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-body-sm font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/20"
                     >
                       ✨ Wrapped
                     </button>
                   ) : null}
                 </div>
-                <p className="text-xs text-muted mt-0.5">
+                <p className="text-body-sm text-muted mt-0.5">
                   {snap.partyName} &middot; {displayCanadianRegionCode(snap.homeState)},{" "}
                   {snap.countryId}
                 </p>
                 {snap.highestOffice && (
-                  <p className="text-xs text-muted mt-0.5">Highest office: {snap.highestOffice}</p>
+                  <p className="text-body-sm text-muted mt-0.5">
+                    Highest office: {snap.highestOffice}
+                  </p>
                 )}
-                <p className="text-xs text-muted mt-1">
+                <p className="text-body-sm text-muted mt-1">
                   <LocalTime value={snap.createdAt} options={DATE_LABEL_OPTIONS} /> &mdash;{" "}
                   <LocalTime value={rc.retiredAt} options={DATE_LABEL_OPTIONS} />
                 </p>
 
                 {/* Stats row */}
-                <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted">
+                <div className="flex flex-wrap gap-3 mt-2 text-body-sm text-muted">
                   <span>
                     Influence:{" "}
                     <span className="font-medium text-foreground">

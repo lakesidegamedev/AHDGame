@@ -46,7 +46,7 @@ export function CentralBankHeader({
 
       <div className="flex flex-col gap-4 px-5 pt-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
         <div className="min-w-0">
-          <h1 className="break-words text-display font-bold tracking-tight text-foreground sm:text-[2.25rem] sm:leading-tight">
+          <h1 className="break-words text-display font-bold tracking-tight text-foreground sm:text-display sm:leading-tight">
             {identity.title}
             {identity.titleEn && (
               <span className="ml-3 align-middle text-heading font-semibold text-muted">
@@ -63,9 +63,7 @@ export function CentralBankHeader({
         </div>
         <div className="shrink-0 sm:text-right">
           <div className="text-body-sm text-muted">Prime rate</div>
-          <div className="text-heading-lg font-semibold tabular-nums text-foreground">
-            {primeRate}
-          </div>
+          <div className="text-heading font-semibold tabular-nums text-foreground">{primeRate}</div>
         </div>
       </div>
 

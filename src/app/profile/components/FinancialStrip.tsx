@@ -600,7 +600,7 @@ function Figure({
           <span className="text-body-sm text-muted">
             {label}
             {expandable && (
-              <span aria-hidden className="ml-1.5 text-body-xs">
+              <span aria-hidden className="ml-1.5 text-body-sm">
                 {open ? "\u25B2" : "\u25BC"}
               </span>
             )}

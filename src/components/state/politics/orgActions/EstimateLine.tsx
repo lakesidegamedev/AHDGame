@@ -38,7 +38,7 @@ export function EstimateLine({
     ? ` · ${CURRENCY_SYMBOLS[costCash.currencyCode as keyof typeof CURRENCY_SYMBOLS] ?? "$"}${Math.round(costCash.amount).toLocaleString("en-US")}`
     : "";
   return (
-    <span className={`block text-[10px] font-medium tabular-nums ${color}`}>
+    <span className={`block text-body-sm font-medium tabular-nums ${color}`}>
       {label ? `${label}: ` : ""}Est. {costPS.toFixed(0)} PS{cash} · {gain.sign}
       {gain.value.toFixed(2)} {gain.unit}
       {suffix ? ` ${suffix}` : ""}

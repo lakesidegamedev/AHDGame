@@ -75,14 +75,16 @@ export function DistrictCardGrid({
 
   if (districts.length === 0) {
     return (
-      <div className="rounded-lg border border-card-border bg-card px-4 py-6 text-center text-sm text-muted">
+      <div className="rounded-lg border border-card-border bg-card px-4 py-6 text-center text-body text-muted">
         <p>District data hasn&apos;t been generated for this state yet.</p>
         {isAdmin ? (
-          <p className="mt-1 text-xs">
+          <p className="mt-1 text-body-sm">
             Run the seed or trigger redistricting from the admin panel to populate districts.
           </p>
         ) : (
-          <p className="mt-1 text-xs">Ask an admin to run the seed or trigger redistricting.</p>
+          <p className="mt-1 text-body-sm">
+            Ask an admin to run the seed or trigger redistricting.
+          </p>
         )}
       </div>
     );
@@ -93,12 +95,12 @@ export function DistrictCardGrid({
       <DistrictCompositionSummary districts={squares} caps={caps} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="flex items-center gap-2 text-xs text-muted">
+        <label className="flex items-center gap-2 text-body-sm text-muted">
           Sort
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortMode)}
-            className="rounded-md border border-card-border bg-card px-2 py-1 text-xs text-foreground"
+            className="rounded-md border border-card-border bg-card px-2 py-1 text-body-sm text-foreground"
           >
             {SORTS.map((s) => (
               <option key={s.id} value={s.id}>
@@ -110,7 +112,7 @@ export function DistrictCardGrid({
         {redistrictHref && (
           <Link
             href={redistrictHref}
-            className="rounded-md border border-card-border bg-card px-3 py-1.5 text-xs font-medium hover:border-primary"
+            className="rounded-md border border-card-border bg-card px-3 py-1.5 text-body-sm font-medium hover:border-primary"
           >
             Redistrict map →
           </Link>

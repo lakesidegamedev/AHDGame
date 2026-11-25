@@ -25,7 +25,7 @@ export default async function MyWikiPage() {
   if (!user.character) {
     return (
       <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
-        <h1 className="mb-3 text-2xl font-bold text-foreground">My wiki pages</h1>
+        <h1 className="mb-3 text-heading font-bold text-foreground">My wiki pages</h1>
         <p className="text-muted">
           You need an active character to create player-authored wiki pages.{" "}
           <Link href="/create-character" className="text-primary hover:underline">
@@ -70,10 +70,10 @@ export default async function MyWikiPage() {
   return (
     <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
       <div className="mb-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-2">
+        <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-2">
           Player-authored pages
         </p>
-        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="mb-2 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           My wiki pages
         </h1>
         <p className="max-w-2xl text-muted">
@@ -120,8 +120,8 @@ export default async function MyWikiPage() {
 function LimitationsBlock() {
   return (
     <div className="mt-10 ">
-      <h2 className="mb-2 text-sm font-semibold text-muted">Rules &amp; limitations</h2>
-      <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
+      <h2 className="mb-2 text-body font-semibold text-muted">Rules &amp; limitations</h2>
+      <ul className="list-disc space-y-1 pl-5 text-body text-muted">
         <li>
           <strong>Moderator review.</strong> Every new page starts in &ldquo;pending review.&rdquo;
           Edits to a live page return it to review. You&rsquo;ll be notified by bell when a
@@ -157,18 +157,18 @@ function LimitationsBlock() {
 function EventCard() {
   return (
     <div className="flex flex-col ">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-1">
+      <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-1">
         Historical event
       </p>
-      <h2 className="mb-4 text-xl font-bold text-foreground">Document a moment in history</h2>
-      <p className="mb-4 text-sm text-muted">
+      <h2 className="mb-4 text-heading font-bold text-foreground">Document a moment in history</h2>
+      <p className="mb-4 text-body text-muted">
         Market crashes, landmark elections, major scandals, anyone can draft an event page. Because
         the slug is your choice, use the general &ldquo;new article&rdquo; flow.
       </p>
       <div className="mt-auto">
         <Link
           href="/wiki/new?category=events"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
         >
           New event page
         </Link>
@@ -191,16 +191,16 @@ function PageCard({ kind, title, subtitle, page, slug, disabled, disabledMessage
   const status = page?.status;
   return (
     <div className="flex flex-col ">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-1">
+      <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-1">
         {subtitle}
       </p>
-      <h2 className="mb-4 text-xl font-bold text-foreground">{title}</h2>
+      <h2 className="mb-4 text-heading font-bold text-foreground">{title}</h2>
 
       {disabled ? (
-        <p className="text-sm text-muted">{disabledMessage}</p>
+        <p className="text-body text-muted">{disabledMessage}</p>
       ) : page && slug ? (
         <>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-4 text-body text-muted">
             Status:{" "}
             <span className="font-medium text-foreground">
               {status === "published"
@@ -217,14 +217,14 @@ function PageCard({ kind, title, subtitle, page, slug, disabled, disabledMessage
           <div className="mt-auto flex flex-wrap gap-2">
             <Link
               href={`/wiki/${slug}/edit`}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
             >
               Edit page
             </Link>
             {status === "published" && (
               <Link
                 href={`/wiki/${slug}`}
-                className="rounded-md border border-card-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="rounded-md border border-card-border px-4 py-2 text-body font-medium text-foreground hover:bg-muted"
               >
                 View live
               </Link>
@@ -233,7 +233,7 @@ function PageCard({ kind, title, subtitle, page, slug, disabled, disabledMessage
         </>
       ) : (
         <>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-4 text-body text-muted">
             You haven&apos;t claimed this page yet. Claiming creates a starter draft and opens the
             editor.
           </p>

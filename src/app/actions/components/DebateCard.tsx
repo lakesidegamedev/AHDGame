@@ -233,7 +233,7 @@ export default function DebateCard({ imageUrl }: { imageUrl?: string | null } = 
           type="button"
           onClick={submit}
           disabled={selected.length === 0 || submitting}
-          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {submitting
             ? "Submitting…"

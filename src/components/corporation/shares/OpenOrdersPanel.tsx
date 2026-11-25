@@ -65,12 +65,12 @@ export default function OpenOrdersPanel({
     const actionLabel = side === "buy" ? "Sell" : "Buy";
     return (
       <div className="min-w-0">
-        <h3 className="flex items-baseline justify-between border-b border-card-border pb-1 text-xs font-medium text-muted">
+        <h3 className="flex items-baseline justify-between border-b border-card-border pb-1 text-body-lg font-medium text-muted">
           <span>{side === "buy" ? "Bids (buy orders)" : "Asks (sell orders)"}</span>
           <span className="tabular-nums">{orders.length}</span>
         </h3>
         {orders.length === 0 ? (
-          <p className="py-2 text-xs text-muted">None open.</p>
+          <p className="py-2 text-body-sm text-muted">None open.</p>
         ) : (
           <table className="w-full border-collapse">
             <thead className="sr-only">
@@ -95,7 +95,7 @@ export default function OpenOrdersPanel({
                     </span>
                   </Td>
                   <Td align="right">{displayPrice(order.pricePerShare)}</Td>
-                  <Td className="max-w-[9rem] truncate text-xs text-muted">
+                  <Td className="max-w-[9rem] truncate text-body-sm text-muted">
                     {order.characterSequentialId ? (
                       <Link
                         href={`/character/${order.characterSequentialId}`}
@@ -135,7 +135,7 @@ export default function OpenOrdersPanel({
                           aria-label={`Shares to ${actionLabel.toLowerCase()}`}
                           min={1}
                           max={order.sharesRemaining}
-                          className="h-6 w-20 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-right text-xs tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                          className="h-6 w-20 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
                         />
                         <SmallButton
                           tone="primary"
@@ -159,7 +159,7 @@ export default function OpenOrdersPanel({
   return (
     <DenseSection title="Order book" meta="open limit orders from other holders">
       {myCorporation && sellOrders.some((o) => !o.isMine) && (
-        <div className="flex flex-wrap items-center gap-2 py-1.5 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-2 py-1.5 text-body-sm text-muted">
           Buy asks with
           <Segmented
             ariaLabel="Pay for asks with"

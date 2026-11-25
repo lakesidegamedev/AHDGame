@@ -137,7 +137,7 @@ export function CeoOperationsPanel({
       {/* Financing */}
       <div className="rounded-xl border border-gold/30 bg-gold/5 p-5">
         <SectionLabel>Financing</SectionLabel>
-        <p className="mt-1 text-body-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Working capital on hand:{" "}
           <span className="font-semibold text-foreground">
             {natMoney(vm.finance.liquidCapital, currency)}
@@ -155,7 +155,7 @@ export function CeoOperationsPanel({
               national budget. At least {MIN_PROFIT_REMITTANCE_PERCENT}% always remits.
             </p>
             <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between text-body-xs">
+              <div className="flex items-center justify-between text-body-sm">
                 <span className="font-semibold text-foreground">Retain {Number(retention)}%</span>
                 <span className="text-muted">Remit {100 - Number(retention)}%</span>
               </div>
@@ -192,7 +192,7 @@ export function CeoOperationsPanel({
               Pull working capital from the national budget into the corporation, up to the treasury
               minister&apos;s per-turn cap. A draw may run the reserve into debt.
             </p>
-            <p className="mt-1 text-body-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Per-turn cap:{" "}
               <span className="font-semibold text-foreground">
                 {natMoney(vm.finance.treasuryDrawCap, currency)}
@@ -230,13 +230,13 @@ export function CeoOperationsPanel({
       {/* Modernization — corp-wide R&D, funded per turn */}
       <div className="rounded-xl border border-card-border bg-card p-5">
         <SectionLabel>Modernization</SectionLabel>
-        <p className="mt-1 text-body-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Modernization is a momentum the corporation must keep funding. Each turn it spends up to
           this budget, capped at its full-funding cost, and its score climbs toward what the funding
           sustains, then bleeds to zero over {TURNS_PER_YEAR} turns if you stop. What matters is
           your spend relative to the corporation&apos;s size, not the raw amount. Set 0 to stop.
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-body-xs text-muted">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted">
           <div>
             R&amp;D budget:{" "}
             <span className="font-semibold text-foreground">
@@ -309,7 +309,7 @@ export function CeoOperationsPanel({
       {/* Per-sector operations */}
       <div className="rounded-xl border border-card-border bg-card p-5">
         <SectionLabel>Sector operations</SectionLabel>
-        <p className="mt-1 text-body-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           {plantsMode
             ? "Tune each sector's production level, funded from the corporation's capital. Capacity is bought site by site here, not set as a growth target."
             : "Tune each sector's growth target and production level, funded from the corporation's capital."}
@@ -321,7 +321,7 @@ export function CeoOperationsPanel({
             {/* Bulk by type — set many holdings of a sector type (or all) at once. */}
             <div className="space-y-3 rounded-lg border border-gold/30 bg-gold/5 p-3">
               <div className="text-body-sm font-semibold text-foreground">Bulk by type</div>
-              <p className="text-body-xs text-muted">
+              <p className="text-body-sm text-muted">
                 {plantsMode
                   ? "Set output policy and pricing across a sector type at once."
                   : "Set growth, output policy, and/or pricing across a sector type at once. Growth shows its projected per-turn cost before you confirm."}
@@ -374,7 +374,7 @@ export function CeoOperationsPanel({
           treasury's remove-ceo. The State appoints a replacement afterward. */}
       <div className="rounded-xl border border-error/30 bg-error/5 p-5">
         <SectionLabel>Step down</SectionLabel>
-        <p className="mt-1 text-body-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Resign as CEO of {vm.name}. The seat is vacated immediately and the State appoints a
           replacement. You cannot undo this yourself.
         </p>
@@ -400,7 +400,7 @@ export function CeoOperationsPanel({
                 type="button"
                 onClick={() => setConfirmResign(false)}
                 disabled={busy}
-                className="rounded border border-card-border px-3 py-1 text-body-xs text-muted hover:text-foreground disabled:opacity-50"
+                className="rounded border border-card-border px-3 py-1 text-body-sm text-muted hover:text-foreground disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -505,7 +505,7 @@ function NatBulkGroupCard({
     <div className="space-y-3 rounded-lg border border-card-border bg-card-elevated/40 p-3">
       <div className="flex items-center gap-2 text-body-sm font-semibold capitalize text-foreground">
         {label}
-        <span className="text-body-xs font-normal text-muted">
+        <span className="text-body-sm font-normal text-muted">
           {sectorCount} sector{sectorCount === 1 ? "" : "s"}
         </span>
       </div>
@@ -515,7 +515,7 @@ function NatBulkGroupCard({
           bulk growth target no longer builds capacity, so offering the control
           would be offering a lever wired to nothing. */}
       <div className={plantsMode ? "hidden" : undefined}>
-        <div className="text-body-xs font-medium text-foreground">Growth target</div>
+        <div className="text-body-sm font-medium text-foreground">Growth target</div>
         <div className="mt-1 flex items-center gap-3">
           <Slider
             variant="success"
@@ -549,7 +549,7 @@ function NatBulkGroupCard({
               </Button>
               <button
                 onClick={() => setPreview(null)}
-                className="rounded border border-card-border px-3 py-1 text-body-xs text-muted hover:text-foreground"
+                className="rounded border border-card-border px-3 py-1 text-body-sm text-muted hover:text-foreground"
               >
                 Cancel
               </button>
@@ -560,7 +560,7 @@ function NatBulkGroupCard({
 
       {/* Production (direct apply) */}
       <div>
-        <div className="text-body-xs font-medium text-foreground">Production policy</div>
+        <div className="text-body-sm font-medium text-foreground">Production policy</div>
         <div className="mt-1 flex items-center gap-3">
           <Slider
             variant={production >= 0 ? "success" : "error"}
@@ -594,7 +594,7 @@ function NatBulkGroupCard({
 
       {/* Pricing posture (direct apply; requires market clearing) */}
       <div>
-        <div className="text-body-xs font-medium text-foreground">Pricing posture</div>
+        <div className="text-body-sm font-medium text-foreground">Pricing posture</div>
         <p className="mt-1 text-body-sm text-muted">
           Posted price vs market for every holding in this group.
         </p>
@@ -615,7 +615,7 @@ function NatBulkGroupCard({
                   `Pricing set to ${postureLabel(p)} across holdings.`
                 )
               }
-              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-xs font-medium tabular-nums text-foreground transition-colors hover:bg-card disabled:opacity-50"
+              className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-sm font-medium tabular-nums text-foreground transition-colors hover:bg-card disabled:opacity-50"
             >
               {postureLabel(p)}
             </button>
@@ -634,7 +634,7 @@ function NatBulkGroupCard({
                 "Pricing set to Auto across holdings."
               )
             }
-            className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-xs font-medium text-foreground transition-colors hover:bg-card disabled:opacity-50"
+            className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-sm font-medium text-foreground transition-colors hover:bg-card disabled:opacity-50"
           >
             Auto
           </button>
@@ -684,7 +684,7 @@ function SectorOpsRow({
             <MothballedPill className="ml-2" sectorType={sector.sectorType as CorporationType} />
           )}
         </div>
-        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-xs text-muted">
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
           <span>
             Revenue{" "}
             <span className="font-medium text-foreground">
@@ -790,7 +790,7 @@ function SectorOpsRow({
             </div>
           )}
           {!retooling && (
-            <p className="mt-1.5 text-body-xs text-muted">
+            <p className="mt-1.5 text-body-sm text-muted">
               {strategies.find((s) => s.id === strategy)?.description ?? ""}
             </p>
           )}
@@ -823,7 +823,7 @@ function SectorOpsRow({
             </div>
             <Link
               href={sectorBuildUrl(corpId, sector.sectorId)}
-              className="ml-auto rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-body-xs font-semibold text-foreground transition-colors hover:bg-gold/20"
+              className="ml-auto rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-body-sm font-semibold text-foreground transition-colors hover:bg-gold/20"
             >
               Build capacity
             </Link>
@@ -929,8 +929,8 @@ function EffectStat({
   const good = positiveIsGood ? up : !up;
   return (
     <div className="text-center">
-      <div className="text-[10px] text-muted">{label}</div>
-      <div className={`text-body-xs font-semibold ${good ? "text-success" : "text-error"}`}>
+      <div className="text-body-sm text-muted">{label}</div>
+      <div className={`text-body-sm font-semibold ${good ? "text-success" : "text-error"}`}>
         {info.label}
       </div>
     </div>

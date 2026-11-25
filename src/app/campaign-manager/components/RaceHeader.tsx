@@ -26,7 +26,7 @@ const BUTTON = {
   alignItems: "center",
   padding: "0 12px",
   borderRadius: 8,
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 600,
 } as const;
 
@@ -63,14 +63,14 @@ export function RaceHeader(props: RaceHeaderProps) {
     <header style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
       <div style={{ flex: 1, minWidth: 220 }}>
         {props.nav}
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{heading}</h2>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{heading}</h2>
         <p
           style={{
             margin: "4px 0 0",
             display: "flex",
             gap: 10,
             flexWrap: "wrap",
-            fontSize: 13,
+            fontSize: 12,
             color: BLEND.muted,
           }}
         >

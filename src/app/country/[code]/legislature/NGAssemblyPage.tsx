@@ -56,7 +56,7 @@ function BillsTab({
     return <LegislatureRowsSkeleton kind="bills" />;
   }
   if (!bills) {
-    return <p className="text-center text-sm text-muted py-12">Bills data unavailable.</p>;
+    return <p className="text-center text-body text-muted py-12">Bills data unavailable.</p>;
   }
 
   const {
@@ -74,16 +74,18 @@ function BillsTab({
       {(canPropose || hasActiveBill) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-body font-medium text-foreground">
               {adminOverride
                 ? "Admin — propose a bill"
                 : "You are a seated member — propose a bill"}
             </p>
-            <p className="text-xs text-muted">Opens to a vote among seated members immediately.</p>
+            <p className="text-body-sm text-muted">
+              Opens to a vote among seated members immediately.
+            </p>
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Propose bill
           </button>
@@ -101,7 +103,7 @@ function BillsTab({
 
       <BillsList bills={filtered} onVoted={onProposed} />
 
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {filtered.length} bill{filtered.length !== 1 ? "s" : ""} total
       </p>
 
@@ -132,7 +134,7 @@ function LeadershipTab({ countryId }: { countryId: CountryId }) {
     <div className="space-y-6">
       <NgChamberLeadershipPanel countryId={countryId} />
       <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">
-        <p className="text-xs text-muted leading-relaxed">
+        <p className="text-body-sm text-muted leading-relaxed">
           Presiding officers are elected by the members of their respective chambers. When an
           election is open, seated members can declare and vote here.
         </p>

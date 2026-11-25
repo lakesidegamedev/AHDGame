@@ -87,7 +87,7 @@ export function EstatesRosterTab({
 
   if (catalog.length === 0) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
         No facility types configured for this portfolio.
       </div>
     );
@@ -116,7 +116,7 @@ export function EstatesRosterTab({
                   setArchetypeId(a.id);
                   setOpening(false);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-semibold ${
                   active ? "text-black" : "bg-card-muted text-muted hover:text-foreground"
                 }`}
                 style={active ? { background: "var(--gov)" } : undefined}
@@ -124,7 +124,7 @@ export function EstatesRosterTab({
                 <EstateIcon name={a.icon} className="h-4 w-4" />
                 <span>{a.label}</span>
                 <span
-                  className={`rounded-full px-1.5 text-[10px] ${active ? "bg-black/20" : "bg-card-border"}`}
+                  className={`rounded-full px-1.5 text-body-sm ${active ? "bg-black/20" : "bg-card-border"}`}
                 >
                   {count}
                 </span>
@@ -142,26 +142,26 @@ export function EstatesRosterTab({
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="text-body font-semibold text-foreground">
           {catalog.find((a) => a.id === archetypeId)?.label} · facilities
         </h2>
         <button
           onClick={() => setOpening(true)}
           disabled={!canAct || busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-[12px] font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-body-sm font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Open estate
         </button>
       </div>
 
       {ministerialActions != null && (
-        <p className="text-[11px] text-muted" data-testid="estate-ministerial-actions">
+        <p className="text-body-sm text-muted" data-testid="estate-ministerial-actions">
           Opening or expanding costs 1 ministerial action: {ministerialActions}/
           {MINISTERIAL_ACTION_CAP} left. {MINISTERIAL_ACTION_RESET_HINT}
         </p>
       )}
 
-      <InlineError error={actionError} className="text-[12px] text-error" />
+      <InlineError error={actionError} className="text-body-sm text-error" />
 
       {opening && (
         <OpenEstatePanel
@@ -182,7 +182,7 @@ export function EstatesRosterTab({
 
       <div className="space-y-2.5">
         {groupEstates.length === 0 && (
-          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
             No facilities of this type. Open one to begin.
           </div>
         )}

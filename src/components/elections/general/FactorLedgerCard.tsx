@@ -53,7 +53,7 @@ function CandidateSelect({
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-card-border bg-background px-2 py-1 text-xs"
+        className="rounded border border-card-border bg-background px-2 py-1 text-body-sm"
       >
         {options.map((c) => (
           <option key={c.id} value={c.id}>
@@ -79,7 +79,7 @@ function FactorRow({
   const widthPct = maxAbs > 0 ? (Math.abs(f.voteDelta) / maxAbs) * 50 : 0;
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-baseline justify-between text-xs">
+      <div className="flex items-baseline justify-between text-body-sm">
         <span className="font-semibold">
           {f.label}
           {typeof f.multiplier === "number" ? (
@@ -169,12 +169,12 @@ export function FactorLedgerCard({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-muted">{t("factorLedger.title")}</h3>
+        <h3 className="text-body-lg font-semibold text-muted">{t("factorLedger.title")}</h3>
         <span className="text-body-sm font-medium text-muted">
           {t("factorLedger.recordedTurn", { turn: data.recordedTurn })}
         </span>
       </div>
-      <p className="mb-3 text-xs leading-snug text-muted">{t("factorLedger.subtitle")}</p>
+      <p className="mb-3 text-body-sm leading-snug text-muted">{t("factorLedger.subtitle")}</p>
 
       {selectable.length > 0 && focus ? (
         <div className="mb-3 flex flex-wrap items-end gap-3">
@@ -189,7 +189,7 @@ export function FactorLedgerCard({
 
       {focus ? (
         <>
-          <div className="mb-2 flex items-baseline justify-between text-xs">
+          <div className="mb-2 flex items-baseline justify-between text-body-sm">
             <span className="font-semibold" style={{ color: positiveColor }}>
               {focusName}
             </span>
@@ -202,7 +202,7 @@ export function FactorLedgerCard({
               <FactorRow key={f.key} factor={f} maxAbs={maxAbs} positiveColor={positiveColor} />
             ))}
           </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-card-border pt-2 text-xs">
+          <div className="mt-3 flex items-baseline justify-between border-t border-card-border pt-2 text-body-sm">
             <span className="font-semibold uppercase tracking-wider text-muted">
               {t("factorLedger.totalVotes")}
             </span>
@@ -220,7 +220,7 @@ export function FactorLedgerCard({
                   `wealth:middle`. Printing them raw asked the reader to learn
                   the model's field names to find out who is behind them. */}
               {bucketAppeal.map((b) => (
-                <div key={b.bucket} className="flex items-baseline justify-between text-xs">
+                <div key={b.bucket} className="flex items-baseline justify-between text-body-sm">
                   <span className="font-semibold">{bucketLabel(b.bucket, countryId)}</span>
                   <span className="tabular-nums text-muted">
                     {(b.appealShare * 100).toFixed(1)}%

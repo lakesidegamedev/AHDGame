@@ -35,21 +35,21 @@ export function VoteTallyTable({
               />
               <span className="min-w-0 break-words">{p.partyName}</span>
             </div>
-            <dl className="mt-2 grid grid-cols-4 gap-1 text-center text-xs tabular-nums">
+            <dl className="mt-2 grid grid-cols-4 gap-1 text-center text-body-sm tabular-nums">
               <div>
-                <dt className="text-[10px] font-medium text-muted">{forLabel}</dt>
+                <dt className="text-body-sm font-medium text-muted">{forLabel}</dt>
                 <dd className={p.for > 0 ? "text-success" : "text-muted"}>{p.for}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-medium text-muted">{againstLabel}</dt>
+                <dt className="text-body-sm font-medium text-muted">{againstLabel}</dt>
                 <dd className={p.against > 0 ? "text-error" : "text-muted"}>{p.against}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-medium text-muted">Abstain</dt>
+                <dt className="text-body-sm font-medium text-muted">Abstain</dt>
                 <dd className="text-muted">{p.abstain}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-medium text-muted">Total</dt>
+                <dt className="text-body-sm font-medium text-muted">Total</dt>
                 <dd className="font-medium">{p.total}</dd>
               </div>
             </dl>
@@ -57,7 +57,7 @@ export function VoteTallyTable({
         ))}
       </div>
       <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain sm:block">
-        <table className="w-full text-xs">
+        <table className="w-full text-body-sm">
           <caption className="sr-only">{chamberLabel} vote tally</caption>
           <thead>
             <tr className="border-b border-card-border text-muted">

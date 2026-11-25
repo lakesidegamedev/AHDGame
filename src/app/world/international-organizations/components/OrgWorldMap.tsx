@@ -207,7 +207,7 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
 
   if (orgs.length === 0) {
     return (
-      <section className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+      <section className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
         No organizations to map.
       </section>
     );
@@ -270,7 +270,7 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
                 setSelectedOrgId(org.id);
                 setSelected(null);
               }}
-              className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              className={`whitespace-nowrap rounded-full border px-3 py-1 text-body-sm font-medium transition-colors ${
                 active
                   ? "border-transparent bg-primary text-primary-foreground"
                   : "border-card-border bg-card text-muted hover:text-foreground"
@@ -284,7 +284,7 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
 
       {/* Legend */}
       {selectedOrg && (
-        <div className="flex items-center gap-4 text-[11px] text-muted">
+        <div className="flex items-center gap-4 text-body-sm text-muted">
           <span className="flex items-center gap-1.5">
             <span
               className="inline-block h-3 w-3 rounded-sm"
@@ -303,14 +303,14 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
       <div className="relative overflow-visible rounded-xl border border-card-border bg-card shadow-card">
         {error ? (
           <div
-            className="flex w-full items-center justify-center text-sm text-muted"
+            className="flex w-full items-center justify-center text-body text-muted"
             style={{ aspectRatio: `${SVG_W}/${SVG_H}` }}
           >
             Map unavailable.
           </div>
         ) : !loaded ? (
           <div
-            className="flex w-full items-center justify-center text-sm text-muted"
+            className="flex w-full items-center justify-center text-body text-muted"
             style={{ aspectRatio: `${SVG_W}/${SVG_H}` }}
           >
             Loading map…

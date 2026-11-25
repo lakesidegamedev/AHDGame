@@ -5,7 +5,7 @@ import { publicPageMetadata } from "@/lib/siteMetadata";
 export const metadata: Metadata = publicPageMetadata({
   title: "Guides | A House Divided",
   description:
-    "Strategy guides for A House Divided: run corporations, win elections in the US, UK, Soviet Union, and East Germany, invest in stocks, bonds, and forex, and navigate legislation and parties in a persistent hourly simulation.",
+    "Strategy guides for A House Divided: run corporations, win elections, invest in stocks, bonds, and forex, and navigate legislation and parties in a persistent hourly simulation.",
   pathname: "/guides",
 });
 
@@ -153,8 +153,8 @@ export default function GuidesHubPage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Guides</h1>
-          <p className="mt-2 text-sm text-muted">In-depth strategy guides for A House Divided</p>
+          <h1 className="text-display font-bold tracking-tight">Guides</h1>
+          <p className="mt-2 text-body text-muted">In-depth strategy guides for A House Divided</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -183,12 +183,12 @@ export default function GuidesHubPage() {
                 </svg>
               </div>
               <h2 className="mb-1.5 font-semibold text-foreground">{guide.title}</h2>
-              <p className="text-sm text-muted leading-relaxed">{guide.description}</p>
+              <p className="text-body text-muted leading-relaxed">{guide.description}</p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {guide.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-card-border px-2 py-0.5 text-xs text-muted"
+                    className="rounded-full border border-card-border px-2 py-0.5 text-body-sm text-muted"
                   >
                     {tag}
                   </span>

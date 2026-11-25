@@ -44,7 +44,7 @@ export function RaceList({
   endorseEndpoint,
 }: Props) {
   if (races.length === 0) {
-    return <p className="text-sm text-muted">No active races in this state.</p>;
+    return <p className="text-body text-muted">No active races in this state.</p>;
   }
   const cid = countryId.toUpperCase() as CountryId;
   return (
@@ -55,7 +55,7 @@ export function RaceList({
             <div className="font-medium">{race.title}</div>
             {race.phase && (
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                className={`rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${
                   race.phase === "primary" ? "bg-warning/15 text-warning" : "bg-info/15 text-info"
                 }`}
               >
@@ -64,11 +64,11 @@ export function RaceList({
             )}
           </div>
           {race.candidates.length === 0 ? (
-            <p className="text-xs text-muted">No active candidates.</p>
+            <p className="text-body-sm text-muted">No active candidates.</p>
           ) : (
             <ul className="space-y-1">
               {race.candidates.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-2 text-sm py-1">
+                <li key={c.id} className="flex items-center justify-between gap-2 text-body py-1">
                   <span
                     className={`inline-flex items-center gap-2 ${
                       c.isPartyMatch ? "text-foreground" : "text-muted opacity-60"
@@ -84,7 +84,7 @@ export function RaceList({
                         logoUrl={c.partyLogoUrl}
                       />
                     ) : c.party ? (
-                      <span className="text-xs text-muted">({c.party})</span>
+                      <span className="text-body-sm text-muted">({c.party})</span>
                     ) : null}
                   </span>
                   <EndorseButton

@@ -73,7 +73,7 @@ function DesireReadout({ kind, value }: { kind: "independence" | "reunification"
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="mt-2 space-y-1">
-      <div className="flex justify-between text-xs text-muted">
+      <div className="flex justify-between text-body-sm text-muted">
         <span>{desireLabel(kind)}</span>
         <span className="tabular-nums">{Math.round(pct)}%</span>
       </div>
@@ -124,9 +124,9 @@ export function ReferendumConsentCard({
 
   return (
     <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-5">
-      <h2 className="text-sm font-semibold text-amber-600">Referendums</h2>
+      <h2 className="text-body font-semibold text-amber-600">Referendums</h2>
       {error && (
-        <div className="mt-3 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+        <div className="mt-3 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-body text-rose-500">
           {error}
         </div>
       )}
@@ -136,7 +136,7 @@ export function ReferendumConsentCard({
           const busy = busyId === r.id;
           return (
             <li key={r.id} className="rounded-lg border border-card-border bg-card p-4">
-              <div className="text-sm font-medium">
+              <div className="text-body font-medium">
                 {regionName(r.regionId)} {noun} referendum
               </div>
 
@@ -146,7 +146,7 @@ export function ReferendumConsentCard({
 
               {r.status === "requested" && (
                 <div className="mt-2 space-y-2">
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     {requestBlurb(r.kind, regionName(r.regionId), r.dailConsentRequired)}
                   </p>
                   {isPM ? (
@@ -155,7 +155,7 @@ export function ReferendumConsentCard({
                         type="button"
                         disabled={busy}
                         onClick={() => post(`${base}/${r.id}/submit`, { action: "grant" }, r.id)}
-                        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                        className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         {busy ? "Granting…" : "Grant the referendum"}
                       </button>
@@ -163,13 +163,13 @@ export function ReferendumConsentCard({
                         type="button"
                         disabled={busy}
                         onClick={() => post(`${base}/${r.id}/submit`, { action: "decline" }, r.id)}
-                        className="rounded-md border border-rose-500/50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-500/10 disabled:opacity-50"
+                        className="rounded-md border border-rose-500/50 px-4 py-2 text-body font-medium text-rose-600 transition-colors hover:bg-rose-500/10 disabled:opacity-50"
                       >
                         Decline
                       </button>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted">
+                    <p className="text-body text-muted">
                       Awaiting the Prime Minister&apos;s decision to grant the referendum.
                     </p>
                   )}
@@ -177,19 +177,19 @@ export function ReferendumConsentCard({
               )}
 
               {r.status === "granted" && (
-                <p className="mt-2 text-sm text-muted">Granted — the campaign is opening.</p>
+                <p className="mt-2 text-body text-muted">Granted — the campaign is opening.</p>
               )}
 
               {r.status === "campaigning" && (
                 <div className="mt-2 space-y-2">
-                  <div className="flex justify-between text-xs text-muted">
+                  <div className="flex justify-between text-body-sm text-muted">
                     <span>Yes {Math.round(r.yesShare)}%</span>
                     <span>No {Math.round(100 - r.yesShare)}%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-background/60">
                     <div className="h-full bg-primary" style={{ width: `${r.yesShare}%` }} />
                   </div>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     Campaign under way.
                     {r.campaignCloseTurn != null &&
                       ` The vote is held on turn ${r.campaignCloseTurn}${
@@ -202,7 +202,7 @@ export function ReferendumConsentCard({
                       page; the executive card shows progress read-only. */}
                   <Link
                     href={referendumDetailUrl(countryId, r.regionId)}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 hover:text-amber-500"
+                    className="inline-flex items-center gap-1 text-body-sm font-medium text-amber-600 hover:text-amber-500"
                   >
                     View campaign →
                   </Link>
@@ -211,7 +211,7 @@ export function ReferendumConsentCard({
 
               {r.status === "actuating" && (
                 <div className="mt-2 space-y-2">
-                  <p className="text-sm text-muted">
+                  <p className="text-body text-muted">
                     {r.kind === "reunification"
                       ? r.dailConsentRequired
                         ? "Carried at the ballot box. The Commons and the Dáil must both consent before the region transfers."
@@ -232,7 +232,7 @@ export function ReferendumConsentCard({
                         onClick={() =>
                           post(`/api/admin/referendum/${r.id}/actuate`, { action: "resolve" }, r.id)
                         }
-                        className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600/90 disabled:opacity-50"
+                        className="rounded-md bg-amber-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-amber-600/90 disabled:opacity-50"
                       >
                         {busy
                           ? "Converting…"
@@ -246,7 +246,7 @@ export function ReferendumConsentCard({
                         onClick={() =>
                           post(`/api/admin/referendum/${r.id}/actuate`, { action: "block" }, r.id)
                         }
-                        className="rounded-md border border-rose-500/50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-500/10 disabled:opacity-50"
+                        className="rounded-md border border-rose-500/50 px-4 py-2 text-body font-medium text-rose-600 transition-colors hover:bg-rose-500/10 disabled:opacity-50"
                       >
                         Block
                       </button>

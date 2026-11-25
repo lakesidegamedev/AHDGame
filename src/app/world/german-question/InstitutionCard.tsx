@@ -44,12 +44,12 @@ export function InstitutionCard({
     <section className="flex flex-col overflow-hidden rounded-lg border border-card-border bg-background">
       <header className="border-b border-card-border px-4 pb-3 pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-heading-sm font-bold text-foreground">{institution.name}</h2>
-          <span className="rounded border border-gold/35 px-1.5 py-0.5 font-mono text-body-xs font-bold tracking-widest text-gold">
+          <h2 className="text-heading font-bold text-foreground">{institution.name}</h2>
+          <span className="rounded border border-gold/35 px-1.5 py-0.5 font-mono text-body-sm font-bold tracking-widest text-gold">
             {institution.weightTag}
           </span>
         </div>
-        <p className="mt-1 font-mono text-body-xs text-muted">{institution.subtitle}</p>
+        <p className="mt-1 font-mono text-body-sm text-muted">{institution.subtitle}</p>
 
         <div className="mt-3">
           <SplitBar eastPct={institution.eastPct} height="md" />
@@ -66,7 +66,7 @@ export function InstitutionCard({
             {institution.eastPct}% PACT
           </span>
         </div>
-        <div className={`mt-1 font-mono text-body-xs font-semibold ${driftTone}`}>
+        <div className={`mt-1 font-mono text-body-sm font-semibold ${driftTone}`}>
           {institution.driftNote}
         </div>
       </header>
@@ -75,7 +75,7 @@ export function InstitutionCard({
         {cap && (
           <div data-testid="open-floor-cap" aria-live="polite">
             <div
-              className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 font-mono text-body-xs ${
+              className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 font-mono text-body-sm ${
                 cap.maxed
                   ? "border-warning/40 bg-warning/[0.05]"
                   : "border-card-border bg-card-muted"
@@ -102,7 +102,7 @@ export function InstitutionCard({
             )}
           </div>
         )}
-        <p className="font-mono text-body-xs tracking-widest text-muted">
+        <p className="font-mono text-body-sm tracking-widest text-muted">
           PLAYS OPEN TO {actorLabel} HERE
         </p>
         {plays.map((play) => (
@@ -115,7 +115,7 @@ export function InstitutionCard({
         )}
       </div>
 
-      <footer className="flex flex-wrap gap-2 border-t border-card-border bg-card-muted px-4 py-2.5 font-mono text-body-xs text-muted">
+      <footer className="flex flex-wrap gap-2 border-t border-card-border bg-card-muted px-4 py-2.5 font-mono text-body-sm text-muted">
         <span>
           held by{" "}
           <span className={institution.holder === "PACT" ? "text-error" : "text-info"}>

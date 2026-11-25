@@ -30,7 +30,7 @@ export function CampaignStatusPill({ status }: { status: CampaignStatus }) {
   const m = statusMeta(status);
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${TONE[m.tone]}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-body-sm font-bold uppercase tracking-wide ${TONE[m.tone]}`}
     >
       {m.label}
     </span>

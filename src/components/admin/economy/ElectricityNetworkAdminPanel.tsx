@@ -70,7 +70,7 @@ export function ElectricityNetworkAdminPanel() {
     <div className="space-y-5">
       <header className="flex flex-wrap justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Electricity network</h2>
+          <h2 className="text-heading font-semibold">Electricity network</h2>
           <p className="text-muted text-body-sm">
             Current setting: {network?.mode ?? "Loading"}. Comparisons below retain the mode and
             network frozen for each settled turn.

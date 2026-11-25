@@ -14,7 +14,7 @@ export function WikiHelpLink({ screen, className = "" }: WikiHelpLinkProps) {
       rel="noopener"
       aria-label="How this works"
       title="How this works"
-      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-xs font-semibold text-muted transition-colors hover:border-primary/50 hover:text-primary ${className}`}
+      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-body-sm font-semibold text-muted transition-colors hover:border-primary/50 hover:text-primary ${className}`}
     >
       ?
     </a>

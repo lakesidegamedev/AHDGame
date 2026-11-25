@@ -52,21 +52,21 @@ export function OrderBook({ orders, onFilled }: Props) {
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       {error && (
-        <div className="mb-4 rounded-lg border border-error/20 bg-error/5 px-4 py-2 text-sm text-error">
+        <div className="mb-4 rounded-lg border border-error/20 bg-error/5 px-4 py-2 text-body text-error">
           {error}
         </div>
       )}
       <div className="px-5 py-4 border-b border-card-border flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-bold text-foreground">Order book</h2>
-          <p className="text-xs text-muted mt-0.5">Open limit orders from other players</p>
+          <h2 className="text-body font-bold text-foreground">Order book</h2>
+          <p className="text-body-sm text-muted mt-0.5">Open limit orders from other players</p>
         </div>
         {pairs.length > 0 && (
           <div className="flex gap-1.5 flex-wrap">
             <button
               type="button"
               onClick={() => setPairFilter("all")}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-full px-2.5 py-1 text-body-sm font-medium transition-colors ${
                 pairFilter === "all"
                   ? "bg-primary/10 text-primary"
                   : "bg-card-elevated text-muted hover:text-foreground"
@@ -79,7 +79,7 @@ export function OrderBook({ orders, onFilled }: Props) {
                 key={pair}
                 type="button"
                 onClick={() => setPairFilter(pair)}
-                className={`rounded-full px-2.5 py-1 text-xs font-mono font-medium transition-colors ${
+                className={`rounded-full px-2.5 py-1 text-body-sm font-mono font-medium transition-colors ${
                   pairFilter === pair
                     ? "bg-primary/10 text-primary"
                     : "bg-card-elevated text-muted hover:text-foreground"
@@ -93,7 +93,7 @@ export function OrderBook({ orders, onFilled }: Props) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border bg-card-elevated">
               <th className="px-4 py-3 text-left text-body-sm font-medium text-muted">Trader</th>
@@ -124,29 +124,29 @@ export function OrderBook({ orders, onFilled }: Props) {
                   o.amount > 0 ? ((o.filledAmount / o.amount) * 100).toFixed(0) : "0";
                 return (
                   <tr key={o._id} className={idx % 2 === 0 ? "bg-card" : "bg-card-elevated/50"}>
-                    <td className="px-4 py-3 font-medium text-foreground text-sm">
+                    <td className="px-4 py-3 font-medium text-foreground text-body">
                       {o.characterName}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-medium">
+                      <span className="font-mono text-body-sm font-medium">
                         {o.fromCurrency} → {o.toCurrency}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-xs">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm">
                       {formatAmount(remaining)}
-                      <span className="ml-1 text-[10px] text-muted">{o.fromCurrency}</span>
+                      <span className="ml-1 text-body-sm text-muted">{o.fromCurrency}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-xs">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm">
                       {o.limitRate != null ? formatRate(o.limitRate) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right hidden sm:table-cell">
-                      <span className="text-xs tabular-nums text-muted">{filledPct}%</span>
+                      <span className="text-body-sm tabular-nums text-muted">{filledPct}%</span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleFill(o._id)}
                         disabled={filling === o._id}
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-bold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                        className="rounded-md bg-primary px-3 py-1 text-body-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         {filling === o._id ? "..." : "Fill"}
                       </button>

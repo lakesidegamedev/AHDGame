@@ -48,8 +48,8 @@ describe("HealPanelMessage", () => {
     const { container, rerender } = render(<HealPanelMessage result={null} />);
     expect(container.innerHTML).toBe("");
     rerender(<HealPanelMessage result={{ ok: true, message: "Repaired" }} />);
-    expect(screen.getByText("Repaired").className).toBe("text-xs font-medium text-success");
+    expect(screen.getByText("Repaired").className).toBe("text-body-sm font-medium text-success");
     rerender(<HealPanelMessage result={{ ok: false, message: "Refused" }} />);
-    expect(screen.getByText("Refused").className).toBe("text-xs font-medium text-error");
+    expect(screen.getByText("Refused").className).toBe("text-body-sm font-medium text-error");
   });
 });

@@ -29,6 +29,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
       : null;
   const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
+  const showUrgency = item.action || item.urgency !== "update";
 
   return (
     <div className="flex h-full flex-col">
@@ -43,14 +44,14 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`text-[11px] font-bold uppercase tracking-[0.16em] ${category.text}`}
+                  className={`text-body-sm font-bold uppercase tracking-[0.16em] ${category.text}`}
                 >
                   {category.label}
                 </span>
                 <span className="text-muted/50">·</span>
                 <span className="text-body-sm font-medium text-muted">{item.label}</span>
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-muted">
                 <span>{item.time === "now" ? "Just now" : `${item.time} ago`}</span>
                 {item.turn && <span>· Turn {item.turn}</span>}
                 {gameMonth && (
@@ -62,29 +63,33 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
               </div>
             </div>
           </div>
-          <span
-            className={`hidden shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide sm:inline-flex ${urgency.wash} ${urgency.border} ${urgency.text}`}
-          >
-            {item.action ? "Needs your attention" : urgency.label}
-          </span>
+          {showUrgency && (
+            <span
+              className={`hidden shrink-0 rounded-full border px-2.5 py-1 text-body-sm font-bold uppercase tracking-wide sm:inline-flex ${urgency.wash} ${urgency.border} ${urgency.text}`}
+            >
+              {item.action ? "Needs your attention" : urgency.label}
+            </span>
+          )}
         </div>
 
         {/* Headline */}
         <div className="mt-7">
-          <h3 className="text-2xl font-semibold leading-tight text-foreground">{item.title}</h3>
-          <p className="mt-4 whitespace-pre-wrap text-[15px] leading-7 text-foreground/85">
+          <h3 className="text-body-lg font-semibold leading-tight text-foreground">{item.title}</h3>
+          <p className="mt-4 whitespace-pre-wrap text-body leading-7 text-foreground/85">
             {item.body}
           </p>
         </div>
 
         {/* Mobile urgency marker */}
-        <div className="mt-4 sm:hidden">
-          <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${urgency.wash} ${urgency.border} ${urgency.text}`}
-          >
-            {item.action ? "Needs your attention" : urgency.label}
-          </span>
-        </div>
+        {showUrgency && (
+          <div className="mt-4 sm:hidden">
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-1 text-body-sm font-bold uppercase tracking-wide ${urgency.wash} ${urgency.border} ${urgency.text}`}
+            >
+              {item.action ? "Needs your attention" : urgency.label}
+            </span>
+          </div>
+        )}
 
         {/* Context strip */}
         {item.meta && item.meta.length > 0 && (
@@ -95,7 +100,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
                 className="min-w-0 rounded-xl border border-card-border bg-card-elevated/65 px-3.5 py-3"
               >
                 <dt className="truncate text-body-sm font-medium text-muted">{label}</dt>
-                <dd className="mt-1 truncate text-sm font-semibold text-foreground" title={value}>
+                <dd className="mt-1 truncate text-body font-semibold text-foreground" title={value}>
                   {value}
                 </dd>
               </div>
@@ -106,13 +111,13 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
         {/* Source CTA */}
         {item.source && (
           <div className="mt-6 rounded-xl border border-card-border p-4">
-            <p className="text-sm font-semibold text-foreground">Continue the thread</p>
-            <p className="mt-1 text-xs text-muted">
+            <p className="text-body font-semibold text-foreground">Continue the thread</p>
+            <p className="mt-1 text-body-sm text-muted">
               {item.source.hint ?? "Open the relevant game screen to act on this update."}
             </p>
             <Link
               href={item.source.href}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               {item.source.label}
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

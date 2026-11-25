@@ -53,14 +53,12 @@ function Surface({
   className?: string;
 }) {
   return (
-    <div
-      className={`rounded-2xl border border-card-border bg-background/45 p-4 md:p-5 ${className}`}
-    >
+    <div className={`rounded-2xl border border-card-border bg-card-muted p-4 md:p-5 ${className}`}>
       <div className="flex items-start gap-3">
         <span className="mt-0.5 shrink-0 text-muted">{icon}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="mt-0.5 text-xs leading-5 text-muted">{description}</p>
+          <p className="text-body font-semibold text-foreground">{title}</p>
+          <p className="mt-0.5 text-body-sm leading-5 text-muted">{description}</p>
           {children}
         </div>
       </div>
@@ -137,7 +135,7 @@ export function GameQuickSettings({
               : t("quick.game.readingCadence")
         }
       >
-        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-card px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-card px-2 py-1 text-body-sm font-semibold uppercase tracking-wider text-muted">
           <Gauge className="h-3 w-3" />
           {singleplayer ? t("quick.game.playerControlled") : t("quick.game.worldControlled")}
         </span>
@@ -204,7 +202,7 @@ export function InterfaceQuickSettings() {
             value={activeLocale}
             disabled={languagePending}
             onChange={(event) => void changeLanguage(event.target.value as Locale)}
-            className="mt-3 min-h-11 w-full rounded-xl border border-card-border bg-card px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-80"
+            className="mt-3 min-h-11 w-full rounded-xl border border-card-border bg-card px-3 text-body text-foreground disabled:cursor-not-allowed disabled:opacity-80"
           >
             {SUPPORTED_LOCALES.map((locale) => (
               <option key={locale} value={locale}>
@@ -214,7 +212,7 @@ export function InterfaceQuickSettings() {
           </select>
         </Surface>
       </div>
-      <p className="text-xs text-muted">{t("quick.interface.currencyNote")}</p>
+      <p className="text-body-sm text-muted">{t("quick.interface.currencyNote")}</p>
     </div>
   );
 }
@@ -224,7 +222,7 @@ export function AudioQuickSettings() {
   const { preferences, updatePreferences } = useBrowserPreferences();
 
   return (
-    <div className="rounded-2xl border border-card-border bg-background/45 p-4 md:p-5">
+    <div className="rounded-2xl border border-card-border bg-card-muted p-4 md:p-5">
       <div className="flex items-center gap-4">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           {preferences.gameSounds ? (
@@ -234,8 +232,8 @@ export function AudioQuickSettings() {
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{t("quick.audio.gameSounds")}</p>
-          <p className="text-xs leading-5 text-muted">{t("quick.audio.gameSoundsHint")}</p>
+          <p className="text-body font-semibold text-foreground">{t("quick.audio.gameSounds")}</p>
+          <p className="text-body-sm leading-5 text-muted">{t("quick.audio.gameSoundsHint")}</p>
         </div>
         <Toggle
           checked={preferences.gameSounds}
@@ -248,7 +246,7 @@ export function AudioQuickSettings() {
         <button
           type="button"
           onClick={() => updatePreferences({ audioCustomized: true })}
-          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-2 text-body font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
         >
           <SlidersHorizontal className="h-4 w-4 text-primary" />
           {t("quick.audio.customize")}
@@ -257,10 +255,10 @@ export function AudioQuickSettings() {
         <div className="mt-5 grid gap-5 border-t border-card-border pt-5 md:grid-cols-2">
           <div>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <label htmlFor="master-volume" className="text-sm font-medium text-foreground">
+              <label htmlFor="master-volume" className="text-body font-medium text-foreground">
                 {t("quick.audio.masterVolume")}
               </label>
-              <span className="font-mono text-xs text-muted">{preferences.masterVolume}%</span>
+              <span className="font-mono text-body-sm text-muted">{preferences.masterVolume}%</span>
             </div>
             <Slider
               id="master-volume"
@@ -274,10 +272,12 @@ export function AudioQuickSettings() {
               aria-label={t("quick.audio.masterVolume")}
             />
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-card-border bg-card/70 p-3">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-card-border bg-card p-3">
             <div>
-              <p className="text-sm font-medium text-foreground">{t("quick.audio.eventSounds")}</p>
-              <p className="mt-0.5 text-xs text-muted">{t("quick.audio.eventSoundsHint")}</p>
+              <p className="text-body font-medium text-foreground">
+                {t("quick.audio.eventSounds")}
+              </p>
+              <p className="mt-0.5 text-body-sm text-muted">{t("quick.audio.eventSoundsHint")}</p>
             </div>
             <Toggle
               checked={preferences.eventSounds}
@@ -287,7 +287,7 @@ export function AudioQuickSettings() {
             />
           </div>
           <p
-            className="flex items-center gap-1.5 text-xs text-success md:col-span-2"
+            className="flex items-center gap-1.5 text-body-sm text-success md:col-span-2"
             aria-live="polite"
           >
             <Check className="h-3.5 w-3.5" />
@@ -405,7 +405,7 @@ export function DataQuickSettings() {
           <button
             type="button"
             onClick={exportPreferences}
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Download className="h-4 w-4" />
             {t("quick.data.export")}
@@ -426,7 +426,7 @@ export function DataQuickSettings() {
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-2 text-body font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
           >
             <Upload className="h-4 w-4 text-primary" />
             {t("quick.data.chooseFile")}
@@ -441,7 +441,7 @@ export function DataQuickSettings() {
             <button
               type="button"
               onClick={() => void clearCachedData()}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-card-border bg-card px-4 py-2 text-body font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-card-elevated"
             >
               {t("quick.data.clearCache")}
             </button>
@@ -451,7 +451,7 @@ export function DataQuickSettings() {
                 resetPreferences();
                 setMessage("quick.data.resetDone");
               }}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-body-sm font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               {t("quick.data.resetPreferences")}
@@ -461,7 +461,7 @@ export function DataQuickSettings() {
       </div>
       {message && (
         <p
-          className="mt-3 flex items-center gap-2 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-xs text-success"
+          className="mt-3 flex items-center gap-2 rounded-xl border border-success/25 bg-success/10 px-3 py-2 text-body-sm text-success"
           aria-live="polite"
         >
           <Check className="h-3.5 w-3.5" />

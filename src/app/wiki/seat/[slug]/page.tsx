@@ -29,7 +29,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
         </Link>
@@ -42,7 +42,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
       </nav>
 
       <header className="mb-8">
-        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {data.title}
         </h1>
         <p className="mt-2 text-muted">
@@ -56,13 +56,13 @@ export default async function WikiSeatPage({ params }: PageProps) {
       </header>
 
       <section className="">
-        <h2 className="mb-4 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+        <h2 className="mb-4 text-heading font-extrabold tracking-[-0.03em] text-foreground">
           Current officeholder(s)
         </h2>
         {data.holders.length === 0 ? (
           <div className="border-b border-card-border/60 py-2.5 text-center">
             <p className="font-medium text-muted">Vacant</p>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-body text-muted">
               {data.type === "governor"
                 ? "No governor has been elected yet. Governor elections run every 4 years (192 hours) per state."
                 : data.type === "senate"
@@ -98,7 +98,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
                     )}
                     {h.partyAbbreviation && data.stateId && (
                       <span
-                        className="rounded px-1.5 py-0.5 text-xs font-medium"
+                        className="rounded px-1.5 py-0.5 text-body-sm font-medium"
                         style={{
                           backgroundColor: (h.partyColor ?? "#888") + "30",
                           color: h.partyColor ?? "#888",
@@ -108,7 +108,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
                       </span>
                     )}
                     {h.isNPP && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted">
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-body-sm text-muted">
                         <NppAbbr />
                       </span>
                     )}
@@ -123,7 +123,7 @@ export default async function WikiSeatPage({ params }: PageProps) {
       <footer className="mt-12 border-t border-card-border pt-6">
         <Link
           href={regionUrl(data.countryId ?? "US", data.stateId)}
-          className="text-sm text-muted hover:text-primary"
+          className="text-body text-muted hover:text-primary"
         >
           ← View {data.stateName} state page
         </Link>

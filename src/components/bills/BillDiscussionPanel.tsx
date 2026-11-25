@@ -119,14 +119,14 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold">Floor debate</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold">Floor debate</h3>
+          <p className="text-body-sm text-muted">
             {data.total === 0
               ? "Make the case for or against this bill."
               : `${data.total} ${data.total === 1 ? "post" : "posts"} so far.`}
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-card-border bg-background px-2.5 py-0.5 text-xs font-medium tabular-nums text-muted">
+        <span className="shrink-0 rounded-full border border-card-border bg-background px-2.5 py-0.5 text-body-sm font-medium tabular-nums text-muted">
           {data.total}
         </span>
       </div>
@@ -157,12 +157,12 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
                 ? "Open the debate. Where do you stand on this bill?"
                 : "Add your voice to the debate..."
             }
-            className="block w-full resize-none rounded-lg bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted/60 focus:outline-none"
+            className="block w-full resize-none rounded-lg bg-transparent px-3 py-2.5 text-body text-foreground placeholder:text-muted/60 focus:outline-none"
           />
           {(focused || draft) && (
             <div className="flex items-center justify-between gap-2 border-t border-card-border/60 px-3 py-2">
               <span
-                className={`text-[11px] tabular-nums ${
+                className={`text-body-sm tabular-nums ${
                   draft.length > MAX_POST_LENGTH * 0.9 ? "text-warning" : "text-muted/70"
                 }`}
               >
@@ -175,7 +175,7 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={submitPost}
                 disabled={submitting || !draft.trim()}
-                className="rounded-lg border border-primary/40 bg-primary/15 px-4 py-1.5 text-xs font-semibold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
+                className="rounded-lg border border-primary/40 bg-primary/15 px-4 py-1.5 text-body-sm font-semibold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
               >
                 {submitting ? "Posting..." : "Post"}
               </button>
@@ -183,7 +183,7 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
           )}
         </div>
       ) : (
-        <p className="rounded-lg border border-dashed border-card-border px-3 py-2 text-xs text-muted">
+        <p className="rounded-lg border border-dashed border-card-border px-3 py-2 text-body-sm text-muted">
           Only {chamberLabel} members may post here. Anyone can read the debate.
         </p>
       )}
@@ -203,7 +203,9 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
           ))}
         </div>
       ) : data.posts.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted">No one has spoken on this bill yet.</p>
+        <p className="py-4 text-center text-body-sm text-muted">
+          No one has spoken on this bill yet.
+        </p>
       ) : (
         <ul className="-mx-2 space-y-1">
           {data.posts.map((post) => (
@@ -225,15 +227,15 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
                     {post.authorSequentialId != null ? (
                       <Link
                         href={`/character/${post.authorSequentialId}`}
-                        className="text-sm font-semibold hover:underline"
+                        className="text-body font-semibold hover:underline"
                         style={post.authorPartyColor ? { color: post.authorPartyColor } : undefined}
                       >
                         {post.authorName}
                       </Link>
                     ) : (
-                      <span className="text-sm font-semibold">{post.authorName}</span>
+                      <span className="text-body font-semibold">{post.authorName}</span>
                     )}
-                    <p className="text-[11px] text-muted">
+                    <p className="text-body-sm text-muted">
                       {[post.authorParty, post.authorRegionLabel].filter(Boolean).join(" · ") ||
                         "Independent"}
                     </p>
@@ -243,18 +245,18 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
                       type="button"
                       onClick={() => remove(post)}
                       title="Remove post"
-                      className="shrink-0 rounded-md border border-red-500/30 px-1.5 text-xs text-red-400 hover:bg-red-500/10"
+                      className="shrink-0 rounded-md border border-red-500/30 px-1.5 text-body-sm text-red-400 hover:bg-red-500/10"
                     >
                       ✕
                     </button>
                   )}
                 </div>
 
-                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
+                <p className="whitespace-pre-wrap break-words text-body leading-relaxed text-foreground/90">
                   {post.content}
                 </p>
 
-                <div className="flex items-center gap-4 pt-1 text-xs">
+                <div className="flex items-center gap-4 pt-1 text-body-sm">
                   <button
                     type="button"
                     onClick={() => react(post, "agree")}
@@ -317,7 +319,7 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
 
       {/* Pagination */}
       {data.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 pt-2 text-xs">
+        <div className="flex items-center justify-center gap-4 pt-2 text-body-sm">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}

@@ -26,7 +26,7 @@ function LocalizedContractBoardLink({
   const t = useTranslations("corporations.governmentContracts");
   return (
     <Link
-      className="inline-flex rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-semibold text-primary"
+      className="inline-flex rounded-lg border border-card-border bg-card px-4 py-2 text-body font-semibold text-primary"
       href={`/country/${countryId.toLowerCase()}/government-contracts?tab=active&type=${type}${corporationId ? `&supplier=${corporationId}` : ""}`}
     >
       {t("openBoard")}

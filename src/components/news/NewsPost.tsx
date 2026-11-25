@@ -82,7 +82,7 @@ function PartyBadge({ party }: { party: string | null }) {
   if (isStandard) {
     return (
       <span
-        className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${getPartyColor(party)}`}
+        className={`inline-block rounded-full border px-2 py-0.5 text-body-sm font-medium ${getPartyColor(party)}`}
       >
         {label}
       </span>
@@ -90,7 +90,7 @@ function PartyBadge({ party }: { party: string | null }) {
   }
 
   return (
-    <span className="inline-block rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-[10px] font-medium text-muted">
+    <span className="inline-block rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm font-medium text-muted">
       {label}
     </span>
   );
@@ -329,27 +329,27 @@ export function NewsPost({
             )}
             {!post.isSystem && <PartyBadge party={post.authorParty} />}
             {!post.isSystem && post.feedType === "advertisement" && (
-              <span className="inline-block rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+              <span className="inline-block rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
                 Sponsored
               </span>
             )}
             {post.isSystem && post.category && (
-              <span className="inline-block rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-medium text-primary">
+              <span className="inline-block rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-body-sm font-medium text-primary">
                 {post.category.charAt(0).toUpperCase() + post.category.slice(1)}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 flex-wrap mt-1">
-            <GameMonthTime className="text-xs text-muted" value={post.createdAt} />
+            <GameMonthTime className="text-body-sm text-muted" value={post.createdAt} />
             {post.editedAt && (
-              <span className="text-[10px] italic text-muted" title="This post was edited">
+              <span className="text-body-sm italic text-muted" title="This post was edited">
                 (edited)
               </span>
             )}
             {!post.isSystem && (
               <Link
                 href={`/news/post/${post._id}`}
-                className="text-[10px] font-medium uppercase tracking-wide text-muted hover:text-primary transition-colors"
+                className="text-body-sm font-medium uppercase tracking-wide text-muted hover:text-primary transition-colors"
               >
                 Permalink
               </Link>
@@ -358,7 +358,7 @@ export function NewsPost({
               <button
                 type="button"
                 onClick={startEditing}
-                className="text-[10px] font-semibold uppercase tracking-wide text-muted hover:text-primary transition-colors"
+                className="text-body-sm font-semibold uppercase tracking-wide text-muted hover:text-primary transition-colors"
               >
                 Edit
               </button>
@@ -369,7 +369,7 @@ export function NewsPost({
                 type="button"
                 onClick={() => void handleModerationRemove()}
                 disabled={removing}
-                className="text-[10px] font-semibold uppercase tracking-wide text-muted hover:text-error disabled:opacity-50"
+                className="text-body-sm font-semibold uppercase tracking-wide text-muted hover:text-error disabled:opacity-50"
               >
                 {removing ? "Removing…" : "Remove post"}
               </button>
@@ -387,14 +387,14 @@ export function NewsPost({
             onChange={(e) => setEditTitle(e.target.value)}
             placeholder="Title (optional)"
             maxLength={100}
-            className="w-full max-w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm font-semibold text-foreground placeholder:text-muted placeholder:font-normal focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="w-full max-w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body font-semibold text-foreground placeholder:text-muted placeholder:font-normal focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
           />
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
             maxLength={1000}
             rows={4}
-            className="w-full max-w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="w-full max-w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
           />
 
           <input
@@ -421,7 +421,7 @@ export function NewsPost({
               <button
                 type="button"
                 onClick={() => setEditImageUrl(null)}
-                className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white hover:bg-black/80"
+                className="absolute right-2 top-2 rounded-md bg-black/60 px-2 py-1 text-body-sm font-medium text-white hover:bg-black/80"
               >
                 Remove image
               </button>
@@ -431,7 +431,7 @@ export function NewsPost({
               type="button"
               onClick={() => editFileInputRef.current?.click()}
               disabled={editImageUploading}
-              className="text-xs font-medium text-muted hover:text-primary transition-colors disabled:opacity-50"
+              className="text-body-sm font-medium text-muted hover:text-primary transition-colors disabled:opacity-50"
             >
               {editImageUploading ? "Uploading image…" : "+ Add image (optional)"}
             </button>
@@ -441,7 +441,7 @@ export function NewsPost({
             <button
               type="submit"
               disabled={!editContent.trim() || editSubmitting || editImageUploading}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {editSubmitting ? "Saving…" : "Save changes"}
             </button>
@@ -449,17 +449,19 @@ export function NewsPost({
               type="button"
               onClick={cancelEditing}
               disabled={editSubmitting}
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground disabled:opacity-50"
+              className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted hover:text-foreground disabled:opacity-50"
             >
               Cancel
             </button>
-            {editError && <span className="text-xs text-error">{editError}</span>}
+            {editError && <span className="text-body-sm text-error">{editError}</span>}
           </div>
         </form>
       ) : (
         <>
           {/* Title */}
-          {post.title && <p className="mb-1 text-sm font-semibold text-foreground">{post.title}</p>}
+          {post.title && (
+            <p className="mb-1 text-body font-semibold text-foreground">{post.title}</p>
+          )}
 
           {/* Optional hero image */}
           {post.imageUrl && !post.isSystem && (
@@ -478,13 +480,13 @@ export function NewsPost({
           )}
 
           {/* Content */}
-          <p className="mb-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <p className="mb-3 text-body leading-relaxed whitespace-pre-wrap break-words">
             {countrySource ? post.content.slice(0, countrySource.index) : post.content}
           </p>
           {countrySource && (
             <Link
               href={countrySource[1]}
-              className="mb-3 inline-block text-sm text-primary underline"
+              className="mb-3 inline-block text-body text-primary underline"
             >
               View country
             </Link>
@@ -497,7 +499,7 @@ export function NewsPost({
         <button
           onClick={() => handleReact("agree")}
           disabled={!canInteract || !!reactingTo}
-          className={`flex items-center gap-1.5 text-xs transition-colors ${
+          className={`flex items-center gap-1.5 text-body-sm transition-colors ${
             post.userReaction === "agree"
               ? "text-green-500"
               : canInteract
@@ -520,7 +522,7 @@ export function NewsPost({
         <button
           onClick={() => handleReact("disagree")}
           disabled={!canInteract || !!reactingTo}
-          className={`flex items-center gap-1.5 text-xs transition-colors ${
+          className={`flex items-center gap-1.5 text-body-sm transition-colors ${
             post.userReaction === "disagree"
               ? "text-red-500"
               : canInteract
@@ -542,7 +544,7 @@ export function NewsPost({
 
         <button
           onClick={toggleReplies}
-          className="ml-auto flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
+          className="ml-auto flex items-center gap-1.5 text-body-sm text-muted hover:text-foreground transition-colors"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -570,9 +572,9 @@ export function NewsPost({
       {repliesOpen && (
         <div className="mt-3 border-t border-card-border pt-3 space-y-3">
           {repliesLoading ? (
-            <div className="py-4 text-center text-xs text-muted">Loading replies...</div>
+            <div className="py-4 text-center text-body-sm text-muted">Loading replies...</div>
           ) : replies.length === 0 && replyCount === 0 ? (
-            <p className="text-xs text-muted">No replies yet.</p>
+            <p className="text-body-sm text-muted">No replies yet.</p>
           ) : (
             replies.map((reply) => (
               <div key={reply._id} className="flex gap-2.5">
@@ -585,14 +587,14 @@ export function NewsPost({
                 />
                 <div className="flex-1 min-w-0 rounded-lg bg-card-muted/60 p-2.5">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium">{reply.authorName}</span>
+                    <span className="text-body-sm font-medium">{reply.authorName}</span>
                     <PartyBadge party={reply.authorParty} />
                     <GameMonthTime
-                      className="ml-auto text-[10px] text-muted"
+                      className="ml-auto text-body-sm text-muted"
                       value={reply.createdAt}
                     />
                   </div>
-                  <p className="text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground/90">
+                  <p className="text-body-sm leading-relaxed whitespace-pre-wrap break-words text-foreground/90">
                     {reply.content}
                   </p>
                 </div>
@@ -608,12 +610,12 @@ export function NewsPost({
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
                 maxLength={500}
-                className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
+                className="flex-1 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-colors"
               />
               <button
                 type="submit"
                 disabled={!replyContent.trim() || replySubmitting}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed"
               >
                 Reply
               </button>

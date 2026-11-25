@@ -84,10 +84,10 @@ export function PartyLeadershipTitlesControl({
   return (
     <section aria-labelledby="party-leadership-titles-heading" className="space-y-4">
       <div>
-        <h3 id="party-leadership-titles-heading" className="text-sm font-semibold text-muted">
+        <h3 id="party-leadership-titles-heading" className="text-body-lg font-semibold text-muted">
           Leadership titles
         </h3>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-body text-muted">
           Set optional display titles for your party officers. Leave a field blank to use the
           existing title for this country.
         </p>
@@ -98,7 +98,7 @@ export function PartyLeadershipTitlesControl({
           const inputId = `party-leadership-title-${key}`;
           return (
             <div key={key} className="space-y-1.5">
-              <label htmlFor={inputId} className="block text-sm font-medium text-foreground">
+              <label htmlFor={inputId} className="block text-body font-medium text-foreground">
                 {FIELD_LABELS[key]}
               </label>
               <input
@@ -111,7 +111,7 @@ export function PartyLeadershipTitlesControl({
                   setDraft((current) => ({ ...current, [key]: event.target.value }));
                   setMessage("");
                 }}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           );
@@ -123,12 +123,12 @@ export function PartyLeadershipTitlesControl({
           type="button"
           onClick={saveTitles}
           disabled={saving || !hasChanges}
-          className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save titles"}
         </button>
         {message && (
-          <p role="status" aria-live="polite" className="text-sm text-muted">
+          <p role="status" aria-live="polite" className="text-body text-muted">
             {message}
           </p>
         )}

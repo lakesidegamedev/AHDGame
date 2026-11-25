@@ -41,7 +41,7 @@ function PresetButtons({
         <button
           key={value}
           onClick={() => onPick(value)}
-          className="rounded bg-primary/20 px-2 py-1 text-xs hover:bg-primary/30"
+          className="rounded bg-primary/20 px-2 py-1 text-body-sm hover:bg-primary/30"
         >
           {label}
         </button>
@@ -124,7 +124,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
   const renderConversionPreview = (anchorAmount: number) => {
     if (!anchorAmount || Object.keys(fxRates).length === 0) return null;
     return (
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-body-sm text-muted">
         <span className="font-medium text-muted">≈</span>
         {PREVIEW_CURRENCIES.map((code) => {
           const rate = fxRates[code];
@@ -243,31 +243,33 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-card-border bg-card p-6">
-        <p className="mb-2 text-sm text-muted">
+        <p className="mb-2 text-body text-muted">
           Grant Action Points, Campaign Funds, and Cash on Hand to players. Amounts are entered in
           anchor units (₳) — every player receives equal real value regardless of home country.
         </p>
-        <p className="mb-6 text-xs text-muted">
+        <p className="mb-6 text-body-sm text-muted">
           Campaign Funds and Cash on Hand auto-convert to each player&apos;s home currency (USD /
           GBP / JPY / EUR) at the current FX rate before being deposited.
         </p>
 
         {/* Message */}
         {message && (
-          <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+          <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(message)}`}>
+            {message}
+          </div>
         )}
 
         {/* Resource Inputs */}
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="mb-2 block text-sm font-medium">Action points</label>
+            <label className="mb-2 block text-body font-medium">Action points</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
                 value={actionsAmount}
                 onChange={(e) => setActionsAmount(parseInt(e.target.value) || 0)}
                 placeholder="0"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               />
               <PresetButtons
                 onPick={setActionsAmount}
@@ -278,18 +280,18 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 ]}
               />
             </div>
-            <p className="mt-1 text-xs text-muted">Use negative values to remove actions</p>
+            <p className="mt-1 text-body-sm text-muted">Use negative values to remove actions</p>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium">Campaign funds (₳)</label>
+            <label className="mb-2 block text-body font-medium">Campaign funds (₳)</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
                 value={fundsAmount}
                 onChange={(e) => setFundsAmount(parseInt(e.target.value) || 0)}
                 placeholder="0"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               />
               <PresetButtons
                 onPick={setFundsAmount}
@@ -300,7 +302,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 ]}
               />
             </div>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Credited to <code>currencyBalances.campaign</code> in the player&apos;s home currency.
               Amounts entered here are interpreted in ₳ and converted at live FX. Negative removes.
             </p>
@@ -308,7 +310,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium">Cash on hand (₳)</label>
+            <label className="mb-2 block text-body font-medium">Cash on hand (₳)</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -320,7 +322,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 placeholder="0"
                 min={-MAX_CASH_GRANT}
                 max={MAX_CASH_GRANT}
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
               />
               <PresetButtons
                 onPick={setCashOnHandAmount}
@@ -330,7 +332,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                 ]}
               />
             </div>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Auto-converted to each player&apos;s home currency at live FX rate.
             </p>
             {renderConversionPreview(cashOnHandAmount)}
@@ -346,8 +348,8 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-700"
             />
             <span>
-              <span className="block text-sm font-medium">Positions Update Voucher</span>
-              <span className="mt-1 block text-xs text-muted">
+              <span className="block text-body font-medium">Positions Update Voucher</span>
+              <span className="mt-1 block text-body-sm text-muted">
                 Grant one voucher to each selected player. A voucher allows one policy position
                 shift without its normal costs.
               </span>
@@ -384,21 +386,21 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               </svg>
             )}
           </div>
-          <span className={`text-sm font-medium ${grantToAll ? "text-amber-400" : ""}`}>
+          <span className={`text-body font-medium ${grantToAll ? "text-amber-400" : ""}`}>
             {grantToAll
               ? `⚠ Granting to ALL ${characters.length} players — individual selection disabled`
               : `Grant to ALL players (${characters.length} total)`}
           </span>
         </div>
 
-        <label className="mb-4 block text-sm font-medium">
+        <label className="mb-4 block text-body font-medium">
           Reason (kept in the grants record)
           <input
             type="text"
             value={reason}
             maxLength={300}
             onChange={(event) => setReason(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
         </label>
 
@@ -413,7 +415,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               !grantPositionUpdateVoucher) ||
             (!grantToAll && selectedIds.size === 0)
           }
-          className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {loading
             ? "Processing..."
@@ -425,8 +427,8 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
       {!grantToAll && (
         <div className="rounded-xl border border-card-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Select players</h3>
-            <span className="text-sm text-muted">
+            <h3 className="text-body-lg font-semibold">Select players</h3>
+            <span className="text-body text-muted">
               {selectedIds.size} of {filteredCharacters.length} selected
             </span>
           </div>
@@ -438,7 +440,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name, state, or party..."
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
             />
           </div>
 
@@ -452,7 +454,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               onChange={handleSelectAll}
               className="h-4 w-4 rounded border-gray-600 bg-gray-700"
             />
-            <span className="text-sm font-medium">Select all visible</span>
+            <span className="text-body font-medium">Select all visible</span>
           </div>
 
           {/* Player List */}
@@ -480,14 +482,14 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{char.name}</span>
-                      <span className={`text-xs ${getPartyTextColor(char.party)}`}>
+                      <span className={`text-body-sm ${getPartyTextColor(char.party)}`}>
                         {char.party.charAt(0).toUpperCase() + char.party.slice(1)}
                       </span>
-                      <span className="text-xs text-muted">
+                      <span className="text-body-sm text-muted">
                         ({displayCanadianRegionCode(char.homeState)})
                       </span>
                     </div>
-                    <div className="text-xs text-muted">
+                    <div className="text-body-sm text-muted">
                       {char.actions} actions | ₳{char.funds.toLocaleString("en-US")} campaign
                     </div>
                   </div>

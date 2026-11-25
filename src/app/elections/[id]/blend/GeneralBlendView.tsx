@@ -120,7 +120,7 @@ export function GeneralBlendView({
     <div
       style={{
         fontFamily: FONT.mono,
-        fontSize: 10.5,
+        fontSize: 12,
         letterSpacing: ".08em",
         color: BLEND.muted,
       }}
@@ -144,7 +144,7 @@ export function GeneralBlendView({
         <span
           style={{
             fontFamily: FONT.mono,
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: ".1em",
             color: BLEND.mutedDim,
           }}
@@ -236,7 +236,7 @@ export function GeneralBlendView({
         padding: 11,
         textAlign: "center",
         fontFamily: FONT.mono,
-        fontSize: 10.5,
+        fontSize: 12,
         letterSpacing: ".08em",
         fontWeight: 700,
         color: "#fff",
@@ -524,7 +524,7 @@ export function GeneralBlendView({
   /** Error from the last endorse attempt, for a view where the hero (and its copy) is hidden. */
   const ticketsError =
     !vm.showCollege && endorseError ? (
-      <p role="alert" style={{ margin: "0 0 10px", fontSize: 13, color: BLEND.negative }}>
+      <p role="alert" style={{ margin: "0 0 10px", fontSize: 12, color: BLEND.negative }}>
         {endorseError}
       </p>
     ) : null;
@@ -592,7 +592,7 @@ export function GeneralBlendView({
                 <p
                   style={{
                     margin: "18px 0 0",
-                    fontSize: 13.5,
+                    fontSize: 14,
                     lineHeight: 1.5,
                     color: BLEND.muted,
                   }}

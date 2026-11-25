@@ -61,11 +61,11 @@ export function PrimaryTileBoard({
               boxShadow: selected ? `inset 0 0 0 2px ${t.ink}` : "none",
             }}
           >
-            <span style={{ fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 700 }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 12, fontWeight: 700 }}>
               {t.stateId}
             </span>
             {t.voted ? (
-              <span style={{ fontFamily: FONT.mono, fontSize: 9, opacity: 0.75 }}>✓</span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 12, opacity: 0.75 }}>✓</span>
             ) : null}
           </button>
         );

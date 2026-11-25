@@ -34,20 +34,20 @@ export default function GlobalError({
       <body>
         <div className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
           <div className="w-full max-w-lg space-y-4 rounded-xl border border-card-border bg-card p-6">
-            <h1 className="text-lg font-semibold text-foreground">{copy.title}</h1>
-            <p className="text-sm text-foreground/90">{copy.explanation}</p>
-            <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted">
+            <h1 className="text-heading font-semibold text-foreground">{copy.title}</h1>
+            <p className="text-body text-foreground/90">{copy.explanation}</p>
+            <ul className="list-disc space-y-0.5 pl-5 text-body text-muted">
               {copy.steps.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               To report it, copy the details below and send them to staff in Discord.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={reset}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Try again
               </button>
@@ -58,15 +58,15 @@ export default function GlobalError({
                     .then(() => setCopied(true))
                     .catch(() => {});
                 }}
-                className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-foreground hover:bg-card-muted transition-colors"
+                className="rounded-lg border border-card-border px-4 py-2 text-body font-medium text-foreground hover:bg-card-muted transition-colors"
               >
                 {copied ? "Copied" : "Copy details"}
               </button>
-              <Link href="/" className="px-2 py-2 text-sm text-muted hover:text-foreground">
+              <Link href="/" className="px-2 py-2 text-body text-muted hover:text-foreground">
                 Home
               </Link>
             </div>
-            <div className="border-t border-card-border pt-3 text-xs text-muted">
+            <div className="border-t border-card-border pt-3 text-body-sm text-muted">
               <span className="font-mono" data-testid="error-code">
                 {reported.code}
               </span>

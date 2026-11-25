@@ -1,6 +1,7 @@
 "use client";
 
 import type { DossierView } from "@/lib/settlement/queries/dossier";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * Who you are on this board, and which hat you are wearing.
@@ -25,7 +26,7 @@ export function SeatSwitcher({ view, mode, onModeChange }: SeatSwitcherProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-3">
-      <span className="w-20 shrink-0 font-mono text-body-xs font-semibold tracking-widest text-muted">
+      <span className="w-20 shrink-0 font-mono text-body-sm font-semibold tracking-widest text-muted">
         ACTING AS
       </span>
 
@@ -35,14 +36,10 @@ export function SeatSwitcher({ view, mode, onModeChange }: SeatSwitcherProps) {
             type="button"
             onClick={() => onModeChange("seat")}
             aria-pressed={mode === "seat"}
-            className={`flex flex-col items-start rounded-md border px-3 py-1.5 text-left ${
-              mode === "seat"
-                ? "border-gold/55 bg-gold/10 text-foreground"
-                : "border-card-border bg-foreground/[0.02] text-muted"
-            }`}
+            className={`flex flex-col items-start px-3 py-1.5 text-left ${pillClass(mode === "seat")}`}
           >
             <span className="text-body-sm font-semibold">{seat.name}</span>
-            <span className="font-mono text-body-xs tracking-wider">
+            <span className="font-mono text-body-sm tracking-wider">
               {seat.tier} · {seat.multiplier} · {seat.actionsRemaining}/{seat.actionsBankCap} AP
             </span>
           </button>
@@ -51,14 +48,10 @@ export function SeatSwitcher({ view, mode, onModeChange }: SeatSwitcherProps) {
             type="button"
             onClick={() => onModeChange("personal")}
             aria-pressed={mode === "personal"}
-            className={`flex flex-col items-start rounded-md border px-3 py-1.5 text-left ${
-              mode === "personal"
-                ? "border-gold/55 bg-gold/10 text-foreground"
-                : "border-card-border bg-foreground/[0.02] text-muted"
-            }`}
+            className={`flex flex-col items-start px-3 py-1.5 text-left ${pillClass(mode === "personal")}`}
           >
             <span className="text-body-sm font-semibold">Yourself</span>
-            <span className="font-mono text-body-xs tracking-wider">
+            <span className="font-mono text-body-sm tracking-wider">
               PERSONAL · 0.25× · {view.viewer.personalActions} AP
             </span>
           </button>
@@ -66,14 +59,14 @@ export function SeatSwitcher({ view, mode, onModeChange }: SeatSwitcherProps) {
       ) : (
         <div className="flex flex-col">
           <span className="text-body-sm font-semibold text-foreground">Yourself</span>
-          <span className="font-mono text-body-xs tracking-wider text-muted">
+          <span className="font-mono text-body-sm tracking-wider text-muted">
             PERSONAL · 0.25× · {view.viewer.personalActions} AP · no delegation
           </span>
         </div>
       )}
 
       {seat && mode === "seat" && !seat.canAct && (
-        <p className="ml-auto font-mono text-body-xs text-warning">
+        <p className="ml-auto font-mono text-body-sm text-warning">
           {seat.blockedReason === "no-direction"
             ? "Your country is in neither bloc — it has no side to push for."
             : "Your delegation has spent its budget this turn."}

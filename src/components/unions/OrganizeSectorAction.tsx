@@ -129,33 +129,33 @@ export function OrganizeSectorAction({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
-      <h3 className="mb-1 text-sm font-bold text-foreground">Union organizing</h3>
-      <p className="mb-2 text-xs text-muted">
+      <h3 className="mb-1 text-body-lg font-bold text-foreground">Union organizing</h3>
+      <p className="mb-2 text-body-sm text-muted">
         You lead <span className="font-medium text-foreground">{myUnion.name}</span>, which
         organizes this industry in this country.
       </p>
 
       {alreadyOurs ? (
         <>
-          <p className="mb-2 text-xs text-muted">
+          <p className="mb-2 text-body-sm text-muted">
             Your union already organizes this sector. Another drive raises unionization further.
           </p>
           <button
             type="button"
             disabled={pending}
             onClick={handleOrganize}
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {pending ? "Working…" : "Organize this sector"}
           </button>
-          <span className="ml-2 text-[11px] text-muted">
+          <span className="ml-2 text-body-sm text-muted">
             Costs {myUnion.organizeActionCost} action points and{" "}
             {treasuryCost.toLocaleString("en-US")} from the treasury
           </span>
         </>
       ) : (
         <>
-          <p className="mb-2 text-xs text-muted">
+          <p className="mb-2 text-body-sm text-muted">
             {isRaid ? (
               <>
                 Currently represented by{" "}
@@ -173,13 +173,13 @@ export function OrganizeSectorAction({
             type="button"
             disabled={pending}
             onClick={handleOrganize}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50 ${
+            className={`rounded-lg px-3 py-1.5 text-body-sm font-semibold text-white transition-colors disabled:opacity-50 ${
               isRaid ? "bg-error hover:bg-error/90" : "bg-primary hover:bg-primary/90"
             }`}
           >
             {pending ? "Working…" : isRaid ? "Raid this sector" : "Organize this sector"}
           </button>
-          <span className="ml-2 text-[11px] text-muted">
+          <span className="ml-2 text-body-sm text-muted">
             Costs {myUnion.organizeActionCost} action points and{" "}
             {treasuryCost.toLocaleString("en-US")} from the treasury
             {isRaid ? ", win or lose" : ""}
@@ -190,7 +190,7 @@ export function OrganizeSectorAction({
       {result && (
         <p
           role={result.ok ? "status" : "alert"}
-          className={`mt-2 text-xs font-medium ${result.ok ? "text-success" : "text-error"}`}
+          className={`mt-2 text-body-sm font-medium ${result.ok ? "text-success" : "text-error"}`}
         >
           {result.text}
         </p>

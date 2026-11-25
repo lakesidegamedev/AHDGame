@@ -84,7 +84,7 @@ function RichBlock({
   if (streaming && kind !== "diagram") {
     return (
       <div
-        className="my-3 flex h-24 items-center justify-center rounded-xl border border-card-border/70 bg-card-elevated/40 text-[12px] text-muted"
+        className="my-3 flex h-24 items-center justify-center rounded-xl border border-card-border/70 bg-card-elevated/40 text-body-sm text-muted"
         role="status"
       >
         <span className="animate-pulse">{kind === "map" ? "Drawing map…" : "Drawing chart…"}</span>
@@ -160,7 +160,7 @@ export const REPORT_REASONS = [
 ];
 
 export const MARKDOWN_CLASS =
-  "text-[15px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-card-elevated [&_code]:px-1 [&_code]:text-[13px] [&_h1]:mb-1 [&_h1]:mt-4 [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-4 [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:mb-1 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p:last-child]:mb-0 [&_p]:mb-3 [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-card-elevated [&_pre]:p-3 [&_table]:mb-3 [&_table]:w-full [&_table]:text-[13px] [&_td]:border-t [&_td]:border-card-border/60 [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5";
+  "text-body leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-card-elevated [&_code]:px-1 [&_code]:text-body-sm [&_h1]:mb-1 [&_h1]:mt-4 [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-4 [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:mb-1 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p:last-child]:mb-0 [&_p]:mb-3 [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-card-elevated [&_pre]:p-3 [&_table]:mb-3 [&_table]:w-full [&_table]:text-body-sm [&_td]:border-t [&_td]:border-card-border/60 [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5";
 
 export /** The typing caret, drawn at the end of the last paragraph or list item rather than on a line of its own. */
 const STREAM_CARET =
@@ -184,7 +184,7 @@ function ReportForm({
       className="space-y-2 rounded-lg border border-card-border bg-card-elevated/40 p-3"
       data-ask-report
     >
-      <p className="text-[13px] text-foreground">
+      <p className="text-body-sm text-foreground">
         What went wrong? Staff review every report, with this question and answer.
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -194,7 +194,7 @@ function ReportForm({
             type="button"
             aria-pressed={tag === r}
             onClick={() => setTag(tag === r ? null : r)}
-            className={`rounded-full border px-2.5 py-1 text-[12px] transition-colors ${tag === r ? "border-transparent bg-primary text-white" : "border-card-border text-muted hover:text-foreground"}`}
+            className={`rounded-full border px-2.5 py-1 text-body-sm transition-colors ${tag === r ? "border-transparent bg-primary text-white" : "border-card-border text-muted hover:text-foreground"}`}
           >
             {r}
           </button>
@@ -206,21 +206,21 @@ function ReportForm({
         rows={2}
         placeholder="Add detail (optional)"
         aria-label="Report detail"
-        className="w-full resize-none rounded-md border border-card-border bg-background px-2 py-1.5 text-base text-foreground placeholder:text-muted focus:border-primary focus:outline-none sm:text-[13px]"
+        className="w-full resize-none rounded-md border border-card-border bg-background px-2 py-1.5 text-body-lg text-foreground placeholder:text-muted focus:border-primary focus:outline-none sm:text-body-sm"
       />
       <div className="flex items-center gap-2">
         <button
           type="button"
           disabled={!tag && !detail.trim()}
           onClick={() => onSend([tag ?? "", detail.trim()].filter(Boolean).join(": "))}
-          className="rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:bg-card-elevated disabled:text-muted"
+          className="rounded-md bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground disabled:bg-card-elevated disabled:text-muted"
         >
           Send report
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md px-2 py-1.5 text-[12px] text-muted hover:text-foreground"
+          className="rounded-md px-2 py-1.5 text-body-sm text-muted hover:text-foreground"
         >
           Cancel
         </button>
@@ -286,7 +286,7 @@ function ResearchDeck({ steps, working }: { steps: string[]; working: boolean })
 
 export function StepList({ turn }: { turn: Turn }) {
   return (
-    <ul className="space-y-1 text-[13px] text-muted" data-ask-steps>
+    <ul className="space-y-1 text-body-sm text-muted" data-ask-steps>
       {turn.trail.map((step, i) => (
         <li key={`s${i}`} className="flex items-center gap-2">
           <StepIcon text={step} className="h-3.5 w-3.5 shrink-0" />
@@ -298,7 +298,7 @@ export function StepList({ turn }: { turn: Turn }) {
 }
 
 export const ROUND_BUTTON =
-  "inline-flex items-center gap-1 rounded-full border border-card-border px-2.5 py-1 text-[12px] text-muted transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex items-center gap-1 rounded-full border border-card-border px-2.5 py-1 text-body-sm text-muted transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 export function TurnView({
   turn,
@@ -369,12 +369,12 @@ export function TurnView({
   return (
     <article className="space-y-3">
       <div className="flex justify-end">
-        <p className="max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-card-elevated px-3.5 py-2 text-[15px] leading-snug text-foreground">
+        <p className="max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-card-elevated px-3.5 py-2 text-body leading-snug text-foreground">
           {turn.question}
         </p>
       </div>
 
-      {turn.ack && !turn.answer && <p className="text-[13px] text-muted">{turn.ack}</p>}
+      {turn.ack && !turn.answer && <p className="text-body-sm text-muted">{turn.ack}</p>}
 
       {working && (
         <div>
@@ -382,7 +382,7 @@ export function TurnView({
             {keir}
             <ResearchDeck steps={turn.trail} working />
             <div className="min-w-0 flex-1" role="status" aria-live="polite">
-              <p className="ask-shimmer truncate text-[14px] text-foreground">
+              <p className="ask-shimmer truncate text-body text-foreground">
                 {turn.status || turn.trail.at(-1) || "Working"}
               </p>
             </div>
@@ -391,7 +391,7 @@ export function TurnView({
                 type="button"
                 onClick={() => toggle("steps")}
                 aria-expanded={stepsOpen}
-                className="shrink-0 text-[12px] text-muted hover:text-foreground"
+                className="shrink-0 text-body-sm text-muted hover:text-foreground"
               >
                 {stepsOpen ? "Hide" : `Show ${steps}`}
               </button>
@@ -411,7 +411,7 @@ export function TurnView({
             type="button"
             onClick={() => toggle("steps")}
             aria-expanded={stepsOpen}
-            className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1.5 text-[13px] text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1.5 text-body-sm text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <span className="flex -space-x-1.5" aria-hidden>
               {Array.from(new Set(turn.trail.map(stepKind)))
@@ -485,7 +485,7 @@ export function TurnView({
           </ReactMarkdown>
         </div>
       )}
-      {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
+      {turn.error && <p className="text-body text-foreground">{turn.error}</p>}
       {turn.error && turn.retryable && (
         <button type="button" onClick={() => onRetry(turn)} className={ROUND_BUTTON}>
           Retry
@@ -502,7 +502,7 @@ export function TurnView({
           <button
             type="button"
             onClick={() => onFollowup(turn.offer?.label ?? "")}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-card-border px-2.5 text-[12px] text-foreground hover:border-foreground/30 sm:min-h-0 sm:py-1"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-card-border px-2.5 text-body-sm text-foreground hover:border-foreground/30 sm:min-h-0 sm:py-1"
           >
             <Icon d={ICONS.flag} className="h-3.5 w-3.5" />
             {turn.offer.label}
@@ -510,14 +510,14 @@ export function TurnView({
         )}
 
       {settled && turn.extras.vizBlocked && (
-        <p className="text-[13px] text-muted">This one is answered in prose.</p>
+        <p className="text-body-sm text-muted">This one is answered in prose.</p>
       )}
       {settled && turn.extras.reportUrl && absoluteAskUrl(turn.extras.reportUrl) && (
         <a
           href={absoluteAskUrl(turn.extras.reportUrl) ?? undefined}
           target="_blank"
           rel="noopener noreferrer"
-          className="block text-[13px] text-primary underline"
+          className="block text-body-sm text-primary underline"
         >
           Open this report as its own shareable page
         </a>
@@ -526,7 +526,7 @@ export function TurnView({
         (turn.extras.conflicts ?? []).map((c, i) => (
           <div
             key={i}
-            className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[13px] text-foreground"
+            className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-body-sm text-foreground"
           >
             <b className="font-semibold">Documentation may be out of date.</b> The {c.source}
             {c.page ? ` page "${c.page}"` : ""} says {c.claim}, but the game code does: {c.actual}.
@@ -592,7 +592,7 @@ export function TurnView({
             </button>
           )}
           {note && (
-            <span className="ml-2 text-[11px] text-emerald-400" role="status">
+            <span className="ml-2 text-body-sm text-emerald-400" role="status">
               {note}
             </span>
           )}
@@ -612,7 +612,7 @@ export function TurnView({
 
       {showRate && turn.ratePrompt && (
         <div
-          className="flex items-center gap-1 text-[12px] text-muted"
+          className="flex items-center gap-1 text-body-sm text-muted"
           role="group"
           aria-label="Rate this answer"
           data-ask-rate
@@ -653,7 +653,7 @@ export function TurnView({
 
       {settled && hasSourcesPanel && sourcesOpen && (
         <div
-          className="space-y-3 rounded-xl border border-card-border bg-card px-3.5 py-3 text-[13px]"
+          className="space-y-3 rounded-xl border border-card-border bg-card px-3.5 py-3 text-body-sm"
           data-ask-sources
         >
           {sourceCount > 0 && (
@@ -670,7 +670,7 @@ export function TurnView({
                   return (
                     <li key={i} className="flex items-baseline gap-2">
                       {c.kind && (
-                        <span className="w-10 shrink-0 text-[10px] uppercase tracking-wide text-muted">
+                        <span className="w-10 shrink-0 text-body-sm uppercase tracking-wide text-muted">
                           {c.kind}
                         </span>
                       )}
@@ -723,7 +723,7 @@ export function TurnView({
             type="button"
             onClick={() => toggle("followups")}
             aria-expanded={followupsOpen}
-            className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-foreground"
+            className="inline-flex items-center gap-1 text-body-sm text-muted hover:text-foreground"
           >
             Follow-up questions
             <ChevronDown
@@ -738,7 +738,7 @@ export function TurnView({
                   key={f}
                   type="button"
                   onClick={() => onFollowup(f)}
-                  className="rounded-full border border-card-border px-3 py-1.5 text-left text-[13px] text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
+                  className="rounded-full border border-card-border px-3 py-1.5 text-left text-body-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
                 >
                   {f}
                 </button>

@@ -36,7 +36,7 @@ export function BillListControls({
                 key={filter.value}
                 type="button"
                 onClick={() => onStatusFilterChange(filter.value)}
-                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                className={`rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-all ${
                   statusFilter === filter.value
                     ? "bg-primary/20 text-primary"
                     : "bg-card text-muted hover:text-foreground"
@@ -54,7 +54,7 @@ export function BillListControls({
               <button
                 key={f.value}
                 onClick={() => onVoteFilterChange(f.value)}
-                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                className={`rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-all ${
                   voteFilter === f.value
                     ? "bg-primary/20 text-primary"
                     : "bg-card text-muted hover:text-foreground"

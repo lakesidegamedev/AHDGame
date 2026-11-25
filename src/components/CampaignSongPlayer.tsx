@@ -42,12 +42,12 @@ export function CampaignSongPlayer({ videoId, characterName, label }: CampaignSo
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{heading}</p>
+          <p className="truncate text-body font-semibold">{heading}</p>
           <a
             href={watchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-muted hover:text-foreground"
+            className="text-body-sm text-muted hover:text-foreground"
           >
             Watch on YouTube
           </a>
@@ -57,7 +57,7 @@ export function CampaignSongPlayer({ videoId, characterName, label }: CampaignSo
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-label={open ? `Close ${heading}` : `Play ${heading}`}
-          className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
         >
           {open ? (
             "Close"

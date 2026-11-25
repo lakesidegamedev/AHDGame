@@ -24,7 +24,7 @@ export function ForeignAffairsTab({
   const countryCode = countryId.toLowerCase();
   return (
     <div className="space-y-6">
-      <p className="text-[12px] text-muted">
+      <p className="text-body-sm text-muted">
         This tab covers the two things a head of government does alone in foreign affairs: declaring
         war and making peace. Everything else is done through international organisations
         (alliances, sanctions, aid, trade deals and joint statements). The game has no separate

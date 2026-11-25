@@ -241,7 +241,7 @@ export default function CabinetOfficePage() {
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
           <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-            <h2 className="text-lg font-semibold text-error">{error ?? "Failed to load"}</h2>
+            <h2 className="text-heading font-semibold text-error">{error ?? "Failed to load"}</h2>
           </div>
         </main>
       </div>
@@ -538,7 +538,7 @@ export default function CabinetOfficePage() {
 
               {activeTab === "allocations" && data.departmentFinances && (
                 <div className="space-y-4">
-                  <p className="rounded-lg border border-card-border bg-card p-4 text-sm text-muted">
+                  <p className="rounded-lg border border-card-border bg-card p-4 text-body text-muted">
                     {translateActions("allocationsNotice")}
                   </p>
                   {data.departmentFinances.map((department) => (

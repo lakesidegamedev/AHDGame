@@ -28,7 +28,7 @@ export default function FinRow({
       <InfoTooltip
         trigger={
           <span
-            className={`text-sm border-b border-dotted border-muted/40 ${indent ? "pl-4 text-muted" : bold ? "font-semibold text-foreground" : "text-foreground"}`}
+            className={`text-body border-b border-dotted border-muted/40 ${indent ? "pl-4 text-muted" : bold ? "font-semibold text-foreground" : "text-foreground"}`}
           >
             {indent && "+ "}
             {label}
@@ -44,9 +44,11 @@ export default function FinRow({
           </p>
         )}
       </InfoTooltip>
-      <span className={`text-sm tabular-nums ${bold ? "font-bold" : "font-medium"} ${valueClass}`}>
+      <span
+        className={`text-body tabular-nums ${bold ? "font-bold" : "font-medium"} ${valueClass}`}
+      >
         {value}
-        {daily && <span className="text-xs font-normal text-muted ml-0.5">/turn</span>}
+        {daily && <span className="text-body-sm font-normal text-muted ml-0.5">/turn</span>}
       </span>
     </div>
   );

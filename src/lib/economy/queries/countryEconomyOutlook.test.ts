@@ -266,6 +266,9 @@ it.each(["stale", "invalid", "missing"] as const)(
     const { buildCountryEconomyOutlook } = await import("./countryEconomyOutlook");
     const result = await buildCountryEconomyOutlook(db as unknown as Db, "UK");
     expect(result.realEconomy.unemployment.value).toBeNull();
+    expect(result.realEconomy.unemploymentPublication).toBe(
+      status === "stale" ? "awaiting_turn" : "unavailable"
+    );
     expect(readNationalMetricRollup).not.toHaveBeenCalled();
   }
 );

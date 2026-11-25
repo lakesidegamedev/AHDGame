@@ -59,7 +59,7 @@ export function ReadOnlyGuard({ active }: { active: boolean }) {
         You can view everything here, including logs and diagnostics. Changes are refused.
       </span>
       {blocked && (
-        <span className="ml-2 font-mono text-body-xs text-warning">Blocked: {blocked}</span>
+        <span className="ml-2 font-mono text-body-sm text-warning">Blocked: {blocked}</span>
       )}
     </div>
   );

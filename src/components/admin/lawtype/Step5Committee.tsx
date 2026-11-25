@@ -49,7 +49,7 @@ export function Step5Committee({ positions, policyDomain, onChange }: Step5Commi
     <div className="space-y-4">
       <div>
         <h3 className="font-medium">Committee positions</h3>
-        <p className="text-xs text-muted mt-1">
+        <p className="text-body-sm text-muted mt-1">
           Auto-generated based on policy domain. Edit names if needed.
         </p>
       </div>
@@ -57,14 +57,14 @@ export function Step5Committee({ positions, policyDomain, onChange }: Step5Commi
       <div className="space-y-3">
         {positions.map((pos, index) => (
           <div key={pos.positionId} className="flex items-center gap-3">
-            <span className="text-xs text-muted w-24 capitalize">
+            <span className="text-body-sm text-muted w-24 capitalize">
               {pos.chamber} {pos.positionId.includes("chair") ? "Chair" : "Ranking"}
             </span>
             <input
               type="text"
               value={pos.name}
               onChange={(e) => updatePosition(index, e.target.value)}
-              className="flex-1 rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+              className="flex-1 rounded border border-card-border bg-card px-2 py-1.5 text-body"
             />
           </div>
         ))}

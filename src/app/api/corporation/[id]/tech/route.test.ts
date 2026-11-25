@@ -64,6 +64,61 @@ beforeEach(async () => {
 });
 
 describe("GET /api/corporation/[id]/tech", () => {
+  it.each(["player", "npp"] as const)(
+    "returns the appropriate country opening years for a %s company",
+    async (ceoType) => {
+      const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+      const { getGameState } = await import("@/lib/gameState");
+      vi.mocked(getGameState).mockResolvedValue({
+        currentYear: 2032,
+        startingYear: 2027,
+        currentTurn: 240,
+        preset: "2027-default",
+      } as never);
+      const node = TECH_TREE.logistics.find(
+        (candidate) => candidate.name === "Autonomous Freight"
+      )!;
+      vi.mocked(resolveCorporation).mockResolvedValue({
+        ok: true,
+        corporation: makeCorp({
+          type: "logistics",
+          countryId: "CA",
+          ceoType,
+          unlockedTechNodeIds: [node.id],
+        }),
+      } as never);
+      const sectors = db.collection("corporateSectors");
+      sectors.distinct.mockResolvedValue(["US"]);
+      sectors.aggregate.mockReturnValue({
+        toArray: vi
+          .fn()
+          .mockResolvedValue([{ _id: { strategyId: "autonomous_freight", countryId: "US" } }]),
+      });
+
+      const { GET } = await import("./route");
+      const response = await GET(new Request("http://localhost/api/corporation/x/tech"), {
+        params: Promise.resolve({ id: corpId.toString() }),
+      });
+      const body = await response.json();
+      const decade = body.decades.find((entry: { id: string }) => entry.id === "2029");
+      const owned = decade.lanes.sector.find((entry: { id: string }) => entry.id === node.id);
+      expect(owned.owned).toBe(true);
+      expect(owned.effects).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            methodOpenings:
+              ceoType === "player"
+                ? []
+                : [
+                    { countryId: "CA", year: 2036, open: false },
+                    { countryId: "US", year: 2036, open: false },
+                  ],
+          }),
+        ])
+      );
+    }
+  );
+
   it("explains the gross operating scale used to price technology", async () => {
     const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
     vi.mocked(resolveCorporation).mockResolvedValue({

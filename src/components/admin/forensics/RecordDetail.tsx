@@ -54,14 +54,14 @@ function PivotButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="rounded-md border border-card-border bg-card/40 px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
+      className="rounded-md border border-card-border bg-card/40 px-2.5 py-1.5 text-body-sm font-medium transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
     >
       {children}
     </button>
   );
 }
 
-const OVERLINE_CLS = "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted";
+const OVERLINE_CLS = "text-body-sm font-semibold uppercase tracking-[0.14em] text-muted";
 
 function RelatedList({
   title,
@@ -78,7 +78,7 @@ function RelatedList({
     <div>
       <h4 className={`mb-2 ${OVERLINE_CLS}`}>{title}</h4>
       {!records || records.length === 0 ? (
-        <p className="text-xs italic text-muted">{emptyHint}</p>
+        <p className="text-body-sm italic text-muted">{emptyHint}</p>
       ) : (
         <ul className="divide-y divide-card-border/50 overflow-hidden rounded-lg border border-card-border bg-card/40">
           {records.map((r) => (
@@ -86,13 +86,13 @@ function RelatedList({
               <button
                 type="button"
                 onClick={() => onSelectRecord(r)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-card-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 motion-reduce:transition-none"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm transition-colors hover:bg-card-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 motion-reduce:transition-none"
               >
                 <span
                   className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${categoryMeta(r.category).dot}`}
                 />
                 <span className="truncate text-foreground">{summarizeRecord(r)}</span>
-                <span className="ml-auto flex-shrink-0 text-[11px] tabular-nums text-muted">
+                <span className="ml-auto flex-shrink-0 text-body-sm tabular-nums text-muted">
                   T{r.turn} · {formatRelative(r.ts)}
                 </span>
               </button>
@@ -157,24 +157,24 @@ export function RecordDetail({
             <>
               <div className="flex flex-wrap items-center gap-1.5">
                 <span
-                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cat.badge}`}
+                  className={`rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${cat.badge}`}
                 >
                   {cat.label}
                 </span>
-                <span className="font-mono text-xs text-muted">{r.action}</span>
+                <span className="font-mono text-body-sm text-muted">{r.action}</span>
                 <span
-                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${OUTCOME_META[r.outcome].badge}`}
+                  className={`rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${OUTCOME_META[r.outcome].badge}`}
                 >
                   {OUTCOME_META[r.outcome].label}
                 </span>
               </div>
-              <h3 className="mt-2 text-base font-semibold tracking-tight">
+              <h3 className="mt-2 text-body-lg font-semibold tracking-tight">
                 {humanizeAction(r.action)}
               </h3>
-              <p className="mt-0.5 text-sm text-muted">{summarizeRecord(r)}</p>
+              <p className="mt-0.5 text-body text-muted">{summarizeRecord(r)}</p>
             </>
           ) : (
-            <h3 className="text-sm font-semibold">Record</h3>
+            <h3 className="text-body-lg font-semibold">Record</h3>
           )}
         </div>
         <button
@@ -202,9 +202,9 @@ export function RecordDetail({
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm text-red-400">
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-body text-red-400">
             <p>{error}</p>
-            <button onClick={load} className="mt-1 text-xs underline hover:text-red-300">
+            <button onClick={load} className="mt-1 text-body-sm underline hover:text-red-300">
               Retry
             </button>
           </div>
@@ -213,7 +213,7 @@ export function RecordDetail({
         {r && (
           <>
             {/* Meta grid */}
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-card-border/60 bg-card/40 p-3 text-sm">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-card-border/60 bg-card/40 p-3 text-body">
               <div>
                 <dt className="mb-0.5 text-body-sm font-medium text-muted">When</dt>
                 <dd className="tabular-nums" title={formatTimestamp(r.ts)}>
@@ -229,7 +229,7 @@ export function RecordDetail({
                 <dt className="mb-0.5 text-body-sm font-medium text-muted">Actor</dt>
                 <dd className="truncate">
                   {describeActor(r.actor)}{" "}
-                  <span className="text-xs text-muted">({r.actor.kind})</span>
+                  <span className="text-body-sm text-muted">({r.actor.kind})</span>
                 </dd>
               </div>
               <div>
@@ -252,7 +252,7 @@ export function RecordDetail({
             </dl>
 
             {r.reason && (
-              <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm text-amber-300">
+              <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-body text-amber-300">
                 {r.reason}
               </p>
             )}
@@ -361,20 +361,20 @@ export function RecordDetail({
                     <div className="space-y-3 px-3 pb-3">
                       {r.net && (
                         <div>
-                          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                          <div className="mb-1 font-mono text-body-sm uppercase tracking-[0.14em] text-muted">
                             net
                           </div>
-                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-card-border/60 bg-card-muted p-2.5 font-mono text-[11px] leading-relaxed">
+                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-card-border/60 bg-card-muted p-2.5 font-mono text-body-sm leading-relaxed">
                             {JSON.stringify(r.net, null, 2)}
                           </pre>
                         </div>
                       )}
                       {r.meta && (
                         <div>
-                          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                          <div className="mb-1 font-mono text-body-sm uppercase tracking-[0.14em] text-muted">
                             meta
                           </div>
-                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-card-border/60 bg-card-muted p-2.5 font-mono text-[11px] leading-relaxed">
+                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-card-border/60 bg-card-muted p-2.5 font-mono text-body-sm leading-relaxed">
                             {JSON.stringify(r.meta, null, 2)}
                           </pre>
                         </div>
@@ -384,7 +384,7 @@ export function RecordDetail({
                 </div>
               )
             ) : (
-              <p className="rounded-lg border border-card-border bg-card/40 px-3 py-2 text-xs italic text-muted">
+              <p className="rounded-lg border border-card-border bg-card/40 px-3 py-2 text-body-sm italic text-muted">
                 Raw metadata and network details are admin-only.
               </p>
             )}

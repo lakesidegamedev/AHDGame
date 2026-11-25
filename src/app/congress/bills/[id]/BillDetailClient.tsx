@@ -136,10 +136,10 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
   if (error && !bill)
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-error text-sm">{error}</p>
+        <p className="text-error text-body">{error}</p>
         <Link
           href="/congress?chamber=senate&tab=bills"
-          className="text-sm text-primary hover:underline"
+          className="text-body text-primary hover:underline"
         >
           ← Back to bills
         </Link>
@@ -260,7 +260,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
         {/* Back nav */}
         <Link
           href={backHref}
-          className="text-sm text-muted hover:text-foreground transition-colors"
+          className="text-body text-muted hover:text-foreground transition-colors"
         >
           {backLabel}
         </Link>
@@ -281,12 +281,12 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
 
         {/* Messages */}
         {message && (
-          <div className="rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-sm text-success">
+          <div className="rounded-lg bg-success/10 border border-success/30 px-4 py-3 text-body text-success">
             {message}
           </div>
         )}
         {error && (
-          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-sm text-error">
+          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-body text-error">
             {error}
           </div>
         )}
@@ -300,10 +300,10 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <h3 className="text-base font-semibold text-amber-300">
+                    <h3 className="text-body-lg font-semibold text-amber-300">
                       Congressional veto override
                     </h3>
-                    <p className="text-xs text-muted mt-1">
+                    <p className="text-body-sm text-muted mt-1">
                       This is a new vote. A two-thirds supermajority of all seats in{" "}
                       <strong className="text-foreground">both chambers</strong> is required to
                       override the presidential veto.
@@ -333,7 +333,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                 {bill.canVetoOverride && (
                   <div className="space-y-2">
                     {bill.myOverrideVote && (
-                      <p className="text-xs text-muted">
+                      <p className="text-body-sm text-muted">
                         Your vote:{" "}
                         <span className="font-medium text-foreground capitalize">
                           {bill.myOverrideVote === "for" ? "Override" : "Sustain veto"}
@@ -354,7 +354,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                       <button
                         onClick={() => handleAction("veto_override_vote", { vote: "for" })}
                         disabled={voting}
-                        className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                        className={`flex-1 rounded-lg border py-2 text-body font-medium transition-colors disabled:opacity-50 ${
                           bill.myOverrideVote === "for"
                             ? "border-amber-500/60 bg-amber-500/25 text-amber-300"
                             : "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
@@ -365,7 +365,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                       <button
                         onClick={() => handleAction("veto_override_vote", { vote: "against" })}
                         disabled={voting}
-                        className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                        className={`flex-1 rounded-lg border py-2 text-body font-medium transition-colors disabled:opacity-50 ${
                           bill.myOverrideVote === "against"
                             ? "border-card-border/60 bg-card text-foreground"
                             : "border-card-border bg-card/50 text-muted hover:text-foreground hover:bg-card"
@@ -388,12 +388,12 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                 bill.votesFor + bill.votesAgainst + bill.votesAbstain > 0) && (
                 <div className="space-y-4 rounded-xl border border-card-border bg-card p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-muted">
+                    <h3 className="text-body-lg font-semibold text-muted">
                       {chamberLabel(bill.currentChamber)} · floor vote
                     </h3>
                     {(isActive || isConcurrent || isJpOverride || isCabinetReview) &&
                       bill.votingEndsAt && (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-warning">
+                        <span className="inline-flex items-center gap-1.5 text-body-sm text-warning">
                           <span className="h-1.5 w-1.5 rounded-full bg-warning" />
                           LIVE ·{" "}
                           <DeadlineCountdown
@@ -408,15 +408,15 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                     bill.filibusterInvocations.length > 0 && (
                       <div className="rounded-lg border border-error/40 bg-error/10 px-4 py-3">
                         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                          <span className="text-base font-bold uppercase tracking-wide text-error">
+                          <span className="text-body-lg font-bold uppercase tracking-wide text-error">
                             ⚑ Filibustered
                           </span>
-                          <span className="text-xs text-error/80">
+                          <span className="text-body-sm text-error/80">
                             {bill.filibusterInvocations.length}× · +
                             {bill.filibusterInvocations.length * 12}h
                           </span>
                         </div>
-                        <div className="mt-1 text-xs text-muted">
+                        <div className="mt-1 text-body-sm text-muted">
                           by{" "}
                           {bill.filibusterInvocations.map((inv, i) => (
                             <span key={inv.characterId}>
@@ -479,7 +479,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                                 type="button"
                                 disabled={voting}
                                 onClick={() => handleVote(false, v)}
-                                className={`flex-1 rounded-lg border py-2.5 text-sm font-medium capitalize transition-colors disabled:opacity-50 ${
+                                className={`flex-1 rounded-lg border py-2.5 text-body font-medium capitalize transition-colors disabled:opacity-50 ${
                                   bill.myVote === v
                                     ? v === "for"
                                       ? "border-success/50 bg-success/15 text-success"
@@ -561,10 +561,10 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                 (bill.voteByPartyOther?.length ?? 0) > 0) && (
                 <div className="min-w-0 rounded-xl border border-card-border bg-card p-5 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-lg font-semibold">Vote by party</h3>
+                    <h3 className="text-body-lg font-semibold">Vote by party</h3>
                     {/* Chamber sub-tabs — bicameral only */}
                     {!isUnicameral && (
-                      <div className="flex rounded-lg border border-card-border overflow-hidden text-sm">
+                      <div className="flex rounded-lg border border-card-border overflow-hidden text-body">
                         <button
                           type="button"
                           onClick={() => setVoteTableChamber("origin")}
@@ -601,7 +601,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                       chamberLabel={chamberLabel(otherChamberName)}
                     />
                   ) : (
-                    <p className="text-xs text-muted py-2">
+                    <p className="text-body-sm text-muted py-2">
                       No votes recorded for this chamber yet.
                     </p>
                   )}
@@ -614,7 +614,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
               ((bill.voteByPartyOrigin?.length ?? 0) > 0 ||
                 (bill.voteByPartyOther?.length ?? 0) > 0) && (
                 <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-                  <h3 className="text-lg font-semibold">Member vote history</h3>
+                  <h3 className="text-body-lg font-semibold">Member vote history</h3>
                   <VoteListTable
                     billId={id}
                     chamber={voteTableChamber}
@@ -628,10 +628,10 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-5 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <h3 className="text-base font-semibold text-purple-300">
+                    <h3 className="text-body-lg font-semibold text-purple-300">
                       Awaiting presidential action
                     </h3>
-                    <p className="text-xs text-muted mt-1">
+                    <p className="text-body-sm text-muted mt-1">
                       The President has until the deadline to sign or veto. If no action is taken,
                       the bill becomes law (pocket signature).
                     </p>
@@ -648,13 +648,13 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAction("presidential_action", { decision: "sign" })}
-                      className="flex-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      className="flex-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 py-2 text-body font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                     >
                       ✓ Sign into law
                     </button>
                     <button
                       onClick={() => setVetoModalOpen(true)}
-                      className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                      className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 py-2 text-body font-medium text-red-400 hover:bg-red-500/20 transition-colors"
                     >
                       ✗ Veto…
                     </button>
@@ -667,11 +667,11 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             {bill.fullText && (
               <details className="group rounded-xl border border-card-border bg-card p-5">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-                  <h3 className="text-lg font-semibold">Full text</h3>
-                  <span className="text-xs text-muted group-open:hidden">Show</span>
-                  <span className="hidden text-xs text-muted group-open:inline">Hide</span>
+                  <h3 className="text-body-lg font-semibold">Full text</h3>
+                  <span className="text-body-sm text-muted group-open:hidden">Show</span>
+                  <span className="hidden text-body-sm text-muted group-open:inline">Hide</span>
                 </summary>
-                <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted">
+                <pre className="mt-3 whitespace-pre-wrap font-sans text-body leading-relaxed text-muted">
                   {bill.fullText}
                 </pre>
               </details>
@@ -680,8 +680,8 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             {/* Override failed panel — US only */}
             {!isUnicameral && bill.status === "override_failed" && (
               <div className="rounded-xl border border-error/30 bg-error/5 p-5 space-y-3">
-                <h3 className="text-base font-semibold text-foreground">Veto sustained</h3>
-                <p className="text-xs text-muted">
+                <h3 className="text-body-lg font-semibold text-foreground">Veto sustained</h3>
+                <p className="text-body-sm text-muted">
                   The override attempt failed to reach a 2/3 supermajority of the seats in both
                   chambers. The presidential veto stands.
                 </p>
@@ -705,8 +705,8 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             {/* Veto overridden panel — US only */}
             {!isUnicameral && bill.status === "signed" && bill.presidentAction === "override" && (
               <div className="rounded-xl border border-success/30 bg-success/5 p-5 space-y-3">
-                <h3 className="text-base font-semibold text-success">Veto overridden</h3>
-                <p className="text-xs text-muted">
+                <h3 className="text-body-lg font-semibold text-success">Veto overridden</h3>
+                <p className="text-body-sm text-muted">
                   Congress overrode the presidential veto with a 2/3 supermajority of the seats in
                   both chambers. The bill is now law.
                 </p>
@@ -736,16 +736,18 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
 
             {(bill.coSponsors?.length ?? 0) > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-body-lg font-semibold">
                   Co-sponsors{" "}
-                  <span className="text-sm font-normal text-muted">{bill.coSponsors?.length}</span>
+                  <span className="text-body font-normal text-muted">
+                    {bill.coSponsors?.length}
+                  </span>
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {(bill.coSponsors ?? []).map((cs) => (
                     <Link
                       key={cs.characterId}
                       href={`/character/${cs.sequentialId ?? cs.characterId}`}
-                      className="rounded-full border border-card-border bg-background px-2.5 py-1 text-xs text-foreground/90 hover:border-primary/50 hover:text-primary transition-colors"
+                      className="rounded-full border border-card-border bg-background px-2.5 py-1 text-body-sm text-foreground/90 hover:border-primary/50 hover:text-primary transition-colors"
                     >
                       {cs.characterName}
                     </Link>
@@ -757,19 +759,19 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             {/* How it becomes law — country-specific procedure */}
             {legProcess.quirks.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-                <h3 className="text-lg font-semibold">How it becomes law</h3>
+                <h3 className="text-body-lg font-semibold">How it becomes law</h3>
                 <div className="space-y-3">
                   {legProcess.quirks.map((q, i) => (
                     <div key={i} className="flex gap-3">
                       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                       <div>
-                        <div className="text-sm font-medium text-foreground">{q.title}</div>
-                        <div className="text-xs leading-relaxed text-muted">{q.body}</div>
+                        <div className="text-body font-medium text-foreground">{q.title}</div>
+                        <div className="text-body-sm leading-relaxed text-muted">{q.body}</div>
                       </div>
                     </div>
                   ))}
                   {legProcess.dissolution && (
-                    <div className="flex gap-2 border-t border-card-border/40 pt-3 text-xs leading-relaxed text-foreground/80">
+                    <div className="flex gap-2 border-t border-card-border/40 pt-3 text-body-sm leading-relaxed text-foreground/80">
                       <span className="font-semibold text-warning">
                         {legProcess.dissolution.actor}:
                       </span>
@@ -783,10 +785,10 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             {/* Whip Count — every seated party, free vote when unwhipped */}
             {bill.whipCounts && bill.whipCounts.length > 0 && (
               <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-                <h3 className="text-lg font-semibold">Whip count</h3>
+                <h3 className="text-body-lg font-semibold">Whip count</h3>
                 <div className="space-y-2">
                   {bill.whipCounts.map((w) => (
-                    <div key={w.partyId} className="flex items-center gap-2 text-sm">
+                    <div key={w.partyId} className="flex items-center gap-2 text-body">
                       <span
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ background: w.partyColor }}
@@ -795,7 +797,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                         {w.partyName}
                       </span>
                       <span
-                        className={`text-xs font-medium ${w.direction === "for" ? "text-success" : w.direction === "against" ? "text-error" : "text-muted"}`}
+                        className={`text-body-sm font-medium ${w.direction === "for" ? "text-success" : w.direction === "against" ? "text-error" : "text-muted"}`}
                       >
                         {w.direction === "for"
                           ? "Whipping Aye"

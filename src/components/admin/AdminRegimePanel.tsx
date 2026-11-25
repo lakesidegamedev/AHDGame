@@ -96,44 +96,44 @@ export function AdminRegimePanel({ countryCode }: Props) {
   return (
     <div className="space-y-6" data-testid="admin-regime-panel">
       {err && (
-        <div className="rounded border border-error/40 bg-error/5 p-3 text-sm text-error">
+        <div className="rounded border border-error/40 bg-error/5 p-3 text-body text-error">
           {err}
         </div>
       )}
       {msg && (
-        <div className="rounded border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm">
+        <div className="rounded border border-emerald-500/40 bg-emerald-500/5 p-3 text-body">
           {msg}
         </div>
       )}
 
       {/* Status */}
       <section className="rounded-lg border border-card-border bg-card p-4">
-        <h2 className="text-sm font-semibold text-foreground">Current state</h2>
+        <h2 className="text-body font-semibold text-foreground">Current state</h2>
         {data ? (
-          <dl className="mt-2 grid gap-3 text-sm sm:grid-cols-2">
+          <dl className="mt-2 grid gap-3 text-body sm:grid-cols-2">
             <div>
-              <dt className="text-xs text-muted">Government type</dt>
+              <dt className="text-body-sm text-muted">Government type</dt>
               <dd className="font-medium text-foreground">{data.governmentType}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">Current stage</dt>
+              <dt className="text-body-sm text-muted">Current stage</dt>
               <dd className="font-medium text-foreground">{data.stage}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">Popular legitimacy</dt>
+              <dt className="text-body-sm text-muted">Popular legitimacy</dt>
               <dd className="tabular-nums">
                 {data.scalars.popularLegitimacy.toFixed(1)} ({data.scalars.popularBand})
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">Intra-party confidence</dt>
+              <dt className="text-body-sm text-muted">Intra-party confidence</dt>
               <dd className="tabular-nums">
                 {data.scalars.partyConfidence.toFixed(1)} ({data.scalars.confidenceBand})
               </dd>
             </div>
           </dl>
         ) : (
-          <p className="mt-2 text-sm text-muted">Loading…</p>
+          <p className="mt-2 text-body text-muted">Loading…</p>
         )}
       </section>
 
@@ -152,8 +152,8 @@ export function AdminRegimePanel({ countryCode }: Props) {
       {/* Transition history */}
       {data && data.transitionHistory.length > 0 && (
         <section className="rounded-lg border border-card-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">Recent transitions</h2>
-          <ul className="mt-2 space-y-1 text-xs text-muted">
+          <h2 className="text-body font-semibold text-foreground">Recent transitions</h2>
+          <ul className="mt-2 space-y-1 text-body-sm text-muted">
             {data.transitionHistory.map((t, i) => (
               <li key={`${t.turn}-${i}`}>
                 T{t.turn}: {t.from} → {t.to} — {t.reason}
@@ -173,12 +173,12 @@ function ForceStageForm({ busy, onSubmit }: { busy: boolean; onSubmit: (toStage:
       className="rounded-lg border border-card-border bg-card p-4"
       data-testid="admin-force-stage"
     >
-      <h2 className="text-sm font-semibold text-foreground">Force escalation stage</h2>
+      <h2 className="text-body font-semibold text-foreground">Force escalation stage</h2>
       <div className="mt-2 flex items-center gap-2">
         <select
           value={toStage}
           onChange={(e) => setToStage(e.target.value as Stage)}
-          className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+          className="rounded border border-card-border bg-background px-2 py-1 text-body"
         >
           {STAGE_OPTIONS.map((s) => (
             <option key={s} value={s}>
@@ -189,7 +189,7 @@ function ForceStageForm({ busy, onSubmit }: { busy: boolean; onSubmit: (toStage:
         <button
           disabled={busy}
           onClick={() => onSubmit(toStage)}
-          className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-sm text-primary hover:bg-primary/20 disabled:opacity-50"
+          className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-body text-primary hover:bg-primary/20 disabled:opacity-50"
         >
           Force stage
         </button>
@@ -214,12 +214,12 @@ function SetScalarForm({
       className="rounded-lg border border-card-border bg-card p-4"
       data-testid="admin-set-scalar"
     >
-      <h2 className="text-sm font-semibold text-foreground">Set scalar</h2>
+      <h2 className="text-body font-semibold text-foreground">Set scalar</h2>
       <div className="mt-2 flex items-center gap-2">
         <select
           value={scalar}
           onChange={(e) => setScalar(e.target.value as "popularLegitimacy" | "partyConfidence")}
-          className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+          className="rounded border border-card-border bg-background px-2 py-1 text-body"
         >
           <option value="popularLegitimacy">popularLegitimacy</option>
           <option value="partyConfidence">partyConfidence</option>
@@ -228,12 +228,12 @@ function SetScalarForm({
           type="number"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-24 rounded border border-card-border bg-background px-2 py-1 text-sm tabular-nums"
+          className="w-24 rounded border border-card-border bg-background px-2 py-1 text-body tabular-nums"
         />
         <button
           disabled={busy}
           onClick={() => onSubmit(scalar, Number(value))}
-          className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-sm text-primary hover:bg-primary/20 disabled:opacity-50"
+          className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-body text-primary hover:bg-primary/20 disabled:opacity-50"
         >
           Set scalar
         </button>
@@ -261,15 +261,15 @@ function ForceConversionForm({
       className="rounded-lg border border-card-border bg-card p-4"
       data-testid="admin-force-conversion"
     >
-      <h2 className="text-sm font-semibold text-foreground">Force system conversion</h2>
-      <p className="mt-1 text-xs text-muted">
+      <h2 className="text-body font-semibold text-foreground">Force system conversion</h2>
+      <p className="mt-1 text-body-sm text-muted">
         Bypasses convention / Stage-4 gates. One-way — cannot convert back to onePartyState.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
           value={target}
           onChange={(e) => setTarget(e.target.value as TargetSystem)}
-          className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+          className="rounded border border-card-border bg-background px-2 py-1 text-body"
         >
           {TARGET_OPTIONS.map((t) => (
             <option key={t} value={t}>
@@ -277,19 +277,19 @@ function ForceConversionForm({
             </option>
           ))}
         </select>
-        <label className="text-xs text-muted">legacy %</label>
+        <label className="text-body-sm text-muted">legacy %</label>
         <input
           type="number"
           min={0}
           max={35}
           value={reservation}
           onChange={(e) => setReservation(e.target.value)}
-          className="w-16 rounded border border-card-border bg-background px-2 py-1 text-sm tabular-nums"
+          className="w-16 rounded border border-card-border bg-background px-2 py-1 text-body tabular-nums"
         />
         <select
           value={path}
           onChange={(e) => setPath(e.target.value as "voluntary" | "forced")}
-          className="rounded border border-card-border bg-background px-2 py-1 text-sm"
+          className="rounded border border-card-border bg-background px-2 py-1 text-body"
         >
           <option value="forced">forced</option>
           <option value="voluntary">voluntary</option>
@@ -303,7 +303,7 @@ function ForceConversionForm({
               path,
             })
           }
-          className="rounded border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-sm text-rose-700 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50"
+          className="rounded border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-body text-rose-700 dark:text-rose-400 hover:bg-rose-500/20 disabled:opacity-50"
         >
           Force conversion
         </button>

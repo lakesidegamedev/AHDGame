@@ -44,7 +44,7 @@ function Note({ children }: { children: React.ReactNode }) {
       style={{
         margin: "6px 0 0",
         fontFamily: FONT.sans,
-        fontSize: 13.5,
+        fontSize: 14,
         lineHeight: 1.5,
         color: BLEND.muted,
       }}
@@ -176,7 +176,7 @@ export function StateOperationsSection({
         style={{
           margin: "0 0 18px",
           fontFamily: FONT.sans,
-          fontSize: 14.5,
+          fontSize: 14,
           lineHeight: 1.55,
           color: BLEND.muted,
         }}
@@ -220,7 +220,7 @@ export function StateOperationsSection({
               background: "transparent",
               padding: "7px 13px",
               fontFamily: FONT.mono,
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: ".08em",
               fontWeight: 700,
               textTransform: "uppercase",
@@ -232,7 +232,7 @@ export function StateOperationsSection({
           </button>
         </div>
         {builtStates.size > 0 && (
-          <p className="mt-2 text-xs text-success">
+          <p className="mt-2 text-body-sm text-success">
             Built this turn:{" "}
             {presence
               .filter((row) => row.builtThisTurn)
@@ -247,7 +247,7 @@ export function StateOperationsSection({
             style={{
               marginTop: 8,
               fontFamily: FONT.mono,
-              fontSize: 11,
+              fontSize: 12,
               color: presenceMessage.startsWith("✓") ? BLEND.positive : BLEND.negative,
             }}
           >
@@ -310,7 +310,7 @@ export function StateOperationsSection({
                     <span
                       style={{
                         fontFamily: FONT.sans,
-                        fontSize: 15.5,
+                        fontSize: 16,
                         fontWeight: 600,
                         color: BLEND.ink,
                       }}
@@ -321,7 +321,7 @@ export function StateOperationsSection({
                   <span
                     style={{
                       fontFamily: FONT.mono,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       color: BLEND.mutedDim,
                       flexShrink: 0,
                     }}
@@ -363,7 +363,7 @@ export function StateOperationsSection({
                                 style={{
                                   alignSelf: "center",
                                   fontFamily: FONT.mono,
-                                  fontSize: 10.5,
+                                  fontSize: 12,
                                   color: BLEND.mutedDim,
                                 }}
                               >
@@ -384,7 +384,7 @@ export function StateOperationsSection({
                             style={{
                               marginTop: 5,
                               fontFamily: FONT.mono,
-                              fontSize: 11,
+                              fontSize: 12,
                               color: BLEND.muted,
                             }}
                           >
@@ -413,7 +413,7 @@ export function StateOperationsSection({
               style={{
                 marginTop: 6,
                 fontFamily: FONT.mono,
-                fontSize: 11.5,
+                fontSize: 12,
                 color: BLEND.negative,
               }}
             >
@@ -492,7 +492,7 @@ export function StateOperationsHere({
       {againstYou.map((row) => (
         <div
           key={`${row.actorName}:${row.kind}`}
-          style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 11.5, color: BLEND.negative }}
+          style={{ marginTop: 6, fontFamily: FONT.mono, fontSize: 12, color: BLEND.negative }}
         >
           Against you: {attackLine(row, view.currentTurn)}
         </div>
@@ -512,7 +512,7 @@ export function StateOperationsHere({
                   aria-hidden
                   style={{ width: 9, height: 9, borderRadius: 2, background: o.color }}
                 />
-                <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>
+                <span style={{ fontFamily: FONT.sans, fontSize: 14, fontWeight: 600 }}>
                   {o.name}
                 </span>
               </div>
@@ -545,7 +545,7 @@ export function StateOperationsHere({
               {liveHere.map((row) => (
                 <div
                   key={`${row.kind}`}
-                  style={{ marginTop: 5, fontFamily: FONT.mono, fontSize: 11, color: BLEND.muted }}
+                  style={{ marginTop: 5, fontFamily: FONT.mono, fontSize: 12, color: BLEND.muted }}
                 >
                   Live against them: {attackLine(row, view.currentTurn)}
                 </div>

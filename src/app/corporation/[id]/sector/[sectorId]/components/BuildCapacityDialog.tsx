@@ -419,7 +419,7 @@ export default function BuildCapacityDialog({
                 }}
                 className="w-full bg-transparent text-center rounded-md text-heading font-bold tabular-nums text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
-              <p className="text-body-xs text-muted">{count === 1 ? site : sites}</p>
+              <p className="text-body-sm text-muted">{count === 1 ? site : sites}</p>
             </div>
             <StepButton
               label={`${vocab.buildVerb} one more ${site}`}
@@ -438,7 +438,7 @@ export default function BuildCapacityDialog({
             </StepButton>
           </div>
           {invalidCount && (
-            <p id="build-count-error" className="mt-2 text-body-xs text-error">
+            <p id="build-count-error" className="mt-2 text-body-sm text-error">
               {t("invalidBuildCount", { max: MAX_FACILITIES })}
             </p>
           )}
@@ -449,7 +449,7 @@ export default function BuildCapacityDialog({
               disabled={matchDemandOff}
               title={sizingNote}
               aria-describedby={hasCapEstimate ? "build-match-demand-basis" : undefined}
-              className="mt-2 rounded-lg border border-card-border px-3 py-1.5 text-body-xs font-semibold text-foreground hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
+              className="mt-2 rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold text-foreground hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
             >
               {t("matchDemand", {
                 count: resourceSizingUnavailable
@@ -459,7 +459,7 @@ export default function BuildCapacityDialog({
             </button>
           )}
           {sectorType !== "logistics" && (
-            <p className="mt-1 text-body-xs text-muted" data-testid="build-match-demand-line">
+            <p className="mt-1 text-body-sm text-muted" data-testid="build-match-demand-line">
               {matchDemandOff
                 ? sizingNote
                 : t("roomRecommended", {
@@ -470,7 +470,7 @@ export default function BuildCapacityDialog({
             </p>
           )}
           {hasCapEstimate && (
-            <p id="build-match-demand-basis" className="mt-1 text-body-xs text-muted">
+            <p id="build-match-demand-basis" className="mt-1 text-body-sm text-muted">
               {t("matchDemandPaidOrders")}
             </p>
           )}
@@ -517,7 +517,7 @@ export default function BuildCapacityDialog({
               {money(Math.abs(cashAfter))}
             </span>
             {!returns && (
-              <span className="ml-2 text-body-xs text-muted" data-testid="build-forecast-reason">
+              <span className="ml-2 text-body-sm text-muted" data-testid="build-forecast-reason">
                 {t(`forecastUnavailableReasons.${forecastBlocker(plants)}`, {
                   turns: plants.governor?.turnsRemaining ?? 0,
                 })}
@@ -526,7 +526,7 @@ export default function BuildCapacityDialog({
           </p>
         )}
         {returns?.noExtraBuyers && returns.profitPerTurn <= 0 && preview.safeCount > 0 && (
-          <p className="text-body-xs text-muted" data-testid="build-no-extra-buyers">
+          <p className="text-body-sm text-muted" data-testid="build-no-extra-buyers">
             {t("noExtraBuyersNote")}
           </p>
         )}
@@ -753,11 +753,11 @@ export default function BuildCapacityDialog({
               )}
             </dl>
             {foundingDiscountPercent > 0 && (
-              <p className="text-body-xs text-muted" data-testid="founding-note">
+              <p className="text-body-sm text-muted" data-testid="founding-note">
                 {t("foundingPriceNote", { percent: foundingDiscountPercent })}
               </p>
             )}
-            <p className="text-body-xs text-muted">
+            <p className="text-body-sm text-muted">
               {t("currentFacilities", {
                 count: ownedFacilities,
                 facilities: ownedFacilities === 1 ? site : sites,
@@ -769,10 +769,10 @@ export default function BuildCapacityDialog({
               {t("cashBalance", { amount: money(q.corpCapitalAnchor) })}
             </p>
             {(sectorType === "logistics" || !matchDemandOff) && (
-              <p className="text-body-xs text-muted">{sizingNote}</p>
+              <p className="text-body-sm text-muted">{sizingNote}</p>
             )}
             {arrivals && (
-              <p className="text-body-xs text-muted" data-testid="build-arrival">
+              <p className="text-body-sm text-muted" data-testid="build-arrival">
                 {t("arrivalLinear", { turns: arrivals.lastInTurns })}
               </p>
             )}
@@ -792,7 +792,7 @@ export default function BuildCapacityDialog({
         </details>
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 rounded-b-xl border-t border-card-border bg-card px-5 py-3">
-        {loanPending && <p className="mr-auto text-body-xs text-muted">{t("reviewLoan")}</p>}
+        {loanPending && <p className="mr-auto text-body-sm text-muted">{t("reviewLoan")}</p>}
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             {t("cancelBuild")}
@@ -852,7 +852,7 @@ function Stat({
     tone === "error" ? "text-error" : tone === "warning" ? "text-warning" : "text-foreground";
   return (
     <div className="min-w-0 rounded-lg border border-card-border bg-background/40 px-3 py-2">
-      <dt className="text-body-xs text-muted">{label}</dt>
+      <dt className="text-body-sm text-muted">{label}</dt>
       <dd className={`text-body font-bold tabular-nums ${toneClass}`}>{value}</dd>
     </div>
   );

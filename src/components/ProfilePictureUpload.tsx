@@ -12,12 +12,12 @@ import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimizatio
 const PLACEHOLDER_GRADIENT = "bg-gradient-to-br from-primary/20 to-secondary/20";
 
 const SIZE_CLASSES = {
-  default: `h-32 w-32 text-5xl rounded-2xl hover:ring-2 hover:ring-primary/50 ${PLACEHOLDER_GRADIENT}`,
-  compact: `h-20 w-20 text-2xl rounded-xl hover:ring-2 hover:ring-primary/50 sm:h-24 sm:w-24 sm:text-3xl ${PLACEHOLDER_GRADIENT}`,
-  hero: `h-24 w-24 text-4xl rounded-2xl ring-2 ring-card-border shadow-xl hover:ring-primary/50 sm:h-36 sm:w-36 sm:text-6xl md:h-40 md:w-40 md:text-7xl lg:h-44 lg:w-44 ${PLACEHOLDER_GRADIENT}`,
+  default: `h-32 w-32 text-display rounded-2xl hover:ring-2 hover:ring-primary/50 ${PLACEHOLDER_GRADIENT}`,
+  compact: `h-20 w-20 text-heading rounded-xl hover:ring-2 hover:ring-primary/50 sm:h-24 sm:w-24 sm:text-display ${PLACEHOLDER_GRADIENT}`,
+  hero: `h-24 w-24 text-display rounded-2xl ring-2 ring-card-border shadow-xl hover:ring-primary/50 sm:h-36 sm:w-36 sm:text-display md:h-40 md:w-40 md:text-display lg:h-44 lg:w-44 ${PLACEHOLDER_GRADIENT}`,
   /** Profile identity block: neutral placeholder, hairline ring, no shadow. */
   header:
-    "h-18 w-18 text-3xl rounded-lg bg-card-elevated text-muted ring-1 ring-card-border hover:ring-foreground/40 sm:h-24 sm:w-24 sm:text-4xl",
+    "h-18 w-18 text-display rounded-lg bg-card-elevated text-muted ring-1 ring-card-border hover:ring-foreground/40 sm:h-24 sm:w-24 sm:text-display",
 } as const;
 
 export function ProfilePictureUpload({
@@ -151,13 +151,13 @@ export function ProfilePictureUpload({
       />
 
       {error && (
-        <p className="absolute -bottom-5 left-0 whitespace-nowrap text-[10px] text-error">
+        <p className="absolute -bottom-5 left-0 whitespace-nowrap text-body-sm text-error">
           {error}
         </p>
       )}
       {showVisibleHint && (
         <p
-          className="mt-1.5 max-w-[11rem] text-center text-[10px] leading-snug text-muted sm:text-left"
+          className="mt-1.5 max-w-[11rem] text-center text-body-sm leading-snug text-muted sm:text-left"
           aria-hidden
         >
           {UPLOAD_IMAGE_HINTS.avatar.short}

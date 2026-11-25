@@ -66,10 +66,10 @@ export function AddressTab(props: Props) {
         <div className="rounded-xl border border-error/40 bg-error/10 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-body font-semibold text-foreground">
                 Admin &mdash; deliver {addressName} on behalf of the sitting leader
               </p>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 Bypasses Office AP + NPI checks. Used for testing or correcting state.
               </p>
             </div>
@@ -79,7 +79,7 @@ export function AddressTab(props: Props) {
                 setModalOpen(true);
               }}
               disabled={onCooldown}
-              className="shrink-0 rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/80 disabled:opacity-50"
+              className="shrink-0 rounded-lg bg-error px-3 py-1.5 text-body font-medium text-white hover:bg-error/80 disabled:opacity-50"
               title={onCooldown ? "Cooldown active." : ""}
             >
               Admin deliver
@@ -92,7 +92,7 @@ export function AddressTab(props: Props) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">{addressName}</h2>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-body-sm text-muted mt-0.5">
               {onCooldown
                 ? `Available again in ${props.addressAvailableAtTurn - props.currentTurn} turns`
                 : "Available now"}
@@ -104,7 +104,7 @@ export function AddressTab(props: Props) {
               setModalOpen(true);
             }}
             disabled={!canDeliver}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             title={disabledReason}
           >
             Deliver
@@ -114,20 +114,20 @@ export function AddressTab(props: Props) {
 
       {props.mostRecentAddress && (
         <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-          <h3 className="text-sm text-muted">Most recent</h3>
+          <h3 className="text-body-lg text-muted">Most recent</h3>
           {props.mostRecentAddress.title && (
-            <p className="text-base font-semibold">{props.mostRecentAddress.title}</p>
+            <p className="text-body-lg font-semibold">{props.mostRecentAddress.title}</p>
           )}
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             Delivered {props.currentTurn - props.mostRecentAddress.deliveredAtTurn} turns ago by{" "}
             {props.mostRecentAddress.deliveredByName}
           </p>
           {props.mostRecentAddress.body && (
-            <p className="text-sm italic whitespace-pre-wrap text-foreground/90 border-l-2 border-card-border pl-3">
+            <p className="text-body italic whitespace-pre-wrap text-foreground/90 border-l-2 border-card-border pl-3">
               {props.mostRecentAddress.body}
             </p>
           )}
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-body-sm">
             {props.mostRecentAddress.emphasizedCategories.map((c) => (
               <span
                 key={c}
@@ -200,5 +200,5 @@ function EffectsStatus({
         : `Turnout boost (expired)`
     );
   }
-  return <p className="text-xs text-muted">{parts.join(" · ")}</p>;
+  return <p className="text-body-sm text-muted">{parts.join(" · ")}</p>;
 }

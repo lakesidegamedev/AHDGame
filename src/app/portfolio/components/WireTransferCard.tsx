@@ -124,7 +124,7 @@ export function WireTransferCard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 className="font-semibold text-foreground">Wire transfer</h2>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-body-sm text-muted mt-0.5">
               {forexEnabled
                 ? "Send personal funds to any politician, at home or abroad"
                 : "Send personal funds to another politician in your country"}
@@ -132,7 +132,7 @@ export function WireTransferCard({
           </div>
           <div className="text-right shrink-0">
             <span className="block text-body-sm font-medium text-muted">Available</span>
-            <span className="text-lg font-bold tabular-nums text-foreground">
+            <span className="text-heading font-bold tabular-nums text-foreground">
               {forexEnabled && activeCurrency
                 ? formatBalance(activeBalance, activeCurrency)
                 : formatAmount(activeBalance)}
@@ -172,7 +172,7 @@ export function WireTransferCard({
                   >
                     <span className="flex items-center gap-1.5">
                       <span
-                        className={`text-xs font-bold ${
+                        className={`text-body-sm font-bold ${
                           isActive ? "text-primary" : "text-foreground"
                         }`}
                       >
@@ -180,7 +180,7 @@ export function WireTransferCard({
                       </span>
                       {isHome && <span className="text-body-sm font-medium text-muted">Home</span>}
                     </span>
-                    <span className="text-[11px] tabular-nums text-muted">
+                    <span className="text-body-sm tabular-nums text-muted">
                       {formatBalance(balance, c)}
                     </span>
                   </button>
@@ -206,7 +206,7 @@ export function WireTransferCard({
         <div>
           <label className="block text-body-sm font-medium text-muted mb-1.5">Amount</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm pointer-events-none">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-body pointer-events-none">
               {activeSymbol}
             </span>
             <input
@@ -215,17 +215,17 @@ export function WireTransferCard({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
-              className="w-full rounded-lg border border-card-border bg-background pl-7 pr-3 py-2 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
+              className="w-full rounded-lg border border-card-border bg-background pl-7 pr-3 py-2 text-body placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
             />
           </div>
         </div>
 
-        <InlineError error={error} className="text-xs text-error" />
+        <InlineError error={error} className="text-body-sm text-error" />
 
         <button
           onClick={handleSend}
           disabled={sending || !selected || !amount}
-          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-body font-semibold text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed transition-opacity"
         >
           {sending ? "Sending…" : "Send wire"}
         </button>

@@ -27,12 +27,12 @@ export default function LiveElectionResultsPage({ params }: { params: Promise<{ 
       <div className="min-h-screen bg-background">
         <main className="mx-auto max-w-2xl px-4 py-12">
           <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-            <p className="text-sm font-medium text-error">{state.message}</p>
+            <p className="text-body font-medium text-error">{state.message}</p>
             <div className="mt-4 flex items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={reload}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Retry
               </button>
@@ -112,8 +112,8 @@ function ComingSoon({ electionId }: { electionId: string }) {
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-2xl px-4 py-12">
         <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-          <p className="text-lg font-semibold">Live results are coming soon</p>
-          <p className="mt-2 text-sm text-muted">
+          <p className="text-heading font-semibold">Live results are coming soon</p>
+          <p className="mt-2 text-body text-muted">
             The election-night results dashboard isn&apos;t switched on for this world yet.
           </p>
           <div className="mt-5">

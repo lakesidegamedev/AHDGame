@@ -152,7 +152,7 @@ function PartyGroup({ title, children }: { title: string; children: React.ReactN
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="font-mono text-body-xs uppercase tracking-[0.16em] text-muted">
+        <span className="font-mono text-body-sm uppercase tracking-[0.16em] text-muted">
           {title}
         </span>
         <span className="h-px flex-1 bg-card-border" />
@@ -227,10 +227,10 @@ function PartyRow({
           )}
           {name}
         </span>
-        <span className="block truncate text-body-xs text-muted">{note}</span>
+        <span className="block truncate text-body-sm text-muted">{note}</span>
         {homeState && (
           <span
-            className="block text-body-xs text-muted"
+            className="block text-body-sm text-muted"
             title={t("orgHint", { region: homeState })}
           >
             {organization == null
@@ -241,7 +241,7 @@ function PartyRow({
       </span>
       {regimeStatus && (
         <span
-          className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-body-xs font-semibold ${REGIME_BADGE[regimeStatus].cls}`}
+          className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-body-sm font-semibold ${REGIME_BADGE[regimeStatus].cls}`}
         >
           {REGIME_BADGE[regimeStatus].label}
         </span>
@@ -252,7 +252,7 @@ function PartyRow({
           proximity. */}
       {meta && distance != null && (
         <span
-          className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-body-xs font-semibold ${meta.toneClass}`}
+          className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-body-sm font-semibold ${meta.toneClass}`}
           title={`Policy distance from your position: ${distance.toFixed(1)}`}
         >
           {meta.label} {distance.toFixed(1)}

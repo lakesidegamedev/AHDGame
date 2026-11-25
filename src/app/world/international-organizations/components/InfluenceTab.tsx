@@ -56,7 +56,7 @@ export function InfluenceTab({
       {/* The rules for this tab are a wiki page nobody could find from here:
           the first question on ticket #1064 was "is there a wiki page for this?"
           and a moderator had to paste the link by hand. */}
-      <p className="text-body-xs text-muted">
+      <p className="text-body-sm text-muted">
         Spending here moves a nation between the poles.{" "}
         <a
           href="/wiki/bloc-spheres"
@@ -94,7 +94,7 @@ export function InfluenceTab({
               <button
                 type="button"
                 onClick={() => setSelectedEntityId(null)}
-                className="text-body-xs text-muted hover:text-foreground lg:hidden"
+                className="text-body-sm text-muted hover:text-foreground lg:hidden"
               >
                 &larr; Change nation
               </button>
@@ -116,9 +116,9 @@ export function InfluenceTab({
       {view.blocStress && (
         <Panel>
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-body-sm font-semibold text-foreground">Bloc strain</h3>
+            <h3 className="text-body-lg font-semibold text-foreground">Bloc strain</h3>
             <span
-              className={`rounded-md px-2 py-0.5 text-body-xs font-semibold ${
+              className={`rounded-md px-2 py-0.5 text-body-sm font-semibold ${
                 view.blocStress.label === "Settled"
                   ? "bg-success/15 text-success"
                   : view.blocStress.label === "Strained"
@@ -140,7 +140,7 @@ export function InfluenceTab({
               ? "This bloc is settled, so its plays land at full strength."
               : `Plays land at ${Math.round(view.blocStress.effectiveness * 100)}% strength while the bloc is stretched.`}
           </p>
-          <ul className="mt-2 space-y-0.5 text-body-xs text-muted/80">
+          <ul className="mt-2 space-y-0.5 text-body-sm text-muted/80">
             <li>Contested by a rival: {Math.round(view.blocStress.contested * 100)}% of members</li>
             <li>At the leave threshold: {Math.round(view.blocStress.wantsOut * 100)}%</li>
             <li>Still settling in: {Math.round(view.blocStress.digesting * 100)}%</li>
@@ -150,7 +150,7 @@ export function InfluenceTab({
 
       {view.members.length > 0 && (
         <Panel>
-          <h3 className="mb-3 text-body-sm font-semibold text-foreground">
+          <h3 className="mb-3 text-body-lg font-semibold text-foreground">
             Members&rsquo; standing ({view.members.length} in this bloc)
           </h3>
           <ul className="space-y-2">
@@ -159,17 +159,17 @@ export function InfluenceTab({
                 <span className="text-body-sm text-foreground">
                   {m.name}
                   {!m.hasVote && (
-                    <span className="ml-2 text-body-xs text-muted">
+                    <span className="ml-2 text-body-sm text-muted">
                       {view.leviesTribute ? "· no vote, pays tribute" : "· no vote"}
                     </span>
                   )}
                 </span>
                 {!m.wantsOut ? (
-                  <span className="font-mono text-body-xs tabular-nums text-muted">
+                  <span className="font-mono text-body-sm tabular-nums text-muted">
                     {formatShare(m.share)} of {channel.poleLabel}
                   </span>
                 ) : (
-                  <span className="font-mono text-body-xs tabular-nums text-warning">
+                  <span className="font-mono text-body-sm tabular-nums text-warning">
                     {formatShare(m.share)} of {channel.poleLabel} · at or below {view.leaveShare}
                     {m.turnsBelowGate != null &&
                       ` · ${m.turnsBelowGate}/${view.sustainTurns} turns`}
@@ -187,8 +187,8 @@ export function InfluenceTab({
       )}
 
       <Panel>
-        <h3 className="mb-3 text-body-sm font-semibold text-foreground">Recent plays</h3>
-        <p className="mb-3 text-body-xs text-muted">{t("historyNote")}</p>
+        <h3 className="mb-3 text-body-lg font-semibold text-foreground">Recent plays</h3>
+        <p className="mb-3 text-body-sm text-muted">{t("historyNote")}</p>
         {view.recent.length === 0 ? (
           <p className="text-body-sm text-muted">
             No influence has been committed through this organization yet.
@@ -250,7 +250,7 @@ function Panel({ children }: { children: React.ReactNode }) {
 function Th({ children, numeric }: { children: React.ReactNode; numeric?: boolean }) {
   return (
     <th
-      className={`px-2 pb-2 text-body-xs font-semibold uppercase tracking-wide text-muted sm:px-3 ${
+      className={`px-2 pb-2 text-body-sm font-semibold uppercase tracking-wide text-muted sm:px-3 ${
         numeric ? "text-right" : ""
       }`}
     >

@@ -107,7 +107,7 @@ export default function BulgarianConstitutionalDecisionPanel() {
   const selectedInitiative = decision?.initiatives?.[displayedDisposition] ?? decision?.initiative;
   return (
     <section className="mx-auto max-w-3xl space-y-4 rounded-lg border border-border bg-card p-5 text-foreground">
-      <h2 className="text-xl font-semibold">{t("title")}</h2>
+      <h2 className="text-heading font-semibold">{t("title")}</h2>
       <p>{t("help")}</p>
       <p>{t("threshold")}</p>
       {selectedInitiative && (
@@ -163,7 +163,7 @@ export default function BulgarianConstitutionalDecisionPanel() {
             type="button"
             disabled={busy}
             onClick={() => void open()}
-            className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+            className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {t(decision.proposal?.canRevise ? "revise" : "open")}
           </button>
@@ -179,7 +179,7 @@ export default function BulgarianConstitutionalDecisionPanel() {
       )}
       {(decision?.dissolution?.available || decision?.dissolution?.proposal) && (
         <div className="space-y-3 border-t border-border pt-4">
-          <h3 className="text-lg font-semibold">{t("continuedDissolution.title")}</h3>
+          <h3 className="text-body-lg font-semibold">{t("continuedDissolution.title")}</h3>
           <p>{t("continuedDissolution.help")}</p>
           {decision.dissolution.proposal && (
             <p>
@@ -198,7 +198,7 @@ export default function BulgarianConstitutionalDecisionPanel() {
                 type="button"
                 disabled={busy}
                 onClick={() => void open("introduce", true)}
-                className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:bg-card-border disabled:text-muted"
               >
                 {t(
                   decision.dissolution.proposal?.canRevise

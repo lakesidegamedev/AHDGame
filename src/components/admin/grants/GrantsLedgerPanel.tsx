@@ -69,8 +69,8 @@ export function GrantsLedgerPanel() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-base font-semibold">Grants and adjustments</h2>
-        <p className="text-sm text-muted">
+        <h2 className="text-body-lg font-semibold">Grants and adjustments</h2>
+        <p className="text-body text-muted">
           Every grant of money, actions, items or access, and who is accountable for it.
         </p>
       </div>
@@ -79,7 +79,7 @@ export function GrantsLedgerPanel() {
           value={kind}
           onChange={(event) => setKind(event.target.value)}
           aria-label="Kind"
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         >
           <option value="">All kinds</option>
           {KINDS.map((k) => (
@@ -93,13 +93,13 @@ export function GrantsLedgerPanel() {
           onChange={(event) => setRecipient(event.target.value)}
           placeholder="Recipient name or id"
           aria-label="Recipient"
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         />
       </div>
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error && <p className="text-body text-error">{error}</p>}
       <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs uppercase tracking-wider text-muted">
+        <table className="w-full text-left text-body">
+          <thead className="text-body-sm uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">When</th>
               <th className="px-3 py-2">Done by</th>

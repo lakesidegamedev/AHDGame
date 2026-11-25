@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pillClass } from "@/components/ui/selectedState";
 
 type Severity = "high" | "medium" | "low";
 type SeverityFilter = Severity | "all";
@@ -147,8 +148,8 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
         <div className="flex items-start gap-3">
           <span className="mt-1 inline-block h-6 w-1 rounded-full bg-info" />
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold sm:text-lg">Priority queue</h2>
-            <p className="mt-1 text-xs text-muted sm:text-sm">
+            <h2 className="text-body-lg font-semibold sm:text-heading">Priority queue</h2>
+            <p className="mt-1 text-body-sm text-muted sm:text-body">
               Highest-severity items pulled from existing moderation surfaces. Drill in for the full
               toolset on each tab.
             </p>
@@ -200,8 +201,8 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
         <div className="rounded-xl border border-card-border bg-card shadow-sm lg:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-card-border/60 p-4">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold">Suspicious activity</h3>
-              <p className="mt-0.5 text-xs text-muted">
+              <h3 className="text-body-lg font-semibold">Suspicious activity</h3>
+              <p className="mt-0.5 text-body-sm text-muted">
                 {totalSuspicious === 0
                   ? "No open flags."
                   : severityFilter === "all"
@@ -212,7 +213,7 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
             <button
               type="button"
               onClick={() => onJump("players", "suspicious")}
-              className="shrink-0 rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
+              className="shrink-0 rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
             >
               Open queue →
             </button>
@@ -235,16 +236,14 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setSeverityFilter(opt.id)}
-                  className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                    isActive
-                      ? "border-info/40 bg-info/10 text-info"
-                      : "border-card-border text-muted hover:bg-white/5 hover:text-foreground"
-                  }`}
+                  className={`flex items-center gap-1.5 px-2.5 py-0.5 text-body-sm ${pillClass(isActive)}`}
                 >
                   <span>{opt.label}</span>
                   <span
-                    className={`rounded px-1 text-[10px] tabular-nums ${
-                      isActive ? "bg-info/15 text-info" : "bg-white/5 text-muted"
+                    className={`rounded px-1 text-body-sm tabular-nums ${
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-white/5 text-muted"
                     }`}
                   >
                     {count}
@@ -256,15 +255,15 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
 
           <div className="divide-y divide-card-border/60">
             {suspiciousLoading && (
-              <div className="p-6 text-center text-sm text-muted">Loading priority queue…</div>
+              <div className="p-6 text-center text-body text-muted">Loading priority queue…</div>
             )}
             {!suspiciousLoading && suspiciousError && (
-              <div className="p-4 text-sm text-error">
+              <div className="p-4 text-body text-error">
                 Could not load suspicious activity ({suspiciousError}).
               </div>
             )}
             {!suspiciousLoading && !suspiciousError && suspiciousEntries.length === 0 && (
-              <div className="p-6 text-center text-sm text-muted">
+              <div className="p-6 text-center text-body text-muted">
                 {severityFilter === "all"
                   ? "No open flags. Nice work."
                   : `No ${severityFilter}-severity flags right now.`}
@@ -287,26 +286,26 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">
+                        <span className="text-body font-semibold text-foreground">
                           {entry.characterName}
                         </span>
-                        <span className="text-xs text-muted">@{entry.username}</span>
-                        <span className="rounded border border-card-border px-1.5 py-0.5 text-[10px] tracking-wide text-muted uppercase">
+                        <span className="text-body-sm text-muted">@{entry.username}</span>
+                        <span className="rounded border border-card-border px-1.5 py-0.5 text-body-sm tracking-wide text-muted uppercase">
                           {entry.countryId}
                         </span>
                         <span
-                          className={`text-[10px] font-bold tracking-widest uppercase ${SEV_TONE[sev]}`}
+                          className={`text-body-sm font-bold tracking-widest uppercase ${SEV_TONE[sev]}`}
                         >
                           {sev}
                         </span>
                       </div>
-                      <div className="mt-1 line-clamp-2 text-xs text-muted">
+                      <div className="mt-1 line-clamp-2 text-body-sm text-muted">
                         {entry.flags?.[0]?.detail ?? "Multiple flags pending review."}
                         {entry.flagCount > 1 && (
                           <span className="ml-1 text-muted/80">(+{entry.flagCount - 1} more)</span>
                         )}
                       </div>
-                      <div className="mt-1.5 text-[10px] text-muted">
+                      <div className="mt-1.5 text-body-sm text-muted">
                         Updated {relativeTime(entry.lastUpdated)} · {entry.flagCount} flag
                         {entry.flagCount === 1 ? "" : "s"}
                       </div>
@@ -323,28 +322,28 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
           <div className="rounded-xl border border-card-border bg-card shadow-sm">
             <div className="flex items-start justify-between gap-3 border-b border-card-border/60 p-4">
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold">Wiki review queue</h3>
-                <p className="mt-0.5 text-xs text-muted">
+                <h3 className="text-body-lg font-semibold">Wiki review queue</h3>
+                <p className="mt-0.5 text-body-sm text-muted">
                   Player submissions awaiting moderator approval.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onJump("content", "wiki-review")}
-                className="shrink-0 rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
+                className="shrink-0 rounded-md border border-card-border px-2.5 py-1 text-body-sm font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
               >
                 Review →
               </button>
             </div>
             <div className="divide-y divide-card-border/60">
-              {wikiLoading && <div className="p-4 text-sm text-muted">Loading wiki queue…</div>}
+              {wikiLoading && <div className="p-4 text-body text-muted">Loading wiki queue…</div>}
               {!wikiLoading && wikiError && (
-                <div className="p-3 text-sm text-error">
+                <div className="p-3 text-body text-error">
                   Could not load wiki queue ({wikiError}).
                 </div>
               )}
               {!wikiLoading && !wikiError && wikiPending.length === 0 && (
-                <div className="p-4 text-sm text-muted">No pending submissions.</div>
+                <div className="p-4 text-body text-muted">No pending submissions.</div>
               )}
               {!wikiLoading &&
                 !wikiError &&
@@ -355,15 +354,17 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
                     onClick={() => onJump("content", "wiki-review")}
                     className="block w-full p-3 text-left transition-colors hover:bg-white/5"
                   >
-                    <div className="truncate text-sm font-medium text-foreground">{page.title}</div>
-                    <div className="mt-0.5 truncate text-xs text-muted">
+                    <div className="truncate text-body font-medium text-foreground">
+                      {page.title}
+                    </div>
+                    <div className="mt-0.5 truncate text-body-sm text-muted">
                       {page.submitterName ? `by ${page.submitterName}` : "submitted"} ·{" "}
                       {relativeTime(page.updatedAt ?? page.createdAt)}
                     </div>
                   </button>
                 ))}
               {!wikiLoading && !wikiError && wikiPending.length > 5 && (
-                <div className="p-2 text-center text-[11px] text-muted">
+                <div className="p-2 text-center text-body-sm text-muted">
                   +{wikiPending.length - 5} more
                 </div>
               )}
@@ -373,8 +374,10 @@ export function ModeratorPriorityTab({ onJump }: ModeratorPriorityTabProps) {
           {/* Quick jump to other moderation surfaces */}
           <div className="rounded-xl border border-card-border bg-card shadow-sm">
             <div className="border-b border-card-border/60 p-4">
-              <h3 className="text-sm font-semibold">Other queues</h3>
-              <p className="mt-0.5 text-xs text-muted">Open the full tooling for any surface.</p>
+              <h3 className="text-body-lg font-semibold">Other queues</h3>
+              <p className="mt-0.5 text-body-sm text-muted">
+                Open the full tooling for any surface.
+              </p>
             </div>
             <div className="grid grid-cols-1 divide-y divide-card-border/60">
               <JumpRow
@@ -438,10 +441,10 @@ function PriorityStat({ label, value, sub, tone, onClick }: PriorityStatProps) {
       }`}
     >
       <span className="text-body-sm font-medium text-muted">{label}</span>
-      <span className={`mt-1 text-xl leading-none font-bold sm:text-2xl ${valueColor}`}>
+      <span className={`mt-1 text-heading leading-none font-bold sm:text-heading ${valueColor}`}>
         {value}
       </span>
-      <span className="mt-1.5 text-[11px] text-muted">{sub}</span>
+      <span className="mt-1.5 text-body-sm text-muted">{sub}</span>
     </Tag>
   );
 }
@@ -454,8 +457,8 @@ function JumpRow({ label, desc, onClick }: { label: string; desc: string; onClic
       className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors hover:bg-white/5"
     >
       <span className="min-w-0">
-        <span className="block text-sm font-medium text-foreground">{label}</span>
-        <span className="block truncate text-xs text-muted">{desc}</span>
+        <span className="block text-body font-medium text-foreground">{label}</span>
+        <span className="block truncate text-body-sm text-muted">{desc}</span>
       </span>
       <span aria-hidden className="shrink-0 text-muted">
         →

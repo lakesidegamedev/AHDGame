@@ -5,7 +5,7 @@ export function PartySwitchElectionWarning({ className = "" }: { className?: str
   return (
     <p
       role="note"
-      className={`rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning ${className}`.trim()}
+      className={`rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm text-warning ${className}`.trim()}
     >
       {PARTY_SWITCH_ELECTION_WARNING}
     </p>

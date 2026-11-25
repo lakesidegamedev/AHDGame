@@ -31,6 +31,7 @@ import { ContestEntry } from "./ContestEntry";
 import { ReferralInviteLink } from "./ReferralInviteLink";
 import { RoundCountdown } from "./RoundCountdown";
 import { AnchorAmount, AnchorUnitNote } from "@/components/currency/AnchorUnit";
+import { pillClass } from "@/components/ui/selectedState";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Contests | A House Divided",
@@ -153,7 +154,7 @@ function ContestRow({
         <span className="min-w-0 flex-1 basis-40 font-medium text-foreground">
           {t(`kinds.${contest.kind}.title`)}
         </span>
-        <span className="order-last flex w-full min-w-0 items-center justify-between gap-3 pl-8 text-sm sm:order-none sm:w-72 sm:pl-0">
+        <span className="order-last flex w-full min-w-0 items-center justify-between gap-3 pl-8 text-body sm:order-none sm:w-72 sm:pl-0">
           {leading ? (
             <>
               <span className="min-w-0">
@@ -168,7 +169,7 @@ function ContestRow({
           )}
         </span>
         {viewer && (
-          <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium tabular-nums text-primary">
+          <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-medium tabular-nums text-primary">
             {viewer.rank === 1 && leading ? t("yours.leading") : `#${viewer.rank}`}
           </span>
         )}
@@ -179,13 +180,13 @@ function ContestRow({
 
       <div className="px-4 pb-5 sm:pl-12">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-          <p className="max-w-2xl text-sm text-muted">{t(`kinds.${contest.kind}.rules`)}</p>
-          <span className="text-xs text-muted">
+          <p className="max-w-2xl text-body text-muted">{t(`kinds.${contest.kind}.rules`)}</p>
+          <span className="text-body-sm text-muted">
             {shares.length === 1 ? t("split.winnerTakesAll") : t("split.podium")}
           </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-body">
           <span className={viewer ? "font-medium text-foreground" : "text-muted"}>
             {viewer
               ? viewer.rank === 1 && leading
@@ -217,7 +218,7 @@ function ContestRow({
                   className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${PODIUM_STYLE[s.rank] ?? ""} ${mine ? "ring-1 ring-primary" : ""}`}
                 >
                   <span
-                    className={`w-5 shrink-0 text-right text-lg font-bold tabular-nums ${RANK_COLOR[s.rank] ?? "text-muted"}`}
+                    className={`w-5 shrink-0 text-right text-heading font-bold tabular-nums ${RANK_COLOR[s.rank] ?? "text-muted"}`}
                   >
                     {s.rank}
                   </span>
@@ -228,7 +229,7 @@ function ContestRow({
                     <span className={`block font-semibold tabular-nums ${scoreColor(s.score)}`}>
                       {formatScore(t, locale, contest.kind, s.score)}
                     </span>
-                    <span className="block text-xs tabular-nums text-gold">
+                    <span className="block text-body-sm tabular-nums text-gold">
                       <AnchorAmount>
                         {formatAnchor(locale, Math.round(contest.prizeAnchor * shares[s.rank - 1]))}
                       </AnchorAmount>
@@ -239,11 +240,11 @@ function ContestRow({
             })}
           </ol>
         ) : (
-          <p className="mt-4 text-sm text-muted">{t("noLeaders")}</p>
+          <p className="mt-4 text-body text-muted">{t("noLeaders")}</p>
         )}
 
         {rest.length > 0 && (
-          <ol className="mt-2 text-sm">
+          <ol className="mt-2 text-body">
             {rest.map((s) => {
               const mine = viewer?.subjectId === s.subjectId;
               return (
@@ -285,9 +286,9 @@ function YourStandings({
     .sort((a, b) => a.viewer!.rank - b.viewer!.rank || a.kind.localeCompare(b.kind));
   return (
     <section className="mb-8">
-      <h2 className="mb-3 text-xl font-semibold text-foreground">{t("yours.title")}</h2>
+      <h2 className="mb-3 text-heading font-semibold text-foreground">{t("yours.title")}</h2>
       {entered.length === 0 ? (
-        <p className="text-sm text-muted">{t("yours.none")}</p>
+        <p className="text-body text-muted">{t("yours.none")}</p>
       ) : (
         <ul className="flex flex-wrap gap-2">
           {entered.map((c) => {
@@ -297,7 +298,7 @@ function YourStandings({
               <li key={c.kind}>
                 <a
                   href={`#${c.kind}`}
-                  className={`flex items-baseline gap-2 rounded-lg border px-3 py-2 text-sm hover:border-primary ${leading ? PODIUM_STYLE[1] : "border-card-border bg-card"}`}
+                  className={`flex items-baseline gap-2 rounded-lg border px-3 py-2 text-body hover:border-primary ${leading ? PODIUM_STYLE[1] : "border-card-border bg-card"}`}
                 >
                   <span className="font-medium text-foreground">{t(`kinds.${c.kind}.title`)}</span>
                   <span
@@ -307,7 +308,7 @@ function YourStandings({
                       ? t("yours.leading")
                       : t("yours.rank", { rank: v.rank, count: c.entrants })}
                   </span>
-                  <span className={`text-xs tabular-nums ${scoreColor(v.score)}`}>
+                  <span className={`text-body-sm tabular-nums ${scoreColor(v.score)}`}>
                     {formatScore(t, locale, c.kind, v.score)}
                   </span>
                 </a>
@@ -333,22 +334,22 @@ function ReferralCard({
     <section className="min-w-0 rounded-xl border border-card-border bg-card p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-heading font-semibold text-foreground">
             {t("kinds.referrals_iteration.title")}
           </h2>
-          <p className="mt-1 text-sm text-muted">{t("kinds.referrals_iteration.rules")}</p>
+          <p className="mt-1 text-body text-muted">{t("kinds.referrals_iteration.rules")}</p>
         </div>
         <div className="max-w-[45%] shrink-0 text-right">
-          <div className="text-xs text-muted">{t("prizeLabelTop3")}</div>
-          <div className="text-sm font-bold text-gold">{t("iterationPrize")}</div>
+          <div className="text-body-sm text-muted">{t("prizeLabelTop3")}</div>
+          <div className="text-body font-bold text-gold">{t("iterationPrize")}</div>
         </div>
       </div>
       {!board.running ? (
-        <p className="mt-4 text-sm text-muted">{t("referrals.notRunning")}</p>
+        <p className="mt-4 text-body text-muted">{t("referrals.notRunning")}</p>
       ) : (
         <>
           {board.startedAt && (
-            <p className="mt-3 text-xs text-muted">
+            <p className="mt-3 text-body-sm text-muted">
               {t("referrals.since")}{" "}
               <LocalTime
                 value={board.startedAt}
@@ -358,9 +359,9 @@ function ReferralCard({
             </p>
           )}
           {board.leaders.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">{t("referrals.none")}</p>
+            <p className="mt-4 text-body text-muted">{t("referrals.none")}</p>
           ) : (
-            <ol className="mt-4 space-y-1.5 text-sm">
+            <ol className="mt-4 space-y-1.5 text-body">
               {board.leaders.map((l) => (
                 <li
                   key={l.rank}
@@ -388,7 +389,7 @@ function ReferralCard({
             </ol>
           )}
           {board.viewerCount !== null && (
-            <p className="mt-4 text-xs text-foreground">
+            <p className="mt-4 text-body-sm text-foreground">
               {t("referrals.yourCount", { count: board.viewerCount })}
               {board.viewerRank !== null &&
                 ` ${t("referrals.yourRank", { rank: board.viewerRank })}`}
@@ -411,11 +412,11 @@ function ReferralCard({
 function PastWinners({ past, t, locale }: { past: PastRoundData[]; t: T; locale: string }) {
   return (
     <section className="min-w-0 rounded-xl border border-card-border bg-card p-5">
-      <h2 className="text-lg font-semibold text-foreground">{t("past.title")}</h2>
+      <h2 className="text-heading font-semibold text-foreground">{t("past.title")}</h2>
       {past.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">{t("past.empty")}</p>
+        <p className="mt-3 text-body text-muted">{t("past.empty")}</p>
       ) : (
-        <ul className="mt-3 divide-y divide-card-border/60 text-sm">
+        <ul className="mt-3 divide-y divide-card-border/60 text-body">
           {past.map((round) => (
             <li key={round.id} className="py-2.5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -431,7 +432,7 @@ function PastWinners({ past, t, locale }: { past: PastRoundData[]; t: T; locale:
                 <LocalTime
                   value={round.settledAt}
                   options={{ dateStyle: "medium" }}
-                  className="text-xs text-muted"
+                  className="text-body-sm text-muted"
                 />
               </div>
               {round.winners.map((w) => (
@@ -441,7 +442,7 @@ function PastWinners({ past, t, locale }: { past: PastRoundData[]; t: T; locale:
                 >
                   <span className="flex min-w-0 items-center gap-2 text-foreground">
                     <span
-                      className={`w-4 shrink-0 text-right text-xs font-semibold tabular-nums ${RANK_COLOR[w.rank ?? 1] ?? "text-muted"}`}
+                      className={`w-4 shrink-0 text-right text-body-sm font-semibold tabular-nums ${RANK_COLOR[w.rank ?? 1] ?? "text-muted"}`}
                     >
                       {w.rank ?? 1}
                     </span>
@@ -454,7 +455,7 @@ function PastWinners({ past, t, locale }: { past: PastRoundData[]; t: T; locale:
                       {formatScore(t, locale, round.kind, w.score)}
                     </span>
                   </span>
-                  <span className="text-xs font-medium text-gold">
+                  <span className="text-body-sm font-medium text-gold">
                     {round.kind === "referrals_iteration"
                       ? w.alreadySupporter
                         ? t("past.alreadySupporter")
@@ -504,8 +505,8 @@ function PersonalResults({
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">{t("history.title")}</h2>
-        <p className="mt-2 text-sm text-muted">{t("history.intro")}</p>
+        <h2 className="text-heading font-semibold">{t("history.title")}</h2>
+        <p className="mt-2 text-body text-muted">{t("history.intro")}</p>
       </div>
       <dl className="grid grid-cols-2 gap-6 border-y border-card-border py-6 sm:grid-cols-4">
         {(
@@ -517,14 +518,14 @@ function PersonalResults({
           ] as const
         ).map(([label, value]) => (
           <div key={label}>
-            <dt className="text-sm text-muted">{t(`history.${label}`)}</dt>
-            <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
+            <dt className="text-body text-muted">{t(`history.${label}`)}</dt>
+            <dd className="mt-1 text-heading font-semibold tabular-nums">{value}</dd>
           </div>
         ))}
       </dl>
       {history.totals.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <caption className="mb-3 text-left font-semibold">{t("history.allTime")}</caption>
             <thead>
               <tr>
@@ -552,7 +553,7 @@ function PersonalResults({
       )}
       <form action="/contests" method="get" className="flex flex-wrap items-end gap-4">
         <input type="hidden" name="view" value="results" />
-        <label className="text-sm">
+        <label className="text-body">
           {t("history.contest")}
           <select
             name="kind"
@@ -567,7 +568,7 @@ function PersonalResults({
             ))}
           </select>
         </label>
-        <label className="text-sm">
+        <label className="text-body">
           {t("history.iteration")}
           <select
             name="iteration"
@@ -582,7 +583,10 @@ function PersonalResults({
             ))}
           </select>
         </label>
-        <button type="submit" className="rounded bg-primary px-4 py-2 text-sm text-white">
+        <button
+          type="submit"
+          className="rounded bg-primary px-4 py-2 text-body text-primary-foreground"
+        >
           {t("history.filter")}
         </button>
       </form>
@@ -596,11 +600,11 @@ function PersonalResults({
                 <h3 className="font-medium">
                   {t(`kinds.${row.kind}.title`)} · {t("past.round", { round: row.roundNumber })}
                 </h3>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-body text-muted">
                   {formatIteration(row.iterationKey, t)} ·{" "}
                   <LocalTime value={row.settledAt} options={{ dateStyle: "medium" }} />
                 </p>
-                <p className="mt-2 text-sm">
+                <p className="mt-2 text-body">
                   {row.subjectName}
                   {showsOwner(row.kind) ? ` · ${row.characterName}` : ""}
                 </p>
@@ -609,10 +613,10 @@ function PersonalResults({
                 <p className="font-semibold">
                   {t("history.placing", { rank: row.rank, count: row.entrants })}
                 </p>
-                <p className="mt-1 text-sm tabular-nums">
+                <p className="mt-1 text-body tabular-nums">
                   {formatScore(t, locale, row.kind, row.score)}
                 </p>
-                <p className="mt-1 text-sm text-gold">
+                <p className="mt-1 text-body text-gold">
                   {row.supporter
                     ? row.alreadySupporter
                       ? t("past.alreadySupporter")
@@ -628,7 +632,7 @@ function PersonalResults({
           ))}
         </ol>
       )}
-      <nav className="flex items-center gap-6 text-sm" aria-label={t("history.pages")}>
+      <nav className="flex items-center gap-6 text-body" aria-label={t("history.pages")}>
         {history.page > 1 && <Link href={pageHref(history.page - 1)}>{t("history.previous")}</Link>}
         <span className="text-muted">
           {t("history.page", {
@@ -655,13 +659,13 @@ function ContestChampions({
 }) {
   return (
     <section>
-      <h2 className="text-2xl font-semibold">{t("champions.title")}</h2>
-      <p className="mb-4 mt-2 text-sm text-muted">{t("champions.intro")}</p>
+      <h2 className="text-heading font-semibold">{t("champions.title")}</h2>
+      <p className="mb-4 mt-2 text-body text-muted">{t("champions.intro")}</p>
       {champions.length === 0 ? (
         <p className="text-muted">{t("past.empty")}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead>
               <tr>
                 <th className="px-3 py-2">#</th>
@@ -750,8 +754,8 @@ export default async function ContestsPage({
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <header className="mb-10 flex flex-col gap-6 rounded-2xl border border-card-border bg-card px-6 py-7 md:flex-row md:items-end md:justify-between md:px-8">
           <div className="max-w-xl">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">{t("title")}</h1>
-            <p className="mt-3 text-sm text-muted">
+            <h1 className="text-display font-bold tracking-tight text-foreground">{t("title")}</h1>
+            <p className="mt-3 text-body text-muted">
               {view === "rankings" ? t("career.intro") : t("intro")}
             </p>
             <AnchorUnitNote className="mt-2" />
@@ -762,15 +766,15 @@ export default async function ContestsPage({
                 // Signed-in players see their own standings first; the pool stays
                 // a compact line so it does not outrank them.
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm text-muted">{t("poolLabel")}</span>
-                  <span className="text-lg font-semibold tabular-nums text-gold">
+                  <span className="text-body text-muted">{t("poolLabel")}</span>
+                  <span className="text-heading font-semibold tabular-nums text-gold">
                     {formatAnchor(locale, pool)}
                   </span>
                 </div>
               ) : (
                 <>
-                  <div className="text-sm text-muted">{t("poolLabel")}</div>
-                  <div className="text-4xl font-bold tabular-nums text-gold">
+                  <div className="text-body text-muted">{t("poolLabel")}</div>
+                  <div className="text-display font-bold tabular-nums text-gold">
                     {formatAnchor(locale, pool)}
                   </div>
                 </>
@@ -789,7 +793,7 @@ export default async function ContestsPage({
         </header>
 
         <nav
-          className="mb-8 flex flex-wrap gap-6 border-b border-card-border"
+          className="mb-8 flex flex-wrap gap-1 border-b border-card-border pb-2"
           aria-label={t("navigation")}
         >
           {(["current", "rankings"] as const).map((tab) => {
@@ -799,7 +803,7 @@ export default async function ContestsPage({
                 key={tab}
                 href={`/contests?view=${tab}`}
                 aria-current={selected ? "page" : undefined}
-                className={`border-b-2 pb-3 font-medium ${selected ? "border-primary text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
+                className={`px-4 py-1.5 ${pillClass(selected)}`}
               >
                 {tab === "current" ? t("tabs.contests") : t("tabs.rankings")}
               </Link>
@@ -807,13 +811,13 @@ export default async function ContestsPage({
           })}
         </nav>
         {view !== "rankings" && (
-          <nav className="mb-6 flex gap-2 text-sm" aria-label={t("contestViews")}>
+          <nav className="mb-6 flex gap-2 text-body" aria-label={t("contestViews")}>
             {(["current", "results"] as const).map((tab) => (
               <Link
                 key={tab}
                 href={`/contests?view=${tab}`}
                 aria-current={view === tab ? "page" : undefined}
-                className={`rounded-md px-4 py-2 ${view === tab ? "bg-card text-foreground" : "text-muted hover:text-foreground"}`}
+                className={`px-4 py-1.5 ${pillClass(view === tab)}`}
               >
                 {t(`tabs.${tab}`)}
               </Link>
@@ -835,8 +839,8 @@ export default async function ContestsPage({
         {view === "rankings" && (
           <div className="space-y-10">
             <div>
-              <h2 className="text-2xl font-semibold">{t("career.title")}</h2>
-              <p className="mb-6 mt-2 text-sm text-muted">{t("career.intro")}</p>
+              <h2 className="text-heading font-semibold">{t("career.title")}</h2>
+              <p className="mb-6 mt-2 text-body text-muted">{t("career.intro")}</p>
               {career && (
                 <LegacyLeaderboardClient
                   data={{ ...career, entries: career.entries.slice(0, 50) }}
@@ -863,12 +867,12 @@ export default async function ContestsPage({
             {auth && <YourStandings contests={data.contests} t={t} locale={locale} />}
 
             {weekly.length === 0 ? (
-              <p className="mb-6 rounded-xl border border-dashed border-card-border p-6 text-sm text-muted">
+              <p className="mb-6 rounded-xl border border-dashed border-card-border p-6 text-body text-muted">
                 {t("noRound")}
               </p>
             ) : (
               <>
-                <nav className="mb-6 flex flex-wrap gap-2 text-sm" aria-label={t("navigation")}>
+                <nav className="mb-6 flex flex-wrap gap-2 text-body" aria-label={t("navigation")}>
                   {[...categories.map(([category]) => category), "referrals" as const].map(
                     (category) => (
                       <a
@@ -884,10 +888,10 @@ export default async function ContestsPage({
                 {categories.map(([category, contests]) => (
                   <section key={category} id={`category-${category}`} className="mb-8">
                     <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4">
-                      <h2 className="text-xl font-semibold text-foreground">
+                      <h2 className="text-heading font-semibold text-foreground">
                         {t(`categories.${category}.title`)}
                       </h2>
-                      <span className="text-sm text-muted">
+                      <span className="text-body text-muted">
                         {t(`categories.${category}.blurb`)} ·{" "}
                         {t("row.contests", { count: contests.length })}
                       </span>
@@ -909,10 +913,10 @@ export default async function ContestsPage({
             )}
 
             <section id="category-referrals" className="mb-10">
-              <h2 className="mb-1 text-xl font-semibold text-foreground">
+              <h2 className="mb-1 text-heading font-semibold text-foreground">
                 {t("referralsHeading")}
               </h2>
-              <p className="mb-4 max-w-3xl text-sm text-muted">{t("referralIntro")}</p>
+              <p className="mb-4 max-w-3xl text-body text-muted">{t("referralIntro")}</p>
               <div className="space-y-4">
                 {weeklyReferrals ? (
                   <div className="overflow-hidden rounded-xl border border-card-border bg-card">
@@ -924,7 +928,7 @@ export default async function ContestsPage({
                     />
                   </div>
                 ) : (
-                  <p className="rounded-xl border border-dashed border-card-border p-6 text-sm text-muted">
+                  <p className="rounded-xl border border-dashed border-card-border p-6 text-body text-muted">
                     {t("noRound")}
                   </p>
                 )}

@@ -8,7 +8,7 @@ export function GroupSupplyOffice({ corpId }: { corpId: string }) {
     { data, error, busy, save } = useGroupManagement(corpId);
   if (!data)
     return error ? (
-      <p role="alert" className="text-sm text-red-400">
+      <p role="alert" className="text-body text-red-400">
         {error}
       </p>
     ) : null;
@@ -20,7 +20,7 @@ export function GroupSupplyOffice({ corpId }: { corpId: string }) {
         {t(data.supplyEngineEnabled ? "participation" : "activeSupply.officeTitle")}
       </h2>
       <Link
-        className="text-sm font-medium text-info hover:underline"
+        className="text-body font-medium text-info hover:underline"
         href={"/corporation/" + data.rootId + "/group#supply"}
       >
         {t("viewGroup")}
@@ -39,7 +39,7 @@ export function GroupSupplyOffice({ corpId }: { corpId: string }) {
           <h3 className="font-semibold">{t("playerSuggestion")}</h3>
           <p>{t("objectives." + member.direction.objective)}</p>
           {!!member.direction.regions.length && (
-            <p className="text-sm">
+            <p className="text-body">
               {t("targetRegions", {
                 regions: member.direction.regions
                   .map((id) => data.regions.find((r) => r.id === id)?.name ?? id)
@@ -47,14 +47,14 @@ export function GroupSupplyOffice({ corpId }: { corpId: string }) {
               })}
             </p>
           )}
-          <p className="text-xs text-muted">{t("directionUI." + member.direction.response)}</p>
-          <p className="text-xs text-muted">{t("directionNote")}</p>
+          <p className="text-body-sm text-muted">{t("directionUI." + member.direction.response)}</p>
+          <p className="text-body-sm text-muted">{t("directionNote")}</p>
           {member.canEdit &&
             ["acknowledged", "declined"].map((response) => (
               <button
                 key={response}
                 disabled={busy}
-                className="rounded border border-card-border px-3 py-2 text-sm disabled:opacity-50"
+                className="rounded border border-card-border px-3 py-2 text-body disabled:opacity-50"
                 onClick={() =>
                   void save({
                     action: "respond",
@@ -69,12 +69,12 @@ export function GroupSupplyOffice({ corpId }: { corpId: string }) {
         </section>
       )}
       {!data.supplyEngineEnabled && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {t(data.internalSupplyEnabled ? "activeSupply.office" : "activeSupply.unavailable")}
         </p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="text-body text-red-400">
           {error}
         </p>
       )}

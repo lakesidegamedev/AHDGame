@@ -426,11 +426,11 @@ export function StateElections({
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="mb-4 text-xl font-semibold">{federalLabel}</h2>
+          <h2 className="mb-4 text-heading font-semibold">{federalLabel}</h2>
           <p className="text-muted">Loading elections...</p>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="mb-4 text-xl font-semibold">{stateLabel}</h2>
+          <h2 className="mb-4 text-heading font-semibold">{stateLabel}</h2>
           <p className="text-muted">Loading elections...</p>
         </div>
       </div>
@@ -443,7 +443,7 @@ export function StateElections({
         <p className="text-muted">Failed to load elections.</p>
         <button
           onClick={fetchData}
-          className="mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
+          className="mt-2 text-body text-primary hover:text-primary/80 transition-colors"
         >
           Try again
         </button>
@@ -455,16 +455,16 @@ export function StateElections({
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="mb-4 text-xl font-semibold">{federalLabel}</h2>
+          <h2 className="mb-4 text-heading font-semibold">{federalLabel}</h2>
           <p className="text-muted">{federalEmpty}</p>
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             Elections will appear here once an admin creates an election cycle.
           </p>
         </div>
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="mb-4 text-xl font-semibold">{stateLabel}</h2>
+          <h2 className="mb-4 text-heading font-semibold">{stateLabel}</h2>
           <p className="text-muted">{stateEmpty}</p>
-          <p className="mt-2 text-sm text-muted">
+          <p className="mt-2 text-body text-muted">
             Elections will appear here once an election cycle is created.
           </p>
         </div>
@@ -478,13 +478,13 @@ export function StateElections({
       {confirmDialog}
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 data-coach="nav-races" className="text-xl font-semibold">
+          <h2 data-coach="nav-races" className="text-heading font-semibold">
             {federalLabel}
           </h2>
           {federalElections.length > 0 && (
             <Link
               href={`${countryElectionsUrl(countryId)}?state=${displayCanadianRegionCode(stateId)}`}
-              className="text-xs text-muted hover:text-primary transition-colors"
+              className="text-body-sm text-muted hover:text-primary transition-colors"
             >
               View all →
             </Link>
@@ -492,11 +492,13 @@ export function StateElections({
         </div>
 
         {message && (
-          <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+          <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(message)}`}>
+            {message}
+          </div>
         )}
 
         {character && character.homeState !== stateId && (
-          <div className="mb-4 rounded-lg bg-yellow-500/10 p-3 text-sm text-yellow-400">
+          <div className="mb-4 rounded-lg bg-yellow-500/10 p-3 text-body text-yellow-400">
             You can only enter races in your home{" "}
             {isParliamentary ? "region" : regionLabel.toLowerCase()} (
             {displayCanadianRegionCode(character.homeState)})
@@ -531,14 +533,14 @@ export function StateElections({
         {!isParliamentary && presidentialElections.length > 0 && (
           <div className="mt-4 pt-4 border-t border-card-border/60">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-muted">Presidential race</h3>
+              <h3 className="text-body-lg font-semibold text-muted">Presidential race</h3>
               {/* There is no per-county presidential breakdown until the
                   general, so the link would open a map of redistributed
                   national numbers. */}
               {!presidentialElections[0].inPrimary && (
                 <Link
                   href={buildElectionStateHref(presidentialElections[0], countryId, stateId)}
-                  className="text-xs text-muted hover:text-primary transition-colors"
+                  className="text-body-sm text-muted hover:text-primary transition-colors"
                 >
                   County results →
                 </Link>
@@ -574,11 +576,11 @@ export function StateElections({
       {
         <div className="rounded-xl border border-card-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold">{stateLabel}</h2>
+            <h2 className="text-heading font-semibold">{stateLabel}</h2>
             {stateElectionsList.length > 0 && (
               <Link
                 href={`${countryElectionsUrl(countryId)}?state=${displayCanadianRegionCode(stateId)}`}
-                className="text-xs text-muted hover:text-primary transition-colors"
+                className="text-body-sm text-muted hover:text-primary transition-colors"
               >
                 View all →
               </Link>

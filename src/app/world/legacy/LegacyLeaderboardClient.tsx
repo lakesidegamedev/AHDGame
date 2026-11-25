@@ -57,7 +57,7 @@ function RankCell({ rank }: { rank: number }) {
   return (
     <div className="flex items-center justify-center md:justify-start">
       <span
-        className={`font-mono text-sm font-bold tabular-nums ${rank <= 3 ? "text-foreground" : "text-muted"}`}
+        className={`font-mono text-body font-bold tabular-nums ${rank <= 3 ? "text-foreground" : "text-muted"}`}
         aria-label={`Rank ${rank}`}
       >
         {rank}
@@ -97,20 +97,20 @@ function ScoreBreakdownModal({
                 { key: "debt", label: "Outstanding personal loans" },
               ] as const
             ).map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between py-1.5 text-sm">
+              <div key={key} className="flex items-center justify-between py-1.5 text-body">
                 <span className="text-muted">{label}</span>
                 <span className="font-mono font-medium text-foreground" title={ANCHOR_UNIT_NOTE}>
                   {formatNetWorth(row.netWorthBreakdown[key])}
                 </span>
               </div>
             ))}
-            <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-sm font-semibold">
+            <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-body font-semibold">
               <span className="text-foreground">Total net worth</span>
               <span className="font-mono text-foreground" title={ANCHOR_UNIT_NOTE}>
                 {formatNetWorth(row.netWorth)}
               </span>
             </div>
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               Forex-normalized so amounts are comparable across countries. Reflects the balance at
               retirement (or now, if still active): not necessarily the highest this life ever held
               mid-game.
@@ -121,7 +121,7 @@ function ScoreBreakdownModal({
             {SCORE_BREAKDOWN_ROWS.map(({ key, label }) => {
               const value = row.scoreBreakdown[key];
               return (
-                <div key={key} className="flex items-center justify-between py-1.5 text-sm">
+                <div key={key} className="flex items-center justify-between py-1.5 text-body">
                   <span className="text-muted">
                     {label}
                     {key === "legislation"
@@ -138,7 +138,7 @@ function ScoreBreakdownModal({
                 </div>
               );
             })}
-            <p className="pt-2 text-xs text-muted">
+            <p className="pt-2 text-body-sm text-muted">
               Politics, business, legislation, contests and gameplay achievements each contribute up
               to 1,000 points. Influence has diminishing returns. Only offices actually held,
               enacted sponsored laws and settled contest placings count. Special, paid and manual
@@ -146,7 +146,7 @@ function ScoreBreakdownModal({
               Political and business career: {row.scoringCharacterName}. Enacted laws and contest
               results cover every career in the selected scope. Scoring version {row.scoreVersion}.
             </p>
-            <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-sm font-semibold">
+            <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-body font-semibold">
               <span className="text-foreground">Total career score</span>
               <span className="font-mono text-foreground">{formatCareerScore(row.score)}</span>
             </div>
@@ -281,7 +281,7 @@ export default function LegacyLeaderboardClient({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted">
+            <div className="flex items-center gap-1 text-body-sm text-muted">
               <CountryFlag country={row.countryId} size="sm" />
               <span>
                 {row.scoringIsActive ? "Current life" : "Retired life"}: {row.scoringCharacterName}{" "}
@@ -313,7 +313,7 @@ export default function LegacyLeaderboardClient({
       header: "National influence",
       hideOnMobile: true,
       render: (row) => (
-        <span className="text-sm text-muted">{formatCompactNumber(row.nationalInfluence)}</span>
+        <span className="text-body text-muted">{formatCompactNumber(row.nationalInfluence)}</span>
       ),
     },
     {
@@ -321,7 +321,7 @@ export default function LegacyLeaderboardClient({
       header: "Party influence",
       hideOnMobile: true,
       render: (row) => (
-        <span className="text-sm text-muted">{formatCompactNumber(row.partyInfluence)}</span>
+        <span className="text-body text-muted">{formatCompactNumber(row.partyInfluence)}</span>
       ),
     },
     {
@@ -330,11 +330,11 @@ export default function LegacyLeaderboardClient({
       hideOnMobile: true,
       render: (row) => (
         <span
-          className="text-sm text-muted"
+          className="text-body text-muted"
           title={`Highest office reached by ${row.scoringCharacterName}, the life this row is ranked on`}
         >
           {row.highestOffice ?? "-"}
-          <span className="block text-xs">as {row.scoringCharacterName}</span>
+          <span className="block text-body-sm">as {row.scoringCharacterName}</span>
         </span>
       ),
     },
@@ -344,7 +344,7 @@ export default function LegacyLeaderboardClient({
       hideOnMobile: true,
       render: (row) => (
         <span
-          className="text-sm text-muted"
+          className="text-body text-muted"
           title="Different achievements earned by any of this player's characters"
         >
           {row.achievementCount}
@@ -357,7 +357,7 @@ export default function LegacyLeaderboardClient({
       hideOnMobile: true,
       render: (row) => (
         <span
-          className="text-sm text-muted"
+          className="text-body text-muted"
           title="A life is one character this player has created, in any iteration, including retired ones"
         >
           {row.lifetimeLives}
@@ -386,20 +386,20 @@ export default function LegacyLeaderboardClient({
               <p className="text-body-sm font-medium text-primary">
                 {scope === "all" ? "Across every iteration" : "This iteration"}
               </p>
-              <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+              <h1 className="mt-2 text-display font-extrabold tracking-tight text-foreground sm:text-display">
                 Hall of fame
               </h1>
-              <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted">
+              <p className="mt-3 max-w-2xl text-body-lg leading-relaxed text-muted">
                 Every player, ranked by their best career plus account achievements across every
                 iteration. Retiring a character or resetting the world doesn&apos;t erase your
                 legacy.
               </p>
-              <p className="mt-2 max-w-2xl text-sm text-muted">
+              <p className="mt-2 max-w-2xl text-body text-muted">
                 {isNetWorth
                   ? "Net worth includes all currency balances, shares, bonds and funds, less personal loans, converted to anchor currency."
                   : "Career score balances politics, business, enacted laws, contest results and earned gameplay achievements. Each area contributes up to 1,000 points."}
               </p>
-              <p className="mt-2 max-w-2xl text-sm text-muted">
+              <p className="mt-2 max-w-2xl text-body text-muted">
                 The name is the life the player chose to show. Office, influence and wealth come
                 from the life named underneath, the one that ranks best. A retired life is frozen as
                 it was when it retired, so it can differ from the player&apos;s current character.
@@ -431,9 +431,9 @@ export default function LegacyLeaderboardClient({
                 aria-selected={rankBy === opt.value}
                 disabled={loading}
                 onClick={() => changeRankBy(opt.value)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                className={`rounded-md px-3 py-1.5 text-body font-medium transition-colors disabled:opacity-50 ${
                   rankBy === opt.value
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-card-elevated hover:text-foreground"
                 }`}
               >
@@ -460,9 +460,9 @@ export default function LegacyLeaderboardClient({
                 aria-selected={scope === opt.value}
                 disabled={loading}
                 onClick={() => changeScope(opt.value)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                className={`rounded-md px-3 py-1.5 text-body font-medium transition-colors disabled:opacity-50 ${
                   scope === opt.value
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-card-elevated hover:text-foreground"
                 }`}
               >
@@ -487,11 +487,11 @@ export default function LegacyLeaderboardClient({
                   <p className="text-body-sm font-medium text-muted">
                     {scope === "all" ? "Your all-time standing" : "Your standing this iteration"}
                   </p>
-                  <p className="mt-1 text-xl font-bold text-foreground">
+                  <p className="mt-1 text-heading font-bold text-foreground">
                     {self.rank ? `#${self.rank}` : "Unranked"}
                   </p>
                   {!self.rank && (
-                    <p className="mt-0.5 text-sm text-muted">
+                    <p className="mt-0.5 text-body text-muted">
                       Play a character to enter the Hall of Fame.
                     </p>
                   )}
@@ -511,7 +511,7 @@ export default function LegacyLeaderboardClient({
                       id="legacy-display-choice"
                       value={pendingChoice}
                       onChange={(e) => setPendingChoice(e.target.value)}
-                      className="min-h-10 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground sm:w-auto"
+                      className="min-h-10 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground sm:w-auto"
                     >
                       <option value="">Current or latest character (default)</option>
                       {self.lives.map((life) => (
@@ -525,12 +525,12 @@ export default function LegacyLeaderboardClient({
                       type="button"
                       onClick={saveDisplayName}
                       disabled={saving}
-                      className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      className="min-h-10 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       {saving ? "Saving…" : "Save"}
                     </button>
                   </div>
-                  <InlineError error={saveError} className="mt-2 text-xs text-error" />
+                  <InlineError error={saveError} className="mt-2 text-body-sm text-error" />
                 </div>
               )}
             </div>
@@ -553,12 +553,12 @@ export default function LegacyLeaderboardClient({
                 <p className="text-body-sm font-medium text-primary">
                   {isNetWorth ? "The vault" : "The record book"}
                 </p>
-                <h2 className="mt-1 text-xl font-bold text-foreground">
+                <h2 className="mt-1 text-heading font-bold text-foreground">
                   {isNetWorth ? "Richest ever" : "All-time rankings"}
                   {scope === "current" ? ": this iteration" : ""}
                 </h2>
               </div>
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 Showing top {entries.length} of {totalCount} players
               </p>
             </div>

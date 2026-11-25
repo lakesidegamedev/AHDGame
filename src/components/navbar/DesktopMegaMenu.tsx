@@ -173,11 +173,11 @@ export function DesktopMegaMenu({
           />
         </span>
         <span className="min-w-0">
-          <span className="block text-[13px] font-medium leading-snug text-foreground [overflow-wrap:anywhere]">
+          <span className="block text-body-sm font-medium leading-snug text-foreground [overflow-wrap:anywhere]">
             {item.label}
           </span>
           {!compact && item.description && (
-            <span className="mt-0.5 block text-xs leading-snug text-muted [overflow-wrap:anywhere]">
+            <span className="mt-0.5 block text-body-sm leading-snug text-muted [overflow-wrap:anywhere]">
               {item.description}
             </span>
           )}
@@ -237,7 +237,7 @@ export function DesktopMegaMenu({
 
   const shortcuts = menu.shortcuts.length > 0 && (
     <div>
-      <p className="mb-2 text-xs font-medium text-muted">{t("shortcuts")}</p>
+      <p className="mb-2 text-body-sm font-medium text-muted">{t("shortcuts")}</p>
       <div className="space-y-0.5">{menu.shortcuts.map((item) => row(item, true))}</div>
     </div>
   );
@@ -247,14 +247,14 @@ export function DesktopMegaMenu({
         name={menu.overview.icon ?? pixelIconForLink(menu.overview.id)}
         className="mb-3 h-7 w-7 text-foreground"
       />
-      <p className="text-sm font-semibold text-foreground">{menu.overview.label}</p>
+      <p className="text-body font-semibold text-foreground">{menu.overview.label}</p>
       {menu.overview.description && (
-        <p className="mt-1 text-xs leading-relaxed text-muted">{menu.overview.description}</p>
+        <p className="mt-1 text-body-sm leading-relaxed text-muted">{menu.overview.description}</p>
       )}
       <Link
         href={menu.overview.href!}
         onClick={onClose}
-        className="mt-3 inline-flex items-center gap-3 text-xs font-medium text-foreground hover:underline"
+        className="mt-3 inline-flex items-center gap-3 text-body-sm font-medium text-foreground hover:underline"
       >
         {t("openOverview")}
         <span aria-hidden="true">↗</span>
@@ -274,7 +274,7 @@ export function DesktopMegaMenu({
     >
       {menu.groups.map((group) => (
         <section key={group.id} className="min-w-0">
-          <h3 className="mb-2 px-2.5 text-xs font-medium text-muted">{group.label}</h3>
+          <h3 className="mb-2 px-2.5 text-body-lg font-medium text-muted">{group.label}</h3>
           {group.items.map((item) => row(item))}
         </section>
       ))}
@@ -317,7 +317,7 @@ export function DesktopMegaMenu({
       }}
     >
       <div className="flex items-center justify-between gap-4 border-b border-card-border px-5 py-3">
-        <span className="text-sm font-medium text-foreground">{menu.title}</span>
+        <span className="text-body font-medium text-foreground">{menu.title}</span>
       </div>
       <div
         className={`grid ${widget ? "grid-cols-[minmax(0,1fr)_260px]" : "grid-cols-[minmax(0,1fr)_220px]"}`}
@@ -325,7 +325,7 @@ export function DesktopMegaMenu({
         {groups}
         {rail}
       </div>
-      <div className="flex items-center justify-between gap-4 border-t border-card-border px-5 py-2 text-xs text-muted">
+      <div className="flex items-center justify-between gap-4 border-t border-card-border px-5 py-2 text-body-sm text-muted">
         <span>{t("keyboardHint")}</span>
         {onCustomize ? (
           <button

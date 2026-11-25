@@ -38,12 +38,12 @@ function Card({
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-body-sm font-medium text-muted">{label}</span>
-        <span className="text-[11px] text-primary">&rarr;</span>
+        <span className="text-body-sm text-primary">&rarr;</span>
       </div>
-      <div className="mt-1.5 font-mono text-[17px] font-bold tabular-nums text-foreground">
+      <div className="mt-1.5 font-mono text-body-lg font-bold tabular-nums text-foreground">
         {stat}
       </div>
-      <div className="mt-0.5 text-[10.5px] text-muted">{sub}</div>
+      <div className="mt-0.5 text-body-sm text-muted">{sub}</div>
     </Link>
   );
 }
@@ -83,11 +83,11 @@ export function MarketsStrip({ countryId, markets }: MarketsStripProps) {
         href="/world/trade"
         className="flex items-center justify-between rounded-xl border border-card-border bg-card px-4 py-3 transition-colors hover:border-foreground/30"
       >
-        <span className="text-[12.5px] font-semibold text-foreground">
+        <span className="text-body-sm font-semibold text-foreground">
           World trade ledger
           <span className="ml-2 font-normal text-muted">balance of trade between nations</span>
         </span>
-        <span className="text-[11px] text-primary">&rarr;</span>
+        <span className="text-body-sm text-primary">&rarr;</span>
       </Link>
     </div>
   );

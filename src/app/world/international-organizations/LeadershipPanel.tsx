@@ -110,7 +110,7 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-foreground">{org.def.leadership.title}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{org.def.leadership.title}</h3>
         {!isPermanent && viewerHoldsVote && !election && !seatStillFilled && (
           <Button
             size="md"
@@ -131,22 +131,22 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-body-sm font-medium text-muted">Currently held by</p>
-              <p className="text-base font-semibold text-foreground">
+              <p className="text-body-lg font-semibold text-foreground">
                 {leader.holderCharacterName}
               </p>
               {leader.holderCountryId && (
-                <p className="text-xs text-muted">
+                <p className="text-body-sm text-muted">
                   {entityName(leader.holderCountryId as CountryId)}
                 </p>
               )}
               {isPermanent ? (
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-body-sm text-muted">
                   Permanent office — held ex officio by the head of government of{" "}
                   {entityName(permanentLeaderCountry)}.
                 </p>
               ) : (
                 seatHeldUntilTurn != null && (
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-body-sm text-muted">
                     Term ends turn {seatHeldUntilTurn}
                     {seatStillFilled
                       ? ` (in ${seatHeldUntilTurn - currentTurn} turn${
@@ -162,7 +162,7 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
           <div>
             <p className="italic text-muted">Seat is currently vacant.</p>
             {isPermanent && (
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 Permanent office — held ex officio by the head of government of{" "}
                 {entityName(permanentLeaderCountry)}.
               </p>
@@ -174,17 +174,17 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
       {/* Nominate form */}
       {!isPermanent && showForm && viewerHoldsVote && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">
+          <h4 className="text-body font-semibold text-foreground">
             Nominate a candidate for {org.def.leadership.title}
           </h4>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Candidates must be a sitting head of government or foreign minister of a member country.
             Election runs {votingWindowTurns} turns; a majority of the voting members elects.
           </p>
           {candidatesLoading ? (
             <div className="mt-3 h-24 animate-pulse rounded-lg bg-card-border" />
           ) : candidates.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">No eligible candidates available.</p>
+            <p className="mt-3 text-body text-muted">No eligible candidates available.</p>
           ) : (
             <div className="mt-3 space-y-1.5">
               {candidates.map((c) => (
@@ -205,8 +205,8 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                   />
                   <CountryFlag country={c.countryId} size="md" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{c.characterName}</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body font-medium text-foreground">{c.characterName}</p>
+                    <p className="text-body-sm text-muted">
                       {c.roleLabel} · {entityName(c.countryId)}
                     </p>
                   </div>
@@ -214,7 +214,7 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
               ))}
             </div>
           )}
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-3 flex gap-2">
             <Button
               variant="primary"
@@ -234,20 +234,20 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
         <article className="rounded-xl border border-card-border bg-card p-5 shadow-card">
           <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h5 className="text-sm font-semibold text-foreground">
+              <h5 className="text-body font-semibold text-foreground">
                 Nominee: {election.candidateCharacterName}
               </h5>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 {entityName(election.candidateCountryId as CountryId)} · Nominated by{" "}
                 {election.nominatedByCharacterName}
               </p>
-              <p className="mt-0.5 text-xs text-muted">
+              <p className="mt-0.5 text-body-sm text-muted">
                 Closes turn {election.closesOnTurn} (in{" "}
                 {Math.max(0, election.closesOnTurn - currentTurn)} turn
                 {Math.max(0, election.closesOnTurn - currentTurn) === 1 ? "" : "s"})
               </p>
             </div>
-            <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+            <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
               Voting
             </span>
           </div>
@@ -274,7 +274,7 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
                 : null;
             return (
               <>
-                <p className="mb-3 text-xs text-muted">
+                <p className="mb-3 text-body-sm text-muted">
                   {yesCount} yes · {noCount} no · {abstainCount} abstain · {requirement}.
                 </p>
                 <VoteButtons

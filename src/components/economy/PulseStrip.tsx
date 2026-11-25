@@ -115,10 +115,10 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
   return (
     <div className="grid grid-cols-2 divide-x divide-card-border bg-card-muted/60 lg:grid-cols-5">
       <Cell label="Gross domestic product" className="col-span-2 lg:col-span-1">
-        <span className="font-mono text-lg font-bold leading-tight tabular-nums text-foreground">
+        <span className="font-mono text-heading font-bold leading-tight tabular-nums text-foreground">
           {pulse.gdpMillions > 0 ? formatGDP(pulse.gdpMillions, prefix) : "—"}
         </span>
-        <span className="text-[11px] text-muted">
+        <span className="text-body-sm text-muted">
           per capita{" "}
           <span className="font-mono font-semibold text-foreground">
             {pulse.gdpPerCapita > 0 ? formatCurrencyCompactChip(pulse.gdpPerCapita, prefix) : "—"}
@@ -129,7 +129,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
 
       <Cell label="GDP growth">
         <span
-          className={`font-mono text-lg font-bold leading-tight tabular-nums ${
+          className={`font-mono text-heading font-bold leading-tight tabular-nums ${
             growth == null ? "text-muted" : growth >= 0 ? "text-success" : "text-error"
           }`}
         >
@@ -141,7 +141,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
             "—"
           )}
         </span>
-        <span className="text-[11px] text-muted">central bank · /yr</span>
+        <span className="text-body-sm text-muted">central bank · /yr</span>
         {pulse.gdpGrowth.history.length > 1 && (
           <Sparkline data={pulse.gdpGrowth.history.map((p) => p.rate)} w={116} h={26} />
         )}
@@ -149,7 +149,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
 
       <Cell label="Inflation">
         <span
-          className={`font-mono text-lg font-bold leading-tight tabular-nums ${
+          className={`font-mono text-heading font-bold leading-tight tabular-nums ${
             inflation == null ? "text-muted" : inflationGood ? "text-success" : "text-error"
           }`}
         >
@@ -161,18 +161,18 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
             "—"
           )}
         </span>
-        <span className="text-[11px] text-muted">target {pulse.inflation.target.toFixed(1)}%</span>
+        <span className="text-body-sm text-muted">target {pulse.inflation.target.toFixed(1)}%</span>
         {pulse.inflation.history.length > 1 && (
           <Sparkline data={pulse.inflation.history.map((p) => p.rate)} w={116} h={26} />
         )}
       </Cell>
 
       <Cell label="Prime rate">
-        <span className="font-mono text-lg font-bold leading-tight tabular-nums text-foreground">
+        <span className="font-mono text-heading font-bold leading-tight tabular-nums text-foreground">
           {prime != null ? (
             <>
               {prime.toFixed(2)}%{" "}
-              <span className="text-[11px] font-bold text-muted">
+              <span className="text-body-sm font-bold text-muted">
                 {primeDir ? (primeDir === "up" ? "▲" : "▼") : "──"}
               </span>
             </>
@@ -180,7 +180,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
             "—"
           )}
         </span>
-        <span className="text-[11px] text-muted">
+        <span className="text-body-sm text-muted">
           neutral ≈ {pulse.primeRate.neutral.toFixed(0)}%
           {pulse.primeRate.heldTurns != null && <> · held {pulse.primeRate.heldTurns}t</>}
         </span>
@@ -190,24 +190,24 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
       </Cell>
 
       <Cell label="Credit standing">
-        <span className="font-mono text-lg font-bold leading-tight">
+        <span className="font-mono text-heading font-bold leading-tight">
           <span style={{ color: "var(--stat, var(--primary))" }}>{pulse.credit.rating ?? "—"}</span>{" "}
           {pulse.credit.debtToGdpRatio != null && (
-            <span className="text-[11px] font-bold text-muted">
+            <span className="text-body-sm font-bold text-muted">
               {(pulse.credit.debtToGdpRatio * 100).toFixed(1)}% debt-to-GDP
             </span>
           )}
           {pulse.credit.debtToGdpRatio != null &&
             pulse.credit.ratioGdpMillions != null &&
             pulse.credit.ratioGdpMillions > 0 && (
-              <span className="block text-[11px] font-normal text-muted">
+              <span className="block text-body-sm font-normal text-muted">
                 on budget GDP {formatGDP(pulse.credit.ratioGdpMillions, prefix)}, a smoothed figure
                 that can differ from the GDP shown first
               </span>
             )}
         </span>
         {primaryBalance != null && (
-          <span className="text-[11px] text-muted">
+          <span className="text-body-sm text-muted">
             Current budget shows {primaryBalanceLabel(primaryBalance)}.
           </span>
         )}
@@ -218,7 +218,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
                 ? `Priced at the ${credit.debtPathBasisPct.toFixed(2)}% ladder rate the year-end rollover uses, before premiums`
                 : undefined
             }
-            className={`text-[11px] ${
+            className={`text-body-sm ${
               credit.debtTrajectory === "rising" ? "text-warning" : "text-muted"
             }`}
           >
@@ -230,7 +230,7 @@ export function PulseStrip({ countryId, pulse }: PulseStripProps) {
         )}
         <Link
           href={budgetUrl(countryId)}
-          className="mt-auto text-[11px] font-semibold text-primary hover:underline"
+          className="mt-auto text-body-sm font-semibold text-primary hover:underline"
         >
           National Budget &rarr;
         </Link>

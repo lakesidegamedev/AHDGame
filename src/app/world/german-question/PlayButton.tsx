@@ -94,7 +94,7 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
             is a choice to make; on a single-route play it would be noise.
           */}
           {play.payments.map((p) => (
-            <span key={p.mode} className="font-mono text-body-xs text-muted">
+            <span key={p.mode} className="font-mono text-body-sm text-muted">
               {play.payments.length > 1 ? `${p.label}: ` : ""}
               {p.costLabel}
               {p.debtNote ? <span className="text-warning"> · {p.debtNote}</span> : null}
@@ -106,7 +106,7 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
             {actor === "personal" ? "±" : play.effectivePoints >= 0 ? "+" : ""}
             {Math.abs(play.effectivePoints).toFixed(2)}
           </span>
-          <span className={`font-mono text-body-xs tracking-wider ${tagTone}`}>{play.tag}</span>
+          <span className={`font-mono text-body-sm tracking-wider ${tagTone}`}>{play.tag}</span>
         </span>
       </div>
 
@@ -114,7 +114,7 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
           buttons do not fit on one line, and shrinking the buttons to fit is
           how they ended up below a usable tap size in the first place. */}
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 pl-1">
-        <span className="font-mono text-body-xs text-muted">{play.basisLabel}</span>
+        <span className="font-mono text-body-sm text-muted">{play.basisLabel}</span>
         <span className="ml-auto flex gap-1.5">
           {actor === "personal" ? (
             <>
@@ -122,7 +122,7 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
                 type="button"
                 disabled={pending !== null || !personalRoute?.affordable}
                 onClick={() => void commit("funds", -1)}
-                className="min-h-11 min-w-16 rounded border border-info/40 px-3 font-mono text-body-xs text-info hover:bg-info/10 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 min-w-16 rounded border border-info/40 px-3 font-mono text-body-sm text-info hover:bg-info/10 disabled:cursor-not-allowed disabled:opacity-50"
                 title={blockedCopy ?? "Push toward NATO"}
               >
                 {pending ? "…" : "NATO"}
@@ -131,7 +131,7 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
                 type="button"
                 disabled={pending !== null || !personalRoute?.affordable}
                 onClick={() => void commit("funds", 1)}
-                className="min-h-11 min-w-16 rounded border border-error/40 px-3 font-mono text-body-xs text-error hover:bg-error/10 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 min-w-16 rounded border border-error/40 px-3 font-mono text-body-sm text-error hover:bg-error/10 disabled:cursor-not-allowed disabled:opacity-50"
                 title={blockedCopy ?? "Push toward reunification"}
               >
                 {pending ? "…" : "PACT"}
@@ -144,7 +144,7 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
                 type="button"
                 disabled={pending !== null || !p.affordable}
                 onClick={() => void commit(p.mode)}
-                className="min-h-11 rounded border border-gold/40 px-3 font-mono text-body-xs text-gold hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded border border-gold/40 px-3 font-mono text-body-sm text-gold hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
                 title={copyFor(p.blockedReason) ?? p.debtNote ?? play.detail}
               >
                 {pending === p.mode ? "…" : play.payments.length > 1 ? p.label : "COMMIT"}
@@ -154,9 +154,9 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
         </span>
       </div>
 
-      {blockedCopy && <p className="pl-1 font-mono text-body-xs text-muted">{blockedCopy}</p>}
+      {blockedCopy && <p className="pl-1 font-mono text-body-sm text-muted">{blockedCopy}</p>}
       {error && (
-        <p role="alert" className="pl-1 font-mono text-body-xs text-error">
+        <p role="alert" className="pl-1 font-mono text-body-sm text-error">
           {error}
         </p>
       )}

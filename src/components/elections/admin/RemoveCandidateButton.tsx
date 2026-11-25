@@ -39,7 +39,7 @@ export function RemoveCandidateButton({
         }
       }}
       disabled={removing}
-      className="rounded px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+      className="rounded px-2 py-1 text-body-sm text-red-400 hover:bg-red-500/20 disabled:opacity-50"
       title="Remove candidate (admin)"
       aria-label={candidateName ? `Remove ${candidateName}` : undefined}
     >

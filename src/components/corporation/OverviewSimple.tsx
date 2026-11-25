@@ -183,7 +183,7 @@ export function OverviewSimple({
           meta={attention.length > 0 ? `${attention.length}` : undefined}
         >
           {attention.length === 0 ? (
-            <p className="flex items-center gap-2 py-2.5 text-[13px] text-foreground">
+            <p className="flex items-center gap-2 py-2.5 text-body-sm text-foreground">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />
               Nothing needs you right now.
             </p>
@@ -195,13 +195,15 @@ export function OverviewSimple({
                   className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3.5 gap-y-2 border-b border-card-border/60 py-3 last:border-b-0 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
                 >
                   <span
-                    className={`min-w-14 rounded-[3px] px-2 py-1 text-center text-[10px] font-bold uppercase tracking-[0.12em] ${ATTENTION_TAG_TONE[item.tone]}`}
+                    className={`min-w-14 rounded-[3px] px-2 py-1 text-center text-body-sm font-bold uppercase tracking-[0.12em] ${ATTENTION_TAG_TONE[item.tone]}`}
                   >
                     {ATTENTION_TAG[item.key] ?? "Note"}
                   </span>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground">{item.title}</div>
-                    {item.detail && <div className="mt-0.5 text-xs text-muted">{item.detail}</div>}
+                    <div className="text-body font-semibold text-foreground">{item.title}</div>
+                    {item.detail && (
+                      <div className="mt-0.5 text-body-sm text-muted">{item.detail}</div>
+                    )}
                   </div>
                   {item.tab && (
                     <div className="col-start-2 sm:col-start-auto">
@@ -236,7 +238,7 @@ export function OverviewSimple({
           actions={<SmallButton onClick={() => onTabChange("sectors")}>All sectors</SmallButton>}
         >
           {top.length === 0 ? (
-            <p className="py-2 text-xs text-muted">No sectors yet.</p>
+            <p className="py-2 text-body-sm text-muted">No sectors yet.</p>
           ) : (
             <ol>
               {top.map((s, i) => {
@@ -251,7 +253,9 @@ export function OverviewSimple({
                       losing ? "border-l-error/70" : "border-l-transparent"
                     }`}
                   >
-                    <span className="text-xl font-semibold tabular-nums text-muted">{i + 1}</span>
+                    <span className="text-heading font-semibold tabular-nums text-muted">
+                      {i + 1}
+                    </span>
                     <div className="min-w-0">
                       <div className="mb-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                         <Link
@@ -270,9 +274,9 @@ export function OverviewSimple({
                           )}
                           <span className="truncate">{s.displayName ?? s.stateName}</span>
                         </Link>
-                        <span className="text-xs text-muted">{s.sectorLabel}</span>
+                        <span className="text-body-sm text-muted">{s.sectorLabel}</span>
                         {s.embargoSuspended && (
-                          <span className="text-[11px] text-error" title="Suspended by embargo">
+                          <span className="text-body-sm text-error" title="Suspended by embargo">
                             embargo
                           </span>
                         )}
@@ -283,14 +287,14 @@ export function OverviewSimple({
                     </div>
                     <div className="flex flex-col items-end gap-0.5 whitespace-nowrap">
                       {hasMoney && (
-                        <span className="font-mono text-[15px] font-semibold tabular-nums text-foreground">
+                        <span className="font-mono text-body font-semibold tabular-nums text-foreground">
                           {typeof s.revenue === "number" ? est(fmt(scale(revenue))) : "n/a"}
                         </span>
                       )}
-                      <span className={`font-mono text-[11px] tabular-nums ${signTone(margin)}`}>
+                      <span className={`font-mono text-body-sm tabular-nums ${signTone(margin)}`}>
                         {margin != null ? `${margin.toFixed(1)}% margin` : "n/a"}
                       </span>
-                      <span className="font-mono text-[11px] tabular-nums text-muted">
+                      <span className="font-mono text-body-sm tabular-nums text-muted">
                         {plantsMode ? (
                           <>
                             <FillText fill={s.fillRate} band={s.fillRateBand} /> fill
@@ -311,7 +315,7 @@ export function OverviewSimple({
               left edge; Pro carries the full column. */}
           {hasMoney &&
             top.some((s) => typeof s.profit === "number" && sectorDisplayProfit(s) < 0) && (
-              <p className="pt-1.5 text-[11px] text-muted">
+              <p className="pt-1.5 text-body-sm text-muted">
                 <span
                   aria-hidden
                   className="mr-1 inline-block h-2 w-0.5 bg-error/70 align-middle"

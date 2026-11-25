@@ -59,10 +59,10 @@ export function PsSpendButtons({
   const showState = !!scopes?.state;
   const showNational = !!scopes?.national;
 
-  const filledClass = `rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity ${buttonAnim}`;
+  const filledClass = `rounded-lg px-4 py-2 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity ${buttonAnim}`;
   const filledStyle = { backgroundColor: color, "--ps-bloom-color": color } as React.CSSProperties;
   const outlineClass =
-    "rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity";
+    "rounded-lg px-4 py-2 text-body font-medium hover:opacity-90 disabled:opacity-50 transition-opacity";
   const outlineStyle = { border: `1px solid ${color}`, color } as React.CSSProperties;
 
   if (showState || showNational) {

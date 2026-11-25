@@ -34,20 +34,20 @@ export function PendingBoardOverridesPanel({
 }: Props) {
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-sm font-semibold">
+      <h2 className="text-body font-semibold">
         {isBoardMember ? "Your board decisions" : "IMF board decisions"}
       </h2>
       {isManagingDirector && (
-        <p className="mt-1 text-xs font-medium">Your role is managing director.</p>
+        <p className="mt-1 text-body-sm font-medium">Your role is managing director.</p>
       )}
-      <p className="mt-2 text-sm text-muted">
+      <p className="mt-2 text-body text-muted">
         A country starts the bailout through its debt crisis process. After a bailout is granted,
         the board has {IMF_BOARD_OVERRIDE_WINDOW_TURNS} turns to adjust terms or issue a statement.
         The board can take one action per bailout. If it takes no action, the original terms stay in
         place.
       </p>
       {overrides.length === 0 ? (
-        <p className="mt-2 text-sm text-muted">No bailouts are waiting for a board decision.</p>
+        <p className="mt-2 text-body text-muted">No bailouts are waiting for a board decision.</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {overrides.map((o) => (
@@ -123,11 +123,11 @@ function OverrideRow({
     <li className="rounded border border-zinc-200 p-3 dark:border-zinc-700">
       <div className="flex items-baseline justify-between">
         <span className="font-medium">{row.countryCode}</span>
-        <span className="text-xs text-zinc-500">
+        <span className="text-body-sm text-zinc-500">
           {remainingTurns} turn{remainingTurns === 1 ? "" : "s"} remaining
         </span>
       </div>
-      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-body-sm text-zinc-600 dark:text-zinc-400">
         Choice: {row.crisisChoice ?? "n/a"} · Principal $
         {(row.facilityTerms.principal / 1e9).toFixed(1)}B · rate{" "}
         {row.facilityTerms.annualRate.toFixed(1)}% · Capture{" "}
@@ -142,7 +142,7 @@ function OverrideRow({
                 void submit("endorse", { statement: "Bailout terms endorsed by IMF Board." })
               }
               disabled={submitting !== null}
-              className="rounded-md border border-emerald-600 bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-md border border-emerald-600 bg-emerald-600 px-2 py-1 text-body-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {submitting === "endorse" ? "Submitting…" : "Endorse"}
             </button>
@@ -152,7 +152,7 @@ function OverrideRow({
                 void submit("criticize", { statement: "Bailout terms criticized by IMF Board." })
               }
               disabled={submitting !== null}
-              className="rounded-md border border-rose-600 bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+              className="rounded-md border border-rose-600 bg-rose-600 px-2 py-1 text-body-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
             >
               {submitting === "criticize" ? "Submitting…" : "Criticize"}
             </button>
@@ -160,7 +160,7 @@ function OverrideRow({
               type="button"
               onClick={() => setShowModifyForm((v) => !v)}
               disabled={submitting !== null}
-              className="rounded-md border border-amber-600 bg-amber-600 px-2 py-1 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              className="rounded-md border border-amber-600 bg-amber-600 px-2 py-1 text-body-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
             >
               {showModifyForm ? "Cancel modify" : "Modify terms"}
             </button>
@@ -168,7 +168,7 @@ function OverrideRow({
               type="button"
               onClick={() => void submit("no-action")}
               disabled={submitting !== null}
-              className="rounded-md border border-zinc-300 bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="rounded-md border border-zinc-300 bg-zinc-100 px-2 py-1 text-body-sm font-medium text-zinc-700 hover:bg-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               {submitting === "no-action" ? "Submitting…" : "No action"}
             </button>
@@ -176,7 +176,7 @@ function OverrideRow({
           {showModifyForm ? (
             <div className="mt-3 space-y-2 rounded border border-amber-300 bg-amber-50 p-2 dark:border-amber-700 dark:bg-amber-950">
               <div>
-                <label className="block text-xs text-zinc-700 dark:text-zinc-300">
+                <label className="block text-body-sm text-zinc-700 dark:text-zinc-300">
                   Rate Δ (pp): {rateDelta.toFixed(2)} (clamped ±{RATE_DELTA_BOUND_PP}pp)
                 </label>
                 <Slider
@@ -190,7 +190,7 @@ function OverrideRow({
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-700 dark:text-zinc-300">
+                <label className="block text-body-sm text-zinc-700 dark:text-zinc-300">
                   Capture Δ: {(captureDelta * 100).toFixed(1)}pp (clamped ±
                   {(CAPTURE_DELTA_BOUND * 100).toFixed(0)}pp)
                 </label>
@@ -213,7 +213,7 @@ function OverrideRow({
                   })
                 }
                 disabled={submitting !== null}
-                className="rounded-md border border-amber-700 bg-amber-700 px-3 py-1 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                className="rounded-md border border-amber-700 bg-amber-700 px-3 py-1 text-body-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
               >
                 {submitting === "modify-terms" ? "Applying…" : "Apply modification"}
               </button>
@@ -221,9 +221,9 @@ function OverrideRow({
           ) : null}
         </>
       ) : (
-        <p className="mt-2 text-xs text-zinc-500">Board members only.</p>
+        <p className="mt-2 text-body-sm text-zinc-500">Board members only.</p>
       )}
-      {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-body-sm text-rose-600">{error}</p> : null}
     </li>
   );
 }

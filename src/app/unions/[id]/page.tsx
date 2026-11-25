@@ -54,6 +54,7 @@ import {
 import { UnionSectorsTable } from "./UnionSectorsTable";
 import type { SectorStatus } from "./unionSectorTable";
 import { approvalText } from "@/lib/ui/tone";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -435,7 +436,7 @@ function UnionDashboard({ id }: { id: string }) {
             <div className="flex items-center justify-between gap-2">
               <BackButton iconOnly fallbackLabel="All unions" fallbackHref="/unions" />
               {isLeader && (
-                <span className="rounded-full border border-white/30 bg-black/60 px-3 py-1 text-xs font-bold text-white">
+                <span className="rounded-full border border-white/30 bg-black/60 px-3 py-1 text-body-sm font-bold text-white">
                   You lead this union
                 </span>
               )}
@@ -450,10 +451,10 @@ function UnionDashboard({ id }: { id: string }) {
                   className="shadow-lg ring-2 ring-white/40"
                 />
                 <div className="min-w-0">
-                  <p className="mb-1 text-xs italic text-white/70 drop-shadow">
+                  <p className="mb-1 text-body-sm italic text-white/70 drop-shadow">
                     {union.countryName} · {union.sectorLabel}
                   </p>
-                  <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+                  <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
                     {union.name}
                   </h1>
                 </div>
@@ -469,14 +470,14 @@ function UnionDashboard({ id }: { id: string }) {
             {presidentHref && leader ? (
               <Link
                 href={presidentHref}
-                className="truncate text-base font-bold text-primary hover:opacity-80"
+                className="truncate text-body-lg font-bold text-primary hover:opacity-80"
               >
                 {leader.name}
               </Link>
             ) : (
-              <span className="text-base font-bold text-muted">Vacant</span>
+              <span className="text-body-lg font-bold text-muted">Vacant</span>
             )}
-            {isLeader && <span className="text-[11px] text-muted">(you)</span>}
+            {isLeader && <span className="text-body-sm text-muted">(you)</span>}
           </div>
           <StatCell
             label="Members"
@@ -525,7 +526,7 @@ function UnionDashboard({ id }: { id: string }) {
       {loadError && (
         <div
           role="alert"
-          className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning"
+          className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-body text-warning"
         >
           Couldn&apos;t refresh this union. {loadError} Showing previously loaded data. Reload the
           page to try again.
@@ -540,7 +541,7 @@ function UnionDashboard({ id }: { id: string }) {
           <span aria-hidden className="mt-0.5 text-warning">
             !
           </span>
-          <p className="min-w-0 text-sm text-warning">
+          <p className="min-w-0 text-body text-warning">
             {partialError} Reload the page to try again.
           </p>
         </div>
@@ -554,11 +555,11 @@ function UnionDashboard({ id }: { id: string }) {
           <span aria-hidden className="mt-0.5 text-error">
             ⚠
           </span>
-          <div className="min-w-0 text-sm">
+          <div className="min-w-0 text-body">
             <p className="font-semibold text-error">
               Unions are banned under current law in {union.countryName}.
             </p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="mt-0.5 text-body-sm text-muted">
               This union is suspended: leadership, treasury, and membership are frozen, not lost,
               until the ban is repealed by legislation. Legal drives, dues, and strikes are frozen
               and open unionization is declining while the ban holds, but cells can still organize
@@ -572,7 +573,7 @@ function UnionDashboard({ id }: { id: string }) {
         myCharacterId === union.pendingLeaderCharacterId &&
         !isLeader && (
           <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-5">
-            <p className="text-sm font-medium">
+            <p className="text-body font-medium">
               Organizers have voted you the top choice for president. Accept to take the seat
               {union.ownerId ? " from the current holder" : ""}.
             </p>
@@ -581,7 +582,7 @@ function UnionDashboard({ id }: { id: string }) {
                 type="button"
                 disabled={actionPending || suspended}
                 onClick={() => runAction("leader/accept")}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 Accept presidency
               </button>
@@ -589,7 +590,7 @@ function UnionDashboard({ id }: { id: string }) {
                 type="button"
                 disabled={actionPending || suspended}
                 onClick={() => runAction("leader/decline")}
-                className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium transition-colors hover:bg-card-elevated disabled:opacity-50"
+                className="rounded-lg border border-card-border px-4 py-2 text-body font-medium transition-colors hover:bg-card-elevated disabled:opacity-50"
               >
                 Decline
               </button>
@@ -602,7 +603,7 @@ function UnionDashboard({ id }: { id: string }) {
           scrolling sideways, so every tab stays in view on a phone. */}
       <section className="space-y-6">
         <div className="border-b border-card-border">
-          <nav className="flex flex-wrap items-center gap-x-1" aria-label="Tabs">
+          <nav className="flex flex-wrap items-center gap-1 pb-2" aria-label="Tabs">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -612,16 +613,12 @@ function UnionDashboard({ id }: { id: string }) {
                   setTab(t.key);
                 }}
                 aria-current={tab === t.key ? "page" : undefined}
-                className={`-mb-px flex items-center whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-                  tab === t.key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:border-muted hover:text-foreground"
-                }`}
+                className={`flex items-center whitespace-nowrap px-3 py-1.5 text-body ${pillClass(tab === t.key)}`}
               >
                 {t.label}
                 {t.count != null && (
                   <span
-                    className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                    className={`ml-2 rounded-full px-2 py-0.5 text-body-sm ${
                       tab === t.key ? "bg-primary/10 text-primary" : "bg-card-elevated text-muted"
                     }`}
                   >
@@ -648,18 +645,18 @@ function UnionDashboard({ id }: { id: string }) {
                 onDrive={(mode) => runAction("organize-underground", { mode })}
               />
             ) : suspended ? (
-              <section className="rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
+              <section className="rounded-xl border border-card-border bg-card p-5 text-body text-muted">
                 Underground cell details are available to characters in {union.countryName}. Legal
                 organizing remains suspended while the ban holds.
               </section>
             ) : (
               <section className="space-y-4 rounded-xl border border-card-border bg-card p-5">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-sm font-semibold text-muted">Organize</h2>
+                  <h2 className="text-body font-semibold text-muted">Organize</h2>
                   <div className="h-px flex-1 bg-card-border" />
                 </div>
 
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   Anyone in {union.countryName} can organize this union. Every drive adds{" "}
                   {union.organizeStrengthGain} strength to the union and the same amount to your own
                   banked total, which is your vote weight in the leadership contest. Strength decays{" "}
@@ -667,7 +664,7 @@ function UnionDashboard({ id }: { id: string }) {
                   works at loses its power, and so does an organizer who stops showing up.
                 </p>
 
-                <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex flex-wrap gap-4 text-body">
                   <div>
                     <span className="text-muted">Union strength:</span>{" "}
                     <span className="font-semibold tabular-nums">{Math.round(union.strength)}</span>
@@ -687,16 +684,16 @@ function UnionDashboard({ id }: { id: string }) {
                     type="button"
                     disabled={actionPending || suspended || cannotAffordOrganize}
                     onClick={() => runAction("organize")}
-                    className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                    className="w-fit rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   >
                     Run organize drive
                   </button>
-                  <span className="text-[11px] text-muted">
+                  <span className="text-body-sm text-muted">
                     Costs {organizeActionCost} action points
                     {myActions != null && ` · you have ${myActions}`}
                   </span>
                   {cannotAffordOrganize && (
-                    <span className="text-[11px] font-medium text-error">
+                    <span className="text-body-sm font-medium text-error">
                       Not enough action points. They refresh each turn.
                     </span>
                   )}
@@ -710,7 +707,7 @@ function UnionDashboard({ id }: { id: string }) {
             {isLeader && (
               <section className="space-y-4 rounded-xl border border-card-border bg-card p-5">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-sm font-semibold text-muted">Leader actions</h2>
+                  <h2 className="text-body font-semibold text-muted">Leader actions</h2>
                   <div className="h-px flex-1 bg-card-border" />
                 </div>
 
@@ -719,7 +716,7 @@ function UnionDashboard({ id }: { id: string }) {
               are now counted from the workers in the sectors this union
               actually represents. Growing the union means organizing a
               specific sector, which happens on that sector's own page. */}
-                <p className="text-[11px] text-muted">
+                <p className="text-body-sm text-muted">
                   To grow this union, open the{" "}
                   <button
                     type="button"
@@ -742,7 +739,7 @@ function UnionDashboard({ id }: { id: string }) {
               own wage panel, and does nothing else. */}
                 <div className="space-y-2 border-t border-card-border pt-3">
                   <p className="text-body-sm font-medium text-muted">Public wage claim</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     The wage level this union says the industry should pay. Employers see it on
                     their own wage panel and every local&apos;s shortfall is listed on the Sectors
                     tab. It binds nobody: to make an employer actually pay it, open a bargaining
@@ -759,7 +756,7 @@ function UnionDashboard({ id }: { id: string }) {
                         value={wageDemandDraft}
                         onChange={(e) => setWageDemandDraft(e.target.value)}
                         placeholder="1.15"
-                        className="w-32 rounded-lg border border-card-border bg-background px-3 py-2 text-xs"
+                        className="w-32 rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm"
                       />
                     </label>
                     <button
@@ -773,7 +770,7 @@ function UnionDashboard({ id }: { id: string }) {
                       onClick={() =>
                         runAction("demand-wage", { demandedWageLevel: Number(wageDemandDraft) })
                       }
-                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                      className="rounded-lg bg-primary px-3 py-2 text-body-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       Set demand
                     </button>
@@ -782,19 +779,19 @@ function UnionDashboard({ id }: { id: string }) {
                         type="button"
                         disabled={actionPending || suspended}
                         onClick={() => runAction("demand-wage", { demandedWageLevel: null })}
-                        className="rounded-lg border border-card-border px-3 py-2 text-xs font-medium transition-colors hover:bg-card-elevated disabled:opacity-50"
+                        className="rounded-lg border border-card-border px-3 py-2 text-body-sm font-medium transition-colors hover:bg-card-elevated disabled:opacity-50"
                       >
                         Withdraw demand
                       </button>
                     )}
                   </div>
                   {wageDemandOutOfRange && (
-                    <p className="text-xs font-medium text-warning">
+                    <p className="text-body-sm font-medium text-warning">
                       Claims are accepted between {WAGE_LEVEL_MIN.toFixed(2)}× and{" "}
                       {WAGE_LEVEL_MAX.toFixed(2)}×.
                     </p>
                   )}
-                  <p className="text-xs text-muted">
+                  <p className="text-body-sm text-muted">
                     {union.demandedWageLevel == null
                       ? "This union has no standing wage claim."
                       : `Standing claim: ${union.demandedWageLevel.toFixed(2)}× the industry baseline wage.`}
@@ -816,7 +813,7 @@ function UnionDashboard({ id }: { id: string }) {
                         runAction("resign");
                       }
                     }}
-                    className="text-xs font-medium text-muted transition-colors hover:text-error disabled:opacity-50"
+                    className="text-body-sm font-medium text-muted transition-colors hover:text-error disabled:opacity-50"
                   >
                     Resign leadership
                   </button>
@@ -843,7 +840,9 @@ function UnionDashboard({ id }: { id: string }) {
           only the head can move them. */}
             <section className="space-y-5 rounded-xl border border-card-border bg-card p-5">
               <div className="flex items-center gap-3">
-                <h2 className="text-sm font-semibold text-muted">Dues, services &amp; politics</h2>
+                <h2 className="text-body font-semibold text-muted">
+                  Dues, services &amp; politics
+                </h2>
                 <div className="h-px flex-1 bg-card-border" />
               </div>
               <UnionDuesPanel
@@ -904,14 +903,14 @@ function UnionDashboard({ id }: { id: string }) {
         {tab === "leadership" && (
           <div className="space-y-6 rounded-xl border border-card-border bg-card p-5">
             <div className="space-y-2">
-              <h2 className="text-sm font-semibold text-foreground">Leadership contest</h2>
-              <p className="text-sm text-muted">
+              <h2 className="text-body font-semibold text-foreground">Leadership contest</h2>
+              <p className="text-body text-muted">
                 Like a corporation CEO race: organizers vote continuously, weighted by banked
                 strength. Whoever leads the tally can accept the presidency
                 {union.ownerId ? " and displace the current holder" : ""}. Ties keep the sitting
                 player president.
               </p>
-              <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex flex-wrap gap-4 text-body">
                 <div>
                   <span className="text-muted">Strength:</span>{" "}
                   <span className="font-semibold tabular-nums">
@@ -931,24 +930,24 @@ function UnionDashboard({ id }: { id: string }) {
                     ) : (
                       <span className="font-semibold">{leader.name}</span>
                     )}
-                    {leader.isNPP && <span className="text-xs text-muted">(NPP)</span>}
+                    {leader.isNPP && <span className="text-body-sm text-muted">(NPP)</span>}
                   </div>
                 )}
               </div>
             </div>
 
             {!union.electionOpen ? (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 Organize this union to {union.leadershipElectionMinStrength} strength to open the
                 contest.
               </p>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-body font-medium text-foreground">
                   Contest open. Cast or change your vote anytime.
                 </p>
                 {voteTallies.length > 0 ? (
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-1 text-body">
                     {voteTallies.map((t) => (
                       <li key={t.characterId} className="flex justify-between gap-4">
                         <span>{t.name}</span>
@@ -959,7 +958,7 @@ function UnionDashboard({ id }: { id: string }) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted">No votes cast yet.</p>
+                  <p className="text-body text-muted">No votes cast yet.</p>
                 )}
                 {canVote && (
                   <div className="flex flex-wrap items-end gap-2">
@@ -968,7 +967,7 @@ function UnionDashboard({ id }: { id: string }) {
                       <select
                         value={candidateDraft}
                         onChange={(e) => setCandidateDraft(e.target.value)}
-                        className="w-64 rounded-lg border border-card-border bg-background px-3 py-2 text-xs"
+                        className="w-64 rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm"
                       >
                         <option value="">Choose a candidate</option>
                         {candidates.map((candidate) => (
@@ -985,11 +984,13 @@ function UnionDashboard({ id }: { id: string }) {
                       onClick={() =>
                         runAction("leader/vote", { candidateCharacterId: candidateDraft })
                       }
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       Cast vote
                     </button>
-                    {myVote && <span className="text-xs text-muted">Your vote is recorded.</span>}
+                    {myVote && (
+                      <span className="text-body-sm text-muted">Your vote is recorded.</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -997,13 +998,13 @@ function UnionDashboard({ id }: { id: string }) {
 
             <div className="space-y-2 border-t border-card-border pt-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-sm font-semibold text-foreground">Organizers</h3>
-                <span className="text-xs text-muted tabular-nums">
+                <h3 className="text-body-lg font-semibold text-foreground">Organizers</h3>
+                <span className="text-body-sm text-muted tabular-nums">
                   {organizerCount} {organizerCount === 1 ? "member" : "members"}
                 </span>
               </div>
               {organizers.length === 0 ? (
-                <p className="text-sm text-muted">
+                <p className="text-body text-muted">
                   Nobody has organized this union yet. The first drive puts you on the roster.
                 </p>
               ) : (
@@ -1016,24 +1017,24 @@ function UnionDashboard({ id }: { id: string }) {
                       <div className="flex min-w-0 items-center gap-2">
                         <Link
                           href={`/character/${organizer.sequentialId ?? organizer.characterId}`}
-                          className="truncate text-sm font-medium text-primary hover:opacity-80"
+                          className="truncate text-body font-medium text-primary hover:opacity-80"
                         >
                           {organizer.name}
                         </Link>
                         {organizer.isLeader && (
-                          <span className="shrink-0 rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[11px] text-primary">
+                          <span className="shrink-0 rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-body-sm text-primary">
                             President
                           </span>
                         )}
                         {organizer.characterId === myCharacterId && (
-                          <span className="shrink-0 text-[11px] text-muted">(you)</span>
+                          <span className="shrink-0 text-body-sm text-muted">(you)</span>
                         )}
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="text-sm font-medium tabular-nums">
+                        <div className="text-body font-medium tabular-nums">
                           {Math.round(organizer.strength)} strength
                         </div>
-                        <div className="text-[11px] text-muted tabular-nums">
+                        <div className="text-body-sm text-muted tabular-nums">
                           {organizer.influencePct.toFixed(1)}% of the vote ·{" "}
                           {organizer.organizeCount} drive
                           {organizer.organizeCount === 1 ? "" : "s"}
@@ -1097,13 +1098,13 @@ function UnionDashboard({ id }: { id: string }) {
               {actionableBills.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-card-border bg-card">
                   <div className="border-b border-card-border bg-card-elevated px-4 py-3">
-                    <h3 className="text-sm font-semibold text-muted">Active national bills</h3>
+                    <h3 className="text-body-lg font-semibold text-muted">Active national bills</h3>
                   </div>
                   <ul className="divide-y divide-card-border">
                     {actionableBills.map((bill) => (
                       <li
                         key={bill.billId}
-                        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-body"
                       >
                         <div className="min-w-0">
                           <Link
@@ -1112,7 +1113,7 @@ function UnionDashboard({ id }: { id: string }) {
                           >
                             {bill.billTitle}
                           </Link>
-                          <p className="text-xs capitalize text-muted">
+                          <p className="text-body-sm capitalize text-muted">
                             {bill.status.replaceAll("_", " ")}
                           </p>
                         </div>
@@ -1127,7 +1128,7 @@ function UnionDashboard({ id }: { id: string }) {
                                   stance: "endorse",
                                 })
                               }
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                              className={`rounded-lg border px-3 py-1.5 text-body-sm font-semibold transition-colors disabled:opacity-50 ${
                                 bill.stance === "endorse"
                                   ? "border-success bg-success/15 text-success"
                                   : "border-card-border hover:bg-card-elevated"
@@ -1144,7 +1145,7 @@ function UnionDashboard({ id }: { id: string }) {
                                   stance: "oppose",
                                 })
                               }
-                              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                              className={`rounded-lg border px-3 py-1.5 text-body-sm font-semibold transition-colors disabled:opacity-50 ${
                                 bill.stance === "oppose"
                                   ? "border-error bg-error/15 text-error"
                                   : "border-card-border hover:bg-card-elevated"
@@ -1156,7 +1157,7 @@ function UnionDashboard({ id }: { id: string }) {
                         ) : bill.stance ? (
                           <StanceBadge stance={bill.stance} />
                         ) : (
-                          <span className="text-xs text-muted">No position</span>
+                          <span className="text-body-sm text-muted">No position</span>
                         )}
                       </li>
                     ))}
@@ -1167,13 +1168,13 @@ function UnionDashboard({ id }: { id: string }) {
               {historicalEndorsements.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-card-border bg-card">
                   <div className="border-b border-card-border bg-card-elevated px-4 py-3">
-                    <h3 className="text-sm font-semibold text-muted">Past stances</h3>
+                    <h3 className="text-body-lg font-semibold text-muted">Past stances</h3>
                   </div>
                   <ul className="divide-y divide-card-border">
                     {historicalEndorsements.map((endorsement) => (
                       <li
                         key={endorsement.billId}
-                        className="flex items-center gap-3 px-4 py-3 text-sm"
+                        className="flex items-center gap-3 px-4 py-3 text-body"
                       >
                         <StanceBadge stance={endorsement.stance} />
                         <Link

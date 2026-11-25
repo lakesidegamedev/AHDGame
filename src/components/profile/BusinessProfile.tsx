@@ -36,7 +36,7 @@ export function BusinessProfile({ data }: { data: BusinessProfileView }) {
             ].map(([label, value]) => (
               <div key={String(label)}>
                 <dt className="text-body-sm text-muted">{label}</dt>
-                <dd className="text-heading-sm font-semibold tabular-nums text-foreground">
+                <dd className="text-heading font-semibold tabular-nums text-foreground">
                   <AnchorAmount>{money(Number(value))}</AnchorAmount>
                 </dd>
               </div>

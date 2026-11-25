@@ -81,11 +81,11 @@ export default function AccountDossier({ userId, context = "admin" }: AccountDos
       {/* Pivot breadcrumb — only once the investigator has stepped off the
           original account. */}
       {trail.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-2 text-body-sm text-muted">
           <button
             type="button"
             onClick={back}
-            className="flex items-center gap-1.5 rounded-md text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+            className="flex items-center gap-1.5 rounded-md text-body text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
           >
             <svg
               className="h-4 w-4"
@@ -122,13 +122,13 @@ export default function AccountDossier({ userId, context = "admin" }: AccountDos
       )}
 
       {error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-10 text-center text-sm text-red-400">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-10 text-center text-body text-red-400">
           {error}
           <div>
             <button
               type="button"
               onClick={() => setReloadNonce((n) => n + 1)}
-              className="mt-3 inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-xs text-foreground transition-colors hover:bg-card-elevated motion-reduce:transition-none"
+              className="mt-3 inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body-sm text-foreground transition-colors hover:bg-card-elevated motion-reduce:transition-none"
             >
               Retry
             </button>

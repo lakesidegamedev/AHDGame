@@ -137,9 +137,9 @@ function LayoutChoice<T extends string>({
       disabled={saving}
       aria-busy={saving}
     >
-      <legend className="px-1 text-sm font-medium text-foreground">{title}</legend>
-      <p className="text-xs leading-relaxed text-muted">{hint}</p>
-      {classicHint && <p className="text-xs text-muted">{classicText}</p>}
+      <legend className="px-1 text-body font-medium text-foreground">{title}</legend>
+      <p className="text-body-sm leading-relaxed text-muted">{hint}</p>
+      {classicHint && <p className="text-body-sm text-muted">{classicText}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {options.map((option) => (
           <label
@@ -155,10 +155,10 @@ function LayoutChoice<T extends string>({
               onChange={() => onChange(option)}
             />
             <span>
-              <span className="block text-sm font-medium text-foreground">
+              <span className="block text-body font-medium text-foreground">
                 {optionText(option).title}
               </span>
-              <span className="mt-1 block text-xs leading-relaxed text-muted">
+              <span className="mt-1 block text-body-sm leading-relaxed text-muted">
                 {optionText(option).hint}
               </span>
             </span>

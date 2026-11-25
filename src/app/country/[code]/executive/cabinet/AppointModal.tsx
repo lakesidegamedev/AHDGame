@@ -83,8 +83,8 @@ export function AppointModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-xl border border-card-border bg-card shadow-lg">
         <div className="border-b border-card-border p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-foreground">Appoint {position.name}</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="text-heading font-semibold text-foreground">Appoint {position.name}</h2>
+          <p className="mt-1 text-body text-muted">
             {isOnePartyState
               ? "Select any player to appoint to this cabinet position."
               : `Select a ${chamberMemberLabel} to appoint to this cabinet position.`}
@@ -95,7 +95,7 @@ export function AppointModal({
           {loading ? (
             <div className="py-8 text-center text-muted">Loading eligible candidates...</div>
           ) : characters.length === 0 ? (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-body text-warning">
               No eligible candidates found. Candidates must be:
               <ul className="mt-2 list-inside list-disc">
                 <li>Player characters (not NPPs)</li>
@@ -137,7 +137,7 @@ export function AppointModal({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-foreground truncate">{character.name}</p>
-                      <p className="text-sm text-muted">
+                      <p className="text-body text-muted">
                         {character.chamberName && (
                           <span className="mr-1">{character.chamberName} - </span>
                         )}
@@ -150,7 +150,7 @@ export function AppointModal({
                   </button>
                 ))}
                 {filteredCharacters.length === 0 && (
-                  <p className="py-4 text-center text-sm text-muted">
+                  <p className="py-4 text-center text-body text-muted">
                     No characters match your search.
                   </p>
                 )}
@@ -161,7 +161,7 @@ export function AppointModal({
 
         <div className="border-t border-card-border p-4 sm:p-6">
           {selectedCharacter && (
-            <div className="mb-4 rounded-lg border border-info/30 bg-info/10 p-3 text-sm text-info">
+            <div className="mb-4 rounded-lg border border-info/30 bg-info/10 p-3 text-body text-info">
               <strong>Selected:</strong> {selectedCharacter.name} (
               {selectedCharacter.chamberName ? `${selectedCharacter.chamberName} - ` : ""}
               {selectedCharacter.constituency})

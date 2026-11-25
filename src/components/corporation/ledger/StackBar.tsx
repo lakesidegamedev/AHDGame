@@ -21,7 +21,7 @@ export function StackBar({ segments, label }: { segments: LedgerSegment[]; label
           />
         ))}
       </div>
-      <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-muted">
+      <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-body-sm text-muted">
         {shown.map((s) => (
           <li key={s.key} className="flex min-w-0 items-center gap-1.5">
             <span

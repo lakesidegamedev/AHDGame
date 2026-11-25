@@ -240,16 +240,16 @@ function FeedbackBoardInner() {
             <div className="absolute top-4 right-4 sm:top-5 sm:right-5">
               <button
                 onClick={openCompose}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-body font-medium transition-colors hover:bg-primary/90"
               >
                 New suggestion
               </button>
             </div>
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-end px-6 pb-5 sm:px-8 sm:pb-7">
-              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
+              <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display">
                 Suggestions
               </h1>
-              <p className="mt-1.5 text-sm text-white/80 drop-shadow max-w-xl">
+              <p className="mt-1.5 text-body text-white/80 drop-shadow max-w-xl">
                 Start a thread, vote and reply. Every suggestion is also posted on Discord, and
                 votes there count here.
               </p>
@@ -273,7 +273,7 @@ function FeedbackBoardInner() {
                   setStatusTab(t.key);
                   setOffset(0);
                 }}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-body font-medium transition-colors ${
                   active
                     ? "bg-primary/15 text-primary ring-1 ring-primary/30"
                     : "text-muted hover:bg-card-elevated hover:text-foreground"
@@ -281,9 +281,9 @@ function FeedbackBoardInner() {
               >
                 {t.label}
                 {typeof count === "number" ? (
-                  <span className="ml-1.5 tabular-nums text-xs opacity-80">({count})</span>
+                  <span className="ml-1.5 tabular-nums text-body-sm opacity-80">({count})</span>
                 ) : (
-                  <span className="ml-1.5 text-xs opacity-60" aria-label="Loading count">
+                  <span className="ml-1.5 text-body-sm opacity-60" aria-label="Loading count">
                     (...)
                   </span>
                 )}
@@ -295,14 +295,14 @@ function FeedbackBoardInner() {
         {/* Inline filter toolbar */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted">Sort</label>
+            <label className="text-body-sm font-medium text-muted">Sort</label>
             <select
               value={sort}
               onChange={(e) => {
                 setSort(e.target.value);
                 setOffset(0);
               }}
-              className="rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-body text-foreground focus:border-primary focus:outline-none"
             >
               <option value="recent">Newest</option>
               <option value="top">Top voted</option>
@@ -311,14 +311,14 @@ function FeedbackBoardInner() {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted">Category</label>
+            <label className="text-body-sm font-medium text-muted">Category</label>
             <select
               value={categoryFilter}
               onChange={(e) => {
                 setCategoryFilter(e.target.value);
                 setOffset(0);
               }}
-              className="rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-body text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">All</option>
               {CATEGORY_OPTIONS.map((o) => (
@@ -329,14 +329,14 @@ function FeedbackBoardInner() {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-muted">Area</label>
+            <label className="text-body-sm font-medium text-muted">Area</label>
             <select
               value={gameSystemFilter}
               onChange={(e) => {
                 setGameSystemFilter(e.target.value);
                 setOffset(0);
               }}
-              className="rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="rounded-lg border border-card-border bg-card px-2.5 py-1.5 text-body text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">All</option>
               {GAME_SYSTEM_OPTIONS.map((o) => (
@@ -350,7 +350,7 @@ function FeedbackBoardInner() {
             <button
               type="button"
               onClick={() => (selectMode ? cancelSelection() : setSelectMode(true))}
-              className={`ml-auto rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`ml-auto rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                 selectMode
                   ? "border-primary/40 bg-primary/15 text-primary"
                   : "border-card-border text-muted hover:text-foreground"
@@ -362,14 +362,14 @@ function FeedbackBoardInner() {
         </div>
 
         {error && (
-          <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm text-error">
+          <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-body text-error">
             {error}
           </div>
         )}
 
         <section className="overflow-hidden rounded-xl border border-card-border bg-card shadow-md">
           <div
-            className={`${THREAD_GRID} hidden border-b border-card-border bg-card-muted px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted md:grid`}
+            className={`${THREAD_GRID} hidden border-b border-card-border bg-card-muted px-4 py-2 text-body-sm font-semibold uppercase tracking-wide text-muted md:grid`}
           >
             <span className="col-span-2">Thread</span>
             <span className="text-center">Votes</span>
@@ -389,7 +389,7 @@ function FeedbackBoardInner() {
               ))}
             </ul>
           ) : items.length === 0 ? (
-            <p className="px-4 py-12 text-center text-sm text-muted">
+            <p className="px-4 py-12 text-center text-body text-muted">
               No suggestions in this view yet.
             </p>
           ) : (
@@ -407,7 +407,7 @@ function FeedbackBoardInner() {
           )}
           {!loading && total > limit && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border bg-card-muted/60 px-4 py-2.5">
-              <span className="text-xs tabular-nums text-muted">
+              <span className="text-body-sm tabular-nums text-muted">
                 {offset + 1} to {Math.min(offset + limit, total)} of {total}
               </span>
               <div className="flex gap-2">
@@ -415,7 +415,7 @@ function FeedbackBoardInner() {
                   variant="secondary"
                   disabled={offset === 0}
                   onClick={() => setOffset((o) => Math.max(0, o - limit))}
-                  className="px-3 py-1 text-xs"
+                  className="px-3 py-1 text-body-sm"
                 >
                   Previous
                 </Button>
@@ -423,7 +423,7 @@ function FeedbackBoardInner() {
                   variant="secondary"
                   disabled={offset + limit >= total}
                   onClick={() => setOffset((o) => o + limit)}
-                  className="px-3 py-1 text-xs"
+                  className="px-3 py-1 text-body-sm"
                 >
                   Next
                 </Button>
@@ -432,7 +432,7 @@ function FeedbackBoardInner() {
           )}
         </section>
 
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Suggestion numbers are never reused. A gap in the numbering means that suggestion was
           merged into another one or removed by a moderator.
         </p>

@@ -281,8 +281,8 @@ export function DebugTab() {
     <div className="space-y-6">
       {/* Stock Exchange Snapshot Diagnostics */}
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Stock exchange snapshot diagnostics</h2>
-        <p className="mb-4 text-sm text-muted">
+        <h2 className="mb-4 text-heading font-semibold">Stock exchange snapshot diagnostics</h2>
+        <p className="mb-4 text-body text-muted">
           Diagnose stock exchange snapshot state or manually trigger snapshot generation. Snapshots
           are normally generated once per turn for fast Discord bot responses.
         </p>
@@ -291,7 +291,7 @@ export function DebugTab() {
           <button
             onClick={diagnoseSnapshots}
             disabled={snapshotLoading}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {snapshotLoading ? "Diagnosing..." : "Diagnose snapshots"}
           </button>
@@ -299,7 +299,7 @@ export function DebugTab() {
           <button
             onClick={generateSnapshots}
             disabled={snapshotGenerating}
-            className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+            className="rounded-md bg-green-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
           >
             {snapshotGenerating ? "Generating..." : "Generate snapshots now"}
           </button>
@@ -307,7 +307,7 @@ export function DebugTab() {
           {snapshotData && (
             <button
               onClick={downloadSnapshotJSON}
-              className="rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-card-hover"
+              className="rounded-md border border-card-border bg-card px-4 py-2 text-body font-medium transition-colors hover:bg-card-hover"
             >
               Download JSON
             </button>
@@ -315,14 +315,14 @@ export function DebugTab() {
         </div>
 
         {snapshotError && (
-          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-body text-red-400">
             {snapshotError}
           </div>
         )}
 
         {snapshotData?.generationResult && (
           <div
-            className={`mt-4 rounded-md border p-3 text-sm ${
+            className={`mt-4 rounded-md border p-3 text-body ${
               snapshotData.generationResult.success
                 ? "border-green-500/30 bg-green-500/10 text-green-400"
                 : "border-red-500/30 bg-red-500/10 text-red-400"
@@ -345,8 +345,8 @@ export function DebugTab() {
           <div className="mt-4 space-y-4">
             {/* Collection counts */}
             <div className="rounded border border-card-border/50 p-3">
-              <h4 className="mb-2 text-sm font-medium">Collection counts</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <h4 className="mb-2 text-body font-medium">Collection counts</h4>
+              <div className="grid grid-cols-2 gap-2 text-body">
                 <div className="flex justify-between">
                   <span className="text-muted">Corporations:</span>
                   <span>{snapshotData.collections.corporations}</span>
@@ -384,8 +384,8 @@ export function DebugTab() {
 
             {/* Snapshot status */}
             <div className="rounded border border-card-border/50 p-3">
-              <h4 className="mb-2 text-sm font-medium">Snapshot status</h4>
-              <div className="space-y-2 text-sm">
+              <h4 className="mb-2 text-body font-medium">Snapshot status</h4>
+              <div className="space-y-2 text-body">
                 {(["nyse", "ftse", "global"] as const).map((exchange) => {
                   const snap = snapshotData.snapshots[exchange];
                   return (
@@ -418,10 +418,10 @@ export function DebugTab() {
             {/* Sample corporations */}
             {snapshotData.sampleCorporations.length > 0 && (
               <div className="rounded border border-card-border/50 p-3">
-                <h4 className="mb-2 text-sm font-medium">
+                <h4 className="mb-2 text-body font-medium">
                   Sample corporations ({snapshotData.sampleCorporations.length})
                 </h4>
-                <div className="max-h-48 overflow-y-auto text-xs">
+                <div className="max-h-48 overflow-y-auto text-body-sm">
                   {snapshotData.sampleCorporations.map((corp) => (
                     <div
                       key={corp._id}
@@ -444,8 +444,8 @@ export function DebugTab() {
       </div>
 
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">NPP election entry diagnostics</h2>
-        <p className="mb-4 text-sm text-muted">
+        <h2 className="mb-4 text-heading font-semibold">NPP election entry diagnostics</h2>
+        <p className="mb-4 text-body text-muted">
           Run diagnostics to understand why NPPs may not be entering primaries. This checks game
           time vs real time, open primaries, NPP availability, and state matching.
         </p>
@@ -454,7 +454,7 @@ export function DebugTab() {
           <button
             onClick={runNPPEntryDebug}
             disabled={loading}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {loading ? "Running..." : "Run NPP entry debug"}
           </button>
@@ -462,7 +462,7 @@ export function DebugTab() {
           {data && (
             <button
               onClick={downloadJSON}
-              className="rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-card-hover"
+              className="rounded-md border border-card-border bg-card px-4 py-2 text-body font-medium transition-colors hover:bg-card-hover"
             >
               Download JSON
             </button>
@@ -470,7 +470,7 @@ export function DebugTab() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-body text-red-400">
             {error}
           </div>
         )}
@@ -478,8 +478,8 @@ export function DebugTab() {
 
       {/* Clear Cooldowns */}
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Clear NPP cooldowns</h2>
-        <p className="mb-4 text-sm text-muted">
+        <h2 className="mb-4 text-heading font-semibold">Clear NPP cooldowns</h2>
+        <p className="mb-4 text-body text-muted">
           If NPPs are blocked from entering primaries due to stale cooldowns, clear them here. This
           removes all election-specific cooldowns from NPP records, allowing them to enter any open
           primary on the next turn.
@@ -488,13 +488,13 @@ export function DebugTab() {
         <button
           onClick={clearCooldowns}
           disabled={clearingCooldowns}
-          className="rounded-md bg-yellow-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-yellow-700 disabled:opacity-50"
+          className="rounded-md bg-yellow-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-yellow-700 disabled:opacity-50"
         >
           {clearingCooldowns ? "Clearing..." : "Clear all NPP cooldowns"}
         </button>
 
         {cooldownResult && (
-          <div className="mt-4 rounded-md border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
+          <div className="mt-4 rounded-md border border-green-500/30 bg-green-500/10 p-3 text-body text-green-400">
             Cleared cooldowns from {cooldownResult.modified} NPPs.
           </div>
         )}
@@ -502,8 +502,8 @@ export function DebugTab() {
 
       {/* Vacate Primaries */}
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Vacate NPP primaries</h2>
-        <p className="mb-4 text-sm text-muted">
+        <h2 className="mb-4 text-heading font-semibold">Vacate NPP primaries</h2>
+        <p className="mb-4 text-body text-muted">
           Withdraw all NPPs from active primaries. Use this after fixing eligibility bugs so NPPs
           can re-enter based on the updated rules (country/region restrictions, incumbent priority,
           etc.). NPPs will re-enter on the next turn.
@@ -512,13 +512,13 @@ export function DebugTab() {
         <button
           onClick={vacatePrimaries}
           disabled={vacatingPrimaries}
-          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          className="rounded-md bg-red-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
         >
           {vacatingPrimaries ? "Withdrawing..." : "Vacate all NPP primaries"}
         </button>
 
         {vacateResult && (
-          <div className="mt-4 rounded-md border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
+          <div className="mt-4 rounded-md border border-green-500/30 bg-green-500/10 p-3 text-body text-green-400">
             Withdrew {vacateResult.withdrawn} NPPs from {vacateResult.electionsChecked} active
             elections.
           </div>
@@ -527,8 +527,8 @@ export function DebugTab() {
 
       {/* Re-enter Primaries */}
       <div className="rounded-lg border border-card-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold">Re-enter NPP primaries</h2>
-        <p className="mb-4 text-sm text-muted">
+        <h2 className="mb-4 text-heading font-semibold">Re-enter NPP primaries</h2>
+        <p className="mb-4 text-body text-muted">
           Force NPPs to enter open primaries now based on current eligibility rules (country/region
           restrictions, incumbent priority, party slots). This runs the same entry logic as the turn
           processor without waiting for the next turn.
@@ -538,11 +538,11 @@ export function DebugTab() {
           <button
             onClick={reenterPrimaries}
             disabled={reenteringPrimaries}
-            className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+            className="rounded-md bg-green-600 px-4 py-2 text-body font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
           >
             {reenteringPrimaries ? "Processing..." : "Re-enter NPP primaries"}
           </button>
-          <label className="flex items-center gap-2 text-sm text-muted">
+          <label className="flex items-center gap-2 text-body text-muted">
             <input
               type="checkbox"
               checked={forceEntry}
@@ -554,7 +554,7 @@ export function DebugTab() {
         </div>
 
         {reenterResult && (
-          <div className="mt-4 rounded-md border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
+          <div className="mt-4 rounded-md border border-green-500/30 bg-green-500/10 p-3 text-body text-green-400">
             {reenterResult.entered} NPPs entered primaries ({reenterResult.openPrimaries} open
             primaries available).
           </div>
@@ -566,7 +566,7 @@ export function DebugTab() {
           {/* Timestamps */}
           <div className="rounded-lg border border-card-border bg-card p-6">
             <h3 className="mb-3 font-semibold">Timestamps</h3>
-            <div className="grid gap-2 text-sm">
+            <div className="grid gap-2 text-body">
               <div className="flex justify-between">
                 <span className="text-muted">Real time:</span>
                 <span className="font-mono">{data.timestamps.realNow}</span>
@@ -595,7 +595,7 @@ export function DebugTab() {
           {/* Summary */}
           <div className="rounded-lg border border-card-border bg-card p-6">
             <h3 className="mb-3 font-semibold">Summary</h3>
-            <div className="grid gap-2 text-sm">
+            <div className="grid gap-2 text-body">
               <div className="flex justify-between">
                 <span className="text-muted">Open primaries:</span>
                 <span
@@ -632,16 +632,16 @@ export function DebugTab() {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2 text-sm">
+            <div className="mt-4 space-y-2 text-body">
               <div>
                 <span className="text-muted">Election states: </span>
-                <span className="font-mono text-xs">
+                <span className="font-mono text-body-sm">
                   {data.summary.electionStates.join(", ") || "(none)"}
                 </span>
               </div>
               <div>
                 <span className="text-muted">NPP home states: </span>
-                <span className="font-mono text-xs">
+                <span className="font-mono text-body-sm">
                   {data.summary.nppHomeStates.join(", ") || "(none)"}
                 </span>
               </div>
@@ -653,7 +653,7 @@ export function DebugTab() {
             <div className="rounded-lg border border-card-border bg-card p-6">
               <h3 className="mb-3 font-semibold">Sample open primaries</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <thead>
                     <tr className="border-b border-card-border text-left text-muted">
                       <th className="pb-2">Type</th>
@@ -667,8 +667,8 @@ export function DebugTab() {
                       <tr key={p._id} className="border-b border-card-border/50">
                         <td className="py-2">{p.electionType}</td>
                         <td className="py-2 font-mono">{p.state}</td>
-                        <td className="py-2 font-mono text-xs">{p.primaryEndTime}</td>
-                        <td className="py-2 font-mono text-xs">{p.endTime}</td>
+                        <td className="py-2 font-mono text-body-sm">{p.primaryEndTime}</td>
+                        <td className="py-2 font-mono text-body-sm">{p.endTime}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -683,16 +683,19 @@ export function DebugTab() {
               <h3 className="mb-3 font-semibold">
                 Sample state analysis: {data.sampleAnalysis.state}
               </h3>
-              <div className="mb-4 text-sm">
+              <div className="mb-4 text-body">
                 <span className="text-muted">NPPs in state: </span>
                 <span>{data.sampleAnalysis.nppsInState}</span>
               </div>
 
               <div className="mb-4">
-                <span className="text-sm text-muted">Party counts:</span>
+                <span className="text-body text-muted">Party counts:</span>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {Object.entries(data.sampleAnalysis.partyCounts).map(([party, count]) => (
-                    <span key={party} className="rounded bg-card-hover px-2 py-1 text-xs font-mono">
+                    <span
+                      key={party}
+                      className="rounded bg-card-hover px-2 py-1 text-body-sm font-mono"
+                    >
                       {party}: {count}
                     </span>
                   ))}
@@ -701,9 +704,9 @@ export function DebugTab() {
 
               <div className="space-y-3">
                 {data.sampleAnalysis.primaries.map((primary, i) => (
-                  <div key={i} className="rounded border border-card-border/50 p-3 text-sm">
+                  <div key={i} className="rounded border border-card-border/50 p-3 text-body">
                     <div className="mb-2 font-medium">{primary.electionType}</div>
-                    <div className="grid gap-1 text-xs">
+                    <div className="grid gap-1 text-body-sm">
                       <div>
                         <span className="text-muted">Candidates: </span>
                         {primary.totalCandidates} total, {primary.nppCandidates} NPPs
@@ -731,12 +734,12 @@ export function DebugTab() {
               <h3 className="mb-3 font-semibold">
                 Entry simulation: {data.entrySimulation.party} in {data.entrySimulation.state}
               </h3>
-              <p className="mb-4 text-sm text-muted">
+              <p className="mb-4 text-body text-muted">
                 Step-by-step trace of why an NPP would or would not enter the first available
                 primary.
               </p>
 
-              <div className="mb-4 space-y-1 text-sm">
+              <div className="mb-4 space-y-1 text-body">
                 {Object.entries(data.entrySimulation.steps).map(([key, value]) => {
                   const isBoolean = typeof value === "boolean";
                   const isFail =
@@ -749,7 +752,7 @@ export function DebugTab() {
                     (key.includes("wouldEnter") && value === true);
 
                   return (
-                    <div key={key} className="flex justify-between font-mono text-xs">
+                    <div key={key} className="flex justify-between font-mono text-body-sm">
                       <span className="text-muted">{key}:</span>
                       <span
                         className={
@@ -765,12 +768,12 @@ export function DebugTab() {
 
               {data.entrySimulation.sampleNPPs.length > 0 && (
                 <div>
-                  <h4 className="mb-2 text-sm font-medium">Sample available NPPs:</h4>
+                  <h4 className="mb-2 text-body font-medium">Sample available NPPs:</h4>
                   <div className="space-y-2">
                     {data.entrySimulation.sampleNPPs.map((npp) => (
                       <div
                         key={npp.id}
-                        className="rounded border border-card-border/50 p-2 text-xs"
+                        className="rounded border border-card-border/50 p-2 text-body-sm"
                       >
                         <div className="font-medium">{npp.name}</div>
                         <div className="text-muted">

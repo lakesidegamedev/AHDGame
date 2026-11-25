@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CrisisEffectChip } from "@/components/crises/CrisisRowParts";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { ROLE_LABEL } from "@/lib/crises/v2/ledgerView";
 import type { AidPledgeRange } from "@/lib/crises/levers/queries";
@@ -69,6 +70,19 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
     <ul className="space-y-2" aria-label="Responses you can make">
       {shown.map((lever) => {
         const costs = leverCostLines(lever.cost);
+        const preview = lever.preview;
+        if (preview?.contribution) {
+          costs.push(
+            `${preview.contributionCurrency} ${preview.contribution.toLocaleString("en-US")} from the treasury`
+          );
+        }
+        if (preview?.treasuryCostPctGdp) {
+          const share = new Intl.NumberFormat("en-US", {
+            style: "percent",
+            maximumFractionDigits: 4,
+          }).format(preview.treasuryCostPctGdp);
+          costs.push(`${share} of national GDP from the treasury`);
+        }
         const state = pulled[lever.id];
         const isPending = pending === lever.id;
         const noCompany = lever.needsCorporation && corporations.length === 0;
@@ -79,19 +93,19 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">{lever.label}</div>
-                <div className="text-xs text-muted">
+                <div className="text-body font-medium text-foreground">{lever.label}</div>
+                <div className="text-body-sm text-muted">
                   As {ROLE_LABEL[lever.role].toLowerCase()}.
                   {lever.cutsSeverity !== false && Math.round(lever.mitigation) > 0
                     ? ` Cuts severity by about ${Math.round(lever.mitigation)} per turn.`
                     : ""}
                 </div>
                 {lever.tradeoff && (
-                  <div className="mt-0.5 text-xs text-foreground/80">{lever.tradeoff}</div>
+                  <div className="mt-0.5 text-body-sm text-foreground/80">{lever.tradeoff}</div>
                 )}
               </div>
               {state ? (
-                <span className="shrink-0 text-xs font-medium text-success">
+                <span className="shrink-0 text-body-sm font-medium text-success">
                   {state === "bill" ? "Emergency bill raised" : "Pulled, counts next turn"}
                 </span>
               ) : confirming === lever.id ? (
@@ -100,7 +114,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                     type="button"
                     disabled={isPending}
                     onClick={() => pull(lever)}
-                    className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-md bg-primary px-2.5 py-1 text-body-sm font-medium text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                   >
                     {isPending ? "Working" : "Confirm"}
                   </button>
@@ -108,7 +122,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                     type="button"
                     disabled={isPending}
                     onClick={() => setConfirming(null)}
-                    className="rounded-md border border-card-border px-2.5 py-1 text-xs text-muted hover:text-foreground disabled:opacity-50"
+                    className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted hover:text-foreground disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -118,25 +132,43 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                   type="button"
                   disabled={noCompany || pending !== null}
                   onClick={() => setConfirming(lever.id)}
-                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-body-sm font-medium text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                 >
                   {lever.viaBill ? "Raise bill" : "Pull"}
                 </button>
               )}
             </div>
-            <div className="mt-1 text-xs text-muted">
-              {costs.length > 0 ? `Costs ${costs.join(", ")}.` : "No direct cost."}{" "}
+            {preview && <p className="mt-1 text-body-sm text-muted">{preview.description}</p>}
+            <div className="mt-1 text-body-sm text-muted">
+              {costs.length > 0
+                ? `Costs ${costs.join(", ")}.`
+                : lever.aid
+                  ? "Cost depends on pledge size."
+                  : "No fixed cost."}{" "}
               {leverCooldownText(lever.cooldownTurns)}.
             </div>
+            {!!preview?.durationReductionTurns && (
+              <p className="mt-1 text-body-sm text-muted">
+                Shortens the crisis by up to {preview.durationReductionTurns}{" "}
+                {preview.durationReductionTurns === 1 ? "turn" : "turns"}.
+              </p>
+            )}
+            {!!preview?.effects.length && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {preview.effects.map((effect, index) => (
+                  <CrisisEffectChip key={index} effect={effect} />
+                ))}
+              </div>
+            )}
             {lever.needsCorporation &&
               (corporations.length === 0 ? (
-                <p className="mt-1 text-xs text-warning">
+                <p className="mt-1 text-body-sm text-warning">
                   You need to run a company in the affected country to use this.
                 </p>
               ) : (
                 corporations.length > 1 &&
                 !state && (
-                  <label className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                  <label className="mt-1 flex items-center gap-1.5 text-body-sm text-muted">
                     Company
                     <select
                       value={corporationId}
@@ -161,12 +193,12 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
               />
             )}
             {confirming === lever.id && !state && (
-              <p className="mt-1 text-xs text-warning">
+              <p className="mt-1 text-body-sm text-warning">
                 Confirm to spend this now. It cannot be undone.
               </p>
             )}
             {error?.leverId === lever.id && (
-              <p role="alert" className="mt-1 text-xs text-error">
+              <p role="alert" className="mt-1 text-body-sm text-error">
                 {error.message}
               </p>
             )}
@@ -190,7 +222,7 @@ function PledgeSize({
 }) {
   const amount = Math.round(value * aid.senderGdp);
   return (
-    <label className="mt-1 block text-xs text-muted">
+    <label className="mt-1 block text-body-sm text-muted">
       <span className="flex items-center justify-between">
         <span>Pledge size</span>
         <span className="tabular-nums font-medium text-foreground">

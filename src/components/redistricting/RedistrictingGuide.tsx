@@ -6,11 +6,11 @@ import Link from "next/link";
  */
 export function RedistrictingGuide() {
   return (
-    <details className="rounded-lg border border-card-border bg-card px-4 py-3 text-sm" open>
+    <details className="rounded-lg border border-card-border bg-card px-4 py-3 text-body" open>
       <summary className="cursor-pointer font-semibold text-foreground">
         How to redraw a House map
       </summary>
-      <div className="mt-3 space-y-3 text-sm text-muted">
+      <div className="mt-3 space-y-3 text-body text-muted">
         <ol className="list-decimal space-y-2 pl-5">
           <li>
             In the state legislature, pass the{" "}

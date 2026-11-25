@@ -105,12 +105,14 @@ export function SingleplayerGuide() {
   return (
     <aside
       aria-label={t("region")}
-      className="fixed bottom-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))] left-3 z-40 w-[min(20rem,calc(100vw-1.5rem))] rounded border border-card-border bg-card text-sm shadow-lg"
+      className="fixed bottom-[max(3.5rem,var(--status-bar-height,0px),var(--mobile-dock-height,0px))] left-3 z-40 w-[min(20rem,calc(100vw-1.5rem))] rounded border border-card-border bg-card text-body shadow-lg"
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <div className="min-w-0">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">{t("title")}</h2>
-          <p className="text-xs text-muted">
+          <h2 className="text-body-sm font-semibold uppercase tracking-wide text-muted">
+            {t("title")}
+          </h2>
+          <p className="text-body-sm text-muted">
             {t("progress", { done: doneCount, total: guide.steps.length })}
           </p>
         </div>
@@ -118,7 +120,7 @@ export function SingleplayerGuide() {
           type="button"
           onClick={() => setFolded((v) => !v)}
           aria-expanded={!folded}
-          className="rounded border border-card-border px-2 py-1 text-xs text-muted transition hover:text-foreground"
+          className="rounded border border-card-border px-2 py-1 text-body-sm text-muted transition hover:text-foreground"
         >
           {folded ? t("show") : t("hide")}
         </button>
@@ -133,9 +135,9 @@ export function SingleplayerGuide() {
                 <li key={step.id} className="flex items-start gap-2">
                   <span
                     aria-hidden="true"
-                    className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] ${
+                    className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-body-sm ${
                       step.done
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : current
                           ? "border-primary text-primary"
                           : "border-card-border text-muted"
@@ -158,7 +160,7 @@ export function SingleplayerGuide() {
 
           {next ? (
             <div className="mt-3 rounded border border-card-border bg-card-muted p-2">
-              <p className="text-xs" title={ANCHOR_UNIT_NOTE}>
+              <p className="text-body-sm" title={ANCHOR_UNIT_NOTE}>
                 {t(`steps.${next.id}.body`, {
                   funds: `₳${Math.round(guide.funds ?? 0).toLocaleString()}`,
                   actions: guide.actions ?? 0,
@@ -167,21 +169,21 @@ export function SingleplayerGuide() {
               {LINK_STEPS.has(next.id) && !onNextPage ? (
                 <Link
                   href={next.href}
-                  className="mt-2 inline-flex rounded bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary/90"
+                  className="mt-2 inline-flex rounded bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
                 >
                   {t(`steps.${next.id}.action`)}
                 </Link>
               ) : null}
             </div>
           ) : (
-            <p className="mt-3 text-xs">{t("allDone")}</p>
+            <p className="mt-3 text-body-sm">{t("allDone")}</p>
           )}
 
           <div className="mt-3 flex justify-end">
             <button
               type="button"
               onClick={() => void send("dismiss")}
-              className="rounded border border-card-border px-2 py-1 text-xs text-muted transition hover:text-foreground"
+              className="rounded border border-card-border px-2 py-1 text-body-sm text-muted transition hover:text-foreground"
             >
               {allDone ? t("close") : t("skip")}
             </button>

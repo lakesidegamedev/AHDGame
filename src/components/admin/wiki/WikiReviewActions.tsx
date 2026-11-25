@@ -80,7 +80,7 @@ export function WikiReviewActions({ slug, onApprove, onReject }: WikiReviewActio
           maxLength={500}
           placeholder="Optional note on approval"
           aria-label="Optional note on approval"
-          className="w-56 rounded-md border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+          className="w-56 rounded-md border border-card-border bg-background px-3 py-2 text-body text-foreground"
         />
         <button
           onClick={handleApprove}

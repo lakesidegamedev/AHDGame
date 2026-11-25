@@ -29,7 +29,7 @@ export function NationalPartyBillActionClient({
   return (
     <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-card-border bg-card p-4">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           {t(
             blocked
               ? "nationalPartyBillBlocked"
@@ -41,7 +41,7 @@ export function NationalPartyBillActionClient({
         <button
           disabled={blocked || unavailable}
           onClick={() => setOpen(true)}
-          className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           {t("proposeViaPartyNpp")}
         </button>

@@ -202,18 +202,18 @@ export default function RunReport({
     <div className="mb-4 space-y-3" data-testid="run-report">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-body-sm text-muted">
-          <span className="text-lg font-semibold tabular-nums text-foreground">
+          <span className="text-heading font-semibold tabular-nums text-foreground">
             {fmtPct(running)}
           </span>{" "}
           of capacity made something last turn
           {pastPushCap && (
-            <span className="block text-body-xs">
+            <span className="block text-body-sm">
               Measured against today&apos;s capacity, which is lower than when last turn ran.
             </span>
           )}
         </p>
         <span
-          className={`rounded-full border px-2.5 py-0.5 text-body-xs font-semibold ${TONE_PILL[head.tone]}`}
+          className={`rounded-full border px-2.5 py-0.5 text-body-sm font-semibold ${TONE_PILL[head.tone]}`}
         >
           {head.pill}
         </span>
@@ -241,7 +241,7 @@ export default function RunReport({
 
       {price != null && unitCost > 0 && (
         <div data-testid="unit-economics">
-          <p className="mb-1 text-body-xs font-medium text-muted">
+          <p className="mb-1 text-body-sm font-medium text-muted">
             Each unit sold to outside buyers last turn (materials, wages and site running only)
           </p>
           <div className="relative h-3 w-full overflow-hidden rounded-full bg-track">
@@ -260,7 +260,7 @@ export default function RunReport({
               aria-hidden
             />
           </div>
-          <p className="mt-1 text-body-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Sold for <span className="font-semibold text-foreground">{formatAmount(price)}</span>{" "}
             (line). Cost{" "}
             {costs
@@ -285,7 +285,7 @@ export default function RunReport({
       )}
 
       {ownSiteUnits > 0 && (
-        <p className="text-body-xs text-muted" data-testid="own-site-line">
+        <p className="text-body-sm text-muted" data-testid="own-site-line">
           Sent to your own sites at last turn&apos;s rate: {fmtUnits(ownSiteUnits * TURNS_PER_DAY)}{" "}
           units a day, worth{" "}
           <span className="font-semibold text-foreground">
@@ -297,13 +297,13 @@ export default function RunReport({
 
       {fixes.length > 0 && (
         <div className="rounded-lg border border-card-border bg-card/60 p-3">
-          <p className="mb-2 text-body-xs font-semibold uppercase tracking-wide text-muted">
+          <p className="mb-2 text-body-sm font-semibold uppercase tracking-wide text-muted">
             What would run more
           </p>
           <ol className="space-y-2">
             {fixes.map((f, i) => (
               <li key={f.key} className="flex gap-2 text-body-sm">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-track text-body-xs font-semibold text-foreground">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-track text-body-sm font-semibold text-foreground">
                   {i + 1}
                 </span>
                 <span>

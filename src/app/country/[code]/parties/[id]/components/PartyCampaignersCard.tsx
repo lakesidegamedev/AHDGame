@@ -29,19 +29,19 @@ export function PartyCampaignersCard({ party, countryCode, onUpdate }: PartyCamp
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Party campaigners</h2>
-        <span className="text-xs text-muted">
+        <h2 className="text-heading font-semibold">Party campaigners</h2>
+        <span className="text-body-sm text-muted">
           Up to {MAX_NATIONAL_CAMPAIGNERS}, confirmed by the National Committee
         </span>
       </div>
 
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         Nominate party members as Campaigners. They can spend national Political Strength to Build
         Org in any state, and use NPP Management (Influence Actions and NPP Move) for this party.
         Recruitment stays chair / vice-chair / admin. NPPs can&apos;t be campaigners.
       </p>
 
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         Adding a name opens a National Committee vote — they take the seat only once it passes.
         Removing a name takes effect immediately, and the committee can strip a seated campaigner
         with a Remove Officer proposal.

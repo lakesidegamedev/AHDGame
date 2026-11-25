@@ -52,7 +52,7 @@ export function AggTile({
     <div className="flex items-center gap-3 rounded-xl border border-card-border bg-card p-3.5">
       <div>
         <div className="dossier-label text-muted">{label}</div>
-        <div className={`tabular mt-0.5 text-lg font-bold ${toneClass}`}>{value}</div>
+        <div className={`tabular mt-0.5 text-heading font-bold ${toneClass}`}>{value}</div>
       </div>
     </div>
   );

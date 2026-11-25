@@ -125,7 +125,7 @@ export function VoteListTable({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search members by name…"
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary"
         />
         {/* Party filter */}
         <div className="flex flex-wrap gap-1.5">
@@ -190,16 +190,18 @@ export function VoteListTable({
       </div>
 
       {/* Result count */}
-      <span className="text-xs text-muted">
+      <span className="text-body-sm text-muted">
         {filtered.length} voter{filtered.length !== 1 ? "s" : ""}
       </span>
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <p className="text-xs text-muted py-4 text-center">No votes match the current filters.</p>
+        <p className="text-body-sm text-muted py-4 text-center">
+          No votes match the current filters.
+        </p>
       ) : (
         <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain">
-          <table className="w-full text-xs">
+          <table className="w-full text-body-sm">
             <thead>
               <tr className="border-b border-card-border text-muted">
                 <th className="text-left py-2 pr-4 font-medium">Name</th>
@@ -344,7 +346,7 @@ function FilterPill({
   activeClassName?: string;
   activeStyle?: React.CSSProperties;
 }) {
-  const base = "px-3 py-1 rounded-full text-xs font-medium transition-colors";
+  const base = "px-3 py-1 rounded-full text-body-sm font-medium transition-colors";
 
   if (active) {
     const colorClass = activeClassName ?? (activeStyle ? "" : "bg-primary/20 text-primary");

@@ -93,7 +93,7 @@ export function NationalCorporationView({ corpId }: { corpId: string }) {
   if (error || !vm) {
     return (
       <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-        <h2 className="text-heading-sm font-semibold text-error">
+        <h2 className="text-heading font-semibold text-error">
           {error || "National Corporation not found"}
         </h2>
         <BackButton />
@@ -141,7 +141,9 @@ export function NationalCorporationView({ corpId }: { corpId: string }) {
               type="button"
               onClick={() => setRole("public")}
               className={`px-3 py-1.5 transition-colors ${
-                !isOfficial ? "bg-primary text-white" : "text-muted hover:text-foreground"
+                !isOfficial
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               Public
@@ -171,24 +173,24 @@ export function NationalCorporationView({ corpId }: { corpId: string }) {
         divisionName={vm.isPrimary ? undefined : vm.name}
       >
         {vm.isPrimary ? (
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-xs font-medium text-white/70">
+          <span className="inline-flex items-center rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-body-sm font-medium text-white/70">
             Primary
           </span>
         ) : (
           vm.assignedSectorTypes[0] && (
-            <span className="inline-flex items-center rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-xs font-medium text-white/70">
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-body-sm font-medium text-white/70">
               {vm.assignedSectorTypes[0]} split-off
             </span>
           )
         )}
         {vm.ceo.vacant ? (
-          <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-xs font-medium text-white/70">
+          <span className="inline-flex items-center whitespace-nowrap rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-body-sm font-medium text-white/70">
             CEO: Vacant{vm.ceo.pendingName ? ` · ${vm.ceo.pendingName} pending` : ""}
           </span>
         ) : (
           <Link
             href={`/character/${vm.ceo.sequentialId ?? vm.ceo.characterId}`}
-            className="inline-flex items-center whitespace-nowrap rounded-full border border-white/25 bg-black/30 px-2.5 py-0.5 text-xs font-medium text-white/85 transition-colors hover:bg-black/45 hover:text-white"
+            className="inline-flex items-center whitespace-nowrap rounded-full border border-white/25 bg-black/30 px-2.5 py-0.5 text-body-sm font-medium text-white/85 transition-colors hover:bg-black/45 hover:text-white"
           >
             CEO: {vm.ceo.name}
           </Link>

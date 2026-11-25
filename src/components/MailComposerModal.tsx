@@ -186,12 +186,12 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-body font-semibold text-foreground">
             {isMail ? "Send mail" : "Shareholder address"}
           </h2>
           <button
             onClick={onClose}
-            className="text-muted hover:text-foreground text-lg leading-none"
+            className="text-muted hover:text-foreground text-heading leading-none"
             aria-label="Close"
           >
             ×
@@ -200,7 +200,7 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
 
         <div className="space-y-3">
           {/* To field */}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {isMail ? (
               <>
                 To:{" "}
@@ -219,14 +219,14 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
           {/* Subject (mail mode only) */}
           {isMail && (
             <div className="space-y-1">
-              <label className="text-xs text-muted">Subject</label>
+              <label className="text-body-sm text-muted">Subject</label>
               <input
                 type="text"
                 maxLength={80}
                 value={state.subject}
                 onChange={(e) => dispatch({ type: "SET_SUBJECT", value: e.target.value })}
                 placeholder="Subject"
-                className="w-full rounded-lg border border-card-border bg-zinc-950 px-3 py-2 text-sm text-foreground focus:border-zinc-500 focus:outline-none"
+                className="w-full rounded-lg border border-card-border bg-zinc-950 px-3 py-2 text-body text-foreground focus:border-zinc-500 focus:outline-none"
               />
             </div>
           )}
@@ -236,7 +236,7 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
             <button
               type="button"
               onClick={() => insertFormatting("**")}
-              className="px-2 py-1 rounded border border-card-border bg-card-elevated text-xs font-bold text-foreground hover:bg-card-border transition-colors"
+              className="px-2 py-1 rounded border border-card-border bg-card-elevated text-body-sm font-bold text-foreground hover:bg-card-border transition-colors"
               title="Bold"
             >
               B
@@ -244,7 +244,7 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
             <button
               type="button"
               onClick={() => insertFormatting("*")}
-              className="px-2 py-1 rounded border border-card-border bg-card-elevated text-xs italic text-foreground hover:bg-card-border transition-colors"
+              className="px-2 py-1 rounded border border-card-border bg-card-elevated text-body-sm italic text-foreground hover:bg-card-border transition-colors"
               title="Italic"
             >
               I
@@ -254,8 +254,10 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
           {/* Body textarea */}
           <div className="space-y-1">
             <div className="flex justify-between">
-              <label className="text-xs text-muted">Message</label>
-              <span className={`text-xs ${bodyRemaining < 100 ? "text-error" : "text-muted/60"}`}>
+              <label className="text-body-sm text-muted">Message</label>
+              <span
+                className={`text-body-sm ${bodyRemaining < 100 ? "text-error" : "text-muted/60"}`}
+              >
                 {bodyRemaining}
               </span>
             </div>
@@ -266,22 +268,22 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
               value={state.body}
               onChange={(e) => dispatch({ type: "SET_BODY", value: e.target.value })}
               placeholder="Write your message..."
-              className="w-full rounded-lg border border-card-border bg-zinc-950 px-3 py-2 text-sm text-foreground focus:border-zinc-500 focus:outline-none resize-none"
+              className="w-full rounded-lg border border-card-border bg-zinc-950 px-3 py-2 text-body text-foreground focus:border-zinc-500 focus:outline-none resize-none"
             />
           </div>
 
           {/* Status messages */}
-          {state.sent && <p className="text-xs text-emerald-400">Sent.</p>}
+          {state.sent && <p className="text-body-sm text-emerald-400">Sent.</p>}
 
           {state.retryAfterSeconds !== null && (
-            <p className="text-xs text-yellow-400">
+            <p className="text-body-sm text-yellow-400">
               {isMail
                 ? `Rate limited. Try again in ${state.retryAfterSeconds}s.`
                 : `Cooldown active. ${formatCooldown(state.retryAfterSeconds)}`}
             </p>
           )}
 
-          {state.error && <p className="text-xs text-red-400">{state.error}</p>}
+          {state.error && <p className="text-body-sm text-red-400">{state.error}</p>}
 
           {/* Submit */}
           {!state.sent && (
@@ -289,7 +291,7 @@ export function MailComposerModal({ mode, onClose }: MailComposerModalProps) {
               type="button"
               onClick={handleSubmit}
               disabled={state.submitting || state.retryAfterSeconds !== null}
-              className="w-full rounded-lg border border-blue-600/40 bg-blue-500/10 px-3 py-2 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-lg border border-blue-600/40 bg-blue-500/10 px-3 py-2 text-body font-medium text-blue-300 transition-colors hover:bg-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {state.submitting ? "Sending..." : isMail ? "Send mail" : "Send address"}
             </button>

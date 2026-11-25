@@ -74,13 +74,13 @@ export function DemographicsSection({ character, onCharacterUpdate }: Props) {
   };
 
   const selectCls =
-    "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50";
+    "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-body focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50";
 
   return (
     <>
-      <p className="text-sm text-muted mb-6">{t("demographics.intro")}</p>
+      <p className="text-body text-muted mb-6">{t("demographics.intro")}</p>
       {!character.demographics && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body text-warning">
           <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
               strokeLinecap="round"
@@ -95,7 +95,7 @@ export function DemographicsSection({ character, onCharacterUpdate }: Props) {
       <form onSubmit={handleDemographicsSave} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="demoRace" className="block text-sm font-medium mb-1.5">
+            <label htmlFor="demoRace" className="block text-body font-medium mb-1.5">
               {t("demographics.race")}
             </label>
             <select
@@ -114,7 +114,7 @@ export function DemographicsSection({ character, onCharacterUpdate }: Props) {
             </select>
           </div>
           <div>
-            <label htmlFor="demoGender" className="block text-sm font-medium mb-1.5">
+            <label htmlFor="demoGender" className="block text-body font-medium mb-1.5">
               {t("demographics.gender")}
             </label>
             <select
@@ -131,7 +131,7 @@ export function DemographicsSection({ character, onCharacterUpdate }: Props) {
             </select>
           </div>
           <div>
-            <label htmlFor="demoEducation" className="block text-sm font-medium mb-1.5">
+            <label htmlFor="demoEducation" className="block text-body font-medium mb-1.5">
               {t("demographics.education")}
             </label>
             <select
@@ -148,7 +148,7 @@ export function DemographicsSection({ character, onCharacterUpdate }: Props) {
             </select>
           </div>
           <div>
-            <label htmlFor="demoWealth" className="block text-sm font-medium mb-1.5">
+            <label htmlFor="demoWealth" className="block text-body font-medium mb-1.5">
               {t("demographics.wealth")}
             </label>
             <select
@@ -171,7 +171,7 @@ export function DemographicsSection({ character, onCharacterUpdate }: Props) {
         <button
           type="submit"
           disabled={demoSaving}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="rounded-xl bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed flex items-center gap-2"
         >
           <span className="flex items-center gap-2">
             {demoSaved ? <CheckIcon /> : demoSaving ? <SpinnerIcon /> : null}

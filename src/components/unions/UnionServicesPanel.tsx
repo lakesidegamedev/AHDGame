@@ -126,17 +126,17 @@ export function UnionServicesPanel({
   return (
     <div className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground">Services</h3>
-        <span className="text-xs text-muted tabular-nums">
+        <h3 className="text-body-lg font-semibold text-foreground">Services</h3>
+        <span className="text-body-sm text-muted tabular-nums">
           {activeSet.size} of {UNION_SERVICES.length} selected
         </span>
       </div>
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         The selected programmes are purchased at the next union settlement for the following turn.
         An unpaid slate earns no benefits. Changes do not cancel services already paid for.
       </p>
 
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         Paid services this turn:{" "}
         {suspended || paidServices.length === 0
           ? "None"
@@ -153,9 +153,9 @@ export function UnionServicesPanel({
           return (
             <li key={service.id} className="flex items-start justify-between gap-3 p-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">{service.name}</p>
-                <p className="text-xs text-muted">{service.description}</p>
-                <p className="mt-1 text-[11px] text-muted">
+                <p className="text-body font-medium text-foreground">{service.name}</p>
+                <p className="text-body-sm text-muted">{service.description}</p>
+                <p className="mt-1 text-body-sm text-muted">
                   Costs {cash(costPerTurn)}/turn · +{service.approvalBonus} approval while funded
                 </p>
               </div>
@@ -167,9 +167,9 @@ export function UnionServicesPanel({
                   aria-label={`${service.name}${on ? ", on" : ", off"}`}
                   disabled={saving || suspended}
                   onClick={() => toggle(service.id)}
-                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                  className={`shrink-0 rounded-full px-3 py-1 text-body-sm font-semibold transition-colors disabled:opacity-50 ${
                     on
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-card-border text-muted hover:bg-card-elevated"
                   }`}
                 >
@@ -177,7 +177,7 @@ export function UnionServicesPanel({
                 </button>
               ) : (
                 <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                  className={`shrink-0 rounded-full px-3 py-1 text-body-sm font-semibold ${
                     on ? "bg-primary/15 text-primary" : "text-muted"
                   }`}
                 >
@@ -189,7 +189,7 @@ export function UnionServicesPanel({
         })}
       </ul>
 
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="flex flex-wrap gap-4 text-body">
         <div>
           <span className="text-muted">Combined cost per turn:</span>{" "}
           <span className="font-semibold tabular-nums">{cash(draftCostPerTurn)}</span>
@@ -204,12 +204,12 @@ export function UnionServicesPanel({
         </div>
       </div>
 
-      <div className="rounded-lg border border-card-border bg-card-muted/30 p-3 text-sm">
+      <div className="rounded-lg border border-card-border bg-card-muted/30 p-3 text-body">
         <p className="font-medium text-foreground">
           Approval is {approval.toFixed(1)}. This slate targets {draftApprovalTarget.toFixed(1)}{" "}
           once its paid turn begins.
         </p>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           Next funded turn: {nextApproval.toFixed(1)} ({nextApprovalDelta >= 0 ? "+" : ""}
           {nextApprovalDelta.toFixed(1)}). Target math: {approvalBreakdown.base} base +
           {serviceBonus} services −{approvalBreakdown.duesPenalty.toFixed(1)} dues −
@@ -219,7 +219,7 @@ export function UnionServicesPanel({
       </div>
 
       {unfunded && (
-        <p className="text-xs font-medium text-warning">
+        <p className="text-body-sm font-medium text-warning">
           This slate costs more per turn than the treasury and dues income can cover. Unfunded
           services lapse and stop paying approval.
         </p>
@@ -230,7 +230,7 @@ export function UnionServicesPanel({
           type="button"
           disabled={saving || suspended || !dirty}
           onClick={handleSave}
-          className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+          className="w-fit rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {saving ? "Saving…" : "Save services"}
         </button>
@@ -239,7 +239,7 @@ export function UnionServicesPanel({
       {result && (
         <p
           role={result.ok ? "status" : "alert"}
-          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${
+          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-body font-medium ${
             result.ok
               ? "border-success/30 bg-success/10 text-success"
               : "border-error/30 bg-error/10 text-error"

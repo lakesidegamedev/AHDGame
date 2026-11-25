@@ -36,25 +36,25 @@ export function BondMyHoldingsPanel({
         className="flex items-center justify-between w-full px-4 py-3 text-left group hover:bg-card-elevated/50 transition-colors"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-sm font-semibold text-foreground">Your holdings</span>
+          <span className="text-body font-semibold text-foreground">Your holdings</span>
           {userContext.myBondUnits > 0 && (
             <>
-              <span className="text-sm text-muted tabular-nums">
+              <span className="text-body text-muted tabular-nums">
                 {userContext.myBondUnits.toLocaleString("en-US")} units
               </span>
-              <span className="hidden sm:inline text-xs text-muted">·</span>
-              <span className="hidden sm:inline text-xs text-success tabular-nums">
+              <span className="hidden sm:inline text-body-sm text-muted">·</span>
+              <span className="hidden sm:inline text-body-sm text-success tabular-nums">
                 {formatAmount(charValue)}
               </span>
             </>
           )}
           {(userContext.myCorporation?.bondUnits ?? 0) > 0 && (
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               + {userContext.myCorporation!.bondUnits.toLocaleString("en-US")} corp units
             </span>
           )}
         </div>
-        <span className="text-xs text-muted group-hover:text-foreground transition-colors shrink-0 ml-3">
+        <span className="text-body-sm text-muted group-hover:text-foreground transition-colors shrink-0 ml-3">
           {open ? "▲" : "▼"}
         </span>
       </button>
@@ -65,31 +65,33 @@ export function BondMyHoldingsPanel({
             className={`grid divide-x divide-card-border ${userContext.myCorporation ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}
           >
             <div className="px-4 py-3">
-              <div className="text-xs text-muted mb-0.5">Units held</div>
-              <div className="text-sm font-semibold text-primary tabular-nums">
+              <div className="text-body-sm text-muted mb-0.5">Units held</div>
+              <div className="text-body font-semibold text-primary tabular-nums">
                 {userContext.myBondUnits.toLocaleString("en-US")}
               </div>
             </div>
             <div className="px-4 py-3">
-              <div className="text-xs text-muted mb-0.5">Portfolio value</div>
-              <div className="text-sm font-semibold text-success tabular-nums">
+              <div className="text-body-sm text-muted mb-0.5">Portfolio value</div>
+              <div className="text-body font-semibold text-success tabular-nums">
                 {formatAmount(charValue)}
               </div>
             </div>
             <div className="px-4 py-3">
-              <div className="text-xs text-muted mb-0.5">Coupon / Turn</div>
-              <div className="text-sm font-semibold text-foreground tabular-nums">
+              <div className="text-body-sm text-muted mb-0.5">Coupon / Turn</div>
+              <div className="text-body font-semibold text-foreground tabular-nums">
                 {formatAmount(charCouponPerTurn)}
               </div>
             </div>
             {userContext.myCorporation && (userContext.myCorporation.bondUnits > 0 || true) && (
               <div className="px-4 py-3">
-                <div className="text-xs text-muted mb-0.5">{userContext.myCorporation.name}</div>
-                <div className="text-sm font-semibold text-foreground tabular-nums">
+                <div className="text-body-sm text-muted mb-0.5">
+                  {userContext.myCorporation.name}
+                </div>
+                <div className="text-body font-semibold text-foreground tabular-nums">
                   {userContext.myCorporation.bondUnits.toLocaleString("en-US")} units
                 </div>
                 {corpCouponPerTurn > 0 && (
-                  <div className="text-xs text-muted tabular-nums">
+                  <div className="text-body-sm text-muted tabular-nums">
                     {formatAmount(corpCouponPerTurn)}/turn
                   </div>
                 )}
@@ -97,7 +99,7 @@ export function BondMyHoldingsPanel({
             )}
           </div>
           <div className="px-4 py-2.5 border-t border-card-border">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-body">
               <span className="text-muted">Cash on hand</span>
               <span className="font-medium tabular-nums">{formatFull(personalCashAnchor)}</span>
             </div>

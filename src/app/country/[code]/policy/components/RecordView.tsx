@@ -65,7 +65,7 @@ export function RecordView({
   // Fetch failure (null payload) is not an empty law book — say so honestly.
   if (record === null) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-10 text-center text-sm italic text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-10 text-center text-body italic text-muted">
         The Record is unavailable right now — try again shortly.
       </div>
     );
@@ -73,7 +73,7 @@ export function RecordView({
 
   if (events.length === 0) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-10 text-center text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-10 text-center text-body text-muted">
         <p className="font-medium text-foreground">No legislative record yet.</p>
         {scopeName ? (
           <p className="mt-1 italic">
@@ -111,7 +111,7 @@ export function RecordView({
           <span className="text-body-sm font-medium text-muted">
             The Record · since first recorded law
           </span>
-          <span className="flex gap-4 font-mono text-[10px] text-muted">
+          <span className="flex gap-4 font-mono text-body-sm text-muted">
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-block h-0.5 w-3.5" style={{ background: economicColor }} />
               economic average
@@ -196,19 +196,19 @@ export function RecordView({
             })}
           </svg>
         </div>
-        <div className="flex justify-between px-4 pb-2 font-mono text-[9px] text-muted/60">
+        <div className="flex justify-between px-4 pb-2 font-mono text-body-sm text-muted/60">
           <span>{events[0].enactedYear}</span>
           <span>{events[events.length - 1].enactedYear}</span>
         </div>
         {pinned && pinnedLean && (
           <div className="border-t border-card-border/50 px-4 py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="text-sm font-bold">{pinned.title}</span>
-              <span className="font-mono text-[10px] text-muted">
+              <span className="text-body font-bold">{pinned.title}</span>
+              <span className="font-mono text-body-sm text-muted">
                 {formatEnactedStamp(pinned.enactedYear, pinned.enactedAt)}
               </span>
             </div>
-            <div className="mt-1 flex flex-wrap gap-3 font-mono text-[11px] text-muted">
+            <div className="mt-1 flex flex-wrap gap-3 font-mono text-body-sm text-muted">
               {pinned.economic !== null && (
                 <span>
                   econ {pinned.economic > 0 ? "+" : ""}
@@ -232,7 +232,7 @@ export function RecordView({
         <div className="rounded-xl border border-card-border bg-card px-4 py-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-body-sm font-medium text-primary">{era.label}</span>
-            <span className="font-mono text-[10px] text-muted">
+            <span className="font-mono text-body-sm text-muted">
               {eraLawCount !== null
                 ? `${eraLawCount} ${eraLawCount === 1 ? "law" : "laws"} this era`
                 : era.sinceTurn !== null
@@ -240,7 +240,7 @@ export function RecordView({
                   : ""}
             </span>
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-muted">
+          <p className="mt-1 text-body-sm leading-relaxed text-muted">
             Earlier administrations render unbanded — era history accrues as governments change from
             here on.
           </p>

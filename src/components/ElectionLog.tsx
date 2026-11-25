@@ -57,7 +57,7 @@ function EventLine({
     text.includes("eliminated") || text.includes("defeated") || text.includes("no seats");
   const dotColor = isWin ? "var(--success)" : isLoss ? "var(--error)" : "var(--muted)";
   return (
-    <div className="flex items-start gap-2 text-xs">
+    <div className="flex items-start gap-2 text-body-sm">
       {partyId ? (
         <PartyLogo
           partyId={partyId}
@@ -91,7 +91,7 @@ function PartyChip({
 }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-body-sm font-medium"
       style={{ borderColor: `${color}50`, backgroundColor: `${color}15`, color }}
     >
       <PartyLogo partyId={partyId} partyColor={color} countryId={countryId} size="h-1.5 w-1.5" />
@@ -117,19 +117,19 @@ function PrimaryBlock({ result }: { result: ElectionLogEntry["primaryResults"][0
             countryId={result.countryId}
             size="h-2 w-2"
           />
-          <span className="text-xs font-medium truncate">{result.partyName}</span>
+          <span className="text-body-sm font-medium truncate">{result.partyName}</span>
           {isContested ? (
-            <span className="rounded-full bg-yellow-500/15 border border-yellow-500/30 px-1.5 py-0.5 text-[9px] text-yellow-400">
+            <span className="rounded-full bg-yellow-500/15 border border-yellow-500/30 px-1.5 py-0.5 text-body-sm text-yellow-400">
               contested
             </span>
           ) : (
-            <span className="rounded-full bg-muted/15 border border-muted/30 px-1.5 py-0.5 text-[9px] text-muted">
+            <span className="rounded-full bg-muted/15 border border-muted/30 px-1.5 py-0.5 text-body-sm text-muted">
               uncontested
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] text-muted">
+          <span className="text-body-sm text-muted">
             {result.candidates.length} candidate{result.candidates.length !== 1 ? "s" : ""}
           </span>
           <svg
@@ -151,7 +151,7 @@ function PrimaryBlock({ result }: { result: ElectionLogEntry["primaryResults"][0
               {result.candidates.map((c) => (
                 <div key={c.candidateId} className="flex items-center gap-2">
                   <span
-                    className={`text-[10px] font-medium w-32 truncate ${c.advanced ? "text-foreground" : "text-muted/60 line-through"}`}
+                    className={`text-body-sm font-medium w-32 truncate ${c.advanced ? "text-foreground" : "text-muted/60 line-through"}`}
                   >
                     {c.name}
                   </span>
@@ -165,7 +165,7 @@ function PrimaryBlock({ result }: { result: ElectionLogEntry["primaryResults"][0
                       }}
                     />
                   </div>
-                  <span className="text-[10px] tabular-nums text-muted w-10 text-right">
+                  <span className="text-body-sm tabular-nums text-muted w-10 text-right">
                     {c.sharePct.toFixed(1)}%
                   </span>
                 </div>
@@ -210,17 +210,17 @@ function GeneralBlock({
           <span
             className={`h-1.5 w-1.5 rounded-full ${result.finalized ? "bg-green-400" : "bg-blue-400"}`}
           />
-          <span className="text-xs font-medium">
+          <span className="text-body-sm font-medium">
             {result.finalized ? "Final results" : "Live tally"}
           </span>
           {totalSeats && (
-            <span className="text-[10px] text-muted">
+            <span className="text-body-sm text-muted">
               · {totalSeats} seat{totalSeats !== 1 ? "s" : ""}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] text-muted">
+          <span className="text-body-sm text-muted">
             {fmtVotes(totalVotes)} votes · {result.turnsCounted} turn
             {result.turnsCounted !== 1 ? "s" : ""}
           </span>
@@ -250,7 +250,7 @@ function GeneralBlock({
                         countryId={c.countryId}
                         size="h-2 w-2"
                       />
-                      <span className="text-xs font-medium truncate">{c.name}</span>
+                      <span className="text-body-sm font-medium truncate">{c.name}</span>
                       <PartyChip
                         name={c.partyName}
                         color={c.partyColor}
@@ -258,12 +258,12 @@ function GeneralBlock({
                         countryId={c.countryId}
                       />
                       {c.won && result.finalized && (
-                        <span className="rounded-full bg-yellow-500/15 border border-yellow-500/30 px-1.5 py-0.5 text-[9px] text-yellow-400">
+                        <span className="rounded-full bg-yellow-500/15 border border-yellow-500/30 px-1.5 py-0.5 text-body-sm text-yellow-400">
                           ✓ won
                         </span>
                       )}
                     </div>
-                    <div className="shrink-0 text-right text-[10px] tabular-nums">
+                    <div className="shrink-0 text-right text-body-sm tabular-nums">
                       <span className="font-semibold" style={{ color: c.partyColor }}>
                         {c.pct.toFixed(1)}%
                       </span>
@@ -314,19 +314,19 @@ function ElectionCard({ entry }: { entry: ElectionLogEntry }) {
           <div className="flex items-center flex-wrap gap-2 mb-0.5">
             <Link
               href={raceHref({ id: entry.id, electionType: entry.electionType })}
-              className="text-sm font-semibold hover:text-primary transition-colors"
+              className="text-body font-semibold hover:text-primary transition-colors"
             >
               {entry.stateName} — {typeLabel}
               {entry.senateClass ? ` (Class ${entry.senateClass})` : ""}
               {entry.totalSeats ? ` · ${entry.totalSeats} seats` : ""}
             </Link>
             <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusStyle}`}
+              className={`rounded-full border px-2 py-0.5 text-body-sm font-medium ${statusStyle}`}
             >
               {STATUS_LABELS[entry.status] ?? entry.status}
             </span>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-body-sm text-muted">
             <span>Cycle {entry.cycle}</span>
             {entry.startTime && (
               <span>
@@ -342,7 +342,7 @@ function ElectionCard({ entry }: { entry: ElectionLogEntry }) {
         </div>
         <Link
           href={raceHref({ id: entry.id, electionType: entry.electionType })}
-          className="shrink-0 text-[10px] text-muted hover:text-primary transition-colors"
+          className="shrink-0 text-body-sm text-muted hover:text-primary transition-colors"
         >
           View →
         </Link>
@@ -372,7 +372,7 @@ function ElectionCard({ entry }: { entry: ElectionLogEntry }) {
 
         {/* No data yet */}
         {!hasPrimary && !hasGeneral && (
-          <p className="text-xs text-muted/50 italic">No candidates yet</p>
+          <p className="text-body-sm text-muted/50 italic">No candidates yet</p>
         )}
       </div>
     </div>
@@ -466,7 +466,7 @@ export function ElectionLog() {
               placeholder="Search state, candidate…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background pl-8 pr-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="w-full rounded-lg border border-card-border bg-background pl-8 pr-3 py-2 text-body placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
           </div>
 
@@ -474,7 +474,7 @@ export function ElectionLog() {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
             <option value="">All types</option>
             <option value="senate">Senate</option>
@@ -487,7 +487,7 @@ export function ElectionLog() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
             <option value="">All statuses</option>
             <option value="upcoming">Upcoming</option>
@@ -502,14 +502,14 @@ export function ElectionLog() {
             value={state}
             onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
             maxLength={2}
-            className="w-28 rounded-lg border border-card-border bg-background px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-28 rounded-lg border border-card-border bg-background px-3 py-2 text-body placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
 
           {/* Refresh */}
           <button
             onClick={() => fetchLog({ q, type, status, state, page })}
             disabled={loading}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-muted hover:text-foreground transition-colors disabled:opacity-50"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body text-muted hover:text-foreground transition-colors disabled:opacity-50"
           >
             <svg
               className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
@@ -528,7 +528,7 @@ export function ElectionLog() {
         </div>
 
         {/* Summary */}
-        <div className="mt-2 text-[11px] text-muted">
+        <div className="mt-2 text-body-sm text-muted">
           {loading ? (
             <Skeleton className="h-3 w-28" />
           ) : (
@@ -555,7 +555,7 @@ export function ElectionLog() {
           ))}
         </div>
       ) : entries.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-card-border bg-card p-12 text-center text-sm text-muted">
+        <div className="rounded-xl border border-dashed border-card-border bg-card p-12 text-center text-body text-muted">
           No elections match your filters.
         </div>
       ) : (
@@ -572,17 +572,17 @@ export function ElectionLog() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
-            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:opacity-40 transition-colors"
+            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-muted hover:text-foreground disabled:opacity-40 transition-colors"
           >
             ← Prev
           </button>
-          <span className="text-sm text-muted">
+          <span className="text-body text-muted">
             Page {page} of {pages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(pages, p + 1))}
             disabled={page === pages || loading}
-            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:opacity-40 transition-colors"
+            className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-muted hover:text-foreground disabled:opacity-40 transition-colors"
           >
             Next →
           </button>

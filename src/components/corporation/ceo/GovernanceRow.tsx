@@ -41,13 +41,13 @@ export function GovernanceRow({
     <div className="border-b border-card-border/60 last:border-b-0">
       <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 sm:flex-nowrap">
         <div
-          className={`w-full shrink-0 text-[13px] font-medium sm:w-44 ${
+          className={`w-full shrink-0 text-body-sm font-medium sm:w-44 ${
             tone === "danger" ? "text-error" : "text-foreground"
           }`}
         >
           {label}
         </div>
-        <div className="min-w-0 flex-1 text-xs text-muted">{summary}</div>
+        <div className="min-w-0 flex-1 text-body-sm text-muted">{summary}</div>
         {actionLabel && (
           <SmallButton
             tone={tone === "danger" ? "danger" : "default"}

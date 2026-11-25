@@ -110,7 +110,7 @@ export function LawTypeWizard({ initialData, onClose }: LawTypeWizardProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-heading font-semibold">
           {isEditing ? `Edit: ${initialData.name}` : "Create new law type"}
         </h2>
         <button
@@ -128,7 +128,7 @@ export function LawTypeWizard({ initialData, onClose }: LawTypeWizardProps) {
             key={step.id}
             onClick={() => setCurrentStep(step.id)}
             disabled={step.id > currentStep && !canProceed(step.id - 1)}
-            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+            className={`flex-1 py-2 text-body-sm font-medium rounded-lg transition-colors ${
               currentStep === step.id
                 ? "bg-primary/20 text-primary"
                 : step.id < currentStep
@@ -143,7 +143,7 @@ export function LawTypeWizard({ initialData, onClose }: LawTypeWizardProps) {
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-body text-red-400">
           {error}
         </div>
       )}
@@ -195,7 +195,7 @@ export function LawTypeWizard({ initialData, onClose }: LawTypeWizardProps) {
         <button
           onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
           disabled={currentStep === 1}
-          className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors disabled:opacity-50"
+          className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors disabled:opacity-50"
         >
           Back
         </button>
@@ -204,7 +204,7 @@ export function LawTypeWizard({ initialData, onClose }: LawTypeWizardProps) {
           <button
             onClick={() => setCurrentStep((s) => s + 1)}
             disabled={!canProceed(currentStep)}
-            className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+            className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-body font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
           >
             Continue
           </button>
@@ -212,7 +212,7 @@ export function LawTypeWizard({ initialData, onClose }: LawTypeWizardProps) {
           <button
             onClick={handleSave}
             disabled={saving || !canProceed(4)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {saving ? "Saving..." : isEditing ? "Save changes" : "Create law type"}
           </button>

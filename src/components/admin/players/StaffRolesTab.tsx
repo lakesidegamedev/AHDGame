@@ -7,6 +7,7 @@ import { PlayerSelector } from "@/components/PlayerSelector";
 import { LocalTime } from "@/components/time/LocalTime";
 import { staffRoleLabel } from "@/lib/staff/grantRules";
 import type { GrantableStaffRole } from "@/lib/staff/rules";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface StaffMember {
   userId: string;
@@ -94,7 +95,7 @@ export function StaffRolesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-1 rounded-lg border border-card-border bg-card p-1" role="tablist">
+      <div className="flex gap-1 rounded-full bg-card-muted p-0.5" role="tablist">
         {(["moderator", "junior_dev"] as const).map((r) => (
           <button
             key={r}
@@ -105,9 +106,7 @@ export function StaffRolesTab() {
               setSelectedUser(null);
               setError("");
             }}
-            className={`flex-1 rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
-              role === r ? "bg-primary/10 text-primary" : "text-muted hover:text-foreground"
-            }`}
+            className={`flex-1 px-3 py-1.5 text-body-sm ${pillClass(role === r)}`}
           >
             {staffRoleLabel(r)}s
           </button>
@@ -115,25 +114,25 @@ export function StaffRolesTab() {
       </div>
 
       <div className="rounded-lg border border-card-border bg-card p-4">
-        <h3 className="mb-1 text-sm font-semibold">Assign {label}</h3>
+        <h3 className="mb-1 text-body-lg font-semibold">Assign {label}</h3>
         <p className="mb-3 text-body-sm text-muted">{ROLE_BLURB[role]} Changes are admin logged.</p>
         <div className="flex gap-2">
           {selectedUser ? (
             <div className="flex flex-1 items-center gap-2">
-              <div className="flex-1 rounded-lg border border-success/40 bg-success/10 px-3 py-2.5 text-sm">
+              <div className="flex-1 rounded-lg border border-success/40 bg-success/10 px-3 py-2.5 text-body">
                 <span className="font-medium">{selectedUser.username}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedUser(null)}
-                className="rounded-md border border-card-border bg-card px-3 py-2 text-xs text-muted hover:text-foreground"
+                className="rounded-md border border-card-border bg-card px-3 py-2 text-body-sm text-muted hover:text-foreground"
               >
                 Clear
               </button>
               <button
                 onClick={handleAssign}
                 disabled={assigning}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {assigning ? "Assigning..." : "Assign"}
               </button>
@@ -149,12 +148,12 @@ export function StaffRolesTab() {
             />
           )}
         </div>
-        <InlineError error={error} className="mt-2 text-sm text-error" />
+        <InlineError error={error} className="mt-2 text-body text-error" />
       </div>
 
       <div className="rounded-lg border border-card-border bg-card">
         <div className="border-b border-card-border px-4 py-3">
-          <h3 className="text-sm font-semibold">
+          <h3 className="text-body-lg font-semibold">
             Current {label}s ({members.length})
           </h3>
         </div>
@@ -163,7 +162,7 @@ export function StaffRolesTab() {
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : members.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted">No {label}s assigned</p>
+          <p className="px-4 py-8 text-center text-body text-muted">No {label}s assigned</p>
         ) : (
           <div className="divide-y divide-card-border">
             {members.map((m) => (
@@ -171,15 +170,15 @@ export function StaffRolesTab() {
                 <div>
                   <span className="font-medium">{m.username}</span>
                   {m.characterName && (
-                    <span className="ml-2 text-sm text-muted">({m.characterName})</span>
+                    <span className="ml-2 text-body text-muted">({m.characterName})</span>
                   )}
-                  <span className="ml-3 text-xs text-muted">
+                  <span className="ml-3 text-body-sm text-muted">
                     Since <LocalTime value={m.moderatorSince} options={{ dateStyle: "medium" }} />
                   </span>
                 </div>
                 <button
                   onClick={() => handleRemove(m.userId, m.username)}
-                  className="rounded-lg bg-error/10 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/20"
+                  className="rounded-lg bg-error/10 px-3 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/20"
                 >
                   Remove
                 </button>

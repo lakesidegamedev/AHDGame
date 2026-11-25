@@ -85,7 +85,7 @@ export function PositionBadges({
   if (!showEcon && !showSocial) return null;
 
   const badgeBase =
-    "inline-flex min-h-[1.5rem] items-center justify-center rounded border px-1.5 py-0.5 text-center text-xs font-semibold leading-tight";
+    "inline-flex min-h-[1.5rem] items-center justify-center rounded border px-1.5 py-0.5 text-center text-body-sm font-semibold leading-tight";
 
   return (
     <div className={`flex flex-col ${align} gap-1.5 ${className}`}>

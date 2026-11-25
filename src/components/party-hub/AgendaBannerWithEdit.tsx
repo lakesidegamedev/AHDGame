@@ -74,23 +74,23 @@ export function AgendaBannerWithEdit({
           value={headline}
           onChange={(e) => setHeadline(e.target.value)}
           placeholder={agenda?.headline ?? "Set the National Agenda headline"}
-          className="w-full rounded-md border border-card-border bg-background px-2 py-1.5 text-sm"
+          className="w-full rounded-md border border-card-border bg-background px-2 py-1.5 text-body"
           maxLength={120}
         />
         <textarea
           value={detail}
           onChange={(e) => setDetail(e.target.value)}
           placeholder={agenda?.detail ?? "Optional detail explaining the agenda."}
-          className="w-full rounded-md border border-card-border bg-background px-2 py-1.5 text-xs"
+          className="w-full rounded-md border border-card-border bg-background px-2 py-1.5 text-body-sm"
           rows={2}
           maxLength={500}
         />
-        {error ? <p className="text-xs text-red-500">{error}</p> : null}
+        {error ? <p className="text-body-sm text-red-500">{error}</p> : null}
         <div className="flex gap-2 justify-end">
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="rounded-md border border-card-border px-3 py-1 text-xs"
+            className="rounded-md border border-card-border px-3 py-1 text-body-sm"
             disabled={submitting}
           >
             Cancel
@@ -99,7 +99,7 @@ export function AgendaBannerWithEdit({
             type="button"
             onClick={handleSubmit}
             disabled={submitting || !headline.trim()}
-            className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded-md bg-primary px-3 py-1 text-body-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {submitting ? "Saving…" : "Save agenda"}
           </button>
@@ -115,12 +115,12 @@ export function AgendaBannerWithEdit({
           <div className="text-body-sm font-medium text-muted">
             {partyAbbreviation ? `${partyAbbreviation} National Agenda` : "National agenda"}
           </div>
-          <p className="text-xs text-muted mt-0.5">No active agenda. Chairs can set one.</p>
+          <p className="text-body-sm text-muted mt-0.5">No active agenda. Chairs can set one.</p>
         </div>
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="shrink-0 rounded-md border border-card-border px-2 py-1 text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--card-muted)]"
+          className="shrink-0 rounded-md border border-card-border px-2 py-1 text-body-sm font-medium uppercase tracking-wider hover:bg-[var(--card-muted)]"
         >
           Set agenda
         </button>

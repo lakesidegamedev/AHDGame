@@ -62,7 +62,7 @@ function CandidateSelect({
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-card-border bg-background px-2 py-1 text-xs"
+        className="rounded border border-card-border bg-background px-2 py-1 text-body-sm"
       >
         {options.map((c) => (
           <option key={c.id} value={c.id}>
@@ -88,7 +88,7 @@ function DriverBarRow({
   const widthPct = maxAbs > 0 ? (Math.abs(d.contributionPct) / maxAbs) * 50 : 0; // 50% per side of midline
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-baseline justify-between text-xs">
+      <div className="flex items-baseline justify-between text-body-sm">
         <span
           className={
             hint ? "font-semibold underline decoration-dotted cursor-help" : "font-semibold"
@@ -195,7 +195,7 @@ export function PersuasionDrivers({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-muted">{t("persuasion.title")}</h3>
+        <h3 className="text-body-lg font-semibold text-muted">{t("persuasion.title")}</h3>
         <span className="text-body-sm font-medium text-muted">
           {displayCanadianRegionCode(stateId)}
         </span>
@@ -217,7 +217,7 @@ export function PersuasionDrivers({
               onChange={setOpponentId}
             />
           </div>
-          <p className="mb-3 text-xs text-muted leading-snug">
+          <p className="mb-3 text-body-sm text-muted leading-snug">
             {t.rich("persuasion.explanation", {
               state: () => <span className="font-semibold">{stateName}</span>,
               focus: () => (
@@ -233,7 +233,9 @@ export function PersuasionDrivers({
       ) : null}
 
       {!hasDrivers ? (
-        <p className="text-xs italic text-muted">{t("persuasion.empty", { state: stateName })}</p>
+        <p className="text-body-sm italic text-muted">
+          {t("persuasion.empty", { state: stateName })}
+        </p>
       ) : (
         <div className="flex flex-col gap-2">
           <div className="text-body-sm font-medium text-muted">{t("persuasion.driversGroup")}</div>
@@ -252,7 +254,7 @@ export function PersuasionDrivers({
             );
           })}
           {slice && focus && opponent ? (
-            <p className="mt-1 rounded border border-card-border bg-background px-2 py-1.5 text-[11px] leading-snug text-muted">
+            <p className="mt-1 rounded border border-card-border bg-background px-2 py-1.5 text-body-sm leading-snug text-muted">
               {t("persuasion.ceiling", {
                 opponent: opponent.name,
                 opponentSlice: slice.opponentSlicePct.toFixed(1),

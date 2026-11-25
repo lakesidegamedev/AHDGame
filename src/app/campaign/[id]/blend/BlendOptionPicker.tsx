@@ -56,7 +56,7 @@ export function BlendOptionPicker({
           padding: "8px 10px",
           font: "inherit",
           fontFamily: FONT.sans,
-          fontSize: 13,
+          fontSize: 12,
           color: BLEND.ink,
         }}
       />
@@ -87,7 +87,7 @@ export function BlendOptionPicker({
           <span
             style={{
               fontFamily: FONT.sans,
-              fontSize: 13.5,
+              fontSize: 14,
               fontWeight: 600,
               minWidth: 0,
               overflow: "hidden",
@@ -101,7 +101,7 @@ export function BlendOptionPicker({
             <span
               style={{
                 fontFamily: FONT.mono,
-                fontSize: 9.5,
+                fontSize: 12,
                 color: BLEND.mutedDim,
                 flexShrink: 0,
               }}
@@ -119,7 +119,7 @@ export function BlendOptionPicker({
             background: BLEND.inset,
             padding: "8px 10px",
             fontFamily: FONT.sans,
-            fontSize: 12.5,
+            fontSize: 12,
             color: BLEND.mutedDim,
           }}
         >

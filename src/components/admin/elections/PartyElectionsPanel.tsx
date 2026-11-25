@@ -163,14 +163,14 @@ export function PartyElectionsPanel() {
             key={s.label}
             className="rounded-xl border border-card-border bg-card p-4 text-center"
           >
-            <div className="text-xs text-muted mb-1">{s.label}</div>
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+            <div className="text-body-sm text-muted mb-1">{s.label}</div>
+            <div className={`text-heading font-bold ${s.color}`}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {message && (
-        <div className={`rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-3 text-body ${getMessageStyle(message)}`}>{message}</div>
       )}
 
       {/* Batch actions */}
@@ -178,7 +178,7 @@ export function PartyElectionsPanel() {
         <h3 className="font-semibold">Batch actions</h3>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="text-xs text-muted block mb-1">
+            <label className="text-body-sm text-muted block mb-1">
               Duration for new elections (turns)
             </label>
             <input
@@ -186,7 +186,7 @@ export function PartyElectionsPanel() {
               min={1}
               value={createDuration}
               onChange={(e) => setCreateDuration(parseInt(e.target.value) || 72)}
-              className="w-28 rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+              className="w-28 rounded-lg border border-card-border bg-background px-3 py-2 text-body"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -197,7 +197,7 @@ export function PartyElectionsPanel() {
                 onChange={(e) => setIncludeNational(e.target.checked)}
                 className="rounded border-card-border"
               />
-              <span className="text-xs text-muted">Include national</span>
+              <span className="text-body-sm text-muted">Include national</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -206,32 +206,32 @@ export function PartyElectionsPanel() {
                 onChange={(e) => setIncludeCommittee(e.target.checked)}
                 className="rounded border-card-border"
               />
-              <span className="text-xs text-muted">Include committee</span>
+              <span className="text-body-sm text-muted">Include committee</span>
             </label>
           </div>
           <button
             onClick={() => batchAction("batch-create")}
             disabled={loading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             Create missing
           </button>
           <button
             onClick={() => batchAction("batch-resolve")}
             disabled={loading}
-            className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            className="rounded-lg bg-secondary px-4 py-2 text-body font-semibold text-white hover:opacity-90 disabled:opacity-50"
           >
             Process now
           </button>
           <button
             onClick={() => batchAction("batch-restart")}
             disabled={loading}
-            className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+            className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-body font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
           >
             Restart all
           </button>
         </div>
-        <p className="text-xs text-muted/60">
+        <p className="text-body-sm text-muted/60">
           <strong>Create missing</strong> — generates elections for any party × position combo with
           no active election.
           <br />
@@ -254,7 +254,7 @@ export function PartyElectionsPanel() {
           <select
             value={filterCountry}
             onChange={(e) => setFilterCountry(e.target.value)}
-            className="w-24 rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-24 rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           >
             <option value="">All countries</option>
             {registered.map((id) => (
@@ -267,18 +267,18 @@ export function PartyElectionsPanel() {
             placeholder="State/Region"
             value={filterState}
             onChange={(e) => setFilterState(e.target.value.toUpperCase())}
-            className="w-28 rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-28 rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
           <input
             placeholder="Party Name"
             value={filterParty}
             onChange={(e) => setFilterParty(e.target.value)}
-            className="w-40 rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-40 rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           >
             <option value="all">All types</option>
             <option value="state">State</option>
@@ -288,7 +288,7 @@ export function PartyElectionsPanel() {
           <select
             value={filterPosition}
             onChange={(e) => setFilterPosition(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           >
             <option value="">All positions</option>
             <option value="chair">Chair</option>
@@ -299,7 +299,7 @@ export function PartyElectionsPanel() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           >
             <option value="">All statuses</option>
             <option value="voting">Voting</option>
@@ -309,7 +309,7 @@ export function PartyElectionsPanel() {
           <button
             onClick={fetchRows}
             disabled={loading}
-            className="rounded-lg border border-card-border bg-background px-4 py-2 text-sm hover:text-foreground disabled:opacity-50"
+            className="rounded-lg border border-card-border bg-background px-4 py-2 text-body hover:text-foreground disabled:opacity-50"
           >
             {loading ? "…" : "Search"}
           </button>
@@ -319,7 +319,7 @@ export function PartyElectionsPanel() {
       {/* Table */}
       <div className="rounded-xl border border-card-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr className="border-b border-card-border text-left">
                 {[
@@ -338,7 +338,7 @@ export function PartyElectionsPanel() {
                 ].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-xs font-medium text-muted whitespace-nowrap"
+                    className="px-4 py-3 text-body-sm font-medium text-muted whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -348,7 +348,7 @@ export function PartyElectionsPanel() {
             <tbody className="divide-y divide-card-border">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-muted text-sm">
+                  <td colSpan={12} className="px-4 py-8 text-center text-muted text-body">
                     {loading ? "Loading…" : "No elections found"}
                   </td>
                 </tr>
@@ -357,7 +357,7 @@ export function PartyElectionsPanel() {
                 <tr key={row.id} className="hover:bg-foreground/[0.03]">
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLOR[row.electionType]}`}
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${TYPE_COLOR[row.electionType]}`}
                     >
                       {row.electionType}
                     </span>
@@ -368,7 +368,7 @@ export function PartyElectionsPanel() {
                   <td className="px-4 py-3">{row.positionLabel}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[row.status]}`}
+                      className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${STATUS_COLOR[row.status]}`}
                     >
                       {row.status}
                     </span>
@@ -397,7 +397,7 @@ export function PartyElectionsPanel() {
                           href={regionPartyUrl(row.countryId, row.stateId, row.partyId)}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-primary hover:underline"
+                          className="text-body-sm text-primary hover:underline"
                         >
                           View
                         </a>
@@ -406,7 +406,7 @@ export function PartyElectionsPanel() {
                           href={partyUrl(row.countryId, row.partyId)}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-primary hover:underline"
+                          className="text-body-sm text-primary hover:underline"
                         >
                           View
                         </a>
@@ -420,7 +420,7 @@ export function PartyElectionsPanel() {
                             )
                           }
                           disabled={loading}
-                          className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40"
+                          className="text-body-sm text-red-400 hover:text-red-300 disabled:opacity-40"
                         >
                           Cancel
                         </button>

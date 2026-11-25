@@ -120,10 +120,10 @@ export function AdminDashboardTab({ counts, onNavigate }: AdminDashboardTabProps
                 className="block rounded-lg border border-card-border bg-card p-3 transition-shadow hover:shadow-md sm:p-4"
               >
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold">{label}</span>
-                  <span className="text-[10px] text-muted sm:text-xs">{tag}</span>
+                  <span className="text-body font-semibold">{label}</span>
+                  <span className="text-body-sm text-muted sm:text-body-sm">{tag}</span>
                 </div>
-                <p className="text-xs leading-relaxed text-muted">{desc}</p>
+                <p className="text-body-sm leading-relaxed text-muted">{desc}</p>
               </Link>
             ))}
           </div>

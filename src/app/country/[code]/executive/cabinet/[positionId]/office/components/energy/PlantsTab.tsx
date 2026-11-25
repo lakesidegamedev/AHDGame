@@ -73,7 +73,7 @@ export function PlantsTab({
                   setSource(s.id);
                   setBuilding(false);
                 }}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-semibold ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm font-semibold ${
                   active ? "text-black" : "bg-card-muted text-muted hover:text-foreground"
                 }`}
                 style={active ? { background: "var(--gov)" } : undefined}
@@ -81,7 +81,7 @@ export function PlantsTab({
                 <EnergyIcon name={s.icon} className="h-4 w-4" />
                 <span>{s.label}</span>
                 <span
-                  className={`rounded-full px-1.5 text-[10px] ${active ? "bg-black/20" : "bg-card-border"}`}
+                  className={`rounded-full px-1.5 text-body-sm ${active ? "bg-black/20" : "bg-card-border"}`}
                 >
                   {count}
                 </span>
@@ -99,13 +99,13 @@ export function PlantsTab({
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="text-body font-semibold text-foreground">
           {ENERGY_SOURCES.find((s) => s.id === source)?.label} · plants
         </h2>
         <button
           onClick={() => setBuilding(true)}
           disabled={!canAct || busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-[12px] font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] px-3 py-1.5 text-body-sm font-semibold text-gov-soft hover:bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Build plant
         </button>
@@ -127,7 +127,7 @@ export function PlantsTab({
 
       <div className="space-y-2.5">
         {groupPlants.length === 0 && (
-          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-[13px] text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body-sm text-muted">
             No plants of this source. Build one to begin.
           </div>
         )}

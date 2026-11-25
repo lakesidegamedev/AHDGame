@@ -143,7 +143,7 @@ export function NpcscChairPanel() {
           <button
             onClick={() => postAction("start_election")}
             disabled={busy}
-            className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning hover:bg-warning/20 disabled:opacity-40 transition-colors"
+            className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-body-sm font-semibold text-warning hover:bg-warning/20 disabled:opacity-40 transition-colors"
           >
             Admin · open election
           </button>
@@ -152,7 +152,7 @@ export function NpcscChairPanel() {
 
       {isElectionActive && (
         <div className="space-y-2">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Election open — closes <LocalTime value={data.election!.endsAt} />.{" "}
             {data.eligibilityLabel.replace(/^./, (c) => c.toUpperCase())} may declare and vote.
           </p>
@@ -161,7 +161,7 @@ export function NpcscChairPanel() {
             <button
               onClick={() => postAction("declare")}
               disabled={busy}
-              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
             >
               Declare for chairman
             </button>
@@ -170,7 +170,7 @@ export function NpcscChairPanel() {
             <button
               onClick={() => postAction("withdraw")}
               disabled={busy}
-              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs text-muted hover:text-foreground disabled:opacity-40 transition-colors"
+              className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm text-muted hover:text-foreground disabled:opacity-40 transition-colors"
             >
               Withdraw your nomination
             </button>
@@ -187,10 +187,10 @@ export function NpcscChairPanel() {
                     className="flex items-center justify-between gap-3 rounded-lg border border-card-border/60 bg-background/40 px-3 py-2"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <p className="text-body font-medium text-foreground truncate">
                         {n.nomineeName}
                       </p>
-                      <p className="text-[10px] text-muted">
+                      <p className="text-body-sm text-muted">
                         {(n.nomineeParty ?? "").toUpperCase()} · {n.votesFor} votes
                       </p>
                     </div>
@@ -198,7 +198,7 @@ export function NpcscChairPanel() {
                       <button
                         onClick={() => postAction("vote", n._id)}
                         disabled={busy || isMyVote}
-                        className={`shrink-0 rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                        className={`shrink-0 rounded-lg px-3 py-1 text-body-sm font-semibold transition-colors ${
                           isMyVote
                             ? "border border-success/40 bg-success/10 text-success"
                             : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
@@ -212,13 +212,13 @@ export function NpcscChairPanel() {
               })}
             </ul>
           ) : (
-            <p className="text-xs text-muted/70">No nominations yet.</p>
+            <p className="text-body-sm text-muted/70">No nominations yet.</p>
           )}
         </div>
       )}
 
       {!isElectionActive && data.leader?.characterId == null && (
-        <p className="text-xs text-muted/70">
+        <p className="text-body-sm text-muted/70">
           No Chairman of the NPC Standing Committee seated. An admin can open an election.
         </p>
       )}

@@ -176,13 +176,13 @@ export function SupplyOfferBoard({
       <h4 className="font-medium">
         {t(row.side)}: {COMMODITY_LABELS[row.commodity]}
       </h4>
-      <p className="text-sm">
+      <p className="text-body">
         {row.corporationName}
         {row.ai ? ` (${t("npp")})` : ""}
         {row.stateId ? ` (${row.stateId})` : ""}
       </p>
       {row.corporationCountryId && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {row.creditRating
             ? t("seller", {
                 country: row.corporationCountryId,
@@ -191,7 +191,7 @@ export function SupplyOfferBoard({
             : t("sellerCountry", { country: row.corporationCountryId })}
         </p>
       )}
-      <p className="text-xs">
+      <p className="text-body-sm">
         {t("terms", {
           volume: row.volumeCap.toLocaleString(),
           unit: COMMODITY_UNITS[row.commodity],
@@ -199,23 +199,23 @@ export function SupplyOfferBoard({
         })}
       </p>
       {row.ai && row.sizingBasis && (
-        <p className="text-xs text-muted" data-testid="offer-sizing-basis">
+        <p className="text-body-sm text-muted" data-testid="offer-sizing-basis">
           {t(row.sizingBasis === "unmetOutput" ? "sizingUnmetOutput" : "sizingSpareCapacity")}
         </p>
       )}
-      {sizeNote(row) && <p className="text-xs text-warning">{sizeNote(row)}</p>}
-      <p className="text-xs text-muted">
+      {sizeNote(row) && <p className="text-body-sm text-warning">{sizeNote(row)}</p>}
+      <p className="text-body-sm text-muted">
         {row.durationTurns ? t("term", { count: row.durationTurns }) : t("openEnded")} ·{" "}
         {t("expires", { turn: row.expiresAtTurn })}
       </p>
       {!row.own && row.unreachableReason && (
-        <p className="text-xs text-warning" role="note">
+        <p className="text-body-sm text-warning" role="note">
           {row.unreachableReason}
         </p>
       )}
       {!row.own && !row.unreachableReason && (
         <div className="flex flex-wrap items-end gap-2">
-          <label className="text-xs">
+          <label className="text-body-sm">
             {t("takeVolume")}
             <input
               className={`${control} w-28`}
@@ -232,14 +232,14 @@ export function SupplyOfferBoard({
             type="button"
             disabled={busy}
             onClick={() => setConfirming(row.id)}
-            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy ? t("taking") : t("take")}
           </button>
           <button
             type="button"
             onClick={() => onRespond(row)}
-            className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+            className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated"
           >
             {t("negotiate")}
           </button>
@@ -247,8 +247,8 @@ export function SupplyOfferBoard({
       )}
       {confirming === row.id && !row.own && !row.unreachableReason && (
         <div className="space-y-2 rounded-md border border-warning/60 p-2" role="group">
-          <p className="text-xs font-medium">{t("confirmTitle")}</p>
-          <p className="text-xs">
+          <p className="text-body-sm font-medium">{t("confirmTitle")}</p>
+          <p className="text-body-sm">
             {t(row.side === "sell" ? "confirmBuy" : "confirmSell", {
               volume: Number(takeVolumes[row.id] ?? row.volumeCap).toLocaleString(),
               unit: COMMODITY_UNITS[row.commodity],
@@ -261,7 +261,7 @@ export function SupplyOfferBoard({
               type="button"
               disabled={busy}
               onClick={() => void take(row)}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {busy ? t("taking") : t("confirm")}
             </button>
@@ -269,7 +269,7 @@ export function SupplyOfferBoard({
               type="button"
               disabled={busy}
               onClick={() => setConfirming("")}
-              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm text-foreground hover:bg-card-elevated"
             >
               {t("cancel")}
             </button>
@@ -279,20 +279,20 @@ export function SupplyOfferBoard({
     </article>
   );
   const control =
-    "h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none";
+    "h-8 w-full rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none";
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
-          <p className="mt-1 max-w-2xl text-xs text-muted">{t("intro")}</p>
+          <h3 className="text-body-lg font-semibold text-foreground">{t("title")}</h3>
+          <p className="mt-1 max-w-2xl text-body-sm text-muted">{t("intro")}</p>
           {[...listings, ...own].some((row) => row.ai) && <ComputerRunOfferNote />}
         </div>
         <button
           type="button"
           disabled={loading || busy || !!error || own.length >= 10}
           onClick={() => setForm((v) => !v)}
-          className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated disabled:opacity-50"
+          className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated disabled:opacity-50"
         >
           {t(form ? "close" : "publish")}
         </button>
@@ -308,7 +308,7 @@ export function SupplyOfferBoard({
       {notice && <p role="status">{notice}</p>}
       {form && (
         <form onSubmit={(e) => void publish(e)} className="grid gap-3 sm:grid-cols-2">
-          <label className="text-xs">
+          <label className="text-body-sm">
             {t("side")}
             <select
               className={control}
@@ -320,7 +320,7 @@ export function SupplyOfferBoard({
               <option value="buy">{t("buy")}</option>
             </select>
           </label>
-          <label className="text-xs">
+          <label className="text-body-sm">
             {t("commodity")}
             <select
               className={control}
@@ -339,7 +339,7 @@ export function SupplyOfferBoard({
             </select>
           </label>
           {supplyAgreementRequiresState(commodity) && (
-            <label className="text-xs">
+            <label className="text-body-sm">
               {t("state")}
               <input
                 required
@@ -351,7 +351,7 @@ export function SupplyOfferBoard({
               />
             </label>
           )}
-          <label className="text-xs">
+          <label className="text-body-sm">
             {t("volume", { unit: COMMODITY_UNITS[commodity] })}
             <input
               required
@@ -364,7 +364,7 @@ export function SupplyOfferBoard({
               disabled={busy}
             />
           </label>
-          <label className="text-xs">
+          <label className="text-body-sm">
             {t("premium")}
             <input
               required
@@ -378,7 +378,7 @@ export function SupplyOfferBoard({
               disabled={busy}
             />
           </label>
-          <label className="text-xs">
+          <label className="text-body-sm">
             {t("duration")}
             <input
               className={control}
@@ -391,11 +391,11 @@ export function SupplyOfferBoard({
               disabled={busy}
             />
           </label>
-          <p className="text-xs text-muted sm:col-span-2">{t("expiry")}</p>
+          <p className="text-body-sm text-muted sm:col-span-2">{t("expiry")}</p>
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {t("submit")}
           </button>
@@ -403,12 +403,12 @@ export function SupplyOfferBoard({
       )}
       {own.length > 0 && (
         <details>
-          <summary className="cursor-pointer text-sm">{t("own", { count: own.length })}</summary>
+          <summary className="cursor-pointer text-body">{t("own", { count: own.length })}</summary>
           <ul className="mt-2 space-y-2">
             {own.map((row) => (
               <li
                 key={row.id}
-                className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 text-body"
               >
                 <span>
                   {t(row.side)} {COMMODITY_LABELS[row.commodity]} {row.stateId ?? ""}
@@ -417,7 +417,7 @@ export function SupplyOfferBoard({
                   type="button"
                   disabled={busy}
                   onClick={() => void mutate({ action: "withdraw", slot: row.slot })}
-                  className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+                  className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm text-foreground hover:bg-card-elevated"
                 >
                   {t("withdraw")}
                 </button>
@@ -426,7 +426,7 @@ export function SupplyOfferBoard({
           </ul>
         </details>
       )}
-      <label className="block text-xs">
+      <label className="block text-body-sm">
         {t("filter")}
         <select
           className={control}
@@ -449,14 +449,14 @@ export function SupplyOfferBoard({
       ) : (
         !error && (
           <>
-            {listings.length === 0 && <p className="py-1 text-xs text-muted">{t("empty")}</p>}
+            {listings.length === 0 && <p className="py-1 text-body-sm text-muted">{t("empty")}</p>}
             <div className="grid gap-3 md:grid-cols-2">{usable.map(renderCard)}</div>
             {unusable.length > 0 && (
               <details className="rounded-md border border-card-border/60 p-2">
-                <summary className="cursor-pointer text-sm">
+                <summary className="cursor-pointer text-body">
                   {t("cannotUse", { count: unusable.length })}
                 </summary>
-                <p className="mt-1 text-xs text-muted">{t("cannotUseHint")}</p>
+                <p className="mt-1 text-body-sm text-muted">{t("cannotUseHint")}</p>
                 <div className="mt-2 grid gap-3 md:grid-cols-2">{unusable.map(renderCard)}</div>
               </details>
             )}
@@ -465,7 +465,7 @@ export function SupplyOfferBoard({
                 type="button"
                 disabled={page === 0}
                 onClick={() => setPage((n) => n - 1)}
-                className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground disabled:opacity-40 disabled:no-underline"
+                className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground disabled:opacity-40 disabled:no-underline"
               >
                 {t("previous")}
               </button>
@@ -473,7 +473,7 @@ export function SupplyOfferBoard({
                 type="button"
                 disabled={!hasMore || page >= 100}
                 onClick={() => setPage((n) => n + 1)}
-                className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground disabled:opacity-40 disabled:no-underline"
+                className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground disabled:opacity-40 disabled:no-underline"
               >
                 {t("next")}
               </button>

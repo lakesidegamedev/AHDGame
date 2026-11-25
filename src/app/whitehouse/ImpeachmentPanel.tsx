@@ -160,7 +160,7 @@ export default function ImpeachmentPanel({
     return (
       <section
         aria-busy="true"
-        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-card-border/70 px-4 py-2.5 text-xs"
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-card-border/70 px-4 py-2.5 text-body-sm"
       >
         <p className="text-muted">
           <span className="font-semibold text-foreground">Impeachment</span>
@@ -199,7 +199,7 @@ export default function ImpeachmentPanel({
   // No case open: one quiet line, not a panel. The full panel is for a live vote.
   if (!active) {
     return (
-      <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-card-border/70 px-4 py-2.5 text-xs">
+      <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-card-border/70 px-4 py-2.5 text-body-sm">
         <p className="text-muted">
           <span className="font-semibold text-foreground">Impeachment</span>
           <span className="mx-2 text-card-border">|</span>
@@ -240,23 +240,23 @@ export default function ImpeachmentPanel({
     <section className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-foreground">Impeachment</h2>
+          <h2 className="text-body font-bold text-foreground">Impeachment</h2>
           <WikiHelpLink screen="impeachment" />
         </div>
         {stageChip && (
-          <span className="text-[11px] rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-warning font-semibold uppercase tracking-wide">
+          <span className="text-body-sm rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-warning font-semibold uppercase tracking-wide">
             {stageChip}
           </span>
         )}
       </div>
 
       <div className="mt-3 space-y-3">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Filed by <span className="font-semibold text-foreground">{active.filedByName}</span>
           {active.filedByNppId ? " (NPP legislator)" : ""}
           {active.requestedByName ? ` at the request of ${active.requestedByName}.` : "."}
         </p>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {active.stage === "house"
             ? "The lower chamber is voting on articles of impeachment. Passage needs a majority of ALL seats, not just votes cast."
             : isGovernor
@@ -265,14 +265,14 @@ export default function ImpeachmentPanel({
           Abstentions and seats that never vote count against passage.
         </p>
         {votes && (
-          <div className="flex gap-4 text-sm">
+          <div className="flex gap-4 text-body">
             <Tally label="For" value={votes.for} tone="success" />
             <Tally label="Against" value={votes.against} tone="error" />
             <Tally label="Abstain" value={votes.abstain} tone="muted" />
           </div>
         )}
         {active.chamber && (
-          <div className="text-xs text-muted">
+          <div className="text-body-sm text-muted">
             <span className="font-semibold text-foreground">
               {active.chamber.needed} of {active.chamber.seats} seats
             </span>{" "}
@@ -308,7 +308,7 @@ export default function ImpeachmentPanel({
               type="button"
               onClick={() => vote(v)}
               disabled={busy}
-              className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50 transition-colors"
+              className="rounded-lg border border-card-border bg-card-elevated/40 px-3 py-1.5 text-body-sm font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50 transition-colors"
             >
               {v === "aye" ? "Aye" : v === "nay" ? "Nay" : "Abstain"}
             </button>
@@ -316,7 +316,7 @@ export default function ImpeachmentPanel({
         </div>
       </div>
 
-      {message && <p className="mt-3 text-xs text-muted">{message}</p>}
+      {message && <p className="mt-3 text-body-sm text-muted">{message}</p>}
     </section>
   );
 }
@@ -334,7 +334,7 @@ function Tally({
     tone === "success" ? "text-success" : tone === "error" ? "text-error" : "text-muted";
   return (
     <div className="text-center">
-      <div className={`text-base font-bold ${color}`}>{value}</div>
+      <div className={`text-body-lg font-bold ${color}`}>{value}</div>
       <div className="text-body-sm font-medium text-muted">{label}</div>
     </div>
   );

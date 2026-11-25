@@ -8,6 +8,7 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import type { BillWhipPanelData } from "@/lib/congress/billWhipPanelData";
 import { partyApiUrl, partyUrl } from "@/lib/urls";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface BillWhipPanelProps {
   billId: string;
@@ -102,31 +103,24 @@ export function BillWhipPanel({
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Whip panel</h3>
-          <p className="text-xs text-muted">{t("billPlayerWhipExplanation")}</p>
+          <h3 className="text-body-lg font-semibold">Whip panel</h3>
+          <p className="text-body-sm text-muted">{t("billPlayerWhipExplanation")}</p>
         </div>
         <Link
           href={partyUrl(countryId, whipPanel.party.id)}
-          className="rounded-full border border-card-border px-3 py-1 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+          className="rounded-full border border-card-border px-3 py-1 text-body-sm font-medium text-primary hover:bg-primary/10 transition-colors"
         >
           {whipPanel.party.name}
         </Link>
       </div>
 
-      <div
-        role="tablist"
-        className="flex gap-1 rounded-lg border border-card-border bg-background p-1 w-fit"
-      >
+      <div role="tablist" className={`${PILL_TRACK} w-fit`}>
         <button
           type="button"
           role="tab"
           aria-selected={audience === "character"}
           onClick={() => setAudience("character")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            audience === "character"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted hover:text-foreground"
-          }`}
+          className={`px-4 py-1.5 text-body ${pillClass(audience === "character")}`}
         >
           Player whip
         </button>
@@ -135,11 +129,7 @@ export function BillWhipPanel({
           role="tab"
           aria-selected={audience === "npp"}
           onClick={() => setAudience("npp")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            audience === "npp"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted hover:text-foreground"
-          }`}
+          className={`px-4 py-1.5 text-body ${pillClass(audience === "npp")}`}
         >
           NPP whip
         </button>
@@ -159,14 +149,16 @@ export function BillWhipPanel({
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-foreground">{chamber.chamberLabel}</div>
-                  <div className="text-xs text-muted">
+                  <div className="text-body font-medium text-foreground">
+                    {chamber.chamberLabel}
+                  </div>
+                  <div className="text-body-sm text-muted">
                     Whips issued: {whip.existingWhips.length}/{maxAttempts}
                     {directionSummary ? ` - ${directionSummary}` : " - none yet"}
                   </div>
                 </div>
                 {!whip.canWhip && (
-                  <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] text-muted uppercase tracking-wide">
+                  <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm text-muted uppercase tracking-wide">
                     Limit reached
                   </span>
                 )}
@@ -178,7 +170,7 @@ export function BillWhipPanel({
                   onClick={() => postBillWhip(chamber.chamberKey, "for", audience)}
                   disabled={!whip.canWhip || whippingId === busyFor || whippingId === busyAgainst}
                   title={!whip.canWhip ? "Maximum whip attempts reached" : undefined}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-card-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-card-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {whippingId === busyFor ? "Issuing..." : "Whip FOR"}
                 </button>
@@ -187,7 +179,7 @@ export function BillWhipPanel({
                   onClick={() => postBillWhip(chamber.chamberKey, "against", audience)}
                   disabled={!whip.canWhip || whippingId === busyFor || whippingId === busyAgainst}
                   title={!whip.canWhip ? "Maximum whip attempts reached" : undefined}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-card-border bg-card hover:bg-card-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 text-body-sm font-medium rounded-md border border-card-border bg-card hover:bg-card-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {whippingId === busyAgainst ? "Issuing..." : "Whip AGAINST"}
                 </button>

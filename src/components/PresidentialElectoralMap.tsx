@@ -87,15 +87,15 @@ export function PresidentialElectoralMap({
                   style={{ backgroundColor: color, opacity: 0.9 }}
                 />
                 <span
-                  className={`text-sm font-medium ${isLeader ? "text-foreground" : "text-muted"}`}
+                  className={`text-body font-medium ${isLeader ? "text-foreground" : "text-muted"}`}
                 >
                   {name}: <span className="tabular-nums">{ev} EV</span>
                   {isLeader && evSorted.length > 1 && (
-                    <span className="ml-1 text-xs text-green-500 font-normal">(leading)</span>
+                    <span className="ml-1 text-body-sm text-green-500 font-normal">(leading)</span>
                   )}
                   {candidateTravelStates[candidateId] && (
                     <span
-                      className="ml-1 text-xs text-muted/70 tabular-nums"
+                      className="ml-1 text-body-sm text-muted/70 tabular-nums"
                       title={`Currently campaigning in ${candidateTravelStates[candidateId]}`}
                     >
                       📍 {candidateTravelStates[candidateId]}
@@ -118,7 +118,7 @@ export function PresidentialElectoralMap({
         />
       </div>
       {!hasData && (
-        <div className="mt-4 px-2 text-sm text-muted">
+        <div className="mt-4 px-2 text-body text-muted">
           Votes will appear as they accumulate each turn. Hover over states to see results.
         </div>
       )}
@@ -131,13 +131,13 @@ export function PresidentialElectoralMap({
                 className="inline-block h-3 w-3 rounded-sm"
                 style={{ backgroundColor: color, opacity: 0.85 }}
               />
-              <span className="text-xs text-muted">{label}</span>
+              <span className="text-body-sm text-muted">{label}</span>
             </div>
           ))}
           {highlightedStates && highlightedStates.length > 0 && (
             <span className="flex items-center gap-1.5 text-purple-400">
               <span className="inline-block h-3 w-3 rounded-sm border-2 border-purple-400" />
-              <span className="text-xs">5 closest states</span>
+              <span className="text-body-sm">5 closest states</span>
             </span>
           )}
         </div>

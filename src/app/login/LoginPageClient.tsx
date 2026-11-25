@@ -308,7 +308,7 @@ export default function LoginPageClient({
                 />
                 <div className="absolute left-5 top-4 z-10">{brand}</div>
                 {eraLabel && (
-                  <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white">
+                  <span className="absolute bottom-4 left-5 z-10 rounded-full bg-primary/90 px-2.5 py-1 text-body-sm font-semibold text-primary-foreground">
                     {eraLabel}
                   </span>
                 )}
@@ -338,7 +338,7 @@ export default function LoginPageClient({
                 </div>
               )}
 
-              <h1 className="text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground lg:text-[1.875rem]">
+              <h1 className="text-display font-semibold leading-tight tracking-tight text-foreground lg:text-display">
                 {t(marginOfVictory ? "movTitle" : "heading")}
               </h1>
               <p className="mt-2 text-body text-muted">
@@ -593,7 +593,7 @@ export default function LoginPageClient({
           </div>
         </div>
 
-        <footer className="flex flex-col gap-2 border-t border-card-border px-5 py-4 text-center text-body-xs leading-relaxed text-muted/80 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:px-9 lg:text-left">
+        <footer className="flex flex-col gap-2 border-t border-card-border px-5 py-4 text-center text-body-sm leading-relaxed text-muted/80 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:px-9 lg:text-left">
           <p className="max-w-md">{t("cookieNotice")}</p>
           <nav className="flex shrink-0 justify-center gap-4">
             <a
@@ -624,7 +624,7 @@ export default function LoginPageClient({
           <div className="relative z-10 max-w-xl">
             {eraLabel && (
               <span
-                className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white ${
+                className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-sm font-semibold text-white ${
                   wireframeColor ? "font-mono uppercase tracking-widest" : ""
                 }`}
               >
@@ -633,7 +633,7 @@ export default function LoginPageClient({
             )}
             {eraTagline && (
               <h2
-                className={`mt-4 text-heading-lg font-semibold leading-tight tracking-tight text-white xl:text-[2.5rem] ${
+                className={`mt-4 text-heading font-semibold leading-tight tracking-tight text-white xl:text-display ${
                   wireframeColor ? "font-mono" : ""
                 }`}
               >

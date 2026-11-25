@@ -24,8 +24,10 @@ export function LegacyChangelogClient({ entries }: { entries: ChangelogEntry[] }
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6">
-            <h1 className="mb-1 text-2xl font-bold tracking-tight text-white">Legacy changelog</h1>
-            <p className="text-sm text-white/70">
+            <h1 className="mb-1 text-heading font-bold tracking-tight text-white">
+              Legacy changelog
+            </h1>
+            <p className="text-body text-white/70">
               Player-facing updates before the v0.4.0 post-style feed.
             </p>
           </div>
@@ -33,22 +35,26 @@ export function LegacyChangelogClient({ entries }: { entries: ChangelogEntry[] }
         <HeroStatsStrip>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Newest here</span>
-            <span className="text-base font-bold tabular-nums text-primary">{latestVersion}</span>
+            <span className="text-body-lg font-bold tabular-nums text-primary">
+              {latestVersion}
+            </span>
           </div>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Versions</span>
-            <span className="text-base font-bold tabular-nums text-foreground">
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
               {entries.length}
             </span>
           </div>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Changes</span>
-            <span className="text-base font-bold tabular-nums text-foreground">{totalChanges}</span>
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
+              {totalChanges}
+            </span>
           </div>
         </HeroStatsStrip>
       </header>
 
-      <div className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/90">
+      <div className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-body text-amber-100/90">
         This archive covers releases before v0.4.0.{" "}
         <Link href="/changelog" className="font-medium text-primary hover:underline">
           Return to the current feed

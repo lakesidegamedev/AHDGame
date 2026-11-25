@@ -71,7 +71,7 @@ export function EndorseButton({
         disabled={pending}
         onClick={click}
         style={partyButtonStyle}
-        className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-50 ${
+        className={`rounded-md border px-2 py-0.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
           isEndorsed
             ? "border-yellow-500/50 bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/25"
             : otherEndorsed
@@ -83,7 +83,7 @@ export function EndorseButton({
       >
         {pending ? "…" : isEndorsed ? "Endorsed ✓" : otherEndorsed ? "Switch" : "Endorse"}
       </button>
-      {error && <span className="text-[10px] text-error">{error}</span>}
+      {error && <span className="text-body-sm text-error">{error}</span>}
     </div>
   );
 }

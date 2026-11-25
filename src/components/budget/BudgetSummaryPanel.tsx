@@ -42,9 +42,9 @@ export function BudgetSummaryPanel({
   return (
     <div className={`rounded-xl border-2 ${borderColor} bg-card p-5`}>
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{title}</h3>
         {warningBadge && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-error/40 bg-error/10 px-3 py-1 text-xs font-semibold text-error">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-error/40 bg-error/10 px-3 py-1 text-body-sm font-semibold text-error">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -65,7 +65,7 @@ export function BudgetSummaryPanel({
               {stat.label}
             </span>
             <span
-              className={`text-sm font-bold tabular-nums ${stat.colorClass ?? "text-foreground"}`}
+              className={`text-body font-bold tabular-nums ${stat.colorClass ?? "text-foreground"}`}
             >
               {stat.colorClass && stat.value >= 0 ? "+" : ""}
               {formatAmount(stat.value, currencySymbol)}

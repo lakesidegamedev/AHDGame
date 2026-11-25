@@ -84,14 +84,14 @@ export function TutorialHubClient() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t("hub.title")}</h1>
-          <p className="mt-1 text-sm text-muted">{t("hub.intro")}</p>
+          <h1 className="text-heading font-bold">{t("hub.title")}</h1>
+          <p className="mt-1 text-body text-muted">{t("hub.intro")}</p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => openTutorialChooser()}
-            className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-sm font-medium transition-colors hover:border-primary/60"
+            className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body font-medium transition-colors hover:border-primary/60"
           >
             {t("hub.changePlan")}
           </button>
@@ -102,7 +102,7 @@ export function TutorialHubClient() {
       </div>
 
       {loadFailed && (
-        <p className="mt-6 rounded-lg border border-card-border bg-card/50 p-4 text-sm text-muted">
+        <p className="mt-6 rounded-lg border border-card-border bg-card/50 p-4 text-body text-muted">
           {t("hub.loadFailed")}
         </p>
       )}
@@ -119,21 +119,21 @@ export function TutorialHubClient() {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="flex items-center gap-2 text-base font-semibold">
+                  <h2 className="flex items-center gap-2 text-body-lg font-semibold">
                     {t(chapter.title)}
                     {finished && (
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-500">
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-body-sm font-medium uppercase tracking-wide text-emerald-500">
                         {t("hub.done")}
                       </span>
                     )}
                     {!finished && inPlan && (
-                      <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] font-medium text-muted">
+                      <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm font-medium text-muted">
                         {t("hub.inYourTour")}
                       </span>
                     )}
                   </h2>
-                  <p className="mt-1 text-sm text-muted">{t(chapterBlurb(chapter, world))}</p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-body text-muted">{t(chapterBlurb(chapter, world))}</p>
+                  <p className="mt-1 text-body-sm text-muted">
                     {t("hub.aboutMinutes", { minutes: chapter.estimatedMinutes })}
                   </p>
                 </div>
@@ -141,7 +141,7 @@ export function TutorialHubClient() {
                   {chapter.wikiPathSlug && (
                     <Link
                       href={`/wiki/paths/${chapter.wikiPathSlug}`}
-                      className="rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:text-foreground"
+                      className="rounded-lg px-3 py-2 text-body text-muted transition-colors hover:text-foreground"
                     >
                       {t("hub.readMore")}
                     </Link>
@@ -149,7 +149,7 @@ export function TutorialHubClient() {
                   <button
                     type="button"
                     onClick={() => startTutorial(id)}
-                    className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:border-primary/60"
+                    className="rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium transition-colors hover:border-primary/60"
                   >
                     {finished ? t("hub.replay") : t("hub.start")}
                   </button>

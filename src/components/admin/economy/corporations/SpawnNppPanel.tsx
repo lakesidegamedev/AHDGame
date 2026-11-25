@@ -20,8 +20,8 @@ export function SpawnNppPanel({
 }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 space-y-4">
-      <h3 className="text-sm font-semibold">Spawn NPP corporation</h3>
-      <p className="text-xs text-muted">
+      <h3 className="text-body-lg font-semibold">Spawn NPP corporation</h3>
+      <p className="text-body-sm text-muted">
         Create a non-player-purchasable corporation. It will have no CEO, no user owner, and will
         participate in turn processing. It opens at the standard size for its sector unless you set
         a starting revenue.
@@ -29,7 +29,7 @@ export function SpawnNppPanel({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-xs text-muted">Name</label>
+          <label className="text-body-sm text-muted">Name</label>
           <input
             type="text"
             value={spawnNppForm.name}
@@ -37,17 +37,17 @@ export function SpawnNppPanel({
               dispatch({ type: "SET_SPAWN_NPP_FORM", value: { name: e.target.value } })
             }
             placeholder="e.g. Acme Industries"
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">Type</label>
+          <label className="text-body-sm text-muted">Type</label>
           <select
             value={spawnNppForm.type}
             onChange={(e) =>
               dispatch({ type: "SET_SPAWN_NPP_FORM", value: { type: e.target.value } })
             }
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           >
             {Object.entries(OPERATING_SECTOR_TYPE_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -57,13 +57,13 @@ export function SpawnNppPanel({
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">Country</label>
+          <label className="text-body-sm text-muted">Country</label>
           <select
             value={spawnNppForm.countryId}
             onChange={(e) =>
               dispatch({ type: "SET_SPAWN_NPP_FORM", value: { countryId: e.target.value } })
             }
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           >
             {["US", "UK", "DE", "JP", "IE", "BR", "CN", "NG"].map((c) => (
               <option key={c} value={c}>
@@ -73,7 +73,7 @@ export function SpawnNppPanel({
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">HQ state ID</label>
+          <label className="text-body-sm text-muted">HQ state ID</label>
           <input
             type="text"
             value={spawnNppForm.headquartersState}
@@ -84,11 +84,11 @@ export function SpawnNppPanel({
               })
             }
             placeholder="e.g. CA, england, JP-13"
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">Starting capital</label>
+          <label className="text-body-sm text-muted">Starting capital</label>
           <input
             type="number"
             value={spawnNppForm.startingCapital}
@@ -99,11 +99,11 @@ export function SpawnNppPanel({
               })
             }
             placeholder="1000000"
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">Starting Revenue (optional)</label>
+          <label className="text-body-sm text-muted">Starting Revenue (optional)</label>
           <input
             type="number"
             value={spawnNppForm.startingRevenue}
@@ -114,11 +114,11 @@ export function SpawnNppPanel({
               })
             }
             placeholder="Leave empty for the standard opening size"
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">Profit margin %</label>
+          <label className="text-body-sm text-muted">Profit margin %</label>
           <input
             type="number"
             value={spawnNppForm.profitMargin}
@@ -126,11 +126,11 @@ export function SpawnNppPanel({
               dispatch({ type: "SET_SPAWN_NPP_FORM", value: { profitMargin: e.target.value } })
             }
             placeholder="35"
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted">Brand Color (optional)</label>
+          <label className="text-body-sm text-muted">Brand Color (optional)</label>
           <input
             type="text"
             value={spawnNppForm.brandColor}
@@ -138,14 +138,14 @@ export function SpawnNppPanel({
               dispatch({ type: "SET_SPAWN_NPP_FORM", value: { brandColor: e.target.value } })
             }
             placeholder="#3b82f6"
-            className="w-full rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-full rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
       </div>
 
       {spawnNppResult && (
         <div
-          className={`rounded-lg px-4 py-3 text-sm ${
+          className={`rounded-lg px-4 py-3 text-body ${
             spawnNppResult.success
               ? "bg-success/10 border border-success/30"
               : "bg-error/10 border border-error/30"
@@ -156,7 +156,7 @@ export function SpawnNppPanel({
               <p className="text-success font-medium">
                 Spawned #{spawnNppResult.sequentialId}: {spawnNppResult.name}
               </p>
-              <p className="text-xs text-muted">Corp ID: {spawnNppResult.corporationId}</p>
+              <p className="text-body-sm text-muted">Corp ID: {spawnNppResult.corporationId}</p>
             </div>
           ) : (
             <p className="text-error">{spawnNppResult.error}</p>
@@ -229,7 +229,7 @@ export function SpawnNppPanel({
           disabled={
             spawnNppLoading || !spawnNppForm.name.trim() || !spawnNppForm.headquartersState.trim()
           }
-          className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
+          className="text-body-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
         >
           {spawnNppLoading ? "Spawning…" : "Spawn corporation"}
         </button>
@@ -288,7 +288,7 @@ export function SpawnNppPanel({
             }
           }}
           disabled={spawnNppLoading || !spawnNppForm.countryId}
-          className="text-xs px-3 py-1.5 rounded bg-secondary text-secondary-foreground hover:opacity-90 disabled:opacity-40"
+          className="text-body-sm px-3 py-1.5 rounded bg-secondary text-secondary-foreground hover:opacity-90 disabled:opacity-40"
         >
           {spawnNppLoading ? "Spawning…" : "Batch spawn all sectors"}
         </button>
@@ -297,7 +297,7 @@ export function SpawnNppPanel({
             dispatch({ type: "SET_INLINE", value: null });
             dispatch({ type: "SET_SPAWN_NPP_RESULT", value: null });
           }}
-          className="text-xs text-muted hover:text-foreground"
+          className="text-body-sm text-muted hover:text-foreground"
         >
           Cancel
         </button>

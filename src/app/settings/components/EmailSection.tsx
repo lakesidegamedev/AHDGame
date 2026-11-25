@@ -63,14 +63,16 @@ export function EmailSection({ email, hasPassword }: Props) {
   };
 
   const inputCls =
-    "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed";
+    "w-full rounded-xl border border-card-border bg-background px-4 py-2.5 text-body focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed";
 
   if (accountFieldsMode !== "off") {
     return (
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-muted mb-1">{t("page.email")}</label>
-          <div className="rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+          <label className="block text-body-sm font-medium text-muted mb-1">
+            {t("page.email")}
+          </label>
+          <div className="rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-body text-foreground">
             {hasRealEmail ? email : t("email.noneOnFile")}
           </div>
         </div>
@@ -82,30 +84,30 @@ export function EmailSection({ email, hasPassword }: Props) {
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-muted mb-1">{t("page.email")}</label>
+        <label className="block text-body-sm font-medium text-muted mb-1">{t("page.email")}</label>
         <div className="flex items-center gap-2">
-          <div className="flex-1 rounded-xl border border-card-border bg-background/50 px-4 py-2.5 text-sm text-foreground">
+          <div className="flex-1 rounded-xl border border-card-border bg-card-muted px-4 py-2.5 text-body text-foreground">
             {hasRealEmail ? email : t("email.noneOnFile")}
           </div>
           {!editing && (
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-xl border border-card-border px-3 py-2.5 text-sm font-medium hover:bg-card-border/40 transition-colors"
+              className="rounded-xl border border-card-border px-3 py-2.5 text-body font-medium hover:bg-card-border/40 transition-colors"
             >
               {hasRealEmail ? t("email.change") : t("email.add")}
             </button>
           )}
         </div>
         {!hasRealEmail && !editing && (
-          <p className="mt-1 text-xs text-muted">{t("email.noneHint")}</p>
+          <p className="mt-1 text-body-sm text-muted">{t("email.noneHint")}</p>
         )}
       </div>
 
       {editing && (
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label htmlFor="newEmail" className="block text-sm font-medium mb-1.5">
+            <label htmlFor="newEmail" className="block text-body font-medium mb-1.5">
               {t("email.newEmail")}
             </label>
             <input
@@ -120,7 +122,7 @@ export function EmailSection({ email, hasPassword }: Props) {
           </div>
           {hasPassword && (
             <div>
-              <label htmlFor="emailCurrentPassword" className="block text-sm font-medium mb-1.5">
+              <label htmlFor="emailCurrentPassword" className="block text-body font-medium mb-1.5">
                 {t("security.currentPassword")}
               </label>
               <input
@@ -134,12 +136,12 @@ export function EmailSection({ email, hasPassword }: Props) {
               />
             </div>
           )}
-          <p className="text-xs text-muted">{t("email.verifyHint")}</p>
+          <p className="text-body-sm text-muted">{t("email.verifyHint")}</p>
           <div className="flex items-center gap-2">
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-primary px-4 py-2.5 font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed flex items-center gap-2"
             >
               {submitting && <SpinnerIcon />}
               {submitting ? t("email.sending") : t("email.sendLink")}
@@ -151,7 +153,7 @@ export function EmailSection({ email, hasPassword }: Props) {
                 setError("");
               }}
               disabled={submitting}
-              className="rounded-xl px-4 py-2.5 text-sm text-muted hover:text-foreground transition-colors"
+              className="rounded-xl px-4 py-2.5 text-body text-muted hover:text-foreground transition-colors"
             >
               {t("common.cancel")}
             </button>

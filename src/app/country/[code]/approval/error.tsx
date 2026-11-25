@@ -49,10 +49,10 @@ export default function CountryError({ error, reset }: CountryErrorProps) {
     return (
       <main className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
         <div role="status" aria-live="polite" className="max-w-md text-center space-y-2">
-          <h1 className="text-lg font-semibold text-foreground">
+          <h1 className="text-heading font-semibold text-foreground">
             {t("error.networkRetryingTitle")}
           </h1>
-          <p className="text-sm text-muted">{t("error.networkRetryingDescription")}</p>
+          <p className="text-body text-muted">{t("error.networkRetryingDescription")}</p>
         </div>
       </main>
     );

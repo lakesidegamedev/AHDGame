@@ -24,7 +24,7 @@ export function HealPanelActions({
       <button
         onClick={onDiagnose}
         disabled={loading}
-        className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
+        className="rounded-lg border border-card-border bg-background px-3 py-2 text-body-sm font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
       >
         {loading ? diagnosePendingLabel : "Diagnose"}
       </button>
@@ -33,8 +33,8 @@ export function HealPanelActions({
         disabled={loading}
         className={
           healTone === "warning"
-            ? "rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
-            : "rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+            ? "rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-body-sm font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+            : "rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
         }
       >
         {loading ? healPendingLabel : healLabel}
@@ -46,7 +46,7 @@ export function HealPanelActions({
 export function HealPanelMessage({ result }: { result: HealPanelResult | null }) {
   return (
     result && (
-      <p className={`text-xs font-medium ${result.ok ? "text-success" : "text-error"}`}>
+      <p className={`text-body-sm font-medium ${result.ok ? "text-success" : "text-error"}`}>
         {result.message}
       </p>
     )

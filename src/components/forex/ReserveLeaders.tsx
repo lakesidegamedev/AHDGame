@@ -31,12 +31,12 @@ export function ReserveLeaders({ leaders }: Props) {
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-foreground">Reserve currencies</h2>
-          <span className="rounded-full border border-card-border px-2.5 py-0.5 text-[10px] font-medium text-muted">
+          <h2 className="text-body font-semibold text-foreground">Reserve currencies</h2>
+          <span className="rounded-full border border-card-border px-2.5 py-0.5 text-body-sm font-medium text-muted">
             Top-3 perk · −50 / −25 / −12.5% volatility
           </span>
         </div>
-        <p className="text-xs text-muted mt-1">
+        <p className="text-body-sm text-muted mt-1">
           Every currency ranked by FX reserves held across all central banks (a country&apos;s own
           domestic lending reserve doesn&apos;t count). The top three earn{" "}
           <span className="font-medium text-foreground/70">safe-haven status</span>: their rate
@@ -54,7 +54,7 @@ export function ReserveLeaders({ leaders }: Props) {
           return (
             <li key={leader.currencyCode} className="flex items-center gap-4 px-5 py-3">
               <span
-                className={`w-6 shrink-0 text-center font-mono text-sm font-bold tabular-nums ${
+                className={`w-6 shrink-0 text-center font-mono text-body font-bold tabular-nums ${
                   hasBuff ? "text-foreground" : "text-muted"
                 }`}
               >
@@ -63,19 +63,19 @@ export function ReserveLeaders({ leaders }: Props) {
               <CountryFlag country={flagCountry} size="sm" className="shrink-0 rounded-[2px]" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-body font-semibold text-foreground">
                     {leader.currencyCode}
                   </span>
-                  <span className="truncate text-xs text-muted">
+                  <span className="truncate text-body-sm text-muted">
                     {CURRENCY_NAMES[leader.currencyCode] ?? leader.currencyCode}
                   </span>
                   {leader.isLeading && (
-                    <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] font-medium text-muted">
+                    <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm font-medium text-muted">
                       Leading exchange currency
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-body-sm text-muted">
                   <span>
                     {formatCurrencyFaceAmount(leader.units, leader.currencyCode)} held in reserve
                   </span>
@@ -88,7 +88,7 @@ export function ReserveLeaders({ leaders }: Props) {
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-sm font-semibold tabular-nums text-foreground">
+                <div className="text-body font-semibold tabular-nums text-foreground">
                   {formatAmount(leader.internalValue)}
                 </div>
                 <div className="text-body-sm font-medium text-muted">Reserve value</div>

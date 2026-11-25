@@ -82,8 +82,8 @@ export function TierSettingPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">{config.name}</h2>
-        <p className="text-sm text-muted mt-1">{config.description}</p>
+        <h2 className="text-heading font-semibold text-foreground">{config.name}</h2>
+        <p className="text-body text-muted mt-1">{config.description}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -107,10 +107,10 @@ export function TierSettingPanel({
                 .trim()}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-foreground text-sm">{option.label}</span>
+                <span className="font-semibold text-foreground text-body">{option.label}</span>
                 {isActive && <span className="text-body-sm font-medium text-primary">Active</span>}
               </div>
-              <p className="text-xs text-muted leading-snug">{option.description}</p>
+              <p className="text-body-sm text-muted leading-snug">{option.description}</p>
             </button>
           );
         })}
@@ -127,7 +127,7 @@ export function TierSettingPanel({
         </Button>
         {feedback && (
           <span
-            className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+            className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
           >
             {feedback.message}
           </span>

@@ -36,8 +36,8 @@ function Board({
   return (
     <section className="overflow-hidden rounded-lg border border-card-border bg-card shadow-panel">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-card-border px-4 py-2.5">
-        <h2 className="font-mono text-sm font-bold text-foreground">{label}</h2>
-        {sub ? <span className="font-mono text-body-xs text-muted">{sub}</span> : null}
+        <h2 className="font-mono text-body font-bold text-foreground">{label}</h2>
+        {sub ? <span className="font-mono text-body-sm text-muted">{sub}</span> : null}
       </div>
       <div className="flex flex-col gap-2.5 p-4">{children}</div>
     </section>
@@ -96,12 +96,12 @@ function StatRow({
         {score !== null && badge ? (
           <ScoreBadge score={score} label={badge.label} />
         ) : (
-          <span className="font-mono text-body-xs text-muted">—</span>
+          <span className="font-mono text-body-sm text-muted">—</span>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-body font-semibold leading-snug text-foreground">{name}</div>
-        <div className="mt-1.5 flex flex-wrap gap-3 text-body-xs text-muted">
+        <div className="mt-1.5 flex flex-wrap gap-3 text-body-sm text-muted">
           {nationalAverage != null && Number.isFinite(nationalAverage) ? (
             <span>
               National · {fmt(nationalAverage)}

@@ -190,7 +190,7 @@ export default function MarketPositionPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="mb-4 text-lg font-bold text-foreground">
+      <h2 className="mb-4 text-heading font-bold text-foreground">
         {compact
           ? "Market position"
           : `Market Position: ${sector.sectorLabel} in ${sector.stateName}`}
@@ -207,7 +207,7 @@ export default function MarketPositionPanel({
             size={pieSize}
           />
         </div>
-        <div className="w-full flex-1 space-y-1.5 text-xs">
+        <div className="w-full flex-1 space-y-1.5 text-body-sm">
           <div className="flex justify-between text-muted">
             <Tooltip content={marketCurrencyNote}>
               <span className="cursor-help border-b border-dashed border-card-border/70">
@@ -256,7 +256,7 @@ export default function MarketPositionPanel({
                 />
                 <span className="truncate text-muted">
                   NPP field
-                  <span className="ml-1 text-[10px] text-muted">
+                  <span className="ml-1 text-body-sm text-muted">
                     ({nppRivals.length} corp{nppRivals.length === 1 ? "" : "s"})
                   </span>
                 </span>
@@ -328,9 +328,9 @@ export default function MarketPositionPanel({
                 Your capacity revenue
               </span>
             </Tooltip>
-            <span className="text-sm font-bold tabular-nums text-success">
+            <span className="text-body font-bold tabular-nums text-success">
               {financials ? fmtCorpSectorMoney(perTurn(financials.revenue)) : "n/a"}
-              <span className="text-[10px] font-normal text-muted">/turn</span>
+              <span className="text-body-sm font-normal text-muted">/turn</span>
             </span>
           </div>
           <div>
@@ -339,24 +339,24 @@ export default function MarketPositionPanel({
                 Your share
               </span>
             </Tooltip>
-            <span className="text-sm font-bold tabular-nums text-primary">
+            <span className="text-body font-bold tabular-nums text-primary">
               {formatPercent(Number(market.marketShare))}
             </span>
           </div>
           <div>
             <span className="block text-body-sm font-medium text-muted">Competitors</span>
-            <span className="text-sm font-bold text-foreground">{market.competitors.length}</span>
+            <span className="text-body font-bold text-foreground">{market.competitors.length}</span>
           </div>
         </div>
       )}
       {!compact && financials?.realizedRevenue != null && (
-        <p className="mt-3 text-[11px] leading-snug text-muted">
+        <p className="mt-3 text-body-sm leading-snug text-muted">
           Earned last turn: {fmtCorpSectorMoney(perTurn(financials.realizedRevenue))}/turn. Market
           and share use capacity revenue, so earnings can be above or below the market total.
         </p>
       )}
       {unservedLines.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">
+        <ul className="mt-3 space-y-1 border-t border-card-border/60 pt-2 text-body-sm leading-snug text-muted">
           {unservedLines.map((line) => (
             <li key={line.commodity}>
               <span className="font-medium text-foreground">
@@ -368,7 +368,7 @@ export default function MarketPositionPanel({
         </ul>
       )}
       {market.attackExposure && (
-        <p className="mt-3 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">
+        <p className="mt-3 border-t border-card-border/60 pt-2 text-body-sm leading-snug text-muted">
           Exposure: {market.attackExposure.rivalName}, the strongest marketer already in this
           market, could try to take {market.attackExposure.plantsAtRisk} of your{" "}
           {market.attackExposure.plantCount} plants with a{" "}
@@ -377,7 +377,7 @@ export default function MarketPositionPanel({
         </p>
       )}
       {(clearingEnabled || capitalEnabled) && (
-        <p className="mt-3 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">
+        <p className="mt-3 border-t border-card-border/60 pt-2 text-body-sm leading-snug text-muted">
           {capitalEnabled
             ? "Revenue (and therefore this sector's valuation and share price) is limited by how much your capacity produces and how much of it actually sells. "
             : "Revenue (and therefore this sector's valuation and share price) reflects how much of your output actually sold this turn, not just your list price. "}

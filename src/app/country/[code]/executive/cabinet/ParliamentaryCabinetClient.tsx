@@ -319,7 +319,7 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
     <>
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8 overflow-x-hidden">
-          <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <nav className="flex flex-wrap items-center gap-2 text-body">
             <Link
               href={governmentLinkPath}
               className="text-muted hover:text-foreground transition-colors"
@@ -343,10 +343,10 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                 aria-hidden
               />
               <div className="absolute inset-0 flex flex-col justify-end px-5 pb-4 sm:px-6 sm:pb-5">
-                <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-2xl">
+                <h1 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-heading">
                   {heroTitle}
                 </h1>
-                <p className="mt-1 text-sm text-white/90 drop-shadow sm:text-base">
+                <p className="mt-1 text-body text-white/90 drop-shadow sm:text-body-lg">
                   {hero.tagline}
                 </p>
               </div>
@@ -354,9 +354,9 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
             <div className="flex items-center overflow-x-auto divide-x divide-card-border border-t border-card-border">
               <div className="flex flex-col px-5 py-3 min-w-[110px]">
                 <span className="text-body-sm font-medium text-muted">Positions</span>
-                <span className="text-base font-bold tabular-nums">
+                <span className="text-body-lg font-bold tabular-nums">
                   {filledCount}
-                  <span className="text-xs font-normal text-muted">
+                  <span className="text-body-sm font-normal text-muted">
                     {" "}
                     / {state.data.positions.length} filled
                   </span>
@@ -387,10 +387,10 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
 
           {activeTab === "overview" && (
             <>
-              <p className="text-sm text-muted mb-6 max-w-2xl">{description}</p>
+              <p className="text-body text-muted mb-6 max-w-2xl">{description}</p>
 
               <section>
-                <h2 className="text-sm font-semibold text-muted mb-4">Cabinet positions</h2>
+                <h2 className="text-body font-semibold text-muted mb-4">Cabinet positions</h2>
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {/* Render the API roster — it is year-resolved (era-gated
                       seats filtered, era names substituted), unlike the static
@@ -431,7 +431,7 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                             />
                           )}
                           {isOnCooldown && !member && (
-                            <span className="text-amber-600 text-sm">
+                            <span className="text-amber-600 text-body">
                               Cooldown: {formatCooldownRemaining(cooldownUntil!)}
                             </span>
                           )}
@@ -484,7 +484,7 @@ export default function ParliamentaryCabinetClient({ config }: Props) {
                         {!positionData?.isHeadOfGovernment && (
                           <Link
                             href={`${governmentLinkPath}/cabinet/${pos.id}/office`}
-                            className="mt-2 block text-xs text-primary hover:underline"
+                            className="mt-2 block text-body-sm text-primary hover:underline"
                           >
                             View office →
                           </Link>

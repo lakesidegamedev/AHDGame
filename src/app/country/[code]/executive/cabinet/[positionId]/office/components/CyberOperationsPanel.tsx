@@ -64,8 +64,8 @@ export function CyberOperationsPanel({
   }, [url]);
   useEffect(load, [load]);
 
-  if (failed) return <p className="text-sm text-muted">{t("unavailable")}</p>;
-  if (!view) return <p className="text-sm text-muted">{t("loading")}</p>;
+  if (failed) return <p className="text-body text-muted">{t("unavailable")}</p>;
+  if (!view) return <p className="text-body text-muted">{t("loading")}</p>;
 
   const selected = view.targets.find((row) => row.countryId === target) ?? null;
   const canAfford = view.balance >= view.cost;
@@ -103,30 +103,30 @@ export function CyberOperationsPanel({
 
   return (
     <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
-      <h2 className="text-lg text-foreground">{t("title")}</h2>
-      <p className="mt-0.5 max-w-2xl text-sm text-muted">{t("intro")}</p>
+      <h2 className="text-heading text-foreground">{t("title")}</h2>
+      <p className="mt-0.5 max-w-2xl text-body text-muted">{t("intro")}</p>
 
       {problem && (
-        <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-foreground">
+        <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-body text-foreground">
           {problem}
         </p>
       )}
       {notice && (
-        <p className="mt-3 rounded-lg border border-card-border bg-background p-3 text-sm text-foreground">
+        <p className="mt-3 rounded-lg border border-card-border bg-background p-3 text-body text-foreground">
           {notice}
         </p>
       )}
       {!view.hasDirector && (
-        <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-foreground">
+        <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-body text-foreground">
           {t("noDirector")}
         </p>
       )}
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col text-xs text-muted">
+        <label className="flex flex-col text-body-sm text-muted">
           {t("target")}
           <select
-            className="mt-1 rounded border border-card-border bg-background p-2 text-sm text-foreground"
+            className="mt-1 rounded border border-card-border bg-background p-2 text-body text-foreground"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
           >
@@ -142,7 +142,7 @@ export function CyberOperationsPanel({
           type="button"
           disabled={busy || launchBlocked}
           onClick={() => submit("launch")}
-          className="rounded bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded bg-primary px-3 py-2 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           {busy ? t("working") : t("launch")}
         </button>
@@ -150,14 +150,14 @@ export function CyberOperationsPanel({
           type="button"
           disabled={busy || !target || !!selected?.standDownRefusal}
           onClick={() => submit("stand_down")}
-          className="rounded border border-card-border px-3 py-2 text-sm text-foreground disabled:opacity-50"
+          className="rounded border border-card-border px-3 py-2 text-body text-foreground disabled:opacity-50"
         >
           {t("standDown")}
         </button>
       </div>
 
       {selected && (
-        <div className="mt-3 space-y-1 text-sm text-muted">
+        <div className="mt-3 space-y-1 text-body text-muted">
           {selected.refusal && <p>{t(`refusal.${selected.refusal}`)}</p>}
           {selected.odds && (
             <>
@@ -179,11 +179,11 @@ export function CyberOperationsPanel({
 
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
         <div>
-          <h3 className="text-sm font-semibold text-muted">{t("trucesTitle")}</h3>
+          <h3 className="text-body-lg font-semibold text-muted">{t("trucesTitle")}</h3>
           {view.truces.length === 0 ? (
-            <p className="mt-1 text-sm text-muted">{t("noTruces")}</p>
+            <p className="mt-1 text-body text-muted">{t("noTruces")}</p>
           ) : (
-            <ul className="mt-1 space-y-1 text-sm text-foreground">
+            <ul className="mt-1 space-y-1 text-body text-foreground">
               {view.truces.map((truce) => (
                 <li key={truce.countryId}>
                   {t("truce", {
@@ -197,11 +197,11 @@ export function CyberOperationsPanel({
           )}
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-muted">{t("operationsTitle")}</h3>
+          <h3 className="text-body-lg font-semibold text-muted">{t("operationsTitle")}</h3>
           {view.operations.length === 0 ? (
-            <p className="mt-1 text-sm text-muted">{t("noOperations")}</p>
+            <p className="mt-1 text-body text-muted">{t("noOperations")}</p>
           ) : (
-            <ul className="mt-1 space-y-1 text-sm text-foreground">
+            <ul className="mt-1 space-y-1 text-body text-foreground">
               {view.operations.map((op, index) => {
                 const name = op.countryId ? getCountryDisplayName(op.countryId as never) : "";
                 const result = op.succeeded ? "success" : "failed";

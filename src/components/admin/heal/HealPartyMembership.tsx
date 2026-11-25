@@ -33,8 +33,8 @@ export function HealPartyMembership() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal party membership</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal party membership</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Fixes characters and NPPs whose party assignment doesn&apos;t match their country. This
           can happen after party ID migrations when a US player ends up in a UK party (or vice
           versa). Members are reassigned to a party with the same name in their correct country.
@@ -51,7 +51,7 @@ export function HealPartyMembership() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           {diagnostic.status === "ok" ? (
             <p className="text-success">{diagnostic.message}</p>
           ) : (
@@ -59,7 +59,7 @@ export function HealPartyMembership() {
               <p className="font-medium text-warning">{diagnostic.message}</p>
               {diagnostic.records.length > 0 && (
                 <div className="mt-2 max-h-64 overflow-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-body-sm">
                     <thead>
                       <tr className="text-left text-muted border-b border-card-border">
                         <th className="pb-1">Name</th>
@@ -75,7 +75,7 @@ export function HealPartyMembership() {
                           <td className="py-1 font-medium">{r.name}</td>
                           <td className="py-1">
                             <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded ${r.type === "character" ? "bg-primary/20 text-primary" : "bg-muted/30 text-muted"}`}
+                              className={`text-body-sm px-1.5 py-0.5 rounded ${r.type === "character" ? "bg-primary/20 text-primary" : "bg-muted/30 text-muted"}`}
                             >
                               {r.type === "character" ? "Player" : "NPP"}
                             </span>

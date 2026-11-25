@@ -24,7 +24,7 @@ export function PendingTakingsSection({
 }) {
   return (
     <section className="rounded-xl border border-card-border bg-card p-5">
-      <h2 className="text-heading-sm font-semibold text-foreground">Pending takings</h2>
+      <h2 className="text-heading font-semibold text-foreground">Pending takings</h2>
       <p className="mt-1 text-body-sm text-muted">
         Authorized nationalizations in their notice window. Curable conditions cleared before the
         deadline cancel the taking.
@@ -42,13 +42,13 @@ export function PendingTakingsSection({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-body-sm font-medium text-foreground">{p.targetName}</span>
-                  <span className="text-body-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     {turnsLeft} turn{turnsLeft === 1 ? "" : "s"} left ·{" "}
                     {TIER_LABEL[p.tier as CompensationTier] ?? p.tier} ·{" "}
                     {PATH_LABEL[p.method as NationalizationPath] ?? p.method}
                   </span>
                 </div>
-                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-xs text-muted">
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
                   <span>cited: {triggerLabels(p.triggers)}</span>
                   {p.curableTriggers.length > 0 ? (
                     <span className="text-warning">

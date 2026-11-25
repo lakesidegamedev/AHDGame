@@ -55,9 +55,12 @@ describe("SuperTabNav folder variant", () => {
     expect(document.querySelector("[data-folder-panel]")).not.toBeNull();
   });
 
-  it("default variant is unchanged", () => {
+  it("default variant marks the selected tab with the filled primary pill", () => {
     renderNav();
-    expect(screen.getByRole("button", { name: /Overview/ }).className).toContain("border-b-2");
+    const selected = screen.getByRole("button", { name: /Overview/ }).className;
+    expect(selected).toContain("bg-primary");
+    expect(selected).toContain("text-primary-foreground");
+    expect(selected).not.toContain("border-b-2");
     expect(document.querySelector("[data-folder-panel]")).toBeNull();
   });
 

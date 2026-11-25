@@ -140,11 +140,11 @@ export function ReshufflePanel({
     >
       <h2
         id="cabinet-reshuffle-heading"
-        className="text-sm font-semibold uppercase tracking-widest text-muted"
+        className="text-body font-semibold uppercase tracking-widest text-muted"
       >
         Cabinet reshuffle
       </h2>
-      <p className="mt-2 text-sm text-foreground" aria-live="polite">
+      <p className="mt-2 text-body text-foreground" aria-live="polite">
         {available ? (
           <>Reshuffle available: the whole cabinet can be replaced in one action.</>
         ) : (
@@ -163,7 +163,7 @@ export function ReshufflePanel({
         </Button>
       )}
       {isPrimeMinister && !available && (
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-body text-muted">
           Individual ministers can still be removed with Fire; each firing dents government
           confidence.
         </p>
@@ -174,17 +174,17 @@ export function ReshufflePanel({
           {error && (
             <p
               role="alert"
-              className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
+              className="rounded-lg border border-error/30 bg-error/10 p-3 text-body text-error"
             >
               {error}
             </p>
           )}
           {candidatesLoading ? (
-            <p className="text-sm text-muted" aria-live="polite">
+            <p className="text-body text-muted" aria-live="polite">
               Loading eligible candidates...
             </p>
           ) : candidates.length === 0 ? (
-            <p className="text-sm text-muted">No eligible candidates found.</p>
+            <p className="text-body text-muted">No eligible candidates found.</p>
           ) : (
             <ul className="space-y-2">
               {portfolioSeats.map((seat) => (
@@ -194,7 +194,7 @@ export function ReshufflePanel({
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground">{seat.name}</p>
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       {seat.member?.isNPP
                         ? `Held by ${seat.member.characterName} (NPP): unchanged by a reshuffle`
                         : seat.member
@@ -212,7 +212,7 @@ export function ReshufflePanel({
                     onChange={(e) =>
                       setSelections((prev) => ({ ...prev, [seat.id]: e.target.value }))
                     }
-                    className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-50"
+                    className="rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground disabled:opacity-50"
                   >
                     <option value="">Leave vacant</option>
                     {candidates.map((candidate) => (

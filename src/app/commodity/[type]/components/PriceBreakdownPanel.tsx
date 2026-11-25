@@ -23,9 +23,9 @@ export default function PriceBreakdownPanel({
   return (
     <section
       aria-label="Price breakdown"
-      className="mb-4 rounded-lg border border-card-border bg-card p-4 text-sm"
+      className="mb-4 rounded-lg border border-card-border bg-card p-4 text-body"
     >
-      <h2 className="mb-2 text-base font-semibold">What is in this price</h2>
+      <h2 className="mb-2 text-body-lg font-semibold">What is in this price</h2>
       <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
         <div className="flex justify-between gap-2">
           <dt className="text-muted">Base price</dt>
@@ -48,7 +48,7 @@ export default function PriceBreakdownPanel({
           </div>
         )}
       </dl>
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         The premium builds up while a good is short and only eases back at a set pace once supply
         catches up, so a well supplied good can still sit near its top price for a while.{" "}
         {premiumTrendSentence(

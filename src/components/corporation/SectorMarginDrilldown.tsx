@@ -28,7 +28,7 @@ function PolicyMeterTone(level: number): "up" | "down" | "warning" {
 function ModifierLine({ label, value }: { label: string; value: number }) {
   const tone = value > 0 ? "text-success" : value < 0 ? "text-error" : "text-muted";
   return (
-    <div className="flex items-center justify-between py-1 text-[12px]">
+    <div className="flex items-center justify-between py-1 text-body-sm">
       <span className="text-muted">{label}</span>
       <span className={`font-semibold tabular-nums ${tone}`}>
         {value > 0 ? "+" : ""}
@@ -45,7 +45,7 @@ function Group({ title, rows }: { title: string; rows: ModRow[] }) {
   if (present.length === 0) return null;
   return (
     <div>
-      <div className="mb-1 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
+      <div className="mb-1 border-b border-card-border pb-1 text-body font-semibold text-foreground">
         {title}
       </div>
       {present.map((r) => (
@@ -158,7 +158,7 @@ export function SectorMarginDrilldown({
           <span className="text-body-sm font-medium text-primary">
             {statement ? "Site net margin" : "Effective margin build"}
           </span>
-          <span className="text-[11px] text-muted">
+          <span className="text-body-sm text-muted">
             {!statement && base != null ? `base ${base.toFixed(1)}% → ` : ""}
             <span
               className={`font-semibold ${(statement ? statement.profit >= 0 : net == null || net >= 0) ? "text-success" : "text-error"}`}
@@ -206,24 +206,24 @@ export function SectorMarginDrilldown({
                 )}
               </>
             ) : (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 No revenue this turn, so net margin has no percentage. See the profit and cost
                 amounts beside it.
               </p>
             )}
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               Internal income and charges cancel in company totals. Estimated value of free
               deliveries is separate from this result.
             </p>
           </>
         ) : physical ? (
           <>
-            <div className="flex items-center justify-between border-b border-card-border py-1 text-[12px]">
+            <div className="flex items-center justify-between border-b border-card-border py-1 text-body-sm">
               <span className="text-foreground">Realized revenue</span>
               <span className="font-semibold tabular-nums text-foreground">100.0%</span>
             </div>
             <div className="pt-2">
-              <div className="mb-1 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
+              <div className="mb-1 border-b border-card-border pb-1 text-body font-semibold text-foreground">
                 What this sector pays
               </div>
               <ModifierLine label="Inputs (at market prices)" value={-physical.inputsPp} />
@@ -233,7 +233,7 @@ export function SectorMarginDrilldown({
                 <ModifierLine label="Policy, tax and support" value={physical.policyPp} />
               )}
             </div>
-            <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-[12px]">
+            <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-body-sm">
               <span className="font-semibold text-foreground">Effective margin</span>
               <span
                 className={`font-bold tabular-nums ${effective >= 0 ? "text-success" : "text-error"}`}
@@ -241,7 +241,7 @@ export function SectorMarginDrilldown({
                 {effective.toFixed(1)}%
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-snug text-muted">
+            <p className="mt-2 text-body-sm leading-snug text-muted">
               This margin comes from real costs, so the cost lines above always add up to it. Every
               modifier listed below reaches your profit through the single &ldquo;policy, tax and
               support&rdquo; line, which the sector page shows in money with each modifier&rsquo;s
@@ -250,7 +250,7 @@ export function SectorMarginDrilldown({
           </>
         ) : (
           <>
-            <div className="flex items-center justify-between border-b border-card-border py-1 text-[12px]">
+            <div className="flex items-center justify-between border-b border-card-border py-1 text-body-sm">
               <span className="text-foreground">Base sector margin</span>
               <span className="font-semibold tabular-nums text-foreground">
                 {base != null ? `${base.toFixed(1)}%` : "n/a"}
@@ -260,7 +260,7 @@ export function SectorMarginDrilldown({
         )}
 
         {physical && (
-          <div className="mt-3 mb-1 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
+          <div className="mt-3 mb-1 border-b border-card-border pb-1 text-body font-semibold text-foreground">
             What shapes those costs
           </div>
         )}
@@ -268,11 +268,11 @@ export function SectorMarginDrilldown({
           <Group title="State conditions" rows={stateRows} />
           {sector.regionalConditionModifiers && sector.regionalConditionModifiers.length > 0 && (
             <div>
-              <div className="mb-1 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
+              <div className="mb-1 border-b border-card-border pb-1 text-body font-semibold text-foreground">
                 Regional conditions
               </div>
               {sector.regionalConditionModifiers.map((rc) => (
-                <div key={rc.label} className="flex items-center justify-between py-1 text-[12px]">
+                <div key={rc.label} className="flex items-center justify-between py-1 text-body-sm">
                   <span className="text-muted">{rc.label}</span>
                   <span
                     className={`font-semibold tabular-nums ${rc.marginEffect > 0 ? "text-success" : rc.marginEffect < 0 ? "text-error" : "text-muted"}`}
@@ -288,10 +288,10 @@ export function SectorMarginDrilldown({
           <Group title="National economy" rows={nationalRows} />
           {!statement && !physical && otherFactors != null && Math.abs(otherFactors) >= 0.05 && (
             <div>
-              <div className="mb-1 border-b border-card-border pb-1 text-sm font-semibold text-foreground">
+              <div className="mb-1 border-b border-card-border pb-1 text-body font-semibold text-foreground">
                 Other factors
               </div>
-              <div className="flex items-center justify-between py-1 text-[12px]">
+              <div className="flex items-center justify-between py-1 text-body-sm">
                 <span className="text-muted">
                   Sprawl, dominance, subsidies &amp; more: see full breakdown
                 </span>
@@ -307,7 +307,7 @@ export function SectorMarginDrilldown({
         </div>
 
         {!statement && !physical && net != null && (
-          <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-[12px]">
+          <div className="mt-2 flex items-center justify-between border-t border-card-border pt-2 text-body-sm">
             <span className="font-semibold text-foreground">Net modifiers</span>
             <span className={`font-bold tabular-nums ${net >= 0 ? "text-success" : "text-error"}`}>
               {net >= 0 ? "+" : ""}
@@ -317,7 +317,7 @@ export function SectorMarginDrilldown({
         )}
 
         {isDominant && (
-          <div className="mt-2.5 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning">
+          <div className="mt-2.5 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-body-sm text-warning">
             Dominance: holding {sector.marketSharePercent.toFixed(0)}% of this market draws a
             regulatory burden that drags the margin and attracts antitrust scrutiny.
           </div>
@@ -326,7 +326,7 @@ export function SectorMarginDrilldown({
         <div className="mt-2 text-right">
           <Link
             href={`/corporation/${corpId}/sector/${sector._id}`}
-            className="text-[11px] font-medium text-secondary hover:underline"
+            className="text-body-sm font-medium text-secondary hover:underline"
           >
             Full breakdown →
           </Link>
@@ -337,29 +337,29 @@ export function SectorMarginDrilldown({
       <div className="rounded-[var(--corp-rad,6px)] border border-card-border bg-card p-3.5">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-body-sm font-medium text-primary">Production policy</span>
-          <span className="text-[11px] text-muted">read-only</span>
+          <span className="text-body-sm text-muted">read-only</span>
         </div>
 
         <div className="flex items-end justify-between">
-          <div className="text-3xl font-bold tabular-nums text-foreground">
+          <div className="text-display font-bold tabular-nums text-foreground">
             {policyLevel > 0 ? "+" : ""}
             {policyLevel}
-            <span className="text-base text-muted">/25</span>
+            <span className="text-body-lg text-muted">/25</span>
           </div>
-          <div className="max-w-[55%] text-right text-[11px] text-muted">{policyDesc}</div>
+          <div className="max-w-[55%] text-right text-body-sm text-muted">{policyDesc}</div>
         </div>
 
         <div className="mt-3">
           <Meter value={policyPct} tone={PolicyMeterTone(policyLevel)} height={6} />
         </div>
-        <div className="mt-1 flex justify-between text-[10px] text-muted">
+        <div className="mt-1 flex justify-between text-body-sm text-muted">
           <span>−25 restrict</span>
           <span>0</span>
           <span>+25 flood</span>
         </div>
 
         {policyTarget !== policyLevel && (
-          <div className="mt-2 text-[11px] text-muted">
+          <div className="mt-2 text-body-sm text-muted">
             Target{" "}
             <span className="font-semibold text-foreground">
               {policyTarget > 0 ? "+" : ""}
@@ -370,7 +370,7 @@ export function SectorMarginDrilldown({
           </div>
         )}
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+        <div className="mt-3 grid grid-cols-3 gap-2 text-body-sm">
           <div>
             <div className="text-body-sm font-medium text-muted">Workers</div>
             <div className="font-bold tabular-nums text-foreground">
@@ -393,7 +393,7 @@ export function SectorMarginDrilldown({
           <div className="mt-3 text-right">
             <Link
               href={`/corporation/${corpId}/sector/${sector._id}`}
-              className="text-[11px] font-medium text-secondary hover:underline"
+              className="text-body-sm font-medium text-secondary hover:underline"
             >
               Set production policy →
             </Link>

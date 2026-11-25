@@ -103,7 +103,7 @@ function PartyButton({
         </span>
       </span>
       {/* A bare count beside "X leads" read as "leads 1": name what it counts. */}
-      <span style={{ fontFamily: FONT.mono, fontSize: 10, color: BLEND.mutedDimmer }}>
+      <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.mutedDimmer }}>
         {p.filed} filed
       </span>
     </button>
@@ -126,7 +126,7 @@ function DelegateRace({ vm, height }: { vm: PrimaryBlendVM; height: number }) {
               alignItems: "center",
               justifyContent: "center",
               fontFamily: FONT.mono,
-              fontSize: 10.5,
+              fontSize: 12,
               fontWeight: 700,
               color: "#14141c",
               overflow: "hidden",
@@ -155,7 +155,7 @@ function DelegateRace({ vm, height }: { vm: PrimaryBlendVM; height: number }) {
           display: "flex",
           justifyContent: "space-between",
           fontFamily: FONT.mono,
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: ".1em",
           color: BLEND.mutedDimmer,
         }}
@@ -231,7 +231,7 @@ function MobileCampaignLine({
         flexWrap: "wrap",
         gap: 12,
         fontFamily: FONT.mono,
-        fontSize: 11.5,
+        fontSize: 12,
         color: BLEND.muted,
         width: "100%",
         minWidth: 0,
@@ -306,7 +306,7 @@ function CalendarWaves({
             <span
               style={{
                 fontFamily: FONT.mono,
-                fontSize: 10.5,
+                fontSize: 12,
                 color: k.color,
                 whiteSpace: "nowrap",
               }}
@@ -347,7 +347,7 @@ function WaveStates({
             borderRadius: 3,
             cursor: "pointer",
             fontFamily: FONT.mono,
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: ".04em",
             color: s.selected ? BLEND.accentInk : BLEND.mutedDim,
             background: s.selected ? "rgba(220,38,38,.12)" : "transparent",
@@ -508,7 +508,7 @@ export function PrimaryBlendView({
         padding: 11,
         textAlign: "center",
         fontFamily: FONT.mono,
-        fontSize: 10.5,
+        fontSize: 12,
         letterSpacing: ".08em",
         fontWeight: 700,
         color: "#fff",
@@ -582,7 +582,7 @@ export function PrimaryBlendView({
                   style={{
                     display: "block",
                     fontFamily: FONT.sans,
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: 600,
                     color: c.advancing ? BLEND.ink : BLEND.muted,
                   }}
@@ -594,7 +594,7 @@ export function PrimaryBlendView({
                     display: "block",
                     marginTop: 1,
                     fontFamily: FONT.sans,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: BLEND.mutedDim,
                   }}
                 >
@@ -606,7 +606,7 @@ export function PrimaryBlendView({
             <span
               style={{
                 fontFamily: FONT.sans,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 600,
                 color: c.advancing ? BLEND.positive : BLEND.mutedDim,
               }}
@@ -638,7 +638,7 @@ export function PrimaryBlendView({
               </span>
             </span>
             <span style={{ textAlign: "right" }}>
-              <span style={{ display: "block", fontFamily: FONT.mono, fontSize: 15 }}>
+              <span style={{ display: "block", fontFamily: FONT.mono, fontSize: 14 }}>
                 {c.delegates ?? "—"}
               </span>
               {c.delegatesAwarded ? (
@@ -647,7 +647,7 @@ export function PrimaryBlendView({
                     display: "block",
                     marginTop: 2,
                     fontFamily: FONT.mono,
-                    fontSize: 10.5,
+                    fontSize: 12,
                     color: BLEND.mutedDim,
                   }}
                 >
@@ -655,13 +655,13 @@ export function PrimaryBlendView({
                 </span>
               ) : null}
             </span>
-            <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
+            <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
               {figures.funds}
             </span>
-            <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
+            <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
               {figures.actions}
             </span>
-            <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 13 }}>
+            <span style={{ textAlign: "right", fontFamily: FONT.mono, fontSize: 12 }}>
               {figures.levels}
             </span>
             <span>{campaign ? <ViewCampaign campaign={campaign} race={election} /> : null}</span>
@@ -782,7 +782,7 @@ export function PrimaryBlendView({
                   <p
                     style={{
                       margin: "6px 0 12px",
-                      fontSize: 12.5,
+                      fontSize: 12,
                       lineHeight: 1.45,
                       color: BLEND.muted,
                     }}
@@ -850,7 +850,7 @@ export function PrimaryBlendView({
                 <p
                   style={{
                     margin: "18px 0 0",
-                    fontSize: 13.5,
+                    fontSize: 14,
                     lineHeight: 1.5,
                     color: BLEND.muted,
                   }}
@@ -871,7 +871,7 @@ export function PrimaryBlendView({
                       style={{
                         marginTop: 10,
                         fontFamily: FONT.mono,
-                        fontSize: 38,
+                        fontSize: 30,
                         fontWeight: 500,
                         letterSpacing: "-0.03em",
                         color: vm.partyAccent,
@@ -883,7 +883,7 @@ export function PrimaryBlendView({
                       style={{
                         marginTop: 3,
                         fontFamily: FONT.sans,
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: 600,
                         color: vm.you.statusColor,
                       }}
@@ -896,7 +896,7 @@ export function PrimaryBlendView({
                         display: "flex",
                         flexDirection: "column",
                         gap: 9,
-                        fontSize: 13,
+                        fontSize: 12,
                       }}
                     >
                       {[
@@ -931,7 +931,7 @@ export function PrimaryBlendView({
                     style={{
                       margin: "10px 0 0",
                       fontFamily: FONT.sans,
-                      fontSize: 13.5,
+                      fontSize: 14,
                       lineHeight: 1.55,
                       color: BLEND.muted,
                     }}
@@ -987,7 +987,7 @@ export function PrimaryBlendView({
               renderPanel={(state, onClose) => (
                 <div>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    <h3 style={{ flex: 1, margin: 0, fontSize: 21, fontWeight: 600 }}>
+                    <h3 style={{ flex: 1, margin: 0, fontSize: 16, fontWeight: 600 }}>
                       {state.name}
                     </h3>
                     <button
@@ -1018,7 +1018,7 @@ export function PrimaryBlendView({
                       </BlendScopeInline>
                     </div>
                   ) : (
-                    <p style={{ marginTop: 8, fontSize: 13, color: BLEND.muted }}>
+                    <p style={{ marginTop: 8, fontSize: 12, color: BLEND.muted }}>
                       {state.caption}
                     </p>
                   )}
@@ -1031,7 +1031,7 @@ export function PrimaryBlendView({
                     flexWrap: "wrap",
                     gap: "6px 18px",
                     fontFamily: FONT.mono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: BLEND.mutedDim,
                   }}
                 >

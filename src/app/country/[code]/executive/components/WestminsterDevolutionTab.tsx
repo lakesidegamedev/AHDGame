@@ -147,14 +147,14 @@ export function WestminsterDevolutionTab() {
             tabIndex={region === id ? 0 : -1}
             onKeyDown={navigateRegion}
             onClick={() => selectRegion(id)}
-            className={`shrink-0 rounded-lg px-4 py-2 text-sm ${region === id ? "bg-primary text-white" : "bg-card text-muted"}`}
+            className={`shrink-0 rounded-lg px-4 py-2 text-body ${region === id ? "bg-primary text-white" : "bg-card text-muted"}`}
           >
             {t(id)}
           </button>
         ))}
       </div>
       {error && (
-        <div role="alert" className="text-sm text-error">
+        <div role="alert" className="text-body text-error">
           {error}{" "}
           <button
             type="button"
@@ -169,12 +169,12 @@ export function WestminsterDevolutionTab() {
         </div>
       )}
       {saved && (
-        <p role="status" className="text-sm text-emerald-500">
+        <p role="status" className="text-body text-emerald-500">
           {t("saved")}
         </p>
       )}
       {loading ? (
-        <p role="status" className="text-sm text-muted">
+        <p role="status" className="text-body text-muted">
           {t("loading")}
         </p>
       ) : (
@@ -189,8 +189,10 @@ export function WestminsterDevolutionTab() {
               <DevolutionDesireReadout data={row} />
               <section className="space-y-3 rounded-xl border border-card-border bg-card p-6">
                 <h2 className="font-semibold">{t("westminsterStance")}</h2>
-                <p className="text-sm text-muted">{t("actions", { value: data?.actions ?? 0 })}</p>
-                <p className="text-xs text-muted">
+                <p className="text-body text-muted">
+                  {t("actions", { value: data?.actions ?? 0 })}
+                </p>
+                <p className="text-body-sm text-muted">
                   {t("cost", {
                     cost: DEVOLUTION_POLICY_CHANGE_AP_COST,
                     turns: DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS,
@@ -206,7 +208,7 @@ export function WestminsterDevolutionTab() {
                       value={policy}
                       disabled={saving}
                       onChange={(event) => setDraftPolicy(event.target.value as DevolutionPolicy)}
-                      className="w-full rounded-lg border border-card-border bg-background p-2 text-sm"
+                      className="w-full rounded-lg border border-card-border bg-background p-2 text-body"
                     >
                       {(["anti", "pro", "independence"] as const).map((value) => (
                         <option key={value} value={value}>
@@ -214,32 +216,36 @@ export function WestminsterDevolutionTab() {
                         </option>
                       ))}
                     </select>
-                    {initialChange && <p className="text-xs text-muted">{t("initialChange")}</p>}
+                    {initialChange && (
+                      <p className="text-body-sm text-muted">{t("initialChange")}</p>
+                    )}
                     {remaining > 0 && (
-                      <p className="text-xs text-muted">{t("cooldown", { turns: remaining })}</p>
+                      <p className="text-body-sm text-muted">
+                        {t("cooldown", { turns: remaining })}
+                      </p>
                     )}
                     <button
                       type="button"
                       disabled={!canSave}
                       onClick={save}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-body text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       {t(saving ? "saving" : "save")}
                     </button>
                   </>
                 ) : (
-                  <p className="text-xs text-muted">{t("readOnly")}</p>
+                  <p className="text-body-sm text-muted">{t("readOnly")}</p>
                 )}
               </section>
               <Link
                 href={`/country/uk/region/${region.toLowerCase()}/office`}
-                className="text-sm text-primary hover:underline"
+                className="text-body text-primary hover:underline"
               >
                 {t("viewOffice")}
               </Link>
             </>
           ) : (
-            <p className="text-sm text-muted">{t("missing")}</p>
+            <p className="text-body text-muted">{t("missing")}</p>
           )}
         </div>
       )}

@@ -90,21 +90,21 @@ export function CommoditiesPanel({
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter commodities"
             aria-label="Filter commodities"
-            className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none sm:w-64"
+            className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none sm:w-64"
           />
           <Link
             href="/commodity/shortages"
-            className="text-xs font-medium text-primary hover:underline"
+            className="text-body-sm font-medium text-primary hover:underline"
           >
             Regional shortages →
           </Link>
         </div>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Prices are world averages per unit, shown in {inputSymbol}. A commodity page for one
           country shows that country&apos;s own market price in its currency, so the two can differ.
         </p>
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card shadow-card">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[720px] text-body">
             <thead>
               <tr className="border-b border-card-border text-left text-body-sm text-muted">
                 <th className="px-3 py-2 font-medium">Commodity</th>
@@ -137,7 +137,7 @@ export function CommoditiesPanel({
                     <td className="px-3 py-2 font-medium text-foreground">{c.label}</td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {formatPrice(c.globalPrice)}
-                      <span className="text-xs text-muted"> /{c.unit}</span>
+                      <span className="text-body-sm text-muted"> /{c.unit}</span>
                     </td>
                     <td
                       className={`px-3 py-2 text-right tabular-nums ${toneClass(base)}`}
@@ -146,7 +146,7 @@ export function CommoditiesPanel({
                       {pctText(base)}
                       {atPriceCap(c) && (
                         <span
-                          className="ml-1 text-xs text-muted"
+                          className="ml-1 text-body-sm text-muted"
                           title={[CAP_TITLE, premiumTitle(c)].filter(Boolean).join(" ")}
                         >
                           at price cap
@@ -170,7 +170,7 @@ export function CommoditiesPanel({
                       {c.backgroundEconomy &&
                         (c.backgroundEconomy.sold > 0 || c.backgroundEconomy.bought > 0) && (
                           <span
-                            className="block text-[10px]"
+                            className="block text-body-sm"
                             title="Included in the totals: the background economy's sales and purchases."
                           >
                             incl. background economy {formatCount(c.backgroundEconomy.sold)} sold /{" "}
@@ -178,10 +178,13 @@ export function CommoditiesPanel({
                           </span>
                         )}
                     </td>
-                    <td className={`px-3 py-2 text-xs font-medium ${bal.tone}`} title={bal.title}>
+                    <td
+                      className={`px-3 py-2 text-body-sm font-medium ${bal.tone}`}
+                      title={bal.title}
+                    >
                       {bal.label}
                     </td>
-                    <td className="px-3 py-2 text-right text-xs">
+                    <td className="px-3 py-2 text-right text-body-sm">
                       <Link
                         href={`/commodity/${c.commodity}`}
                         className="text-primary hover:underline"

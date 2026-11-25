@@ -100,7 +100,7 @@ export function FirstDaysPanel({
   const step = (done: boolean, n: number) => (
     <span
       aria-hidden
-      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-body-xs font-semibold ${
+      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-body-sm font-semibold ${
         done ? "text-foreground" : "text-muted"
       }`}
     >
@@ -116,10 +116,10 @@ export function FirstDaysPanel({
       data-coach="first-days"
     >
       <div className="px-4 pt-3">
-        <h2 className="text-heading-sm font-semibold text-foreground">
+        <h2 className="text-heading font-semibold text-foreground">
           {year ? t("titleYear", { year }) : t("title")}
         </h2>
-        <p className="mt-0.5 text-body-xs text-muted">{t("intro")}</p>
+        <p className="mt-0.5 text-body-sm text-muted">{t("intro")}</p>
       </div>
 
       <ol className="mt-2 divide-y divide-card-border/60">
@@ -130,7 +130,7 @@ export function FirstDaysPanel({
             <p className="text-body-sm font-medium text-foreground">
               {t("campaignTitle", { done: campaigns, goal: data.campaignGoal })}
             </p>
-            <p className="mt-0.5 text-body-xs leading-relaxed text-muted">
+            <p className="mt-0.5 text-body-sm leading-relaxed text-muted">
               {t("campaignBody", { influence: data.influence.toFixed(1) })}
             </p>
             {!campaignDone && (
@@ -145,29 +145,29 @@ export function FirstDaysPanel({
                     >
                       {t(campaigning ? "campaignInProgress" : "campaignButton")}
                     </Button>
-                    <span className="text-body-xs text-muted">
+                    <span className="text-body-sm text-muted">
                       {t("campaignCost", campaignCost)}
                     </span>
                   </>
                 ) : (
-                  <span className="text-body-xs text-muted">{t("campaignCostUnavailable")}</span>
+                  <span className="text-body-sm text-muted">{t("campaignCostUnavailable")}</span>
                 )}
-                <Link href="/actions" className="text-body-xs text-muted hover:underline">
+                <Link href="/actions" className="text-body-sm text-muted hover:underline">
                   {t("allActions")}
                 </Link>
               </div>
             )}
             {turnProcessing && !campaignDone && (
-              <p className="mt-1 text-body-xs text-muted" role="status">
+              <p className="mt-1 text-body-sm text-muted" role="status">
                 {t("turnProcessing")}
               </p>
             )}
             {lastGain && (
-              <p role="status" className="mt-1 text-body-xs text-success">
+              <p role="status" className="mt-1 text-body-sm text-success">
                 {lastGain}
               </p>
             )}
-            <InlineError error={error} className="mt-1 text-body-xs text-error" />
+            <InlineError error={error} className="mt-1 text-body-sm text-error" />
           </div>
         </li>
 
@@ -185,7 +185,7 @@ export function FirstDaysPanel({
                 >
                   {t("partyTitle")} <span aria-hidden>→</span>
                 </Link>
-                <p className="mt-0.5 text-body-xs leading-relaxed text-muted">{t("partyBody")}</p>
+                <p className="mt-0.5 text-body-sm leading-relaxed text-muted">{t("partyBody")}</p>
               </>
             )}
           </div>
@@ -201,7 +201,7 @@ export function FirstDaysPanel({
               <>
                 <p className="text-body-sm font-medium text-foreground">{t("raceTitle")}</p>
                 {data.races.length === 0 ? (
-                  <p className="mt-0.5 text-body-xs text-muted">
+                  <p className="mt-0.5 text-body-sm text-muted">
                     {t("raceNone")}{" "}
                     <Link href="/elections" className="text-primary hover:underline">
                       {t("browseRaces")}
@@ -209,7 +209,7 @@ export function FirstDaysPanel({
                   </p>
                 ) : (
                   <>
-                    <p className="mt-0.5 text-body-xs leading-relaxed text-muted">
+                    <p className="mt-0.5 text-body-sm leading-relaxed text-muted">
                       {t("raceBody")}
                     </p>
                     <ul className="mt-1.5 space-y-1">
@@ -221,7 +221,7 @@ export function FirstDaysPanel({
                           >
                             {race.label}
                           </Link>
-                          <span className="text-body-xs text-muted">
+                          <span className="text-body-sm text-muted">
                             {race.closesInHours === null
                               ? t("raceCandidates", { count: race.candidates })
                               : t("raceCloses", {
@@ -240,7 +240,7 @@ export function FirstDaysPanel({
         </li>
       </ol>
 
-      <p className="border-t border-card-border/60 px-4 py-2 text-body-xs text-muted">
+      <p className="border-t border-card-border/60 px-4 py-2 text-body-sm text-muted">
         {t.rich(data.skippedTutorial ? "skippedTour" : "tutorial", {
           link: (chunks) => (
             <Link href="/tutorial" className="text-primary hover:underline">

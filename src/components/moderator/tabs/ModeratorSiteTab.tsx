@@ -7,8 +7,8 @@ export function ModeratorSiteTab({ canChange = true }: { canChange?: boolean }) 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
-        <h2 className="text-base font-semibold">Site controls</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-body-lg font-semibold">Site controls</h2>
+        <p className="mt-1 text-body text-muted">
           High-blast-radius operational toggles.{" "}
           {canChange
             ? "All actions here are recorded in the admin log."

@@ -30,7 +30,7 @@ export function FundActions({ corporations = [], ...props }: Props) {
         <button
           type="button"
           onClick={() => setMode("subscribe")}
-          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-5 py-2.5 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           Buy fund units
         </button>
@@ -40,12 +40,12 @@ export function FundActions({ corporations = [], ...props }: Props) {
           <button
             type="button"
             onClick={() => setMode("redeem")}
-            className="rounded-lg border border-card-border px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
+            className="rounded-lg border border-card-border px-5 py-2.5 text-body font-semibold disabled:opacity-50"
           >
             Withdraw
           </button>
         )}
-      <span className="text-sm text-muted">
+      <span className="text-body text-muted">
         Your position: {props.myUnits.toLocaleString("en-US")} units
       </span>
       {mode && (
@@ -89,7 +89,7 @@ function FundTradeDialog({
         className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-card-border bg-background p-5"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 id={titleId} className="text-lg font-semibold">
+          <h2 id={titleId} className="text-heading font-semibold">
             Trade fund units
           </h2>
           <button
@@ -103,7 +103,7 @@ function FundTradeDialog({
           </button>
         </div>
         {corporations.length > 0 && (
-          <label className="mb-4 block text-sm">
+          <label className="mb-4 block text-body">
             Investment account
             <select
               aria-label="Investment account"

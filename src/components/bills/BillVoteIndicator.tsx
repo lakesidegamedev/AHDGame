@@ -76,13 +76,13 @@ export function BillVoteIndicator({
 
   const indicator =
     currentVote === "for" ? (
-      <span className="text-success text-xs font-medium">&#10003; Voted for</span>
+      <span className="text-success text-body-sm font-medium">&#10003; Voted for</span>
     ) : currentVote === "against" ? (
-      <span className="text-error text-xs font-medium">&#10007; Voted against</span>
+      <span className="text-error text-body-sm font-medium">&#10007; Voted against</span>
     ) : currentVote === "abstain" ? (
-      <span className="text-muted text-xs font-medium">&mdash; Abstained</span>
+      <span className="text-muted text-body-sm font-medium">&mdash; Abstained</span>
     ) : canVote ? (
-      <span className="text-muted/60 text-xs italic">Not yet voted</span>
+      <span className="text-muted/60 text-body-sm italic">Not yet voted</span>
     ) : null;
 
   if (!indicator) return null;
@@ -110,7 +110,7 @@ export function BillVoteIndicator({
                   castVote(voteOption);
                 }}
                 disabled={voting}
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`rounded-md border px-2 py-0.5 text-body-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   currentVote === voteOption
                     ? voteOption === "for"
                       ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400"

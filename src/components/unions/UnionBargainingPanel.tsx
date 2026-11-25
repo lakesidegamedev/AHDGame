@@ -295,7 +295,7 @@ export function UnionBargainingPanel({
       {isLeader && (
         <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
           <div>
-            <h3 className="text-heading-sm font-semibold text-foreground">
+            <h3 className="text-body-lg font-semibold text-foreground">
               Open a bargaining campaign
             </h3>
             <p className="mt-1 text-body text-muted">
@@ -385,7 +385,7 @@ export function UnionBargainingPanel({
 
       {activeAgreementEmployers.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-5">
-          <h3 className="text-heading-sm font-semibold text-foreground">
+          <h3 className="text-body-lg font-semibold text-foreground">
             Active collective agreements
           </h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">

@@ -10,6 +10,7 @@ import type { WidgetLayout, WidgetMenu } from "@/lib/sidebarWidgets/widgetCatalo
 import { SidebarWidget, widgetBadge } from "./SidebarWidget";
 import { WidgetEditor, type WidgetOption } from "./WidgetEditor";
 import { useSidebarWidgetData } from "./useSidebarWidgetData";
+import { pillClass } from "@/components/ui/selectedState";
 
 const AskDrawerPanel = dynamic(
   () => import("@/components/askDrawer/AskDrawerPanel").then((m) => m.AskDrawerPanel),
@@ -107,7 +108,7 @@ export function SideTray({
           }`}
         >
           {badge > 0 && (
-            <span className="min-w-[14px] rounded-full bg-primary px-0.5 text-center text-[9px] font-bold leading-[14px] text-white">
+            <span className="min-w-[14px] rounded-full bg-primary px-0.5 text-center text-body-sm font-bold leading-[14px] text-primary-foreground">
               {badge > 9 ? "9+" : badge}
             </span>
           )}
@@ -149,7 +150,7 @@ export function SideTray({
               type="button"
               onClick={() => setEditing((value) => !value)}
               aria-pressed={editing}
-              className="rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-white/5 hover:text-foreground"
+              className="rounded-md px-2 py-1 text-body-sm font-medium text-muted hover:bg-white/5 hover:text-foreground"
             >
               {editing ? t("done") : t("edit")}
             </button>
@@ -159,7 +160,7 @@ export function SideTray({
             onClick={onSwapSide}
             aria-label={t("swapSide")}
             title={t("swapSide")}
-            className="rounded-md px-2 py-1 text-sm text-muted hover:bg-white/5 hover:text-foreground"
+            className="rounded-md px-2 py-1 text-body text-muted hover:bg-white/5 hover:text-foreground"
           >
             ⇄
           </button>
@@ -168,7 +169,7 @@ export function SideTray({
             onClick={() => show(false)}
             aria-label={t("close")}
             title={t("close")}
-            className="rounded-md px-2 py-1 text-lg leading-none text-muted hover:bg-white/5 hover:text-foreground"
+            className="rounded-md px-2 py-1 text-heading leading-none text-muted hover:bg-white/5 hover:text-foreground"
           >
             ×
           </button>
@@ -194,11 +195,11 @@ export function SideTray({
               />
             ) : layout.tray.length === 0 ? (
               <div className="rounded-lg border border-dashed border-card-border p-4 text-center">
-                <p className="text-sm text-muted">{t("empty")}</p>
+                <p className="text-body text-muted">{t("empty")}</p>
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="mt-3 rounded-md border border-card-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/5"
+                  className="mt-3 rounded-md border border-card-border px-3 py-1.5 text-body-sm font-medium text-foreground hover:bg-white/5"
                 >
                   {t("add")}
                 </button>
@@ -239,7 +240,7 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${active ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"}`}
+      className={`px-3 py-1.5 text-body-sm font-semibold ${pillClass(active)}`}
     >
       {children}
     </button>

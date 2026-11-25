@@ -137,7 +137,7 @@ export function LeadershipPanel({
 
   if (error && !data) {
     return (
-      <div className="rounded-md border border-error/40 bg-error/10 px-4 py-3 text-sm">
+      <div className="rounded-md border border-error/40 bg-error/10 px-4 py-3 text-body">
         <p>{error}</p>
         <button
           type="button"
@@ -164,7 +164,7 @@ export function LeadershipPanel({
       <section aria-label="Party leadership" className="rounded-lg border border-card-border p-4">
         <OfficeholderPortrait
           compact
-          role={<h3 className="text-heading-sm font-bold">{labels.chair}</h3>}
+          role={<h3 className="text-body-lg font-bold">{labels.chair}</h3>}
           holder={data.leader && { name: data.leader.name, ...data.leader.profile }}
         />
         <p className="mt-1 text-body-sm text-muted">
@@ -202,7 +202,7 @@ export function LeadershipPanel({
         aria-label="Governing committee"
         className="rounded-lg border border-card-border p-4"
       >
-        <h3 className="text-heading-sm font-bold">
+        <h3 className="text-body-lg font-bold">
           {data.committeeName} ({data.committee.control.totalSeats} seats)
         </h3>
         <p className="mt-1 text-body-sm text-muted">
@@ -318,7 +318,7 @@ export function LeadershipPanel({
         aria-label="Leadership challenge"
         className="rounded-lg border border-card-border p-4"
       >
-        <h3 className="text-heading-sm font-bold">Leadership challenge</h3>
+        <h3 className="text-body-lg font-bold">Leadership challenge</h3>
         {!challenge && (
           <>
             <p className="mt-1 text-body-sm text-muted">
@@ -472,7 +472,7 @@ export function LeadershipPanel({
       </section>
 
       <section aria-label="Leadership history" className="rounded-lg border border-card-border p-4">
-        <h3 className="text-heading-sm font-bold">Recent history</h3>
+        <h3 className="text-body-lg font-bold">Recent history</h3>
         <ul className="mt-2 space-y-1 text-body-sm text-muted">
           {data.history
             .slice(-10)

@@ -124,7 +124,7 @@ export function BlocOverviewBoard({ side = "west" }: { side?: BlocSide }) {
                       margin: 0,
                       fontFamily: headingFont,
                       fontWeight: 700,
-                      fontSize: 38,
+                      fontSize: 30,
                       lineHeight: 1,
                       letterSpacing: "-.01em",
                       color: "#f3f1ea",
@@ -136,7 +136,7 @@ export function BlocOverviewBoard({ side = "west" }: { side?: BlocSide }) {
                     style={{
                       margin: "9px 0 0",
                       maxWidth: 540,
-                      fontSize: 13,
+                      fontSize: 12,
                       lineHeight: 1.55,
                       color: "#9595a4",
                     }}
@@ -175,7 +175,7 @@ export function BlocOverviewBoard({ side = "west" }: { side?: BlocSide }) {
                       marginTop: 6,
                       fontFamily: headingFont,
                       fontWeight: 700,
-                      fontSize: 24,
+                      fontSize: 20,
                       lineHeight: 1,
                       color: defconColor(defcon),
                     }}
@@ -218,7 +218,7 @@ export function BlocOverviewBoard({ side = "west" }: { side?: BlocSide }) {
                   >
                     <span style={{ width: 9, height: 9, borderRadius: 2, background: "#3b82f6" }} />
                     WESTERN BLOC{" "}
-                    <span style={{ fontFamily: mono, fontSize: 13, color: "#e8e8ee" }}>52.4%</span>
+                    <span style={{ fontFamily: mono, fontSize: 12, color: "#e8e8ee" }}>52.4%</span>
                   </span>
                   <span
                     style={{ font: `600 10px ${mono}`, letterSpacing: ".13em", color: "#ca9a3a" }}
@@ -234,7 +234,7 @@ export function BlocOverviewBoard({ side = "west" }: { side?: BlocSide }) {
                       color: "#ef8a8a",
                     }}
                   >
-                    <span style={{ fontFamily: mono, fontSize: 13, color: "#e8e8ee" }}>47.6%</span>{" "}
+                    <span style={{ fontFamily: mono, fontSize: 12, color: "#e8e8ee" }}>47.6%</span>{" "}
                     EASTERN BLOC
                     <span style={{ width: 9, height: 9, borderRadius: 2, background: "#dc2626" }} />
                   </span>
@@ -1044,7 +1044,7 @@ function BlocStat({
 function StatCell({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 21, color: "#f3f1ea" }}>
+      <div style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 20, color: "#f3f1ea" }}>
         {value}
       </div>
       <div style={{ font: `500 9px ${mono}`, color: "#7a7a8c" }}>{label}</div>

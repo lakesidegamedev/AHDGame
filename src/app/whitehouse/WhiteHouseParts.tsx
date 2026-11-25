@@ -141,7 +141,9 @@ export function ExecutiveCard({
                 countryId={data.countryId ?? "US"}
               />
               {data.administrationStartGameDate && (
-                <p className="mt-1 text-xs text-muted">Since {data.administrationStartGameDate}</p>
+                <p className="mt-1 text-body-sm text-muted">
+                  Since {data.administrationStartGameDate}
+                </p>
               )}
             </div>
             <div className="flex flex-col gap-2 shrink-0">
@@ -149,7 +151,7 @@ export function ExecutiveCard({
                 <button
                   onClick={onResign}
                   disabled={resignLoading}
-                  className="rounded-lg border border-error/40 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50 transition-colors"
+                  className="rounded-lg border border-error/40 px-3 py-1.5 text-body-sm font-medium text-error hover:bg-error/10 disabled:opacity-50 transition-colors"
                 >
                   {resignLoading ? "Resigning…" : "Resign"}
                 </button>
@@ -157,7 +159,7 @@ export function ExecutiveCard({
               {isAdmin && officialId && (
                 <button
                   onClick={onAppoint}
-                  className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted hover:bg-card-elevated hover:text-foreground transition-colors"
+                  className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted hover:bg-card-elevated hover:text-foreground transition-colors"
                 >
                   Change
                 </button>
@@ -166,7 +168,7 @@ export function ExecutiveCard({
           </div>
         ) : (
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-center">
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               {needsInit
                 ? "Initialize executive slots in Admin first"
                 : onNominateVp
@@ -178,7 +180,7 @@ export function ExecutiveCard({
             {isAdmin && needsInit && onInitialize && (
               <button
                 onClick={onInitialize}
-                className="rounded-lg bg-warning/15 text-warning border border-warning/40 px-3 py-1.5 text-xs font-medium hover:bg-warning/25 transition-colors"
+                className="rounded-lg bg-warning/15 text-warning border border-warning/40 px-3 py-1.5 text-body-sm font-medium hover:bg-warning/25 transition-colors"
               >
                 Initialize
               </button>
@@ -186,7 +188,7 @@ export function ExecutiveCard({
             {isAdmin && officialId && !needsInit && (
               <button
                 onClick={onAppoint}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Appoint
               </button>
@@ -194,7 +196,7 @@ export function ExecutiveCard({
             {onNominateVp && !vpNominationPending && (
               <button
                 onClick={onNominateVp}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Nominate VP
               </button>

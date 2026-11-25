@@ -930,7 +930,7 @@ function AxisStepper({
           className="policy-slider relative h-4 w-full cursor-pointer appearance-none bg-transparent"
         />
       </div>
-      <div className="flex justify-between text-body-xs text-muted">
+      <div className="flex justify-between text-body-sm text-muted">
         <span>{leftLabel}</span>
         <span>{rightLabel}</span>
       </div>

@@ -109,15 +109,15 @@ export function OnboardingChecklist({
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-4 pt-3">
         <div className="flex items-baseline gap-2 min-w-0">
-          <h2 className="text-heading-sm font-semibold text-foreground">{t("title")}</h2>
-          <span className="text-body-xs text-muted whitespace-nowrap">
+          <h2 className="text-heading font-semibold text-foreground">{t("title")}</h2>
+          <span className="text-body-sm text-muted whitespace-nowrap">
             {t("progress", { completed: completedCount, total })}
           </span>
         </div>
         <button
           onClick={handleDismiss}
           disabled={dismissing}
-          className="shrink-0 text-body-xs text-muted hover:text-foreground transition-colors"
+          className="shrink-0 text-body-sm text-muted hover:text-foreground transition-colors"
           aria-label={t("dismissChecklistAria")}
         >
           {t("dismiss")}
@@ -137,14 +137,14 @@ export function OnboardingChecklist({
               {step.done ? (
                 <span
                   aria-hidden
-                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-foreground text-body-xs font-bold"
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-foreground text-body-sm font-bold"
                 >
                   ✓
                 </span>
               ) : (
                 <span
                   aria-hidden
-                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-muted text-body-xs font-semibold"
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-card-border text-muted text-body-sm font-semibold"
                 >
                   {step.optional ? "·" : index + 1}
                 </span>
@@ -167,11 +167,11 @@ export function OnboardingChecklist({
                       </span>
                     </Link>
                     {step.optional && (
-                      <span className="ml-2 rounded-sm border border-card-border px-1.5 py-px text-body-xs text-muted">
+                      <span className="ml-2 rounded-sm border border-card-border px-1.5 py-px text-body-sm text-muted">
                         {t("later")}
                       </span>
                     )}
-                    <p className="mt-0.5 text-body-xs text-muted leading-relaxed">{step.body}</p>
+                    <p className="mt-0.5 text-body-sm text-muted leading-relaxed">{step.body}</p>
                   </>
                 )}
               </div>
@@ -189,10 +189,10 @@ export function OnboardingChecklist({
             <Button size="sm" onClick={handleClaim} isLoading={claiming}>
               {t("claim", { reward: rewardLabel })}
             </Button>
-            <InlineError error={claimError} className="text-body-xs text-error" />
+            <InlineError error={claimError} className="text-body-sm text-error" />
           </div>
         ) : (
-          <p className="text-body-xs text-muted">
+          <p className="text-body-sm text-muted">
             {t("finishSteps", { total, reward: rewardLabel })}
           </p>
         )}

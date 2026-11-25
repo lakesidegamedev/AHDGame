@@ -100,14 +100,14 @@ export function SavingsWalletBlock({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-body-sm font-medium text-primary">Savings · {apyLabel}</div>
-          <div className="text-xs text-muted">
+          <div className="text-body-sm text-muted">
             Yield follows the displayed APY, including any central-bank deposit bonus. Interest
             accrues every turn; it is added to your savings balance every 12 turns.
           </div>
         </div>
         <div className="text-right">
           <div className="text-body-sm font-medium text-muted">Balance</div>
-          <div className="text-sm font-bold tabular-nums text-foreground">
+          <div className="text-body font-bold tabular-nums text-foreground">
             {formatBalance(savingsBalance, currency)}
           </div>
         </div>
@@ -118,7 +118,7 @@ export function SavingsWalletBlock({
         interestAccrualPerTurn != null &&
         interestAccrualPerTurn > 0 &&
         turnsUntilCredit != null && (
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             About {formatBalance(interestAccrualPerTurn, currency)} interest this turn · balance
             credit in {turnsUntilCredit} turn{turnsUntilCredit === 1 ? "" : "s"}
             {pendingInterest != null && pendingInterest > 0 && (
@@ -129,13 +129,13 @@ export function SavingsWalletBlock({
 
       {!accountOpened && liquid > 0 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border border-dashed border-card-border bg-card/50 px-3 py-2">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Earn the rate above on cash you are not using. Open a savings account for {currency}.
           </p>
           <Button
             type="button"
             variant="secondary"
-            className="!h-9 !min-w-0 shrink-0 px-4 text-xs"
+            className="!h-9 !min-w-0 shrink-0 px-4 text-body-sm"
             disabled={busy}
             onClick={() => void onOpen()}
           >
@@ -149,7 +149,7 @@ export function SavingsWalletBlock({
           <Button
             type="button"
             variant="secondary"
-            className="!h-9 !min-w-0 px-3 text-xs"
+            className="!h-9 !min-w-0 px-3 text-body-sm"
             disabled={busy || liquid <= 0}
             onClick={() => {
               setPanel(panel === "deposit" ? null : "deposit");
@@ -161,7 +161,7 @@ export function SavingsWalletBlock({
           <Button
             type="button"
             variant="secondary"
-            className="!h-9 !min-w-0 px-3 text-xs"
+            className="!h-9 !min-w-0 px-3 text-body-sm"
             disabled={busy || savingsBalance <= 0}
             onClick={() => {
               setPanel(panel === "withdraw" ? null : "withdraw");
@@ -176,7 +176,7 @@ export function SavingsWalletBlock({
       {accountOpened && panel === "deposit" && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="text-[10px] font-medium uppercase text-muted">
+            <label className="text-body-sm font-medium uppercase text-muted">
               Amount ({currency})
             </label>
             <Input
@@ -186,14 +186,14 @@ export function SavingsWalletBlock({
               onChange={(e) => setAmountStr(e.target.value)}
               className="mt-1"
             />
-            <p className="mt-1 text-[10px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Available liquid: {formatBalance(liquid, currency)}
             </p>
           </div>
           <Button
             type="button"
             variant="secondary"
-            className="!h-9 !min-w-0 shrink-0 px-4 text-xs"
+            className="!h-9 !min-w-0 shrink-0 px-4 text-body-sm"
             disabled={busy}
             onClick={onConfirmDeposit}
           >
@@ -205,7 +205,7 @@ export function SavingsWalletBlock({
       {accountOpened && panel === "withdraw" && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="text-[10px] font-medium uppercase text-muted">
+            <label className="text-body-sm font-medium uppercase text-muted">
               Amount ({currency})
             </label>
             <Input
@@ -215,14 +215,14 @@ export function SavingsWalletBlock({
               onChange={(e) => setAmountStr(e.target.value)}
               className="mt-1"
             />
-            <p className="mt-1 text-[10px] text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               In savings: {formatBalance(savingsBalance, currency)}
             </p>
           </div>
           <Button
             type="button"
             variant="secondary"
-            className="!h-9 !min-w-0 shrink-0 px-4 text-xs"
+            className="!h-9 !min-w-0 shrink-0 px-4 text-body-sm"
             disabled={busy}
             onClick={onConfirmWithdraw}
           >
@@ -232,7 +232,7 @@ export function SavingsWalletBlock({
       )}
 
       {!accountOpened && liquid <= 0 && (
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           Fund this currency to open savings and earn {apyLabel.replace(" APY", "")} annualized
           (accrues each turn; credited to balance every 12 turns).
         </p>

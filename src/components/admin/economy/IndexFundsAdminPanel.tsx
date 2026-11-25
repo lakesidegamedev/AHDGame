@@ -34,7 +34,7 @@ const COLUMNS: ResponsiveTableColumn<AdminFundRow>[] = [
     render: (r) => (
       <div>
         <span className="font-medium">{r.name}</span>
-        <span className="block text-xs text-muted">{r.slug}</span>
+        <span className="block text-body-sm text-muted">{r.slug}</span>
       </div>
     ),
   },
@@ -43,7 +43,7 @@ const COLUMNS: ResponsiveTableColumn<AdminFundRow>[] = [
     header: "Status",
     render: (r) => (
       <span
-        className={`text-xs font-semibold uppercase ${
+        className={`text-body-sm font-semibold uppercase ${
           r.status === "active"
             ? "text-success"
             : r.status === "paused"
@@ -301,7 +301,7 @@ export function IndexFundsAdminPanel() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         Manage index fund definitions, backing health, and pause state. Player subscribe/redeem uses
         fund cash only — queued redemptions pay when cash is available on the hourly cron.
       </p>
@@ -311,13 +311,13 @@ export function IndexFundsAdminPanel() {
           type="button"
           disabled={injectAllLoading || loading}
           onClick={() => void injectCapitalAll()}
-          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-40"
+          className="rounded-lg bg-primary px-3 py-2 text-body-sm font-semibold text-primary-foreground hover:brightness-110 disabled:bg-card-border disabled:text-muted"
         >
           {injectAllLoading ? "Recapitalizing…" : "Inject capital — All Funds to 100%"}
         </button>
         {injectAllMessage && (
           <span
-            className={`text-xs ${injectAllMessage.startsWith("Topped up") ? "text-success" : "text-error"}`}
+            className={`text-body-sm ${injectAllMessage.startsWith("Topped up") ? "text-success" : "text-error"}`}
             role="status"
           >
             {injectAllMessage}
@@ -332,19 +332,19 @@ export function IndexFundsAdminPanel() {
           value={deployAmount}
           onChange={(e) => setDeployAmount(e.target.value)}
           placeholder="Amount (anchor)"
-          className="rounded-lg border border-card-border bg-card px-3 py-2 text-xs w-40 focus:outline-none focus:ring-1 focus:ring-primary"
+          className="rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm w-40 focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <button
           type="button"
           disabled={deployAllLoading || loading}
           onClick={() => void deployCashAll()}
-          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-40"
+          className="rounded-lg bg-primary px-3 py-2 text-body-sm font-semibold text-primary-foreground hover:brightness-110 disabled:bg-card-border disabled:text-muted"
         >
           {deployAllLoading ? "Deploying…" : "Deploy cash to all funds"}
         </button>
         {deployAllMessage && (
           <span
-            className={`text-xs ${deployAllMessage.startsWith("Deployed") ? "text-success" : "text-error"}`}
+            className={`text-body-sm ${deployAllMessage.startsWith("Deployed") ? "text-success" : "text-error"}`}
             role="status"
           >
             {deployAllMessage}
@@ -353,13 +353,13 @@ export function IndexFundsAdminPanel() {
       </div>
 
       {error && (
-        <p className="text-sm text-error" role="alert">
+        <p className="text-body text-error" role="alert">
           {error}
         </p>
       )}
 
       {loading ? (
-        <p className="text-sm text-muted">Loading funds…</p>
+        <p className="text-body text-muted">Loading funds…</p>
       ) : (
         <ResponsiveTable
           columns={COLUMNS}
@@ -370,7 +370,7 @@ export function IndexFundsAdminPanel() {
             <button
               type="button"
               onClick={() => void loadDetail(row.id)}
-              className="text-xs font-semibold text-primary hover:underline"
+              className="text-body-sm font-semibold text-primary hover:underline"
             >
               Manage
             </button>
@@ -382,15 +382,15 @@ export function IndexFundsAdminPanel() {
         <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="text-lg font-bold">{String(detail.name ?? "")}</h3>
-              <p className="text-sm text-muted font-mono">{String(detail.tickerSymbol ?? "")}</p>
+              <h3 className="text-body-lg font-bold">{String(detail.name ?? "")}</h3>
+              <p className="text-body text-muted font-mono">{String(detail.tickerSymbol ?? "")}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={actionLoading || detail.status === "active"}
                 onClick={() => void setStatus("active")}
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold hover:bg-card-elevated disabled:opacity-40"
+                className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold hover:bg-card-elevated disabled:opacity-40"
               >
                 Resume
               </button>
@@ -398,7 +398,7 @@ export function IndexFundsAdminPanel() {
                 type="button"
                 disabled={actionLoading || detail.status === "paused"}
                 onClick={() => void setStatus("paused")}
-                className="rounded-lg border border-warning/40 px-3 py-1.5 text-xs font-semibold text-warning hover:bg-warning/10 disabled:opacity-40"
+                className="rounded-lg border border-warning/40 px-3 py-1.5 text-body-sm font-semibold text-warning hover:bg-warning/10 disabled:opacity-40"
               >
                 Pause
               </button>
@@ -406,7 +406,7 @@ export function IndexFundsAdminPanel() {
                 type="button"
                 disabled={actionLoading || detail.status === "delisted"}
                 onClick={() => void setStatus("delisted")}
-                className="rounded-lg border border-error/40 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/10 disabled:opacity-40"
+                className="rounded-lg border border-error/40 px-3 py-1.5 text-body-sm font-semibold text-error hover:bg-error/10 disabled:opacity-40"
               >
                 Delist
               </button>
@@ -414,14 +414,14 @@ export function IndexFundsAdminPanel() {
           </div>
 
           {message && (
-            <p className="text-xs text-success" role="status">
+            <p className="text-body-sm text-success" role="status">
               {message}
             </p>
           )}
 
           <div className="rounded-lg border border-card-border bg-card-elevated p-4 space-y-3">
             <h4 className="text-body-sm font-medium text-muted">Inject capital</h4>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Adds anchor-currency cash to the fund without minting units. Raises NAV and improves
               backing ratio.
             </p>
@@ -438,21 +438,21 @@ export function IndexFundsAdminPanel() {
                   value={injectAmount}
                   onChange={(e) => setInjectAmount(e.target.value)}
                   placeholder="Amount (anchor)"
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
                 />
               </div>
               <button
                 type="button"
                 disabled={injectLoading}
                 onClick={() => void injectCapital()}
-                className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-40"
+                className="rounded-lg bg-primary px-3 py-2 text-body-sm font-semibold text-primary-foreground hover:brightness-110 disabled:bg-card-border disabled:text-muted"
               >
                 {injectLoading ? "Injecting…" : "Inject capital"}
               </button>
             </div>
             {injectMessage && (
               <p
-                className={`text-xs ${injectMessage.startsWith("Injected") ? "text-success" : "text-error"}`}
+                className={`text-body-sm ${injectMessage.startsWith("Injected") ? "text-success" : "text-error"}`}
                 role="status"
               >
                 {injectMessage}
@@ -460,7 +460,7 @@ export function IndexFundsAdminPanel() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-body">
             <Stat label="NAV" value={fmt(Number(detail.quotedNav ?? 0))} />
             <Stat
               label="Backing"
@@ -480,7 +480,7 @@ export function IndexFundsAdminPanel() {
           </div>
 
           {detail._holders != null && (
-            <pre className="text-[10px] text-muted overflow-auto max-h-40 rounded-lg bg-card-elevated p-3">
+            <pre className="text-body-sm text-muted overflow-auto max-h-40 rounded-lg bg-card-elevated p-3">
               {JSON.stringify(
                 (detail._holders as { queuedRedemptions?: unknown[] }).queuedRedemptions?.length ??
                   0,

@@ -29,6 +29,7 @@ import {
 import { getExchangeApiKey } from "@/lib/constants/exchangeRegistry";
 import { aggregateExchangeTotals } from "@/lib/stockExchange/aggregate";
 import type { ExchangeData } from "@/app/country/[code]/stockmarket/types";
+import { pillClass } from "@/components/ui/selectedState";
 
 // One panel per tab, and only the selected tab renders. The overview stays
 // eager because it is the default tab.
@@ -228,7 +229,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-heading-lg font-bold text-foreground">The Market</h1>
+              <h1 className="text-heading font-bold text-foreground">The Market</h1>
               {tab === "stocks" && <WikiHelpLink screen="stock-market" />}
               {tab === "bonds" && <WikiHelpLink screen="bond-market" />}
             </div>
@@ -238,13 +239,13 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
 
         <section aria-label="Stock market chart">
           <div className="flex items-center justify-between">
-            <h2 className="text-heading-sm font-bold text-foreground">Stock market</h2>
+            <h2 className="text-heading font-bold text-foreground">Stock market</h2>
             <button
               type="button"
               aria-expanded={chartOpen}
               disabled={!chartReady}
               onClick={() => setChartOpen(!chartOpen)}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground enabled:hover:bg-card-elevated disabled:cursor-wait"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-card-border px-2.5 text-body-sm font-medium text-foreground enabled:hover:bg-card-elevated disabled:cursor-wait"
             >
               {chartOpen ? (
                 <ChevronUp className="h-3.5 w-3.5" />
@@ -277,7 +278,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
           <div
             role="tablist"
             aria-label="Market sections"
-            className="flex min-w-max gap-1 border-b border-card-border"
+            className="flex min-w-max gap-1 border-b border-card-border pb-2"
           >
             {MARKET_TABS.map((t) => (
               <button
@@ -286,11 +287,7 @@ export function MarketHub({ previews }: { previews?: MarketOverviewPreviews | nu
                 role="tab"
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
-                className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  tab === t.key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:text-foreground"
-                }`}
+                className={`whitespace-nowrap px-3 py-1.5 text-body ${pillClass(tab === t.key)}`}
               >
                 {t.key === "sub-groups" ? groupT("tab") : t.label}
               </button>

@@ -6,6 +6,7 @@ import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
 import { ISO_NUMERIC_TO_COUNTRY } from "@/lib/commodity-map/commodityRegionMappings";
 import { WORLD_GEO_URL, SVG_W, SVG_H } from "@/app/world/worldConstants";
 import { directionMark } from "../lib/ledgerFormat";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * World Trade Map — a real geographic map (Equal Earth projection). Non-playable
@@ -161,13 +162,13 @@ export default function MapView({ ledger }: { ledger: WorldTradeLedger }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-bold text-foreground">
+        <h3 className="text-body-lg font-bold text-foreground">
           World trade map{" "}
           <span className="font-normal text-muted">
             · {focus ? `balance vs. ${focus}` : "net balance by nation"}
           </span>
         </h3>
-        <span className="inline-flex items-center gap-3 text-[10px] text-muted">
+        <span className="inline-flex items-center gap-3 text-body-sm text-muted">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm bg-success" />
             surplus
@@ -183,11 +184,7 @@ export default function MapView({ ledger }: { ledger: WorldTradeLedger }) {
         <button
           onClick={() => setFocus(null)}
           aria-pressed={focus === null}
-          className={`rounded-full border px-3 py-1 text-[11.5px] font-semibold transition-colors ${
-            focus === null
-              ? "border-primary/60 bg-primary/15 text-foreground"
-              : "border-card-border bg-card-elevated text-muted hover:text-foreground"
-          }`}
+          className={`px-3 py-1 text-body-sm ${pillClass(focus === null)}`}
         >
           All flows
         </button>
@@ -198,14 +195,10 @@ export default function MapView({ ledger }: { ledger: WorldTradeLedger }) {
               key={c.code}
               onClick={() => setFocus((f) => (f === c.code ? null : c.code))}
               aria-pressed={active}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-foreground"
-                  : "border-card-border bg-card-elevated text-muted hover:text-foreground"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-body-sm ${pillClass(active)}`}
             >
               <span
-                className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-[8px]"
+                className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-body-sm"
                 style={{ border: `1.5px solid ${c.hue}`, color: c.hue }}
               >
                 {c.code}
@@ -470,7 +463,7 @@ export default function MapView({ ledger }: { ledger: WorldTradeLedger }) {
         </svg>
       </div>
 
-      <p className="mt-2.5 text-[11.5px] text-muted">
+      <p className="mt-2.5 text-body-sm text-muted">
         {focus
           ? `${ledger.meta.countries.find((c) => c.code === focus)?.name ?? focus} selected · other nations shaded by their balance with it (green = surplus, red = deficit); arcs show its flows.`
           : "Playable nations shaded by net balance (green = surplus, red = deficit); other countries dimmed. Arc runs exporter → importer. Click a nation to focus."}

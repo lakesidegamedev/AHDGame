@@ -48,11 +48,11 @@ export function ElectionsHero({
         <div className="absolute inset-0 flex flex-col justify-end px-5 py-4 sm:px-6 sm:py-5">
           <h1
             data-coach="nav-elections"
-            className="text-3xl font-bold text-white drop-shadow-md sm:text-4xl"
+            className="text-display font-bold text-white drop-shadow-md sm:text-display"
           >
             {countryName} Elections
           </h1>
-          <p className="mt-1 text-sm text-white/80 drop-shadow sm:text-base">
+          <p className="mt-1 text-body text-white/80 drop-shadow sm:text-body-lg">
             Pick an office, find your seat, and file to stand.
           </p>
         </div>
@@ -74,7 +74,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-max flex-col px-5 py-3">
       <span className="text-body-sm font-medium text-muted">{label}</span>
-      <span className="mt-0.5 text-base font-bold tabular-nums">{value}</span>
+      <span className="mt-0.5 text-body-lg font-bold tabular-nums">{value}</span>
     </div>
   );
 }

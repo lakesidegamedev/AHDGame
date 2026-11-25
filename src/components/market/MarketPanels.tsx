@@ -43,7 +43,7 @@ export function StocksPanel({ exchange = "global" }: { exchange?: string }) {
       emptyText="No listed corporations yet."
     >
       {nppCount > 0 && (
-        <label className="mb-3 flex cursor-pointer items-center justify-end gap-2 text-sm text-muted">
+        <label className="mb-3 flex cursor-pointer items-center justify-end gap-2 text-body text-muted">
           <input
             type="checkbox"
             className="accent-primary"
@@ -115,7 +115,7 @@ export function SectorsPanel() {
       emptyText="No sectors are for sale."
     >
       <section className="rounded-xl border border-card-border bg-card shadow-card">
-        <p className="px-4 pt-3 text-sm text-muted">
+        <p className="px-4 pt-3 text-body text-muted">
           {formatCount(data?.totalItems ?? 0)} for sale. Open a sector to review it and buy with a
           corporation you run.
         </p>
@@ -130,27 +130,30 @@ export function SectorsPanel() {
                 className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-card-border/50 px-4 py-2.5"
               >
                 <div className="min-w-0">
-                  <Link href={href} className="text-sm font-medium text-foreground hover:underline">
+                  <Link
+                    href={href}
+                    className="text-body font-medium text-foreground hover:underline"
+                  >
                     {s.sectorTypeLabel}
                   </Link>
-                  <p className="truncate text-xs text-muted">
+                  <p className="truncate text-body-sm text-muted">
                     {s.stateName} · {s.countryFlag} {s.countryName}
                     {s.corporationName ? ` · ${s.corporationName}` : ""}
                   </p>
                 </div>
-                <div className="flex items-center gap-4 text-xs tabular-nums">
+                <div className="flex items-center gap-4 text-body-sm tabular-nums">
                   <span className="text-muted">{formatAmount(s.revenueAnchor)} /day</span>
                   {s.growthRate != null && (
                     <span className={toneClass(s.growthRate)}>{pctText(s.growthRate)} /yr</span>
                   )}
                   {s.forSalePrice != null && (
-                    <span className="text-sm font-semibold text-foreground">
+                    <span className="text-body font-semibold text-foreground">
                       {formatAmount(s.forSalePrice)}
                     </span>
                   )}
                   <Link
                     href={href}
-                    className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 font-medium text-white hover:bg-primary/90"
+                    className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 font-medium text-primary-foreground hover:bg-primary/90"
                   >
                     Review and buy
                   </Link>
@@ -159,7 +162,7 @@ export function SectorsPanel() {
             );
           })}
         </ul>
-        <div className="flex items-center justify-between border-t border-card-border/50 px-4 py-2 text-xs text-muted">
+        <div className="flex items-center justify-between border-t border-card-border/50 px-4 py-2 text-body-sm text-muted">
           <button
             type="button"
             disabled={page <= 1}
@@ -188,13 +191,13 @@ export function SectorsPanel() {
 export function CurrenciesPanel() {
   return (
     <section className="rounded-xl border border-card-border bg-card p-5 shadow-card">
-      <h2 className="text-heading-sm font-bold text-foreground">Currency exchange</h2>
-      <p className="mt-1 text-sm text-muted">
+      <h2 className="text-heading font-bold text-foreground">Currency exchange</h2>
+      <p className="mt-1 text-body text-muted">
         Swap between national currencies at the current rates and see how each one has moved.
       </p>
       <Link
         href="/forex/global"
-        className="mt-3 inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-sm font-medium text-white hover:bg-primary/90"
+        className="mt-3 inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-body font-medium text-primary-foreground hover:bg-primary/90"
       >
         Open the exchange
       </Link>

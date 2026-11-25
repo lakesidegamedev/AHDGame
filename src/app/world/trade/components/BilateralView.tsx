@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants/commoditiesCore";
 import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
 import { directionMark, directionToneClass } from "../lib/ledgerFormat";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * Bilateral settlement between a reporter and a partner: directional export
@@ -74,13 +75,13 @@ export default function BilateralView({ ledger }: { ledger: WorldTradeLedger }) 
             <div className="flex flex-col items-center gap-0.5">
               <span className="text-body-sm font-medium text-muted">net balance</span>
               <span
-                className={`inline-flex items-center gap-1.5 font-mono text-lg font-bold tabular-nums ${directionToneClass(
+                className={`inline-flex items-center gap-1.5 font-mono text-heading font-bold tabular-nums ${directionToneClass(
                   net
                 )}`}
               >
                 {directionMark(net)} {formatAmountChip(net)}
               </span>
-              <span className="text-[10.5px] text-muted">
+              <span className="text-body-sm text-muted">
                 {net === 0
                   ? "balanced trade"
                   : `${nameOf(net > 0 ? reporter : partner)} runs the surplus`}
@@ -100,13 +101,13 @@ export default function BilateralView({ ledger }: { ledger: WorldTradeLedger }) 
 
       <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
         <div className="mb-2 flex items-baseline justify-between gap-2">
-          <h3 className="text-sm font-bold text-foreground">Balance by commodity</h3>
-          <span className="text-[10px] text-muted">
+          <h3 className="text-body-lg font-bold text-foreground">Balance by commodity</h3>
+          <span className="text-body-sm text-muted">
             {partner} surplus ◀ · ▶ {reporter} surplus
           </span>
         </div>
         {rows.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted">
+          <p className="py-6 text-center text-body text-muted">
             No goods cross between {nameOf(reporter)} and {nameOf(partner)} yet.
           </p>
         )}
@@ -117,10 +118,10 @@ export default function BilateralView({ ledger }: { ledger: WorldTradeLedger }) 
               key={r.key}
               className="flex items-center gap-3 border-t border-card-border py-2.5 first:border-t-0"
             >
-              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-card-border bg-card-elevated font-mono text-[10px] font-bold text-muted">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-card-border bg-card-elevated font-mono text-body-sm font-bold text-muted">
                 {COMMODITY_ICONS[r.key]}
               </span>
-              <span className="w-44 truncate text-[12.5px] font-semibold text-foreground">
+              <span className="w-44 truncate text-body-sm font-semibold text-foreground">
                 {COMMODITY_LABELS[r.key]}
               </span>
               <div className="flex min-w-[100px] flex-1 items-center">
@@ -139,7 +140,7 @@ export default function BilateralView({ ledger }: { ledger: WorldTradeLedger }) 
                 </div>
               </div>
               <span
-                className={`w-20 text-right font-mono text-xs font-bold tabular-nums ${directionToneClass(
+                className={`w-20 text-right font-mono text-body-sm font-bold tabular-nums ${directionToneClass(
                   r.net
                 )}`}
               >
@@ -175,14 +176,10 @@ function Picker({
               key={c.code}
               onClick={() => onPick(c.code)}
               aria-pressed={active}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-foreground"
-                  : "border-card-border bg-card-elevated text-muted hover:text-foreground"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-body-sm ${pillClass(active)}`}
             >
               <span
-                className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-[8px]"
+                className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-body-sm"
                 style={{ border: `1.5px solid ${c.hue}`, color: c.hue }}
               >
                 {c.code}
@@ -200,12 +197,12 @@ function Seal({ code, name, hue }: { code: string; name: string; hue: string }) 
   return (
     <div className="flex w-20 flex-shrink-0 flex-col items-center gap-1.5">
       <div
-        className="flex h-14 w-14 items-center justify-center rounded-full font-mono text-base font-bold"
+        className="flex h-14 w-14 items-center justify-center rounded-full font-mono text-body-lg font-bold"
         style={{ border: `2px solid ${hue}`, color: hue, background: `${hue}24` }}
       >
         {code}
       </div>
-      <div className="text-center text-[11px] font-semibold text-foreground">{name}</div>
+      <div className="text-center text-body-sm font-semibold text-foreground">{name}</div>
     </div>
   );
 }
@@ -225,7 +222,7 @@ function FlowBar({
 }) {
   return (
     <div>
-      <div className="mb-1 flex justify-between text-[10px] text-muted">
+      <div className="mb-1 flex justify-between text-body-sm text-muted">
         <span>{label}</span>
         <span className="font-mono">{value}</span>
       </div>

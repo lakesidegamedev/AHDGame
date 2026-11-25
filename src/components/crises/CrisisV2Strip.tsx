@@ -21,9 +21,9 @@ export function StageTrack({ stage }: { stage: CrisisStage }) {
         <li
           key={s}
           aria-current={s === stage ? "step" : undefined}
-          className={`flex-1 rounded px-1 py-0.5 text-center text-xs ${
+          className={`flex-1 rounded px-1 py-0.5 text-center text-body-sm ${
             s === stage
-              ? "bg-primary font-medium text-white"
+              ? "bg-primary font-medium text-primary-foreground"
               : stage === "resolved" || i < current
                 ? "bg-card-elevated text-foreground"
                 : "border border-card-border text-muted"
@@ -88,12 +88,12 @@ export function CrisisV2Strip({
 }) {
   const forecast = forecastText(v2.severity, v2.forecast, v2.graceTurns);
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-2 text-body">
       <StageTrack stage={v2.stage} />
       <div className="flex items-center gap-3">
         <SeveritySparkline history={v2.history} forecast={v2.forecast} />
-        <div className="min-w-0 text-xs text-muted">
-          <span className="text-sm font-semibold tabular-nums text-foreground">
+        <div className="min-w-0 text-body-sm text-muted">
+          <span className="text-body font-semibold tabular-nums text-foreground">
             Severity {Math.round(v2.severity)}
           </span>{" "}
           <span className={TREND_CLASS[v2.trend]}>{TREND_TEXT[v2.trend]}</span>
