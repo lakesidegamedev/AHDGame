@@ -46,6 +46,8 @@ import {
   householdOpeningMoves,
   householdTransferMoves,
   newHouseholdIncomeMoves,
+  NEW_HOUSEHOLD_INCOME_KIND,
+  HOUSEHOLD_SPENDING_POWER_KIND,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   batchProducerMoves,
@@ -761,27 +763,32 @@ async function prepareRunFundedProducerTurn(
     )
   );
 
-  await apply(
-    batchProducerMoves(
-      worldEpoch,
-      turn,
-      newHouseholdIncomeMoves(
+  // Growth income and the spending power top-up are different money-move
+  // kinds, so each goes in its own batch: a batch holds one kind, and its key
+  // is per kind, so neither replaces the other.
+  const newIncomeMoves = newHouseholdIncomeMoves(
+    worldEpoch,
+    turn,
+    (demand.newHouseholdIncome ?? []).map((t) => {
+      const scope = scopeById.get(t.walletId);
+      const rate = rateOf(scope?.currency);
+      return {
+        source: t.source,
+        walletId: t.walletId,
+        amountLocal: t.amount * rate,
+        currencyCode: scope!.currency,
+        localPerAnchor: rate,
+      };
+    })
+  );
+  for (const kind of [NEW_HOUSEHOLD_INCOME_KIND, HOUSEHOLD_SPENDING_POWER_KIND])
+    await apply(
+      batchProducerMoves(
         worldEpoch,
         turn,
-        (demand.newHouseholdIncome ?? []).map((t) => {
-          const scope = scopeById.get(t.walletId);
-          const rate = rateOf(scope?.currency);
-          return {
-            source: t.source,
-            walletId: t.walletId,
-            amountLocal: t.amount * rate,
-            currencyCode: scope!.currency,
-            localPerAnchor: rate,
-          };
-        })
+        newIncomeMoves.filter((m) => m.kind === kind)
       )
-    )
-  );
+    );
 
   // First live funded turn after spending power shipped: stamp the start of its ramp.
   // The guard keeps the first stamp; the shadow never writes.
