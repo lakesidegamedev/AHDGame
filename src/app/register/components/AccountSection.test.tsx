@@ -59,3 +59,15 @@ describe("registration Discord linking", () => {
     expect(screen.getByText("(Required)")).toBeTruthy();
   });
 });
+
+describe("registration social buttons", () => {
+  it("use the secondary card style so the form submit stays the primary action", () => {
+    render(<AccountSection formData={formData} onChange={() => {}} onSocialRegister={() => {}} />);
+    for (const key of ["registerWithApple", "registerWithDiscord", "registerWithGoogle"]) {
+      const button = screen.getByRole("button", { name: key });
+      expect(button.className).toContain("bg-card");
+      expect(button.className).toContain("border-card-border");
+      expect(button.className).not.toMatch(/\bbg-(black|white|secondary|primary)\b|bg-\[#/);
+    }
+  });
+});
