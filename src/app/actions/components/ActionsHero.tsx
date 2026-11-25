@@ -7,7 +7,8 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import { HeroImage } from "@/components/HeroImage";
 import { calculateFavorabilityAboveThresholdPenalty } from "@shared/constants/formulas";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatPercent } from "@/lib/ui/numbers";
 import { toneText } from "@/lib/ui/tone";
 
@@ -23,16 +24,22 @@ interface ActionsHeroProps {
   influence: number;
   infamy: number;
   influenceDecay: string;
-  portfolioData: {
-    totalValue: number;
-    totalBondValue: number;
-    totalBondIncomePerTurn: number;
-    cashOnHand: number;
-  } | null;
+}
+
+interface PortfolioSummary {
+  totalValue: number;
+  totalBondValue: number;
+  totalBondIncomePerTurn: number;
+  cashOnHand: number;
 }
 
 const LABEL_CLASS = "text-body-sm text-muted";
 const VALUE_CLASS = "text-heading font-semibold tabular-nums text-foreground";
+const HERO_CARD = "overflow-hidden rounded-xl border border-card-border bg-card";
+const HERO_STATS =
+  "grid gap-x-12 gap-y-5 border-t border-card-border px-5 py-4 sm:px-8 lg:grid-cols-[auto_minmax(16rem,1fr)] lg:items-start";
+const FIGURES = "grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:gap-x-10";
+const METER_ROW = "min-h-[3.25rem]";
 
 /** A 0 to 100 meter in the stat's own color (influence red, favorability amber). */
 function Meter({ value, fillClass }: { value: number; fillClass: string }) {
@@ -53,13 +60,15 @@ export function ActionsHeroBanner({
   return (
     <div className="relative h-[175px] w-full sm:h-[220px]">
       <HeroImage
+        key={imageUrl}
         src={imageUrl}
         alt="Political campaign"
         fill
         className="object-cover object-[center_55%]"
-        sizes="(max-width: 1280px) 100vw, 1280px"
+        sizes="(width < 640px) calc(100vw - 2rem), (width < 1280px) calc(100vw - 3rem), 1232px"
         priority
         fetchPriority="high"
+        optimize
       />
       <div
         className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10"
@@ -80,6 +89,43 @@ export function ActionsHeroBanner({
   );
 }
 
+export function ActionsHeroLoading({
+  hero,
+}: {
+  hero: Pick<ActionsHeroProps, "imageUrl" | "eraLabel"> | null;
+}) {
+  return (
+    <header className={HERO_CARD} aria-busy="true">
+      {hero ? (
+        <ActionsHeroBanner {...hero} />
+      ) : (
+        <Skeleton className="h-[175px] sm:h-[220px] w-full rounded-none" />
+      )}
+      <div className={HERO_STATS} aria-hidden>
+        <div className={FIGURES}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="min-w-0 space-y-1.5">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-6 w-16" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-4">
+          {["influence", "favorability"].map((meter) => (
+            <div key={meter} className={METER_ROW}>
+              <div className="mb-1.5 flex h-5 items-center justify-between">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function ActionsHero({
   character,
   imageUrl,
@@ -89,20 +135,49 @@ export default function ActionsHero({
   influence,
   infamy,
   influenceDecay,
-  portfolioData,
 }: ActionsHeroProps) {
   const { formatAmount } = useCurrency();
   const [fundsExpanded, setFundsExpanded] = useState(false);
+  const [portfolio, setPortfolio] = useState<{ character: string; data: PortfolioSummary } | null>(
+    null
+  );
+  const [portfolioFailed, setPortfolioFailed] = useState(false);
+  const characterId = String(character._id);
+  const portfolioData = portfolio?.character === characterId ? portfolio.data : null;
   const favorability = character.favorability ?? 50;
   const favAboveThresholdPenalty = calculateFavorabilityAboveThresholdPenalty(favorability);
   const favDecayDisplay = favAboveThresholdPenalty > 0 ? favAboveThresholdPenalty.toFixed(1) : null;
 
+  useEffect(() => {
+    if (!fundsExpanded || portfolioData) return;
+    const controller = new AbortController();
+    void fetch("/api/character/portfolio?summary=1", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Portfolio unavailable");
+        const data = await response.json();
+        if (controller.signal.aborted) return;
+        setPortfolio({
+          character: characterId,
+          data: {
+            totalValue: data.totalValue ?? 0,
+            totalBondValue: data.totalBondValue ?? 0,
+            totalBondIncomePerTurn: data.totalBondIncomePerTurn ?? 0,
+            cashOnHand: data.liquidCashWealth ?? data.cashOnHand ?? 0,
+          },
+        });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setPortfolioFailed(true);
+      });
+    return () => controller.abort();
+  }, [characterId, fundsExpanded, portfolioData]);
+
   return (
-    <header className="overflow-hidden rounded-xl border border-card-border bg-card">
+    <header className={HERO_CARD}>
       <ActionsHeroBanner imageUrl={imageUrl} eraLabel={eraLabel} />
 
-      <div className="grid gap-x-12 gap-y-5 border-t border-card-border px-5 py-4 sm:px-8 lg:grid-cols-[auto_minmax(16rem,1fr)] lg:items-start">
-        <dl className="flex flex-wrap gap-x-10 gap-y-4">
+      <div className={HERO_STATS}>
+        <dl className={FIGURES}>
           <div>
             <dt className={LABEL_CLASS}>Actions</dt>
             <dd>
@@ -116,7 +191,10 @@ export default function ActionsHero({
               <button
                 type="button"
                 className="flex items-center gap-1 rounded text-body-sm text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                onClick={() => setFundsExpanded(!fundsExpanded)}
+                onClick={() => {
+                  setPortfolioFailed(false);
+                  setFundsExpanded(!fundsExpanded);
+                }}
                 aria-expanded={fundsExpanded}
                 aria-label={fundsExpanded ? "Hide funds breakdown" : "Show funds breakdown"}
               >
@@ -139,6 +217,13 @@ export default function ActionsHero({
             <dd className={VALUE_CLASS}>
               {formatCurrencyFaceAmount(campaignFundsDisplay, campaignFundsCurrency)}
             </dd>
+            {fundsExpanded && !portfolioData && (
+              <dd role="status" className="mt-2 text-body-sm text-muted">
+                {portfolioFailed
+                  ? "Portfolio details are unavailable."
+                  : "Loading portfolio details"}
+              </dd>
+            )}
             {fundsExpanded && portfolioData && (
               <dd className="mt-2 space-y-1 text-body-sm">
                 <div className="flex justify-between gap-4">
@@ -192,7 +277,7 @@ export default function ActionsHero({
         </dl>
 
         <div className="space-y-4">
-          <div>
+          <div className={METER_ROW}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <span className={LABEL_CLASS}>Influence</span>
               <span className="text-body font-semibold tabular-nums text-foreground">
@@ -204,7 +289,7 @@ export default function ActionsHero({
               Decay: -{influenceDecay}% per turn
             </div>
           </div>
-          <div>
+          <div className={METER_ROW}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <span className={LABEL_CLASS}>Favorability</span>
               <span className="text-body font-semibold tabular-nums text-foreground">

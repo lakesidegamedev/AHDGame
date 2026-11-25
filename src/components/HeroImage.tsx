@@ -15,6 +15,7 @@ interface HeroImageProps {
   priority?: boolean;
   fetchPriority?: React.ImgHTMLAttributes<HTMLImageElement>["fetchPriority"];
   style?: React.CSSProperties;
+  optimize?: boolean;
 }
 
 /**
@@ -31,8 +32,10 @@ export function HeroImage({
   priority,
   fetchPriority,
   style,
+  optimize = false,
 }: HeroImageProps) {
   const [errored, setErrored] = useState(false);
+  const [useOriginal, setUseOriginal] = useState(false);
 
   if (errored) {
     return (
@@ -54,8 +57,13 @@ export function HeroImage({
       sizes={sizes}
       className={fill ? `object-cover ${className}` : className}
       style={fill ? { objectPosition: "center", ...style } : style}
-      onError={() => setErrored(true)}
-      unoptimized={Boolean(mobileSrc) || bypassNextImageOptimization(src)}
+      onError={() => {
+        if (optimize && !mobileSrc && !useOriginal) setUseOriginal(true);
+        else setErrored(true);
+      }}
+      unoptimized={
+        Boolean(mobileSrc) || (optimize ? useOriginal : bypassNextImageOptimization(src))
+      }
     />
   );
   if (!mobileSrc) return image;

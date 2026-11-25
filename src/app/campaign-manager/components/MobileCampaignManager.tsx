@@ -85,6 +85,28 @@ const STAGES = [
   { id: "final", key: "stageFinal" },
 ] as const;
 
+const raceStripStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+  minWidth: 0,
+};
+
+export function MobileRaceStripLoading({ countryPicker }: { countryPicker: ReactNode }) {
+  return (
+    <div style={raceStripStyle}>
+      {countryPicker}
+      {[42, 86, 52].map((height) => (
+        <div
+          key={height}
+          aria-hidden="true"
+          style={{ height, borderRadius: 11, background: BLEND.field }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function MobileRaceStrip({
   countryId,
   races,
@@ -118,7 +140,7 @@ export function MobileRaceStrip({
     WebkitOverflowScrolling: "touch",
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+    <div style={raceStripStyle}>
       {countryPicker}
       <div style={scroller}>
         {types.map((type) => (
