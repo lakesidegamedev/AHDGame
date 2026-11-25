@@ -12,6 +12,13 @@ export const HOUSEHOLD_SPENDING_POWER_RAMP_TURNS = 72;
 const TURNS_PER_YEAR = 48;
 /** Plant workers as a multiple of the labour force at which plant pay fully sets the state's wage level. */
 const WAGE_INFLUENCE_MULTIPLE = 10;
+/**
+ * A wallet already holding this many turns of its target gets no more top-up.
+ * Households in a state with little to buy cannot spend the money, and without
+ * this cap the unspent top-up would pile up every turn and flood the market
+ * once supply arrives.
+ */
+export const HOUSEHOLD_SPENDING_POWER_CASH_CAP_TURNS = 3;
 /** Working-age share of a population when the state has no working-age count. */
 const FALLBACK_WORKING_AGE_SHARE = 0.6;
 
@@ -117,6 +124,10 @@ export function spendingPowerTopUps(input: {
   plantsByState: ReadonlyMap<string, readonly SpendingPowerPlant[]>;
   /** Wages, transfers and growth income each wallet receives this turn, anchor. */
   incomeByWallet: ReadonlyMap<string, number>;
+  /** Cash each wallet already holds before this top-up (carried savings plus this turn's other income), anchor. */
+  cashByWallet?: ReadonlyMap<string, number>;
+  /** Turns of target a wallet may hold before its top-up stops. */
+  cashCapTurns?: number;
   turn: number;
   startTurn: number;
   rampTurns?: number;
@@ -140,7 +151,14 @@ export function spendingPowerTopUps(input: {
       share: input.share,
     });
     const income = input.incomeByWallet.get(w.accountId) ?? 0;
-    const amount = Math.max(0, target - (Number.isFinite(income) ? income : 0)) * ramp;
+    const wanted = Math.max(0, target - (Number.isFinite(income) ? income : 0)) * ramp;
+    const cash = input.cashByWallet?.get(w.accountId) ?? 0;
+    const room = Math.max(
+      0,
+      (input.cashCapTurns ?? HOUSEHOLD_SPENDING_POWER_CASH_CAP_TURNS) * target -
+        (Number.isFinite(cash) ? cash : 0)
+    );
+    const amount = Math.min(wanted, room);
     if (amount > 0) out.push({ walletId: w.accountId, countryId: w.countryId, amount, target });
   }
   return out;

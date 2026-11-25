@@ -105,6 +105,21 @@ describe("spendingPowerTopUps", () => {
     expect(rows[1]!.amount).toBeCloseTo(target, 6);
   });
 
+  it("stops topping up a wallet that already holds three turns of its target", () => {
+    const rows = spendingPowerTopUps({
+      ...base,
+      incomeByWallet: new Map(),
+      cashByWallet: new Map([
+        ["w1", target * 3],
+        ["w2", target * 2.5],
+      ]),
+    });
+    // w1 is full; w2 has room for half a turn of target only.
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.walletId).toBe("w2");
+    expect(rows[0]!.amount).toBeCloseTo(target * 0.5, 6);
+  });
+
   it("pays nothing once income already meets the target", () => {
     const rows = spendingPowerTopUps({
       ...base,

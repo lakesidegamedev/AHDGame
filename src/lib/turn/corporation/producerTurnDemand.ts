@@ -634,6 +634,8 @@ export async function buildProducerTurnDemand(
         localPerAnchorByCountry: localPerAnchorForPower,
         plantsByState: spendingPowerPlants,
         incomeByWallet: householdIncome,
+        // Opening cash already includes carried savings, transfers and growth income.
+        cashByWallet: householdOpening,
         turn: input.turn,
         startTurn: spendingPowerStartTurn,
         rampTurns: input.env.householdSpendingPowerRampTurns,
