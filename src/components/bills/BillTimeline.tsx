@@ -140,6 +140,7 @@ export function BillTimeline({
   originChamber,
   proposedAt,
   votingEndsAt,
+  votingEndsOnTurn = null,
   variant = "national",
   countryId,
   stateStatus,
@@ -149,6 +150,8 @@ export function BillTimeline({
   originChamber: string;
   proposedAt: string;
   votingEndsAt: string | null;
+  /** Game-clock close turn. When set it wins over the wall-clock time, which drifts if turns pause. */
+  votingEndsOnTurn?: number | null;
   /** Use state timeline labels and steps for subnational bills */
   variant?: "national" | "state";
   /** National bill's country — drives unicameral (single-chamber) timeline shape. */
@@ -279,11 +282,19 @@ export function BillTimeline({
       <div className="flex items-center justify-between text-[10px] text-muted pt-0.5">
         <GameMonthTime value={proposedAt} />
         {failedNote && <span className="text-error/80 font-medium">{failedNote}</span>}
-        {isVoting && votingEndsAt && (
-          <span className="text-yellow-400">
-            Closes{" "}
-            <LocalTime value={votingEndsAt} options={{ dateStyle: "medium", timeStyle: "short" }} />
-          </span>
+        {isVoting && votingEndsOnTurn != null ? (
+          <span className="text-yellow-400">Closes on turn {votingEndsOnTurn}</span>
+        ) : (
+          isVoting &&
+          votingEndsAt && (
+            <span className="text-yellow-400">
+              Closes{" "}
+              <LocalTime
+                value={votingEndsAt}
+                options={{ dateStyle: "medium", timeStyle: "short" }}
+              />
+            </span>
+          )
         )}
       </div>
     </div>

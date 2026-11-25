@@ -11,8 +11,6 @@ import {
   type SectorsForSaleResponse,
   type SupplyOffersResponse,
 } from "./marketEndpoints";
-import { atPriceCap } from "@/lib/market/overviewPreview";
-import { cappedGoodNote, cappedGoodTarget } from "@/lib/market/cappedGoodTarget";
 import { priceCapBasisText } from "@/lib/market/priceCapBasis";
 import { PreviewCard, PreviewRow, pctText, toneClass, vsBasePct } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
@@ -22,7 +20,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MarketOverviewPreviews } from "@/lib/market/loadOverviewPreviews";
 import {
   MARKET_OVERVIEW_ROWS,
-  topCommodityMovers,
+  cappedSummary,
+  commodityOverview,
   topStocksForPreview,
 } from "@/lib/market/overviewPreview";
 import { formatCount, formatPercent } from "@/lib/ui/numbers";
@@ -63,11 +62,13 @@ export function MarketOverview({
     .sort(byDesc((b) => b.yieldToMaturity))
     .slice(0, 5);
   const topFunds = [...(funds.data?.funds ?? [])].sort(byDesc((f) => f.aumAnchor)).slice(0, 5);
-  const movers = previews?.movers ?? topCommodityMovers(commodities ?? []);
-  const capMover = (movers as Partial<CommodityData>[]).find((c) =>
-    atPriceCap({ globalPrice: c.globalPrice ?? 0, priceCeiling: c.priceCeiling })
-  );
-  const capNote = priceCapBasisText(capMover?.priceCapBasis);
+  const local = commodityOverview(commodities ?? []);
+  const movers = previews?.movers ?? local.movers;
+  const capped: { commodity: string; label: string; vsBasePct: number | null }[] =
+    previews?.capped ?? local.capped.map((c) => ({ ...c, vsBasePct: vsBasePct(c) }));
+  const capBasis = (movers as Partial<CommodityData>[]).find((c) => c.priceCapBasis)?.priceCapBasis;
+  const capNote = priceCapBasisText(capBasis);
+  const cappedNames = cappedSummary(capped);
   const sectorRows = (sectors?.sectors ?? []).slice(0, 5);
   const offerRows = (offers?.offers ?? []).slice(0, 5);
 
@@ -174,28 +175,33 @@ export function MarketOverview({
       <PreviewCard
         title="Commodities"
         detail={
-          capNote
-            ? `Furthest from original base price. At cap: ${capNote}`
+          capped.length > 0
+            ? "Furthest from original base price, below the cap"
             : "Furthest from original base price"
         }
         href="/market?tab=commodities"
         loading={commoditiesLoading}
         error=""
-        empty={movers.length === 0}
+        empty={movers.length === 0 && capped.length === 0}
       >
-        {movers.map((c) => {
-          const target = atPriceCap(c) ? cappedGoodTarget(c) : null;
-          return (
-            <PreviewRow
-              key={c.commodity}
-              href={`/commodity/${c.commodity}`}
-              left={c.label}
-              right={pctText(vsBasePct(c))}
-              rightTone={toneClass(vsBasePct(c))}
-              note={target ? cappedGoodNote(target) : null}
-            />
-          );
-        })}
+        {movers.map((c) => (
+          <PreviewRow
+            key={c.commodity}
+            href={`/commodity/${c.commodity}`}
+            left={c.label}
+            right={pctText(vsBasePct(c))}
+            rightTone={toneClass(vsBasePct(c))}
+          />
+        ))}
+        {cappedNames && (
+          <PreviewRow
+            href="/market?tab=commodities"
+            left={`${capped.length} ${capped.length === 1 ? "good" : "goods"} at the price cap`}
+            right={pctText(capped[0]!.vsBasePct)}
+            rightTone={toneClass(capped[0]!.vsBasePct)}
+            note={capNote ? `${cappedNames}. The cap is ${capNote}.` : cappedNames}
+          />
+        )}
       </PreviewCard>
       <PreviewCard
         title="Supply deals"

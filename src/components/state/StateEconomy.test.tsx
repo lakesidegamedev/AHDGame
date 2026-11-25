@@ -142,7 +142,7 @@ describe("StateEconomy", () => {
     await waitFor(() =>
       expect(screen.getAllByText("Lone Star Petroleum").length).toBeGreaterThan(0)
     );
-    expect(screen.getByText("Production")).toBeTruthy();
+    expect(screen.getByText("Production policy")).toBeTruthy();
     expect(screen.getByText("+12%")).toBeTruthy();
   });
 

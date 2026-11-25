@@ -1,4 +1,5 @@
 "use client";
+import type { SectorCrisisEffects } from "@/lib/crises/rules/sectorCrisisEffects";
 import { renderStateEconomyView } from "./StateEconomy.view";
 
 import { useGameEvents } from "@/hooks/useGameEvents";
@@ -58,6 +59,7 @@ interface SectorOwner {
   currentGrowthRate: number;
   /** CEO-set production level (−25…+25); negative risks the margin penalty. */
   productionLevel?: number;
+  crisisEffects?: SectorCrisisEffects;
   isNatcorp?: boolean;
   /** NPP-run corp — aggregated into one pie slice and hidden from the table (t834). */
   isNpp?: boolean;

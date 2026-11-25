@@ -604,4 +604,15 @@ describe("wider-economy funding", () => {
       expect(s.usStateless).toBe(0);
     });
   });
+
+  it("records each lane's unsold share of new plant output for the buyer's oversupply check", async () => {
+    const r = await runWith(100);
+    const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
+    const surplus = outcome.wideSurplus as Record<string, number>;
+    expect(surplus).toBeDefined();
+    for (const share of Object.values(surplus)) {
+      expect(share).toBeGreaterThanOrEqual(0);
+      expect(share).toBeLessThanOrEqual(1);
+    }
+  });
 });

@@ -103,7 +103,7 @@ function launchBlock(input: StaticLandingInput): string {
         ? t("landing.world2027.openNote")
         : null;
   const row = (label: string, at: string) =>
-    `<div data-countdown-row class="flex flex-wrap items-baseline gap-x-5"><dt class="text-[#ff4d5e] sm:w-[6.25rem]">${esc(label)}</dt><dd class="order-3 basis-full text-white/60 sm:order-2 sm:basis-auto"><time dateTime="${esc(at)}">${esc(t("landing.world2027.easternTime", { time: formatEastern(at, locale) }))}</time></dd><dd data-countdown="${esc(at)}" class="order-2 ml-auto text-white tabular-nums sm:order-3 sm:ml-0" aria-hidden="true">${formatRemaining(null)}</dd></div>`;
+    `<div data-countdown-row class="flex flex-wrap items-baseline gap-x-5"><dt class="text-[var(--landing-accent)] sm:w-[6.25rem]">${esc(label)}</dt><dd class="order-3 basis-full text-white/60 sm:order-2 sm:basis-auto"><time dateTime="${esc(at)}">${esc(t("landing.world2027.easternTime", { time: formatEastern(at, locale) }))}</time></dd><dd data-countdown="${esc(at)}" class="order-2 ml-auto text-white tabular-nums sm:order-3 sm:ml-0" aria-hidden="true">${formatRemaining(null)}</dd></div>`;
   return `<div data-countdown-block class="mb-6"><dl class="flex max-w-full flex-col gap-y-2 rounded-md border border-white/15 bg-black/40 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.12em] sm:inline-flex sm:gap-y-1.5 sm:text-xs">${
     launch.opensAt ? row(t("landing.world2027.opensLabel"), launch.opensAt) : ""
   }${
@@ -119,11 +119,11 @@ function headline(input: StaticLandingInput): string {
   const body =
     at < 0
       ? esc(text)
-      : `${esc(text.slice(0, at))}<span class="ahd-bc-odometer text-[#ff4d5e]">${esc(
+      : `${esc(text.slice(0, at))}<span class="ahd-bc-odometer text-[var(--landing-accent)]">${esc(
           Math.max(era.year, input.currentYear)
         )}</span>${esc(text.slice(at + year.length))}`;
   return era.broadcast
-    ? `<h1 class="ahd-bc-headline text-balance text-[2.35rem] font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-[2.75rem] lg:text-[2.95rem]">${body}</h1>`
+    ? `<h1 class="ahd-bc-headline text-balance text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-5xl">${body}</h1>`
     : `<h1 class="text-display font-bold leading-tight tracking-tight text-foreground">${body}</h1>`;
 }
 

@@ -239,6 +239,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         metadata: {
           attackerCorporationName: attacker.name,
           attackerCorporationId: attacker._id.toString(),
+          defenderCorporationId: defender._id.toString(),
+          sectorId: targetSector._id.toString(),
           sectorType: result.sectorType,
           sectorLabel,
           stateId,

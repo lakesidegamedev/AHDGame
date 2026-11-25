@@ -1,5 +1,5 @@
 import type { NotificationType } from "@/lib/db/types/notifications";
-import { regionUrl, centralBankUrl } from "@/lib/urls";
+import { regionUrl, regionPartyUrl, partyUrl, centralBankUrl } from "@/lib/urls";
 import { getRepresentativeCentralBankCountry } from "@/lib/centralBank/intorgRepresentative";
 import { campaignManagerHref } from "@/lib/campaignManager/links";
 
@@ -43,6 +43,38 @@ export function resolveSourceLink(
         encodeURIComponent(String(m.countryId).toLowerCase()) +
         "/government-contracts?tab=awarded",
     };
+
+  if (type === "corp_sector_attacked") {
+    const defender = asString(m.defenderCorporationId);
+    const sector = asString(m.sectorId);
+    if (defender && sector) {
+      return {
+        label: "Review affected sector",
+        href: `/corporation/${encodeURIComponent(defender)}/sector/${encodeURIComponent(sector)}`,
+      };
+    }
+    const country = asString(m.countryId);
+    const state = asString(m.stateId);
+    if (country && state) {
+      return { label: "View regional economy", href: `${regionUrl(country, state)}/economy` };
+    }
+  }
+
+  if (
+    type === "leadership_election_opened" ||
+    type === "national_leadership_election_opened" ||
+    type === "committee_election_opened" ||
+    type === "caucus_chair_election_opened"
+  ) {
+    const country = asString(m.countryId);
+    const state = asString(m.stateId);
+    const party = asString(m.partyId) ?? asNumber(m.partyId);
+    if (country && party !== undefined) {
+      return state
+        ? { label: "Open state party", href: regionPartyUrl(country, state, party) }
+        : { label: "Open party", href: partyUrl(country, party) };
+    }
+  }
 
   // ── Election ──────────────────────────────────────────────────────────────
   const electionId = asString(m.electionId);
@@ -237,6 +269,16 @@ export function resolveSourceLink(
   }
 
   // ── Crisis ────────────────────────────────────────────────────────────────
+  if (type === "corp_credit_rating_change") {
+    const corporationId = asString(m.corporationId);
+    if (corporationId) {
+      return {
+        label: "View corporation",
+        href: `/corporation/${encodeURIComponent(corporationId)}`,
+      };
+    }
+  }
+
   if (type === "crisis" || type === "crisis_resolved") {
     const crisisId = asString(m.crisisId);
     if (crisisId) {

@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { CountryCrisisNotice } from "@/components/crises/CountryCrisisNotice";
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
@@ -879,6 +881,12 @@ export default async function ProfilePage({
         notices={
           <>
             <ConstituencySelector />
+            <Suspense fallback={null}>
+              <CountryCrisisNotice
+                countryId={character.countryId ?? "US"}
+                regionId={character.homeState}
+              />
+            </Suspense>
             {firstDays ? (
               <FirstDaysPanel
                 key={character._id.toString()}

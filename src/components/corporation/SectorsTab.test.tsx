@@ -746,3 +746,22 @@ describe("SectorsTab plants total reconciliation", () => {
     });
   });
 });
+
+describe("SectorsTab primary action placement", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("puts the CEO's new-sector button ahead of the lead panels", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        leadPanels={<section data-testid="lead-panel">Product studio</section>}
+      />
+    );
+    const action = screen.getByRole("button", { name: /New sector/ });
+    const panel = screen.getByTestId("lead-panel");
+    expect(action.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

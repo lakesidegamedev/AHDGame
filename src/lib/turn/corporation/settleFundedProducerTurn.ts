@@ -1,5 +1,8 @@
 import { logger } from "@/lib/observability/logger";
-import { wideEconomyLaneShortage } from "@/lib/market/producerMarket/wideEconomyRules";
+import {
+  wideEconomyLaneShortage,
+  wideEconomyLaneSurplus,
+} from "@/lib/market/producerMarket/wideEconomyRules";
 import {
   COMPANY_BOOKS_KEPT_TURNS,
   companyBooksId,
@@ -21,6 +24,7 @@ function attributedBook(a: CountryBookAttribution | undefined) {
     demandBy: scaleUnits(a.demandBy, TURNS_PER_DAY),
     requestedBy: scaleUnits(a.requestedBy, TURNS_PER_DAY),
     filledBy: scaleUnits(a.filledBy, TURNS_PER_DAY),
+    ...(a.carriedStock ? { carriedStock: a.carriedStock * TURNS_PER_DAY } : {}),
   };
 }
 import type { FundedProducerTurnResult } from "@/lib/turn/corporation/fundedProducerTurn";
@@ -624,12 +628,22 @@ export async function publishFundedProducerTurn(
       { upsert: true }
     );
   // Any wider-economy wallet means it ran this turn (also on a resumed turn).
-  const wideShortage = [...context.scopeById.values()].some((s) => s.kind === "wideEconomy")
+  const wideRan = [...context.scopeById.values()].some((s) => s.kind === "wideEconomy");
+  const isWideAccount = (id: string) => context.scopeById.get(id)?.kind === "wideEconomy";
+  const wideShortage = wideRan
     ? wideEconomyLaneShortage({
         outcomes: settled.result.orderOutcomes ?? [],
         orders: settled.result.tradeReceipt.orders,
         fills: settled.result.tradeReceipt.fills,
-        isWideAccount: (id) => context.scopeById.get(id)?.kind === "wideEconomy",
+        isWideAccount,
+        laneKey: laneKeyOf,
+      })
+    : null;
+  const wideSurplus = wideRan
+    ? wideEconomyLaneSurplus({
+        products: settled.result.producers.flatMap((p) => p.products),
+        outcomes: settled.result.orderOutcomes ?? [],
+        isWideAccount,
         laneKey: laneKeyOf,
       })
     : null;
@@ -654,6 +668,9 @@ export async function publishFundedProducerTurn(
       // Real shortage per lane, read by the next turns to size the wider
       // economy's seller on persistently short lanes (wideEconomyShortageBoost).
       ...(wideShortage ? { wideShortage } : {}),
+      // Unsold share of new plant output per lane, read by the next turns to
+      // size the wider economy's buyer on oversupplied lanes (wideEconomySurplusBoost).
+      ...(wideSurplus ? { wideSurplus } : {}),
       ...(restartOn && pressureNow
         ? {
             recipePressure: fundedRecipePressure({

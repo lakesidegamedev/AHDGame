@@ -86,6 +86,7 @@ export function producerStageEnv(
         wholePlantsStage?: number;
         wideEconomyStage?: number;
         wideEconomyPricingStage?: number;
+        wideEconomySurplusStage?: number;
         fiscalScaleStage?: number;
       } & LabourWageConfig)
     | null
@@ -128,6 +129,8 @@ export function producerStageEnv(
     wideEconomyStage: config?.wideEconomyStage ?? 1,
     // Ships on as well: the price counts what the wider economy sold.
     wideEconomyPricingStage: config?.wideEconomyPricingStage ?? 1,
+    // And the buyer's oversupplied-lane boost.
+    wideEconomySurplusStage: config?.wideEconomySurplusStage ?? 1,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)

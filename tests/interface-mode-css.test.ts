@@ -17,7 +17,8 @@ describe("interface mode presentation contract", () => {
   it("scopes classic presentation to the classic preference", () => {
     expect(CSS).toContain('[data-interface="classic"]');
     expect(CSS).toContain("--font-lora");
-    expect(CSS).toContain("--glow-primary");
+    // Buttons are flat in every mode: classic keeps its type and panel depth, not a glow.
+    expect(CSS).not.toContain("--glow-primary");
   });
 
   it("adds modern mobile color without changing desktop modern mode", () => {

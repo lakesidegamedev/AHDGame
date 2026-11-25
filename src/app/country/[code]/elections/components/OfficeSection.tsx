@@ -120,51 +120,55 @@ export function OfficeSection({
 
   return (
     <section className="space-y-3">
-      <button
-        type="button"
-        onClick={() => onToggle(section.key)}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        className="flex w-full items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40"
-      >
-        <svg
-          className={`h-4 w-4 shrink-0 text-muted transition-transform ${expanded ? "rotate-90" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden
+      {/* Each office group is a section heading: the button sits inside it, the
+          standard accordion pattern, so the page outline lists every office. */}
+      <h2 className="m-0 text-base font-normal">
+        <button
+          type="button"
+          onClick={() => onToggle(section.key)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className="flex w-full items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+          <svg
+            className={`h-4 w-4 shrink-0 text-muted transition-transform ${expanded ? "rotate-90" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
 
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-bold tracking-tight text-foreground">
-            {section.label}
-          </span>
-          <span className="mt-0.5 block text-xs text-muted">
-            {section.total} race{section.total === 1 ? "" : "s"}
-            <span className="mx-1.5 opacity-50">·</span>
-            {section.contested} contested
-            {section.competitive > 0 && (
-              <>
-                <span className="mx-1.5 opacity-50">·</span>
-                <span className="text-warning" title={CLOSE_RACE_RULE_TEXT}>
-                  {section.competitive} close
-                </span>
-              </>
-            )}
-          </span>
-        </span>
-
-        {deadline && (
-          <span className="shrink-0 text-right">
-            <span className="block text-sm font-medium tabular-nums text-foreground">
-              {deadline}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-base font-bold tracking-tight text-foreground">
+              {section.label}
             </span>
-            <span className="block text-body-sm font-medium text-muted">Next to close</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              {section.total} race{section.total === 1 ? "" : "s"}
+              <span className="mx-1.5 opacity-50">·</span>
+              {section.contested} contested
+              {section.competitive > 0 && (
+                <>
+                  <span className="mx-1.5 opacity-50">·</span>
+                  <span className="text-warning" title={CLOSE_RACE_RULE_TEXT}>
+                    {section.competitive} close
+                  </span>
+                </>
+              )}
+            </span>
           </span>
-        )}
-      </button>
+
+          {deadline && (
+            <span className="shrink-0 text-right">
+              <span className="block text-sm font-medium tabular-nums text-foreground">
+                {deadline}
+              </span>
+              <span className="block text-body-sm font-medium text-muted">Next to close</span>
+            </span>
+          )}
+        </button>
+      </h2>
 
       {isPremierLabel(section.label) && (
         <p className="px-1 text-xs text-muted">{PREMIER_ELECTION_NOTE}</p>

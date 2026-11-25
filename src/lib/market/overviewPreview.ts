@@ -52,8 +52,29 @@ export function compareByDistanceFromBase<T extends CommodityMover>(a: T, b: T):
   return tb - ta;
 }
 
-export function topCommodityMovers<T extends CommodityMover>(commodities: readonly T[]): T[] {
-  return [...commodities].sort(compareByDistanceFromBase).slice(0, MARKET_OVERVIEW_ROWS);
+/**
+ * The commodities card: goods held at the cap all show the same figure, so
+ * they share one summary row and the other rows go to the goods furthest
+ * from base that can still move. One row fewer when any good is capped.
+ */
+export function commodityOverview<T extends CommodityMover>(
+  commodities: readonly T[]
+): { movers: T[]; capped: T[] } {
+  const sorted = [...commodities].sort(compareByDistanceFromBase);
+  const capped = sorted.filter((c) => atPriceCap(c));
+  const free = sorted.filter((c) => !atPriceCap(c));
+  return {
+    movers: free.slice(0, capped.length > 0 ? MARKET_OVERVIEW_ROWS - 1 : MARKET_OVERVIEW_ROWS),
+    capped,
+  };
+}
+
+/** Plain-words summary of the goods held at the cap, most pressed first. */
+export function cappedSummary(capped: readonly { label: string }[]): string | null {
+  if (capped.length === 0) return null;
+  const names = capped.slice(0, 4).map((c) => c.label);
+  const more = capped.length - names.length;
+  return more > 0 ? `${names.join(", ")} and ${more} more` : names.join(", ");
 }
 
 /** `?preview=N` as a row count, or null when absent or invalid. */

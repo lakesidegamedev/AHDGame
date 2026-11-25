@@ -9,7 +9,7 @@ import { SovereignDebtWatchPanel } from "@/components/world/SovereignDebtWatchPa
 import type { Conflict } from "@/app/world/conflicts/_coldwar/conflicts";
 import { CrisisBoardMap } from "./CrisisBoardMap";
 import { BoardCard, ExposurePanel } from "./CrisisBoardCards";
-import { SECTION_META, SECTION_ORDER } from "@/lib/crises/rules/crisisRow";
+import { HIGH_SEVERITY_SCORE, SECTION_META, SECTION_ORDER } from "@/lib/crises/rules/crisisRow";
 import { SEVERITY_BADGE } from "./crisisBoardStyle";
 
 type View = "all" | "mine" | "conflicts" | "global" | "country" | "region" | "debt";
@@ -136,7 +136,7 @@ function CrisisBoardPage() {
             <h1 className="text-2xl font-bold text-foreground">Crises</h1>
             <p className="text-sm text-muted">
               {board
-                ? `${activeCount} active, ${severeCount} severe · ${board.actionCount} need your response`
+                ? `${activeCount} active, ${severeCount} severe (score ${HIGH_SEVERITY_SCORE}+) · ${board.actionCount} need your response`
                 : "Loading"}
             </p>
           </div>
