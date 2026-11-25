@@ -133,6 +133,19 @@ it("archives a notification from the rail without opening it", async () => {
   expect(screen.queryByRole("button", { name: "Archive Title second" })).toBeNull();
 });
 
+it("can focus notifications on urgent and actionable items", () => {
+  const urgent = { ...notif("urgent"), action: false };
+  const routine = { ...notif("routine"), action: false, urgency: "update" as const };
+  mockUseInboxData.mockReturnValue(hookResult([urgent, routine], vi.fn()));
+  render(<InboxClient />);
+
+  fireEvent.click(screen.getByRole("tab", { name: /Notifications/ }));
+  expect(screen.getByRole("button", { name: "Archive Title routine" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox", { name: "Priority only" }));
+  expect(screen.queryByRole("button", { name: "Archive Title routine" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Archive Title urgent" })).toBeTruthy();
+});
+
 describe("InboxClient handleMarkAllRead", () => {
   beforeEach(() => {
     vi.clearAllMocks();

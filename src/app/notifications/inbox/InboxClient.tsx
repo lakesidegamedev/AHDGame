@@ -211,6 +211,8 @@ export function InboxClient() {
       }
     : null;
   const [showHistory, setShowHistory] = useState(false);
+  const [priorityOnly, setPriorityOnly] = useState(false);
+  const filterPriority = state.seg === "notifs" && priorityOnly;
   // Mobile: false = rail visible, true = reading pane visible (full-screen).
   // Ignored at lg+ where both columns always show.
   const [mobileReader, setMobileReader] = useState(false);
@@ -220,7 +222,11 @@ export function InboxClient() {
   // Derive visible items for the active segment, hiding archived
   const visibleItems = useMemo(() => {
     const base = items.filter((i) => !state.archivedIds.has(i.id) && !state.snoozedIds.has(i.id));
-    if (state.seg === "notifs") return base.filter((i) => i.kind === "notif");
+    if (state.seg === "notifs") {
+      return base.filter(
+        (i) => i.kind === "notif" && (!filterPriority || i.urgency === "urgent" || i.action)
+      );
+    }
     if (state.seg === "mail") return base.filter((i) => i.kind === "mail");
     if (state.seg === "action") {
       return base.filter((i) => {
@@ -230,7 +236,15 @@ export function InboxClient() {
       });
     }
     return base;
-  }, [items, state.seg, state.archivedIds, state.snoozedIds, state.readIds, state.selId]);
+  }, [
+    items,
+    state.seg,
+    state.archivedIds,
+    state.snoozedIds,
+    state.readIds,
+    state.selId,
+    filterPriority,
+  ]);
 
   const counts = useMemo(() => {
     const activeItems = items.filter(
@@ -484,6 +498,17 @@ export function InboxClient() {
           {markingAll ? "Marking…" : "Mark all read"}
         </button>
       </div>
+
+      {state.seg === "notifs" && !loading && (
+        <label className="mb-3 flex w-fit items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={priorityOnly}
+            onChange={(event) => setPriorityOnly(event.target.checked)}
+          />
+          Priority only
+        </label>
+      )}
 
       {/* Mark-all-read failure — rolled back to server state, player can retry */}
       {markAllError && (
