@@ -202,7 +202,7 @@ export function LegislatureCompositionSection({
       <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-sm">{chamberLabel}</h2>
+            <h2 className="font-semibold text-sm">{chamberLabel} composition</h2>
             <p className="text-xs text-muted mt-0.5">{subtitle}</p>
           </div>
           <div className="flex items-center gap-3">

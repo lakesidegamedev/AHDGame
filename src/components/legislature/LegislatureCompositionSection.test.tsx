@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { LegislatureCompositionSection } from "./LegislatureCompositionSection";
 import type { LegislatureMember } from "./types";
 
@@ -47,5 +47,23 @@ describe("LegislatureCompositionSection bloc list", () => {
     const text = container.textContent ?? "";
     expect(text).toContain("2 party blocs holding 33 seats");
     expect(text).toContain("not individual legislators");
+  });
+
+  it("titles the chart card distinctly from the chamber name", () => {
+    render(
+      <LegislatureCompositionSection
+        data={{
+          members: [bloc("a", "Andre Wright", 19)],
+          composition: [],
+          totalSeats: 19,
+          filledSeats: 19,
+        }}
+        chamberLabel="Senate"
+        showSeatsColumn={false}
+        countryId="US"
+      />
+    );
+    expect(screen.getByRole("heading", { level: 2, name: "Senate composition" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 2, name: "Senate" })).toBeNull();
   });
 });
