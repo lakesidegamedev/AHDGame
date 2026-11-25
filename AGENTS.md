@@ -21,6 +21,25 @@ Treat every change as production-bound.
   repository layer.
 - No em dashes or en dashes in player-facing copy, in any language.
 
+## Every number must still line up
+
+Any change that creates, moves or removes a quantity players can see (supply,
+demand, money, prices, votes, seats, members, anything with a total) must keep
+every screen and API that shows it reconciled. This applies to small changes
+too, such as adding demand or adding votes to candidates.
+
+- Each source of the number is its own labelled row wherever the total is
+  shown (for example real producers, background economy, imports, exports).
+  The visible rows add up to the visible total.
+- One definition per figure. A screen must not invent its own version of a
+  total ("demand minus exports plus imports"). Use the shared builder; if none
+  exists, create one and point every screen at it.
+- Same unit everywhere, and say which (per turn, per day).
+- Add a reconciliation test: displayed rows sum to the displayed total, using a
+  fixture that includes the new source.
+- Before calling the work done, open one affected screen on the running game
+  and check that it adds up.
+
 ## Systems need a portable rules core
 
 Every system's rules (formulas, eligibility, resolution, state transitions) must
