@@ -1097,10 +1097,10 @@ export async function processNppCorporationDecisions(
       // skips its decisions this turn instead of stopping the whole turn.
       if (!(error instanceof Error) || !error.message.startsWith("Exchange rate unavailable"))
         throw error;
-      logger.warn("[NPP] corporation skipped this turn", {
-        corporationId: String(corp._id),
-        error: error.message,
-      });
+      logger.warn(
+        "NPP Corporation Behavior",
+        `${String(corp._id)} skipped this turn: ${error.message}`
+      );
     }
   }
 
