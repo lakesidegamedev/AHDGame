@@ -52,7 +52,7 @@ export function AskDrawerSection() {
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-card-border bg-background/50 px-4 py-3">
+    <div className="space-y-3 rounded-xl border border-card-border bg-card-muted px-4 py-3">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-sm font-medium text-foreground">{t("askDrawer.title")}</div>

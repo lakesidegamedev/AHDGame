@@ -33,13 +33,13 @@ export function MobileTabs({
   const style = (on: boolean): React.CSSProperties => ({
     minHeight: 40,
     border: 0,
-    borderRadius: 8,
+    borderRadius: 999,
     cursor: "pointer",
     fontFamily: FONT.sans,
     fontSize: 14,
     fontWeight: on ? 600 : 500,
-    background: on ? BLEND.ink : "transparent",
-    color: on ? BLEND.page : BLEND.muted,
+    background: on ? "var(--primary)" : "transparent",
+    color: on ? "var(--primary-foreground)" : BLEND.muted,
   });
   return (
     <div

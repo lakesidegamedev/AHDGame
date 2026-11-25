@@ -28,6 +28,7 @@ import { CustomerBankPanel } from "./CustomerBankPanel";
 import { DepositorBookPanel } from "./DepositorBookPanel";
 import { BankTreasuryPanel } from "./BankTreasuryPanel";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { pillClass } from "@/components/ui/selectedState";
 
 /** CEO toggle for opt-in loan approval. When on, new loans queue as pending. */
 function LoanApprovalToggle({
@@ -435,11 +436,7 @@ export function ActiveCharterPanel({
             onClick={() => setTab(tabItem.id)}
             aria-current={tab === tabItem.id ? "page" : undefined}
             title={tabItem.hint}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] transition-colors ${
-              tab === tabItem.id
-                ? "bg-card-elevated font-medium text-foreground"
-                : "text-muted hover:bg-card-elevated/60 hover:text-foreground"
-            }`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-[13px] ${pillClass(tab === tabItem.id)}`}
           >
             {tabItem.label}
             {tabItem.badge != null && (

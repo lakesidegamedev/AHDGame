@@ -44,6 +44,7 @@ import type { MainTab as StateMainTab } from "@/app/country/[code]/region/[id]/p
 import type { StatePartyAnalyticsPayload } from "@/lib/partyAnalytics";
 
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
+import { pillClass } from "@/components/ui/selectedState";
 
 export type PartyHubScope =
   | { kind: "national"; countryCode: string; partyId: string }
@@ -95,13 +96,11 @@ export function ScopeSwitcher({
   const isNational = scope.kind === "national";
 
   return (
-    <div className="mt-4 inline-flex rounded-lg border border-card-border p-1">
+    <div className="mt-4 inline-flex gap-1 rounded-full bg-card-muted p-0.5">
       <Link
         href={nationalHref}
         aria-current={isNational ? "page" : undefined}
-        className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
-          isNational ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"
-        }`}
+        className={`px-3 py-1.5 text-body-sm ${pillClass(isNational)}`}
       >
         National
       </Link>
@@ -109,14 +108,12 @@ export function ScopeSwitcher({
         <Link
           href={regionHref}
           aria-current={!isNational ? "page" : undefined}
-          className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
-            !isNational ? "bg-card-elevated text-foreground" : "text-muted hover:text-foreground"
-          }`}
+          className={`px-3 py-1.5 text-body-sm ${pillClass(!isNational)}`}
         >
           {regionLabel}
         </Link>
       ) : (
-        <span className="cursor-not-allowed rounded-md px-3 py-1.5 text-body-sm font-medium text-muted/50">
+        <span className="cursor-not-allowed rounded-full px-3 py-1.5 text-body-sm font-medium text-muted/50">
           {regionLabel}
         </span>
       )}

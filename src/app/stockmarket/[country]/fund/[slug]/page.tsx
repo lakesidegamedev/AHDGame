@@ -23,6 +23,7 @@ import { SponsorshipCard } from "@/components/indexFunds/SponsorshipCard";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import type { PriceChangeTimeframe } from "@/app/country/[code]/stockmarket/components/StockList";
+import { pillClass } from "@/components/ui/selectedState";
 
 export default function FundDetailPage({
   params,
@@ -331,19 +332,17 @@ function FundDetailContent({ country, slug }: { country: string; slug: string })
                     onClick={() => setActiveTab(t.key)}
                     role="tab"
                     aria-selected={active}
-                    className={`inline-flex items-center gap-2 rounded-[10px] border px-4 py-2 text-[13px] font-semibold transition-all ${
-                      active
-                        ? "border-primary/55 bg-card-elevated text-foreground"
-                        : "border-card-border bg-card text-muted hover:text-foreground"
-                    }`}
+                    className={`inline-flex items-center gap-2 px-4 py-1.5 text-[13px] ${pillClass(active)}`}
                   >
                     {t.label}
                     {t.count && (
                       <span
                         className="rounded-full px-1.5 py-px font-mono text-[10px] font-bold"
                         style={{
-                          background: active ? "var(--primary)" : "var(--card-elevated)",
-                          color: active ? "var(--primary-foreground, #fff)" : "var(--muted)",
+                          background: active
+                            ? "color-mix(in srgb, var(--primary-foreground) 25%, transparent)"
+                            : "var(--card-elevated)",
+                          color: active ? "var(--primary-foreground)" : "var(--muted)",
                         }}
                       >
                         {t.count}

@@ -6,6 +6,7 @@ import type { WorldTradeLedger } from "@/lib/trade/queries/worldTradeLedger";
 import { ISO_NUMERIC_TO_COUNTRY } from "@/lib/commodity-map/commodityRegionMappings";
 import { WORLD_GEO_URL, SVG_W, SVG_H } from "@/app/world/worldConstants";
 import { directionMark } from "../lib/ledgerFormat";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * World Trade Map — a real geographic map (Equal Earth projection). Non-playable
@@ -183,11 +184,7 @@ export default function MapView({ ledger }: { ledger: WorldTradeLedger }) {
         <button
           onClick={() => setFocus(null)}
           aria-pressed={focus === null}
-          className={`rounded-full border px-3 py-1 text-[11.5px] font-semibold transition-colors ${
-            focus === null
-              ? "border-primary/60 bg-primary/15 text-foreground"
-              : "border-card-border bg-card-elevated text-muted hover:text-foreground"
-          }`}
+          className={`px-3 py-1 text-[11.5px] ${pillClass(focus === null)}`}
         >
           All flows
         </button>
@@ -198,11 +195,7 @@ export default function MapView({ ledger }: { ledger: WorldTradeLedger }) {
               key={c.code}
               onClick={() => setFocus((f) => (f === c.code ? null : c.code))}
               aria-pressed={active}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-foreground"
-                  : "border-card-border bg-card-elevated text-muted hover:text-foreground"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11.5px] ${pillClass(active)}`}
             >
               <span
                 className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-[8px]"

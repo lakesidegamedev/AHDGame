@@ -144,7 +144,7 @@ export function NotificationPreferencesPanel() {
   };
 
   return (
-    <section className="rounded-2xl border border-card-border bg-background/45 p-4 md:col-span-3 md:p-5">
+    <section className="rounded-2xl border border-card-border bg-card-muted p-4 md:col-span-3 md:p-5">
       <h3 className="text-sm font-semibold">{t("title")}</h3>
       <p className="mt-1 text-xs leading-5 text-muted">{t("description")}</p>
       <p className="mt-2 text-xs leading-5 text-muted">{t("turnStatusHint")}</p>

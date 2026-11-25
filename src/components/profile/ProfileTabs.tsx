@@ -13,6 +13,7 @@ import {
   PROFILE_CONTAINER_CLASS,
   PROFILE_MAIN_WIDTH_CLASS,
 } from "@/app/profile/components/profileStyles";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 // The political view is the default and stays eager; the military and business
 // views only render when their tab is selected, so they must not ride in every
@@ -102,7 +103,7 @@ export function ProfileTabs({
             <div
               role="tablist"
               aria-label={t("label")}
-              className="-mb-px flex gap-x-6 overflow-x-auto scrollbar-hide"
+              className="flex gap-1 overflow-x-auto pb-3 scrollbar-hide"
             >
               {tabs.map((item) => (
                 <button
@@ -136,7 +137,7 @@ export function ProfileTabs({
                       document.getElementById(`${id}-${next.id}`)?.focus();
                     }
                   }}
-                  className={`shrink-0 whitespace-nowrap border-b-2 pb-3 text-body font-medium transition-colors ${item.locked ? "cursor-not-allowed border-transparent text-muted opacity-60" : tab === item.id ? "border-foreground font-semibold text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
+                  className={`shrink-0 whitespace-nowrap px-3 py-1.5 text-body ${item.locked ? `${PILL_SHAPE} cursor-not-allowed text-muted opacity-60` : pillClass(tab === item.id)}`}
                   title={item.locked ?? undefined}
                 >
                   {t(item.id)}

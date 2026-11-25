@@ -1,6 +1,7 @@
 "use client";
 
 import { CATEGORY_LABELS } from "../actionsConstants";
+import { pillClass } from "@/components/ui/selectedState";
 
 interface CategoryFilterProps {
   categories: string[];
@@ -31,11 +32,7 @@ export default function CategoryFilter({
             role="tab"
             aria-selected={active}
             onClick={() => onCategoryChange(cat)}
-            className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-1.5 text-body font-medium transition-colors ${
-              active
-                ? "border-foreground/40 bg-card-elevated text-foreground"
-                : "border-card-border bg-card text-muted hover:bg-card-elevated hover:text-foreground"
-            }`}
+            className={`flex items-center gap-2 whitespace-nowrap px-4 py-1.5 text-body ${pillClass(active)}`}
           >
             {cat === "all" ? "All operations" : CATEGORY_LABELS[cat]}
             {count !== undefined && (

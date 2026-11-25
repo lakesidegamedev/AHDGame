@@ -14,6 +14,7 @@ import { validateDraft, type CommandDraft } from "@/lib/military/commands";
 import { draftEffectiveness, effIntent } from "@/lib/military/calc";
 import { Badge } from "../../dossier";
 import { PostureEffects, TypeBonuses } from "@/components/CommandEffects";
+import { pillClass } from "@/components/ui/selectedState";
 
 const TYPE_KEYS: CommandType[] = ["HOMELAND_DEFENSE", "REGIONAL", "LOGISTICS"];
 const SUPPLIES: SupplyPriority[] = ["Normal", "High", "Emergency"];
@@ -114,11 +115,7 @@ export function CreateCommandDialog({
                   type="button"
                   onClick={() => set({ type: t })}
                   aria-pressed={draft.type === t}
-                  className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold ${
-                    draft.type === t
-                      ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] text-gov-soft"
-                      : "border-card-border text-muted hover:text-foreground"
-                  }`}
+                  className={`px-3 py-1.5 text-[12px] ${pillClass(draft.type === t)}`}
                 >
                   {COMMAND_TYPES[t].label}
                 </button>

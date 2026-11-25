@@ -16,6 +16,7 @@ import {
   type ActionAuditRecord,
 } from "@/components/admin/forensics/types";
 import { OVERLINE_CLS, PANEL_CLS } from "./dossierTypes";
+import { PILL_SHAPE, pillClass } from "@/components/ui/selectedState";
 
 interface RecentActionsPanelProps {
   recentActions: ActionAuditRecord[];
@@ -123,12 +124,8 @@ function StreamButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`px-2.5 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none ${
-        active
-          ? "bg-card-elevated text-foreground"
-          : danger
-            ? "text-red-400/80 hover:text-red-400"
-            : "text-muted hover:text-foreground"
+      className={`px-2.5 py-1 text-[11px] motion-reduce:transition-none ${
+        danger && !active ? `${PILL_SHAPE} text-red-400/80 hover:text-red-400` : pillClass(active)
       }`}
     >
       {label}

@@ -8,6 +8,7 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import type { BillWhipPanelData } from "@/lib/congress/billWhipPanelData";
 import { partyApiUrl, partyUrl } from "@/lib/urls";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 interface BillWhipPanelProps {
   billId: string;
@@ -113,20 +114,13 @@ export function BillWhipPanel({
         </Link>
       </div>
 
-      <div
-        role="tablist"
-        className="flex gap-1 rounded-lg border border-card-border bg-background p-1 w-fit"
-      >
+      <div role="tablist" className={`${PILL_TRACK} w-fit`}>
         <button
           type="button"
           role="tab"
           aria-selected={audience === "character"}
           onClick={() => setAudience("character")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            audience === "character"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted hover:text-foreground"
-          }`}
+          className={`px-4 py-1.5 text-sm ${pillClass(audience === "character")}`}
         >
           Player whip
         </button>
@@ -135,11 +129,7 @@ export function BillWhipPanel({
           role="tab"
           aria-selected={audience === "npp"}
           onClick={() => setAudience("npp")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-            audience === "npp"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted hover:text-foreground"
-          }`}
+          className={`px-4 py-1.5 text-sm ${pillClass(audience === "npp")}`}
         >
           NPP whip
         </button>

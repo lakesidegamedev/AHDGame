@@ -144,7 +144,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
 
               <div className="min-w-0 space-y-7">
                 {!hasSearchResults && (
-                  <div className="rounded-2xl border border-dashed border-card-border bg-card/50 px-6 py-12 text-center">
+                  <div className="rounded-2xl border border-dashed border-card-border bg-card px-6 py-12 text-center">
                     <Search className="mx-auto h-6 w-6 text-muted" />
                     <h2 className="mt-3 text-base font-semibold text-foreground">
                       {t("page.noResultsTitle")}
@@ -276,7 +276,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                           !hasVisibleCharacterSettings &&
                           (!normalizedSearch ||
                             "character create new".includes(normalizedSearch)) && (
-                            <div className="rounded-2xl border border-dashed border-card-border bg-background/40 p-6 text-center">
+                            <div className="rounded-2xl border border-dashed border-card-border bg-card-muted p-6 text-center">
                               <p className="text-sm text-muted">{t("page.noCharacter")}</p>
                               <div className="mt-4 flex flex-wrap justify-center gap-2">
                                 <Link
@@ -360,7 +360,7 @@ export function renderSettingsPageContentView(context: SettingsPageContentViewCo
                               className={`overflow-hidden rounded-2xl border shadow-lg ${
                                 activeSection === "danger" || activeSection === "character-danger"
                                   ? "border-error/35 bg-error/[0.04]"
-                                  : "border-primary/30 bg-background/75"
+                                  : "border-primary/30 bg-card-muted"
                               }`}
                             >
                               <div className="flex items-center gap-3 border-b border-card-border px-5 py-4 md:px-6">

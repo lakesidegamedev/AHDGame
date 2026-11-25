@@ -10,6 +10,7 @@ import { DEMOGRAPHIC_LABELS } from "@/lib/seeds/demographicLabels";
 import { partyHex } from "../../pollHelpers";
 import type { PollData, StoredPoll } from "../../types";
 import { formatScore } from "@/lib/ui/numbers";
+import { pillClass } from "@/components/ui/selectedState";
 
 type SortKey = string;
 
@@ -219,11 +220,7 @@ function HeaderButton({
       onClick={onClick}
       aria-label={ariaLabel}
       aria-pressed={active}
-      className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
-        active
-          ? "bg-foreground/10 text-foreground"
-          : "text-muted hover:bg-foreground/[0.05] hover:text-foreground"
-      }`}
+      className={`px-3 py-1.5 text-body-sm ${pillClass(active === true)}`}
     >
       {children}
     </button>
@@ -243,7 +240,7 @@ function DimensionTabs({
 }) {
   return (
     <nav
-      className="flex flex-wrap gap-x-1 border-b border-card-border"
+      className="flex flex-wrap gap-1 border-b border-card-border pb-2"
       role="tablist"
       aria-label="Granular dimensions"
     >
@@ -253,11 +250,7 @@ function DimensionTabs({
           role="tab"
           aria-selected={active === dim}
           onClick={() => onChange(dim)}
-          className={`-mb-px border-b-2 px-3 py-2 text-body font-medium transition-colors ${
-            active === dim
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted hover:text-foreground"
-          }`}
+          className={`px-3 py-1.5 text-body ${pillClass(active === dim)}`}
         >
           {dimLabels[dim] ?? prettifyKey(dim)}
         </button>

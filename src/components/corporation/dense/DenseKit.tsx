@@ -8,6 +8,7 @@ import type { FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { ROW_ACCENT, type Tone } from "./InlineViz";
 import { useCorpLedger } from "../ledger/LedgerContext";
 import { ProportionBar } from "../ledger/ProportionBar";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "../fillBand";
 
 /**
@@ -444,15 +445,8 @@ export function Segmented<T extends string | number>({
   ariaLabel: string;
   disabled?: boolean;
 }) {
-  const ledger = useCorpLedger();
   return (
-    <div
-      role="radiogroup"
-      aria-label={ariaLabel}
-      className={`inline-flex h-7 shrink-0 items-stretch overflow-hidden border border-card-border ${
-        ledger ? "rounded-[calc(var(--corp-rad)-2px)]" : "rounded-md"
-      }`}
-    >
+    <div role="radiogroup" aria-label={ariaLabel} className={`${PILL_TRACK} h-7 shrink-0`}>
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -464,12 +458,7 @@ export function Segmented<T extends string | number>({
             title={opt.title}
             disabled={disabled}
             onClick={() => onChange(opt.value)}
-            className={`border-r border-card-border px-2 text-xs tabular-nums transition-colors last:border-r-0 disabled:opacity-50 ${
-              // Same selected look as filter pills across the game.
-              active
-                ? "bg-primary/10 font-semibold text-primary"
-                : "text-muted hover:bg-card-elevated hover:text-foreground"
-            }`}
+            className={`h-6 px-2.5 text-xs tabular-nums disabled:opacity-50 ${pillClass(active)}`}
           >
             {opt.label}
           </button>

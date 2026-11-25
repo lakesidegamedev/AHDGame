@@ -205,7 +205,7 @@ export function DangerZoneSection({ onAccountDeleted }: Props) {
         )}
 
         {showSpecificPositions && (
-          <div className="mt-4 rounded-xl border border-card-border bg-background/40 p-4">
+          <div className="mt-4 rounded-xl border border-card-border bg-card-muted p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <p className="text-sm font-medium text-foreground">
                 {t("danger.resignSpecificTitle")}

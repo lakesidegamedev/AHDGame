@@ -53,9 +53,7 @@ function Surface({
   className?: string;
 }) {
   return (
-    <div
-      className={`rounded-2xl border border-card-border bg-background/45 p-4 md:p-5 ${className}`}
-    >
+    <div className={`rounded-2xl border border-card-border bg-card-muted p-4 md:p-5 ${className}`}>
       <div className="flex items-start gap-3">
         <span className="mt-0.5 shrink-0 text-muted">{icon}</span>
         <div className="min-w-0 flex-1">
@@ -224,7 +222,7 @@ export function AudioQuickSettings() {
   const { preferences, updatePreferences } = useBrowserPreferences();
 
   return (
-    <div className="rounded-2xl border border-card-border bg-background/45 p-4 md:p-5">
+    <div className="rounded-2xl border border-card-border bg-card-muted p-4 md:p-5">
       <div className="flex items-center gap-4">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           {preferences.gameSounds ? (
@@ -274,7 +272,7 @@ export function AudioQuickSettings() {
               aria-label={t("quick.audio.masterVolume")}
             />
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-card-border bg-card/70 p-3">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-card-border bg-card p-3">
             <div>
               <p className="text-sm font-medium text-foreground">{t("quick.audio.eventSounds")}</p>
               <p className="mt-0.5 text-xs text-muted">{t("quick.audio.eventSoundsHint")}</p>

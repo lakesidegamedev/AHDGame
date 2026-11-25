@@ -28,6 +28,7 @@ import {
   sovereigntyRegionIn,
 } from "@/lib/referendum/rules/sovereigntyRegions";
 import { TabFallback } from "@/components/state/TabFallback";
+import { pillClass } from "@/components/ui/selectedState";
 
 // Only the Overview tab is open on arrival; the others are one click away and
 // each pulls its own heavy tree (the legislation tab drags the metric catalog
@@ -249,18 +250,14 @@ export function GovernorOfficeClient(props: Props) {
             )}
           </div>
           <nav
-            className="flex overflow-x-auto scrollbar-hide border-t border-card-border"
+            className="flex gap-1 overflow-x-auto scrollbar-hide border-t border-card-border p-2"
             aria-label="Office sections"
           >
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setSelectedTab(tab.key)}
-                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm transition-colors ${
-                  active === tab.key
-                    ? "border-b-2 border-primary text-foreground font-medium"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(active === tab.key)}`}
                 aria-current={active === tab.key ? "page" : undefined}
               >
                 {tab.label}

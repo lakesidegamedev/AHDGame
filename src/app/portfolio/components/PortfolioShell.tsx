@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { toneForDelta, toneText, type Tone } from "@/lib/ui/tone";
+import { PILL_SELECTED, pillClass } from "@/components/ui/selectedState";
 
 export interface PortfolioRailItem<K extends string> {
   key: K;
@@ -105,10 +106,10 @@ function RailButton<K extends string>({
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full rounded-lg border px-3 py-3 text-left transition-all ${
-        active
-          ? "border-primary/30 bg-primary/5 shadow-sm"
-          : "border-transparent hover:border-card-border hover:bg-card-elevated"
+      // The desktop rail is the wide form of the section tabs: the selected
+      // section takes the filled primary state like every other tab.
+      className={`group w-full rounded-xl px-3 py-3 text-left transition-colors ${
+        active ? PILL_SELECTED : "hover:bg-card-elevated"
       }`}
       aria-current={active ? "page" : undefined}
     >
@@ -116,20 +117,32 @@ function RailButton<K extends string>({
         <span
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${
             active
-              ? "border-primary/30 bg-primary/10 text-primary"
+              ? "border-primary-foreground/30 text-primary-foreground"
               : "border-card-border bg-card-elevated text-muted group-hover:text-foreground"
           }`}
         >
           {item.icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-foreground">{item.label}</div>
+          <div
+            className={`truncate text-sm font-semibold ${active ? "text-primary-foreground" : "text-foreground"}`}
+          >
+            {item.label}
+          </div>
           <div className="flex items-baseline gap-2">
-            <span className="truncate text-xs tabular-nums text-muted">{item.value}</span>
+            <span
+              className={`truncate text-xs tabular-nums ${active ? "text-primary-foreground" : "text-muted"}`}
+            >
+              {item.value}
+            </span>
             {item.delta !== null && (
               <span
                 className={`text-[10px] font-bold tabular-nums shrink-0 ${
-                  item.delta >= 0 ? "text-success" : "text-error"
+                  active
+                    ? "text-primary-foreground"
+                    : item.delta >= 0
+                      ? "text-success"
+                      : "text-error"
                 }`}
               >
                 {item.delta >= 0 ? "+" : ""}
@@ -177,27 +190,31 @@ function MobileRail<K extends string>({
               role="tab"
               aria-selected={isActive}
               onClick={() => onSelect(item.key)}
-              className={`flex shrink-0 flex-col items-start gap-0.5 rounded-lg border px-3 py-2 transition-colors ${
-                isActive
-                  ? "border-primary bg-primary/5"
-                  : "border-card-border bg-card hover:bg-card-elevated"
-              }`}
+              className={`flex shrink-0 flex-col items-start gap-0.5 px-3 py-2 ${pillClass(isActive)}`}
             >
               <span
                 className={`text-[10px] font-bold uppercase tracking-wider ${
-                  isActive ? "text-primary" : "text-muted"
+                  isActive ? "text-primary-foreground" : "text-muted"
                 }`}
               >
                 {item.label}
               </span>
               <span className="flex items-baseline gap-1.5">
-                <span className="text-xs font-semibold text-foreground tabular-nums">
+                <span
+                  className={`text-xs font-semibold tabular-nums ${
+                    isActive ? "text-primary-foreground" : "text-foreground"
+                  }`}
+                >
                   {item.value}
                 </span>
                 {item.delta !== null && (
                   <span
                     className={`text-[10px] font-bold tabular-nums ${
-                      item.delta >= 0 ? "text-success" : "text-error"
+                      isActive
+                        ? "text-primary-foreground"
+                        : item.delta >= 0
+                          ? "text-success"
+                          : "text-error"
                     }`}
                   >
                     {item.delta >= 0 ? "+" : ""}

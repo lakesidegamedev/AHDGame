@@ -19,6 +19,7 @@ import {
   type OfferView,
 } from "@/lib/corporations/supplyExchange/offerOrdering";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { pillClass } from "@/components/ui/selectedState";
 
 type OfferFilters = OfferView;
 
@@ -186,13 +187,9 @@ function Segmented<T extends string>({
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`rounded-md border font-medium ${
-            prominent ? "h-9 px-4 text-sm" : "h-8 px-2.5 text-xs"
-          } ${
+          className={`font-medium ${prominent ? "h-9 px-4 text-sm" : "h-8 px-2.5 text-xs"} ${pillClass(
             value === o.value
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-card-border text-foreground hover:bg-card-elevated"
-          }`}
+          )}`}
         >
           {o.label}
         </button>

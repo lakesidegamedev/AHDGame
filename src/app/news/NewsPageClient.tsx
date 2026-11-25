@@ -9,6 +9,7 @@ import { HeroImage } from "@/components/HeroImage";
 import type { SerializedPost } from "@/components/news/NewsPost";
 import type { NewsFeedType } from "@/lib/db/types";
 import { useAuthMe } from "@/contexts/AuthDataContext";
+import { pillClass } from "@/components/ui/selectedState";
 
 const HERO_IMAGE_URL =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/An_old_man_in_newsagent%27s_shop%2C_Paris_September_2011.jpg/960px-An_old_man_in_newsagent%27s_shop%2C_Paris_September_2011.jpg";
@@ -183,14 +184,14 @@ export function NewsPageClient({
                   <button
                     type="button"
                     onClick={() => setComposerMode("text")}
-                    className={`rounded-md px-3 py-1.5 transition-colors ${composerMode === "text" ? "bg-white/90 text-black" : "text-white/70 hover:text-white"}`}
+                    className={`px-3 py-1.5 ${composerMode === "text" ? pillClass(true) : "rounded-full text-white/70 transition-colors hover:text-white"}`}
                   >
                     {composerFeedType === "advertisement" ? "Sponsored post" : "Text post"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setComposerMode("banner")}
-                    className={`rounded-md px-3 py-1.5 transition-colors ${composerMode === "banner" ? "bg-white/90 text-black" : "text-white/70 hover:text-white"}`}
+                    className={`px-3 py-1.5 ${composerMode === "banner" ? pillClass(true) : "rounded-full text-white/70 transition-colors hover:text-white"}`}
                   >
                     Banner ad
                   </button>

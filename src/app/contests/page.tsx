@@ -31,6 +31,7 @@ import { ContestEntry } from "./ContestEntry";
 import { ReferralInviteLink } from "./ReferralInviteLink";
 import { RoundCountdown } from "./RoundCountdown";
 import { AnchorAmount, AnchorUnitNote } from "@/components/currency/AnchorUnit";
+import { pillClass } from "@/components/ui/selectedState";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Contests | A House Divided",
@@ -792,7 +793,7 @@ export default async function ContestsPage({
         </header>
 
         <nav
-          className="mb-8 flex flex-wrap gap-6 border-b border-card-border"
+          className="mb-8 flex flex-wrap gap-1 border-b border-card-border pb-2"
           aria-label={t("navigation")}
         >
           {(["current", "rankings"] as const).map((tab) => {
@@ -802,7 +803,7 @@ export default async function ContestsPage({
                 key={tab}
                 href={`/contests?view=${tab}`}
                 aria-current={selected ? "page" : undefined}
-                className={`border-b-2 pb-3 font-medium ${selected ? "border-primary text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
+                className={`px-4 py-1.5 ${pillClass(selected)}`}
               >
                 {tab === "current" ? t("tabs.contests") : t("tabs.rankings")}
               </Link>
@@ -816,7 +817,7 @@ export default async function ContestsPage({
                 key={tab}
                 href={`/contests?view=${tab}`}
                 aria-current={view === tab ? "page" : undefined}
-                className={`rounded-md px-4 py-2 ${view === tab ? "bg-card text-foreground" : "text-muted hover:text-foreground"}`}
+                className={`px-4 py-1.5 ${pillClass(view === tab)}`}
               >
                 {t(`tabs.${tab}`)}
               </Link>

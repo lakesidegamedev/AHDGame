@@ -9,6 +9,7 @@ import {
 } from "@/components/elections/general/PersuasionDrivers";
 import type { DriverDisplayInputs } from "@/lib/elections/computePersuasionDriverDisplay";
 import type { GeneralElectionViewModel } from "@/lib/elections/generalViewModel";
+import { pillClass } from "@/components/ui/selectedState";
 
 /**
  * Per-state drivers for the presidential general: registration influence and
@@ -59,11 +60,7 @@ export function GeneralElectionShellClient({
                 type="button"
                 onClick={() => setSelectedStateId(id)}
                 aria-pressed={id === selectedStateId}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                  id === selectedStateId
-                    ? "border-primary/50 bg-primary/15 text-primary"
-                    : "border-card-border bg-background text-muted hover:text-foreground"
-                }`}
+                className={`px-2.5 py-1 text-xs ${pillClass(id === selectedStateId)}`}
               >
                 {nameFor(id)}
               </button>

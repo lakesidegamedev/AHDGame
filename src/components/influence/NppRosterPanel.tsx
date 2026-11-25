@@ -19,6 +19,7 @@ import {
   type RosterSort,
 } from "./nppRoster";
 import { sortByRegionLabel } from "@/lib/regionOptions";
+import { pillClass } from "@/components/ui/selectedState";
 
 export interface NppRosterPanelProps {
   scope: "state" | "national";
@@ -484,7 +485,7 @@ function NppDrawer({
             type="button"
             aria-pressed={count === value}
             onClick={() => setCount(value)}
-            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+            className={`px-3 py-1 ${pillClass(count === value)}`}
           >
             x{value}
           </button>

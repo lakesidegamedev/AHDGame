@@ -14,6 +14,7 @@ import type {
   SupplyChainRow,
 } from "@/lib/corporations/supplyChain/types";
 import { SupplyChainTable } from "./supplyChain/SupplyChainTable";
+import { pillClass } from "@/components/ui/selectedState";
 
 const initialFilters: SupplyChainFilters = {
   country: "",
@@ -200,7 +201,7 @@ export default function SupplyChainTab({
               <button
                 key={view}
                 aria-pressed={filters.view === view}
-                className={`rounded border px-3 py-1.5 text-xs ${filters.view === view ? "border-primary bg-primary/10 text-primary" : "border-card-border text-muted"}`}
+                className={`px-3 py-1.5 text-xs ${pillClass(filters.view === view)}`}
                 onClick={() => setFilters({ ...filters, view })}
               >
                 {label}
