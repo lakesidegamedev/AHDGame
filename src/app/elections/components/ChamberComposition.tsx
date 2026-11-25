@@ -60,7 +60,7 @@ export function ChamberComposition({
     <div className="space-y-4 rounded-xl border border-card-border bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">{chamber.name}</h3>
+          <h2 className="text-sm font-semibold">{chamber.name}</h2>
           {isUpper && activeSenateClass != null && (
             <p className="mt-0.5 text-xs text-muted">
               {t("chamberComposition.classContested", {
