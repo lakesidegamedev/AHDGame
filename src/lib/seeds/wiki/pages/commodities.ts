@@ -114,10 +114,11 @@ function formatFinalDemand(commodity: CommodityType): string[] {
   }
   for (const entry of GOVERNMENT_COMMODITY_DEMAND) {
     if (entry.commodity !== commodity) continue;
+    const share = Math.round(entry.mixShare * 1000) / 10;
     lines.push(
       entry.plannedOnly
         ? `- **Governments of planned economies**: from the ${entry.category} budget`
-        : `- **Governments**: from the ${entry.category} budget`
+        : `- **Governments**: ${entry.label.toLowerCase()} budget line, about ${share}% of it`
     );
   }
   return lines;

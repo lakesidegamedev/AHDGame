@@ -191,14 +191,14 @@ export const NPP_RD_MAINTENANCE_SHARE = 0.001;
  * Share of a cell's measured unmet demand that all NPP corporations together
  * may order as new capacity in one turn (founding plus expansion). The gap only
  * closes as plants come online, so ordering all of it at once overshoots by the
- * number of builders that read it; a third a turn closes a real shortage in a
+ * number of builders that read it; half a turn closes a real shortage in a
  * handful of turns and lets each reading correct the next step.
  */
-export const NPP_PACE_UNMET_SHARE = 0.3;
+export const NPP_PACE_UNMET_SHARE = 0.5;
 
 /**
  * Most plants all NPP corporations together may order in one country and lane
  * per turn. Bounds a lane whose measured gap is huge against the plant a
  * country can staff and supply, such as a public-budget service.
  */
-export const NPP_PACE_MAX_PLANTS_PER_LANE = 3;
+export const NPP_PACE_MAX_PLANTS_PER_LANE = 6;

@@ -34,16 +34,31 @@ export interface PublicPurchaseLine {
   amountLocal: number;
 }
 
+/** One budget line's purchase of one good, before lines for the same good and book are merged. */
+export interface PublicBudgetLinePurchase {
+  /** Budget category key the money came from. */
+  category: string;
+  commodity: CommodityType;
+  book: string;
+  amountLocal: number;
+}
+
 export function publicBuyerFunding(
   budgets: readonly PublicBuyerBudget[],
   turnsPerYear: number
-): { countryId: string; fundingLocal: number; lines: PublicPurchaseLine[] }[] {
+): {
+  countryId: string;
+  fundingLocal: number;
+  lines: PublicPurchaseLine[];
+  /** The same money before merging, so each budget line's goods can be shown. */
+  byBudgetLine: PublicBudgetLinePurchase[];
+}[] {
   if (!Number.isFinite(turnsPerYear) || turnsPerYear <= 0)
     throw new Error("Invalid turns per year");
   return [...budgets]
     .sort((a, b) => (a.countryId < b.countryId ? -1 : 1))
     .map((b) => {
-      const lines: PublicPurchaseLine[] = [];
+      const byBudgetLine: PublicBudgetLinePurchase[] = [];
       const share = Number.isFinite(b.plantShare) ? Math.min(1, Math.max(0, b.plantShare)) : 0;
       for (const {
         category,
@@ -59,19 +74,34 @@ export function publicBuyerFunding(
         const perTurn = (annual / turnsPerYear) * share * plantSliceFraction;
         if (!(perTurn > 0)) continue;
         if (!isStateScopedCommodity(commodity)) {
-          lines.push({ commodity, book: "world", amountLocal: perTurn });
+          byBudgetLine.push({ category, commodity, book: "world", amountLocal: perTurn });
           continue;
         }
         const weights = [...b.stateWeights].filter(([, w]) => Number.isFinite(w) && w > 0);
         const total = weights.reduce((s, [, w]) => s + w, 0);
         if (!(total > 0)) continue; // no state to deliver a local service in
         for (const [stateId, w] of weights.sort(([a], [c]) => (a < c ? -1 : 1)))
-          lines.push({ commodity, book: `state:${stateId}`, amountLocal: (perTurn * w) / total });
+          byBudgetLine.push({
+            category,
+            commodity,
+            book: `state:${stateId}`,
+            amountLocal: (perTurn * w) / total,
+          });
       }
+      // Several budget lines can buy the same good; a buyer orders it once per book.
+      const merged = new Map<string, PublicPurchaseLine>();
+      for (const l of byBudgetLine) {
+        const key = `${l.commodity}|${l.book}`;
+        const line = merged.get(key) ?? { commodity: l.commodity, book: l.book, amountLocal: 0 };
+        line.amountLocal += l.amountLocal;
+        merged.set(key, line);
+      }
+      const lines = [...merged.values()];
       return {
         countryId: b.countryId,
         fundingLocal: lines.reduce((s, l) => s + l.amountLocal, 0),
         lines,
+        byBudgetLine,
       };
     });
 }

@@ -211,10 +211,9 @@ describe("unlistedDemand", () => {
 
 describe("government demand note", () => {
   it("says governments do not buy a good that is not in the demand table", () => {
-    expect(governmentDemandNote("steel")).toMatch(/^Governments do not buy this good\./);
-    expect(governmentDemandNote("steel")).toContain("healthcare services");
-    expect(governmentDemandNote("steel")).toContain("ordnance");
-    expect(governmentDemandNote("steel")).toContain("advertising & media (planned economies only)");
+    expect(governmentDemandNote("fertilizers")).toMatch(/^Governments do not buy this good\./);
+    expect(governmentDemandNote("fertilizers")).toContain("healthcare");
+    expect(governmentDemandNote("fertilizers")).toContain("infrastructure");
     expect(governmentDemandNote("ordnance")).toBeNull();
     expect(governmentDemandNote("advertising")).toBeNull();
   });
@@ -226,7 +225,7 @@ describe("government demand note", () => {
         topConsumers={[]}
         syntheticDemandSources={[otherDemand]}
         unit="tons"
-        commodity="steel"
+        commodity="fertilizers"
       />
     );
     expect(screen.getByText(/Governments do not buy this good/)).toBeTruthy();
