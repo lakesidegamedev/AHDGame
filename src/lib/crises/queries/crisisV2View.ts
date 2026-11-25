@@ -1,3 +1,4 @@
+import { crisisScoreFor } from "../rules/crisisRow";
 import { ObjectId, type Db } from "mongodb";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
@@ -59,13 +60,13 @@ export interface CrisisV2Detail extends CrisisV2Summary {
   scars: CrisisV2ScarView[];
 }
 
-type V2Crisis = Pick<Crisis, "_id" | "countryIds" | "regionIds" | "status"> &
+type V2Crisis = Pick<Crisis, "_id" | "countryIds" | "regionIds" | "status" | "effects"> &
   Required<Pick<Crisis, "v2">>;
 
 const HISTORY_SHOWN = Math.min(24, SEVERITY_HISTORY_LIMIT);
 const CORPORATIONS_SHOWN = 12;
 
-export function hasLiveV2(crisis: Pick<Crisis, "status" | "v2">): crisis is V2Crisis {
+export function hasLiveV2(crisis: Pick<Crisis, "status" | "v2" | "effects">): crisis is V2Crisis {
   return crisis.status === "active" && !!crisis.v2 && crisis.v2.stage !== "resolved";
 }
 
@@ -96,7 +97,8 @@ function summarize(
 ): CrisisV2Summary | null {
   const def = resolveCrisisDefinition(crisis.v2.definitionId);
   if (!def || crisis.v2.stage === "resolved") return null;
-  const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => s.severity);
+  const score = (severity: number) => crisisScoreFor(crisis, severity);
+  const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => score(s.severity));
   const levers = (available?.levers ?? []).map(withCorporationFlag);
   const scoped =
     crisis.countryIds.length > 0
@@ -106,11 +108,11 @@ function summarize(
     definitionId: def.id,
     label: def.label,
     stage: crisis.v2.stage,
-    severity: crisis.v2.severity,
-    peakSeverity: crisis.v2.peakSeverity,
+    severity: score(crisis.v2.severity),
+    peakSeverity: score(crisis.v2.peakSeverity),
     history,
     trend: severityTrend(history),
-    forecast: forecastDoNothing(def, crisis.v2, turn),
+    forecast: forecastDoNothing(def, crisis.v2, turn).map(score),
     levers,
     corporations: levers.some((l) => l.needsCorporation)
       ? scoped.map(({ id, name }) => ({ id, name }))
@@ -139,7 +141,7 @@ async function viewerCorporations(db: Db, characterId: ObjectId) {
  */
 export async function loadCrisisV2Summaries(
   db: Db,
-  crises: readonly Pick<Crisis, "_id" | "countryIds" | "regionIds" | "status" | "v2">[],
+  crises: readonly Pick<Crisis, "_id" | "countryIds" | "regionIds" | "status" | "effects" | "v2">[],
   viewerId: ObjectId | null
 ): Promise<Map<string, CrisisV2Summary>> {
   const live = crises.filter(hasLiveV2);
@@ -219,13 +221,14 @@ export async function loadCrisisV2Detail(
   ]);
   const ledger = ledgerView(crisis.v2.ledger, def, names);
   if (summary) return { ...summary, ledger, scars };
-  const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => s.severity);
+  const score = (severity: number) => crisisScoreFor(crisis, severity);
+  const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => score(s.severity));
   return {
     definitionId: crisis.v2.definitionId,
     label: def?.label ?? crisis.name,
     stage: crisis.v2.stage,
-    severity: crisis.v2.severity,
-    peakSeverity: crisis.v2.peakSeverity,
+    severity: score(crisis.v2.severity),
+    peakSeverity: score(crisis.v2.peakSeverity),
     history,
     trend: severityTrend(history),
     forecast: [],

@@ -11,12 +11,11 @@ import { getDb } from "@/lib/mongodb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { rawTurnToLarpDate } from "@/lib/utils/formatters";
-import type { Crisis } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
 import { effectImpact } from "@/lib/crises/severity";
 import { describeCrisisEffect } from "@/lib/crises/effectDisplay";
 import { crisisImageUrl } from "@/lib/crises/crisisImages";
-import { crisisKind } from "@/lib/crises/rules/boardView";
+import { crisisKind, crisisTurnProgress } from "@/lib/crises/rules/boardView";
 import { crisisScoreFor, severityBandFromScore } from "@/lib/crises/rules/crisisRow";
 import { resolveCrisisLocationName, interpolateLocation } from "@/lib/crises/crisisLocation";
 import { CRISIS_TOOLTIPS, tooltipForEffect } from "@/lib/crises/tooltipCopy";
@@ -243,7 +242,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
     : null;
   // Largest single-effect impact, to scale the per-effect strength bars.
   const maxEffectImpact = crisis.effects.reduce((m, e) => Math.max(m, effectImpact(e)), 0);
-  const severity = severityBandFromScore(crisisScoreFor(crisis, v2Detail?.severity));
+  const severity = severityBandFromScore(v2Detail?.severity ?? crisisScoreFor(crisis, undefined));
   const heroSrc = crisisImageUrl(
     { name: crisis.name, templateKey: crisis.templateKey, kind: crisisKind(crisis) },
     1600
@@ -252,16 +251,7 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
   const scopeWord =
     crisis.scope === "country" ? "National" : crisis.scope === "region" ? "Regional" : "Global";
 
-  // Relative progress through a fixed-duration crisis, mirroring the list-page
-  // "Turn X of Y" label so the two surfaces agree.
-  const elapsedTurns =
-    isActive && crisis.durationTurns
-      ? Math.min(Math.max(1, currentTurn - crisis.startTurn + 1), crisis.durationTurns)
-      : null;
-  const progressPct =
-    elapsedTurns && crisis.durationTurns
-      ? Math.round((elapsedTurns / crisis.durationTurns) * 100)
-      : null;
+  const progress = crisisTurnProgress(crisis, currentTurn);
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -626,18 +616,19 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                 )}
               </dl>
 
-              {isActive && crisis.durationTurns && elapsedTurns && progressPct !== null && (
+              {progress && (
                 <div className="px-4 py-3 border-t border-card-border">
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="text-muted">Progress</span>
                     <span className="tabular-nums font-medium text-foreground">
-                      Turn {elapsedTurns} of {crisis.durationTurns}
+                      {progress.elapsed} elapsed · {progress.remaining} remaining · {progress.total}{" "}
+                      turns total
                     </span>
                   </div>
                   <div className="h-1.5 rounded-full bg-card-elevated overflow-hidden">
                     <div
                       className={`h-full rounded-full ${SEV_DOT[severity]}`}
-                      style={{ width: `${progressPct}%` }}
+                      style={{ width: `${Math.round((progress.elapsed / progress.total) * 100)}%` }}
                     />
                   </div>
                 </div>

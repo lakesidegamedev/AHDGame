@@ -1,3 +1,7 @@
+import { Suspense } from "react";
+import Link from "next/link";
+import type { WireEvent } from "@/lib/wireEvent";
+import { wireEventsCollection } from "@/lib/db/repositories/wireEvents";
 import type { Metadata } from "next";
 import { NewsPageClient } from "./NewsPageClient";
 import { publicPageMetadata } from "@/lib/siteMetadata";
@@ -58,6 +62,42 @@ async function shouldTrackReadWire(userId: string | undefined): Promise<boolean>
   }
 }
 
+async function CrisisWire() {
+  const events = await wireEventsCollection<WireEvent>(await getDb())
+    .find(
+      { type: { $in: ["crisis_start", "crisis_end", "crisis_outcome"] } },
+      { projection: { headline: 1, href: 1, type: 1 }, sort: { timestamp: -1 }, limit: 6 }
+    )
+    .toArray();
+  if (events.length === 0) return null;
+
+  return (
+    <section className="rounded-xl border border-card-border bg-card p-4">
+      <h2 className="text-sm font-semibold text-foreground">Crisis wire</h2>
+      <ul className="mt-2 space-y-1 text-sm text-muted">
+        {events.map((event) => (
+          <li key={event._id.toString()}>
+            <span className="mr-2 font-medium text-foreground">
+              {event.type === "crisis_start"
+                ? "Started"
+                : event.type === "crisis_end"
+                  ? "Ended"
+                  : "Update"}
+            </span>
+            {event.href ? (
+              <Link className="underline underline-offset-2" href={event.href}>
+                {event.headline}
+              </Link>
+            ) : (
+              event.headline
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default async function NewsPage({
   searchParams,
 }: {
@@ -82,7 +122,17 @@ export default async function NewsPage({
   return (
     <div className="min-h-screen bg-background pb-16">
       {trackReadWire && <OnboardingStepTracker step="read-wire" />}
-      <NewsPageClient authorId={authorId} initialPosts={initialData.posts} />
+      <NewsPageClient
+        authorId={authorId}
+        initialPosts={initialData.posts}
+        crisisWire={
+          authorId ? null : (
+            <Suspense fallback={null}>
+              <CrisisWire />
+            </Suspense>
+          )
+        }
+      />
     </div>
   );
 }

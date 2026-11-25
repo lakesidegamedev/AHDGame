@@ -52,7 +52,7 @@ function rowFor(
   data: ActiveCrisisData
 ): CrisisListRow & { section: ReturnType<typeof crisisSection>; startTurn: number } {
   const { crisis, v2 } = data;
-  const score = crisisScoreFor(crisis, v2?.severity);
+  const score = v2?.severity ?? crisisScoreFor(crisis, undefined);
   return {
     id: crisis._id.toString(),
     title: crisis.name,
@@ -272,7 +272,7 @@ export default function CrisisActionCard() {
           optionAvailability,
           v2,
         } = data;
-        const severity = severityBandFromScore(crisisScoreFor(crisis, v2?.severity));
+        const severity = severityBandFromScore(v2?.severity ?? crisisScoreFor(crisis, undefined));
         const styles = SEVERITY_STYLES[severity];
         const crisisId = crisis._id.toString();
         const needsDecision = canInteract && !!currentNode;
