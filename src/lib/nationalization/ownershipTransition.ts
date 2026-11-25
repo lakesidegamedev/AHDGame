@@ -397,7 +397,7 @@ export async function nationalizeSector(
     // but loses this plant to the state, so dent its brand proportional to the
     // sector's share of its revenue. Called before the sector is re-parented (the
     // aggregate still includes it). No-op when the donor has no loyalty.
-    await applyBrandFacilityLoss(db, donor._id, sector.revenue);
+    await applyBrandFacilityLoss(db, donor._id, [sector]);
 
     const resultingSectorId = await absorbSectorIntoNatCorp(
       db,

@@ -283,7 +283,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       // revenue. Called while the seller still owns it (aggregate includes it).
       // No-op when the seller has no loyalty. Best-effort — loyalty recomputes
       // each turn, so a rare post-call failure self-heals.
-      await applyBrandFacilityLoss(db, seller._id, sector.revenue);
+      await applyBrandFacilityLoss(db, seller._id, [sector]);
 
       // ── Merge path ──────────────────────────────────────────────────────────
       // Buyer already owns this sector type in this state. Claim the listing

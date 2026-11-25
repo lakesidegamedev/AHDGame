@@ -182,7 +182,7 @@ export async function abandonSector(request: Request, { params }: RouteParams) {
       // revenue. Called while the corp still owns it (aggregate includes it). No-op
       // when the corp has no loyalty. Best-effort — loyalty recomputes each turn.
       if (!brandDone) {
-        await applyBrandFacilityLoss(db, corporation._id, sector.revenue);
+        await applyBrandFacilityLoss(db, corporation._id, [sector]);
         await setStage("brandApplied");
       }
 

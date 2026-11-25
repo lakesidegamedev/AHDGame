@@ -2,7 +2,7 @@
  * Per-turn recompute of `State.topSectorsCache`: top-3 corporate sectors by
  * aggregate per-turn revenue per state.
  *
- * Groups `corporateSectors` by `(stateId, sectorType)`, sums `revenue`,
+ * Groups `corporateSectors` by `(stateId, sectorType)`, sums `revenue` in ₳,
  * sorts descending, and writes the top `TOP_N` per state.
  *
  * Cache entries are tagged with `specializationBonus`: `"primary"` (+10pp
@@ -19,6 +19,8 @@ import type { CorporationType } from "@/lib/constants/corporations";
 import type { State } from "@/lib/db/types";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
+import { loadOwnerCurrencyInfo, sectorMoneyAnchor } from "@/lib/corporations/sectorRevenueScale";
 import type { Document } from "mongodb";
 
 /** How many top sectors to surface per state. */
@@ -34,6 +36,8 @@ interface AggRow {
   _id: {
     stateId: string;
     sectorType: CorporationType;
+    corporationId: unknown;
+    countryId?: string | null;
   };
   revenue: number;
 }
@@ -43,8 +47,9 @@ export async function processTopSectorsRecompute(
   currentTurn: number,
   now: Date = new Date()
 ): Promise<TopSectorsRecomputeResult> {
-  // Single aggregation that groups every sector instance by (state, type).
-  // `revenue` is the per-turn revenue stored on each `corporateSectors` row.
+  // One aggregation per (state, type, owner, host country): `revenue` is stored
+  // in each site's host currency, so rows are converted to ₳ before they are
+  // added across owners (a foreign site and a domestic one do not share a unit).
   const rows = await corporateSectorsCollection<Document>(db)
     .aggregate<AggRow>([
       {
@@ -52,13 +57,35 @@ export async function processTopSectorsRecompute(
           _id: {
             stateId: "$stateId",
             sectorType: "$sectorType",
+            corporationId: "$corporationId",
+            countryId: "$countryId",
           },
           revenue: { $sum: "$revenue" },
         },
       },
-      { $sort: { revenue: -1 } },
     ])
     .toArray();
+  const [owners, fx] = await Promise.all([
+    loadOwnerCurrencyInfo(
+      db,
+      rows.map((r) => r._id.corporationId as string)
+    ),
+    loadValuationFxRates(db),
+  ]);
+  const anchorByStateType = new Map<string, { row: AggRow["_id"]; revenue: number }>();
+  for (const row of rows) {
+    const key = `${row._id.stateId}\u0000${row._id.sectorType}`;
+    const anchor = sectorMoneyAnchor(
+      row.revenue,
+      { countryId: row._id.countryId },
+      owners.get(String(row._id.corporationId)),
+      fx
+    );
+    const entry = anchorByStateType.get(key);
+    if (entry) entry.revenue += anchor;
+    else anchorByStateType.set(key, { row: row._id, revenue: anchor });
+  }
+  const sorted = [...anchorByStateType.values()].sort((a, b) => b.revenue - a.revenue);
 
   // Group by stateId in memory (already sorted desc by revenue, so the first
   // N entries per state are the top N).
@@ -69,16 +96,13 @@ export async function processTopSectorsRecompute(
       revenue: number;
     }>
   >();
-  for (const row of rows) {
-    const list = byState.get(row._id.stateId) ?? [];
+  for (const { row, revenue } of sorted) {
+    const list = byState.get(row.stateId) ?? [];
     if (list.length < TOP_N) {
-      list.push({
-        sectorType: row._id.sectorType,
-        revenue: row.revenue,
-      });
-      byState.set(row._id.stateId, list);
-    } else if (!byState.has(row._id.stateId)) {
-      byState.set(row._id.stateId, list);
+      list.push({ sectorType: row.sectorType, revenue });
+      byState.set(row.stateId, list);
+    } else if (!byState.has(row.stateId)) {
+      byState.set(row.stateId, list);
     }
   }
 
