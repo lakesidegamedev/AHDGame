@@ -535,4 +535,73 @@ describe("wider-economy funding", () => {
     const offered = (companyDoc.rows as { offered: number }[]).reduce((n, c) => n + c.offered, 0);
     expect(offered * TURNS_PER_DAY).toBeCloseTo(book.supplyBy.company!, 6);
   });
+
+  describe("the price counts what the background economy sold", () => {
+    const publicWallet = producerWalletId("world", {
+      kind: "publicBuyer",
+      countryId: "US",
+      currency: "USD",
+    });
+    const run = (env: Record<string, unknown>) =>
+      runWith(
+        0,
+        (wallet) => ({
+          funding: [{ countryId: "US", fundingLocal: 10_000 }],
+          publicBuyerOrders: [
+            {
+              id: "public-fs",
+              accountId: publicWallet,
+              commodity: "financial_services",
+              book: "world",
+              units: 1_000_000,
+              maximumUnitPrice: 4,
+              maximumSpend: 10_000,
+              countryId: "US",
+            },
+          ],
+          wideEconomyOffers: [
+            {
+              id: "wide-offer-fs",
+              accountId: wallet,
+              commodity: "financial_services",
+              book: "world",
+              units: 5,
+              unitPrice: 3.15,
+              countryId: "US",
+            },
+          ],
+        }),
+        () => {},
+        [],
+        { fundedBookStage: 1, ...env }
+      );
+    const supplies = (r: Awaited<ReturnType<typeof run>>) => {
+      const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
+      const sum = (rows: Record<string, unknown>[]) =>
+        rows
+          .filter((x) => x.commodity === "financial_services")
+          .reduce((n, x) => n + (x.supply as number), 0);
+      const usRow = (outcome.rows as Record<string, unknown>[]).find(
+        (x) => x.commodity === "financial_services" && x.countryId === "US"
+      ) as { supply: number } | undefined;
+      return {
+        price: sum(outcome.rows as Record<string, unknown>[]),
+        books: sum(outcome.books as Record<string, unknown>[]),
+        usStateless: usRow?.supply ?? 0,
+      };
+    };
+
+    it("on by default: world supply the price reads equals the country books, sales included", async () => {
+      const s = supplies(await run({}));
+      expect(s.price).toBeCloseTo(s.books, 6);
+      // The 5 units sold per turn count daily (x 24) in the seller's own country.
+      expect(s.usStateless).toBeCloseTo(5 * TURNS_PER_DAY, 6);
+    });
+
+    it("switched off: the price leaves the background economy's sales out, as before", async () => {
+      const s = supplies(await run({ wideEconomyPricingStage: 0 }));
+      expect(s.price).toBeCloseTo(s.books - 5 * TURNS_PER_DAY, 6);
+      expect(s.usStateless).toBe(0);
+    });
+  });
 });

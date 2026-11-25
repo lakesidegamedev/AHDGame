@@ -102,10 +102,13 @@ function groupItems(items: InboxItem[]): { thisTurn: InboxItem[]; earlier: Inbox
 // MonoCount chip
 // ---------------------------------------------------------------------------
 
-function MonoCount({ n }: { n: number }) {
+function MonoCount({ n }: { n: number | null }) {
   return (
-    <span className="ml-1.5 inline-block min-w-[1.25rem] rounded bg-card-elevated px-1 text-center font-mono text-[10px] tabular-nums text-muted">
-      {n}
+    <span
+      aria-hidden={n === null}
+      className="ml-1.5 inline-block min-w-6 rounded bg-card-elevated px-1 text-center font-mono text-[10px] tabular-nums text-muted"
+    >
+      {n ?? "\u00a0"}
     </span>
   );
 }
@@ -176,14 +179,14 @@ export function InboxClient() {
 
   // Open on the unread items when nothing needs action, so a full inbox never
   // greets the player with "all caught up".
-  const defaultSegSettled = useRef(false);
-  useEffect(() => {
-    if (loading || defaultSegSettled.current) return;
-    defaultSegSettled.current = true;
-    if (mailLink || deepLinkId || state.seg !== "action") return;
-    const seg = defaultInboxSegment(counts);
-    if (seg !== "action") dispatch({ type: "SET_SEG", seg });
-  }, [loading, counts, mailLink, deepLinkId, state.seg]);
+  const [defaultSegSettled, setDefaultSegSettled] = useState(false);
+  if (!loading && !defaultSegSettled) {
+    setDefaultSegSettled(true);
+    if (!mailLink && !deepLinkId && state.seg === "action") {
+      const seg = defaultInboxSegment(counts);
+      if (seg !== "action") dispatch({ type: "SET_SEG", seg });
+    }
+  }
 
   // The open item keeps its original rank in the focused list (it is ranked
   // before it turns read), then is shown as read.
@@ -332,37 +335,6 @@ export function InboxClient() {
     setMarkingAll(false);
   }, [visibleItems, state.readIds, markingAll, refetch, refreshNav]);
 
-  // Loading state — mirrors header + segment chips + rail/reading-pane grid
-  if (loading) {
-    return (
-      <div className="mx-auto min-h-[50vh] max-w-7xl px-4 pb-16 sm:px-6">
-        <div className="mb-6 mt-6 space-y-2">
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-4 w-44" />
-        </div>
-        <div className="mb-5 flex flex-wrap gap-1.5">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-24 rounded-full" />
-          ))}
-        </div>
-        <div className="grid gap-6 lg:grid-cols-[352px_1fr]">
-          <div className="rounded-xl border border-card-border bg-card px-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ListRowSkeleton key={i} lines={2} />
-            ))}
-          </div>
-          <div className="hidden min-h-[480px] space-y-3 rounded-xl border border-card-border bg-card p-6 lg:block">
-            <Skeleton className="h-6 w-2/3" />
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="mt-6 h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Error state
   if (error) {
     return (
@@ -382,21 +354,24 @@ export function InboxClient() {
   const compact = state.density === "compact";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+    <div className="mx-auto min-h-[50vh] max-w-7xl px-4 pb-16 sm:px-6" aria-busy={loading}>
       {/* Page header */}
       <div className="mb-6 mt-6 flex items-start justify-between gap-4">
         <div>
           {/* Eyebrow */}
-          {eyebrow && (
-            <p className="mb-0.5 text-body-sm font-medium text-muted">
-              {eyebrow.name}
-              {eyebrow.seat ? <span className="mx-1.5 opacity-40">·</span> : null}
-              {eyebrow.seat}
-            </p>
-          )}
+          <p className="mb-0.5 min-h-[1.125rem] text-body-sm font-medium text-muted">
+            {eyebrow?.name}
+            {eyebrow?.seat ? <span className="mx-1.5 opacity-40">·</span> : null}
+            {eyebrow?.seat}
+          </p>
           <h1 className="text-2xl font-bold text-foreground">Inbox</h1>
           <p className="mt-1 text-sm text-muted">
-            {state.seg === "action" ? (
+            {loading ? (
+              <span
+                className="inline-block h-3 w-32 animate-pulse rounded bg-muted/30"
+                aria-hidden
+              />
+            ) : state.seg === "action" ? (
               <>
                 <span className="font-mono tabular-nums">{counts.action}</span>
                 {counts.action === 1 ? " item needs" : " items need"} your input
@@ -425,7 +400,7 @@ export function InboxClient() {
         <button
           type="button"
           onClick={() => void handleMarkAllRead()}
-          disabled={counts.all === 0 || markingAll}
+          disabled={loading || counts.all === 0 || markingAll}
           className="shrink-0 rounded-lg border border-card-border bg-card px-3.5 py-1.5 text-sm font-medium text-muted transition-colors hover:border-primary/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-40 motion-reduce:transition-none"
         >
           {markingAll ? "Marking…" : "Mark all read"}
@@ -449,10 +424,6 @@ export function InboxClient() {
         </div>
       )}
 
-      {/* Priority lane — active event needing inline input (renders null when none) */}
-      <PriorityLane onResolved={refetch} />
-
-      {/* Segment chips */}
       <div role="tablist" aria-label="Inbox segment" className="mb-5 flex flex-wrap gap-1.5">
         {(["action", "all", "notifs", "mail"] as const).map((seg) => {
           const active = state.seg === seg;
@@ -470,6 +441,7 @@ export function InboxClient() {
               role="tab"
               type="button"
               aria-selected={active}
+              disabled={loading}
               onClick={() => {
                 dispatch({ type: "SET_SEG", seg });
                 if (seg !== "mail" && mailLink) {
@@ -492,14 +464,33 @@ export function InboxClient() {
               ].join(" ")}
             >
               {segmentLabel(seg)}
-              <MonoCount n={count} />
+              <MonoCount n={loading ? null : count} />
             </button>
           );
         })}
       </div>
 
+      {!loading && <PriorityLane onResolved={refetch} />}
+
+      {loading && (
+        <div className="grid gap-6 lg:h-[calc(100vh-240px)] lg:grid-cols-[352px_1fr]" aria-hidden>
+          <div className="rounded-xl border border-card-border bg-card px-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ListRowSkeleton key={index} lines={2} />
+            ))}
+          </div>
+          <div className="hidden min-h-0 space-y-3 rounded-xl border border-card-border bg-card p-6 lg:block">
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="mt-6 h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        </div>
+      )}
+
       {/* Empty state */}
-      {visibleItems.length === 0 && (
+      {!loading && visibleItems.length === 0 && (
         <InboxEmpty
           filterLabel={segmentLabel(state.seg)}
           variant={state.seg === "action" ? "priority" : "default"}
@@ -507,7 +498,7 @@ export function InboxClient() {
       )}
 
       {/* Two-column grid: 352px rail | 1fr reading pane */}
-      {visibleItems.length > 0 && (
+      {!loading && visibleItems.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-[352px_1fr] lg:h-[calc(100vh-240px)]">
           {/* Rail */}
           <div

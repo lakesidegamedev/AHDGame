@@ -23,6 +23,7 @@ import {
   residualWideEconomyBuyers,
   wideEconomyFallbackOffers,
   withWideEconomyFallback,
+  wideEconomySales,
   wideEconomySeededFills,
   withWideEconomyFills,
 } from "./wideEconomyRules";
@@ -860,6 +861,7 @@ export function advanceProducerEconomy(
     addStageTiming(timings, "residualTrialRuns", trialRuns - trialsBeforeResidual);
   }
   market = withWideEconomyFills(market, [...wideOffers, ...wideBoostOffers]);
+  const wideSales = wideEconomySales(market, [...wideOffers, ...wideBoostOffers]);
   // Who every unit of the country books came from and went to.
   const attribution = market.countryBooks
     ? attributeCountryBooks({
@@ -939,6 +941,7 @@ export function advanceProducerEconomy(
     ...(attribution
       ? { countryBookAttribution: attribution.books, companyBooks: attribution.companies }
       : {}),
+    ...(wideSales.length > 0 ? { wideEconomySales: wideSales } : {}),
     orderOutcomes: productionOrderOutcomes(
       [...consumerOrders, ...inputOrders()],
       market.orders,

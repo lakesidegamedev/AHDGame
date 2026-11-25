@@ -12,12 +12,13 @@ const mocks = vi.hoisted(() => ({
   cycles: [] as SeatCycle[],
   finished: vi.fn(() => ({ races: [], loading: false })),
   actions: vi.fn(() => ({ character: null })),
+  loading: false,
 }));
 vi.mock("./useRaceIndex", () => ({
   useRaceIndex: () => ({
     races: mocks.races,
     currentTurn: 10,
-    loading: false,
+    loading: mocks.loading,
     error: null,
     reload: vi.fn(),
   }),
@@ -50,6 +51,9 @@ vi.mock("@/components/blend/BlendShell", () => ({
   ),
 }));
 vi.mock("./components/RaceView", () => ({ RaceView: ({ nav }: { nav: ReactNode }) => <>{nav}</> }));
+vi.mock("./components/CountryPicker", () => ({
+  CountryPicker: () => <select aria-label="Country" />,
+}));
 vi.mock("./map/CampaignMap", () => ({ CampaignMap: () => null }));
 vi.mock("./components/TargetPanel", () => ({ TargetPanel: () => <div>target actions</div> }));
 vi.mock("./components/MyMovesPanel", () => ({ MyMovesPanel: () => <div>my actions</div> }));
@@ -71,6 +75,7 @@ const props: CampaignManagerClientProps = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.loading = false;
   mocks.races = buildRaceIndex(
     [election({ electionType: "snap_commons", countryId: "UK", state: "SCO" })],
     { currentTurn: 10, nationalChamberKeys: ["commons"] }
@@ -78,6 +83,13 @@ beforeEach(() => {
   mocks.cycles = [];
 });
 afterEach(cleanup);
+
+it("reserves the phone race controls before the race index arrives", () => {
+  mocks.loading = true;
+  mocks.races = [];
+  renderWithElectionsMessages(<CampaignManagerClient {...props} />);
+  expect(screen.getByRole("combobox", { name: "Country" }).closest(".lg\\:hidden")).toBeTruthy();
+});
 
 it("renders the phone tabs at the desktop server snapshot with responsive visibility", () => {
   renderWithElectionsMessages(<CampaignManagerClient {...props} />);
