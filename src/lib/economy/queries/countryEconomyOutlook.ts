@@ -103,6 +103,7 @@ export interface CountryEconomyOutlook {
     householdPriceIndex: number;
     /** State/province-weighted national metric (not the central-bank figure). */
     unemployment: { value: number | null; trend: number | null };
+    unemploymentPublication?: "awaiting_turn" | "unavailable";
     medianIncome: { value: number | null; trend: number | null };
     /** Median income in reset-price purchasing power. */
     realMedianIncome: number | null;
@@ -337,6 +338,12 @@ export async function buildCountryEconomyOutlook(
       tradeGrowth: budget?.economicFactors?.tradeGrowth ?? null,
       householdPriceIndex,
       unemployment,
+      ...(unemployment.value == null
+        ? {
+            unemploymentPublication:
+              publishedBoard.status === "stale" ? "awaiting_turn" : "unavailable",
+          }
+        : {}),
       medianIncome,
       realMedianIncome: householdPriceAdjustedValue(medianIncome.value, householdPriceIndex),
       // SP6: the Economy page is the statistics home — total population joins
