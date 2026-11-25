@@ -16,6 +16,7 @@ import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { emitBankingAuditEvent } from "@/lib/banking/auditEvents";
 import { recordBankingStage } from "@/lib/banking/telemetry";
 import { archiveCharter } from "@/lib/banking/charterHistory";
+import { notifyBankFailure } from "@/lib/banking/failureNotice";
 import { getCashReserves } from "@/lib/banking/bankCash";
 import { turnMoveKey } from "@/lib/banking/moneyMove";
 import { settleTransition } from "@/lib/banking/settlementJournal";
@@ -572,6 +573,13 @@ async function evaluateOneBank(
     if (failed.modifiedCount === 1) {
       await archiveCharter(db, corp._id, failedCharter, turn, "failed");
       await writeOffLenderSideInterbankOnFailure(db, corp._id, turn);
+      await notifyBankFailure(db, {
+        corporationId: corp._id,
+        bankName: corp.name,
+        userId: corp.userId,
+        turn,
+        depositTaking,
+      });
       emitBankingAuditEvent(
         {
           kind: "bank.failed",
