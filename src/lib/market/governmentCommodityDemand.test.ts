@@ -39,7 +39,7 @@ describe("public buyer funding with mixes", () => {
   );
 
   it("spends each category's whole plant-slice money, split over its goods", () => {
-    const perTurn = (4800 + 9600 + 2400) / 48 / 2 + (4800 * 0.25 * 0.98) / 48 / 2;
+    const perTurn = (4800 + 9600 + 2400) / 48 / 2 + (4800 * 0.25) / 48 / 2;
     expect(us.fundingLocal).toBeCloseTo(perTurn, 9);
   });
 
