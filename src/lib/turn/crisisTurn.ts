@@ -456,15 +456,17 @@ async function notifyAffectedPlayers(
   const userIds = [...new Set(characters.map((c) => c.userId?.toString()).filter(Boolean))];
   if (userIds.length === 0) return;
 
-  // Keep the inbox body to a single concise line — prefer the wire copy and fall
-  // back to a trimmed description. The full flavor text lives on the crisis detail
-  // page, reached via the "View crisis" link (metadata.crisisId → sourceLink).
-  const message =
-    type === "crisis_start"
-      ? crisis.wireMessageOnStart?.trim() || truncate(crisis.description, 160)
-      : crisis.wireMessageOnEnd?.trim() || `The ${crisis.name} has eased.`;
-
   const title = type === "crisis_start" ? crisis.name : `${crisis.name} is over`;
+  const wireCopy =
+    type === "crisis_start" ? crisis.wireMessageOnStart?.trim() : crisis.wireMessageOnEnd?.trim();
+  const sameAsTitle = wireCopy?.replace(/[.!?]+$/, "") === title.replace(/[.!?]+$/, "");
+  const message =
+    wireCopy && !sameAsTitle
+      ? wireCopy
+      : type === "crisis_start"
+        ? truncate(crisis.description, 160) ||
+          "Open the crisis to see who is affected and how to respond."
+        : "Open the crisis to review how it ended.";
 
   // The end of a crisis is news, not a task: its own type keeps it out of the
   // action-required filter and off the lock screen.
@@ -473,7 +475,7 @@ async function notifyAffectedPlayers(
     type: type === "crisis_start" ? ("crisis" as const) : ("crisis_resolved" as const),
     title,
     message,
-    metadata: { crisisId: crisis._id.toString() },
+    metadata: { crisisId: crisis._id.toString(), crisisStartTurn: crisis.startTurn },
   }));
 
   await createNotifications(notifications);

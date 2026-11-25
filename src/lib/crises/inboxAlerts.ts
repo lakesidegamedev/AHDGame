@@ -130,7 +130,12 @@ export async function notifyCrisisChanges(db: Db, turn: number): Promise<number>
       type: "crisis" as const,
       title: copy.title,
       message: copy.message,
-      metadata: { crisisId: crisis._id.toString(), alertTurn: turn, alertKind: kind },
+      metadata: {
+        crisisId: crisis._id.toString(),
+        crisisStartTurn: crisis.startTurn,
+        alertTurn: turn,
+        alertKind: kind,
+      },
     }));
   });
   await createNotifications(notifications);

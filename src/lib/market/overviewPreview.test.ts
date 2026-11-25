@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  cappedSummary,
+  commodityOverview,
   atPriceCap,
   parsePreviewRows,
   topBondsForPreview,
@@ -63,5 +65,45 @@ describe("priceCapBasisText", () => {
       resolvePriceCapBasis({ producerPriceMaxMultiplier: 2.5, commodityNominalPriceIndex: 1.1 })
     ).toEqual({ multiplier: 2.5, nominalIndex: 1.1 });
     expect(resolvePriceCapBasis(null).nominalIndex).toBe(1);
+  });
+});
+
+describe("commodityOverview", () => {
+  const good = (commodity: string, globalPrice: number, priceCeiling = 400) => ({
+    commodity,
+    label: commodity.toUpperCase(),
+    basePrice: 100,
+    globalPrice,
+    priceCeiling,
+  });
+
+  it("puts goods at the cap in one summary and fills the rows with goods below it", () => {
+    const { movers, capped } = commodityOverview([
+      good("a", 400),
+      good("b", 150),
+      good("c", 399),
+      good("d", 300),
+      good("e", 120),
+      good("f", 60),
+      good("g", 105),
+    ]);
+    expect(capped.map((c) => c.commodity)).toEqual(["a", "c"]);
+    // Four rows below the cap, furthest from base first, then the summary row.
+    expect(movers.map((c) => c.commodity)).toEqual(["d", "b", "f", "e"]);
+    expect(cappedSummary(capped)).toBe("A, C");
+  });
+
+  it("keeps five rows when nothing is at the cap", () => {
+    const { movers, capped } = commodityOverview(
+      ["a", "b", "c", "d", "e", "f"].map((c, i) => good(c, 110 + i * 10))
+    );
+    expect(capped).toEqual([]);
+    expect(movers).toHaveLength(5);
+    expect(cappedSummary(capped)).toBeNull();
+  });
+
+  it("names four capped goods and counts the rest", () => {
+    const capped = ["a", "b", "c", "d", "e", "f"].map((c) => ({ label: c.toUpperCase() }));
+    expect(cappedSummary(capped)).toBe("A, B, C, D and 2 more");
   });
 });

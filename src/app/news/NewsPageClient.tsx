@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { NewsTab } from "@/components/news/NewsTab";
 import { NewsComposer } from "@/components/news/NewsComposer";
 import { BannerAdComposer } from "@/components/news/BannerAdComposer";
@@ -16,9 +16,11 @@ const HERO_IMAGE_URL =
 export function NewsPageClient({
   authorId,
   initialPosts,
+  crisisWire,
 }: {
   authorId: string | null;
   initialPosts?: SerializedPost[];
+  crisisWire?: ReactNode;
 }) {
   const [composerFeedType, setComposerFeedType] = useState<NewsFeedType | null>(null);
   const [composerMode, setComposerMode] = useState<"text" | "banner">("text");
@@ -143,6 +145,7 @@ export function NewsPageClient({
           </div>
         </header>
 
+        {activeFeed === "article" && crisisWire}
         <NewsTab
           authorId={authorId}
           initialPosts={activeFeed === "article" ? initialPosts : undefined}

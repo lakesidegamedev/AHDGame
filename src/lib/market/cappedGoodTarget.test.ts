@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cappedGoodNote, cappedGoodTarget } from "./cappedGoodTarget";
-import { topCommodityMovers } from "./overviewPreview";
+import { commodityOverview } from "./overviewPreview";
 
 function good(name: string, applied: number, lag: number, demand = 1.2) {
   const real = 1000;
@@ -46,9 +46,11 @@ describe("cappedGoodTarget", () => {
   });
 });
 
-describe("capped goods in the movers list", () => {
+describe("capped goods on the commodities card", () => {
   it("orders goods sharing the cap figure by how far their target sits above it", () => {
     const rows = [good("low", 3673, -500), good("high", 3673, -3827), good("mid", 3673, -2000)];
-    expect(topCommodityMovers(rows).map((r) => r.commodity)).toEqual(["high", "mid", "low"]);
+    const { movers, capped } = commodityOverview(rows);
+    expect(capped.map((r) => r.commodity)).toEqual(["high", "mid", "low"]);
+    expect(movers).toEqual([]);
   });
 });

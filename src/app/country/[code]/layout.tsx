@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { CountryCrisisNotice } from "@/components/crises/CountryCrisisNotice";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -118,6 +120,12 @@ export default async function CountryLayout({ params, children }: Props) {
     );
   }
 
+  const crisisNotice = (
+    <Suspense fallback={null}>
+      <CountryCrisisNotice countryId={countryId} className="mx-4 mt-3 xl:mx-auto xl:max-w-7xl" />
+    </Suspense>
+  );
+
   // Admins always see everything — just show a banner when the country is not
   // yet enabled for regular players.
   if (isAdmin) {
@@ -126,6 +134,7 @@ export default async function CountryLayout({ params, children }: Props) {
       <>
         {wartime}
         {peacetime}
+        {crisisNotice}
         {showAdminBanner && (
           <div className="bg-warning/10 border-b border-warning/30 px-4 py-2 text-center text-sm text-warning">
             {access.econOnly
@@ -144,6 +153,7 @@ export default async function CountryLayout({ params, children }: Props) {
       <>
         {wartime}
         {peacetime}
+        {crisisNotice}
         {children}
       </>
     );
@@ -160,6 +170,7 @@ export default async function CountryLayout({ params, children }: Props) {
       <>
         {wartime}
         {peacetime}
+        {crisisNotice}
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 text-center text-sm text-primary">
           {name} is an econ-only nation. You can view every page here, but you cannot run for
           office, join a party, or vote.

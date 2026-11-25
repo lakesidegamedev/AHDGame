@@ -70,7 +70,17 @@ export function crisisTurnsLeft(
   currentTurn: number
 ): number | null {
   if (crisis.status === "resolved" || crisis.durationTurns == null) return null;
-  return Math.max(0, crisis.startTurn + crisis.durationTurns - currentTurn);
+  return Math.max(0, crisis.durationTurns - Math.max(0, currentTurn - crisis.startTurn));
+}
+
+export function crisisTurnProgress(
+  crisis: Pick<Crisis, "status" | "startTurn" | "durationTurns">,
+  currentTurn: number
+): { elapsed: number; remaining: number; total: number } | null {
+  const remaining = crisisTurnsLeft(crisis, currentTurn);
+  const total = crisis.durationTurns;
+  if (remaining == null || total == null || total <= 0) return null;
+  return { elapsed: total - remaining, remaining, total };
 }
 
 export function boardGroup(facts: BoardCrisisFacts): CrisisBoardGroup {

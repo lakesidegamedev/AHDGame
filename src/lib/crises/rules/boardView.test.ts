@@ -4,6 +4,7 @@ import {
   buildSpreadLinks,
   crisisKind,
   crisisTurnsLeft,
+  crisisTurnProgress,
   exposureReasons,
   type BoardCrisisFacts,
   type ViewerExposureContext,
@@ -112,6 +113,14 @@ describe("crisisTurnsLeft and boardGroup", () => {
     expect(crisisTurnsLeft(crisis(), 15)).toBe(5);
     expect(crisisTurnsLeft(crisis({ durationTurns: null }), 15)).toBeNull();
     expect(crisisTurnsLeft(crisis({ status: "resolved" }), 15)).toBeNull();
+  });
+
+  it.each([9, 10, 15, 20, 21])("reconciles board and detail turn counts at turn %i", (turn) => {
+    const event = crisis();
+    const progress = crisisTurnProgress(event, turn)!;
+    expect(progress.remaining).toBe(crisisTurnsLeft(event, turn));
+    expect(progress.elapsed + progress.remaining).toBe(progress.total);
+    expect(progress.elapsed).toBeGreaterThanOrEqual(0);
   });
 
   it("puts a viewer-actionable crisis first, even when it is winding down", () => {
