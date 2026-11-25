@@ -1,4 +1,5 @@
 import { crisisScoreFor } from "../rules/crisisRow";
+import { crisisTurnsLeft } from "../rules/boardView";
 import { ObjectId, type Db } from "mongodb";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
@@ -32,6 +33,7 @@ export interface CrisisV2Summary {
   trend: SeverityTrend;
   /** Projected severity for the next turns if nobody acts. */
   forecast: number[];
+  turnsUntilExpiry?: number;
   levers: CrisisV2Lever[];
   /** Companies the viewer runs that can pay for a company lever. */
   corporations: Array<{ id: string; name: string }>;
@@ -60,7 +62,10 @@ export interface CrisisV2Detail extends CrisisV2Summary {
   scars: CrisisV2ScarView[];
 }
 
-type V2Crisis = Pick<Crisis, "_id" | "countryIds" | "regionIds" | "status" | "effects"> &
+type V2Crisis = Pick<
+  Crisis,
+  "_id" | "countryIds" | "regionIds" | "status" | "effects" | "startTurn" | "durationTurns"
+> &
   Required<Pick<Crisis, "v2">>;
 
 const HISTORY_SHOWN = Math.min(24, SEVERITY_HISTORY_LIMIT);
@@ -98,6 +103,8 @@ function summarize(
   const def = resolveCrisisDefinition(crisis.v2.definitionId);
   if (!def || crisis.v2.stage === "resolved") return null;
   const score = (severity: number) => crisisScoreFor(crisis, severity);
+  const turnsUntilExpiry = crisisTurnsLeft(crisis, turn);
+  const forecast = forecastDoNothing(def, crisis.v2, turn);
   const history = crisis.v2.severityHistory.slice(-HISTORY_SHOWN).map((s) => score(s.severity));
   const levers = (available?.levers ?? []).map(withCorporationFlag);
   const scoped =
@@ -112,7 +119,11 @@ function summarize(
     peakSeverity: score(crisis.v2.peakSeverity),
     history,
     trend: severityTrend(history),
-    forecast: forecastDoNothing(def, crisis.v2, turn).map(score),
+    forecast: (turnsUntilExpiry == null
+      ? forecast
+      : forecast.slice(0, Math.max(0, turnsUntilExpiry - 1))
+    ).map(score),
+    ...(turnsUntilExpiry != null ? { turnsUntilExpiry } : {}),
     levers,
     corporations: levers.some((l) => l.needsCorporation)
       ? scoped.map(({ id, name }) => ({ id, name }))
@@ -141,7 +152,7 @@ async function viewerCorporations(db: Db, characterId: ObjectId) {
  */
 export async function loadCrisisV2Summaries(
   db: Db,
-  crises: readonly Pick<Crisis, "_id" | "countryIds" | "regionIds" | "status" | "effects" | "v2">[],
+  crises: readonly (Omit<V2Crisis, "v2"> & Pick<Crisis, "v2">)[],
   viewerId: ObjectId | null
 ): Promise<Map<string, CrisisV2Summary>> {
   const live = crises.filter(hasLiveV2);
