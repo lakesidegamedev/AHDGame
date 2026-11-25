@@ -1,4 +1,5 @@
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
+import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import {
   resolveShortageGrowthFinanceConfig,
   sectorBookPressure,
@@ -635,10 +636,17 @@ export async function processNppCorporationDecisions(
     priceRatioOf,
   });
 
-  // Local-per-₳ rates, loaded once: live rates plus the authored era rates that
-  // cross-border sectors stored in a host's era-blind currency need. NPP money
-  // constants are all ₳; `liquidCapital` is not. See `NppCorpDecisionContext.fxRate`.
-  const fxByCurrency: Map<string, number> = await loadValuationFxRates(db);
+  // Local-per-₳ rates for every live currency, loaded once. NPP money constants
+  // are all ₳; `liquidCapital` is not. See `NppCorpDecisionContext.fxRate`.
+  const fxByCurrency = new Map<string, number>();
+  for (const rate of await exchangeRatesCollection(db).find({}).toArray()) {
+    if (rate.currencyCode && typeof rate.rate === "number" && rate.rate > 0) {
+      fxByCurrency.set(rate.currencyCode, rate.rate);
+    }
+  }
+  // Sector valuation also needs the authored era rates: cross-border sectors
+  // are stored in a host's era-blind currency (FRF, ITL) with no live row.
+  const valuationFx = await loadValuationFxRates(db);
   const { retailExpansionPaused, ledgerShadow, bankingPolicy } = await loadNppBehaviorConfig(
     db,
     turn
@@ -998,7 +1006,7 @@ export async function processNppCorporationDecisions(
         dailyGrossRevenueLocal: corpDailyGrossRevenueLocalFromSectors(sectors, corp, {
           plantsEnabled,
           eraUnitScale: plants?.eraUnitScale ?? 1,
-          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          fxByCurrency: valuationFx,
         }),
         techCashFloorLocal: corpTechCashFloorLocal(corp, {
           eraUnitScale: plants?.eraUnitScale ?? 1,
