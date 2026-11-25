@@ -81,6 +81,14 @@ async function openNation() {
 }
 
 describe("experimental desktop menu integration", () => {
+  it("puts the inbox bell with the desktop toolbar actions", () => {
+    const { container } = renderNav("cards", "en", { unreadCount: 12 });
+    const desktop = container.querySelector("[class*='lg:flex']");
+    const bell = desktop?.querySelector("a[href='/notifications']");
+    expect(bell?.getAttribute("aria-label")).toBe("Notifications (12 unread)");
+    expect(bell?.textContent).toContain("12");
+  });
+
   it("preserves nation links in grouped cards, including conditional links", async () => {
     renderNav("cards");
     const { panel } = await openNation();
