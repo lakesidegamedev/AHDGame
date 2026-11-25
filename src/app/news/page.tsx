@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const base = publicPageMetadata({
     title: "News & events | A House Divided",
     description:
-      "In-character news wire, player posts, and headlines from the live simulation in the US, UK, Soviet Union, and East Germany. Refreshes as the hourly game clock advances.",
+      "In-character news wire, player posts, and headlines from the live simulation. Refreshes as the hourly game clock advances.",
     pathname: "/news",
   });
 

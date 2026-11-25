@@ -40,7 +40,7 @@ async function loadMarketedWorld(db: Db): Promise<MarketedWorld> {
     gameStateCollection(db).findOne({ _id: "current" }, { projection: { startingYear: 1 } }),
   ]);
 
-  const seedYear = config?.seedYear ?? gs?.startingYear ?? DEFAULT_SEED_YEAR;
+  const seedYear = gs?.startingYear ?? config?.seedYear ?? DEFAULT_SEED_YEAR;
   const eraId = toEraId(seedYear);
   const presetId = `${eraId}-default`;
   const roster = eraRoster(eraId);
@@ -68,6 +68,11 @@ async function loadMarketedWorld(db: Db): Promise<MarketedWorld> {
       presetId
     ),
     registeredCountryCount: REGISTERED_COUNTRY_COUNT,
+    presentCountryCount: roster.presentCount,
+    simulatedNpp: toNations(
+      roster.npp.filter((id) => !playableSet.has(id)),
+      presetId
+    ),
   };
 }
 

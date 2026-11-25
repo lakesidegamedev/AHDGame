@@ -100,7 +100,13 @@ export const SITE_SUBTITLE = "Political & Economic Sim Game";
  * filled in from the live registry. Never hardcode the list here: see `lib/marketing/marketedWorld`.
  */
 export function buildSiteDescription(world: MarketedWorld): string {
-  return `Real-time multiplayer political and economic simulation: run for office, pass legislation, build parties, run corporations, and trade markets in ${formatNationList(world.playable)}. The world advances every hour; progression never resets.`;
+  const simulated = [...world.playable, ...world.simulatedNpp];
+  const backgroundCount = world.presentCountryCount - simulated.length;
+  const worldDescription =
+    backgroundCount > 0
+      ? `${formatNationList(simulated)}, plus ${backgroundCount} other countries`
+      : formatNationList(simulated);
+  return `Real-time multiplayer political and economic simulation set in ${worldDescription}. Run for office, pass laws, manage corporations, and trade on an hourly game clock.`;
 }
 
 /**

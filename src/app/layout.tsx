@@ -39,13 +39,7 @@ import { CookieConsentBanner } from "@/components/CookieConsent";
 import { COOKIE_CONSENT_KEY } from "@/lib/analytics/storageKeys";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
-import {
-  DEFAULT_SITE_DESCRIPTION,
-  SITE_BRAND,
-  SITE_SUBTITLE,
-  buildSiteDescription,
-  getSiteUrl,
-} from "@/lib/siteMetadata";
+import { SITE_BRAND, SITE_SUBTITLE, buildSiteDescription, getSiteUrl } from "@/lib/siteMetadata";
 import { nationKeywords } from "@/lib/marketing/marketedWorld";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 import { getEraConfig } from "@/components/landing/eraThemes";
@@ -182,7 +176,6 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: SITE_BRAND,
-  description: DEFAULT_SITE_DESCRIPTION,
   applicationCategory: "Game",
   operatingSystem: "Web",
 };
@@ -346,7 +339,12 @@ export default async function RootLayout({
         <script
           id="ld-json"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({ ...jsonLd, description: buildSiteDescription(world) }).replace(
+              /</g,
+              "\\u003c"
+            ),
+          }}
         />
         <Script
           id="display-mode"
