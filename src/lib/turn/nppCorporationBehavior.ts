@@ -1,4 +1,5 @@
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
+import { logger } from "@/lib/observability/logger";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import {
   resolveShortageGrowthFinanceConfig,
@@ -1096,7 +1097,10 @@ export async function processNppCorporationDecisions(
       // skips its decisions this turn instead of stopping the whole turn.
       if (!(error instanceof Error) || !error.message.startsWith("Exchange rate unavailable"))
         throw error;
-      console.warn(`[NPP] ${String(corp._id)} skipped this turn: ${error.message}`);
+      logger.warn("[NPP] corporation skipped this turn", {
+        corporationId: String(corp._id),
+        error: error.message,
+      });
     }
   }
 
