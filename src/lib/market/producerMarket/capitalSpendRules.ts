@@ -18,17 +18,24 @@ import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
 
 /**
- * What building capacity buys: structures (construction services and building
- * materials), equipment (steel, electronics, vehicles) and software. Weights sum
- * to 1. Tunable.
+ * What building capacity buys: structures (construction services, building
+ * materials, timber), equipment (steel, electronics, vehicles, iron, plastics),
+ * software, and the energy, consulting and freight that go with a build. Weights
+ * sum to 1. Tunable.
  */
 export const CAPITAL_GOODS_BASKET: Readonly<Partial<Record<CommodityType, number>>> = {
-  construction_services: 0.4,
-  building_materials: 0.15,
+  construction_services: 0.28,
+  building_materials: 0.14,
   steel: 0.1,
-  electronics: 0.15,
-  vehicles: 0.1,
-  software: 0.1,
+  electronics: 0.1,
+  vehicles: 0.07,
+  software: 0.07,
+  timber: 0.07,
+  energy: 0.04,
+  consulting_services: 0.04,
+  freight: 0.04,
+  iron: 0.03,
+  plastics: 0.02,
 };
 
 export type BuildOrderWork = Pick<

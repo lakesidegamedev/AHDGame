@@ -9,11 +9,19 @@
  * the turn records what each ordered and received.
  */
 import type { Db } from "mongodb";
+import { governmentBudgetLinesText } from "@/lib/market/governmentCommodityDemand";
 import { producerMarketOutcomesCollection } from "@/lib/db/repositories/producerMarketOutcomes";
 import {
   FUNDED_BUYER_LABELS,
   type FundedBuyerDemandRow,
 } from "@/lib/market/producerMarket/fundedBuyerDemandRules";
+
+function describeBuyer(kind: FundedBuyerDemandRow["kind"], commodity: string): string {
+  const base = FUNDED_BUYER_LABELS[kind].description;
+  if (kind !== "publicBuyer") return base;
+  const lines = governmentBudgetLinesText(commodity);
+  return lines ? `${base} ${lines}` : base;
+}
 
 export interface FundedBuyerSource {
   name: string;
@@ -57,6 +65,6 @@ export function fundedBuyerSourceRows(
       type: "system" as const,
       units: Math.round(r.requested * 100) / 100,
       receivedUnits: Math.round(r.delivered * 100) / 100,
-      description: FUNDED_BUYER_LABELS[r.kind].description,
+      description: describeBuyer(r.kind, commodity),
     }));
 }
