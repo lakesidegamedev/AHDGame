@@ -260,6 +260,12 @@ export default function MarketMoneyPanel({
             value: otherSplit.managementOverheadAnchor ?? 0,
             help: "A share of this site's sales charged for the size of the whole company. It is separate from the corporation overhead row in the details below, which is head office cost used for the tax estimate.",
           },
+          {
+            key: "dominance-cost",
+            label: "Dominance cost",
+            value: otherSplit.dominanceCostAnchor ?? 0,
+            help: "Extra running cost because your company holds more than half of this sector in the state. It grows with your share and applies to sites in that state only.",
+          },
         ].filter((line) => Math.round(line.value) !== 0)
       : []),
     ...(!otherSplit || Math.round(otherSplit.remainderAnchor) !== 0
@@ -508,6 +514,36 @@ export default function MarketMoneyPanel({
           bold
           help="Income from outside buyers, plus any internal supply income allocated by your own sites. Internal allocations do not change the company's total cash."
         />
+        {pnl.revenueEffects && (
+          <>
+            <Row
+              label="Sales to buyers"
+              value={money(pnl.salesRevenueAnchor ?? 0)}
+              tone="success"
+              indent
+              help="What buyers paid for what you sold, before the effects below."
+            />
+            {pnl.revenueEffects.map((effect) => (
+              <Row
+                key={effect.key}
+                label={effect.label}
+                value={`${effect.anchor >= 0 ? "+ " : "− "}${money(Math.abs(effect.anchor))}`}
+                tone={effect.anchor >= 0 ? "success" : "error"}
+                indent
+                help="Applied to the revenue you sold this turn. Sales plus these lines is your total revenue. All the effects together are capped at 30% of sales, up or down."
+              />
+            ))}
+            {(pnl.subsidyReceivedAnchor ?? 0) > 0 && (
+              <Row
+                label="Subsidy received"
+                value={`+ ${money(pnl.subsidyReceivedAnchor ?? 0)}`}
+                tone="success"
+                indent
+                help="Paid by the government from its sector subsidy budget. It is not sales revenue and is not part of the revenue total above."
+              />
+            )}
+          </>
+        )}
         {!!pnl.internalSupplyIncomeAnchor && (
           <Row
             label={supplyText("transferIncome")}

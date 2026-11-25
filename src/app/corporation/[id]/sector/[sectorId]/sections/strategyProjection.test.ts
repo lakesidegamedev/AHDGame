@@ -112,7 +112,7 @@ describe("topMarginDrivers", () => {
     expect(ranked.map((d) => d.label)).toEqual([
       "Government subsidy",
       "Commodity markets",
-      "Inflation",
+      "Inflation (already in prices)",
       "Broadband access",
     ]);
   });

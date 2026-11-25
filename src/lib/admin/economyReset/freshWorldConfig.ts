@@ -136,6 +136,9 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   groupSizeCostsStage: "management overhead and concentration rules on groups",
   soeSizeCostScale: "state-owned size cost rule",
   dominanceRunningCostScale: "running dominance cost rule",
+  fundedRevenueEffects: "standing rule: fit, policy and event legs move sold revenue",
+  fundedMonopolyCharge: "standing rule: monopoly charge cuts sold revenue",
+  fundedDominanceCost: "standing rule: state dominance raises operating costs",
   honestBalanceSheetsStage: "debt counted in credit and share price",
   wholePlantsStage:
     "plants are whole units of capacity; a rebuilt economy keeps counting, building and wearing whole plants",

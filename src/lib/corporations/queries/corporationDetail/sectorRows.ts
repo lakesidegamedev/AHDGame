@@ -239,6 +239,12 @@ export interface SectorFinancialTotals {
   totalMaintenanceCosts: number;
   totalGrowthCosts: number;
   totalSubsidyBenefit: number;
+  /** Government subsidy credited to the company on funded sectors, its own money line. */
+  totalSubsidyReceived: number;
+  /** Named revenue effects summed over funded sectors, already inside revenue. */
+  revenueEffects: { key: string; label: string; amount: number }[];
+  /** State dominance cost summed over funded sectors, already inside maintenance. */
+  totalDominanceCost: number;
   totalRegulatoryBurden: number;
   totalLaborCosts: number;
   totalFreightCosts?: number;
@@ -313,6 +319,9 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   const byCountry: Record<string, CountryOperatingTotals> = {};
   let totalGrowthCosts = 0;
   let totalSubsidyBenefit = 0;
+  let totalSubsidyReceived = 0;
+  let totalDominanceCost = 0;
+  const revenueEffectsByKey = new Map<string, { key: string; label: string; amount: number }>();
   let totalRegulatoryBurden = 0;
   let totalLaborCosts = 0;
   let totalFreightCosts = 0;
@@ -714,7 +723,25 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     country.freightCosts += freightCost;
     country.growthCosts += sectorGrowthCostLocal;
     country.regulatoryBurden += sectorRegulatoryBurden;
-    totalSubsidyBenefit += financialRevenue * (subsidyMod / 100);
+    // A funded sector is paid its subsidy in money; the margin estimate only
+    // describes sectors the legacy pass still runs.
+    const subsidyPaid =
+      sector.plantsPnl?.source === "funded" && typeof sector.plantsPnl.subsidyReceived === "number"
+        ? sectorFieldToCorpCcy(sector.plantsPnl.subsidyReceived, sector)
+        : null;
+    if (subsidyPaid != null) totalSubsidyReceived += subsidyPaid;
+    if (sector.plantsPnl?.source === "funded") {
+      totalDominanceCost += sectorFieldToCorpCcy(sector.plantsPnl.dominanceCost ?? 0, sector);
+      for (const effect of sector.plantsPnl.revenueEffects ?? []) {
+        const line = revenueEffectsByKey.get(effect.key) ?? {
+          key: effect.key,
+          label: effect.label,
+          amount: 0,
+        };
+        line.amount += sectorFieldToCorpCcy(effect.amount, sector);
+        revenueEffectsByKey.set(effect.key, line);
+      }
+    } else totalSubsidyBenefit += financialRevenue * (subsidyMod / 100);
 
     // ── Plants-tier physicals ────────────────────────────────────────────
     // `capitalStock`, `producedUnits` and `soldUnits` share one basis: output
@@ -982,6 +1009,9 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       totalMaintenanceCosts,
       totalGrowthCosts,
       totalSubsidyBenefit,
+      totalSubsidyReceived,
+      revenueEffects: [...revenueEffectsByKey.values()],
+      totalDominanceCost,
       totalRegulatoryBurden,
       totalLaborCosts,
       totalFreightCosts,

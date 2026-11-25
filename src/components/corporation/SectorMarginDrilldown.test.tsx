@@ -68,7 +68,7 @@ describe("SectorMarginDrilldown", () => {
     // row says where it went (it IS the inputs line under the physical model).
     expect(screen.getByText("What shapes those costs")).toBeTruthy();
     expect(screen.getByText("Commodity markets (priced into inputs & sales)")).toBeTruthy();
-    expect(screen.getByText("Inflation")).toBeTruthy();
+    expect(screen.getByText("Inflation (already in prices)")).toBeTruthy();
     // The additive reconciliation devices must not render: they cannot
     // reconcile a physically-derived margin.
     expect(screen.queryByText("Net modifiers")).toBeNull();

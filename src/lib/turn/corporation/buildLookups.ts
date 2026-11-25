@@ -504,6 +504,9 @@ export async function buildCorporationLookups(
     groupSizeCostsStage?: number;
     soeSizeCostScale?: number;
     dominanceRunningCostScale?: number;
+    fundedRevenueEffects?: boolean;
+    fundedMonopolyCharge?: boolean;
+    fundedDominanceCost?: boolean;
     honestBalanceSheetsStage?: number;
     fundedOverheadStage?: number;
     fundedHeadcountStage?: number;
@@ -520,6 +523,9 @@ export async function buildCorporationLookups(
         groupSizeCostsStage: 1,
         soeSizeCostScale: 1,
         dominanceRunningCostScale: 1,
+        fundedRevenueEffects: 1,
+        fundedMonopolyCharge: 1,
+        fundedDominanceCost: 1,
         honestBalanceSheetsStage: 1,
         fundedOverheadStage: 1,
         fundedHeadcountStage: 1,
@@ -647,8 +653,17 @@ export async function buildCorporationLookups(
     typeof overheadCfg?.dominanceRunningCostScale === "number"
       ? Math.max(0, overheadCfg.dominanceRunningCostScale)
       : 0;
+  // Revenue effects ship on: only an explicit false turns them off.
+  const revenueEffects = {
+    enabled: overheadCfg?.fundedRevenueEffects !== false,
+    monopolyCharge: overheadCfg?.fundedMonopolyCharge !== false,
+    dominanceCost: overheadCfg?.fundedDominanceCost !== false,
+  };
   const controlRootByCorpId =
-    groupSizeCostsStage >= 1 || dominanceRunningCostScale > 0
+    groupSizeCostsStage >= 1 ||
+    dominanceRunningCostScale > 0 ||
+    revenueEffects.monopolyCharge ||
+    revenueEffects.dominanceCost
       ? controlGroupRootByCorpId(loadedCorporations)
       : null;
   const managementOverheadPpByCorpId = new Map<string, number>();
@@ -807,7 +822,10 @@ export async function buildCorporationLookups(
   });
   // Running dominance cost reads the control group's combined shares.
   const dominanceRunningCost =
-    dominanceRunningCostScale > 0 && controlRootByCorpId
+    (dominanceRunningCostScale > 0 ||
+      revenueEffects.monopolyCharge ||
+      revenueEffects.dominanceCost) &&
+    controlRootByCorpId
       ? (() => {
           const g = buildGroupDominanceShares({
             sectors: allSectors,
@@ -1026,7 +1044,7 @@ export async function buildCorporationLookups(
     honestBalanceSheetsStage,
     constructionLoanDebtByCorpId,
     fundedOverheadStage:
-      typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 0,
+      typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 1,
     fundedHeadcountStage:
       typeof overheadCfg?.fundedHeadcountStage === "number" ? overheadCfg.fundedHeadcountStage : 0,
     fundedValuationStage:
@@ -1034,6 +1052,8 @@ export async function buildCorporationLookups(
     dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
     soeSizeCostByCorpId,
     dominanceRunningCost,
+    revenueEffects,
+    fundedTariffs: fundedTariffsOn,
     strengthUpkeepStage,
     legacyTechStartingYear: gameState?.startingYear ?? STARTING_YEAR,
     legacyTechMode: resolveLegacyTechMode(overheadCfg?.legacyTechMode),

@@ -348,6 +348,22 @@ export interface GameConfig extends ProducerGameConfig {
    */
   dominanceRunningCostScale?: number;
   /**
+   * Funded producer turns turn the fit, policy and event margin legs into a
+   * percentage of sold revenue, and pay subsidies as a government credit.
+   * Absent = on; false turns them off.
+   */
+  fundedRevenueEffects?: boolean;
+  /**
+   * Monopoly charge on funded turns: a revenue cut from the state share over
+   * 50% plus the country share over 30%. Absent = on; false = off.
+   */
+  fundedMonopolyCharge?: boolean;
+  /**
+   * Dominance cost on funded turns: operating costs rise by up to 15% at a
+   * 100% state share, in the dominated state only. Absent = on; false = off.
+   */
+  fundedDominanceCost?: boolean;
+  /**
    * Multiplier (0 to 1] on the ordinary plant build price outside the 1991
    * basis. Absent = the shipped default (PLANT_BUILD_PRICE_SCALE). Founding is
    * not scaled. Set 1 to restore the previous prices without a deploy.
@@ -366,8 +382,7 @@ export interface GameConfig extends ProducerGameConfig {
   /**
    * Funded producer path: 1 charges management overhead as points of revenue on
    * funded sectors, since the margin stack that carries it is bypassed there.
-   * State-owned size cost and running dominance cost follow their own scale
-   * knobs. 0 or absent = off.
+   * State-owned size cost follows its own scale knob. Absent = on; 0 = off.
    */
   fundedOverheadStage?: number;
   /**

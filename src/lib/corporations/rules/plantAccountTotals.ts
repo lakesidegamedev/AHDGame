@@ -15,6 +15,12 @@ export type PlantAccountInput = {
   inputsAnchor: number;
   internalSupplyIncomeAnchor?: number;
   internalSupplyChargeAnchor?: number;
+  /** Funded turn: sales before revenue effects, ₳ per day. */
+  salesRevenueAnchor?: number;
+  /** Funded turn: the named revenue effects behind `realizedRevenueAnchor`, ₳ per day. */
+  revenueEffects?: { key: string; label: string; anchor: number }[];
+  /** Funded turn: government subsidy credited beside profit, ₳ per day. */
+  subsidyReceivedAnchor?: number;
   freightCostAnchor?: number;
   freightIncomeAnchor?: number;
   /**
@@ -33,6 +39,7 @@ export type PlantAccountInput = {
     minorInputPremiumAnchor: number;
     inventoryWriteOffAnchor: number;
     managementOverheadAnchor: number | null;
+    dominanceCostAnchor?: number | null;
     growthAnchor: number | null;
   } | null;
   /**
