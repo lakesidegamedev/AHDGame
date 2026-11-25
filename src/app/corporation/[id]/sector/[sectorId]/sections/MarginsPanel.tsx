@@ -95,9 +95,9 @@ export function topMarginDrivers(margins: Margins): { label: string; value: numb
     ["Expropriation risk", margins.expropriationRiskModifier],
     ["Economic model fit", margins.economicModelAlignmentModifier],
     ["Logistics sprawl", margins.sprawlModifier],
-    ["Inflation", margins.inflationModifier],
-    ["National debt", margins.debtToGdpModifier],
-    ["Deficit spending", margins.deficitToGdpModifier],
+    ["Inflation (already in prices)", margins.inflationModifier],
+    ["National debt (already in prices)", margins.debtToGdpModifier],
+    ["Deficit spending (already in prices)", margins.deficitToGdpModifier],
     ["Type switch penalty", margins.typeSwitchModifier],
     ["Strategy transition", margins.strategyTransitionModifier],
     ["Foreign tariff", margins.foreignTariffModifier],
@@ -712,7 +712,7 @@ export default function MarginsPanel({
                 )}
                 {margins.inflationModifier !== 0 && (
                   <ModifierRow
-                    label="Inflation"
+                    label="Inflation (already in prices)"
                     modifier={margins.inflationModifier}
                     rawValue={margins.inflationRate}
                     rawUnit="%"
@@ -722,7 +722,7 @@ export default function MarginsPanel({
                 )}
                 {margins.debtToGdpModifier !== 0 && (
                   <ModifierRow
-                    label="National debt"
+                    label="National debt (already in prices)"
                     modifier={margins.debtToGdpModifier}
                     rawValue={margins.debtToGdpRatio}
                     rawUnit="% of GDP"
@@ -732,7 +732,7 @@ export default function MarginsPanel({
                 )}
                 {margins.deficitToGdpModifier !== 0 && (
                   <ModifierRow
-                    label="Deficit spending"
+                    label="Deficit spending (already in prices)"
                     modifier={margins.deficitToGdpModifier}
                     rawValue={margins.deficitToGdpPct}
                     rawUnit="% of GDP"

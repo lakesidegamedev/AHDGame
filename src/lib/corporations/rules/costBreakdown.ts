@@ -14,6 +14,8 @@ export interface SiteCostParts {
   maintenance: number;
   /** Group size costs charged on the site's revenue. */
   managementOverhead: number;
+  /** Extra running cost in a state the company dominates. */
+  dominanceCost: number;
   freight: number;
 }
 
@@ -32,6 +34,7 @@ export const COST_CATEGORIES: readonly CostCategory[] = [
   "inputs",
   "maintenance",
   "managementOverhead",
+  "dominanceCost",
   "freight",
   "budgets",
   "other",
@@ -42,6 +45,7 @@ export const COST_CATEGORY_LABELS: Record<CostCategory, string> = {
   inputs: "Inputs",
   maintenance: "Maintenance",
   managementOverhead: "Management overhead",
+  dominanceCost: "Dominance cost",
   freight: "Freight",
   budgets: "Marketing, logistics, R&D and CEO pay",
   other: "Other costs",
@@ -51,7 +55,7 @@ const finite = (x: number | null | undefined): number =>
   typeof x === "number" && Number.isFinite(x) ? x : 0;
 
 export function emptySiteCostParts(): SiteCostParts {
-  return { wages: 0, inputs: 0, maintenance: 0, managementOverhead: 0, freight: 0 };
+  return { wages: 0, inputs: 0, maintenance: 0, managementOverhead: 0, dominanceCost: 0, freight: 0 };
 }
 
 export function addSiteCostParts(into: SiteCostParts, part: Partial<SiteCostParts>): void {
@@ -59,6 +63,7 @@ export function addSiteCostParts(into: SiteCostParts, part: Partial<SiteCostPart
   into.inputs += finite(part.inputs);
   into.maintenance += finite(part.maintenance);
   into.managementOverhead += finite(part.managementOverhead);
+  into.dominanceCost += finite(part.dominanceCost);
   into.freight += finite(part.freight);
 }
 
@@ -73,6 +78,7 @@ export function buildCostBreakdown(
     sites.inputs +
     sites.maintenance +
     sites.managementOverhead +
+    sites.dominanceCost +
     sites.freight +
     finite(budgets);
   return { ...sites, budgets: finite(budgets), other: finite(totalCosts) - named };
@@ -88,6 +94,7 @@ export function mapCostBreakdown(
     inputs: convert(breakdown.inputs),
     maintenance: convert(breakdown.maintenance),
     managementOverhead: convert(breakdown.managementOverhead),
+    dominanceCost: convert(breakdown.dominanceCost),
     freight: convert(breakdown.freight),
     budgets: convert(breakdown.budgets),
     other: convert(breakdown.other),

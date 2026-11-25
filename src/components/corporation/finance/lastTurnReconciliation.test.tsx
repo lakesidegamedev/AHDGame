@@ -40,6 +40,7 @@ describe("cost drivers in the recorded section", () => {
     inputs: 100,
     maintenance: 50,
     managementOverhead: 0,
+    dominanceCost: 0,
     freight: 0,
     budgets: 0,
     other: 0,

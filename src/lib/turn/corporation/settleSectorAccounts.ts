@@ -749,6 +749,7 @@ export function settleSectorAccounts(context: ProcessSectorStageContext): Sector
             inputs: physicalPnl.inputsCost,
             maintenance: Math.max(0, physicalPnl.otherOpex) + physicalPnl.upkeep,
             managementOverhead: 0,
+            dominanceCost: 0,
             freight: context.freightBilling.charge,
           },
         }
@@ -782,7 +783,20 @@ export function settleSectorAccounts(context: ProcessSectorStageContext): Sector
     fundedRegulatoryBurdenRate: context.embargoLegacyMothball
       ? 0
       : context.fundedRegulatoryBurdenRate,
-    fundedDominancePenaltyPp: context.fundedSizeLegs.dominance,
+    fundedDominancePenaltyPp:
+      context.dominanceCostPct > 0 ? -context.dominanceCostPct : context.fundedSizeLegs.dominance,
+    // Revenue effects and the dominance cost: absent when off.
+    ...(!context.embargoLegacyMothball &&
+    (context.lookups.revenueEffects?.enabled === true ||
+      context.lookups.revenueEffects?.monopolyCharge === true)
+      ? {
+          fundedRevenueLegs: context.revenueEffectLegs,
+          fundedSubsidyPp: context.lookups.revenueEffects?.enabled === true ? context.subsidyMod : 0,
+        }
+      : {}),
+    ...(!context.embargoLegacyMothball && context.dominanceCostPct > 0
+      ? { fundedDominanceCostPct: context.dominanceCostPct }
+      : {}),
     nameplateHourlyGrowthCost: context.embargoLegacyMothball
       ? 0
       : context.nameplateHourlyGrowthCost,

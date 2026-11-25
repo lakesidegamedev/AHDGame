@@ -194,5 +194,12 @@ export function buildFinancials(inputs: FinancialsInputs) {
     /** True when `currentGrowthRate` is measured realized revenue, not the legacy field. */
     growthRateIsRealized: realizedGrowthRate !== null,
     subsidyBenefit: Math.round(totals.totalSubsidyBenefit),
+    subsidyReceived: Math.round(totals.totalSubsidyReceived ?? 0),
+    revenueEffects: (totals.revenueEffects ?? []).map((e) => ({
+      key: e.key,
+      label: e.label,
+      amount: Math.round(e.amount),
+    })),
+    dominanceCost: Math.round(totals.totalDominanceCost ?? 0),
   };
 }

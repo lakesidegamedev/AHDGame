@@ -312,11 +312,21 @@ export interface SectorPlantsSection {
       inventoryWriteOffAnchor?: number;
       /** Funded turns: management overhead on the revenue sold. */
       managementOverheadAnchor?: number;
+      dominanceCostAnchor?: number;
       /** False when the turn was recorded before management overhead was stored. */
       managementOverheadRecorded?: boolean;
     };
     internalSupplyDiscountAnchor?: number;
     internalSupplyIncomeAnchor?: number;
+    /**
+     * Funded turn: what the plant sold, before revenue effects, ₳ per day.
+     * `revenueAnchor` is sales plus the effects below, so the lines add up.
+     */
+    salesRevenueAnchor?: number;
+    /** Funded turn: each fit, policy, event or dominance effect that applied, in money. */
+    revenueEffects?: { key: string; label: string; anchor: number }[];
+    /** Funded turn: government subsidy paid beside profit, not sales revenue, ₳ per day. */
+    subsidyReceivedAnchor?: number;
     internalSupplyChargeAnchor?: number;
     /**
      * Free internal transfers: what this site sent to the company's own sites
