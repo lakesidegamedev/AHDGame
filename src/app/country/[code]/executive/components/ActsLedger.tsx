@@ -17,7 +17,7 @@ export interface LedgerAct {
 
 const KIND_TONE: Record<ExecutiveActKind, string> = {
   signed: "bg-success/10 text-success",
-  vetoed: "bg-error/10 text-error",
+  vetoed: "border border-card-border bg-transparent text-foreground",
   onDesk: "bg-warning/10 text-warning",
   order: "bg-gold/10 text-gold",
   confirmed: "bg-info/10 text-info",

@@ -53,6 +53,7 @@ import {
 } from "./UnionPanels";
 import { UnionSectorsTable } from "./UnionSectorsTable";
 import type { SectorStatus } from "./unionSectorTable";
+import { approvalText } from "@/lib/ui/tone";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -495,8 +496,7 @@ function UnionDashboard({ id }: { id: string }) {
             value={`${Math.round(approval)}%`}
             sub={{
               label: approval >= 50 ? "Members are satisfied" : "Members are unhappy",
-              toneClass:
-                approval >= 50 ? "text-success" : approval >= 30 ? "text-warning" : "text-error",
+              toneClass: approvalText(approval, 30),
             }}
             hint="How the membership rates the bargain, 0-100. Dues push it down, running services pushes it up. It anchors whether the union grows into new shops or bleeds density."
           />

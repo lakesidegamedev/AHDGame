@@ -12,6 +12,7 @@ import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { reconcileRegionApproval } from "@/lib/country/rules/approvalBreakdown";
 import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
+import { approvalText } from "@/lib/ui/tone";
 
 interface StateApprovalData {
   stateId: string;
@@ -22,7 +23,7 @@ interface StateApprovalData {
 }
 
 function approvalColor(v: number) {
-  return v >= 50 ? "text-success" : v >= 40 ? "text-warning" : "text-error";
+  return approvalText(v);
 }
 
 export function RegionApprovalClient({
@@ -112,7 +113,7 @@ export function RegionApprovalClient({
                 <div>
                   <p className="text-body-sm font-medium text-muted mb-1">Net approval</p>
                   <p
-                    className={`text-4xl font-bold tabular-nums ${netApproval >= 0 ? "text-success" : "text-error"}`}
+                    className={`text-4xl font-bold tabular-nums ${netApproval >= 0 ? "text-success" : "text-warning"}`}
                   >
                     {netApproval >= 0 ? "+" : ""}
                     {netApproval}

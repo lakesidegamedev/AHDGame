@@ -21,6 +21,7 @@ import {
   regionWeightedConditionMargins,
 } from "@/lib/country/rules/approvalBreakdown";
 import { NetEffectTotals } from "@/components/approval/NetEffectTotals";
+import { approvalText } from "@/lib/ui/tone";
 
 interface StateApprovalEntry {
   stateId: string;
@@ -65,7 +66,7 @@ export function historyTitle(h: {
 }
 
 function approvalColor(v: number) {
-  return v >= 50 ? "text-success" : v >= 40 ? "text-warning" : "text-error";
+  return approvalText(v);
 }
 
 interface ApprovalClientProps {
