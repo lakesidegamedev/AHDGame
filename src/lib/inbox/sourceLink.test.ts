@@ -2,6 +2,29 @@ import { describe, it, expect } from "vitest";
 import { resolveSourceLink } from "./sourceLink";
 
 describe("resolveSourceLink", () => {
+  it("links a sector attack to the affected sector or its region economy", () => {
+    expect(
+      resolveSourceLink("corp_sector_attacked", { defenderCorporationId: "corp", sectorId: "site" })
+        ?.href
+    ).toBe("/corporation/corp/sector/site");
+    expect(
+      resolveSourceLink("corp_sector_attacked", { countryId: "US", stateId: "GA" })?.href
+    ).toBe("/country/us/region/GA/economy");
+  });
+
+  it("links party election notices to their ballot pages", () => {
+    expect(
+      resolveSourceLink("leadership_election_opened", {
+        countryId: "US",
+        stateId: "GA",
+        partyId: "2",
+      })?.href
+    ).toBe("/country/us/region/GA/party/2");
+    expect(
+      resolveSourceLink("committee_election_opened", { countryId: "US", partyId: "2" })?.href
+    ).toBe("/country/us/parties/2");
+  });
+
   it("links new tender alerts to the specific opportunity", () => {
     expect(
       resolveSourceLink("government_contract_opened", {

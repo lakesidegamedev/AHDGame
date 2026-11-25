@@ -73,7 +73,7 @@ export function notificationToInboxItem(n: SerializedNotification, now: number):
     label: accountWide
       ? `${notificationLabel(n.type)} · Shared by all your characters`
       : notificationLabel(n.type),
-    urgency: notificationUrgency(n.type, action),
+    urgency: notificationUrgency(n.type, action, n.metadata),
     unread,
     action,
     createdAt: n.createdAt,
