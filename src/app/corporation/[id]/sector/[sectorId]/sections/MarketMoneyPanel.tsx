@@ -18,7 +18,7 @@ import type { PlantsData, Financials, CorporationRef } from "../types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct, PLANTS_CLOCK_NOTE } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
+import { TURNS_PER_DAY, type OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { unitsSoldShare } from "@/lib/corporations/fundedClearingReading";
@@ -68,15 +68,15 @@ export default function MarketMoneyPanel({
   const supplyText = useTranslations("corporations.internalSupply");
   const sites = facilityPlural(sectorType);
   const { formatAmount, formatPrice, toInternalFrom } = useCurrency();
-  const money = (anchor: number) => formatAmount(anchor);
+  const liquidCode = (corporation.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
+  const money = (anchor: number) => formatAmount(anchor, liquidCode);
   // Per-unit figures are often well under $1 (plants mixPrice). formatAmount
   // rounds to whole currency units and painted "$0" on a real ~$0.05 sale
   // (ticket #1026). formatPrice keeps cent / sub-cent precision.
-  const unitMoney = (anchor: number) => formatPrice(anchor);
+  const unitMoney = (anchor: number) => formatPrice(anchor, liquidCode);
   const pnl = plants.pnl;
   const truth = plants.truth ?? null;
 
-  const liquidCode = (corporation.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
   const corpMoney = (val: number) =>
     formatAmount(liquidCode ? toInternalFrom(val, liquidCode) : val, liquidCode);
 
@@ -131,7 +131,7 @@ export default function MarketMoneyPanel({
       ? [
           {
             key: "stockCredit",
-            label: "Output added to stock at cost",
+            label: "Stock credit for unsold output",
             value: -statement.inventoryCredit,
             help: "Production cost retained as stock, separate from sales income.",
           },
@@ -290,7 +290,9 @@ export default function MarketMoneyPanel({
     },
   ];
 
-  const totalCosts = costLines.reduce((s, l) => s + l.value, 0);
+  const grossCosts = costLines.reduce((sum, line) => sum + Math.max(0, line.value), 0);
+  const credits = costLines.reduce((sum, line) => sum + Math.min(0, line.value), 0);
+  const totalCosts = grossCosts + credits;
   // A cost line is only ever shown as a subtraction when it IS one. A negative
   // line is a credit, so it renders "+ $X" in the profit tone. Printing
   // "− −$34K" (or clamping the value away) is what broke the on-screen sum.
@@ -564,8 +566,26 @@ export default function MarketMoneyPanel({
             </div>
           </details>
         )}
+        {credits < 0 && (
+          <div className="space-y-1 border-t border-card-border pt-2">
+            <Row
+              label="Gross costs"
+              value={signedCost(grossCosts)}
+              tone="error"
+              help="All expenses before credits are applied."
+            />
+            <Row
+              label="Credits against costs"
+              value={signedCost(credits)}
+              tone="success"
+              help="Amounts that offset the expenses above."
+            />
+          </div>
+        )}
         <div className="flex items-center justify-between border-t border-card-border pt-2">
-          <span className="text-body-sm text-muted">All costs</span>
+          <span className="text-body-sm text-muted">
+            {credits < 0 ? "Net costs after credits" : "Total costs"}
+          </span>
           <span className="text-body-sm tabular-nums text-muted">{signedCost(totalCosts)}</span>
         </div>
         <div className="border-t border-card-border pt-2">
@@ -577,6 +597,10 @@ export default function MarketMoneyPanel({
             help="Revenue minus every cost line above, exactly. A line shown with a + is a credit, so it adds back instead of taking away. Corporation-level costs and tax are settled on the corporation page."
           />
         </div>
+        <p className="text-xs text-muted">
+          Per turn ({TURNS_PER_DAY} per financial day) · {money(pnl.revenueAnchor / TURNS_PER_DAY)}{" "}
+          revenue · {money(pnl.profitAnchor / TURNS_PER_DAY)} operating profit
+        </p>
         {!!pnl.ownSiteMemoAnchor && (
           <div className="flex items-center justify-between text-body-sm">
             <InfoTooltip

@@ -509,6 +509,28 @@ describe("isCountryEnabledForPlayers()", () => {
 // absentInEra — era absence, kept distinct from dissolution
 // ---------------------------------------------------------------------------
 describe("registeredBase() — absentInEra", () => {
+  it("reads era absence and dissolution when selecting countries for simulations", async () => {
+    await setupDb();
+    const find = db.collection("countryGameStates").find;
+    find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { _id: "DD", status: "active", absentInEra: true },
+        { _id: "CS", status: "active", dissolvedTurn: 42 },
+        { _id: "US", status: "active" },
+      ]),
+    });
+
+    const { getSimulatedCountryIds } = await import("./countryAccess");
+    const countries = await getSimulatedCountryIds(db as unknown as Db);
+    expect(countries).toContain("US");
+    expect(countries).not.toContain("DD");
+    expect(countries).not.toContain("CS");
+    expect(find).toHaveBeenCalledWith(
+      {},
+      { projection: expect.objectContaining({ absentInEra: 1, dissolvedTurn: 1 }) }
+    );
+  });
+
   it("drops a country flagged absentInEra from the registered set", async () => {
     await setupDb();
     db.collectionMocks["countryGameStates"]!.find.mockReturnValue({

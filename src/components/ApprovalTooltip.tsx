@@ -7,6 +7,7 @@ import { netModifierEffect, type ActiveModifier } from "@/lib/approval/activeMod
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 import { buildModifierTitle } from "@/components/approval/modifierTitle";
 import { ApprovalEffectIcon } from "@/components/approval/ApprovalEffectIcon";
+import { approvalText } from "@/lib/ui/tone";
 
 interface ApprovalTooltipProps {
   /** Final approval (with modifiers applied). */
@@ -76,8 +77,7 @@ export function ApprovalTooltip({
     router.push(href);
   }
 
-  const approvalColor =
-    approval >= 50 ? "text-success" : approval >= 40 ? "text-warning" : "text-error";
+  const approvalColor = approvalText(approval);
 
   const tooltip = rect && (
     <div

@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from "react";
 import { notificationToInboxItem, groupMailIntoThreads, mailThreadToInboxItem } from "@/lib/inbox";
 import type { InboxItem, SerializedNotification, SerializedMail } from "@/lib/inbox";
 
+export const INBOX_NOTIFICATION_LIMIT = 100;
+
 export interface InboxCounts {
   all: number;
   notifs: number;
@@ -38,7 +40,7 @@ export function useInboxData(): UseInboxDataResult {
 
       try {
         const [notifsRes, inboxRes, sentRes] = await Promise.all([
-          fetch("/api/notifications?limit=100", { signal }),
+          fetch(`/api/notifications?limit=${INBOX_NOTIFICATION_LIMIT}`, { signal }),
           fetch("/api/mail?limit=50", { signal }),
           fetch("/api/mail/sent?limit=50", { signal }),
         ]);

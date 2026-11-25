@@ -18,7 +18,12 @@ vi.mock("@/lib/crises/interactionEngine", async (importOriginal) => ({
   getCrisisInteractionsByCrisisId: vi.fn(async () => interactions.map),
 }));
 
-import { countViewerCrisisActions, viewerCanActOnCrisis, type BoardViewer } from "./crisisBoard";
+import {
+  countViewerCrisisActions,
+  loadCrisisBoard,
+  viewerCanActOnCrisis,
+  type BoardViewer,
+} from "./crisisBoard";
 
 const characterId = new ObjectId();
 const viewer: BoardViewer = {
@@ -123,6 +128,34 @@ describe("viewerCanActOnCrisis", () => {
       } as unknown as Crisis["globalResponse"],
     });
     expect(viewerCanActOnCrisis(c, interaction(c, node()), viewer)).toBe(false);
+  });
+});
+
+describe("loadCrisisBoard", () => {
+  it("omits legacy crises whose only locations are absent in the world era", async () => {
+    const db = createMockDb();
+    const rows = [
+      crisis({ name: "Old trade offer", countryIds: ["CS"], status: "resolved" }),
+      crisis({ name: "Old heat dome", countryIds: ["DD"], scope: "region" }),
+      crisis({ name: "Cross-border event", countryIds: ["US", "DD"] }),
+      crisis({ name: "Global event", scope: "global", countryIds: [] }),
+    ].map((row) => ({ ...row, effects: [], startTurn: 1 }));
+    db.collection("crises").find.mockReturnValue({
+      sort: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(rows) }),
+    });
+    db.collection("countryGameStates").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "CS" }, { _id: "DD" }]),
+    });
+
+    const board = await loadCrisisBoard(db as unknown as Db, null);
+
+    expect(board.crises.map(({ name }) => name).sort()).toEqual([
+      "Cross-border event",
+      "Global event",
+    ]);
+    expect(board.crises.find(({ name }) => name === "Cross-border event")?.countryIds).toEqual([
+      "US",
+    ]);
   });
 });
 

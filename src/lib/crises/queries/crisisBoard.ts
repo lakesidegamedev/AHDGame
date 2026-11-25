@@ -40,6 +40,7 @@ import { globalResponseRoleFor } from "@/lib/livingConflict/globalResponse";
 import { listCrises } from "@/lib/crises/queries/crisisQueries";
 import { loadCrisisV2Summaries, type CrisisV2Summary } from "@/lib/crises/queries/crisisV2View";
 import { getAvailableLevers } from "@/lib/crises/levers/queries";
+import { countryGameStatesCollection } from "@/lib/db/repositories/countryGameStates";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 
 /** Resolved crises older than this many turns drop off the board's history. */
@@ -224,10 +225,20 @@ async function loadExposureContext(db: Db, viewer: BoardViewer): Promise<ViewerE
 }
 
 export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promise<CrisisBoard> {
-  const list = await listCrises(db, null, "all");
+  const [list, absentCountries] = await Promise.all([
+    listCrises(db, null, "all"),
+    countryGameStatesCollection(db)
+      .find({ absentInEra: true }, { projection: { _id: 1 } })
+      .toArray(),
+  ]);
   const { currentTurn } = list;
+  const absentIds = new Set<string>(absentCountries.map(({ _id }) => _id));
   const visible = list.crises.filter(
-    (c) => c.status === "active" || (c.endTurn ?? c.startTurn) >= currentTurn - HISTORY_TURNS
+    (c) =>
+      (c.scope === "global" ||
+        c.countryIds.length === 0 ||
+        c.countryIds.some((id) => !absentIds.has(id))) &&
+      (c.status === "active" || (c.endTurn ?? c.startTurn) >= currentTurn - HISTORY_TURNS)
   );
   const active = visible.filter((c) => c.status === "active");
   const [interactions, context, v2Summaries] = await Promise.all([
@@ -259,7 +270,7 @@ export async function loadCrisisBoard(db: Db, viewer: BoardViewer | null): Promi
       heroImage: crisis.heroImage,
       scope: crisis.scope,
       status: crisis.status,
-      countryIds: crisis.countryIds,
+      countryIds: crisis.countryIds.filter((id) => !absentIds.has(id)),
       regionIds: crisis.regionIds,
       startTurn: crisis.startTurn,
       durationTurns: crisis.durationTurns,

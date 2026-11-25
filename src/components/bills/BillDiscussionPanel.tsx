@@ -135,7 +135,7 @@ export function BillDiscussionPanel({ apiBase, chamberLabel }: BillDiscussionPan
       {data.viewerCanPost ? (
         <div
           className={`rounded-lg border bg-background transition-colors ${
-            focused ? "border-primary/60" : "border-card-border"
+            focused ? "border-primary ring-1 ring-primary" : "border-card-border"
           }`}
         >
           <textarea

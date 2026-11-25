@@ -57,7 +57,7 @@ export function StatusBadge({ status }: { status: string }) {
     active: "bg-success/20 text-success",
     passed: "bg-success/20 text-success",
     failed: "bg-error/20 text-error",
-    vetoed: "bg-warning/20 text-warning",
+    vetoed: "border border-card-border bg-transparent text-foreground",
     open: "bg-warning/20 text-warning",
     voting: "bg-info/20 text-info",
     confirmed: "bg-success/20 text-success",

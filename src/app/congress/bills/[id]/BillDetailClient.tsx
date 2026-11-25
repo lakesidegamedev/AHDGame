@@ -680,7 +680,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
             {/* Override failed panel — US only */}
             {!isUnicameral && bill.status === "override_failed" && (
               <div className="rounded-xl border border-error/30 bg-error/5 p-5 space-y-3">
-                <h3 className="text-base font-semibold text-error">Veto sustained</h3>
+                <h3 className="text-base font-semibold text-foreground">Veto sustained</h3>
                 <p className="text-xs text-muted">
                   The override attempt failed to reach a 2/3 supermajority of the seats in both
                   chambers. The presidential veto stands.
