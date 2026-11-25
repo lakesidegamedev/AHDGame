@@ -87,6 +87,11 @@ export function producerStageEnv(
         wideEconomyStage?: number;
         wideEconomyPricingStage?: number;
         wideEconomySurplusStage?: number;
+        newHouseholdIncomeStage?: number;
+        householdSpendingPowerStage?: number;
+        householdSpendingPowerShare?: number;
+        householdSpendingPowerRampTurns?: number;
+        householdSpendingPowerStartTurn?: number;
         fiscalScaleStage?: number;
       } & LabourWageConfig)
     | null
@@ -96,7 +101,7 @@ export function producerStageEnv(
   return {
     electricityNetworkMode: electricityMode(config),
     demandPlanStage: config?.producerDemandPlanStage,
-    demandCurve: (config?.producerDemandCurveStage ?? 0) >= 1,
+    demandCurve: (config?.producerDemandCurveStage ?? 1) >= 1,
     lowUseCostStage: config?.producerLowUseCostStage,
     idleRetireStage: config?.producerIdleRetireStage,
     decommissionGrantShare: config?.decommissionGrantShare,
@@ -131,6 +136,13 @@ export function producerStageEnv(
     wideEconomyPricingStage: config?.wideEconomyPricingStage ?? 1,
     // And the buyer's oversupplied-lane boost.
     wideEconomySurplusStage: config?.wideEconomySurplusStage ?? 1,
+    // New household income by real GDP growth ships on too.
+    newHouseholdIncomeStage: config?.newHouseholdIncomeStage ?? 1,
+    // Spending power top-up (population times wage) ships on too.
+    householdSpendingPowerStage: config?.householdSpendingPowerStage ?? 1,
+    householdSpendingPowerShare: config?.householdSpendingPowerShare,
+    householdSpendingPowerRampTurns: config?.householdSpendingPowerRampTurns,
+    householdSpendingPowerStartTurn: config?.householdSpendingPowerStartTurn,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
