@@ -7,8 +7,9 @@
  */
 
 import { useReducer, useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { useSearchParams } from "next/navigation";
-import { useInboxData } from "./useInboxData";
+import { INBOX_NOTIFICATION_LIMIT, useInboxData } from "./useInboxData";
 import { inboxReducer, initialInboxState } from "./inboxReducer";
 import { RailItem } from "./RailItem";
 import { NotifDetail } from "./NotifDetail";
@@ -81,12 +82,15 @@ function receivedMailIds(item: InboxItem): string[] {
     .map((message) => message.id as string);
 }
 
-function groupItems(items: InboxItem[]): { thisTurn: InboxItem[][]; earlier: InboxItem[][] } {
+function groupItems(
+  items: InboxItem[],
+  currentTurn: number | undefined
+): { thisTurn: InboxItem[][]; earlier: InboxItem[][] } {
   const thisTurn: InboxItem[][] = [];
   const earlier: InboxItem[][] = [];
   for (const group of groupedRailItems(items)) {
-    const time = group[0].time;
-    if (time === "now" || time.endsWith("m") || time.endsWith("h")) thisTurn.push(group);
+    const turn = group[0].turn;
+    if (turn != null && currentTurn != null && turn === String(currentTurn)) thisTurn.push(group);
     else earlier.push(group);
   }
   return { thisTurn, earlier };
@@ -125,11 +129,13 @@ function InboxRailRows({
   selectedId,
   compact,
   onSelect,
+  onArchive,
 }: {
   groups: InboxItem[][];
   selectedId: string | null;
   compact: boolean;
   onSelect: (item: InboxItem) => void;
+  onArchive: (item: InboxItem) => void;
 }) {
   const row = (item: InboxItem) => (
     <RailItem
@@ -138,6 +144,7 @@ function InboxRailRows({
       selected={item.id === selectedId}
       compact={compact}
       onSelect={() => onSelect(item)}
+      onArchive={item.kind === "notif" ? () => onArchive(item) : undefined}
     />
   );
 
@@ -266,7 +273,11 @@ export function InboxClient() {
       : (railItems[0]?.id ?? null);
   const sel = railItems.find((i) => i.id === selId) ?? null;
 
-  const { thisTurn, earlier } = useMemo(() => groupItems(railItems), [railItems]);
+  const currentTurn = useGameTurnStatus()?.currentTurn;
+  const { thisTurn, earlier } = useMemo(
+    () => groupItems(railItems, currentTurn),
+    [railItems, currentTurn]
+  );
   const hiddenCount = Math.max(0, visibleItems.length - railItems.length);
 
   // Select + mark read
@@ -317,9 +328,12 @@ export function InboxClient() {
     void handleSelect(target);
   }, [deepLinkId, loading, items, handleSelect]);
 
+  const [archiveError, setArchiveError] = useState(false);
+
   // Archive
   const handleArchive = useCallback(
     async (item: InboxItem) => {
+      setArchiveError(false);
       dispatch({ type: "ARCHIVE", id: item.id });
       try {
         if (item.kind === "mail") {
@@ -328,14 +342,17 @@ export function InboxClient() {
           );
           refreshNav?.();
         } else {
-          await fetch("/api/notifications", {
+          const response = await fetch("/api/notifications", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: item.id, action: "archive" }),
           });
+          if (!response.ok) throw new Error("Archive request failed");
+          refreshNav?.();
         }
       } catch {
-        // Best-effort
+        dispatch({ type: "UNARCHIVE", id: item.id });
+        setArchiveError(true);
       }
     },
     [refreshNav]
@@ -568,7 +585,7 @@ export function InboxClient() {
             <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-card-border bg-card/95 px-4 py-3 backdrop-blur">
               <div className="min-w-0">
                 <p className="text-body-sm font-medium text-muted">
-                  {showHistory ? "Full history" : "Working set"}
+                  {showHistory ? "Available history" : "Working set"}
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
                   <span className="font-mono tabular-nums text-foreground">{railItems.length}</span>{" "}
@@ -598,16 +615,27 @@ export function InboxClient() {
               </div>
             </div>
 
+            <p className="border-b border-card-border px-4 py-2 text-xs text-muted">
+              Shows up to the latest {INBOX_NOTIFICATION_LIMIT} notifications.
+            </p>
+            {archiveError && (
+              <p role="alert" className="px-4 py-2 text-xs text-error">
+                Couldn’t archive the item. Try again.
+              </p>
+            )}
             {thisTurn.length > 0 && (
               <>
                 <div className="border-b border-card-border bg-card-elevated/25 px-4 py-2">
-                  <p className="text-body-sm font-medium text-foreground/70">This turn</p>
+                  <p className="text-body-sm font-medium text-foreground/70">
+                    This turn · {currentTurn}
+                  </p>
                 </div>
                 <InboxRailRows
                   groups={thisTurn}
                   selectedId={selId}
                   compact={compact}
                   onSelect={(item) => void handleSelect(item)}
+                  onArchive={(item) => void handleArchive(item)}
                 />
               </>
             )}
@@ -615,13 +643,16 @@ export function InboxClient() {
             {earlier.length > 0 && (
               <>
                 <div className="border-b border-card-border bg-card-elevated/25 px-4 py-2">
-                  <p className="text-body-sm font-medium text-foreground/70">Earlier</p>
+                  <p className="text-body-sm font-medium text-foreground/70">
+                    Earlier and unlabelled turns
+                  </p>
                 </div>
                 <InboxRailRows
                   groups={earlier}
                   selectedId={selId}
                   compact={compact}
                   onSelect={(item) => void handleSelect(item)}
+                  onArchive={(item) => void handleArchive(item)}
                 />
               </>
             )}

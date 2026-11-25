@@ -7,7 +7,8 @@ import { useInboxData } from "./useInboxData";
 import { InboxClient } from "./InboxClient";
 import type { InboxItem } from "@/lib/inbox";
 
-vi.mock("./useInboxData", () => ({ useInboxData: vi.fn() }));
+vi.mock("./useInboxData", () => ({ INBOX_NOTIFICATION_LIMIT: 100, useInboxData: vi.fn() }));
+vi.mock("@/hooks/useGameEvents", () => ({ useGameTurnStatus: () => ({ currentTurn: 12 }) }));
 
 let mockSearch = "";
 vi.mock("next/navigation", () => ({
@@ -83,7 +84,7 @@ it("groups matching notifications while keeping different event links separate",
 
   expect(container.querySelectorAll("details")).toHaveLength(1);
   expect(container.querySelector("summary")?.textContent).toContain("2 notifications");
-  expect(container.querySelectorAll("details button")).toHaveLength(2);
+  expect(container.querySelectorAll("details button[aria-label^=Archive]")).toHaveLength(2);
 });
 
 it("puts crisis starts and ends for the same crisis in one group across time sections", () => {
@@ -95,7 +96,41 @@ it("puts crisis starts and ends for the same crisis in one group across time sec
   const { container } = render(<InboxClient />);
 
   expect(container.querySelector("summary")?.textContent).toContain("2 notifications");
-  expect(container.querySelectorAll("details button")).toHaveLength(2);
+  expect(container.querySelectorAll("details button[aria-label^=Archive]")).toHaveLength(2);
+});
+
+it("uses recorded turns even when relative ages disagree", () => {
+  mockUseInboxData.mockReturnValue(
+    hookResult(
+      [
+        { ...notif("old"), turn: "11" },
+        { ...notif("current"), turn: "12", time: "1d" },
+      ],
+      vi.fn()
+    )
+  );
+  render(<InboxClient />);
+
+  expect(screen.getByText("This turn · 12")).toBeTruthy();
+  expect(screen.getByText("Turn 12 · 1d")).toBeTruthy();
+  expect(screen.getByText("Earlier and unlabelled turns")).toBeTruthy();
+  expect(screen.getByText("Turn 11 · now")).toBeTruthy();
+});
+
+it("archives a notification from the rail without opening it", async () => {
+  mockUseInboxData.mockReturnValue(hookResult([notif("first"), notif("second")], vi.fn()));
+  mockFetch(() => okJson({ success: true }));
+  render(<InboxClient />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Archive Title second" }));
+
+  await waitFor(() => {
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/notifications",
+      expect.objectContaining({ body: JSON.stringify({ id: "second", action: "archive" }) })
+    );
+  });
+  expect(screen.queryByRole("button", { name: "Archive Title second" })).toBeNull();
 });
 
 describe("InboxClient handleMarkAllRead", () => {

@@ -54,7 +54,7 @@ export function relativeTime(iso: string, now: number): string {
 }
 
 export function notificationToInboxItem(n: SerializedNotification, now: number): InboxItem {
-  const metadataTurn = n.metadata?.turn;
+  const metadataTurn = n.metadata?.turn ?? n.metadata?.alertTurn;
   const turn =
     typeof metadataTurn === "string" || typeof metadataTurn === "number"
       ? String(metadataTurn)
