@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
+import { eraRateForCurrency } from "@/lib/constants/currencies";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -278,6 +279,63 @@ describe("GET /api/sectors (view=owned)", () => {
       countryName: "Japan",
       revenueAnchor: 100_000,
     });
+  });
+
+  it("reads a euro-country sector of a foreign owner at the authored era rate", async () => {
+    // A cross-border sector in a euro country is stored in the host's era-blind
+    // currency, which has no live quote. The list must still load.
+    const ownerId = new ObjectId();
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2027,
+      preset: "2027-default",
+    });
+    db.collectionMocks.states.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([{ _id: "FR-IDF", name: "Paris", countryId: "FR" }]),
+    });
+    db.collectionMocks.exchangeRates.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        { currencyCode: "USD", rate: 1 },
+        { currencyCode: "EUR", rate: 0.9 },
+      ]),
+    });
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: new ObjectId(),
+          corporationId: ownerId,
+          stateId: "FR-IDF",
+          countryId: "FR",
+          sectorType: "defense",
+          revenue: 600_000,
+        },
+      ]),
+    });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: ownerId,
+          name: "Overseas Holdings",
+          sequentialId: 3,
+          countryId: "US",
+          liquidCurrencyCode: "USD",
+        },
+      ]),
+    });
+    const hostRate = eraRateForCurrency("FRF", "2027-default");
+    expect(hostRate).toBeGreaterThan(0);
+
+    const { GET } = await import("./route");
+    const response = await GET(makeRequest("view=owned&type=defense"));
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.sectors).toHaveLength(1);
+    expect(data.sectors[0].countryId).toBe("FR");
+    expect(data.sectors[0].revenueAnchor).toBeCloseTo(600_000 / (hostRate as number), 0);
   });
 });
 

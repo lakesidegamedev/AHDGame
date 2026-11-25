@@ -5,7 +5,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { getGameState } from "@/lib/gameState";
 import { getCurrentTurn } from "@/lib/currentTurn";
-import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
+import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { Corporation } from "@/lib/db/types";
 import type { ProductVenture, VentureDomain } from "./types";
@@ -35,7 +35,7 @@ export async function loadVentureContext(db: Db, corporation: Corporation) {
       .sort({ startedTurn: -1 })
       .limit(40)
       .toArray(),
-    loadFxRatesByCurrency(db),
+    loadValuationFxRates(db),
     getCurrentTurn(db),
     getGameState(db),
     ventureDomainsEnabled(db),

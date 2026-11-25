@@ -9,7 +9,7 @@ import type {
   Subsidy,
 } from "@/lib/db/types";
 import {
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveSectorHostCurrencyCode,
   fxRateForSectorHostFromMap,
 } from "@/lib/currency/corporationCapital";
@@ -76,7 +76,7 @@ export function computeSectorMarketPosition(args: {
     | "marketingStrength"
   >[];
   siblingsSectors: CorporateSector[];
-  siblingFxByCurrency: Awaited<ReturnType<typeof loadFxRatesByCurrency>>;
+  siblingFxByCurrency: Awaited<ReturnType<typeof loadValuationFxRates>>;
 }) {
   const {
     sector,

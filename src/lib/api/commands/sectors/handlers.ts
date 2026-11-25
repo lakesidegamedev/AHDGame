@@ -16,7 +16,7 @@ import {
 } from "@/lib/constants/countries";
 import {
   fxRateForSectorHostFromMap,
-  loadFxRatesByCurrency,
+  loadValuationFxRates,
   resolveSectorHostCurrencyCode,
   type CorpCapitalCurrencyInfo,
 } from "@/lib/currency/corporationCapital";
@@ -162,7 +162,7 @@ export async function GET(request: Request) {
       overrides[id]?.flagEmoji ?? COUNTRY_CONFIGS[id]?.flagEmoji ?? "";
 
     // Load FX rates for anchor normalization
-    const fxByCurrency = await loadFxRatesByCurrency(db);
+    const fxByCurrency = await loadValuationFxRates(db);
 
     const rows: SectorRow[] = [];
 
