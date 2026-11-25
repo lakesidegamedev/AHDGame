@@ -568,8 +568,18 @@ export default function MarketMoneyPanel({
         )}
         {credits < 0 && (
           <div className="space-y-1 border-t border-card-border pt-2">
-            <Row label="Gross costs" value={signedCost(grossCosts)} tone="error" />
-            <Row label="Credits against costs" value={signedCost(credits)} tone="success" />
+            <Row
+              label="Gross costs"
+              value={signedCost(grossCosts)}
+              tone="error"
+              help="All expenses before credits are applied."
+            />
+            <Row
+              label="Credits against costs"
+              value={signedCost(credits)}
+              tone="success"
+              help="Amounts that offset the expenses above."
+            />
           </div>
         )}
         <div className="flex items-center justify-between border-t border-card-border pt-2">
