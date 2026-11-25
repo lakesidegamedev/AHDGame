@@ -417,7 +417,7 @@ export default function BuildCapacityDialog({
                     nudge(-10, e);
                   }
                 }}
-                className="w-full bg-transparent text-center text-heading font-bold tabular-nums text-foreground focus:outline-none"
+                className="w-full bg-transparent text-center rounded-md text-heading font-bold tabular-nums text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               />
               <p className="text-body-xs text-muted">{count === 1 ? site : sites}</p>
             </div>

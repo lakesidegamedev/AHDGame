@@ -133,7 +133,7 @@
 }
 
 [data-interface="classic"] :is(button, a, input, select, textarea):focus-visible {
-  outline-color: var(--primary);
+  outline-color: var(--primary-ink);
   box-shadow:
     0 0 0 2px var(--background),
     0 0 0 4px var(--primary);
