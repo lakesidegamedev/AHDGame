@@ -289,7 +289,10 @@ export function BillTimeline({
           votingEndsAt && (
             <span className="text-yellow-400">
               Closes{" "}
-              <LocalTime value={votingEndsAt} options={{ dateStyle: "medium", timeStyle: "short" }} />
+              <LocalTime
+                value={votingEndsAt}
+                options={{ dateStyle: "medium", timeStyle: "short" }}
+              />
             </span>
           )
         )}

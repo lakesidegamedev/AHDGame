@@ -367,7 +367,9 @@ function StateBillDetailContent() {
                 votesAgainst={bill.votesAgainst}
                 votesAbstain={bill.votesAbstain}
                 deadline={isOriginStage && !isOverrideStage ? (bill.votingEndsAt ?? null) : null}
-                deadlineTurn={isOriginStage && !isOverrideStage ? (bill.votingEndsOnTurn ?? null) : null}
+                deadlineTurn={
+                  isOriginStage && !isOverrideStage ? (bill.votingEndsOnTurn ?? null) : null
+                }
                 myVote={bill.myVote}
                 canVote={bill.canVote && !voting && canCastOriginVote}
                 onVote={canCastOriginVote ? (v) => void handleChamberVote(v) : undefined}
