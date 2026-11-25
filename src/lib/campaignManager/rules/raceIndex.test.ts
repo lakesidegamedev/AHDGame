@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
+import { raceIndexResponse } from "../raceIndexResponse";
 import {
   buildRaceIndex,
   filterRaces,
@@ -31,6 +32,52 @@ describe("initialsOf", () => {
 });
 
 describe("buildRaceIndex", () => {
+  it("builds the same race rows from the compact campaign response", () => {
+    const rows = [
+      election({ id: "upcoming", isUpcoming: true, inGeneral: false, startTurn: 14 }),
+      election({
+        id: "primary",
+        inPrimary: true,
+        inGeneral: false,
+        cands: [{ id: "a", name: "A", party: "1" }],
+        byParty: [
+          {
+            partyId: "1",
+            partyName: "Party 1",
+            partyColor: "#2563eb",
+            countryId: "US",
+            partyEcon: 0,
+            partySocial: 0,
+            hasCompetitivePrimary: false,
+            candidates: election({
+              cands: [{ id: "a", name: "A", party: "1", share: 100, isYou: true }],
+            }).candidates,
+          },
+        ],
+      }),
+      election({
+        id: "general",
+        cands: [{ id: "b", name: "B", party: "2", share: 65 }],
+        totalSeats: 10,
+        seatsEstimate: { b: 7 },
+        primaryResults: {
+          "2": [{ candidateId: "b", characterName: "B", sharePct: 100, won: true }],
+        },
+      }),
+      election({
+        id: "finished",
+        isEnded: true,
+        cands: [{ id: "c", name: "C", party: "2", share: 58 }],
+      }),
+    ];
+    const projected = rows.map(raceIndexResponse);
+    const options = { ...ctx, includeFinal: true, includeUpcoming: true };
+
+    expect(projected[1].candidates).toEqual([]);
+    expect(projected[1].polling).toBeNull();
+    expect(buildRaceIndex(projected, options)).toEqual(buildRaceIndex(rows, options));
+  });
+
   it("returns nothing for no elections", () => {
     expect(buildRaceIndex([], ctx)).toEqual([]);
   });

@@ -102,6 +102,15 @@ describe("GET /api/elections", () => {
     expect(typeof json.total).toBe("number");
   });
 
+  it("marks the opt-in campaign list response as uncacheable", async () => {
+    const { GET } = await import("./route");
+    const req = new Request("https://example.test/api/elections?country=US&view=campaign");
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store, no-transform");
+    expect(await res.json()).toEqual({ elections: [], total: 0, page: 1 });
+  });
+
   it("returns 400 when neither id nor country is provided", async () => {
     const { GET } = await import("./route");
     const req = new Request("http://localhost/api/elections");

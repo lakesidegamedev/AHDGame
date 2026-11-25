@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchAllElections } from "@/lib/elections/fetchAllElections";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
+import type { RaceIndexElection } from "@/lib/campaignManager/raceIndexResponse";
 import { buildRaceIndex, type CmRace } from "@/lib/campaignManager/rules";
 
 /**
  * One read per country, race type and turn: finished races only change when a
  * turn resolves more of them, so `version` (the turn) is part of the key.
  */
-const cache = new Map<string, ElectionResponse[]>();
+const cache = new Map<string, RaceIndexElection[]>();
 
 /**
  * Every finished race of one type in the player's country, as `final` rows.
@@ -27,7 +27,7 @@ export function useFinishedRaces(
 ): { races: CmRace[]; loading: boolean } {
   const base = `${countryId}|${type}`;
   const key = `${base}|${version}`;
-  const [loaded, setLoaded] = useState<{ base: string; elections: ElectionResponse[] } | null>(
+  const [loaded, setLoaded] = useState<{ base: string; elections: RaceIndexElection[] } | null>(
     null
   );
 
@@ -35,6 +35,7 @@ export function useFinishedRaces(
     if (!enabled || !type || cache.has(key)) return;
     const controller = new AbortController();
     void fetchAllElections(countryId, {
+      view: "campaign",
       signal: controller.signal,
       status: ["completed", "resolved"],
       type,

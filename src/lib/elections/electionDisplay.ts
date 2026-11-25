@@ -3,8 +3,8 @@ import type { ElectionDisplay } from "@/lib/db/types";
 import { isCommonsGeneralElection } from "@/lib/utils/electionLabels";
 
 /** Shape of GET /api/elections list responses (country/list mode). */
-export interface ElectionsPageResponse {
-  elections?: ElectionResponse[];
+export interface ElectionsPageResponse<Election = ElectionResponse> {
+  elections?: Election[];
   total?: number;
   page?: number;
 }
