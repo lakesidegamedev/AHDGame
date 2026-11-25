@@ -9,6 +9,7 @@ import {
 import { BUILD_OUTLOOK_COPY } from "./CommodityCountryStatCard";
 import {
   balanceParts,
+  newOutputBalance,
   formatWholeUnits,
   wholeUnitsAddingUp,
   type Segment,
@@ -113,6 +114,11 @@ export default function SupplyDemandBar({
           ({Math.round((100 * sold) / market.supply)}% of their offers, at home and abroad)
         </p>
       )}
+      {market && stockNote(market, unit) && (
+        <p className="mt-2 text-xs text-muted" data-testid="balance-stock">
+          {stockNote(market, unit)}
+        </p>
+      )}
       <p className="mt-2 text-xs leading-relaxed text-muted" data-testid="balance-verdict">
         {verdict}
       </p>
@@ -168,6 +174,22 @@ function BalanceRow({
       )}
     </div>
   );
+}
+
+/**
+ * Old stock in plain words: how much of the supply was stock from earlier
+ * turns, and how new output alone compared with orders. Null without stock.
+ */
+export function stockNote(
+  market: { supply: number; demand: number; carriedStock?: number },
+  unit: string
+): string | null {
+  const b = newOutputBalance(market);
+  if (!(b.stock > 0)) return null;
+  const share = b.newRatio == null ? null : Math.round(b.newRatio * 100);
+  return `${formatUnits(b.stock, unit)} of the supply is unsold stock from earlier turns.${
+    share == null ? "" : ` New output alone was ${share}% of what buyers ordered.`
+  }`;
 }
 
 /** Plain balance for views without a traded book. Never calls a gap "unsold". */

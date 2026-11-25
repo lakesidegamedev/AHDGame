@@ -88,6 +88,8 @@ export default function WorldTradeClient({ ledger }: { ledger: WorldTradeLedger 
           <span className="text-[11.5px] text-muted">{NOTES[view]}</span>
         </div>
 
+        {/* Section heading for the outline; each view carries its own title. */}
+        <h2 className="sr-only">Trade ledger</h2>
         {view === "nations" && <NationsView ledger={ledger} />}
         {view === "commodities" && <CommoditiesView ledger={ledger} />}
         {view === "bilateral" && <BilateralView ledger={ledger} />}

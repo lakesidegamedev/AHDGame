@@ -403,6 +403,110 @@ export function wideEconomyShortageBoost(
   return boost;
 }
 
+/** A lane is oversupplied when this share of its new plant output goes unsold... */
+export const WIDE_ECONOMY_SURPLUS_THRESHOLD = 0.15;
+/** ...in each of this many recent settled turns. */
+export const WIDE_ECONOMY_SURPLUS_TURNS = 3;
+/** An oversupplied lane's buyer grows to leave about this share of new output unsold... */
+export const WIDE_ECONOMY_TARGET_SURPLUS = 0.1;
+/** ...but never beyond this share of demand (2.5x the base buyer). */
+export const WIDE_ECONOMY_MAX_BUYER_SHARE = 0.25;
+
+/**
+ * Each lane's unsold share of new plant output for one settled turn: what
+ * plants made this turn and neither real buyers nor the company's own sites
+ * took, over what they made. Sales count against new output first, so stock
+ * carried from earlier turns never makes a lane read as oversupplied. What the wider economy's own buyer
+ * bought counts as unsold here, so a lane it props up still reads as
+ * oversupplied until real demand grows.
+ */
+export function wideEconomyLaneSurplus(input: {
+  products: readonly {
+    commodity: string;
+    book: string;
+    producedUnits?: number;
+    soldUnits?: number;
+    internalDeliveredUnits?: number;
+  }[];
+  outcomes: readonly {
+    accountId: string;
+    commodity: string;
+    book: string;
+    deliveredUnits: number;
+  }[];
+  isWideAccount: (accountId: string) => boolean;
+  laneKey: (commodity: string, book: string) => string;
+}): Record<string, number> {
+  const made = new Map<string, number>();
+  const sold = new Map<string, number>();
+  for (const p of input.products) {
+    const lane = input.laneKey(p.commodity, p.book);
+    made.set(lane, (made.get(lane) ?? 0) + finitePositive(p.producedUnits ?? 0));
+    sold.set(
+      lane,
+      (sold.get(lane) ?? 0) +
+        finitePositive(p.soldUnits ?? 0) +
+        finitePositive(p.internalDeliveredUnits ?? 0)
+    );
+  }
+  for (const o of input.outcomes) {
+    if (!input.isWideAccount(o.accountId)) continue;
+    const lane = input.laneKey(o.commodity, o.book);
+    sold.set(lane, (sold.get(lane) ?? 0) - finitePositive(o.deliveredUnits));
+  }
+  const out: Record<string, number> = {};
+  for (const lane of [...made.keys()].sort()) {
+    const m = made.get(lane)!;
+    if (!(m > 0)) continue;
+    const realSold = Math.max(0, sold.get(lane) ?? 0);
+    out[lane] = Math.min(1, Math.max(0, (m - realSold) / m));
+  }
+  return out;
+}
+
+/**
+ * How much bigger each persistently oversupplied lane's buyer is than the
+ * base line. A lane whose new output went unsold beyond the threshold in each
+ * of the recent turns gets a buyer of its smallest recent unsold share less
+ * the target, between the base share and the cap; any other lane stays at
+ * the base. It shrinks by itself as real demand catches up.
+ */
+export function wideEconomySurplusBoost(
+  history: readonly Readonly<Record<string, number>>[]
+): Map<string, number> {
+  const boost = new Map<string, number>();
+  if (history.length < WIDE_ECONOMY_SURPLUS_TURNS) return boost;
+  const recent = history.slice(0, WIDE_ECONOMY_SURPLUS_TURNS);
+  for (const lane of Object.keys(recent[0]!).sort()) {
+    const surpluses = recent.map((turn) => turn[lane]);
+    if (surpluses.some((u) => u == null || !(u > WIDE_ECONOMY_SURPLUS_THRESHOLD))) continue;
+    const u = Math.min(...(surpluses as number[]));
+    const share = Math.min(
+      WIDE_ECONOMY_MAX_BUYER_SHARE,
+      Math.max(WIDE_ECONOMY_DEMAND_SHARE, u - WIDE_ECONOMY_TARGET_SURPLUS)
+    );
+    if (share > WIDE_ECONOMY_DEMAND_SHARE) boost.set(lane, share / WIDE_ECONOMY_DEMAND_SHARE);
+  }
+  return boost;
+}
+
+/** The buyer's lines with each oversupplied lane scaled up (wideEconomySurplusBoost). */
+export function wideEconomyBoostedOrders(
+  base: readonly PurchaseOrder[],
+  boostByLane: ReadonlyMap<string, number>,
+  laneKey: (commodity: string, book: string) => string
+): PurchaseOrder[] {
+  return base.map((o) => {
+    const factor = boostByLane.get(laneKey(o.commodity, o.book)) ?? 1;
+    if (!(factor > 1)) return o;
+    return {
+      ...o,
+      units: o.units * factor,
+      ...(o.maximumSpend != null ? { maximumSpend: o.maximumSpend * factor } : {}),
+    };
+  });
+}
+
 interface SettledOffer {
   offeredUnits: number;
   deliveredUnits: number;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import {
+  carriedStockByBook,
   marketAccountKind,
   marketAttributionGaps,
   totalOf,
@@ -151,6 +152,9 @@ describe("market attribution", () => {
       .companyBooks!.filter((c) => c.countryId === "US")
       .reduce((n, c) => n + c.offered, 0);
     expect(companyOffered).toBeCloseTo(us.supplyBy.company!, 9);
+    // The US plant made nothing this turn and offered 4 units of old stock.
+    expect(us.carriedStock).toBeCloseTo(4, 9);
+    expect(fr.carriedStock).toBeUndefined();
   });
 
   it("reports any book total that some volume does not account for", () => {
@@ -164,5 +168,32 @@ describe("market attribution", () => {
     expect(gaps).toEqual([
       expect.objectContaining({ countryId: "US", commodity: "advertising", measure: "supply" }),
     ]);
+  });
+});
+
+describe("old stock per country book", () => {
+  it("is what a plant offered beyond this turn's output less its own sites' share", () => {
+    const stock = carriedStockByBook(
+      [
+        // Made 100, 20 went to its own sites, offered 130: 50 of the offer is old stock.
+        {
+          id: "p1",
+          products: [
+            {
+              commodity: "steel",
+              producedUnits: 100,
+              internalDeliveredUnits: 20,
+              offeredUnits: 130,
+            },
+          ],
+        },
+        // Offered only this turn's output: no stock.
+        { id: "p2", products: [{ commodity: "steel", producedUnits: 40, offeredUnits: 40 }] },
+        { id: "p3", products: [{ commodity: "steel", producedUnits: 0, offeredUnits: 5 }] },
+      ],
+      (id) => (id === "p3" ? "CA" : "US")
+    );
+    expect(stock.get(JSON.stringify(["US", "steel"]))).toBeCloseTo(50, 9);
+    expect(stock.get(JSON.stringify(["CA", "steel"]))).toBeCloseTo(5, 9);
   });
 });

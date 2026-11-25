@@ -31,9 +31,18 @@ function balance(c: CommodityData): { label: string; tone: string; title?: strin
         }
       : { label: "Supplied in every state", tone: "text-success", title };
   }
-  const ratio = c.globalSupply / Math.max(c.globalDemand, 1e-9);
+  // Only new output decides a surplus: stock left from earlier turns is an
+  // overhang of its own, not plants making more than buyers order.
+  const stock = Math.max(0, Math.min(c.carriedStock ?? 0, c.globalSupply));
+  const ratio = (c.globalSupply - stock) / Math.max(c.globalDemand, 1e-9);
   if (ratio < 0.95) return { label: "Short", tone: "text-error" };
   if (ratio > 1.05) return { label: "Surplus", tone: "text-success" };
+  if (c.globalSupply / Math.max(c.globalDemand, 1e-9) > 1.05)
+    return {
+      label: "Old stock left",
+      tone: "text-muted",
+      title: `New output roughly matches orders. ${formatCount(stock)} of the supply is unsold stock from earlier turns.`,
+    };
   return { label: "Balanced", tone: "text-muted" };
 }
 

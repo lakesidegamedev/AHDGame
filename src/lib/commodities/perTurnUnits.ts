@@ -23,6 +23,7 @@ interface MarketFields {
   supplyBy?: Split;
   demandBy?: Split;
   filledBy?: Split;
+  carriedStock?: number;
 }
 
 const splitPerTurn = (split: Split | undefined) =>
@@ -44,6 +45,7 @@ export function marketPerTurn<M extends MarketFields>(m: M): M {
     ...(m.supplyBy ? { supplyBy: splitPerTurn(m.supplyBy) } : {}),
     ...(m.demandBy ? { demandBy: splitPerTurn(m.demandBy) } : {}),
     ...(m.filledBy ? { filledBy: splitPerTurn(m.filledBy) } : {}),
+    ...(m.carriedStock != null ? { carriedStock: bookPerTurn(m.carriedStock) } : {}),
   };
 }
 interface PricingFields {
@@ -182,6 +184,7 @@ export function commodityDetailPerTurn<T extends BookFields>(detail: T): T {
 }
 
 interface ListRowFields extends PricingFields {
+  carriedStock?: number;
   backgroundEconomy?: { sold: number; bought: number };
   globalSupply: number;
   globalDemand: number;
@@ -201,6 +204,7 @@ export function commodityListRowPerTurn<T extends ListRowFields>(row: T): T {
     globalSupply: bookPerTurn(row.globalSupply),
     globalDemand: bookPerTurn(row.globalDemand),
     ...pricingPerTurn(row),
+    ...(row.carriedStock != null ? { carriedStock: bookPerTurn(row.carriedStock) } : {}),
     exchangeSupply: bookPerTurn(row.exchangeSupply),
     exchangeDemand: bookPerTurn(row.exchangeDemand),
     ...(row.backgroundEconomy
