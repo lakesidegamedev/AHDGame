@@ -1387,6 +1387,80 @@ describe("receipt-backed production", () => {
     ).toBeCloseTo(3.3);
   });
 
+  it("posts a cost-plus ask at unit cost times markup, without markdown or bracket", () => {
+    const lane = "advertising|world";
+    const run = (
+      unitCost: number | undefined,
+      markup = 0.1,
+      policy: { kind: "costPlus"; markup: number } | { kind: "automatic"; targetMarkup: 0 } = {
+        kind: "costPlus",
+        markup,
+      }
+    ) =>
+      advanceProducerEconomy({
+        turn: 2,
+        accounts,
+        stockCoverTurns: 1,
+        producers: [
+          plant({
+            inputs: [],
+            outputs: [
+              {
+                commodity: "advertising",
+                book: "world",
+                unitsPerOutput: 1,
+                policy,
+                referenceUnitPrice: 10,
+                storable: true,
+              },
+            ],
+            capacityUnits: 20,
+            outputStock: [{ commodity: "advertising", book: "world", units: 20 }],
+            // Sold little last turn: an automatic ask would be marked down.
+            recentSoldUnits: 1,
+            recentSoldByOutput: { [lane]: 1 },
+            askBracketByOutput: {
+              [lane]: {
+                ask: 9,
+                soldUnits: 1,
+                offeredUnits: 20,
+                bracket: { lowerAsk: 8, referenceUnitPrice: 10, turns: 0 },
+              },
+            },
+            ...(unitCost != null ? { costPlusUnitCostByOutput: { [lane]: unitCost } } : {}),
+          }),
+        ],
+        clearingPriceByLane: { [lane]: 10 },
+        externalOrders: [
+          {
+            id: "buyer",
+            accountId: "households",
+            commodity: "advertising",
+            book: "world",
+            units: 20,
+            maximumUnitPrice: 50,
+          },
+        ],
+      }).producers[0].products[0];
+    const priced = run(8);
+    expect(priced.askingUnitPrice).toBeCloseTo(8.8);
+    expect(priced.costPlus).toEqual({ markup: 0.1, unitCost: 8 });
+    expect(priced.askBracket).toBeUndefined();
+    // The same carried stock marks an automatic ask down.
+    expect(run(8, 0, { kind: "automatic", targetMarkup: 0 }).askingUnitPrice).toBeLessThan(10);
+    // The ask follows the cost.
+    expect(run(9).askingUnitPrice).toBeCloseTo(9.9);
+    expect(run(9, -0.1).askingUnitPrice).toBeCloseTo(8.1);
+    // Capped at 3x the reference price.
+    const capped = run(40);
+    expect(capped.askingUnitPrice).toBeCloseTo(30);
+    expect(capped.costPlus).toEqual({ markup: 0.1, unitCost: 40, capped: true });
+    // No cost history: the market price, and the receipt says so.
+    const fallback = run(undefined);
+    expect(fallback.askingUnitPrice).toBeCloseTo(10);
+    expect(fallback.costPlus).toEqual({ markup: 0.1 });
+  });
+
   it("posts the midpoint of a known ask bracket and stores the bracket on the receipt", () => {
     const lane = "advertising|world";
     const output = {

@@ -28,6 +28,7 @@ import {
   recentSoldOf,
   idleUpkeep,
   type RunCutReason,
+  type CostPlusAskBasis,
 } from "./productionPlan";
 import type { ProducerMarketResult } from "@/lib/market/producerMarket/rules";
 import type { ProducerCashChanges } from "./cashChangesRules";
@@ -38,6 +39,7 @@ export function buildProducerOperatingResults({
   input,
   postedOffers,
   askBrackets,
+  costPlusAsks,
   plans,
   internalAccountingAccounts,
   physicalMaximum,
@@ -68,6 +70,8 @@ export function buildProducerOperatingResults({
   postedOffers: Map<string, ProducerOffer>;
   /** Ask bracket each automatic offer was posted under (autoAskRules); stored on the receipt. */
   askBrackets?: ReadonlyMap<string, AskBracket>;
+  /** Cost-plus basis of each cost-plus offer; stored on the receipt so the panel can show it. */
+  costPlusAsks?: ReadonlyMap<string, CostPlusAskBasis>;
   plans: ProductionPlan[];
   internalAccountingAccounts: Set<string>;
   physicalMaximum: Map<string, number>;
@@ -535,6 +539,7 @@ export function buildProducerOperatingResults({
       // turn they were made, and finished stock is not capitalized.
       const offerId = JSON.stringify([p.id, "output", output.commodity]);
       const askBracket = askBrackets?.get(offerId);
+      const costPlus = costPlusAsks?.get(offerId);
       products.push({
         commodity: output.commodity,
         book: output.book,
@@ -546,6 +551,7 @@ export function buildProducerOperatingResults({
         revenue: sold.revenue,
         askingUnitPrice: postedOffers.get(offerId)!.unitPrice,
         ...(askBracket ? { askBracket } : {}),
+        ...(costPlus ? { costPlus } : {}),
         ...(marketValue > 0 && sold.internalDeliveredUnits > 0
           ? { captiveUnitValue: marketValue / sold.internalDeliveredUnits }
           : {}),

@@ -38,11 +38,16 @@ type SectorFacts = Pick<
 /**
  * The quote a sector posts without an explicit producer quote: automatic, with
  * the CEO's pricing posture as its markup over the market reference. Cost-plus
- * mode reads posture as a markup over cost, which this policy does not model,
- * so it stays at the market.
+ * mode reads posture as a markup over last run's unit cost; retained stock of
+ * a good the plant no longer makes has no run cost, so it stays automatic.
  */
-function defaultQuotePolicy(sector: SectorFacts): ProducerQuotePolicy {
+function defaultQuotePolicy(sector: SectorFacts, produced = true): ProducerQuotePolicy {
   const posture = sector.pricingPosture;
+  if (sector.pricingMode === "costPlus" && produced)
+    return {
+      kind: "costPlus",
+      markup: typeof posture === "number" ? clampPricingPosture(posture) : 0,
+    };
   return {
     kind: "automatic",
     targetMarkup:
@@ -168,7 +173,8 @@ export function prepareProducerSector(input: {
         commodity,
         unitsPerOutput,
         book: market.book,
-        policy: sector.producerQuotes?.[commodity] ?? defaultQuotePolicy(sector),
+        policy:
+          sector.producerQuotes?.[commodity] ?? defaultQuotePolicy(sector, unitsPerOutput > 0),
         referenceUnitPrice: market.referenceUnitPrice,
         storable: isStorable(commodity),
       };
@@ -197,7 +203,7 @@ export function prepareProducerSector(input: {
       commodity,
       unitsPerOutput: 0,
       book: market.book,
-      policy: sector.producerQuotes?.[commodity] ?? defaultQuotePolicy(sector),
+      policy: sector.producerQuotes?.[commodity] ?? defaultQuotePolicy(sector, false),
       referenceUnitPrice: market.referenceUnitPrice,
       storable: true,
       ...(retainedUnitCost != null ? { retainedUnitCost } : {}),

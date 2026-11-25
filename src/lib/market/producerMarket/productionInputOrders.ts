@@ -4,7 +4,8 @@ import { type PurchaseOrder, type ProducerOffer, quoteProducer } from "./rules";
 import { minorInputs } from "./makeDoRules";
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { laneKeyOf } from "./laneKey";
-import { shortageAsk } from "./shortageAskRules";
+import { SHORTAGE_ASK_DEFAULT_MAX_MULTIPLIER, shortageAsk } from "./shortageAskRules";
+import { costPlusAsk } from "@/lib/market/costPlusPricing/rules";
 import { stockCover, markdownFactor, markedDownAsk } from "./stockCoverRules";
 import { type AskBracket, type AskBracketReading, bracketAsk } from "./autoAskRules";
 import { internalTransferUnitPrice } from "./internalTransferPricingRules";
@@ -12,6 +13,7 @@ import {
   type ProducerInputReservation,
   finite,
   type ProductionPlan,
+  type CostPlusAskBasis,
   indexQuoteVolumes,
   recentSoldOf,
   quoteVolumesExcept,
@@ -263,6 +265,8 @@ export function buildProducerInputOrders({
   }> = [];
   /** Ask bracket each automatic offer was posted under, by offer id. */
   const askBrackets = new Map<string, AskBracket>();
+  /** Cost-plus basis of each cost-plus offer, by offer id. */
+  const costPlusAsks = new Map<string, CostPlusAskBasis>();
   const requestedSpend = new Map<string, number>();
   const groupedSpend = new Map<string, { accountId: string; maximumSpend: number }>();
   for (const order of orders) {
@@ -372,8 +376,34 @@ export function buildProducerInputOrders({
         postureAnchor > 0
           ? postureAnchor
           : clearingUnitPrice;
+      // Cost-plus: last run's unit cost times (1 + markup), capped at the price
+      // ceiling, posted as a fixed price; no cost history asks the market.
+      // Retained stock of a good no longer made prices off its recorded cost.
+      const costPlusUnitCost =
+        p.costPlusUnitCostByOutput?.[lane] ??
+        (output.unitsPerOutput === 0 ? output.retainedUnitCost : undefined);
+      const costPlus =
+        output.policy.kind === "costPlus"
+          ? {
+              markup: output.policy.markup,
+              ...costPlusAsk({
+                unitCost: costPlusUnitCost,
+                markup: output.policy.markup,
+                marketUnitPrice: askBase ?? output.referenceUnitPrice,
+                ceilingUnitPrice:
+                  output.referenceUnitPrice *
+                  (input.shortageAsk?.maxMultiplier ?? SHORTAGE_ASK_DEFAULT_MAX_MULTIPLIER),
+              }),
+            }
+          : null;
+      if (costPlus)
+        costPlusAsks.set(JSON.stringify([p.id, "output", output.commodity]), {
+          markup: costPlus.markup,
+          ...(costPlus.basis === "cost" ? { unitCost: costPlusUnitCost } : {}),
+          ...(costPlus.capped ? { capped: true as const } : {}),
+        });
       const quoteInput = {
-        policy: output.policy,
+        policy: costPlus ? ({ kind: "manual", unitPrice: costPlus.ask } as const) : output.policy,
         referenceUnitPrice: output.referenceUnitPrice,
         ...(askBase != null ? { clearingUnitPrice: askBase } : {}),
         ...(postureAnchor != null ? { postureAnchorUnitPrice: postureAnchor } : {}),
@@ -396,7 +426,7 @@ export function buildProducerInputOrders({
         policy:
           output.policy.kind === "automatic"
             ? { kind: "manual", unitPrice: askBase ?? output.referenceUnitPrice }
-            : output.policy,
+            : quoteInput.policy,
       });
       const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
       pendingQuotes.push({
@@ -406,7 +436,8 @@ export function buildProducerInputOrders({
           ? { bracket: { last: p.askBracketByOutput?.[lane] ?? null } }
           : {}),
         markdown: {
-          factor: markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
+          // A cost-plus ask is the seller's own price: no stock markdown.
+          factor: costPlus ? 1 : markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
           reference: output.referenceUnitPrice,
         },
         offer: {
@@ -473,5 +504,6 @@ export function buildProducerInputOrders({
     minorByPlan,
     proposedById,
     askBrackets,
+    costPlusAsks,
   };
 }

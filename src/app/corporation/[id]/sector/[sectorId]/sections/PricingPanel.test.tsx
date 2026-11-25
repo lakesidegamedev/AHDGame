@@ -99,4 +99,37 @@ describe("PricingPanel asking prices", () => {
     expect(list.textContent).toMatch(/asked.*2,?070/);
     expect(screen.getByText(/moves at most 6% a turn/)).toBeTruthy();
   });
+
+  it("shows the cost per unit and markup a cost-plus ask used, matching the ask", () => {
+    panel({
+      posture: 0.1,
+      pricingMode: "costPlus",
+      costPlusEnabled: true,
+      costPlusReady: true,
+      effectivePosture: null,
+      salesBasis: "settlement",
+      soldFraction: 1,
+      clearingFactor: 1,
+      asks: [
+        {
+          commodity: "steel",
+          askingUnitPrice: 880,
+          paidUnitPrice: 880,
+          marketUnitPrice: 2000,
+          costPlus: { markup: 0.1, unitCost: 800 },
+        },
+        {
+          commodity: "plastics",
+          askingUnitPrice: 950,
+          paidUnitPrice: null,
+          marketUnitPrice: 950,
+          costPlus: { markup: 0.1 },
+        },
+      ],
+    });
+    const list = screen.getByRole("list", { name: "Asking prices last turn" });
+    expect(list.textContent).toMatch(/asked.*880/);
+    expect(list.textContent).toMatch(/800 cost per unit made last run plus 10% = .*880/);
+    expect(list.textContent).toContain("no settled run to price from yet");
+  });
 });

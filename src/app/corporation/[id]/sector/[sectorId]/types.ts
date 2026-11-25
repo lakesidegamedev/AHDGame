@@ -305,6 +305,8 @@ export interface PricingData {
     askingUnitPrice: number;
     paidUnitPrice: number | null;
     marketUnitPrice: number | null;
+    /** Cost-plus basis of the ask; no unitCost = no cost history, so it asked the market. */
+    costPlus?: { markup: number; unitCost?: number; capped?: true };
   }[];
   /** Share of output that found a buyer last turn. */
   soldFraction: number | null;

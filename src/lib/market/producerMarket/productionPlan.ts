@@ -6,6 +6,13 @@ import { laneKeyOf } from "./laneKey";
 import type { InputReceipt } from "./rules/inputReceipt";
 import type { OfferMissReason } from "./rules/unfilledReasons";
 
+export interface CostPlusAskBasis {
+  markup: number;
+  unitCost?: number;
+  /** The ask hit the price ceiling and is below unit cost times markup. */
+  capped?: true;
+}
+
 export interface PurchasedStock {
   commodity: string;
   units: number;
@@ -85,6 +92,8 @@ export interface ProductionPlan {
    * recentSoldByOutput (autoAskRules bracketAsk). Absent = no bracket.
    */
   askBracketByOutput?: Readonly<Record<string, AskBracketReading>>;
+  /** Last run's operating cost per unit made, per cost-plus output (costPlusUnitCosts). */
+  costPlusUnitCostByOutput?: Readonly<Record<string, number>>;
   /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
   plannedRunShare?: number;
   /** Consecutive glut turns before this one (producerRunPlanStage); echoed on the receipt. */
@@ -269,6 +278,11 @@ export interface ProducerOperatingResult {
     lostUnits: number;
     /** Ask bracket this ask was posted under (autoAskRules); absent = none. */
     askBracket?: AskBracket;
+    /**
+     * The cost-plus basis of this ask: markup and the unit cost it was applied
+     * to. No unit cost = no cost history, so the ask was the market price.
+     */
+    costPlus?: CostPlusAskBasis;
   }>;
 }
 
