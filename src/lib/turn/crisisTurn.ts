@@ -475,7 +475,7 @@ async function notifyAffectedPlayers(
     type: type === "crisis_start" ? ("crisis" as const) : ("crisis_resolved" as const),
     title,
     message,
-    metadata: { crisisId: crisis._id.toString() },
+    metadata: { crisisId: crisis._id.toString(), crisisStartTurn: crisis.startTurn },
   }));
 
   await createNotifications(notifications);

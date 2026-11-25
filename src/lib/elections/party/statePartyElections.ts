@@ -927,6 +927,7 @@ async function notifyMembersElectionsOpenedBatch(
           `Voting is open for ${durationTurns} turns. Declare your candidacy or cast your vote on the state party page.`,
         metadata: {
           stateId,
+          countryId,
           partyId,
           positions,
           recipientCharacterId: member._id.toString(),
