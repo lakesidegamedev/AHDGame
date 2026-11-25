@@ -1,3 +1,4 @@
+import { collectiveSpending } from "./ledgerView";
 import { describe, expect, it } from "vitest";
 import { costLines, ledgerView } from "./ledgerView";
 import { makeDefinition } from "./testFixtures";
@@ -57,4 +58,17 @@ describe("costLines", () => {
     ]);
     expect(costLines({}, money)).toEqual([]);
   });
+});
+
+it("reconciles recorded contributions within each treasury currency", () => {
+  const spending = collectiveSpending([
+    { countryId: "GB", amount: 10_000_000 },
+    { countryId: "GB", amount: 5_000_000 },
+    { countryId: "JP", amount: 10_000_000 },
+    { countryId: "JP", amount: 0 },
+  ]);
+  expect(spending).toEqual([
+    { countryId: "GB", amounts: [10_000_000, 5_000_000], total: 15_000_000 },
+    { countryId: "JP", amounts: [10_000_000], total: 10_000_000 },
+  ]);
 });

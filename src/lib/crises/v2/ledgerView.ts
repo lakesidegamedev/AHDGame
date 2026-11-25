@@ -74,3 +74,21 @@ export function costLines(cost: LeverCost, formatMoney: (amount: number) => stri
   }
   return lines;
 }
+
+/** Recorded collective contributions are in the contributing treasury's own currency. */
+export function collectiveSpending(
+  contributors: readonly { countryId: string; amount: number }[]
+): Array<{ countryId: string; amounts: number[]; total: number }> {
+  const byCountry = new Map<string, number[]>();
+  for (const { countryId, amount } of contributors) {
+    if (amount <= 0 || !Number.isFinite(amount)) continue;
+    const amounts = byCountry.get(countryId);
+    if (amounts) amounts.push(amount);
+    else byCountry.set(countryId, [amount]);
+  }
+  return [...byCountry].map(([countryId, amounts]) => ({
+    countryId,
+    amounts,
+    total: amounts.reduce((sum, amount) => sum + amount, 0),
+  }));
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { automaticCrisisOption } from "@/lib/crises/rules/automaticResponse";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
@@ -45,6 +46,7 @@ interface SerializedInteraction {
   contributors: Array<{ countryId: string; amount: number }>;
   leaderResponses?: LeaderResponse[];
   decisionDeadline: string | null;
+  autoResolveOnExpiry?: boolean;
   resolvedAt: string | null;
   resolutionPath: string[];
   resolutionOutcome: string | null;
@@ -508,6 +510,7 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
   const currentNode =
     interaction.decisionTree.find((n) => n.nodeId === interaction.currentNodeId) ?? null;
   const resolved = !!interaction.resolvedAt;
+  const fallback = currentNode ? automaticCrisisOption(currentNode) : undefined;
   const terminalId = interaction.resolutionPath.at(-1);
   const terminalNode = interaction.decisionTree.find(
     (n) => n.nodeId === terminalId && n.type === "terminal"
@@ -541,6 +544,25 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
             <h3 className="text-sm font-medium text-foreground">{currentNode.title}</h3>
             <p className="text-xs text-muted mt-0.5 mb-3">{currentNode.description}</p>
 
+            {!multiResponder && (
+              <div className="mb-3 space-y-1 text-xs text-muted">
+                <p>
+                  {currentNode.type === "collective"
+                    ? "Each eligible responder can contribute once."
+                    : currentNode.type === "aid"
+                      ? "Each eligible country can pledge once."
+                      : "This decision closes or advances after one choice."}
+                </p>
+                <p>
+                  {interaction.decisionDeadline && interaction.autoResolveOnExpiry
+                    ? fallback
+                      ? `If nobody responds by the deadline, the game uses “${fallback.label}”.`
+                      : "If nobody responds by the deadline, the window closes."
+                    : "There is no automatic choice for this decision."}
+                </p>
+              </div>
+            )}
+
             {multiResponder && (
               <div className="text-[11px] text-muted -mt-2 mb-3 space-y-1">
                 <p>
@@ -548,7 +570,8 @@ export default function CrisisInteractionPanel({ crisisId }: { crisisId: string 
                   determine the global outcome.
                 </p>
                 <p>
-                  Governments that send no order follow the event&rsquo;s default posture at expiry.
+                  Governments that send no order do not submit a response. The event applies its
+                  default posture when the response window closes.
                 </p>
                 {responseRole ? (
                   <p className="font-medium text-foreground/80">
