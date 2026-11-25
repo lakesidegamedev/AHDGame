@@ -11,7 +11,7 @@ import { formatCurrencyFull } from "@/lib/utils/formatters";
 import type { MarketingBudget, CorpVolume, SyntheticDemandSource } from "../types";
 import { COMMODITY_LABELS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
 import {
-  governmentBoughtGoods,
+  governmentBudgetLineLabels,
   governmentBuysCommodity,
 } from "@/lib/market/governmentCommodityDemand";
 
@@ -36,16 +36,12 @@ interface TopProducersConsumersProps {
   settled?: boolean;
 }
 
-/** Says governments do not buy this good, naming what they do buy. Null when they buy it. */
+/** Says governments do not buy this good, naming the budget lines that buy goods. Null when they buy it. */
 export function governmentDemandNote(commodity: string): string | null {
   if (governmentBuysCommodity(commodity)) return null;
-  const bought = governmentBoughtGoods().map(
-    (g) =>
-      `${(COMMODITY_LABELS[g.commodity] ?? g.commodity).toLowerCase()}${g.plannedOnly ? " (planned economies only)" : ""}`
-  );
-  const list =
-    bought.length > 1 ? `${bought.slice(0, -1).join(", ")} and ${bought.at(-1)}` : bought[0];
-  return `Governments do not buy this good. They buy only ${list}.`;
+  const lines = governmentBudgetLineLabels().map((l) => l.toLowerCase());
+  const list = `${lines.slice(0, -1).join(", ")} and ${lines.at(-1)}`;
+  return `Governments do not buy this good. Their ${list} budget lines each buy a mix of other goods.`;
 }
 
 /**
