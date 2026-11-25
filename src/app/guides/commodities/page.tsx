@@ -400,12 +400,12 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
               a markup (15% by default, never below 10% or above 15%). Households spend 60% of their
               food money, all of their Consumer Goods money and 70% of their electronics money in
               stores. Cars, medicines and everything else are bought direct from producers, and
-              stores never sell weapons or business goods. A store's capacity limits how much it can
-              resell each turn; whatever the stores in a state cannot serve is bought direct from
-              producers at the producer price, with no markup, so no producer loses a sale because
-              stores are missing. Population, income, employment, consumer confidence, and prices
-              determine what households buy, so opening more stores competes for existing demand
-              instead of creating new customers.
+              stores never sell weapons or business goods. A store&apos;s capacity limits how much
+              it can resell each turn; whatever the stores in a state cannot serve is bought direct
+              from producers at the producer price, with no markup, so no producer loses a sale
+              because stores are missing. Population, income, employment, consumer confidence, and
+              prices determine what households buy, so opening more stores competes for existing
+              demand instead of creating new customers.
             </p>
             <FormulaBlock>{`Household demand = population × per-capita budget
   × employment factor
@@ -416,8 +416,8 @@ effective D/S = raw D/S up to 3x, softened beyond 3x
             <p className="text-body text-muted leading-relaxed">
               Consumer purchases create final demand for food, energy, vehicles, electronics,
               consumer goods, healthcare, and other household goods and services. Those purchases
-              are counted once by households. A store's margin is its markup minus wages, site bills
-              and running supplies, and its page shows each of those rows.
+              are counted once by households. A store&apos;s margin is its markup minus wages, site
+              bills and running supplies, and its page shows each of those rows.
             </p>
             <Callout label="Stores can saturate.">
               Excess stores split the same household demand between them, so each earns less.

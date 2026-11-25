@@ -42,8 +42,8 @@ export default function HouseholdChannelPanel({
       </dl>
       <p className="mt-2 text-body-sm text-muted">
         {pct(storeShare)} of the units households bought went through stores, which add a{" "}
-        {pct(channel.markup)} markup to the producer price. Units a state's stores could not serve
-        were bought direct at the producer price.
+        {pct(channel.markup)} markup to the producer price. Units a state&apos;s stores could not
+        serve were bought direct at the producer price.
       </p>
     </section>
   );
