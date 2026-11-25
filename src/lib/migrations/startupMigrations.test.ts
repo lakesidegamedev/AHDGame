@@ -74,6 +74,7 @@ describe("runRequiredStartupMigrations", () => {
       "2026-11-20-corporations-wiki-margins",
       "2026-11-21-faq-party-leadership",
       "wartime-crisis-description",
+      "crisis-fade-descriptions",
     ]);
     expect(REQUIRED_STARTUP_MIGRATIONS.every((migration) => migration.idempotent)).toBe(true);
     expect(runMigrationsMock).toHaveBeenNthCalledWith(1, db, {

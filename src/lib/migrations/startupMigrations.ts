@@ -1,4 +1,5 @@
 import { migration as wartimeCrisisDescription } from "./entries/wartime-crisis-description";
+import { migration as crisisFadeDescriptions } from "./entries/crisis-fade-descriptions";
 import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
 import { migration as nationalizationSiteIdentity } from "./entries/2026-11-16-nationalization-site-identity";
 import { migration as moveFrackingToExtraction } from "./entries/2026-11-17-move-fracking-to-extraction";
@@ -135,6 +136,7 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   corporationsWikiMargins,
   faqPartyLeadership,
   wartimeCrisisDescription,
+  crisisFadeDescriptions,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */
