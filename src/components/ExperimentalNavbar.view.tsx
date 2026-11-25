@@ -126,6 +126,30 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
     worldSubItems,
   } = context;
 
+  const notifications = showProfile ? (
+    <Link
+      href="/notifications"
+      aria-label={
+        unreadCount > 0
+          ? t("notifications.ariaUnread", { count: unreadCount })
+          : t("common.notifications")
+      }
+      aria-current={isNavActive(pathname, "/notifications") ? "page" : undefined}
+      title={t("common.notifications")}
+      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-card-border bg-card text-muted transition-colors hover:text-foreground"
+    >
+      <PixelNavIcon name="bell" className="h-4 w-4" />
+      {unreadCount > 0 && (
+        <span
+          aria-hidden="true"
+          className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground"
+        >
+          {unreadBadgeLabel(unreadCount)}
+        </span>
+      )}
+    </Link>
+  ) : null;
+
   return (
     <>
       <nav
@@ -438,6 +462,8 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                   <NavMailLink className="h-9 w-9 rounded-lg border border-card-border bg-card text-muted hover:text-foreground" />
                 )}
 
+                {notifications}
+
                 {/* Wallet */}
                 {showProfile && (
                   <Link
@@ -564,22 +590,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                 {showProfile && (
                   <NavMailLink className="h-9 w-9 rounded-lg border border-card-border bg-card text-foreground" />
                 )}
-                <Link
-                  href="/notifications"
-                  aria-label={
-                    unreadCount
-                      ? `${t("common.notifications")} (${unreadCount})`
-                      : t("common.notifications")
-                  }
-                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card text-foreground transition-colors hover:bg-white/5"
-                >
-                  <PixelNavIcon name="bell" className="h-4 w-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white">
-                      {unreadBadgeLabel(unreadCount)}
-                    </span>
-                  )}
-                </Link>
+                {notifications}
                 <button
                   type="button"
                   onClick={() => {
@@ -605,6 +616,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                 {showProfile && (
                   <NavMailLink className="h-9 w-9 rounded-lg border border-card-border bg-card text-foreground" />
                 )}
+                {notifications}
                 {showProfile && user && (
                   <button
                     type="button"
