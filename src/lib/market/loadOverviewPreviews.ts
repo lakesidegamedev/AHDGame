@@ -9,7 +9,8 @@ import { getDb } from "@/lib/mongodb";
 import { loadPriceCapBasis } from "./priceCapBasisLoad";
 import {
   MARKET_OVERVIEW_ROWS,
-  topCommodityMovers,
+  commodityOverview,
+  vsBasePct,
   topStocksForPreview,
   type CommodityMover,
 } from "./overviewPreview";
@@ -17,7 +18,7 @@ import {
 export async function loadOverviewPreviews() {
   const db = await getDb();
   const capBasis = await loadPriceCapBasis(db).catch(() => null);
-  const [stocks, movers] = await Promise.all([
+  const [stocks, commodities] = await Promise.all([
     stockExchangeSnapshotsCollection(db)
       .findOne({ _id: "global" }, { projection: { listings: 1 } })
       .then((snapshot) =>
@@ -50,7 +51,7 @@ export async function loadOverviewPreviews() {
       .toArray()
       .then((prices) => {
         const byCommodity = new Map(prices.map((price) => [price.commodity, price]));
-        return topCommodityMovers(
+        return commodityOverview(
           COMMODITY_TYPES.map((commodity): CommodityMover => {
             const price = byCommodity.get(commodity);
             const basePrice = price?.basePrice ?? COMMODITY_BASE_PRICES[commodity];
@@ -74,7 +75,16 @@ export async function loadOverviewPreviews() {
       })
       .catch(() => null),
   ]);
-  return { stocks, movers };
+  return {
+    stocks,
+    movers: commodities?.movers ?? null,
+    capped:
+      commodities?.capped.map((c) => ({
+        commodity: c.commodity,
+        label: c.label,
+        vsBasePct: vsBasePct(c),
+      })) ?? null,
+  };
 }
 
 export type MarketOverviewPreviews = Awaited<ReturnType<typeof loadOverviewPreviews>>;
