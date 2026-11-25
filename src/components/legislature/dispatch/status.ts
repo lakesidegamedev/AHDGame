@@ -1,4 +1,4 @@
-export type DispatchTone = "warning" | "info" | "success" | "error" | "muted";
+export type DispatchTone = "warning" | "info" | "success" | "error" | "muted" | "neutral";
 
 export interface DispatchStatusMeta {
   label: string;
@@ -28,8 +28,8 @@ const STATUS_META: Record<string, DispatchStatusMeta> = {
   signed: { label: "Signed into Law", tone: "success", live: false },
   // terminal — failure
   failed: { label: "Failed", tone: "error", live: false },
-  vetoed: { label: "Vetoed", tone: "error", live: false },
-  override_failed: { label: "Override Failed", tone: "error", live: false },
+  vetoed: { label: "Vetoed", tone: "neutral", live: false },
+  override_failed: { label: "Override Failed", tone: "neutral", live: false },
   withdrawn: { label: "Withdrawn", tone: "error", live: false },
   filibustered: { label: "Filibustered", tone: "error", live: false },
   // pre-vote
@@ -50,6 +50,8 @@ export function toneColor(tone: DispatchTone): string {
       return "var(--success)";
     case "error":
       return "var(--error)";
+    case "neutral":
+      return "var(--foreground)";
     default:
       return "var(--muted)";
   }

@@ -276,39 +276,6 @@ export default function LoginPageClient({
 
   return (
     <div className="flex min-h-screen bg-background">
-      {!marginOfVictory && (
-        <aside className="relative hidden flex-col justify-between overflow-hidden bg-card-muted p-10 lg:flex lg:w-[52%] xl:w-[56%] xl:px-14 xl:py-12">
-          {eraImage}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-[linear-gradient(180deg,rgb(12_12_18/0.55)_0%,rgb(12_12_18/0)_22%,rgb(12_12_18/0)_45%,rgb(12_12_18/0.85)_80%,rgb(12_12_18/0.96)_100%)]"
-          />
-          <div className="relative z-10">{brand}</div>
-          <div className="relative z-10 max-w-xl">
-            {eraLabel && (
-              <span
-                className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white ${
-                  wireframeColor ? "font-mono uppercase tracking-widest" : ""
-                }`}
-              >
-                {eraLabel}
-              </span>
-            )}
-            {eraTagline && (
-              <p
-                className={`mt-4 text-heading-lg font-semibold leading-tight tracking-tight text-white xl:text-[2.5rem] ${
-                  wireframeColor ? "font-mono" : ""
-                }`}
-              >
-                {eraTagline}
-              </p>
-            )}
-            <p className="mt-3 max-w-md text-body-lg leading-relaxed text-white/80">
-              {t("eraDescription")}
-            </p>
-          </div>
-        </aside>
-      )}
       <main
         className={`flex w-full flex-col bg-background ${marginOfVictory ? "pt-6 lg:pt-0" : "border-card-border lg:w-[48%] lg:border-l xl:w-[44%]"}`}
       >
@@ -643,6 +610,42 @@ export default function LoginPageClient({
           </nav>
         </footer>
       </main>
+      {/* The era panel sits on the left on wide screens (order-first) but
+          follows the form in the document, so the page H1 comes first and the
+          era headline reads as a second-level heading. */}
+      {!marginOfVictory && (
+        <aside className="relative order-first hidden flex-col justify-between overflow-hidden bg-card-muted p-10 lg:flex lg:w-[52%] xl:w-[56%] xl:px-14 xl:py-12">
+          {eraImage}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(180deg,rgb(12_12_18/0.55)_0%,rgb(12_12_18/0)_22%,rgb(12_12_18/0)_45%,rgb(12_12_18/0.85)_80%,rgb(12_12_18/0.96)_100%)]"
+          />
+          <div className="relative z-10">{brand}</div>
+          <div className="relative z-10 max-w-xl">
+            {eraLabel && (
+              <span
+                className={`inline-flex rounded-full bg-primary/90 px-2.5 py-1 text-body-xs font-semibold text-white ${
+                  wireframeColor ? "font-mono uppercase tracking-widest" : ""
+                }`}
+              >
+                {eraLabel}
+              </span>
+            )}
+            {eraTagline && (
+              <h2
+                className={`mt-4 text-heading-lg font-semibold leading-tight tracking-tight text-white xl:text-[2.5rem] ${
+                  wireframeColor ? "font-mono" : ""
+                }`}
+              >
+                {eraTagline}
+              </h2>
+            )}
+            <p className="mt-3 max-w-md text-body-lg leading-relaxed text-white/80">
+              {t("eraDescription")}
+            </p>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

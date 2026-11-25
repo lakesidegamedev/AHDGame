@@ -327,7 +327,19 @@ const loadEnabledCountryIdsForRequest = cache(async (): Promise<CountryId[]> => 
  */
 export async function getSimulatedCountryIds(db: Db): Promise<CountryId[]> {
   const docs = await countryGameStatesCollection(db)
-    .find({}, { projection: { _id: 1, status: 1, enabledForPlayers: 1, backgroundCountry: 1 } })
+    .find(
+      {},
+      {
+        projection: {
+          _id: 1,
+          status: 1,
+          enabledForPlayers: 1,
+          backgroundCountry: 1,
+          absentInEra: 1,
+          dissolvedTurn: 1,
+        },
+      }
+    )
     .toArray();
   const byId = new Map(docs.map((d) => [String(d._id), d]));
   return registeredBase(docs).filter((countryId) => {

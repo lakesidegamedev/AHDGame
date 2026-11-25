@@ -339,7 +339,7 @@ function LeaderStatItem({
   );
 }
 
-/** Government approval. Red only below 40%, where a government is in trouble. */
+/** Government approval. Amber below 40%, where a government is in trouble; red is for money lost and errors. */
 function ApprovalStat({
   countryId,
   data,
@@ -356,7 +356,7 @@ function ApprovalStat({
       ) : data?.approval != null ? (
         <span
           className={`text-body-lg font-semibold tabular-nums ${
-            data.approval < 40 ? "text-error" : "text-foreground"
+            data.approval < 40 ? "text-warning" : "text-foreground"
           }`}
         >
           <ApprovalTooltip
@@ -365,6 +365,8 @@ function ApprovalStat({
             modifiers={data.approvalModifiers}
             href={approvalUrl(countryId)}
           />
+          {/* Colour alone does not carry the meaning. */}
+          {data.approval < 40 && <span className="ml-1 text-body-sm font-medium">low</span>}
         </span>
       ) : (
         <span className="text-body-lg text-muted">No data</span>

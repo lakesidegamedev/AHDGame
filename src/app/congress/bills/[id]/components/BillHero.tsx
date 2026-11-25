@@ -39,9 +39,9 @@ const STATUS_ACCENT: Record<string, string> = {
   enrolled: "bg-purple-400",
   passed_origin: "bg-cyan-400",
   signed: "bg-emerald-400",
-  vetoed: "bg-error",
+  vetoed: "bg-card-border",
   failed: "bg-error",
-  override_failed: "bg-error",
+  override_failed: "bg-card-border",
 };
 
 function pct(n: number, of: number): string {
@@ -245,7 +245,7 @@ export function BillHero({
 
         {bill.vetoMessage && (
           <div className="rounded-lg border border-error/40 bg-error/5 px-4 py-3">
-            <h2 className="text-sm font-semibold text-error">President&apos;s veto message</h2>
+            <h2 className="text-sm font-semibold text-foreground">President&apos;s veto message</h2>
             <p className="mt-1 text-sm italic">&ldquo;{bill.vetoMessage}&rdquo;</p>
           </div>
         )}

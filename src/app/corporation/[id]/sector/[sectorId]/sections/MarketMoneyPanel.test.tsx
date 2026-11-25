@@ -178,11 +178,15 @@ describe("signed cost lines (ticket 1122)", () => {
     );
 
     // The credit reads as money added back, never as "− −$46,378".
-    expect(screen.getByText("+ M46378")).toBeTruthy();
+    expect(screen.getAllByText("+ M46378")).toHaveLength(2);
     expect(screen.queryByText("− M-46378")).toBeNull();
     // Wages still bill in full.
     expect(screen.getByText("− M70562")).toBeTruthy();
-    // All costs = 12,400 + 70,562 − 46,378 = 36,584, and
+    expect(screen.getByText("Gross costs")).toBeTruthy();
+    expect(screen.getByText("− M82962")).toBeTruthy();
+    expect(screen.getByText("Credits against costs")).toBeTruthy();
+    expect(screen.getByText("Net costs after credits")).toBeTruthy();
+    // Net costs = 12,400 + 70,562 − 46,378 = 36,584, and
     // 321,760 − 36,584 = 285,176, the profit printed underneath.
     expect(screen.getByText("− M36584")).toBeTruthy();
     expect(screen.getByText("M285176")).toBeTruthy();
@@ -210,7 +214,7 @@ describe("running costs split into named lines", () => {
       />
     );
     expect(screen.getByText("Overhead credit")).toBeTruthy();
-    expect(screen.getByText("+ M30000")).toBeTruthy();
+    expect(screen.getAllByText("+ M30000")).toHaveLength(2);
     expect(screen.getByText("Stock carrying cost")).toBeTruthy();
     expect(screen.getByText("Crisis and disaster losses")).toBeTruthy();
     expect(screen.queryByText("Other running costs, not itemised")).toBeNull();
@@ -301,7 +305,7 @@ it("shows the internal input credit as a named signed line in the plant account"
     />
   );
   expect(screen.getByText("Internal supply credit")).toBeTruthy();
-  expect(screen.getByText("+ M200")).toBeTruthy();
+  expect(screen.getAllByText("+ M200")).toHaveLength(2);
   expect(screen.getByText("M87900")).toBeTruthy();
 });
 

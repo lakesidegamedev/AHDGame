@@ -168,16 +168,18 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
           <div className="flex items-start gap-3 pb-0">
             <div
               className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
-                bill.status === "failed" || bill.status === "vetoed"
+                bill.status === "failed"
                   ? "border-error bg-error/20 text-error"
-                  : "border-card-border bg-card-elevated text-muted"
+                  : bill.status === "vetoed"
+                    ? "border-card-border bg-transparent text-foreground"
+                    : "border-card-border bg-card-elevated text-muted"
               }`}
             >
               ✗
             </div>
             <div className="flex-1 pt-0.5">
               <p
-                className={`text-xs font-medium ${bill.status === "failed" || bill.status === "vetoed" ? "text-error" : "text-muted"}`}
+                className={`text-xs font-medium ${bill.status === "failed" ? "text-error" : bill.status === "vetoed" ? "text-foreground" : "text-muted"}`}
               >
                 {STATUS_LABELS[bill.status]}
               </p>
@@ -200,7 +202,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
                 ✗
               </div>
               <div className="flex-1 pt-0.5">
-                <p className="text-xs font-medium text-error">Vetoed</p>
+                <p className="text-xs font-medium text-foreground">Vetoed</p>
                 {bill.failedAt && (
                   <p className="text-[10px] text-muted mt-0.5">
                     <GameMonthTime value={bill.failedAt} />
@@ -255,7 +257,7 @@ export function TimelineStepper({ bill }: { bill: BillDetail }) {
                   ✗
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className="text-xs font-medium text-error">Veto sustained</p>
+                  <p className="text-xs font-medium text-foreground">Veto sustained</p>
                   {bill.overrideFailedAt && (
                     <p className="text-[10px] text-muted mt-0.5">
                       <GameMonthTime value={bill.overrideFailedAt} />

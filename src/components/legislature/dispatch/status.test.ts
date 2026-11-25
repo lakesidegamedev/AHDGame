@@ -12,7 +12,7 @@ describe("dispatchStatusMeta", () => {
     expect(dispatchStatusMeta("enrolled").tone).toBe("info");
     expect(dispatchStatusMeta("signed").tone).toBe("success");
     expect(dispatchStatusMeta("failed").tone).toBe("error");
-    expect(dispatchStatusMeta("vetoed").tone).toBe("error");
+    expect(dispatchStatusMeta("vetoed").tone).toBe("neutral");
   });
 
   it("covers the full app BillStatus vocabulary", () => {
@@ -31,8 +31,8 @@ describe("dispatchStatusMeta", () => {
       enrolled: { tone: "info", live: false },
       signed: { tone: "success", live: false },
       failed: { tone: "error", live: false },
-      vetoed: { tone: "error", live: false },
-      override_failed: { tone: "error", live: false },
+      vetoed: { tone: "neutral", live: false },
+      override_failed: { tone: "neutral", live: false },
       withdrawn: { tone: "error", live: false },
       filibustered: { tone: "error", live: false },
       proposed: { tone: "muted", live: false },
