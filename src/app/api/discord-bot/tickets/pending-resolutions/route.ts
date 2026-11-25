@@ -70,6 +70,19 @@ function currentChannelUpdatePostedExpression() {
   };
 }
 
+// A resolution receipt is a reply while the ticket is fresh. Delivered weeks
+// later it reads as spam: on 2026-11-25 eleven receipts from October and
+// November went out at once after a long-failing delivery suddenly succeeded.
+// Receipts written before the cutover, or older than the age limit, are never
+// offered for delivery again.
+export const RESOLUTION_RECEIPT_CUTOVER = new Date("2026-11-25T17:52:38.000Z");
+export const RESOLUTION_RECEIPT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
+
+export function oldestDeliverableReceipt(now: Date = new Date()): Date {
+  const byAge = new Date(now.getTime() - RESOLUTION_RECEIPT_MAX_AGE_MS);
+  return byAge > RESOLUTION_RECEIPT_CUTOVER ? byAge : RESOLUTION_RECEIPT_CUTOVER;
+}
+
 // GET /api/discord-bot/tickets/pending-resolutions — Closed tickets whose
 // reporter still needs the final DM. Ops and the bot record channel delivery
 // separately so the bot can also close the channel without duplicating receipts.
@@ -90,6 +103,7 @@ export async function GET(request: Request) {
       status: { $in: ["resolved", "closed"] },
       "resolution.message": { $exists: true },
       "resolution.deliveredAt": null,
+      "resolution.createdAt": { $gte: oldestDeliverableReceipt() },
       $or: [
         { discordChannelId: { $in: [null, ""] } },
         { $expr: currentChannelUpdatePostedExpression() },

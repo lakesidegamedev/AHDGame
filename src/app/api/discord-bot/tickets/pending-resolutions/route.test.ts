@@ -37,6 +37,7 @@ describe("GET /api/discord-bot/tickets/pending-resolutions", () => {
         status: { $in: ["resolved", "closed"] },
         "resolution.message": { $exists: true },
         "resolution.deliveredAt": null,
+        "resolution.createdAt": { $gte: expect.any(Date) },
         $or: expect.arrayContaining([
           { discordChannelId: { $in: [null, ""] } },
           { $expr: expect.objectContaining({ $or: expect.any(Array) }) },
@@ -60,5 +61,21 @@ describe("GET /api/discord-bot/tickets/pending-resolutions", () => {
         channelUpdatePosted: expect.objectContaining({ $or: expect.any(Array) }),
       })
     );
+  });
+
+  it("never offers a receipt written before the cutover or older than three days", async () => {
+    const { oldestDeliverableReceipt, RESOLUTION_RECEIPT_CUTOVER } = await import("./route");
+    // Before the cutover plus three days, the cutover itself is the floor.
+    expect(oldestDeliverableReceipt(new Date("2026-11-25T18:25:00.000Z"))).toEqual(RESOLUTION_RECEIPT_CUTOVER);
+    // Later, receipts older than three days are never delivered.
+    expect(oldestDeliverableReceipt(new Date("2026-12-10T00:00:00.000Z"))).toEqual(new Date("2026-12-07T00:00:00.000Z"));
+    const tickets = db.collection("tickets");
+    db.collectionMocks.tickets = tickets;
+    tickets.find.mockReturnValue({ project: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnThis(), toArray: vi.fn().mockResolvedValue([]) });
+    const { GET } = await import("./route");
+    await GET(new Request("https://example.com/api/discord-bot/tickets/pending-resolutions"));
+    const filter = tickets.find.mock.calls.at(-1)?.[0] as { "resolution.createdAt": { $gte: Date } };
+    // A receipt from October (the incident) is below the floor.
+    expect(new Date("2026-10-20T00:28:22.134Z") < filter["resolution.createdAt"].$gte).toBe(true);
   });
 });
