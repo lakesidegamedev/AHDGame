@@ -8,6 +8,7 @@ import {
   householdTransferMoves,
   investmentFundingMoves,
   investmentReturnMoves,
+  newHouseholdIncomeMoves,
   publicFundingMoves,
   producerMoveLedgerLegs,
   publicReturnMoves,
@@ -17,6 +18,19 @@ import {
 const wallet = { walletId: "pub-us", amountLocal: 50, currencyCode: "USD", localPerAnchor: 1 };
 
 describe("live producer money flows", () => {
+  it("mints growth income and the spending power top-up under separate kinds and keys", () => {
+    const moves = newHouseholdIncomeMoves("w", 9, [
+      { ...wallet, source: "growth" },
+      { ...wallet, source: "spendingPower" },
+    ]);
+    expect(moves.map((m) => m.kind)).toEqual([
+      "producer_household_new_income",
+      "producer_household_spending_power",
+    ]);
+    expect(new Set(moves.map((m) => m.key)).size).toBe(2);
+    for (const m of moves) expect(m.legs.map((l) => l.kind)).toEqual(["mint", "credit"]);
+  });
+
   it("keys every move by world, turn and party and skips zero amounts", () => {
     const moves = publicFundingMoves("w", 7, [
       { ...wallet, countryId: "us" },

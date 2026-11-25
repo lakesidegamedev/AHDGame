@@ -28,7 +28,12 @@ export function newHouseholdIncomeShare(realGdpGrowthPct: number | null | undefi
   );
 }
 
+/** Why the money was created: GDP growth, or the population-times-wage top-up. */
+export type NewHouseholdIncomeSource = "growth" | "spendingPower";
+
 export interface NewHouseholdIncomeRow {
+  /** Absent on rows recorded before spending power existed: those are growth. */
+  source?: NewHouseholdIncomeSource;
   walletId: string;
   countryId: string;
   /** Anchor currency, per turn. */
@@ -54,17 +59,20 @@ export function newHouseholdIncome(input: {
     const share = newHouseholdIncomeShare(input.realGdpGrowthByCountry.get(w.countryId));
     const income = input.incomeByWallet.get(w.accountId) ?? 0;
     const amount = Number.isFinite(income) && income > 0 ? income * share : 0;
-    if (amount > 0) out.push({ walletId: w.accountId, countryId: w.countryId, amount, share });
+    if (amount > 0)
+      out.push({ source: "growth", walletId: w.accountId, countryId: w.countryId, amount, share });
   }
   return out;
 }
 
 /** Totals by country, for the turn record and screens. */
 export function newHouseholdIncomeByCountry(
-  rows: readonly NewHouseholdIncomeRow[]
+  rows: readonly NewHouseholdIncomeRow[],
+  source: NewHouseholdIncomeSource = "growth"
 ): Record<string, { amount: number; share: number }> {
   const out: Record<string, { amount: number; share: number }> = {};
   for (const r of rows) {
+    if ((r.source ?? "growth") !== source) continue;
     const c = (out[r.countryId] ??= { amount: 0, share: r.share });
     c.amount += r.amount;
   }
@@ -72,14 +80,22 @@ export function newHouseholdIncomeByCountry(
 }
 
 /** What a turn record keeps: anchor amounts and the share paid, by country, and the total. */
-export function newHouseholdIncomeRecord(rows: readonly NewHouseholdIncomeRow[]): {
+export function newHouseholdIncomeRecord(
+  rows: readonly NewHouseholdIncomeRow[],
+  source: NewHouseholdIncomeSource = "growth"
+): {
   totalAnchor: number;
   byCountry: Record<string, { amountAnchor: number; share: number }>;
 } {
   const byCountry: Record<string, { amountAnchor: number; share: number }> = {};
-  for (const [countryId, v] of Object.entries(newHouseholdIncomeByCountry(rows)))
+  for (const [countryId, v] of Object.entries(newHouseholdIncomeByCountry(rows, source)))
     byCountry[countryId] = { amountAnchor: v.amount, share: v.share };
-  return { totalAnchor: rows.reduce((sum, r) => sum + r.amount, 0), byCountry };
+  return {
+    totalAnchor: rows
+      .filter((r) => (r.source ?? "growth") === source)
+      .reduce((sum, r) => sum + r.amount, 0),
+    byCountry,
+  };
 }
 
 /**

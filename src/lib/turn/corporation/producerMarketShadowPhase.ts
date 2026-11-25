@@ -102,7 +102,7 @@ export async function runProducerMarketShadowPhase(
         householdForPayee,
         householdSeed,
         householdTransferTotal,
-        newHouseholdIncomeTotal,
+        newHouseholdIncome,
         householdWallets,
         households,
         investmentBuyerOrders,
@@ -123,6 +123,16 @@ export async function runProducerMarketShadowPhase(
         skipped,
         states,
       } = d;
+      const growthIncome = newHouseholdIncome
+        .filter((r) => r.source !== "spendingPower")
+        .reduce((sum, r) => sum + r.amount, 0);
+      const spendingPowerIncome = newHouseholdIncome
+        .filter((r) => r.source === "spendingPower")
+        .reduce((sum, r) => sum + r.amount, 0);
+      const newIncomeSources = {
+        ...(growthIncome > 0 ? { newHouseholdIncome: growthIncome } : {}),
+        ...(spendingPowerIncome > 0 ? { householdSpendingPower: spendingPowerIncome } : {}),
+      };
       const { summary, result } = runProducerShadowDetailed({
         turn: input.turn,
         references,
@@ -231,7 +241,7 @@ export async function runProducerMarketShadowPhase(
         sources: {
           householdSeed,
           householdTransfer: householdTransferTotal,
-          ...(newHouseholdIncomeTotal > 0 ? { newHouseholdIncome: newHouseholdIncomeTotal } : {}),
+          ...newIncomeSources,
           newCompanyCash: newCompanyCash.total,
           publicFunding,
           investmentFunding: investmentFundingTotal,
@@ -254,7 +264,7 @@ export async function runProducerMarketShadowPhase(
           sources: {
             householdSeed,
             householdTransfer: householdTransferTotal,
-            ...(newHouseholdIncomeTotal > 0 ? { newHouseholdIncome: newHouseholdIncomeTotal } : {}),
+            ...newIncomeSources,
             newCompanyCash: newCompanyCash.total,
             publicFunding,
             investmentFunding: investmentFundingTotal,
@@ -447,7 +457,7 @@ const SHADOW_DEMAND_FIELDS = [
   "householdForPayee",
   "householdSeed",
   "householdTransferTotal",
-  "newHouseholdIncomeTotal",
+  "newHouseholdIncome",
   "householdWallets",
   "households",
   "investmentBuyerOrders",

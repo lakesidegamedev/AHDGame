@@ -43,7 +43,7 @@ import { organizationFundsCollection } from "@/lib/db/repositories/organizationF
 import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketPools";
 import { productAdvertisingClearingCollection } from "@/lib/db/repositories/productAdvertisingClearing";
 import { moneySupplySnapshotsCollection } from "@/lib/db/repositories/moneySupplySnapshots";
-import { newHouseholdIncomeMinted } from "./newHouseholdIncomeMinted";
+import { householdSpendingPowerMinted, newHouseholdIncomeMinted } from "./newHouseholdIncomeMinted";
 
 export { PERSONS_PER_HOUSEHOLD, HOUSEHOLD_LIQUID_RATIO, HOUSEHOLD_SAVINGS_RATIO };
 
@@ -383,6 +383,7 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
 
   // New money paid to households, from the money-move ledger itself.
   const newHouseholdIncome = await newHouseholdIncomeMinted(db, turn);
+  const spendingPower = await householdSpendingPowerMinted(db, turn);
 
   const now = new Date();
   let written = 0;
@@ -425,6 +426,8 @@ export async function snapshotMoneySupply(db: Db, turn: number): Promise<number>
       netMoneyCreatedLifetime,
       newHouseholdIncomeTurn: newHouseholdIncome.get(currencyCode)?.turn ?? 0,
       newHouseholdIncomeLifetime: newHouseholdIncome.get(currencyCode)?.lifetime ?? 0,
+      householdSpendingPowerTurn: spendingPower.get(currencyCode)?.turn ?? 0,
+      householdSpendingPowerLifetime: spendingPower.get(currencyCode)?.lifetime ?? 0,
       createdAt: now,
     };
     await moneySupplySnapshotsCollection<MoneySupplySnapshot>(db).replaceOne(

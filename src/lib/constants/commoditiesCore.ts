@@ -65,7 +65,7 @@ export const COMMODITY_LABELS: Record<CommodityType, string> = {
   real_estate_services: "Real Estate Services",
   software: "Software & IT Services",
   financial_services: "Financial Services",
-  advertising: "Advertising & Media",
+  advertising: "Advertising & media",
   vehicles: "Vehicles & Machinery",
   retail: "Consumer Goods",
   freight: "Freight & Transportation",

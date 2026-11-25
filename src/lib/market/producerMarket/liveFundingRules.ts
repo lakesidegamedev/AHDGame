@@ -103,41 +103,49 @@ export function householdTransferMoves(
 
 /**
  * Mints each household wallet's new household income (newHouseholdIncomeRules):
- * new money, not a budget line, so it has its own kind for the money-created audit.
+ * new money, not a budget line, so it has its own kinds for the money-created
+ * audit: one for GDP growth, one for the population-times-wage top-up.
  */
 export function newHouseholdIncomeMoves(
   worldEpoch: string,
   turn: number,
-  rows: readonly WalletAmount[]
+  rows: readonly (WalletAmount & { source?: "growth" | "spendingPower" })[]
 ): MoneyMove[] {
   return rows
     .filter((r) => positive(r.amountLocal) > 0)
-    .map((r) => ({
-      key: `producer-household-new-income:${worldEpoch}:${turn}:${r.walletId}`,
-      kind: NEW_HOUSEHOLD_INCOME_KIND,
-      turn,
-      legs: [
-        {
-          kind: "mint",
-          amount: r.amountLocal,
-          valuation: valuation(r),
-          note: "new household income, sized by real GDP growth",
-        },
-        {
-          kind: "credit",
-          amount: r.amountLocal,
-          valuation: valuation(r),
-          collection: PRODUCER_ACCOUNTS,
-          filter: { _id: r.walletId },
-          path: "cash",
-          note: "new household income",
-        },
-      ],
-    }));
+    .map((r) => {
+      const power = r.source === "spendingPower";
+      return {
+        key: `producer-household-${power ? "spending-power" : "new-income"}:${worldEpoch}:${turn}:${r.walletId}`,
+        kind: power ? HOUSEHOLD_SPENDING_POWER_KIND : NEW_HOUSEHOLD_INCOME_KIND,
+        turn,
+        legs: [
+          {
+            kind: "mint",
+            amount: r.amountLocal,
+            valuation: valuation(r),
+            note: power
+              ? "household spending power top-up, sized by population and wages"
+              : "new household income, sized by real GDP growth",
+          },
+          {
+            kind: "credit",
+            amount: r.amountLocal,
+            valuation: valuation(r),
+            collection: PRODUCER_ACCOUNTS,
+            filter: { _id: r.walletId },
+            path: "cash",
+            note: power ? "household spending power top-up" : "new household income",
+          },
+        ],
+      };
+    });
 }
 
 /** Money-move kind of new household income: every unit of it is newly created money. */
 export const NEW_HOUSEHOLD_INCOME_KIND = "producer_household_new_income";
+/** Money-move kind of the spending power top-up: newly created money too. */
+export const HOUSEHOLD_SPENDING_POWER_KIND = "producer_household_spending_power";
 
 /** Burns what a public buyer did not spend. */
 export function publicReturnMoves(

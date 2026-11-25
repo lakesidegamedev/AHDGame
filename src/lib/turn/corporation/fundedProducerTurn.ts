@@ -77,6 +77,7 @@ import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
 import { tariffCollectorScopes, collectionsAtClose, plantLevies } from "./fundedTariffs";
 import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
@@ -771,6 +772,7 @@ async function prepareRunFundedProducerTurn(
           const scope = scopeById.get(t.walletId);
           const rate = rateOf(scope?.currency);
           return {
+            source: t.source,
             walletId: t.walletId,
             amountLocal: t.amount * rate,
             currencyCode: scope!.currency,
@@ -780,6 +782,14 @@ async function prepareRunFundedProducerTurn(
       )
     )
   );
+
+  // First live funded turn after spending power shipped: stamp the start of its ramp.
+  // The guard keeps the first stamp; the shadow never writes.
+  if (demand.householdSpendingPowerStartTurnToStamp != null)
+    await gameConfigCollection(db).updateOne(
+      { _id: "default", householdSpendingPowerStartTurn: { $exists: false } },
+      { $set: { householdSpendingPowerStartTurn: demand.householdSpendingPowerStartTurnToStamp } }
+    );
 
   if (input.seedHouseholds) {
     const wageBill = new Map<string, number>();

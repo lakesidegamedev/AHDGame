@@ -129,6 +129,8 @@ export interface MoneySupplyView {
   /** New household income minted on the snapshot's turn and in total; absent on older rows. */
   newHouseholdIncomeTurn?: number;
   newHouseholdIncomeLifetime?: number;
+  householdSpendingPowerTurn?: number;
+  householdSpendingPowerLifetime?: number;
   lastOperationTurn: number | null;
   lastPolicyEvaluation: {
     accountingVersion?: number;

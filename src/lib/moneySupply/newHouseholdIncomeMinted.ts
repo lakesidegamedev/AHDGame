@@ -5,7 +5,10 @@
  */
 import type { Db } from "mongodb";
 import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
-import { NEW_HOUSEHOLD_INCOME_KIND } from "@/lib/market/producerMarket/liveFundingRules";
+import {
+  HOUSEHOLD_SPENDING_POWER_KIND,
+  NEW_HOUSEHOLD_INCOME_KIND,
+} from "@/lib/market/producerMarket/liveFundingRules";
 
 export interface MintedByCurrency {
   /** Minted on the given turn, local currency. */
@@ -18,7 +21,8 @@ export interface MintedByCurrency {
 
 export async function newHouseholdIncomeMinted(
   db: Db,
-  turn: number
+  turn: number,
+  kind: string = NEW_HOUSEHOLD_INCOME_KIND
 ): Promise<Map<string, MintedByCurrency>> {
   const rows = await bankMoneyMovesCollection(db)
     .aggregate<{
@@ -27,7 +31,7 @@ export async function newHouseholdIncomeMinted(
       turn: number;
       turnAnchor: number;
     }>([
-      { $match: { kind: NEW_HOUSEHOLD_INCOME_KIND, status: "applied" } },
+      { $match: { kind, status: "applied" } },
       { $project: { turn: 1, legs: 1 } },
       { $unwind: "$legs" },
       { $match: { "legs.kind": "mint" } },
@@ -52,4 +56,12 @@ export async function newHouseholdIncomeMinted(
   return new Map(
     rows.map((r) => [r._id, { turn: r.turn, lifetime: r.lifetime, turnAnchor: r.turnAnchor }])
   );
+}
+
+/** The spending power top-up minted, by currency, on the same terms. */
+export function householdSpendingPowerMinted(
+  db: Db,
+  turn: number
+): Promise<Map<string, MintedByCurrency>> {
+  return newHouseholdIncomeMinted(db, turn, HOUSEHOLD_SPENDING_POWER_KIND);
 }

@@ -1,5 +1,8 @@
 import { logger } from "@/lib/observability/logger";
-import { newHouseholdIncomeMinted } from "@/lib/moneySupply/newHouseholdIncomeMinted";
+import {
+  householdSpendingPowerMinted,
+  newHouseholdIncomeMinted,
+} from "@/lib/moneySupply/newHouseholdIncomeMinted";
 import {
   newHouseholdIncomeAuditWarning,
   newHouseholdIncomeRecord,
@@ -559,12 +562,19 @@ export async function publishFundedProducerTurn(
   // what the ledger minted for it. Read back from the ledger, so a lost or
   // doubled move shows. Recovery snapshots without the plan skip it.
   const plannedNewIncome = context.demand.newHouseholdIncome;
+  const newIncomeRecords = {
+    growth: newHouseholdIncomeRecord(plannedNewIncome ?? [], "growth"),
+    spendingPower: newHouseholdIncomeRecord(plannedNewIncome ?? [], "spendingPower"),
+  };
+  const newIncomeRecord = (source: "growth" | "spendingPower") =>
+    newIncomeRecords[source].totalAnchor > 0 ? newIncomeRecords[source] : null;
   let newIncomeAudit: string | null = null;
   if (plannedNewIncome) {
     const minted = await newHouseholdIncomeMinted(context.db, context.turn);
+    const mintedPower = await householdSpendingPowerMinted(context.db, context.turn);
     newIncomeAudit = newHouseholdIncomeAuditWarning(
       plannedNewIncome.reduce((sum, r) => sum + r.amount, 0),
-      [...minted.values()].reduce((sum, m) => sum + m.turnAnchor, 0)
+      [...minted.values(), ...mintedPower.values()].reduce((sum, m) => sum + m.turnAnchor, 0)
     );
     if (newIncomeAudit) logger.error("corporationTurn", newIncomeAudit);
   }
@@ -693,8 +703,10 @@ export async function publishFundedProducerTurn(
       // economy's seller on persistently short lanes (wideEconomyShortageBoost).
       ...(wideShortage ? { wideShortage } : {}),
       // New money paid to households this turn, by country (newHouseholdIncomeRules).
-      ...((context.demand.newHouseholdIncome?.length ?? 0) > 0
-        ? { newHouseholdIncome: newHouseholdIncomeRecord(context.demand.newHouseholdIncome!) }
+      ...(newIncomeRecord("growth") ? { newHouseholdIncome: newIncomeRecord("growth") } : {}),
+      // The population-times-wage top-up, recorded as its own source.
+      ...(newIncomeRecord("spendingPower")
+        ? { householdSpendingPower: newIncomeRecord("spendingPower") }
         : {}),
       // Unsold share of new plant output per lane, read by the next turns to
       // size the wider economy's buyer on oversupplied lanes (wideEconomySurplusBoost).

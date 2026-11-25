@@ -25,6 +25,9 @@ export interface MoneySupplySnapshot extends MoneyAggregates {
    */
   newHouseholdIncomeTurn?: number;
   newHouseholdIncomeLifetime?: number;
+  /** The population-times-wage top-up (householdSpendingPowerRules), same terms. */
+  householdSpendingPowerTurn?: number;
+  householdSpendingPowerLifetime?: number;
   createdAt: Date;
 }
 

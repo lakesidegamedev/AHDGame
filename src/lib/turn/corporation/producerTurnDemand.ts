@@ -81,6 +81,15 @@ import {
   newHouseholdIncome,
   newHouseholdIncomeOn,
 } from "@/lib/market/producerMarket/newHouseholdIncomeRules";
+import {
+  householdSpendingPowerOn,
+  spendingPowerTopUps,
+  type SpendingPowerPlant,
+  type SpendingPowerStateInput,
+} from "@/lib/market/producerMarket/householdSpendingPowerRules";
+import { clampWageLevel } from "@/lib/labour/laborCost";
+import { producerWalletId } from "./producerWallets";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { statesCollection } from "@/lib/db/repositories/states";
 import {
@@ -205,6 +214,7 @@ export async function buildProducerTurnDemand(
     { accountId: string; stateId: string; countryId: string }
   >();
   const wageBillByWallet = new Map<string, number>();
+  const spendingPowerPlants = new Map<string, SpendingPowerPlant[]>();
   const planCountry = new Map<string, string>();
   const planSector = new Map<string, string>();
   const householdForPayee = new Map<string, string>();
@@ -229,6 +239,7 @@ export async function buildProducerTurnDemand(
           prepared,
           walletScopes: scopes,
           headcount,
+          techLaborCostMultiplier,
         } = prepareProducerPhysicalSector({
           worldEpoch,
           env,
@@ -290,6 +301,15 @@ export async function buildProducerTurnDemand(
           workers: headcount.workers,
         });
         walletScopes.push(...scopes);
+        {
+          const list = spendingPowerPlants.get(sector.stateId) ?? [];
+          list.push({
+            stateId: sector.stateId,
+            workers: headcount.workers,
+            wageMultiplier: clampWageLevel(sector.wageLevel ?? 1) * techLaborCostMultiplier,
+          });
+          spendingPowerPlants.set(sector.stateId, list);
+        }
         // Legacy plantsPnl is daily and in the sector host's currency; the
         // shadow is per turn in anchor units, so convert before comparing.
         const legacyLocal = legacyBySectorId.get(sectorId) ?? null;
@@ -363,6 +383,37 @@ export async function buildProducerTurnDemand(
     input.lastBookPressure
   );
   input.stage?.("demand.plants");
+  const states = await statesCollection<{
+    _id: unknown;
+    countryId?: string;
+    gdp?: number;
+    population?: number;
+    workingAgePopulation?: number;
+  }>(db)
+    .find({}, { projection: { countryId: 1, gdp: 1, population: 1, workingAgePopulation: 1 } })
+    .toArray();
+  // Households live in every populated state of a country with a budget, not
+  // only where a plant pays wages: they get a wallet, and spending power tops it up.
+  const budgetCurrencyByCountry = new Map<string, CurrencyCode>();
+  for (const b of lookups.federalBudgets) {
+    const code = resolveCountryCurrencyCode(b);
+    if (code) budgetCurrencyByCountry.set(String(b.countryId), code as CurrencyCode);
+  }
+  for (const s of states) {
+    const countryId = s.countryId ?? "";
+    const currency = budgetCurrencyByCountry.get(countryId);
+    if (!currency || !((s.population ?? 0) > 0)) continue;
+    const scope = {
+      kind: "households" as const,
+      countryId,
+      stateId: String(s._id),
+      currency,
+    };
+    const accountId = producerWalletId(worldEpoch, scope);
+    if (householdWallets.has(accountId)) continue;
+    householdWallets.set(accountId, { accountId, stateId: scope.stateId, countryId });
+    walletScopes.push(scope);
+  }
   // 2. Households: carried savings, or a new run's opening of a few turns of
   //    the wages they are paid (owner decision 2026-10-18). Income-derived;
   //    no GDP or population sizing.
@@ -381,9 +432,6 @@ export async function buildProducerTurnDemand(
   input.stage?.("demand.households");
   // 3. Public buyers: the existing budget outlay times the plant economy's
   //    share of GDP, so only the plant market's slice of a budget is spent here.
-  const states = await statesCollection<{ _id: unknown; countryId?: string; gdp?: number }>(db)
-    .find({}, { projection: { countryId: 1, gdp: 1 } })
-    .toArray();
   const stateWeightsByCountry = new Map<string, Map<string, number>>();
   const gdpMillionsByCountry = new Map<string, number>();
   for (const s of states)
@@ -555,8 +603,46 @@ export async function buildProducerTurnDemand(
         ),
       })
     : [];
-  const newHouseholdIncomeTotal = newHouseholdIncomeRows.reduce((sum, r) => sum + r.amount, 0);
   for (const r of newHouseholdIncomeRows)
+    householdIncome.set(r.walletId, (householdIncome.get(r.walletId) ?? 0) + r.amount);
+  // Spending power (gameConfig.householdSpendingPowerStage, absent = on): top each
+  // wallet up toward its state's population times the average wage, as new money.
+  // Phased in from a start turn; with none stored the ramp starts this turn, and
+  // the live funded turn stamps it.
+  const spendingPowerStartTurn = input.env.householdSpendingPowerStartTurn ?? input.turn;
+  const localPerAnchorForPower = new Map(
+    [...budgetCurrencyByCountry].flatMap(([countryId, code]) => {
+      const rate = lookups.exchangeRatesByCurrency.get(code);
+      return rate != null && Number.isFinite(rate) && rate > 0 ? [[countryId, rate] as const] : [];
+    })
+  );
+  const spendingPowerStates = new Map<string, SpendingPowerStateInput>(
+    states.map((s) => [
+      String(s._id),
+      {
+        population: s.population ?? 0,
+        workingAgePopulation: s.workingAgePopulation,
+        medianIncomeLocal: lookups.stateMetricsByState?.get(String(s._id))?.economic?.medianIncome
+          ?.value,
+      },
+    ])
+  );
+  const spendingPowerRows = householdSpendingPowerOn(input.env)
+    ? spendingPowerTopUps({
+        wallets: [...householdWallets.values()],
+        stateById: spendingPowerStates,
+        localPerAnchorByCountry: localPerAnchorForPower,
+        plantsByState: spendingPowerPlants,
+        incomeByWallet: householdIncome,
+        turn: input.turn,
+        startTurn: spendingPowerStartTurn,
+        rampTurns: input.env.householdSpendingPowerRampTurns,
+        share: input.env.householdSpendingPowerShare,
+      }).map((r) => ({ ...r, source: "spendingPower" as const, share: 0 }))
+    : [];
+  const allNewIncomeRows = [...newHouseholdIncomeRows, ...spendingPowerRows];
+  const newHouseholdIncomeTotal = allNewIncomeRows.reduce((sum, r) => sum + r.amount, 0);
+  for (const r of allNewIncomeRows)
     householdOpening.set(r.walletId, (householdOpening.get(r.walletId) ?? 0) + r.amount);
   const budgetCountries = new Set(lookups.federalBudgets.map((b) => String(b.countryId)));
   // Construction work on outstanding build orders, bought from producers. The
@@ -973,8 +1059,11 @@ export async function buildProducerTurnDemand(
     householdSeed,
     householdTransfers,
     householdTransferTotal,
-    newHouseholdIncome: newHouseholdIncomeRows,
+    newHouseholdIncome: allNewIncomeRows,
     newHouseholdIncomeTotal,
+    // Set when no start turn is stored: the live funded turn stamps it.
+    householdSpendingPowerStartTurnToStamp:
+      input.env.householdSpendingPowerStartTurn == null ? input.turn : undefined,
     householdSource,
     householdWallets,
     households,

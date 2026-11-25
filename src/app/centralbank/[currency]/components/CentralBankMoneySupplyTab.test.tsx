@@ -143,6 +143,28 @@ describe("CentralBankMoneySupplyTab", () => {
     expect(screen.queryByText("New household income, last turn")).toBeNull();
   });
 
+  it("shows the spending power top-up as its own rows, only once it exists", () => {
+    const { rerender } = render(
+      <CentralBankMoneySupplyTab
+        countryId="US"
+        data={{ ...data, householdSpendingPowerTurn: 77, householdSpendingPowerLifetime: 999 }}
+        canOperate={false}
+        onChanged={() => {}}
+      />
+    );
+    expect(screen.getByText("Household spending power top-up, last turn")).toBeTruthy();
+    expect(screen.getByText("Household spending power top-up, since the world began")).toBeTruthy();
+    rerender(
+      <CentralBankMoneySupplyTab
+        countryId="US"
+        data={data}
+        canOperate={false}
+        onChanged={() => {}}
+      />
+    );
+    expect(screen.queryByText("Household spending power top-up, last turn")).toBeNull();
+  });
+
   it("shows all four policy tools to an authorized chair", () => {
     render(
       <CentralBankMoneySupplyTab countryId="US" data={data} canOperate onChanged={() => {}} />
