@@ -14,7 +14,7 @@ interface PublicEntryProps {
 function renderItem(item: string, j: number) {
   const dashIdx = item.indexOf(" \u2014 ");
   return (
-    <li key={j} className="text-sm leading-relaxed text-muted">
+    <li key={j} className="text-body leading-relaxed text-muted">
       <span className="mr-1.5 text-card-border">&#x2022;</span>
       {dashIdx > -1 ? (
         <>
@@ -49,16 +49,16 @@ export function PublicEntry({ entry, isLatest, startExpanded }: PublicEntryProps
         className="mb-2 flex w-full items-center gap-3 text-left"
       >
         <span
-          className={`text-base font-semibold ${isLatest ? "text-primary" : "text-foreground"}`}
+          className={`text-body-lg font-semibold ${isLatest ? "text-primary" : "text-foreground"}`}
         >
           {entry.version}
         </span>
-        <span className="text-xs text-muted">{formatDate(entry.date)}</span>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">{formatDate(entry.date)}</span>
+        <span className="text-body-sm text-muted">
           {totalItems} change{totalItems !== 1 ? "s" : ""}
         </span>
         {isLatest && (
-          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-body-sm font-medium text-primary">
             Latest
           </span>
         )}
@@ -84,7 +84,7 @@ export function PublicEntry({ entry, isLatest, startExpanded }: PublicEntryProps
               // content in some long releases), so `cat.name` alone collides.
               <span
                 key={`${cat.name}-${idx}`}
-                className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                className={`rounded-full border px-2 py-0.5 text-body-sm font-medium ${
                   meta
                     ? `${meta.bg} ${meta.color} ${meta.border}`
                     : "bg-card text-muted border-card-border"
@@ -108,9 +108,9 @@ export function PublicEntry({ entry, isLatest, startExpanded }: PublicEntryProps
                   <div key={`${cat.name}-${idx}`}>
                     {/* Category heading */}
                     <div className="mb-2 flex items-center gap-2">
-                      {meta && <span className="text-sm">{meta.icon}</span>}
+                      {meta && <span className="text-body">{meta.icon}</span>}
                       <span
-                        className={`text-xs font-bold uppercase tracking-wider ${meta?.color ?? "text-muted"}`}
+                        className={`text-body-sm font-bold uppercase tracking-wider ${meta?.color ?? "text-muted"}`}
                       >
                         {cat.name}
                       </span>
@@ -122,7 +122,7 @@ export function PublicEntry({ entry, isLatest, startExpanded }: PublicEntryProps
                       {cat.subcategories.map((sub, si) => (
                         <div key={si}>
                           {sub.name && (
-                            <div className="mb-1 text-xs font-semibold text-foreground/70">
+                            <div className="mb-1 text-body-sm font-semibold text-foreground/70">
                               {sub.name}
                             </div>
                           )}

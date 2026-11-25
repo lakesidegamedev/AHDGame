@@ -46,7 +46,7 @@ function HouseholdBookTable({
 
   return (
     <div className="space-y-1">
-      <p className="flex flex-wrap gap-x-5 gap-y-1 py-1 text-xs text-muted">
+      <p className="flex flex-wrap gap-x-5 gap-y-1 py-1 text-body-sm text-muted">
         <span>
           Household book{" "}
           <span className="font-mono font-medium tabular-nums text-foreground">
@@ -85,10 +85,10 @@ function HouseholdBookTable({
               <tr key={row.band} className={row.open ? "" : "opacity-60"}>
                 <Td>
                   <span className={`font-mono font-medium ${BAND_TONE[row.band]}`}>{row.band}</span>
-                  {!row.open && <span className="ml-2 text-[11px] text-muted">closed</span>}
+                  {!row.open && <span className="ml-2 text-body-sm text-muted">closed</span>}
                   {row.isLegacy && (
                     <span
-                      className="ml-2 text-[11px] text-muted"
+                      className="ml-2 text-body-sm text-muted"
                       title="Originated before the book was split by rating. Runs off at its original rate."
                     >
                       legacy
@@ -187,11 +187,11 @@ function LendingProfilePicker({
 
   return (
     <div className="space-y-1">
-      <h3 className="flex items-baseline gap-2 border-b border-card-border pb-1 text-xs font-medium text-foreground">
+      <h3 className="flex items-baseline gap-2 border-b border-card-border pb-1 text-body-lg font-medium text-foreground">
         Lending stance
         <span className="font-normal text-muted">CEO control</span>
       </h3>
-      <p className="py-1 text-xs text-muted">
+      <p className="py-1 text-body-sm text-muted">
         Sets which ratings the bank will lend to from the next turn. Loans already on the book keep
         their rate and rating. Both directions move slowly: open bands build at up to{" "}
         {MAX_NPC_FLOW_PER_TURN_FRACTION * 100}% of target per turn and closed bands run off at the
@@ -235,7 +235,7 @@ function LendingProfilePicker({
                     ) : (
                       <span>{profile.label}</span>
                     )}
-                    {active && <span className="ml-1.5 text-[11px] text-muted">current</span>}
+                    {active && <span className="ml-1.5 text-body-sm text-muted">current</span>}
                   </Td>
                   <Td className="font-mono text-muted">to {profile.floorBand}</Td>
                   <Td align="right">
@@ -332,11 +332,11 @@ export function LoanBookTable({
           />
         )}
         <div className="space-y-1">
-          <h3 className="border-b border-card-border pb-1 text-xs font-medium text-foreground">
+          <h3 className="border-b border-card-border pb-1 text-body-lg font-medium text-foreground">
             Player loans
           </h3>
           {named.length === 0 ? (
-            <p className="py-1 text-xs text-muted">
+            <p className="py-1 text-body-sm text-muted">
               No player loans. Named character and corporation loans appear here.
             </p>
           ) : (
@@ -370,7 +370,7 @@ export function LoanBookTable({
                         ) : (
                           <span className="text-muted">Unknown borrower</span>
                         )}
-                        <span className="ml-1.5 text-[11px] text-muted">{loan.borrowerType}</span>
+                        <span className="ml-1.5 text-body-sm text-muted">{loan.borrowerType}</span>
                       </Td>
                       <Td align="right">{formatBankMoney(loan.principal, currency)}</Td>
                       <Td align="right">{formatBankMoney(loan.outstanding, currency)}</Td>

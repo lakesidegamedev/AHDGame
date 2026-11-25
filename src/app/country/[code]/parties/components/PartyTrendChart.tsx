@@ -62,7 +62,7 @@ export function PartyTrendChart({
 
   if (history.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-xl border border-card-border bg-card-muted/30 text-sm text-muted">
+      <div className="flex h-40 items-center justify-center rounded-xl border border-card-border bg-card-muted/30 text-body text-muted">
         No history has been recorded yet.
       </div>
     );
@@ -132,12 +132,12 @@ export function PartyTrendChart({
     <div className="relative select-none">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-foreground">{partyName}</p>
-          <p className="text-xs text-muted">
+          <p className="text-body font-semibold text-foreground">{partyName}</p>
+          <p className="text-body-sm text-muted">
             {seriesLabel} across the last {history.length} turns.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-body-sm">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-card-border bg-background px-2.5 py-1">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: partyColor }} />
             {seriesLabel} {formatValue(getValue(latest))}
@@ -259,7 +259,7 @@ export function PartyTrendChart({
       </svg>
 
       {hovered !== null && hoveredOrg && hoveredMember && (
-        <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-3 py-2 text-xs shadow-card">
+        <div className="pointer-events-none absolute top-2 right-3 rounded-md border border-card-border bg-card px-3 py-2 text-body-sm shadow-card">
           <div className="mb-1 text-muted">
             {rawTurnToLarpDate(history[hovered].turn, startingYear, clock)}
           </div>

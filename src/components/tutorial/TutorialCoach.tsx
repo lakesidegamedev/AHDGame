@@ -584,7 +584,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
                   aria-label={t("coach.goToChapter", { title: t(chapter.title) })}
                   aria-current={here ? "step" : undefined}
                   onClick={() => setStep(chapter.firstStep)}
-                  className={`flex min-w-0 items-center gap-1 rounded-full px-1.5 py-1 text-[11px] leading-none transition-colors ${
+                  className={`flex min-w-0 items-center gap-1 rounded-full px-1.5 py-1 text-body-sm leading-none transition-colors ${
                     here
                       ? "flex-1 bg-primary/15 font-semibold text-primary"
                       : done
@@ -608,18 +608,21 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               ? t("coach.chapterProgress", { number: chapterNumber, total: chapters.length })
               : t(current.chapterTitle)}
           </span>
-          <span className="text-[11px] tabular-nums text-muted">
+          <span className="text-body-sm tabular-nums text-muted">
             {t("coach.stepProgress", { step: step + 1, total: steps.length })}
           </span>
         </div>
 
-        <h4 className="mt-1 text-base font-semibold leading-snug">{t(current.title, values)}</h4>
-        <p className="mt-1 text-sm leading-relaxed text-muted">{t(current.body, values)}</p>
+        <h4 className="mt-1 text-body-lg font-semibold leading-snug">{t(current.title, values)}</h4>
+        <p className="mt-1 text-body leading-relaxed text-muted">{t(current.body, values)}</p>
 
         {visibleFacts.length > 0 && (
           <dl className="mt-2 space-y-0.5 rounded-lg bg-card-muted px-2.5 py-2">
             {visibleFacts.map((fact) => (
-              <div key={fact.label} className="flex items-baseline justify-between gap-3 text-xs">
+              <div
+                key={fact.label}
+                className="flex items-baseline justify-between gap-3 text-body-sm"
+              >
                 <dt className="shrink-0 text-muted">{fact.label}</dt>
                 <dd className="text-right font-medium tabular-nums">{fact.value}</dd>
               </div>
@@ -628,13 +631,13 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
         )}
 
         {current.hint && (
-          <p className="mt-2 text-xs font-medium text-primary">{t(current.hint, values)}</p>
+          <p className="mt-2 text-body-sm font-medium text-primary">{t(current.hint, values)}</p>
         )}
 
         {current.readMore && (
           <Link
             href={current.readMore.href}
-            className="mt-2 inline-block text-xs font-medium text-primary underline-offset-2 hover:underline"
+            className="mt-2 inline-block text-body-sm font-medium text-primary underline-offset-2 hover:underline"
           >
             {t(current.readMore.label)} →
           </Link>
@@ -645,7 +648,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
             <button
               type="button"
               onClick={close}
-              className="text-xs text-muted hover:text-foreground"
+              className="text-body-sm text-muted hover:text-foreground"
             >
               {t("coach.close")}
             </button>
@@ -653,7 +656,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               <button
                 type="button"
                 onClick={goBack}
-                className="text-xs text-muted hover:text-foreground"
+                className="text-body-sm text-muted hover:text-foreground"
               >
                 {t("coach.back")}
               </button>
@@ -669,7 +672,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               <button
                 type="button"
                 onClick={() => window.open(current.link, "_blank", "noopener,noreferrer")}
-                className="rounded-md border border-card-border px-3 py-1.5 text-sm font-medium text-foreground hover:border-primary/50 hover:text-primary"
+                className="rounded-md border border-card-border px-3 py-1.5 text-body font-medium text-foreground hover:border-primary/50 hover:text-primary"
               >
                 {t(current.next)} <span aria-hidden>↗</span>
               </button>
@@ -678,7 +681,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               <button
                 type="button"
                 onClick={() => current.link && router.push(current.link)}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+                className="rounded-md bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:opacity-90"
               >
                 {t("coach.takeMeThere")}
               </button>
@@ -686,7 +689,7 @@ export function TutorialCoach({ character, plan, autoStart }: TutorialCoachProps
               <button
                 type="button"
                 onClick={advance}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+                className="rounded-md bg-primary px-3 py-1.5 text-body font-medium text-primary-foreground hover:opacity-90"
               >
                 {current.external ? t("coach.next") : t(current.next)}
               </button>

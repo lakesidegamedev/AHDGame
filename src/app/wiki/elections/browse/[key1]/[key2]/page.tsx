@@ -94,7 +94,7 @@ export default function WikiElectionsGroupPage({
 
   return (
     <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
         </Link>
@@ -107,7 +107,7 @@ export default function WikiElectionsGroupPage({
       </nav>
 
       <header className="mb-10">
-        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="mb-2 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {pageTitle}
         </h1>
         <p className="text-muted">
@@ -155,7 +155,7 @@ export default function WikiElectionsGroupPage({
       )}
 
       <footer className="mt-10 border-t border-card-border pt-6">
-        <Link href="/wiki/elections" className="text-sm text-muted hover:text-foreground">
+        <Link href="/wiki/elections" className="text-body text-muted hover:text-foreground">
           ← Back to election history
         </Link>
       </footer>

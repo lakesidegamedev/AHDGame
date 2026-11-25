@@ -100,7 +100,7 @@ export function StateDetailModal({
       >
         <div className="sticky top-0 z-10 border-b border-card-border bg-card px-5 py-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold">{stateName}</h3>
+            <h3 className="text-body-lg font-semibold">{stateName}</h3>
             <button
               type="button"
               onClick={onClose}
@@ -119,7 +119,7 @@ export function StateDetailModal({
           </div>
           <Link
             href={electionRegionUrl(electionId, countryId, stateId)}
-            className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+            className="text-body text-primary hover:underline inline-flex items-center gap-1"
             onClick={onClose}
           >
             View county map →
@@ -165,7 +165,7 @@ export function StateDetailModal({
                       />
                       <span className="font-medium">{candidateNames[cid] ?? "Unknown"}</span>
                     </div>
-                    <div className="flex flex-col items-end gap-0.5 text-sm">
+                    <div className="flex flex-col items-end gap-0.5 text-body">
                       <div className="flex items-center gap-3">
                         <span className="tabular-nums text-muted">
                           {votes.toLocaleString("en-US")} ({pct.toFixed(1)}%)
@@ -174,7 +174,7 @@ export function StateDetailModal({
                       </div>
                       {trend !== undefined && Math.abs(trend) >= 0.01 && (
                         <span
-                          className={`text-xs tabular-nums ${
+                          className={`text-body-sm tabular-nums ${
                             trend > 0 ? "text-green-500" : "text-red-500"
                           }`}
                           title="Vote share change per turn"
@@ -189,7 +189,7 @@ export function StateDetailModal({
               })}
             </div>
             {Object.keys(trendSplitThisTurn).length > 0 && (
-              <div className="mt-2 rounded-lg border border-dashed border-card-border bg-muted/30 px-3 py-2 text-sm">
+              <div className="mt-2 rounded-lg border border-dashed border-card-border bg-muted/30 px-3 py-2 text-body">
                 <span className="text-muted">Trending this turn: </span>
                 {Object.entries(trendSplitThisTurn)
                   .filter(([, pct]) => pct >= 0.5)
@@ -206,7 +206,9 @@ export function StateDetailModal({
                       </span>
                     </span>
                   ))}
-                <span className="text-muted text-xs block mt-1">(of votes gained this turn)</span>
+                <span className="text-muted text-body-sm block mt-1">
+                  (of votes gained this turn)
+                </span>
               </div>
             )}
           </div>

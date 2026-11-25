@@ -354,11 +354,14 @@ export function SeatLegend({
                   className="h-2.5 w-2.5 rounded-sm shrink-0"
                   style={{ backgroundColor: group.color }}
                 />
-                <span className="text-xs font-semibold text-foreground">{group.name}</span>
-                <span className="text-xs font-bold tabular-nums" style={{ color: group.color }}>
+                <span className="text-body-sm font-semibold text-foreground">{group.name}</span>
+                <span
+                  className="text-body-sm font-bold tabular-nums"
+                  style={{ color: group.color }}
+                >
                   {group.totalSeats}
                 </span>
-                <span className="text-[10px] text-muted/60 tabular-nums">
+                <span className="text-body-sm text-muted/60 tabular-nums">
                   ({groupPct(group.members)}%)
                 </span>
               </div>
@@ -371,14 +374,14 @@ export function SeatLegend({
                       countryId={p.countryId}
                       size="h-2.5 w-2.5"
                     />
-                    <span className="text-xs text-muted">{p.partyName}</span>
+                    <span className="text-body-sm text-muted">{p.partyName}</span>
                     <span
-                      className="text-xs font-semibold tabular-nums"
+                      className="text-body-sm font-semibold tabular-nums"
                       style={{ color: p.partyColor }}
                     >
                       {p.seats}
                     </span>
-                    <span className="text-[10px] text-muted/60 tabular-nums">({pctOf(p)}%)</span>
+                    <span className="text-body-sm text-muted/60 tabular-nums">({pctOf(p)}%)</span>
                   </div>
                 ))}
               </div>
@@ -397,14 +400,14 @@ export function SeatLegend({
                   countryId={p.countryId}
                   size="h-2.5 w-2.5"
                 />
-                <span className="text-xs text-muted">{p.partyName}</span>
+                <span className="text-body-sm text-muted">{p.partyName}</span>
                 <span
-                  className="text-xs font-semibold tabular-nums"
+                  className="text-body-sm font-semibold tabular-nums"
                   style={{ color: p.partyColor }}
                 >
                   {p.seats}
                 </span>
-                <span className="text-[10px] text-muted/60 tabular-nums">({pctOf(p)}%)</span>
+                <span className="text-body-sm text-muted/60 tabular-nums">({pctOf(p)}%)</span>
               </div>
             ))}
           </div>
@@ -424,11 +427,11 @@ export function SeatLegend({
             countryId={p.countryId}
             size="h-2.5 w-2.5"
           />
-          <span className="text-xs text-muted">{p.partyName}</span>
-          <span className="text-xs font-semibold tabular-nums" style={{ color: p.partyColor }}>
+          <span className="text-body-sm text-muted">{p.partyName}</span>
+          <span className="text-body-sm font-semibold tabular-nums" style={{ color: p.partyColor }}>
             {p.seats}
           </span>
-          <span className="text-[10px] text-muted/60 tabular-nums">({pctOf(p)}%)</span>
+          <span className="text-body-sm text-muted/60 tabular-nums">({pctOf(p)}%)</span>
         </div>
       ))}
     </div>
@@ -464,7 +467,7 @@ export function MajorityBanner({
 
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-body-sm ${
         hasMajority
           ? "bg-green-500/10 border border-green-500/20 text-green-400"
           : "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400"

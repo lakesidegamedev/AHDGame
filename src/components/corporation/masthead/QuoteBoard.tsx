@@ -93,29 +93,29 @@ export function QuoteBoard({
       aria-label="Share quote"
       className="flex min-w-0 flex-col rounded-[var(--corp-rad,6px)] border border-card-border bg-card-muted"
     >
-      <div className="flex justify-between gap-2 border-b border-card-border px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+      <div className="flex justify-between gap-2 border-b border-card-border px-3.5 py-2.5 text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
         <span>Last{money.code ? ` · ${money.code}` : ""}</span>
         {currentTurn != null && <span>Turn {currentTurn}</span>}
       </div>
 
       <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 px-3.5 pb-1.5 pt-3.5">
-        <span className="font-mono text-[40px] font-semibold leading-none tracking-tight tabular-nums text-gold lg:text-[52px]">
+        <span className="font-mono text-display font-semibold leading-none tracking-tight tabular-nums text-gold lg:text-display">
           {money.fmtPrice(price)}
         </span>
         {dayChange == null && historyLoading && (
           // Same box as the change badge below, so the price row keeps its height.
           <span
             aria-hidden
-            className="invisible flex flex-col gap-0.5 font-mono text-[15px] font-semibold"
+            className="invisible flex flex-col gap-0.5 font-mono text-body font-semibold"
           >
-            ▲ 0.00%<small className="text-[11px] font-medium">+0 on prev. turn</small>
+            ▲ 0.00%<small className="text-body-sm font-medium">+0 on prev. turn</small>
           </span>
         )}
         {dayChange != null && (
-          <span className={`flex flex-col gap-0.5 font-mono text-[15px] font-semibold ${tone}`}>
+          <span className={`flex flex-col gap-0.5 font-mono text-body font-semibold ${tone}`}>
             {up ? "▲" : "▼"} {Math.abs(change?.changePct ?? 0).toFixed(2)}%
             {moneyChange != null && (
-              <small className="text-[11px] font-medium text-muted">
+              <small className="text-body-sm font-medium text-muted">
                 {moneyChange >= 0 ? "+" : "-"}
                 {money.fmtPrice(Math.abs(moneyChange))} on prev. turn
               </small>
@@ -159,7 +159,7 @@ export function QuoteBoard({
               />
             </svg>
           </div>
-          <div className="flex justify-between px-3.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+          <div className="flex justify-between px-3.5 pt-1.5 text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
             <span>
               {series.length} turns
               {spanChangePct != null && spanChangePct !== 0 && (
@@ -186,7 +186,7 @@ export function QuoteBoard({
           <div className="px-3.5 pt-1">
             <div className="h-14 w-full animate-pulse rounded bg-card-border/40 lg:h-[84px]" />
           </div>
-          <div className="px-3.5 pt-1.5 text-[10px] leading-[15px]">&nbsp;</div>
+          <div className="px-3.5 pt-1.5 text-body-sm leading-[15px]">&nbsp;</div>
         </div>
       )}
 
@@ -196,33 +196,33 @@ export function QuoteBoard({
           title="The equity market pool's live quote. Market sales fill at the bid, purchases at the ask."
         >
           <div className="flex flex-col gap-0.5 px-3.5 py-2.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <span className="text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
               Bid
             </span>
-            <span className="font-mono text-[17px] font-semibold tabular-nums text-foreground">
+            <span className="font-mono text-body-lg font-semibold tabular-nums text-foreground">
               {money.fmtPrice(bid as number)}
             </span>
           </div>
           <div className="flex flex-col items-center gap-0.5 border-x border-card-border px-3.5 py-2.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <span className="text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
               Spread
             </span>
-            <span className="font-mono text-[13px] tabular-nums text-muted">
+            <span className="font-mono text-body-sm tabular-nums text-muted">
               {money.fmtPrice(Math.max(0, (ask as number) - (bid as number)))}
             </span>
           </div>
           <div className="flex flex-col items-end gap-0.5 px-3.5 py-2.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+            <span className="text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
               Ask
             </span>
-            <span className="font-mono text-[17px] font-semibold tabular-nums text-foreground">
+            <span className="font-mono text-body-lg font-semibold tabular-nums text-foreground">
               {money.fmtPrice(ask as number)}
             </span>
           </div>
         </div>
       )}
 
-      <p className="m-0 hidden border-t border-card-border px-3.5 py-2.5 text-[11px] leading-relaxed text-muted lg:block">
+      <p className="m-0 hidden border-t border-card-border px-3.5 py-2.5 text-body-sm leading-relaxed text-muted lg:block">
         Live quote{money.code ? ` in ${money.code}, the listing currency` : ""}. Market boards show
         the last snapshot.
       </p>

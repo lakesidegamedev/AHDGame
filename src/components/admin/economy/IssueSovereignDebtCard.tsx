@@ -66,8 +66,8 @@ export function IssueSovereignDebtCard() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Issue sovereign debt (test)</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Issue sovereign debt (test)</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Admin-only route for manually issuing a sovereign bond series. By default it issues one
           quarter of the current annual deficit and updates national debt immediately.
         </p>
@@ -80,7 +80,7 @@ export function IssueSovereignDebtCard() {
             id="country-id"
             value={countryId}
             onChange={(event) => setCountryId(event.target.value as CountryId)}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {registered.map((id) => (
               <option key={id} value={id}>
@@ -96,7 +96,7 @@ export function IssueSovereignDebtCard() {
             id="maturity-turns"
             value={maturityTurns}
             onChange={(event) => setMaturityTurns(Number(event.target.value) as 48 | 96 | 240)}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value={48}>1 Year</option>
             <option value={96}>2 Years</option>
@@ -116,7 +116,7 @@ export function IssueSovereignDebtCard() {
         </div>
       </div>
 
-      <label className="flex items-center gap-3 text-sm text-foreground">
+      <label className="flex items-center gap-3 text-body text-foreground">
         <input
           type="checkbox"
           checked={useQuarterDeficit}
@@ -132,7 +132,7 @@ export function IssueSovereignDebtCard() {
 
       {result ? (
         <div
-          className={`rounded-lg border p-4 text-sm ${
+          className={`rounded-lg border p-4 text-body ${
             result.success
               ? "border-success/30 bg-success/10 text-success"
               : "border-error/30 bg-error/10 text-error"
@@ -140,7 +140,7 @@ export function IssueSovereignDebtCard() {
         >
           <p className="font-medium">{result.message}</p>
           {result.result ? (
-            <div className="mt-2 space-y-1 text-xs text-foreground">
+            <div className="mt-2 space-y-1 text-body-sm text-foreground">
               <p>Bond ID: {result.result.bondId}</p>
               <p>Issue amount: {result.result.issueAmount.toLocaleString("en-US")}</p>
               <p>Coupon rate: {result.result.couponRate.toFixed(2)}%</p>

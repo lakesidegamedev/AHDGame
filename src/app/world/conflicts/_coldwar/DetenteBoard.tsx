@@ -177,7 +177,7 @@ export function DetenteBoard({ side }: { side: Side }) {
                 margin: 0,
                 fontFamily: headingFont,
                 fontWeight: 700,
-                fontSize: 34,
+                fontSize: 30,
                 lineHeight: 1,
                 color: "#f3f1ea",
               }}
@@ -188,7 +188,7 @@ export function DetenteBoard({ side }: { side: Side }) {
               style={{
                 margin: "8px 0 0",
                 maxWidth: 580,
-                fontSize: 13,
+                fontSize: 12,
                 lineHeight: 1.5,
                 color: "#9595a4",
               }}
@@ -214,7 +214,7 @@ export function DetenteBoard({ side }: { side: Side }) {
                   marginTop: 6,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 24,
+                  fontSize: 20,
                   lineHeight: 1,
                   color: dm.color,
                 }}
@@ -244,7 +244,7 @@ export function DetenteBoard({ side }: { side: Side }) {
                   marginTop: 6,
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 24,
+                  fontSize: 20,
                   lineHeight: 1,
                   color: pcColor(pc),
                 }}

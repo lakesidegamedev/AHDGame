@@ -151,8 +151,8 @@ export function DonutChartBase({
                 className="h-2.5 w-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-xs font-medium truncate">{item.name}</span>
-              <span className="ml-auto text-xs text-muted tabular-nums shrink-0">
+              <span className="text-body-sm font-medium truncate">{item.name}</span>
+              <span className="ml-auto text-body-sm text-muted tabular-nums shrink-0">
                 {formatValue(item.value)} <span className="text-muted/50">({pct}%)</span>
               </span>
             </button>

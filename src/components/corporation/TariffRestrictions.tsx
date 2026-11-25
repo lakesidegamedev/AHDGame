@@ -84,7 +84,7 @@ export function TariffRestrictions({
 
   if (countries.length === 0) {
     return (
-      <p className="py-1 text-xs text-muted">
+      <p className="py-1 text-body-sm text-muted">
         No active trade restrictions affect this corporation.
       </p>
     );
@@ -96,13 +96,13 @@ export function TariffRestrictions({
         {countries.flatMap((country) =>
           tariffsByCountry[country].map((t) => (
             <tr key={t.id}>
-              <td className="border-b border-card-border/60 py-1.5 pr-2 text-xs text-muted">
+              <td className="border-b border-card-border/60 py-1.5 pr-2 text-body-sm text-muted">
                 {country}, {SCOPE_LABELS[t.scopeType] ?? t.scopeType}
                 {t.targetSectorType
                   ? `, ${OPERATING_SECTOR_TYPE_LABELS[t.targetSectorType as OperatingSectorType] ?? t.targetSectorType}`
                   : ""}
               </td>
-              <td className="whitespace-nowrap border-b border-card-border/60 py-1.5 text-right font-mono text-[13px] text-warning">
+              <td className="whitespace-nowrap border-b border-card-border/60 py-1.5 text-right font-mono text-body-sm text-warning">
                 {t.rate}% tariff
               </td>
             </tr>

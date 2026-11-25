@@ -79,7 +79,7 @@ export default function MyHoldingsPanel({
         )}
       </KVList>
       {holdingTerms && (
-        <ul className="mt-2 space-y-1 text-xs text-muted">
+        <ul className="mt-2 space-y-1 text-body-sm text-muted">
           {holdingTerms.shortTermLots.map((lot) => (
             <li key={lot.acquiredTurn}>
               {t("purchaseTurn", {

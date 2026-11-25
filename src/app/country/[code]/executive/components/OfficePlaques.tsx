@@ -57,7 +57,7 @@ export function OfficePlaques({
           >
             <span
               aria-hidden
-              className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] ${
+              className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border text-body-sm ${
                 vacant ? "border-dashed border-card-border text-muted/60" : ""
               }`}
               style={
@@ -88,7 +88,7 @@ export function OfficePlaques({
               </p>
             )}
             {plaque.tenureLine && (
-              <div className="mt-3 border-t border-card-border/50 pt-2 font-mono text-[10px] text-muted/70">
+              <div className="mt-3 border-t border-card-border/50 pt-2 font-mono text-body-sm text-muted/70">
                 {plaque.tenureLine}
               </div>
             )}

@@ -96,7 +96,7 @@ function RegistryMasthead({
       data-testid="stat-masthead"
       className="overflow-hidden rounded-lg border border-card-border bg-card shadow-panel"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border px-4 py-2 font-mono text-body-xs uppercase tracking-widest text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border px-4 py-2 font-mono text-body-sm uppercase tracking-widest text-muted">
         <span>{registry}</span>
         <span className="inline-flex items-center gap-2">
           <LiveDot color="success" />
@@ -106,18 +106,18 @@ function RegistryMasthead({
       <div className="flex flex-wrap items-center gap-4 p-4">
         <div
           aria-hidden="true"
-          className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border-2 border-success bg-card-muted font-mono text-heading-sm font-bold text-success"
+          className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border-2 border-success bg-card-muted font-mono text-heading font-bold text-success"
         >
           {glyph}
         </div>
         <div className="min-w-[220px] flex-1">
           <h1 className="text-display font-bold leading-tight text-foreground">{displayName}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 font-mono text-body-xs font-bold tracking-wider text-success">
+            <span className="inline-flex items-center gap-1.5 font-mono text-body-sm font-bold tracking-wider text-success">
               <span>{board.metrics.length}</span>
               <span>METRICS TRACKED</span>
             </span>
-            <span className="font-mono text-body-xs text-muted">
+            <span className="font-mono text-body-sm text-muted">
               TURN {board.asOfTurn.toLocaleString("en-US")}
             </span>
           </div>
@@ -126,7 +126,7 @@ function RegistryMasthead({
           <Button variant="secondary" size="sm" onClick={onCompare}>
             ⇄ Compare
           </Button>
-          <span className="font-mono text-body-xs uppercase tracking-widest text-muted">
+          <span className="font-mono text-body-sm uppercase tracking-widest text-muted">
             {seal}
           </span>
         </div>
@@ -139,9 +139,9 @@ function RegistryMasthead({
 function SummaryTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="border-l border-card-border px-4 py-3 first:border-l-0">
-      <div className="font-mono text-body-xs uppercase tracking-wider text-muted">{label}</div>
+      <div className="font-mono text-body-sm uppercase tracking-wider text-muted">{label}</div>
       <div className="mt-0.5 text-body-lg font-bold tabular-nums text-foreground">{value}</div>
-      <div className="text-body-xs text-muted">{sub}</div>
+      <div className="text-body-sm text-muted">{sub}</div>
     </div>
   );
 }
@@ -207,13 +207,13 @@ function RegistrySummary({
             </span>
           </span>
           <div>
-            <div className="font-mono text-body-xs uppercase tracking-widest text-muted">
+            <div className="font-mono text-body-sm uppercase tracking-widest text-muted">
               Average score
             </div>
             <div className="mt-0.5 text-heading font-semibold text-foreground">
               {categories.length} outcome domains
             </div>
-            <div className="text-body-xs text-muted">
+            <div className="text-body-sm text-muted">
               Mean of all {scores.length} scored metrics, out of 100
             </div>
           </div>
@@ -293,13 +293,13 @@ function CategoryOverview({
                 </h2>
                 <div className="flex items-center gap-1 text-right">
                   <div>
-                    <div className="font-mono text-[9px] uppercase tracking-wider text-muted">
+                    <div className="font-mono text-body-sm uppercase tracking-wider text-muted">
                       Condition
                     </div>
                     <div className="text-heading font-extrabold tabular-nums text-success">
                       {score === null ? "n/a" : Math.round(score)}
                       {score !== null && (
-                        <span className="text-body-xs font-normal text-muted">/100</span>
+                        <span className="text-body-sm font-normal text-muted">/100</span>
                       )}
                     </div>
                   </div>
@@ -315,13 +315,13 @@ function CategoryOverview({
               </div>
               <div className="grid grid-cols-3 gap-2 text-body-sm">
                 <div>
-                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                  <div className="font-mono text-body-sm uppercase tracking-wider text-muted">
                     Recorded / derived
                   </div>
                   <div className="mt-1 font-bold tabular-nums text-foreground">{sourced}</div>
                 </div>
                 <div>
-                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                  <div className="font-mono text-body-sm uppercase tracking-wider text-muted">
                     Provisional
                   </div>
                   <div className="mt-1 font-bold tabular-nums text-warning">
@@ -329,7 +329,7 @@ function CategoryOverview({
                   </div>
                 </div>
                 <div>
-                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                  <div className="font-mono text-body-sm uppercase tracking-wider text-muted">
                     Pressure
                   </div>
                   <div className="mt-1 font-bold tabular-nums text-foreground">
@@ -337,7 +337,7 @@ function CategoryOverview({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2 border-t border-dashed border-card-border pt-2 text-body-xs text-muted">
+              <div className="flex items-center justify-between gap-2 border-t border-dashed border-card-border pt-2 text-body-sm text-muted">
                 <span>{category.metrics.length} primary observations</span>
                 <span className="whitespace-nowrap">open →</span>
               </div>
@@ -345,7 +345,7 @@ function CategoryOverview({
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-4 font-mono text-body-xs uppercase tracking-wider text-muted">
+      <div className="flex flex-wrap gap-4 font-mono text-body-sm uppercase tracking-wider text-muted">
         <span>Values retain their real units</span>
         <span>Direction explains how to read each measure</span>
         <span>Provisional means a game-calibrated stand-in where no observed figure exists</span>

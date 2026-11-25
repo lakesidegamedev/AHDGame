@@ -147,7 +147,7 @@ export function PrimeRateCard({
 
   return (
     <CentralBankSection title="Prime rate" level="aside">
-      <p className="text-heading-lg font-semibold tabular-nums text-foreground">
+      <p className="text-heading font-semibold tabular-nums text-foreground">
         {(primeRate ?? 0).toFixed(2)}%
       </p>
 

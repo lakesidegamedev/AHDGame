@@ -5,7 +5,7 @@ const corpHref = (c: { _id: string; sequentialId?: number }) =>
   `/corporation/${c.sequentialId ?? c._id}`;
 
 const box =
-  "min-w-0 rounded-[var(--corp-rad,6px)] border border-card-border bg-card px-3 py-2 text-[13px]";
+  "min-w-0 rounded-[var(--corp-rad,6px)] border border-card-border bg-card px-3 py-2 text-body-sm";
 
 /** A short vertical rule joining one tier of the chart to the next. */
 function Connector() {
@@ -40,13 +40,13 @@ export function GroupChart({
       {parent && (
         <>
           <div className={`${box} mx-auto max-w-xs text-center`}>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+            <span className="block text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
               Parent
             </span>
             <Link href={corpHref(parent)} className="font-medium text-foreground hover:underline">
               {parent.name}
             </Link>
-            <span className="block text-xs tabular-nums text-muted">
+            <span className="block text-body-sm tabular-nums text-muted">
               owns {parent.ownershipPct.toFixed(1)}%
             </span>
           </div>
@@ -55,7 +55,7 @@ export function GroupChart({
       )}
 
       <div className={`${box} mx-auto max-w-xs border-foreground/40 bg-card-elevated text-center`}>
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+        <span className="block text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
           This corporation
         </span>
         <span className="font-semibold text-foreground">{corporation.name}</span>
@@ -76,7 +76,7 @@ export function GroupChart({
                 >
                   {child.name}
                 </Link>
-                <span className="block text-xs tabular-nums text-muted">
+                <span className="block text-body-sm tabular-nums text-muted">
                   {child.ownershipPct.toFixed(1)}% owned
                 </span>
               </li>
@@ -86,10 +86,10 @@ export function GroupChart({
                 <button
                   type="button"
                   onClick={onSpinOff}
-                  className="flex h-full w-full flex-col items-start rounded-[var(--corp-rad,6px)] border border-dashed border-card-border px-3 py-2 text-left text-[13px] text-foreground hover:bg-card-elevated"
+                  className="flex h-full w-full flex-col items-start rounded-[var(--corp-rad,6px)] border border-dashed border-card-border px-3 py-2 text-left text-body-sm text-foreground hover:bg-card-elevated"
                 >
                   <span className="font-medium">Spin off a subsidiary</span>
-                  <span className="text-xs text-muted">
+                  <span className="text-body-sm text-muted">
                     {spinOffCooldownTurns > 0
                       ? `Available again in ${spinOffCooldownTurns} turn${
                           spinOffCooldownTurns === 1 ? "" : "s"

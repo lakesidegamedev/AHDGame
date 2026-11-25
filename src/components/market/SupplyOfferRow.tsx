@@ -24,14 +24,14 @@ export interface OfferCorporation {
 }
 
 const control =
-  "h-8 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none";
+  "h-8 rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none";
 
 /** Column template shared by the header and every row (md and up). */
 const OFFER_GRID =
   "md:grid md:grid-cols-[minmax(11rem,1.6fr)_5.5rem_minmax(7rem,1fr)_minmax(6rem,0.9fr)_minmax(6rem,0.9fr)_5.5rem_minmax(7rem,1fr)] md:items-center md:gap-3";
 
 export function SupplyOfferHeader() {
-  const cell = "text-[11px] font-semibold uppercase tracking-wide text-muted";
+  const cell = "text-body-sm font-semibold uppercase tracking-wide text-muted";
   return (
     <div className={`hidden border-b border-card-border pb-1.5 ${OFFER_GRID}`} aria-hidden>
       <span className={cell}>Company</span>
@@ -106,7 +106,7 @@ export function SupplyOfferRow({
         <span>
           <SideBadge side={offer.side} />
         </span>
-        <span className="text-sm font-semibold text-foreground">
+        <span className="text-body font-semibold text-foreground">
           {COMMODITY_LABELS[commodity]}
           {offer.stateId ? (
             <span className="font-normal text-muted">
@@ -117,22 +117,24 @@ export function SupplyOfferRow({
             ""
           )}
         </span>
-        <span className="text-sm font-semibold tabular-nums text-foreground md:text-right">
+        <span className="text-body font-semibold tabular-nums text-foreground md:text-right">
           {formatVolume(offer.volumeCap)}{" "}
-          <span className="text-xs font-normal text-muted">{COMMODITY_UNITS[commodity]}/day</span>
+          <span className="text-body-sm font-normal text-muted">
+            {COMMODITY_UNITS[commodity]}/day
+          </span>
         </span>
-        <span className="text-sm tabular-nums text-foreground md:text-right">
+        <span className="text-body tabular-nums text-foreground md:text-right">
           {value == null ? "n/a" : `~${formatAmount(Math.round(value))}`}
         </span>
         <span>
           <PremiumChip premium={offer.pricePremium} side={offer.side} />
           {unitPrice != null && (
-            <span className="block text-xs tabular-nums text-muted">
+            <span className="block text-body-sm tabular-nums text-muted">
               ~{formatAmount(Math.round(unitPrice))}/{COMMODITY_UNITS[commodity]}
             </span>
           )}
         </span>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {offer.durationTurns ? `${offer.durationTurns} turns` : "Open-ended"}
           <br />
           {[
@@ -144,17 +146,19 @@ export function SupplyOfferRow({
         </span>
       </div>
       {offer.own ? (
-        <p className="text-xs text-muted">This is your offer.</p>
+        <p className="text-body-sm text-muted">This is your offer.</p>
       ) : takers.length === 0 ? (
-        <p className="text-xs text-muted">You need a corporation you run to take this offer.</p>
+        <p className="text-body-sm text-muted">
+          You need a corporation you run to take this offer.
+        </p>
       ) : (
         <div className="flex flex-wrap items-end gap-2">
           {takers.length === 1 ? (
-            <p className="self-center text-xs text-muted">
+            <p className="self-center text-body-sm text-muted">
               Taking with <span className="font-medium text-foreground">{takers[0].name}</span>
             </p>
           ) : (
-            <label className="text-xs">
+            <label className="text-body-sm">
               Take with
               <select
                 className={`${control} block`}
@@ -171,7 +175,7 @@ export function SupplyOfferRow({
               </select>
             </label>
           )}
-          <label className="text-xs">
+          <label className="text-body-sm">
             Quantity to take
             <input
               className={`${control} block w-28`}
@@ -188,14 +192,14 @@ export function SupplyOfferRow({
             type="button"
             disabled={busy || !corpId}
             onClick={() => void take()}
-            className="inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy ? "Taking..." : "Take offer"}
           </button>
           {corpId && (
             <Link
               href={negotiateHref(corpId, offer)}
-              className="inline-flex h-8 items-center rounded-md border border-card-border px-3 text-xs font-medium text-foreground hover:bg-card-elevated"
+              className="inline-flex h-8 items-center rounded-md border border-card-border px-3 text-body-sm font-medium text-foreground hover:bg-card-elevated"
             >
               Negotiate
             </Link>
@@ -203,7 +207,10 @@ export function SupplyOfferRow({
         </div>
       )}
       {message && (
-        <p role={failed ? "alert" : "status"} className={failed ? "text-xs text-error" : "text-xs"}>
+        <p
+          role={failed ? "alert" : "status"}
+          className={failed ? "text-body-sm text-error" : "text-body-sm"}
+        >
           {message}
         </p>
       )}

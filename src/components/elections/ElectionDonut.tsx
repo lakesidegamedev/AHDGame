@@ -77,7 +77,7 @@ export function GeneralPieChart({
       </svg>
       {h && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 -bottom-8 pointer-events-none z-50 whitespace-nowrap rounded border border-card-border bg-card px-2 py-0.5 text-[10px] font-medium shadow"
+          className="absolute left-1/2 -translate-x-1/2 -bottom-8 pointer-events-none z-50 whitespace-nowrap rounded border border-card-border bg-card px-2 py-0.5 text-body-sm font-medium shadow"
           style={{ color: h.color }}
         >
           {h.label} · {h.pct.toFixed(1)}%

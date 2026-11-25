@@ -52,7 +52,7 @@ export function RatingScale({ rating }: { rating: string }) {
               }`}
             />
             <span
-              className={`font-mono text-[9px] font-semibold tabular-nums ${
+              className={`font-mono text-body-sm font-semibold tabular-nums ${
                 on ? "text-foreground" : "text-muted"
               }`}
             >

@@ -99,7 +99,7 @@ export function UnionPensionSchemePanel({ scheme }: { scheme: UnionPensionScheme
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-heading-sm font-semibold text-foreground">Pension scheme</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">Pension scheme</h3>
         <span
           className={`rounded-full px-2.5 py-1 text-body-sm font-semibold ${BAND_STYLE[scheme.band]}`}
         >

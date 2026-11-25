@@ -77,7 +77,7 @@ export function TreasurySuppressionControl({
             d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
           />
         </svg>
-        <div className="text-xs font-semibold text-muted">Voter suppression</div>
+        <div className="text-body-sm font-semibold text-muted">Voter suppression</div>
       </div>
       <p className="text-body-sm text-muted mb-3 ml-6">
         Nationwide dirty tricks. Suppress opponent turnout across all {regionCount} {regionWord}.
@@ -98,7 +98,7 @@ export function TreasurySuppressionControl({
           variant="error"
           className="flex-1 max-w-48"
         />
-        <span className="text-lg font-bold tabular-nums w-12 text-right">
+        <span className="text-heading font-bold tabular-nums w-12 text-right">
           {suppressionForm.percent}%
         </span>
       </div>
@@ -114,7 +114,7 @@ export function TreasurySuppressionControl({
             });
             dispatch({ type: "SET_SUPPRESSION", field: "group", value: "" });
           }}
-          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="">Category…</option>
           {categories.map((category) => (
@@ -129,7 +129,7 @@ export function TreasurySuppressionControl({
             dispatch({ type: "SET_SUPPRESSION", field: "group", value: e.target.value })
           }
           disabled={!suppressionForm.category}
-          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+          className="rounded-lg border border-card-border bg-background px-3 py-1.5 text-body focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
         >
           <option value="">Demographic…</option>
           {groupsForSupCat.map((d) => (
@@ -142,7 +142,7 @@ export function TreasurySuppressionControl({
           <button
             onClick={onSave}
             disabled={suppressionForm.saving || supNeedsTarget}
-            className="rounded-lg px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity bg-error"
+            className="rounded-lg px-4 py-1.5 text-body font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity bg-error"
           >
             {suppressionForm.saving ? "Saving…" : "Save"}
           </button>
@@ -150,7 +150,7 @@ export function TreasurySuppressionControl({
       </div>
 
       {supNeedsTarget && (
-        <p className="mt-2 text-xs text-error flex items-center gap-1.5 ml-6">
+        <p className="mt-2 text-body-sm text-error flex items-center gap-1.5 ml-6">
           <svg
             className="h-3 w-3 shrink-0"
             fill="none"
@@ -169,13 +169,13 @@ export function TreasurySuppressionControl({
       )}
       {suppressionForm.percent > 0 && selectedSupDemo && (
         <div className="mt-3 ml-6 rounded-lg bg-background/50 border border-card-border/30 p-3 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">Total spending</span>
             <span className="font-semibold tabular-nums">
               {fmt(supSpend, party.countryId)} / hr
             </span>
           </div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">
               Per {isUs ? "state" : "region"} ({regionCount})
             </span>
@@ -183,7 +183,7 @@ export function TreasurySuppressionControl({
               {fmt(supRawPerState, party.countryId)} / hr
             </span>
           </div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">Counter-alignment</span>
             <span
               className={`font-semibold tabular-nums ${supAlignMult >= 0.5 ? "text-error" : "text-warning"}`}
@@ -191,7 +191,7 @@ export function TreasurySuppressionControl({
               {Math.round(supAlignMult * 100)}%
             </span>
           </div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="text-muted">Est. reduction / state</span>
             <span className="font-bold tabular-nums text-error">
               -{supEstBoost.toFixed(3)}% / turn

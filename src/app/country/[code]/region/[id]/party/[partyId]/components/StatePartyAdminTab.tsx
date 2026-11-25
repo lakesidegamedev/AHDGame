@@ -76,7 +76,7 @@ export function StatePartyAdminTab({ stateParty, onUpdate }: StatePartyAdminTabP
           </svg>
           <div>
             <h3 className="font-semibold text-red-400">Admin controls</h3>
-            <p className="text-sm text-red-300/80 mt-1">
+            <p className="text-body text-red-300/80 mt-1">
               These controls allow direct manipulation of the state party. Changes take effect
               immediately.
             </p>
@@ -85,7 +85,7 @@ export function StatePartyAdminTab({ stateParty, onUpdate }: StatePartyAdminTabP
       </div>
 
       {message && (
-        <div className={`rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-3 text-body ${getMessageStyle(message)}`}>{message}</div>
       )}
 
       {/* Leadership Appointment */}
@@ -121,8 +121,8 @@ export function StatePartyAdminTab({ stateParty, onUpdate }: StatePartyAdminTabP
         <div className="rounded-lg border border-red-500/30 bg-background p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="font-medium text-sm">Delete state party organization</div>
-              <div className="text-xs text-muted mt-1">
+              <div className="font-medium text-body">Delete state party organization</div>
+              <div className="text-body-sm text-muted mt-1">
                 Permanently delete the {stateParty.stateName} {stateParty.partyName} organization.
                 This removes all leadership positions, treasury, and associated data.
               </div>
@@ -130,7 +130,7 @@ export function StatePartyAdminTab({ stateParty, onUpdate }: StatePartyAdminTabP
             <button
               onClick={handleDeleteStateParty}
               disabled={deleting}
-              className="shrink-0 rounded-lg border border-red-500 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+              className="shrink-0 rounded-lg border border-red-500 bg-red-500/10 px-4 py-2 text-body font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
             >
               {deleting ? "Deleting..." : "Delete"}
             </button>

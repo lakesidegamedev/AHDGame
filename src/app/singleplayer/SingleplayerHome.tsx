@@ -96,8 +96,8 @@ export function SingleplayerHome({ status }: Props) {
       <div className="w-full max-w-2xl">
         <header className="mb-10">
           <p className="mb-2 text-body-sm font-medium text-primary">Singleplayer</p>
-          <h1 className="text-3xl font-bold tracking-tight">A House Divided</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">A House Divided</h1>
+          <p className="mt-2 text-body text-muted">
             The same world the multiplayer game runs, on this machine, on your clock. Turns advance
             when you press End turn.
           </p>
@@ -105,8 +105,8 @@ export function SingleplayerHome({ status }: Props) {
 
         {status.hasWorld ? (
           <section className="mb-8 rounded border border-card-border bg-card-muted p-5">
-            <h2 className="text-sm font-semibold text-muted">Current world</h2>
-            <dl className="mt-3 grid grid-cols-3 gap-4 text-sm">
+            <h2 className="text-body font-semibold text-muted">Current world</h2>
+            <dl className="mt-3 grid grid-cols-3 gap-4 text-body">
               <div>
                 <dt className="text-muted">Era</dt>
                 <dd className="font-medium">
@@ -126,7 +126,7 @@ export function SingleplayerHome({ status }: Props) {
             </dl>
             <Link
               href="/"
-              className="mt-5 inline-flex items-center rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+              className="mt-5 inline-flex items-center rounded bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
               {status.hasCharacter ? "Continue" : "Create your character"}
             </Link>
@@ -134,7 +134,7 @@ export function SingleplayerHome({ status }: Props) {
         ) : null}
 
         <section className="rounded border border-card-border bg-card-muted p-5">
-          <h2 className="text-sm font-semibold text-muted">
+          <h2 className="text-body font-semibold text-muted">
             {status.hasWorld ? "Start over" : "New game"}
           </h2>
 
@@ -157,14 +157,14 @@ export function SingleplayerHome({ status }: Props) {
                     onChange={() => setPreset(era.preset)}
                     className="sr-only"
                   />
-                  <span className="block text-lg font-bold">{era.label}</span>
-                  <span className="block text-xs text-muted">{era.blurb}</span>
+                  <span className="block text-heading font-bold">{era.label}</span>
+                  <span className="block text-body-sm text-muted">{era.blurb}</span>
                 </label>
               ))}
             </div>
 
             <div>
-              <span className="block text-sm text-muted">Play mode</span>
+              <span className="block text-body text-muted">Play mode</span>
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 {[
                   ["normal", "Career"],
@@ -173,7 +173,7 @@ export function SingleplayerHome({ status }: Props) {
                 ].map(([value, label]) => (
                   <label
                     key={value}
-                    className="flex cursor-pointer items-center gap-2 rounded border border-card-border p-3 text-sm"
+                    className="flex cursor-pointer items-center gap-2 rounded border border-card-border p-3 text-body"
                   >
                     <input
                       type="radio"
@@ -188,7 +188,7 @@ export function SingleplayerHome({ status }: Props) {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm">
+              <label className="grid gap-2 text-body">
                 <span className="text-muted">Difficulty</span>
                 <select
                   value={difficulty}
@@ -200,7 +200,7 @@ export function SingleplayerHome({ status }: Props) {
                   <option value="hard">Hard</option>
                 </select>
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className="grid gap-2 text-body">
                 <span className="text-muted">Autonomous politicians</span>
                 <select
                   value={autonomyLevel}
@@ -220,10 +220,10 @@ export function SingleplayerHome({ status }: Props) {
             </div>
 
             <details className="rounded border border-card-border bg-background p-3">
-              <summary className="cursor-pointer text-sm font-semibold">
+              <summary className="cursor-pointer text-body font-semibold">
                 Advanced feature flags
               </summary>
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 Shipped defaults are recommended. Turn systems off only when you want a narrower
                 local simulation.
               </p>
@@ -246,15 +246,15 @@ export function SingleplayerHome({ status }: Props) {
                       className="mt-1"
                     />
                     <span>
-                      <span className="block text-sm font-medium">{flag.label}</span>
-                      <span className="block text-xs text-muted">{flag.description}</span>
+                      <span className="block text-body font-medium">{flag.label}</span>
+                      <span className="block text-body-sm text-muted">{flag.description}</span>
                     </span>
                   </label>
                 ))}
               </div>
             </details>
 
-            <label className="block text-sm">
+            <label className="block text-body">
               <span className="text-muted">Your name (optional)</span>
               <input
                 type="text"
@@ -262,12 +262,12 @@ export function SingleplayerHome({ status }: Props) {
                 maxLength={40}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Player"
-                className="mt-1 w-full rounded border border-card-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                className="mt-1 w-full rounded border border-card-border bg-background px-3 py-2 text-body outline-none focus:border-primary"
               />
             </label>
 
             {status.hasWorld && confirmOverwrite && !running ? (
-              <p className="rounded border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-400">
+              <p className="rounded border border-red-500/40 bg-red-500/5 p-3 text-body text-red-400">
                 This replaces your current world and character. Press again to confirm.
               </p>
             ) : null}
@@ -275,7 +275,7 @@ export function SingleplayerHome({ status }: Props) {
             <button
               type="button"
               onClick={startNewGame}
-              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-wait disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-wait disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {running ? (
                 <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -289,20 +289,20 @@ export function SingleplayerHome({ status }: Props) {
           </fieldset>
 
           {running ? (
-            <p className="mt-3 text-xs text-muted">
+            <p className="mt-3 text-body-sm text-muted">
               Seeding countries, parties, markets and the electorate. This takes a minute or two on
               a laptop.
             </p>
           ) : null}
 
           {error ? (
-            <p role="alert" className="mt-3 text-sm text-red-400">
+            <p role="alert" className="mt-3 text-body text-red-400">
               {error}
             </p>
           ) : null}
 
           {logs.length > 0 && phase !== "done" ? (
-            <pre className="mt-4 max-h-64 overflow-auto rounded border border-card-border bg-background p-3 text-xs text-muted">
+            <pre className="mt-4 max-h-64 overflow-auto rounded border border-card-border bg-background p-3 text-body-sm text-muted">
               {logs.join("\n")}
             </pre>
           ) : null}

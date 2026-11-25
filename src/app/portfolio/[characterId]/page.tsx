@@ -140,14 +140,14 @@ export default function CharacterPortfolioPage() {
             <div className="bg-card-elevated px-6 py-6 border-b border-card-border">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                  <h1 className="text-heading font-bold text-foreground tracking-tight">
                     {characterName ? `${characterName}'s Portfolio` : "Portfolio"}
                   </h1>
                   <p className="text-muted">Investment holdings and assets</p>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-body-sm font-medium text-muted">Total net worth</span>
-                  <span className="text-3xl font-bold text-foreground tabular-nums tracking-tight">
+                  <span className="text-display font-bold text-foreground tabular-nums tracking-tight">
                     {formatAmount(combinedTotal)}
                   </span>
                 </div>
@@ -159,17 +159,17 @@ export default function CharacterPortfolioPage() {
             <div className="grid grid-cols-2 md:grid-cols-7 divide-x divide-card-border">
               <div className="p-6">
                 <span className="block text-body-sm text-muted">Index funds</span>
-                <span className="text-xl font-bold">{formatAmount(totalFundValue)}</span>
+                <span className="text-heading font-bold">{formatAmount(totalFundValue)}</span>
               </div>
               <div className="p-6">
                 <span className="block text-body-sm text-muted">Unpaid income tax</span>
-                <span className="text-xl font-bold">{formatAmount(-incomeTaxDebtValue)}</span>
+                <span className="text-heading font-bold">{formatAmount(-incomeTaxDebtValue)}</span>
               </div>
               <div className="p-6">
                 <span className="block text-body-sm font-medium text-muted mb-1">
                   Stock holdings
                 </span>
-                <span className="block text-xl font-bold text-foreground tabular-nums">
+                <span className="block text-heading font-bold text-foreground tabular-nums">
                   {formatAmount(totalValue)}
                 </span>
               </div>
@@ -177,20 +177,20 @@ export default function CharacterPortfolioPage() {
                 <span className="block text-body-sm font-medium text-muted mb-1">
                   Bond holdings
                 </span>
-                <span className="block text-xl font-bold text-foreground tabular-nums">
+                <span className="block text-heading font-bold text-foreground tabular-nums">
                   {formatAmount(totalBondValue)}
                 </span>
               </div>
               <div className="p-6">
                 <span className="block text-body-sm font-medium text-muted mb-1">Cash on hand</span>
-                <span className="block text-xl font-bold text-foreground tabular-nums">
+                <span className="block text-heading font-bold text-foreground tabular-nums">
                   {formatAmount(cashOnHand)}
                 </span>
               </div>
               <div className="p-6">
                 <span className="block text-body-sm font-medium text-muted mb-1">Loans</span>
                 <span
-                  className={`block text-xl font-bold tabular-nums ${
+                  className={`block text-heading font-bold tabular-nums ${
                     locDebtValue > 0 ? "text-error" : "text-foreground"
                   }`}
                 >
@@ -200,7 +200,7 @@ export default function CharacterPortfolioPage() {
               <div className="p-6">
                 <span className="block text-body-sm font-medium text-muted mb-1">Bond income</span>
                 <span
-                  className={`block text-xl font-bold tabular-nums ${toneText(toneForDelta(totalBondIncomePerTurn))}`}
+                  className={`block text-heading font-bold tabular-nums ${toneText(toneForDelta(totalBondIncomePerTurn))}`}
                 >
                   {totalBondIncomePerTurn > 0 ? "+" : ""}
                   {formatAmount(totalBondIncomePerTurn)}/turn
@@ -215,8 +215,10 @@ export default function CharacterPortfolioPage() {
           <div className="rounded-xl border border-card-border bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Portfolio value over time</h2>
-                <p className="text-xs text-muted">
+                <h2 className="text-body font-semibold text-foreground">
+                  Portfolio value over time
+                </h2>
+                <p className="text-body-sm text-muted">
                   {chartView === "total"
                     ? seriesView === "total"
                       ? "Total net worth history"
@@ -229,7 +231,7 @@ export default function CharacterPortfolioPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setChartView("total")}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                     chartView === "total"
                       ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated text-muted hover:text-foreground"
@@ -239,7 +241,7 @@ export default function CharacterPortfolioPage() {
                 </button>
                 <button
                   onClick={() => setChartView("breakdown")}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                     chartView === "breakdown"
                       ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated text-muted hover:text-foreground"
@@ -251,7 +253,7 @@ export default function CharacterPortfolioPage() {
                   <>
                     <button
                       onClick={() => setSeriesView("total")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                         seriesView === "total"
                           ? "bg-primary text-primary-foreground"
                           : "bg-card-elevated text-muted hover:text-foreground"
@@ -261,7 +263,7 @@ export default function CharacterPortfolioPage() {
                     </button>
                     <button
                       onClick={() => setSeriesView("stocks")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                         seriesView === "stocks"
                           ? "bg-success text-white"
                           : "bg-card-elevated text-muted hover:text-foreground"
@@ -271,7 +273,7 @@ export default function CharacterPortfolioPage() {
                     </button>
                     <button
                       onClick={() => setSeriesView("bonds")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                         seriesView === "bonds"
                           ? "bg-warning text-white"
                           : "bg-card-elevated text-muted hover:text-foreground"
@@ -281,7 +283,7 @@ export default function CharacterPortfolioPage() {
                     </button>
                     <button
                       onClick={() => setSeriesView("cash")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                         seriesView === "cash"
                           ? "bg-info text-white"
                           : "bg-card-elevated text-muted hover:text-foreground"
@@ -291,7 +293,7 @@ export default function CharacterPortfolioPage() {
                     </button>
                     <button
                       onClick={() => setSeriesView("savings")}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      className={`px-3 py-1.5 text-body-sm font-medium rounded-lg transition-colors ${
                         seriesView === "savings"
                           ? "bg-primary text-primary-foreground"
                           : "bg-card-elevated text-muted hover:text-foreground"
@@ -317,7 +319,7 @@ export default function CharacterPortfolioPage() {
               <button
                 onClick={() => setActiveTab("stocks")}
                 className={`
-                  shrink-0 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors
+                  shrink-0 whitespace-nowrap border-b-2 py-4 px-1 text-body font-medium transition-colors
                   ${
                     activeTab === "stocks"
                       ? "border-primary text-primary"
@@ -326,14 +328,14 @@ export default function CharacterPortfolioPage() {
                 `}
               >
                 Stocks
-                <span className="ml-2 rounded-full bg-card-elevated px-2 py-0.5 text-xs text-muted">
+                <span className="ml-2 rounded-full bg-card-elevated px-2 py-0.5 text-body-sm text-muted">
                   {holdings.length}
                 </span>
               </button>
               <button
                 onClick={() => setActiveTab("bonds")}
                 className={`
-                  shrink-0 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors
+                  shrink-0 whitespace-nowrap border-b-2 py-4 px-1 text-body font-medium transition-colors
                   ${
                     activeTab === "bonds"
                       ? "border-primary text-primary"
@@ -342,7 +344,7 @@ export default function CharacterPortfolioPage() {
                 `}
               >
                 Bonds
-                <span className="ml-2 rounded-full bg-card-elevated px-2 py-0.5 text-xs text-muted">
+                <span className="ml-2 rounded-full bg-card-elevated px-2 py-0.5 text-body-sm text-muted">
                   {bondHoldings.length}
                 </span>
               </button>

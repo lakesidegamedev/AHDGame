@@ -55,7 +55,7 @@ const THRESHOLD_KEYS: Array<{ key: keyof AltScoringThresholds; label: string; he
 ];
 
 const GHOST_BTN_CLS =
-  "inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-sm transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none";
+  "inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none";
 
 export function ScoringConfigPanel({ config, cluster, onSaved, notify }: ScoringConfigPanelProps) {
   const [weights, setWeights] = useState<AltSignalWeights>({ ...config.weights });
@@ -107,8 +107,8 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
     <div className="space-y-5 rounded-xl border border-card-border bg-card p-4 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-muted">Scoring config</h3>
-          <p className="mt-1 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-muted">Scoring config</h3>
+          <p className="mt-1 text-body-sm text-muted">
             Admin only. Weights feed the noisy-OR aggregate; guards are not editable.
           </p>
         </div>
@@ -116,7 +116,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
           <div className="flex items-center gap-3 rounded-lg border border-card-border/70 bg-card-muted px-3 py-2">
             <div className="text-right">
               <div className="text-body-sm font-medium text-muted">Live preview</div>
-              <div className="text-xs tabular-nums text-muted">
+              <div className="text-body-sm tabular-nums text-muted">
                 now {formatPct(cluster.confidence)} →{" "}
                 <span
                   className={
@@ -132,7 +132,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
               </div>
               {Math.abs(delta) > 0.001 && (
                 <div
-                  className={`text-[11px] font-medium tabular-nums ${delta > 0 ? "text-red-400" : "text-emerald-400"}`}
+                  className={`text-body-sm font-medium tabular-nums ${delta > 0 ? "text-red-400" : "text-emerald-400"}`}
                 >
                   {delta > 0 ? "+" : ""}
                   {Math.round(delta * 100)} pts
@@ -145,7 +145,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
       </div>
 
       {!cluster && (
-        <p className="rounded-lg border border-dashed border-card-border bg-card-muted/50 px-3 py-2.5 text-xs text-muted">
+        <p className="rounded-lg border border-dashed border-card-border bg-card-muted/50 px-3 py-2.5 text-body-sm text-muted">
           Open a cluster to see edits preview against a live ring.
         </p>
       )}
@@ -165,7 +165,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
                     style={{ backgroundColor: TIER_HEX[meta.tier] }}
                   />
                   <span
-                    className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                    className="text-body-sm font-semibold uppercase tracking-[0.14em]"
                     style={{ color: TIER_HEX[meta.tier] }}
                   >
                     {TIER_LABEL[meta.tier]}
@@ -175,9 +175,9 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
               )}
               <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-lg px-2 py-1.5 transition-colors hover:bg-card-elevated/50 motion-reduce:transition-none">
                 <div className="min-w-0">
-                  <span className="truncate text-sm font-medium">{meta.label}</span>
+                  <span className="truncate text-body font-medium">{meta.label}</span>
                   {meta.guard && (
-                    <p className="text-[11px] leading-relaxed text-emerald-400/80">
+                    <p className="text-body-sm leading-relaxed text-emerald-400/80">
                       Guard: {meta.guard}
                     </p>
                   )}
@@ -193,7 +193,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
                     className="w-32 accent-primary"
                     aria-label={`${meta.label} weight`}
                   />
-                  <span className="w-11 rounded-md bg-card-muted px-1.5 py-0.5 text-right font-mono text-xs font-semibold tabular-nums">
+                  <span className="w-11 rounded-md bg-card-muted px-1.5 py-0.5 text-right font-mono text-body-sm font-semibold tabular-nums">
                     {weights[sig].toFixed(2)}
                   </span>
                 </div>
@@ -211,8 +211,8 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
             className="grid grid-cols-[1fr_auto] items-center gap-x-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-card-elevated/50 motion-reduce:transition-none"
           >
             <div>
-              <span className="text-sm font-medium">{label}</span>
-              <p className="text-[11px] leading-relaxed text-muted">{help}</p>
+              <span className="text-body font-medium">{label}</span>
+              <p className="text-body-sm leading-relaxed text-muted">{help}</p>
             </div>
             <div className="flex items-center gap-2.5">
               <input
@@ -225,7 +225,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
                 className="w-32 accent-primary"
                 aria-label={label}
               />
-              <span className="w-11 rounded-md bg-card-muted px-1.5 py-0.5 text-right font-mono text-xs font-semibold tabular-nums">
+              <span className="w-11 rounded-md bg-card-muted px-1.5 py-0.5 text-right font-mono text-body-sm font-semibold tabular-nums">
                 {thresholds[key].toFixed(2)}
               </span>
             </div>
@@ -256,7 +256,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
         <button
           onClick={save}
           disabled={saving || !dirty}
-          className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border motion-reduce:transition-none"
+          className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border motion-reduce:transition-none"
         >
           {saving ? "Saving…" : "Save config"}
         </button>

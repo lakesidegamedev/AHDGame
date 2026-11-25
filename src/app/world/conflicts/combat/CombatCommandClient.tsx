@@ -171,7 +171,7 @@ export function CombatCommandClient({
               margin: 0,
               fontFamily: MIL_FONT.heading,
               fontWeight: 700,
-              fontSize: 32,
+              fontSize: 30,
               lineHeight: 1,
               color: MIL_COLOR.textStrong,
             }}
@@ -203,7 +203,7 @@ export function CombatCommandClient({
                   color: active ? "#fff" : MIL_COLOR.textMuted,
                   padding: "8px 12px 12px",
                   fontFamily: MIL_FONT.sans,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
                 }}

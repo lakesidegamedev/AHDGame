@@ -16,7 +16,7 @@ export function CompareBars({ rows, label }: { rows: CompareRow[]; label: string
     <div role="img" aria-label={label} className="flex flex-col gap-1.5">
       {rows.map((r) => (
         <div key={r.key} className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+          <span className="text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
             {r.label}
           </span>
           <div className="h-2.5 overflow-hidden bg-track">
@@ -26,7 +26,7 @@ export function CompareBars({ rows, label }: { rows: CompareRow[]; label: string
               style={{ width: pctWidth(r.value > 0 ? (r.value / max) * 100 : 0) }}
             />
           </div>
-          <span className="font-mono text-xs tabular-nums text-foreground">{r.display}</span>
+          <span className="font-mono text-body-sm tabular-nums text-foreground">{r.display}</span>
         </div>
       ))}
     </div>

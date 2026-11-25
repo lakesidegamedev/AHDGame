@@ -23,7 +23,7 @@ export function PresidentialElectionPanel({ activePresidentialCandidacy }: Props
 
   return (
     <div>
-      <nav className="mb-4 flex gap-2 text-sm" role="tablist">
+      <nav className="mb-4 flex gap-2 text-body" role="tablist">
         <button
           type="button"
           role="tab"

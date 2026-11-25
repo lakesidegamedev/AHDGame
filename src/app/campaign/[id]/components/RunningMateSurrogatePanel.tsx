@@ -87,13 +87,13 @@ export function RunningMateSurrogatePanel({
           marginBottom: 8,
         }}
       >
-        <h3 style={{ margin: 0, fontFamily: FONT.sans, fontSize: 17, fontWeight: 600 }}>
+        <h3 style={{ margin: 0, fontFamily: FONT.sans, fontSize: 16, fontWeight: 600 }}>
           Running mate surrogate
         </h3>
         <span
           style={{
             fontFamily: FONT.mono,
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: ".08em",
             color: poolExhausted ? BLEND.caution : BLEND.positive,
             whiteSpace: "nowrap",
@@ -114,7 +114,7 @@ export function RunningMateSurrogatePanel({
           style={{
             marginBottom: 10,
             fontFamily: FONT.sans,
-            fontSize: 13,
+            fontSize: 12,
             lineHeight: 1.55,
             color: BLEND.muted,
           }}
@@ -145,7 +145,7 @@ export function RunningMateSurrogatePanel({
             style={{
               marginTop: 8,
               fontFamily: FONT.sans,
-              fontSize: 13,
+              fontSize: 12,
               color: BLEND.muted,
             }}
           >

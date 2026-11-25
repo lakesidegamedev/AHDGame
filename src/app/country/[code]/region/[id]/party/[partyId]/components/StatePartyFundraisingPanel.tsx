@@ -264,7 +264,7 @@ export function StatePartyFundraisingPanel({
       )}
 
       {canManageTreas && !insights && insightsFailed && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-card-border bg-card p-5 text-body text-muted">
           <span>Treasury insights could not be loaded.</span>
           <button
             type="button"
@@ -280,7 +280,7 @@ export function StatePartyFundraisingPanel({
       )}
 
       {canManageTreas && !insights && !insightsFailed && (
-        <div className="rounded-xl border border-card-border bg-card p-5 text-sm text-muted">
+        <div className="rounded-xl border border-card-border bg-card p-5 text-body text-muted">
           Loading treasury insights...
         </div>
       )}
@@ -289,7 +289,7 @@ export function StatePartyFundraisingPanel({
         <div className="rounded-xl border border-card-border bg-card overflow-hidden">
           {msg && (
             <div
-              className={`px-6 py-3 border-b border-card-border/40 text-sm ${getMessageStyle(msg)}`}
+              className={`px-6 py-3 border-b border-card-border/40 text-body ${getMessageStyle(msg)}`}
             >
               {msg}
             </div>
@@ -311,7 +311,7 @@ export function StatePartyFundraisingPanel({
               </svg>
               <div className="text-body-sm font-medium text-muted">Donate to state party</div>
             </div>
-            <p className="mb-3 text-[11px] text-muted/60">
+            <p className="mb-3 text-body-sm text-muted/60">
               Contribute your campaign funds to the state party treasury. Funds support GOTV,
               organization building, and other party operations.
             </p>
@@ -321,12 +321,12 @@ export function StatePartyFundraisingPanel({
                 placeholder="Amount"
                 value={donateAmount}
                 onChange={(e) => setDonateAmount(e.target.value)}
-                className="w-36 bg-background py-2 text-sm"
+                className="w-36 bg-background py-2 text-body"
               />
               <button
                 onClick={handleDonate}
                 disabled={donating}
-                className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="rounded-lg px-4 py-2 text-body font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{
                   backgroundColor: stateParty.partyColor,
                   color: contrastTextColor(stateParty.partyColor),
@@ -335,7 +335,7 @@ export function StatePartyFundraisingPanel({
                 {donating ? "Donating..." : "Donate"}
               </button>
             </div>
-            <div className="mt-1 text-xs text-muted">
+            <div className="mt-1 text-body-sm text-muted">
               Campaign funds: {fmt(characterFunds, stateParty.countryId)} | Min.{" "}
               {fmt(1000, stateParty.countryId)}
             </div>

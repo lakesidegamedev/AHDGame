@@ -107,20 +107,20 @@ export default function OwnershipOverview({ corporation }: { corporation: Corpor
                 y="87"
                 textAnchor="middle"
                 fill="var(--foreground)"
-                className="font-mono text-2xl"
+                className="font-mono text-heading"
               >
                 {holders.length}
               </text>
-              <text x="90" y="107" textAnchor="middle" fill="var(--muted)" className="text-xs">
+              <text x="90" y="107" textAnchor="middle" fill="var(--muted)" className="text-body-sm">
                 {t("holdersLabel")}
               </text>
             </svg>
           ) : (
-            <p className="text-xs text-muted">{t("unavailableSplit")}</p>
+            <p className="text-body-sm text-muted">{t("unavailableSplit")}</p>
           )}
         </div>
         <div className="min-w-0">
-          <div className="grid grid-cols-[minmax(0,1fr)_76px_76px] gap-3 border-b border-card-border pb-2 text-[11px] text-muted">
+          <div className="grid grid-cols-[minmax(0,1fr)_76px_76px] gap-3 border-b border-card-border pb-2 text-body-sm text-muted">
             <span>{t("holder")}</span>
             <span className="text-right">{t("ownership")}</span>
             <span className="text-right">{t("votingPower")}</span>
@@ -128,7 +128,7 @@ export default function OwnershipOverview({ corporation }: { corporation: Corpor
           {rows.map((row) => (
             <div
               key={row.key}
-              className="grid grid-cols-[minmax(0,1fr)_76px_76px] items-center gap-3 border-b border-card-border/60 py-2.5 text-xs"
+              className="grid grid-cols-[minmax(0,1fr)_76px_76px] items-center gap-3 border-b border-card-border/60 py-2.5 text-body-sm"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -157,9 +157,9 @@ export default function OwnershipOverview({ corporation }: { corporation: Corpor
               </span>
             </div>
           ))}
-          <p className="mt-3 text-[11px] leading-relaxed text-muted">{t("votingExplanation")}</p>
+          <p className="mt-3 text-body-sm leading-relaxed text-muted">{t("votingExplanation")}</p>
           {remainder > 0 && (
-            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            <p className="mt-1 text-body-sm leading-relaxed text-muted">
               {t("unassignedExplanation")}
             </p>
           )}

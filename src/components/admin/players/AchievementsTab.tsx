@@ -161,8 +161,8 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
       {/* Seed button */}
       <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
         <div>
-          <p className="text-sm font-medium">Seed achievement definitions</p>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="text-body font-medium">Seed achievement definitions</p>
+          <p className="mt-0.5 text-body-sm text-muted">
             Creates all achievement definitions from seed data (only when collection is empty)
           </p>
         </div>
@@ -170,7 +170,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
           type="button"
           onClick={handleSeedAchievements}
           disabled={seedLoading}
-          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+          className="rounded-lg bg-amber-600 px-4 py-2 text-body font-medium text-white hover:bg-amber-700 disabled:opacity-50"
         >
           {seedLoading ? "Seeding..." : "Seed all"}
         </button>
@@ -178,7 +178,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
           type="button"
           onClick={handleSyncNames}
           disabled={syncLoading}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+          className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {syncLoading ? "Syncing..." : "Sync names"}
         </button>
@@ -187,7 +187,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
       {/* Action message */}
       {actionMsg && (
         <div
-          className={`rounded-lg p-3 text-sm ${actionMsg.ok ? "bg-green-500/10 border border-green-500/30 text-green-400" : "bg-red-500/10 border border-red-500/30 text-red-400"}`}
+          className={`rounded-lg p-3 text-body ${actionMsg.ok ? "bg-green-500/10 border border-green-500/30 text-green-400" : "bg-red-500/10 border border-red-500/30 text-red-400"}`}
         >
           {actionMsg.text}
         </div>
@@ -205,7 +205,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 px-4 py-3 text-body font-medium transition-colors ${
                 activeTab === tab.id
                   ? "border-b-2 border-primary bg-card text-foreground"
                   : "text-muted hover:text-foreground"
@@ -221,11 +221,11 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
           {activeTab === "grant" && (
             <form onSubmit={handleGrant} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium">Character</label>
+                <label className="mb-2 block text-body font-medium">Character</label>
                 <select
                   value={grantCharacterId}
                   onChange={(e) => setGrantCharacterId(e.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">Select character</option>
                   {characters.map((c) => (
@@ -236,11 +236,11 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Achievement</label>
+                <label className="mb-2 block text-body font-medium">Achievement</label>
                 <select
                   value={grantSlug}
                   onChange={(e) => setGrantSlug(e.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">Select achievement</option>
                   {achievements.map((a) => (
@@ -253,7 +253,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
               <button
                 type="submit"
                 disabled={actionLoading || !grantCharacterId || !grantSlug}
-                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 Grant achievement
               </button>
@@ -263,11 +263,11 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
           {activeTab === "revoke" && (
             <form onSubmit={handleRevoke} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium">Character</label>
+                <label className="mb-2 block text-body font-medium">Character</label>
                 <select
                   value={revokeCharacterId}
                   onChange={(e) => setRevokeCharacterId(e.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">Select character</option>
                   {characters.map((c) => (
@@ -278,11 +278,11 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Achievement</label>
+                <label className="mb-2 block text-body font-medium">Achievement</label>
                 <select
                   value={revokeSlug}
                   onChange={(e) => setRevokeSlug(e.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">Select achievement</option>
                   {achievements.map((a) => (
@@ -295,7 +295,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
               <button
                 type="submit"
                 disabled={actionLoading || !revokeCharacterId || !revokeSlug}
-                className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-red-600 px-4 py-2.5 text-body font-medium text-white hover:bg-red-700 disabled:opacity-50"
               >
                 Revoke achievement
               </button>
@@ -305,11 +305,11 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
           {activeTab === "bulk" && (
             <form onSubmit={handleBulkGrant} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium">Achievement</label>
+                <label className="mb-2 block text-body font-medium">Achievement</label>
                 <select
                   value={bulkSlug}
                   onChange={(e) => setBulkSlug(e.target.value)}
-                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   {achievements.map((a) => (
                     <option key={a.id} value={a.slug}>
@@ -318,14 +318,14 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
                   ))}
                 </select>
               </div>
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-400">
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-body text-amber-400">
                 ⚠ This will grant the selected achievement to{" "}
                 <strong>all {characters.length} characters</strong>.
               </div>
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-amber-600 px-4 py-2.5 text-body font-medium text-white hover:bg-amber-700 disabled:opacity-50"
               >
                 Grant to all characters
               </button>
@@ -338,12 +338,12 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
       <div className="rounded-xl border border-card-border bg-card overflow-hidden">
         <div className="border-b border-card-border bg-background px-4 py-3">
           <h3 className="font-semibold">All achievements</h3>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-0.5 text-body-sm text-muted">
             {achievements.length} total achievement{achievements.length !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr className="border-b border-card-border bg-card/50">
                 <th className="px-4 py-3 text-left font-medium">Icon</th>
@@ -363,7 +363,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
                     <AchievementIcon name={a.icon} className="h-5 w-5 text-muted" />
                   </td>
                   <td className="px-4 py-3 font-medium">{a.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted">{a.slug}</td>
+                  <td className="px-4 py-3 font-mono text-body-sm text-muted">{a.slug}</td>
                   <td className="px-4 py-3 capitalize text-muted">{a.category}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular-nums">
                     {a.earnedCount}

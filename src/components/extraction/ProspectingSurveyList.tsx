@@ -22,7 +22,7 @@ export function ProspectingSurveyList({
 }: ProspectingSurveyListProps) {
   if (loading) {
     return (
-      <div className="py-4 text-center text-xs text-muted animate-pulse">Loading surveys…</div>
+      <div className="py-4 text-center text-body-sm text-muted animate-pulse">Loading surveys…</div>
     );
   }
 
@@ -33,7 +33,7 @@ export function ProspectingSurveyList({
     .slice(0, 5);
 
   if (active.length === 0 && resolved.length === 0) {
-    return <p className="text-xs text-muted">No geological surveys yet.</p>;
+    return <p className="text-body-sm text-muted">No geological surveys yet.</p>;
   }
 
   return (
@@ -46,12 +46,12 @@ export function ProspectingSurveyList({
             return (
               <div
                 key={s._id}
-                className="flex items-center justify-between rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg border border-card-border bg-card-elevated/40 px-3 py-2 text-body"
               >
                 <span className="font-medium text-foreground">
                   {COMMODITY_LABELS[s.resource] ?? s.resource}
                 </span>
-                <span className="text-xs text-muted tabular-nums">
+                <span className="text-body-sm text-muted tabular-nums">
                   {turnsLeft === 0
                     ? "Resolving next turn"
                     : `${turnsLeft} turn${turnsLeft === 1 ? "" : "s"} left`}
@@ -68,18 +68,18 @@ export function ProspectingSurveyList({
           {resolved.map((s) => (
             <div
               key={s._id}
-              className="flex items-center justify-between rounded-lg border border-card-border px-3 py-2 text-sm"
+              className="flex items-center justify-between rounded-lg border border-card-border px-3 py-2 text-body"
             >
               <span className="font-medium text-foreground">
                 {COMMODITY_LABELS[s.resource] ?? s.resource}
               </span>
               {s.status === "succeeded" ? (
-                <span className="text-xs font-medium text-success">
+                <span className="text-body-sm font-medium text-success">
                   Struck deposits
                   {s.capacityGained ? ` (+${s.capacityGained.toLocaleString("en-US")})` : ""}
                 </span>
               ) : (
-                <span className="text-xs font-medium text-muted">Came up dry</span>
+                <span className="text-body-sm font-medium text-muted">Came up dry</span>
               )}
             </div>
           ))}

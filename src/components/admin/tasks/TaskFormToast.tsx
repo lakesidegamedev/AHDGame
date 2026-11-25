@@ -57,10 +57,10 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
       <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up">
         <div className="mx-auto max-w-2xl rounded-t-xl border border-card-border bg-card shadow-2xl">
           <div className="flex items-center justify-between border-b border-card-border px-5 py-3">
-            <h2 className="text-sm font-semibold">New task</h2>
+            <h2 className="text-body font-semibold">New task</h2>
             <button
               onClick={onClose}
-              className="text-muted hover:text-foreground transition-colors text-lg leading-none"
+              className="text-muted hover:text-foreground transition-colors text-heading leading-none"
             >
               ×
             </button>
@@ -77,7 +77,7 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
                 maxLength={200}
                 required
                 autoFocus
-                className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-body placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -89,7 +89,7 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 required
                 rows={3}
-                className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-body placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary resize-none"
               />
             </div>
 
@@ -99,7 +99,7 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as TaskType)}
-                  className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="bug">Bug</option>
                   <option value="feature">Feature</option>
@@ -110,7 +110,7 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                  className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-body focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -127,25 +127,25 @@ export function TaskFormToast({ onCreated, onClose }: TaskFormToastProps) {
                 placeholder="Tags (comma-separated, e.g. uk, elections)"
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
-                className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded border border-card-border bg-card-elevated px-3 py-2 text-body placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
-            <InlineError error={error} className="text-xs text-red-500" />
+            <InlineError error={error} className="text-body-sm text-red-500" />
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-1.5 rounded text-sm border border-card-border hover:bg-card-elevated transition-colors"
+                className="px-4 py-1.5 rounded text-body border border-card-border hover:bg-card-elevated transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-1.5 rounded text-sm bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
+                className="px-4 py-1.5 rounded text-body bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
               >
                 {submitting ? "Saving…" : "Save task"}
               </button>

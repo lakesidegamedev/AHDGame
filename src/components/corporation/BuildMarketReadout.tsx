@@ -72,8 +72,8 @@ export default function BuildMarketReadout({
       data-testid="build-market-readout"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-body-sm font-semibold text-foreground">{t("title")}</h3>
-        <span className="text-body-xs text-muted">{t("lastTurn")}</span>
+        <h3 className="text-body-lg font-semibold text-foreground">{t("title")}</h3>
+        <span className="text-body-sm text-muted">{t("lastTurn")}</span>
       </div>
       <p className="mt-1 text-body-sm text-foreground" data-testid="build-market-headline">
         {headline}
@@ -83,8 +83,8 @@ export default function BuildMarketReadout({
           <ProductRow key={product.commodity} product={product} site={site} sites={sites} />
         ))}
       </ul>
-      {capSignal && <p className="mt-3 text-body-xs text-muted">{t("capNote")}</p>}
-      <p className="mt-3 text-body-xs text-muted">{t("notALimit")}</p>
+      {capSignal && <p className="mt-3 text-body-sm text-muted">{t("capNote")}</p>}
+      <p className="mt-3 text-body-sm text-muted">{t("notALimit")}</p>
     </section>
   );
 }
@@ -137,7 +137,7 @@ function ProductRow({
           {COMMODITY_LABELS[product.commodity]}
         </span>
         <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-body-xs font-semibold ${chip.cls}`}
+          className={`shrink-0 rounded-full border px-2 py-0.5 text-body-sm font-semibold ${chip.cls}`}
         >
           {chip.text}
         </span>
@@ -154,7 +154,7 @@ function ProductRow({
           <div className="h-full bg-muted" style={{ width: `${filledPct}%` }} />
         </div>
       )}
-      <p className="mt-1 text-body-xs text-muted">
+      <p className="mt-1 text-body-sm text-muted">
         {product.ordered != null && product.filled != null && (
           <span className="tabular-nums">
             {t("orderedFilled", { ordered: units(product.ordered), filled: units(product.filled) })}

@@ -58,13 +58,13 @@ export function NationDetailPanel({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px 10px" }}>
-        <span style={{ fontSize: 26, lineHeight: 1 }}>{detail.flag}</span>
+        <span style={{ fontSize: 30, lineHeight: 1 }}>{detail.flag}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontFamily: headingFont,
               fontWeight: 700,
-              fontSize: 18,
+              fontSize: 20,
               color: "#f3f1ea",
               lineHeight: 1.05,
             }}
@@ -98,7 +98,7 @@ export function NationDetailPanel({
             background: "#1d1d2a",
             color: "#8a8a9a",
             cursor: "pointer",
-            fontSize: 13,
+            fontSize: 12,
             lineHeight: 1,
           }}
         >

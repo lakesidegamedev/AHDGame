@@ -32,7 +32,7 @@ function Chamber({
   return (
     <section className="min-w-0 rounded-xl border border-card-border bg-card p-5 sm:p-6">
       <div className="flex items-baseline justify-between gap-3 border-b border-card-border pb-3">
-        <h3 className="text-heading-sm font-semibold text-foreground">{title}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{title}</h3>
         <span className="shrink-0 text-body-sm text-muted">{meta}</span>
       </div>
       {children}

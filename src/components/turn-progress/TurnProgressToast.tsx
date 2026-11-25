@@ -122,11 +122,11 @@ export function TurnProgressToast() {
         <div className="flex items-start gap-2 p-3">
           <div className="min-w-0 flex-1">
             <p className="text-body-sm font-medium text-muted">{heading}</p>
-            <p className="mt-0.5 truncate text-sm text-foreground">{body}</p>
+            <p className="mt-0.5 truncate text-body text-foreground">{body}</p>
           </div>
           <button
             type="button"
-            className="rounded-md px-1.5 py-0.5 text-base leading-none text-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+            className="rounded-md px-1.5 py-0.5 text-body-lg leading-none text-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
             aria-label={t("dismiss")}
             onClick={() => dispatch({ type: "dismiss" })}
           >
@@ -156,7 +156,7 @@ export function TurnProgressToast() {
           <div className="flex justify-end px-3 pb-3">
             <button
               type="button"
-              className="rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+              className="rounded-md px-2 py-1 text-body-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
               onClick={() => {
                 dispatch({ type: "retry", nowMs: Date.now() });
                 void refreshGameTurnStatus();

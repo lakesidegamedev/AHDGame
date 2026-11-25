@@ -55,7 +55,7 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-card-border bg-background/50 p-3">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
+      <div className="mt-1 text-heading font-semibold tabular-nums">{value}</div>
     </div>
   );
 }
@@ -63,16 +63,16 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 function CountList({ title, rows }: { title: string; rows: CountRow[] }) {
   return (
     <div>
-      <h3 className="mb-2 text-sm font-semibold text-muted">{title}</h3>
+      <h3 className="mb-2 text-body-lg font-semibold text-muted">{title}</h3>
       <div className="space-y-1">
         {rows.slice(0, 8).map((row) => (
-          <div key={row.key} className="flex items-center justify-between gap-3 text-xs">
+          <div key={row.key} className="flex items-center justify-between gap-3 text-body-sm">
             <span className="truncate">{row.key.replaceAll("_", " ")}</span>
             <span className="tabular-nums text-muted">{row.count}</span>
           </div>
         ))}
         {rows.length === 0 ? (
-          <p className="text-xs text-muted">No records in this window.</p>
+          <p className="text-body-sm text-muted">No records in this window.</p>
         ) : null}
       </div>
     </div>
@@ -108,14 +108,14 @@ export function ForeignPolicyLedgerPanel() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-card-border bg-card p-4 text-sm text-muted">
+      <div className="rounded-lg border border-card-border bg-card p-4 text-body text-muted">
         Loading ledger...
       </div>
     );
   }
   if (error || !data) {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-card p-4 text-sm text-red-400">
+      <div className="rounded-lg border border-red-500/30 bg-card p-4 text-body text-red-400">
         {error || "Foreign policy ledger is unavailable."}
       </div>
     );
@@ -126,8 +126,8 @@ export function ForeignPolicyLedgerPanel() {
     <div className="rounded-lg border border-card-border bg-card p-4">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Autonomous foreign policy ledger</h2>
-          <p className="mt-1 text-xs text-muted">
+          <h2 className="text-body font-semibold">Autonomous foreign policy ledger</h2>
+          <p className="mt-1 text-body-sm text-muted">
             Turns {data.fromTurn} to {data.throughTurn}. Rollout {data.rollout.mode}, capability{" "}
             {data.rollout.stage}.
           </p>
@@ -135,7 +135,7 @@ export function ForeignPolicyLedgerPanel() {
         <button
           type="button"
           onClick={() => void load()}
-          className="rounded-md border border-card-border px-3 py-1.5 text-xs text-muted hover:text-foreground"
+          className="rounded-md border border-card-border px-3 py-1.5 text-body-sm text-muted hover:text-foreground"
         >
           Refresh
         </button>
@@ -158,7 +158,7 @@ export function ForeignPolicyLedgerPanel() {
       </div>
 
       <div className="mt-4 overflow-x-auto border-t border-card-border pt-4">
-        <table className="w-full min-w-[32rem] text-left text-xs">
+        <table className="w-full min-w-[32rem] text-left text-body-sm">
           <thead className="text-body-sm font-medium text-muted">
             <tr>
               <th className="pb-2">Country</th>
@@ -182,7 +182,7 @@ export function ForeignPolicyLedgerPanel() {
         </table>
       </div>
 
-      <p className="mt-4 border-t border-card-border pt-3 text-[11px] text-muted">
+      <p className="mt-4 border-t border-card-border pt-3 text-body-sm text-muted">
         Active embargoes: {data.embargoes.active} across {data.embargoes.activePairs} pairs. Average
         temporary duration: {data.embargoes.averageTemporaryDurationTurns} turns. Latest gross
         trade: {data.trade.grossVolume.toLocaleString()} (
@@ -192,7 +192,7 @@ export function ForeignPolicyLedgerPanel() {
         ).
       </p>
       {data.documentLimitReached ? (
-        <p className="mt-2 text-[11px] text-amber-400">
+        <p className="mt-2 text-body-sm text-amber-400">
           The bounded ledger limit was reached. Narrow the operational review window before drawing
           completeness conclusions.
         </p>

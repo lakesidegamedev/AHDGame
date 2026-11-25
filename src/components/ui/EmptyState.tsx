@@ -36,14 +36,14 @@ export function EmptyState({
         </div>
       )}
       <p className="font-medium text-foreground">{title}</p>
-      {description && <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>}
+      {description && <p className="mt-1 max-w-sm text-body text-muted">{description}</p>}
       {hasAction && (
         <div className="mt-4">
           {action ??
             (actionHref ? (
               <Link
                 href={actionHref}
-                className="inline-block rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium transition-colors duration-150 hover:border-card-border/80 hover:bg-card/80"
+                className="inline-block rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium transition-colors duration-150 hover:border-card-border/80 hover:bg-card/80"
               >
                 {actionLabel}
               </Link>
@@ -51,7 +51,7 @@ export function EmptyState({
               <button
                 type="button"
                 onClick={onAction}
-                className="inline-block rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium transition-colors duration-150 hover:border-card-border/80 hover:bg-card/80"
+                className="inline-block rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium transition-colors duration-150 hover:border-card-border/80 hover:bg-card/80"
               >
                 {actionLabel}
               </button>

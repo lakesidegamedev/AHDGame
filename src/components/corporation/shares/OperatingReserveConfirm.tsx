@@ -61,15 +61,23 @@ export function OperatingReserveConfirmDialog({ state }: { state: OperatingReser
         aria-labelledby="operating-reserve-confirm-title"
         className="w-full max-w-sm rounded-2xl border border-warning/40 bg-card p-5 shadow-modal space-y-3"
       >
-        <h3 id="operating-reserve-confirm-title" className="text-sm font-semibold text-foreground">
+        <h3
+          id="operating-reserve-confirm-title"
+          className="text-body-lg font-semibold text-foreground"
+        >
           This leaves your plants short of cash
         </h3>
-        <p className="text-xs leading-relaxed text-muted">{state.pending.message}</p>
-        <p className="text-xs leading-relaxed text-muted">
+        <p className="text-body-sm leading-relaxed text-muted">{state.pending.message}</p>
+        <p className="text-body-sm leading-relaxed text-muted">
           A plant that cannot pay its wages and inputs runs short or stops next turn.
         </p>
         <div className="flex items-center justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={state.cancel} disabled={state.busy} className="text-sm">
+          <Button
+            variant="ghost"
+            onClick={state.cancel}
+            disabled={state.busy}
+            className="text-body"
+          >
             Cancel
           </Button>
           <Button
@@ -77,7 +85,7 @@ export function OperatingReserveConfirmDialog({ state }: { state: OperatingReser
             onClick={() => void state.confirm()}
             disabled={state.busy}
             isLoading={state.busy}
-            className="text-sm"
+            className="text-body"
           >
             Buy anyway
           </Button>

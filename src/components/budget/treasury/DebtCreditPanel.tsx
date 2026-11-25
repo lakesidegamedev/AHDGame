@@ -47,12 +47,10 @@ function KV({
         {label}
       </div>
       <div className="mt-0.5 flex items-baseline gap-1.5">
-        <span className="font-mono text-[15px] font-bold tabular-nums text-foreground">
-          {value}
-        </span>
+        <span className="font-mono text-body font-bold tabular-nums text-foreground">{value}</span>
         {delta}
       </div>
-      {sub ? <div className="mt-0.5 text-[11px] leading-snug text-muted">{sub}</div> : null}
+      {sub ? <div className="mt-0.5 text-body-sm leading-snug text-muted">{sub}</div> : null}
     </div>
   );
 }
@@ -108,10 +106,10 @@ export function DebtCreditPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-foreground">Debt &amp; credit</div>
+        <div className="text-body font-semibold text-foreground">Debt &amp; credit</div>
         <span
           title="Sovereign credit rating, set from debt-to-GDP and the country's sovereign risk anchor. The bond pages show this same rating."
-          className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${ratingClasses(rating)}`}
+          className={`rounded-full border px-2 py-0.5 text-body-sm font-semibold ${ratingClasses(rating)}`}
         >
           {rating}
         </span>
@@ -151,7 +149,7 @@ export function DebtCreditPanel({
         <KV label={ceilingLabel} value={money(ceiling)} />
       </div>
 
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         Interest is charged at the coupons the existing bonds were issued at, so the average rate
         paid sits between old and new rates. The new borrowing rate is what bonds issued or rolled
         over today would pay.
@@ -162,7 +160,7 @@ export function DebtCreditPanel({
         <div className="relative h-4 w-full overflow-hidden rounded bg-card-muted">
           <div className={`h-full transition-all ${barTone}`} style={{ width: `${barFill}%` }} />
         </div>
-        <div className="relative mt-0.5 h-4 text-[10px] text-muted">
+        <div className="relative mt-0.5 h-4 text-body-sm text-muted">
           {DG_THRESHOLDS.map((t) => (
             <span
               key={t.label}
@@ -174,8 +172,8 @@ export function DebtCreditPanel({
           ))}
         </div>
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-[10px] text-muted">D/G scale · 0–200%</span>
-          <span className="text-[10px] text-muted">
+          <span className="text-body-sm text-muted">D/G scale · 0–200%</span>
+          <span className="text-body-sm text-muted">
             Ceiling use{" "}
             <span
               className={`font-semibold ${ceilingUse > 0.95 ? "text-error" : ceilingUse > 0.85 ? "text-warning" : "text-foreground"}`}
@@ -191,7 +189,7 @@ export function DebtCreditPanel({
         <div className="mt-4 flex items-center justify-between rounded-lg border border-card-border bg-card-muted p-3">
           <div>
             <div className="text-body-sm font-medium text-muted">Debt-to-GDP trend</div>
-            <div className="text-[11px] text-muted">{trendRange}</div>
+            <div className="text-body-sm text-muted">{trendRange}</div>
           </div>
           <Sparkline data={trend} w={180} h={42} color={trendColor} />
         </div>

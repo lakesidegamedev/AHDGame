@@ -49,7 +49,7 @@ export function EstatesFlagship({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-md px-3 py-1.5 text-[12px] font-semibold ${
+            className={`rounded-md px-3 py-1.5 text-body-sm font-semibold ${
               tab === t.id
                 ? "bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] text-gov-soft"
                 : "text-muted hover:text-foreground"

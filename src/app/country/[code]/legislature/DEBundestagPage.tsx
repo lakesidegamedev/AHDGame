@@ -87,10 +87,10 @@ function BillsTab({
   if (!isBundestag) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-10 text-center">
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-body font-medium text-foreground">
           Bundesrat legislation is not player-managed.
         </p>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-body-sm text-muted">
           The Bundesrat is appointed by state governments, so active federal bills are proposed and
           voted through the Bundestag flow.
         </p>
@@ -99,7 +99,7 @@ function BillsTab({
   }
 
   if (!bills) {
-    return <p className="text-center text-sm text-muted py-12">Bills data unavailable.</p>;
+    return <p className="text-center text-body text-muted py-12">Bills data unavailable.</p>;
   }
 
   const {
@@ -117,18 +117,18 @@ function BillsTab({
       {(canPropose || hasActiveBill) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-body font-medium text-foreground">
               {adminOverride
                 ? "Admin — propose a Bundestag bill"
                 : "You are a seated MdB — propose a bill"}
             </p>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Opens to a vote among seated Bundestag members immediately.
             </p>
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Propose bill
           </button>
@@ -143,7 +143,7 @@ function BillsTab({
 
       <BillsList bills={filtered} onVoted={onProposed} />
 
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {filtered.length} bill{filtered.length !== 1 ? "s" : ""} total
       </p>
 
@@ -213,7 +213,7 @@ function LeadershipTab({
   }
 
   if (!leaders) {
-    return <p className="text-center text-sm text-muted py-12">Leadership data unavailable.</p>;
+    return <p className="text-center text-body text-muted py-12">Leadership data unavailable.</p>;
   }
 
   return (
@@ -222,8 +222,8 @@ function LeadershipTab({
         <div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3">
           <div className="mb-2 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Dissolve the Bundestag</p>
-              <p className="text-xs text-muted">
+              <p className="text-body font-medium text-foreground">Dissolve the Bundestag</p>
+              <p className="text-body-sm text-muted">
                 As Chancellor, you may call a snap election. All active legislation will fail.
               </p>
             </div>
@@ -276,7 +276,7 @@ function LeadershipTab({
       <BundestagspraesidentPanel />
 
       <div className="rounded-xl border border-card-border/40 bg-card-muted/30 p-4">
-        <p className="text-xs text-muted leading-relaxed">
+        <p className="text-body-sm text-muted leading-relaxed">
           The Federal Chancellor is elected by the Bundestag and leads the federal government. The
           Bundestagspräsident presides over the Bundestag and ranks second in the constitutional
           order of precedence after the Bundespräsident. The Opposition Leader heads the largest

@@ -73,7 +73,7 @@ export function PrimaryElectoralMap({
         />
       </div>
       {!hasData && (
-        <div className="mt-4 px-2 text-sm text-muted">
+        <div className="mt-4 px-2 text-body text-muted">
           No primary data yet. State colors appear as the stagger window progresses.
         </div>
       )}

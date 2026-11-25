@@ -310,7 +310,7 @@ export default function CrisisActionCard() {
                 </span>
                 <SeverityTag band={severity} />
                 {needsDecision && (
-                  <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-body-xs font-semibold text-warning">
+                  <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-body-sm font-semibold text-warning">
                     Your decision
                   </span>
                 )}
@@ -337,7 +337,7 @@ export default function CrisisActionCard() {
             tags={
               <>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-body-xs font-medium ${styles.badge}`}
+                  className={`rounded-full px-2 py-0.5 text-body-sm font-medium ${styles.badge}`}
                 >
                   {crisis.scope === "global"
                     ? "Global"
@@ -345,7 +345,7 @@ export default function CrisisActionCard() {
                       ? "National"
                       : "Regional"}
                 </span>
-                <span className="text-body-xs text-muted">{styles.label}</span>
+                <span className="text-body-sm text-muted">{styles.label}</span>
               </>
             }
             aside={
@@ -417,7 +417,7 @@ export default function CrisisActionCard() {
                 {/* Collective Progress */}
                 {currentNode.type === "collective" && interaction && (
                   <div className="mb-3">
-                    <div className="flex items-center justify-between text-xs mb-1">
+                    <div className="flex items-center justify-between text-body-sm mb-1">
                       <span className="text-muted">Response fund</span>
                       <span className="tabular-nums">
                         {formatMoney(interaction.collectiveCurrent)} /{" "}
@@ -433,7 +433,7 @@ export default function CrisisActionCard() {
                       />
                     </div>
                     {interaction.contributors.length > 0 && (
-                      <p className="text-xs text-muted mt-1">
+                      <p className="text-body-sm text-muted mt-1">
                         {interaction.contributors.length} contributor
                         {interaction.contributors.length === 1 ? "" : "s"}
                       </p>
@@ -447,7 +447,7 @@ export default function CrisisActionCard() {
                 {currentNode.type === "aid" && (
                   <Link
                     href={`/world/crises/${crisis._id.toString()}`}
-                    className="inline-flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-card-elevated"
+                    className="inline-flex items-center gap-1 rounded-lg border border-card-border bg-card px-3 py-2 text-body font-medium text-primary transition-colors hover:bg-card-elevated"
                   >
                     Open the crisis to send aid or decline
                   </Link>
@@ -480,10 +480,12 @@ export default function CrisisActionCard() {
                               isSubmitting ? "animate-pulse" : ""
                             }`}
                           >
-                            <div className="text-sm font-medium text-foreground">
+                            <div className="text-body font-medium text-foreground">
                               {option.label}
                             </div>
-                            <div className="text-xs text-muted mt-0.5">{option.description}</div>
+                            <div className="text-body-sm text-muted mt-0.5">
+                              {option.description}
+                            </div>
                             {availability?.eligible === false && (
                               <ul className="mt-2 space-y-0.5 text-body-sm text-error">
                                 {availability.reasons.map((reason) => (
@@ -492,7 +494,7 @@ export default function CrisisActionCard() {
                               </ul>
                             )}
                             {option.collectiveContribution && (
-                              <div className="text-xs text-primary mt-1">
+                              <div className="text-body-sm text-primary mt-1">
                                 Contribute {formatMoney(option.collectiveContribution)}
                               </div>
                             )}

@@ -28,7 +28,7 @@ function CohortBar({
   } ${href ? "hover:border-primary/50" : ""}`;
   const inner = (
     <>
-      <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+      <div className="mb-1.5 flex items-center justify-between text-body-sm">
         <span className="font-semibold">{name}</span>
         <span className="font-mono text-muted">
           {share != null ? `${Math.round(share * 100)}% · ` : ""}
@@ -72,11 +72,11 @@ export function CohortBreakdown({
   return (
     <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted">Where the votes are</h2>
-        <span className="text-[11px] text-muted">tap a group to target your spend</span>
+        <h2 className="text-body font-semibold text-muted">Where the votes are</h2>
+        <span className="text-body-sm text-muted">tap a group to target your spend</span>
       </div>
       {rows.length === 0 ? (
-        <div className="text-[12.5px] font-bold text-muted">No cohort data for this region.</div>
+        <div className="text-body-sm font-bold text-muted">No cohort data for this region.</div>
       ) : (
         <div className="flex flex-col gap-2">
           {yesShare != null && (

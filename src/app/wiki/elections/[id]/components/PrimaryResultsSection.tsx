@@ -72,7 +72,7 @@ const PrimaryTrendChart = memo(function PrimaryTrendChart({
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
           <XAxis
             dataKey="t"
-            tick={{ fontSize: 10, fill: "var(--color-muted)" }}
+            tick={{ fontSize: 12, fill: "var(--color-muted)" }}
             interval={tickInterval - 1}
             tickLine={false}
             axisLine={false}
@@ -80,13 +80,13 @@ const PrimaryTrendChart = memo(function PrimaryTrendChart({
               value: "Turn",
               position: "insideBottomRight",
               offset: 0,
-              fontSize: 10,
+              fontSize: 12,
               fill: "var(--color-muted)",
             }}
           />
           <YAxis
             domain={[0, 100]}
-            tick={{ fontSize: 10, fill: "var(--color-muted)" }}
+            tick={{ fontSize: 12, fill: "var(--color-muted)" }}
             tickFormatter={(v) => `${v}%`}
             tickLine={false}
             axisLine={false}
@@ -106,7 +106,7 @@ const PrimaryTrendChart = memo(function PrimaryTrendChart({
             ]}
           />
           <Legend
-            wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+            wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
             formatter={(value) => <span style={{ color: "var(--color-muted)" }}>{value}</span>}
           />
           {names.map((name, i) => (
@@ -143,13 +143,13 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
         {hasTrend && (
           <button
             onClick={() => setShowTrend((v) => !v)}
-            className="text-xs text-muted hover:text-foreground transition-colors"
+            className="text-body-sm text-muted hover:text-foreground transition-colors"
           >
             {showTrend ? "Hide trend" : "Show trend"}
           </button>
         )}
       </div>
-      <p className="mb-4 text-sm text-muted">
+      <p className="mb-4 text-body text-muted">
         The primary phase determined each party&apos;s nominee through competitive intra-party
         contests. Results reflect weighted primary scores incorporating campaign performance
         metrics. The candidate with the highest score in each party secured that party&apos;s
@@ -177,7 +177,7 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
             <div className="mb-4 space-y-2">
               {party.candidates.map((candidate) => (
                 <div key={`primary-bar-${party.partyId}-${candidate.characterName}`}>
-                  <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                  <div className="mb-1 flex items-center justify-between gap-3 text-body-sm">
                     <span className="truncate font-medium text-foreground">
                       {candidate.characterName}
                     </span>
@@ -198,24 +198,24 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
 
             {/* Detail table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-card-border text-left">
-                    <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                    <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                       Candidate
                     </th>
-                    <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                    <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                       Primary score
                     </th>
-                    <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                    <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                       Share
                     </th>
                     {party.candidates.some((c) => c.delegates != null) && (
-                      <th className="border-b border-card-border py-1.5 pr-4 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                      <th className="border-b border-card-border py-1.5 pr-4 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                         Delegates
                       </th>
                     )}
-                    <th className="border-b border-card-border py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                    <th className="border-b border-card-border py-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                       Result
                     </th>
                   </tr>
@@ -242,7 +242,7 @@ export const PrimaryResultsSection = memo(function PrimaryResultsSection({
                       )}
                       <td className="py-2">
                         {c.won ? (
-                          <span className="rounded bg-success/10 border border-success/25 px-2 py-0.5 text-xs font-medium text-success">
+                          <span className="rounded bg-success/10 border border-success/25 px-2 py-0.5 text-body-sm font-medium text-success">
                             Nominee
                           </span>
                         ) : (

@@ -48,15 +48,15 @@ export function LoansPane({
   if (!hasOutstanding && !Object.values(s.accountsOpened).some(Boolean)) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6 text-center space-y-3 shadow-sm">
-        <p className="text-sm font-semibold text-foreground">No active loan</p>
-        <p className="text-xs text-muted">
+        <p className="text-body font-semibold text-foreground">No active loan</p>
+        <p className="text-body-sm text-muted">
           Open a line of credit at your home central bank. Requires bond income, a CEO salary, or
           dividends to qualify.
         </p>
         {homeCurrency && (
           <Link
             href={managePath}
-            className="inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="inline-block rounded-lg bg-primary px-4 py-2 text-body font-semibold text-primary-foreground hover:bg-primary/90"
           >
             Open at {countryId.toUpperCase()} central bank →
           </Link>
@@ -77,10 +77,10 @@ export function LoansPane({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-body-sm font-medium text-muted mb-1">Your rate</p>
-            <p className="text-2xl font-bold text-foreground tabular-nums">
+            <p className="text-heading font-bold text-foreground tabular-nums">
               {s.effectiveRatePercent.toFixed(2)}% p.a.
             </p>
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-body-sm text-muted mt-0.5">
               policy {s.homePrimePercent.toFixed(2)}% {spreadSign}
               {s.spreadPercentPoints.toFixed(2)}% spread
               {typeof policySpread === "number"
@@ -90,11 +90,11 @@ export function LoansPane({
           </div>
           <div className="text-right">
             <p className="text-body-sm font-medium text-muted mb-1">Outstanding</p>
-            <p className="text-2xl font-bold text-error tabular-nums">
+            <p className="text-heading font-bold text-error tabular-nums">
               {formatAmount(s.outstandingInternal)}
             </p>
             {s.drawFrozen && (
-              <p className="text-xs font-semibold text-warning mt-0.5">Draws frozen</p>
+              <p className="text-body-sm font-semibold text-warning mt-0.5">Draws frozen</p>
             )}
           </div>
         </div>
@@ -102,7 +102,7 @@ export function LoansPane({
         {/* DTI usage bar */}
         {!noIncome && (
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-muted mb-1.5">
+            <div className="flex justify-between text-body-sm text-muted mb-1.5">
               <span>Credit used ({(usedPct * 100).toFixed(0)}%)</span>
               <span>
                 Limit {formatAmount(s.perPlayerLimitInternal)} · available{" "}
@@ -117,7 +117,7 @@ export function LoansPane({
                 style={{ width: `${(usedPct * 100).toFixed(1)}%` }}
               />
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-muted tabular-nums">
+            <div className="mt-1.5 flex flex-wrap gap-x-3 text-body-sm text-muted tabular-nums">
               <span>
                 Income cap:{" "}
                 <span
@@ -143,18 +143,18 @@ export function LoansPane({
                 </span>
               </span>
             </div>
-            {s.collateralNote && <p className="mt-1 text-[10px] text-muted">{s.collateralNote}</p>}
+            {s.collateralNote && <p className="mt-1 text-body-sm text-muted">{s.collateralNote}</p>}
           </div>
         )}
 
         {noIncome && (
-          <div className="mt-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+          <div className="mt-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-body-sm text-warning">
             No qualifying income — bond coupons, CEO salary, or dividends required to borrow.
           </div>
         )}
 
         {(s.garnishedPerTurnInternal ?? 0) > 0 && (
-          <div className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-xs">
+          <div className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-body-sm">
             <span className="font-semibold text-error">Garnishment active</span>
             <span className="ml-1.5 text-muted">
               Your account is in distress. ~{formatAmount(s.garnishedPerTurnInternal!)}/turn of bond
@@ -179,13 +179,13 @@ export function LoansPane({
                 return (
                   <div
                     key={ccy}
-                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-body"
                   >
                     <span className="flex items-center gap-1.5">
                       <span className="font-semibold text-foreground">{ccy}</span>
                       {s.paymentMode?.[ccy as CurrencyCode] === "io" && (
                         <span
-                          className="rounded border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-warning"
+                          className="rounded border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-warning"
                           title="Interest-only — principal stays flat until switched back to P/I"
                         >
                           I/O
@@ -217,7 +217,7 @@ export function LoansPane({
 
       <Link
         href={managePath}
-        className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10"
+        className="inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-body font-semibold text-primary hover:bg-primary/10"
       >
         Manage loan →
       </Link>

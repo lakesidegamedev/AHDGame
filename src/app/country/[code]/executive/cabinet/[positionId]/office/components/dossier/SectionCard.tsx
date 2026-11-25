@@ -25,8 +25,8 @@ export function SectionCard({
             </div>
           )}
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-foreground">{title}</div>
-            {sub && <div className="truncate text-[11px] text-muted">{sub}</div>}
+            <div className="truncate text-body font-semibold text-foreground">{title}</div>
+            {sub && <div className="truncate text-body-sm text-muted">{sub}</div>}
           </div>
         </div>
         {/* The action never squeezes: without shrink-0 a narrow screen compresses

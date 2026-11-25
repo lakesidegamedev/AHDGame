@@ -68,7 +68,7 @@ export function RegimeOffersInbox({ countryCode, partySequentialId }: Props) {
       className="rounded-lg border border-card-border bg-card p-4"
       data-testid="regime-offers-inbox"
     >
-      <h3 className="text-sm font-semibold text-foreground">Regime notifications</h3>
+      <h3 className="text-body-lg font-semibold text-foreground">Regime notifications</h3>
       <ul className="mt-2 space-y-2">
         {data.offers.map((o) => (
           <li
@@ -78,14 +78,14 @@ export function RegimeOffersInbox({ countryCode, partySequentialId }: Props) {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-sm text-foreground">{o.title}</div>
+                <div className="text-body text-foreground">{o.title}</div>
                 {o.subtype && (
-                  <div className="mt-0.5 text-xs text-muted">
+                  <div className="mt-0.5 text-body-sm text-muted">
                     {SUBTYPE_LABEL[o.subtype] ?? o.subtype}
                   </div>
                 )}
               </div>
-              <span className="shrink-0 text-xs text-muted">Turn {o.turn}</span>
+              <span className="shrink-0 text-body-sm text-muted">Turn {o.turn}</span>
             </div>
           </li>
         ))}

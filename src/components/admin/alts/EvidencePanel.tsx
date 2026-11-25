@@ -47,7 +47,7 @@ export function EvidencePanel({
 
   if (links.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed border-card-border px-4 py-8 text-center text-sm text-muted">
+      <p className="rounded-lg border border-dashed border-card-border px-4 py-8 text-center text-body text-muted">
         No pairwise links recorded for this cluster.
       </p>
     );
@@ -57,7 +57,7 @@ export function EvidencePanel({
     <div className="space-y-2">
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <h4 className="text-body-sm font-medium text-muted">Evidence by pair</h4>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {links.length} link{links.length === 1 ? "" : "s"}
           {isAdmin ? " · un-redacted (admin)" : " · network details masked"}
         </span>
@@ -127,7 +127,7 @@ function PairRow({ pairId, link, aName, bName, selected, onSelect }: PairRowProp
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-sm font-medium">
+        <span className="text-body font-medium">
           {aName} <span className="px-0.5 text-muted">↔</span> {bName}
         </span>
         <div className="ml-auto flex items-center gap-3">
@@ -137,7 +137,7 @@ function PairRow({ pairId, link, aName, bName, selected, onSelect }: PairRowProp
               return (
                 <span
                   key={i}
-                  className="rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+                  className="rounded-md px-1.5 py-0.5 text-body-sm font-medium"
                   style={{
                     backgroundColor: `${TIER_HEX[meta.tier]}1f`,
                     color: TIER_HEX[meta.tier],
@@ -148,7 +148,7 @@ function PairRow({ pairId, link, aName, bName, selected, onSelect }: PairRowProp
               );
             })}
             {firing.length > 4 && (
-              <span className="self-center text-[10px] text-muted">+{firing.length - 4}</span>
+              <span className="self-center text-body-sm text-muted">+{firing.length - 4}</span>
             )}
           </div>
           <ConfidenceBar value={link.confidence} widthClass="w-16" />
@@ -160,28 +160,28 @@ function PairRow({ pairId, link, aName, bName, selected, onSelect }: PairRowProp
           {firing.map((s, i) => {
             const meta = signalMeta(s.type);
             return (
-              <div key={i} className="flex items-start gap-2.5 text-sm">
+              <div key={i} className="flex items-start gap-2.5 text-body">
                 <span
                   className="mt-1.5 inline-block h-2 w-2 flex-shrink-0 rounded-full"
                   style={{ backgroundColor: TIER_HEX[meta.tier] }}
                 />
                 <div className="min-w-0">
                   <span className="font-medium">{meta.label}</span>
-                  <span className="ml-2 font-mono text-[11px] text-muted">
+                  <span className="ml-2 font-mono text-body-sm text-muted">
                     w {s.weight.toFixed(2)}
                   </span>
-                  <p className="text-xs leading-relaxed text-muted">{s.evidence}</p>
+                  <p className="text-body-sm leading-relaxed text-muted">{s.evidence}</p>
                 </div>
               </div>
             );
           })}
           {guarded.length > 0 && (
             <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-              <p className="mb-1 text-[11px] font-semibold text-emerald-400">
+              <p className="mb-1 text-body-sm font-semibold text-emerald-400">
                 Guarded to zero (not counted)
               </p>
               {guarded.map((s, i) => (
-                <p key={i} className="text-xs leading-relaxed text-muted">
+                <p key={i} className="text-body-sm leading-relaxed text-muted">
                   <span className="font-medium text-foreground/70">
                     {signalMeta(s.type).label}:
                   </span>{" "}

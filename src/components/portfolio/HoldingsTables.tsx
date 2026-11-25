@@ -128,7 +128,9 @@ export function StocksTable({
             return (
               <section key={term} className="space-y-2">
                 <h3 className="font-medium">{t(term)}</h3>
-                <p className="text-sm text-muted">{t(term === "short" ? "shortTax" : "longTax")}</p>
+                <p className="text-body text-muted">
+                  {t(term === "short" ? "shortTax" : "longTax")}
+                </p>
                 <StocksTable holdings={rows} showCostBasis={showCostBasis} />
               </section>
             );
@@ -139,7 +141,7 @@ export function StocksTable({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-body">
           <thead className="bg-card-elevated border-b border-card-border">
             <tr>
               <th className="px-4 py-3 text-muted text-body-sm font-medium w-[40%]">Corporation</th>
@@ -197,7 +199,7 @@ export function StocksTable({
                       </span>
                     </Link>
                     {h.purchaseLots && (
-                      <ul className="mt-2 space-y-1 text-xs text-muted">
+                      <ul className="mt-2 space-y-1 text-body-sm text-muted">
                         {h.purchaseLots.map((lot) => (
                           <li key={lot.acquiredTurn}>
                             {t("purchaseTurn", {
@@ -234,7 +236,7 @@ export function StocksTable({
                             {h.unrealizedPnl >= 0 ? "+" : ""}
                             {formatAmount(norm(h.unrealizedPnl, h.currencyCode), h.currencyCode)}
                             {h.unrealizedPnlPct != null && (
-                              <span className="block text-[10px] opacity-75">
+                              <span className="block text-body-sm opacity-75">
                                 {formatSignedPercent(h.unrealizedPnlPct)}
                               </span>
                             )}
@@ -253,7 +255,7 @@ export function StocksTable({
                     {sp(norm(h.sharePrice, h.currencyCode), h.currencyCode)}
                     {h.isPrivate && (
                       <span
-                        className="block text-[10px] opacity-75"
+                        className="block text-body-sm opacity-75"
                         title="Private shares have no market price. This is an estimated valuation."
                       >
                         valuation
@@ -287,15 +289,15 @@ export function BondsTable({
     <>
       {totalBondIncomePerTurn > 0 && (
         <div className="rounded-xl border border-success/20 bg-success/5 px-4 py-3 flex items-center justify-between">
-          <span className="text-xs text-muted">Income per turn from bond coupons</span>
-          <span className="text-sm font-bold text-success tabular-nums">
+          <span className="text-body-sm text-muted">Income per turn from bond coupons</span>
+          <span className="text-body font-bold text-success tabular-nums">
             +{formatAmount(totalBondIncomePerTurn)}
           </span>
         </div>
       )}
       <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead className="bg-card-elevated border-b border-card-border">
               <tr>
                 <th className="px-4 py-3 text-muted text-body-sm font-medium w-[30%]">Bond</th>
@@ -328,7 +330,7 @@ export function BondsTable({
                           {b.corporationName}
                         </span>
                         {b.defaulted && (
-                          <span className="text-[9px] bg-error/10 text-error px-1.5 py-0.5 rounded border border-error/20 font-bold uppercase">
+                          <span className="text-body-sm bg-error/10 text-error px-1.5 py-0.5 rounded border border-error/20 font-bold uppercase">
                             Defaulted
                           </span>
                         )}
@@ -349,7 +351,7 @@ export function BondsTable({
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/bond/${b.bondId}`}
-                        className="text-xs font-medium text-primary hover:underline"
+                        className="text-body-sm font-medium text-primary hover:underline"
                       >
                         Trade
                       </Link>

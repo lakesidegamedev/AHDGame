@@ -40,7 +40,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   return (
     <div className="mx-auto max-w-[860px] min-w-0 px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-foreground transition-colors">
           Wiki
         </Link>
@@ -49,13 +49,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       </nav>
 
       <div className="mb-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-3">
+        <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-3">
           Category
         </p>
-        <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="mb-2 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {category.name}
         </h1>
-        <p className="text-lg text-muted">{category.description}</p>
+        <p className="text-heading text-muted">{category.description}</p>
       </div>
 
       <div>
@@ -68,12 +68,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               className="group block border-b border-card-border/60 py-3"
             >
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[14px] font-semibold text-[var(--wiki-link)] group-hover:underline">
+                <span className="text-body font-semibold text-[var(--wiki-link)] group-hover:underline">
                   {page.title}
                 </span>
-                {diff && <span className="shrink-0 text-[11px] text-muted">{diff}</span>}
+                {diff && <span className="shrink-0 text-body-sm text-muted">{diff}</span>}
               </div>
-              <p className="mt-0.5 text-[13px] text-muted">{page.description}</p>
+              <p className="mt-0.5 text-body-sm text-muted">{page.description}</p>
             </Link>
           );
         })}

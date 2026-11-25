@@ -157,21 +157,21 @@ export function HomeStatePicker({
                     <span className="block truncate text-body font-medium">{state.name}</span>
                     {electorate ? (
                       <>
-                        <span className="block truncate font-mono text-body-xs text-muted">
+                        <span className="block truncate font-mono text-body-sm text-muted">
                           Electoral lean: {electoralLean}
                         </span>
-                        <span className="block truncate font-mono text-body-xs text-muted">
+                        <span className="block truncate font-mono text-body-sm text-muted">
                           Economic: {getLeanLabel(electorate.economic)} · Social:{" "}
                           {getSocialLeanLabel(electorate.social)}
                         </span>
                       </>
                     ) : (
-                      <span className="block truncate font-mono text-body-xs text-muted">
+                      <span className="block truncate font-mono text-body-sm text-muted">
                         Lean not yet derived
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 text-right font-mono text-body-xs text-muted">
+                  <span className="shrink-0 text-right font-mono text-body-sm text-muted">
                     <span className="block">{formatPopulation(state.population)}</span>
                     <span className="block">{playersHereSuffix(players)}</span>
                   </span>

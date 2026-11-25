@@ -163,7 +163,7 @@ export function SetupPanel() {
           </div>
           <div>
             <h2 className="font-semibold">{allReady ? "Server ready" : "Setup required"}</h2>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               {passCount}/{totalCount} checks passing
             </p>
           </div>
@@ -174,7 +174,7 @@ export function SetupPanel() {
           {Object.entries(checks).map(([key, ok]) => (
             <div
               key={key}
-              className="flex items-center gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body"
             >
               {ok ? (
                 <span className="text-green-500">&#10003;</span>
@@ -185,7 +185,7 @@ export function SetupPanel() {
                 {CHECK_LABELS[key] ?? key}
               </span>
               {status?.counts[key] != null && (
-                <span className="ml-auto text-xs text-muted">
+                <span className="ml-auto text-body-sm text-muted">
                   {status.counts[key === "gameConfig" ? key : key]}
                 </span>
               )}
@@ -194,7 +194,7 @@ export function SetupPanel() {
         </div>
 
         {status?.gameState && (
-          <p className="mt-3 text-xs text-muted">
+          <p className="mt-3 text-body-sm text-muted">
             Game state: Turn {status.gameState.currentTurn},{" "}
             {status.gameState.isActive ? "active" : "paused"}
           </p>
@@ -204,14 +204,14 @@ export function SetupPanel() {
       {/* IMF institution — required for corporate bailout admin tools */}
       <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
         <h3 className="mb-1 font-semibold">IMF institution corporation</h3>
-        <p className="mb-3 text-sm text-muted">
+        <p className="mb-3 text-body text-muted">
           Creates or repairs the &quot;International Monetary Fund&quot; corporation (USD, hidden
           from the exchange). Required before activating IMF bailouts from the Corporations admin
           panel. Choose two starting shareholders and which one is CEO; safe to re-run to repair
           ownership.
         </p>
         {imfStatus && (
-          <p className="mb-3 text-xs font-mono text-muted">
+          <p className="mb-3 text-body-sm font-mono text-muted">
             Status: {imfStatus.seeded ? "seeded" : "not seeded"}
             {imfStatus.corporationId ? ` — id ${imfStatus.corporationId}` : ""}
           </p>
@@ -223,19 +223,19 @@ export function SetupPanel() {
       {!allReady && (
         <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
           <h3 className="mb-1 font-semibold">Run setup</h3>
-          <p className="mb-4 text-sm text-muted">
+          <p className="mb-4 text-body text-muted">
             Seeds all reference data, initializes game state (paused), creates elected officials and
             cycle-1 elections, and ensures database indexes. Safe to run multiple times.
           </p>
 
           <div className="mb-4">
-            <label className="block text-xs text-muted mb-1.5">Scope</label>
+            <label className="block text-body-sm text-muted mb-1.5">Scope</label>
             <div className="flex gap-2">
               {[...registered, "all" as const].map((s) => (
                 <button
                   key={s}
                   onClick={() => setScope(s)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`rounded-lg border px-3 py-1.5 text-body font-medium transition-colors ${
                     scope === s
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-card-border bg-card text-muted hover:text-foreground"
@@ -250,7 +250,7 @@ export function SetupPanel() {
           <button
             onClick={runSetup}
             disabled={running}
-            className="min-h-[44px] rounded-lg bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+            className="min-h-[44px] rounded-lg bg-primary px-6 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
           >
             {running ? (
               <span className="flex items-center gap-2">
@@ -268,9 +268,9 @@ export function SetupPanel() {
       {result && (
         <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-5 shadow-sm">
           <h3 className="mb-2 font-semibold text-green-400">Setup complete</h3>
-          <p className="mb-3 text-sm text-muted">{result.message}</p>
+          <p className="mb-3 text-body text-muted">{result.message}</p>
           {result.logs.length > 0 && (
-            <details className="text-xs">
+            <details className="text-body-sm">
               <summary className="cursor-pointer text-muted hover:text-foreground transition-colors">
                 Show {result.logs.length} log entries
               </summary>
@@ -292,7 +292,7 @@ export function SetupPanel() {
       {/* Error */}
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 shadow-sm">
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-body text-red-400">{error}</p>
         </div>
       )}
     </div>

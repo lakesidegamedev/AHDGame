@@ -96,7 +96,7 @@ function PaletteDialog({ groups, onClose }: Omit<ControlPaletteProps, "open">) {
                 }`}
               >
                 <span>{r.tool.label}</span>
-                <span className="text-body-xs text-muted">{r.area}</span>
+                <span className="text-body-sm text-muted">{r.area}</span>
               </button>
             </li>
           ))}

@@ -67,7 +67,7 @@ export function BoardCard({
   return (
     <div
       id={`crisis-${crisis.id}`}
-      className={`overflow-hidden rounded-lg border bg-card text-sm ${BAND_ROW_CLASS[band]} ${
+      className={`overflow-hidden rounded-lg border bg-card text-body ${BAND_ROW_CLASS[band]} ${
         selected ? "border-primary" : "border-card-border"
       } ${resolved ? "opacity-70" : ""}`}
     >
@@ -87,12 +87,12 @@ export function BoardCard({
           <span className="block truncate font-semibold leading-snug text-foreground">
             {crisis.name}
           </span>
-          <span className="block truncate text-xs text-muted">
+          <span className="block truncate text-body-sm text-muted">
             {place} · {stageText(crisis)}
           </span>
         </span>
         {crisis.viewerCanAct && (
-          <span className="hidden shrink-0 text-xs font-medium text-success sm:inline">
+          <span className="hidden shrink-0 text-body-sm font-medium text-success sm:inline">
             You can respond
           </span>
         )}
@@ -105,7 +105,7 @@ export function BoardCard({
 
       {open && (
         <div className="space-y-3 border-t border-card-border p-3">
-          <div className="flex items-center gap-2 text-xs text-muted">
+          <div className="flex items-center gap-2 text-body-sm text-muted">
             <span
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ background: KIND_COLOR[crisis.kind] }}
@@ -116,11 +116,11 @@ export function BoardCard({
             {deadline && !resolved && <span className="text-warning">{deadline}</span>}
           </div>
 
-          <p className="text-sm text-foreground">{crisis.description}</p>
+          <p className="text-body text-foreground">{crisis.description}</p>
 
           {crisis.effects.length > 0 && (
             <div>
-              <h3 className="mb-1 text-xs font-semibold text-muted">What it does</h3>
+              <h3 className="mb-1 text-body-lg font-semibold text-muted">What it does</h3>
               <div className="flex flex-wrap gap-1.5">
                 {crisis.effects.map((effect, i) => (
                   <CrisisEffectChip key={i} effect={effect} />
@@ -133,9 +133,9 @@ export function BoardCard({
             <CrisisV2Strip crisisId={crisis.id} v2={crisis.v2} onPulled={onPulled} />
           )}
 
-          <p className="text-xs text-muted">{whoCanRespondText(crisis)}</p>
+          <p className="text-body-sm text-muted">{whoCanRespondText(crisis)}</p>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-muted">
             {crisis.exposure
               .filter((r) => r !== "office")
               .map((r) => (
@@ -172,11 +172,13 @@ export function ExposurePanel({
     .sort((a, b) => Number(b.viewerCanAct) - Number(a.viewerCanAct));
   return (
     <aside className="rounded-xl border border-card-border bg-card p-3">
-      <h2 className="text-sm font-semibold text-foreground">Your exposure</h2>
+      <h2 className="text-body font-semibold text-foreground">Your exposure</h2>
       {!authenticated ? (
-        <p className="mt-2 text-xs text-muted">Sign in with a character to see what touches you.</p>
+        <p className="mt-2 text-body-sm text-muted">
+          Sign in with a character to see what touches you.
+        </p>
       ) : touching.length === 0 ? (
-        <p className="mt-2 text-xs text-muted">
+        <p className="mt-2 text-body-sm text-muted">
           No active crisis touches your country, state, corporations, holdings or office.
         </p>
       ) : (
@@ -184,7 +186,7 @@ export function ExposurePanel({
           {touching.map((c) => {
             const deadline = formatDeadline(c.decisionDeadline);
             return (
-              <li key={c.id} className="rounded-lg border border-card-border p-2 text-xs">
+              <li key={c.id} className="rounded-lg border border-card-border p-2 text-body-sm">
                 <Link href={c.href} className="font-medium text-foreground hover:text-primary">
                   {c.name}
                 </Link>

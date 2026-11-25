@@ -103,7 +103,7 @@ export function ConversationShell({
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-5 sm:px-6">
       <p
-        className="font-mono text-body-xs uppercase tracking-[0.14em] text-muted"
+        className="font-mono text-body-sm uppercase tracking-[0.14em] text-muted"
         aria-live="polite"
       >
         Step {activeIndex + 1} of {steps.length}
@@ -127,7 +127,7 @@ export function ConversationShell({
                       : "border-card-border bg-card text-muted hover:border-primary/40 hover:text-foreground"
                   }`}
                 >
-                  <span aria-hidden className="font-mono text-body-xs">
+                  <span aria-hidden className="font-mono text-body-sm">
                     {i + 1}
                   </span>
                   {s.title}
@@ -141,7 +141,7 @@ export function ConversationShell({
                       : "border-card-border/50 text-muted/50"
                   }`}
                 >
-                  <span aria-hidden className="font-mono text-body-xs">
+                  <span aria-hidden className="font-mono text-body-sm">
                     {i + 1}
                   </span>
                   {s.title}
@@ -157,7 +157,7 @@ export function ConversationShell({
         <ol aria-label="Your answers so far" className="mt-4 space-y-2">
           {answered.map((s) => (
             <li key={s.id} className="rounded-lg border border-card-border bg-card px-3 py-2">
-              <p className="font-mono text-body-xs uppercase tracking-[0.14em] text-muted">
+              <p className="font-mono text-body-sm uppercase tracking-[0.14em] text-muted">
                 {s.title}
               </p>
               <div className="mt-1 flex items-start justify-between gap-3">
@@ -185,7 +185,7 @@ export function ConversationShell({
             id="conversation-step-heading"
             ref={headingRef}
             tabIndex={-1}
-            className="text-heading-sm font-semibold leading-tight outline-none"
+            className="text-heading font-semibold leading-tight outline-none"
           >
             {active.title}
           </h2>
@@ -196,7 +196,7 @@ export function ConversationShell({
       </section>
 
       {upcoming.length > 0 && (
-        <p className="mt-3 text-body-xs text-muted">
+        <p className="mt-3 text-body-sm text-muted">
           Up next: {upcoming.map((s) => s.title).join(", ")}
         </p>
       )}

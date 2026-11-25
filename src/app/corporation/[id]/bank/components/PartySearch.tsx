@@ -62,14 +62,14 @@ export function PartySearch({
         disabled={disabled}
         placeholder={kind === "character" ? "Search players by name" : "Search companies by name"}
         aria-label={kind === "character" ? "Search players" : "Search companies"}
-        className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none disabled:opacity-50"
+        className="h-8 w-full rounded-md border border-card-border bg-background px-2 text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none disabled:opacity-50"
       />
       {query.trim().length >= 2 && (
         <div className="divide-y divide-card-border rounded-md border border-card-border bg-card">
           {searching && visible.length === 0 ? (
-            <p className="px-2 py-1.5 text-xs text-muted">Searching...</p>
+            <p className="px-2 py-1.5 text-body-sm text-muted">Searching...</p>
           ) : visible.length === 0 ? (
-            <p className="px-2 py-1.5 text-xs text-muted">No match.</p>
+            <p className="px-2 py-1.5 text-body-sm text-muted">No match.</p>
           ) : (
             visible.map((party) => (
               <button
@@ -81,10 +81,10 @@ export function PartySearch({
                   setQuery("");
                   setAnswered({ term: "", results: [] });
                 }}
-                className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-[13px] hover:bg-card-elevated disabled:opacity-50"
+                className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-body-sm hover:bg-card-elevated disabled:opacity-50"
               >
                 <span className="truncate">{party.name}</span>
-                <span className="shrink-0 text-xs text-muted">
+                <span className="shrink-0 text-body-sm text-muted">
                   {party.ticker ?? (party.sequentialId != null ? `#${party.sequentialId}` : "")}
                 </span>
               </button>

@@ -21,8 +21,10 @@ function Figure({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">{label}</div>
-      <div className={`mt-0.5 truncate font-mono text-[13px] tabular-nums ${className}`}>
+      <div className="text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
+        {label}
+      </div>
+      <div className={`mt-0.5 truncate font-mono text-body-sm tabular-nums ${className}`}>
         {children}
       </div>
     </div>
@@ -78,7 +80,7 @@ export function SectorCards({
                 )}
                 <span className="truncate">{s.displayName ?? s.stateName}</span>
               </Link>
-              <span className="shrink-0 text-xs text-muted">
+              <span className="shrink-0 text-body-sm text-muted">
                 {s.sectorLabel}
                 {s.embargoSuspended && <span className="ml-1.5 text-error">embargo</span>}
                 {s.mothballed && <span className="ml-1.5">mothballed</span>}
@@ -86,10 +88,10 @@ export function SectorCards({
             </div>
             <SectorCrisisEffects effects={s.crisisEffects} />
             <div className="flex items-baseline justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+              <span className="text-body-sm font-semibold uppercase tracking-[0.1em] text-muted">
                 Revenue
               </span>
-              <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+              <span className="font-mono text-heading font-semibold tabular-nums text-foreground">
                 {hasRevenue ? est(fmt(scale(sectorRevenue(s)))) : "n/a"}
               </span>
             </div>

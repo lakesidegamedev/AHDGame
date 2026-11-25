@@ -53,7 +53,7 @@ export function StateDropdown(props: StateDropdownProps) {
         onClick={() => setIsOpen(!isOpen)}
         onPointerEnter={preloadPanel}
         onFocus={preloadPanel}
-        className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
+        className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-body font-medium text-muted transition-colors hover:bg-card hover:text-foreground"
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label={`${props.stateName} menu`}

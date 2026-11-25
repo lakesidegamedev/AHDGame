@@ -117,10 +117,10 @@ export function NationalMetricCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <h3 className="truncate text-[13px] font-semibold text-foreground">{name}</h3>
+              <h3 className="truncate text-body-lg font-semibold text-foreground">{name}</h3>
               <InfoTooltip
                 trigger={
-                  <span className="cursor-default select-none text-[13px] leading-none text-muted/50 hover:text-muted">
+                  <span className="cursor-default select-none text-body-sm leading-none text-muted/50 hover:text-muted">
                     ⓘ
                   </span>
                 }
@@ -151,7 +151,9 @@ export function NationalMetricCard({
               </InfoTooltip>
             </div>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="text-2xl font-bold tabular-nums text-foreground">{fmt(value)}</span>
+              <span className="text-heading font-bold tabular-nums text-foreground">
+                {fmt(value)}
+              </span>
               <TrendChip trend={summary.trend} value={value} isHigherBetter={isHigherBetter} />
             </div>
           </div>
@@ -164,7 +166,7 @@ export function NationalMetricCard({
         </div>
 
         {/* best/worst region row */}
-        <div className="mt-3 flex items-center justify-between gap-3 text-[11px]">
+        <div className="mt-3 flex items-center justify-between gap-3 text-body-sm">
           <span className="flex min-w-0 items-center gap-1 text-muted">
             <span className="shrink-0 text-success">▲</span>
             <span className="truncate">{best.stateName}</span>
@@ -189,11 +191,11 @@ export function NationalMetricCard({
                 {score !== null && <HealthRing score={score} size={58} label="/100" />}
                 <div className="min-w-0 flex-1">
                   <div className="text-body-sm font-medium text-muted">Quality score</div>
-                  <div className="mt-1 text-[12px] text-foreground">
+                  <div className="mt-1 text-body-sm text-foreground">
                     {isHigherBetter ? "↑ Higher is better" : "↓ Lower is better"}
                   </div>
                   {threshold && (
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-body-sm">
                       <div className="rounded bg-card-muted px-2 py-1">
                         <div className="text-muted">Target</div>
                         <div className="font-bold tabular-nums text-success">
@@ -209,7 +211,7 @@ export function NationalMetricCard({
                     </div>
                   )}
                   {threshold && (
-                    <div className="mt-1.5 text-[10px] leading-snug text-muted">
+                    <div className="mt-1.5 text-body-sm leading-snug text-muted">
                       {fmt(value)} scored against target {fmt(threshold.best)} / worst{" "}
                       {fmt(threshold.worst)}
                     </div>
@@ -235,7 +237,7 @@ export function NationalMetricCard({
                 />
               </div>
               {def?.description && (
-                <p className="mt-3 text-[11px] leading-snug text-muted">{def.description}</p>
+                <p className="mt-3 text-body-sm leading-snug text-muted">{def.description}</p>
               )}
             </div>
 
@@ -243,7 +245,9 @@ export function NationalMetricCard({
             <div className="rounded-lg border border-card-border bg-card p-3.5">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-body-sm font-medium text-muted">{regionLabel} rankings</span>
-                <span className="text-[10px] text-muted">pop-weighted nat&apos;l {fmt(value)}</span>
+                <span className="text-body-sm text-muted">
+                  pop-weighted nat&apos;l {fmt(value)}
+                </span>
               </div>
               <RegionRankingList
                 ranked={ranked}
@@ -267,7 +271,7 @@ export function NationalMetricCard({
           <div className="mt-4 flex justify-end">
             <Link
               href={detailHref}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-[12px] font-semibold text-primary hover:bg-primary/20"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-body-sm font-semibold text-primary hover:bg-primary/20"
             >
               View full metric page
               <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">

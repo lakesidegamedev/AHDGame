@@ -207,7 +207,7 @@ export function SectorRow({
   const ownSiteMemo =
     plantsMode && sector.ownSiteMemoValue != null && sector.ownSiteMemoValue > 0 ? (
       <span
-        className="block font-mono text-[11px] tabular-nums text-muted"
+        className="block font-mono text-body-sm tabular-nums text-muted"
         title="Estimated value of free deliveries to your own sites. This estimate is separate from revenue, profit and net margin."
       >
         {fmtMoney(sector.ownSiteMemoValue * scaleFactor)} to own sites
@@ -254,7 +254,7 @@ export function SectorRow({
   const revenueTooltip = (
     <>
       <p className="font-semibold text-foreground mb-1">Nameplate → net profit</p>
-      <div className="space-y-0.5 text-muted text-xs">
+      <div className="space-y-0.5 text-muted text-body-sm">
         <div className="flex justify-between gap-3">
           <span>Nameplate revenue</span>
           <span className="tabular-nums">{fmtScaled(nameplate)}</span>
@@ -297,7 +297,7 @@ export function SectorRow({
         </div>
       </div>
       {showRealizationGap && (
-        <p className="mt-1.5 text-[10px] leading-snug text-muted">
+        <p className="mt-1.5 text-body-sm leading-snug text-muted">
           Realization is production policy, commodity prices, throughput and capacity applied to
           your nameplate share. Open the sector for the per-commodity breakdown.
         </p>
@@ -319,7 +319,7 @@ export function SectorRow({
           }
         }}
         disabled={isUpdating || isTransitioning || cooldownRemaining > 0}
-        className={`h-6 rounded border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`h-6 rounded border border-card-border bg-background px-1.5 text-body-sm text-foreground focus:border-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
           isMobile ? "" : "w-full"
         }`}
         title="Change operating strategy"
@@ -354,7 +354,7 @@ export function SectorRow({
       </select>
     ) : strategies ? (
       <span
-        className={`block truncate text-xs ${currentId !== "standard" ? "text-foreground" : "text-muted"}`}
+        className={`block truncate text-body-sm ${currentId !== "standard" ? "text-foreground" : "text-muted"}`}
       >
         {currentStrategy.name}
       </span>
@@ -384,7 +384,7 @@ export function SectorRow({
       {isMothballed && <MothballedPill sectorType={sector.sectorType as CorporationType} />}
       {sector.forSale && (
         <span
-          className="shrink-0 text-[11px] font-medium text-success"
+          className="shrink-0 text-body-sm font-medium text-success"
           title={`Listed for sale at ${fmtAnchor(sector.forSale.priceAnchor)}`}
         >
           For sale
@@ -392,7 +392,7 @@ export function SectorRow({
       )}
       {sector.embargoSuspended && (
         <span
-          className="shrink-0 text-[11px] font-medium text-error"
+          className="shrink-0 text-body-sm font-medium text-error"
           title="Suspended by a total trade embargo against your nation. This sector earns no revenue until the embargo is lifted. Consider selling or relocating it."
         >
           Embargoed
@@ -409,12 +409,12 @@ export function SectorRow({
       <div className="flex min-w-0 items-baseline gap-1.5">
         <Link
           href={`/corporation/${corpId}/sector/${sector._id}`}
-          className="truncate text-[13px] font-medium text-foreground hover:underline"
+          className="truncate text-body-sm font-medium text-foreground hover:underline"
           title={sector.displayName ? `${sector.displayName}, ${sector.stateName}` : undefined}
         >
           {sectorName}
         </Link>
-        <span className="shrink-0 text-[11px] text-muted">{sector.sectorLabel}</span>
+        <span className="shrink-0 text-body-sm text-muted">{sector.sectorLabel}</span>
         {markers}
       </div>
     </div>
@@ -468,7 +468,7 @@ export function SectorRow({
           aria-expanded={isMenuOpen}
           aria-haspopup="menu"
           aria-label={`Actions for ${sectorName}`}
-          className="px-1 text-sm text-muted hover:text-foreground"
+          className="px-1 text-body text-muted hover:text-foreground"
           title="Actions"
         >
           ⋯
@@ -482,7 +482,7 @@ export function SectorRow({
           <Link
             href={`/corporation/${corpId}/sector/${sector._id}`}
             onClick={onMenuToggle}
-            className="rounded px-2 py-1 text-left text-xs text-foreground hover:bg-card-elevated"
+            className="rounded px-2 py-1 text-left text-body-sm text-foreground hover:bg-card-elevated"
           >
             Details
           </Link>
@@ -490,7 +490,7 @@ export function SectorRow({
             <Link
               href={sectorBuildUrl(corpId, sector._id)}
               onClick={onMenuToggle}
-              className="rounded px-2 py-1 text-left text-xs text-foreground hover:bg-card-elevated"
+              className="rounded px-2 py-1 text-left text-body-sm text-foreground hover:bg-card-elevated"
               title={`Order more capacity for these ${facilityPlural(sector.sectorType as CorporationType)}`}
             >
               Build capacity
@@ -506,7 +506,7 @@ export function SectorRow({
               }}
               disabled={mothballBusy}
               aria-busy={mothballBusy}
-              className="rounded px-2 py-1 text-left text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
+              className="rounded px-2 py-1 text-left text-body-sm text-foreground hover:bg-card-elevated disabled:opacity-50"
               title={mothballTitle}
             >
               {mothballLabel}
@@ -520,7 +520,7 @@ export function SectorRow({
                 onAbandonSector(sector._id);
               }}
               disabled={abandoningSectorId === sector._id}
-              className="rounded px-2 py-1 text-left text-xs text-error hover:bg-error/10 disabled:opacity-50"
+              className="rounded px-2 py-1 text-left text-body-sm text-error hover:bg-error/10 disabled:opacity-50"
               title="Abandon sector: an NPP operator takes over most of its plants"
             >
               {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
@@ -532,7 +532,7 @@ export function SectorRow({
   );
 
   const drawerButton =
-    "h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs";
+    "h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-body-sm";
   // The phone row already carries Details, Build capacity and Abandon, so the
   // drawer repeats them on desktop only; the rival split is drawer-only.
   const desktopOnly = "hidden lg:inline-flex";
@@ -563,7 +563,7 @@ export function SectorRow({
       </Link>
       {isCeo &&
         (drawerAbandonConfirm ? (
-          <span className="hidden flex-wrap items-center gap-2 text-xs text-error lg:inline-flex">
+          <span className="hidden flex-wrap items-center gap-2 text-body-sm text-error lg:inline-flex">
             Abandon? An NPP operator takes over most of its plants.
             <button
               type="button"
@@ -606,7 +606,7 @@ export function SectorRow({
       : Math.abs(fillAdjusted) > 999
         ? `${fillAdjusted > 0 ? ">" : "<-"}999%`
         : `${fillAdjusted.toFixed(1)}%`;
-  const cellNum = "font-mono text-[13px] tabular-nums";
+  const cellNum = "font-mono text-body-sm tabular-nums";
 
   return (
     <li key={sector._id} className="hover:bg-card-elevated/40">
@@ -701,7 +701,7 @@ export function SectorRow({
             {ownSiteMemo}
           </div>
 
-          <div className="text-right font-mono text-xs tabular-nums text-muted">
+          <div className="text-right font-mono text-body-sm tabular-nums text-muted">
             {sector.workers != null ? sector.workers.toLocaleString("en-US") : "n/a"}
           </div>
 
@@ -772,7 +772,7 @@ export function SectorRow({
               .join(" ")}
           >
             {(sector.foreignTariffModifier !== 0 || sector.domesticTariffMalus !== 0) && (
-              <span className="mr-1 font-sans text-[10px] text-warning">tariff</span>
+              <span className="mr-1 font-sans text-body-sm text-warning">tariff</span>
             )}
             {sector.effectiveProfitMargin}%
             <ModelledMarginMark modelled={sector.effectiveMarginModelled} />
@@ -782,7 +782,7 @@ export function SectorRow({
             {fmtMoney(shownProfit * scaleFactor)}
           </div>
 
-          <div className="text-right font-mono text-xs tabular-nums text-muted">
+          <div className="text-right font-mono text-body-sm tabular-nums text-muted">
             {sector.workers != null ? sector.workers.toLocaleString("en-US") : "n/a"}
           </div>
 
@@ -796,7 +796,7 @@ export function SectorRow({
           {identityCell}
           <Link
             href={`/corporation/${corpId}/sector/${sector._id}`}
-            className="shrink-0 text-xs text-muted hover:text-foreground"
+            className="shrink-0 text-body-sm text-muted hover:text-foreground"
           >
             Details
           </Link>
@@ -813,7 +813,7 @@ export function SectorRow({
           {plantsMode ? (
             <>
               <div>
-                <dt className="text-[11px] text-muted">Plants</dt>
+                <dt className="text-body-sm text-muted">Plants</dt>
                 <dd
                   className={`${cellNum} ${plantCount > 0 ? "text-foreground" : "text-muted"}`}
                   title={plantCountTitle(sector)}
@@ -828,7 +828,7 @@ export function SectorRow({
                 />
               </div>
               <div>
-                <dt className="text-[11px] text-muted" title={RUNNING_SOLD_HEADING_TITLE}>
+                <dt className="text-body-sm text-muted" title={RUNNING_SOLD_HEADING_TITLE}>
                   {RUNNING_SOLD_HEADING}
                 </dt>
                 <dd>
@@ -852,7 +852,7 @@ export function SectorRow({
             <>
               <div>
                 <dt
-                  className="text-[11px] text-muted"
+                  className="text-body-sm text-muted"
                   title={`Growth target is applied over ${GROWTH_RATE_TURNS_PER_YEAR} turns (one game year)`}
                 >
                   Growth target
@@ -870,7 +870,7 @@ export function SectorRow({
                 </dd>
               </div>
               <div>
-                <dt className="text-[11px] text-muted">Active rate</dt>
+                <dt className="text-body-sm text-muted">Active rate</dt>
                 <dd>
                   <ActiveRateDisplay
                     currentRate={sector.currentGrowthRate}
@@ -882,22 +882,22 @@ export function SectorRow({
             </>
           )}
           <div>
-            <dt className="text-[11px] text-muted">Revenue{scaleLabel}</dt>
+            <dt className="text-body-sm text-muted">Revenue{scaleLabel}</dt>
             <dd className={`${cellNum} text-foreground`}>
               {fmtScaled(plantsMode ? realized : displayRevenue)}
             </dd>
             {!plantsMode && sector.currentGrowthCost != null && (
-              <dd className="font-mono text-[11px] tabular-nums text-muted">
+              <dd className="font-mono text-body-sm tabular-nums text-muted">
                 -{fmtScaled(sector.currentGrowthCost)} cost
               </dd>
             )}
           </div>
           <div>
-            <dt className="text-[11px] text-muted">Profit{scaleLabel}</dt>
+            <dt className="text-body-sm text-muted">Profit{scaleLabel}</dt>
             <dd className={`${cellNum} ${profitTone}`}>{fmtMoney(shownProfit * scaleFactor)}</dd>
             {ownSiteMemo && <dd>{ownSiteMemo}</dd>}
             <dd
-              className="font-mono text-[11px] tabular-nums text-muted"
+              className="font-mono text-body-sm tabular-nums text-muted"
               title={
                 fillAdjusted != null
                   ? `Net margin: profit over revenue after paying for everything made. Effective margin on sold units only: ${sector.effectiveProfitMargin}%.`
@@ -917,7 +917,7 @@ export function SectorRow({
           {plantsMode && isCeo && (
             <Link
               href={sectorBuildUrl(corpId, sector._id)}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-body-sm font-medium text-background hover:bg-foreground/90"
             >
               Build capacity
             </Link>
@@ -931,7 +931,7 @@ export function SectorRow({
               disabled={mothballBusy}
               aria-busy={mothballBusy}
               title={mothballTitle}
-              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-body-sm text-foreground hover:bg-card-elevated disabled:opacity-50"
             >
               {mothballLabel}
             </button>
@@ -940,18 +940,18 @@ export function SectorRow({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-body-sm text-foreground hover:bg-card-elevated"
           >
             {expanded ? "Hide margins" : "Margins"}
           </button>
           {isCeo &&
             (mobileAbandonConfirm ? (
-              <span className="inline-flex items-center gap-2 text-xs text-error">
+              <span className="inline-flex items-center gap-2 text-body-sm text-error">
                 Abandon? An NPP operator takes over most of its plants.
                 <button
                   type="button"
                   onClick={() => setMobileAbandonConfirm(false)}
-                  className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+                  className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-body-sm text-foreground hover:bg-card-elevated"
                 >
                   Keep
                 </button>
@@ -962,7 +962,7 @@ export function SectorRow({
                     onAbandonSector(sector._id);
                   }}
                   disabled={abandoningSectorId === sector._id}
-                  className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-error/50 px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50"
+                  className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-error/50 px-2.5 text-body-sm font-medium text-error hover:bg-error/10 disabled:opacity-50"
                 >
                   {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
                 </button>
@@ -972,7 +972,7 @@ export function SectorRow({
                 type="button"
                 onClick={() => setMobileAbandonConfirm(true)}
                 disabled={abandoningSectorId === sector._id}
-                className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-error/50 px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50"
+                className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-error/50 px-2.5 text-body-sm font-medium text-error hover:bg-error/10 disabled:opacity-50"
               >
                 {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
               </button>
@@ -1016,12 +1016,12 @@ export function SectorRow({
 
       {/* Cancel transition confirmation */}
       {cancelPending && onCancelTransition && (
-        <div className="flex flex-wrap items-center gap-2 px-2 pb-3 pt-1 text-xs text-error">
+        <div className="flex flex-wrap items-center gap-2 px-2 pb-3 pt-1 text-body-sm text-error">
           Cancel the transition? It costs {fmtMoney(cancelCostDisplay)}.
           <button
             type="button"
             onClick={() => setCancelPending(false)}
-            className="inline-flex h-6 items-center rounded border border-card-border px-2 text-[11px] text-foreground hover:bg-card-elevated"
+            className="inline-flex h-6 items-center rounded border border-card-border px-2 text-body-sm text-foreground hover:bg-card-elevated"
           >
             Keep it
           </button>
@@ -1031,7 +1031,7 @@ export function SectorRow({
               onCancelTransition(sector._id);
               setCancelPending(false);
             }}
-            className="inline-flex h-6 items-center rounded border border-error/50 px-2 text-[11px] font-medium text-error hover:bg-error/10"
+            className="inline-flex h-6 items-center rounded border border-error/50 px-2 text-body-sm font-medium text-error hover:bg-error/10"
           >
             Cancel transition
           </button>

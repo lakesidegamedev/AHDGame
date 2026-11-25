@@ -98,7 +98,7 @@ export function PlayerSafetyActions({ characterId, characterName, initiallyBlock
           type="button"
           onClick={() => setReportOpen((open) => !open)}
           disabled={busy}
-          className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
+          className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted transition-colors hover:text-foreground disabled:opacity-50"
         >
           Report
         </button>
@@ -106,7 +106,7 @@ export function PlayerSafetyActions({ characterId, characterName, initiallyBlock
           type="button"
           onClick={toggleBlock}
           disabled={busy}
-          className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
+          className="rounded-lg border border-error/30 px-3 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
         >
           {blocked ? "Unblock" : "Block"}
         </button>
@@ -117,14 +117,17 @@ export function PlayerSafetyActions({ characterId, characterName, initiallyBlock
           onSubmit={submitReport}
           className="space-y-2 rounded-lg border border-card-border p-3"
         >
-          <label className="block text-xs font-medium" htmlFor={`report-reason-${characterId}`}>
+          <label
+            className="block text-body-sm font-medium"
+            htmlFor={`report-reason-${characterId}`}
+          >
             What is wrong with {characterName}&apos;s content?
           </label>
           <select
             id={`report-reason-${characterId}`}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-body"
           >
             {REASONS.map((r) => (
               <option key={r.value} value={r.value}>
@@ -138,20 +141,20 @@ export function PlayerSafetyActions({ characterId, characterName, initiallyBlock
             maxLength={1000}
             rows={3}
             placeholder="Optional: what you saw and where"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-body"
           />
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               Send report
             </button>
             <button
               type="button"
               onClick={() => setReportOpen(false)}
-              className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-foreground"
+              className="rounded-lg px-3 py-1.5 text-body-sm text-muted hover:text-foreground"
             >
               Cancel
             </button>
@@ -160,7 +163,7 @@ export function PlayerSafetyActions({ characterId, characterName, initiallyBlock
       )}
 
       {message && (
-        <p className={`text-xs ${message.ok ? "text-success" : "text-error"}`} role="status">
+        <p className={`text-body-sm ${message.ok ? "text-success" : "text-error"}`} role="status">
           {message.text}
         </p>
       )}

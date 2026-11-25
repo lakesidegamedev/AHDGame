@@ -81,17 +81,17 @@ export function TreasuryMasthead({
             </div>
             <h1
               data-coach="nav-budget"
-              className="mt-1 text-2xl font-bold leading-[1.1] tracking-tight text-white sm:text-3xl"
+              className="mt-1 text-heading font-bold leading-[1.1] tracking-tight text-white sm:text-display"
             >
               {id.budgetTitle}
               {id.budgetTitleEn && (
-                <span className="ml-2 align-middle text-lg font-semibold text-white/55 sm:text-xl">
+                <span className="ml-2 align-middle text-heading font-semibold text-white/55 sm:text-heading">
                   ({id.budgetTitleEn})
                 </span>
               )}
             </h1>
             <div
-              className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm"
+              className="mt-0.5 flex flex-wrap items-center gap-x-2 text-body"
               style={{ color: hexToRgba(id.accentSoft, 0.92) }}
             >
               <span>
@@ -102,7 +102,7 @@ export function TreasuryMasthead({
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
-                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold text-white"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-body-sm font-semibold text-white"
                 style={{
                   borderColor: hexToRgba(id.accent, 0.45),
                   background: hexToRgba(id.accent, 0.16),
@@ -110,16 +110,16 @@ export function TreasuryMasthead({
               >
                 Fiscal year {fiscalYear}
               </span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-xs font-medium text-white/80">
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/80">
                 {executiveLabel}
               </span>
               {isLive ? (
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-xs font-medium text-white/80">
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/15 bg-black px-2.5 py-0.5 text-body-sm font-medium text-white/80">
                   <span className="h-2 w-2 shrink-0 rounded-full bg-success" aria-hidden />
                   Live · next FY in {turnsUntilFY}t
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
+                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warning/40 bg-warning/10 px-2.5 py-0.5 text-body-sm font-medium text-warning">
                   Historical snapshot
                 </span>
               )}
@@ -136,7 +136,7 @@ export function TreasuryMasthead({
               <button
                 type="button"
                 onClick={() => setLens("public")}
-                className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                className={`rounded-md px-2.5 py-1 text-body-sm font-semibold ${
                   lens === "public" ? "bg-white/15 text-white" : "text-white/55 hover:text-white"
                 }`}
               >
@@ -151,7 +151,7 @@ export function TreasuryMasthead({
                     ? undefined
                     : "Only the seated finance minister can open the minister lens"
                 }
-                className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold ${
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-body-sm font-semibold ${
                   lens === "minister"
                     ? "bg-gold/25 text-gold"
                     : isFinanceMinister
@@ -179,7 +179,7 @@ export function TreasuryMasthead({
               className="h-1.5 w-28 cursor-pointer accent-gold"
               aria-label="Fiscal year"
             />
-            <span className="font-mono text-xs font-semibold tabular-nums text-white">
+            <span className="font-mono text-body-sm font-semibold tabular-nums text-white">
               {fiscalYear}
             </span>
           </div>
@@ -189,7 +189,7 @@ export function TreasuryMasthead({
             type="button"
             onClick={() => setCompare(!compare)}
             disabled={!hasPrevFy}
-            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-body-sm font-semibold ${
               compare
                 ? "border-gold/50 bg-gold/15 text-gold"
                 : "border-white/15 bg-black/30 text-white/60 hover:text-white"

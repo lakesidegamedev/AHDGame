@@ -30,7 +30,7 @@ export function PollBannerStrip({ snapshot }: { snapshot: PollBannerSnapshot }) 
       // later filled, so announcement on arrival is not guaranteed across
       // every screen reader; the role is still correct and costs nothing.
       role="status"
-      className={`border-b px-4 py-2 text-center text-sm break-words ${TONE_CLASSES[snapshot.tone]}`}
+      className={`border-b px-4 py-2 text-center text-body break-words ${TONE_CLASSES[snapshot.tone]}`}
     >
       <span>{snapshot.message} </span>
       <a

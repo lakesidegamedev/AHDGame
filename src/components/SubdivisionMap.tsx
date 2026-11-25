@@ -280,16 +280,16 @@ export function SubdivisionMap({
 
       {hoveredSub && tooltipPos && (
         <div
-          className="absolute pointer-events-none z-10 px-2 py-1.5 rounded text-xs bg-slate-900 border border-slate-600 shadow-lg max-w-[220px]"
+          className="absolute pointer-events-none z-10 px-2 py-1.5 rounded text-body-sm bg-slate-900 border border-slate-600 shadow-lg max-w-[220px]"
           style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 8 }}
         >
           <div className="font-semibold text-slate-100">{hoveredSub.name}</div>
           {formatSubdivisionLean(hoveredSub.leanScalar, hoveredSub.leanStatus) && (
-            <div className="text-slate-400 text-[10px]">
+            <div className="text-slate-400 text-body-sm">
               Lean: {formatSubdivisionLean(hoveredSub.leanScalar, hoveredSub.leanStatus)}
             </div>
           )}
-          {!hoveredSub.winner && <div className="text-slate-400 text-[10px]">Vacant</div>}
+          {!hoveredSub.winner && <div className="text-slate-400 text-body-sm">Vacant</div>}
           {hoveredSub.party !== undefined && hoveredSub.winner && (
             <div className="mt-1 space-y-0.5">
               <div className="flex items-center gap-1.5">
@@ -304,7 +304,7 @@ export function SubdivisionMap({
                   {hoveredSub.partyLabel ?? hoveredSub.party}
                 </span>
               </div>
-              <div className="text-slate-400 text-[10px]">
+              <div className="text-slate-400 text-body-sm">
                 {hoveredSub.marginAvailable === false
                   ? "District vote margin unavailable"
                   : `Margin: ${hoveredSub.margin.toFixed(1)}%`}

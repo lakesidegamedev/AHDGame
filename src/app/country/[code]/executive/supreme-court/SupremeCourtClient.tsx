@@ -237,13 +237,13 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
           <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-            <h1 className="text-lg font-semibold text-foreground">Supreme Court</h1>
-            <p className="mt-2 text-sm text-muted">
+            <h1 className="text-heading font-semibold text-foreground">Supreme Court</h1>
+            <p className="mt-2 text-body text-muted">
               The Supreme Court is currently modeled for the United States only.
             </p>
             <Link
               href={executiveUrl(countryId)}
-              className="mt-4 inline-block text-sm text-primary hover:underline"
+              className="mt-4 inline-block text-body text-primary hover:underline"
             >
               Back to {COUNTRY_CLIENT_CONFIGS[countryId]?.executiveTitle ?? "Executive"}
             </Link>
@@ -289,7 +289,7 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
     <>
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-7xl space-y-6 overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8">
-          <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <nav className="flex flex-wrap items-center gap-2 text-body">
             <Link href="/whitehouse" className="text-muted transition-colors hover:text-foreground">
               Back to White House
             </Link>
@@ -316,11 +316,11 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
           <header className="overflow-hidden rounded-2xl border border-card-border bg-card shadow-card">
             <ScotusHero />
             <div className="p-6">
-              <h1 className="text-2xl font-bold text-foreground">Supreme Court</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted">
+              <h1 className="text-heading font-bold text-foreground">Supreme Court</h1>
+              <p className="mt-1 max-w-2xl text-body text-muted">
                 Nine seats. The President nominates and the Senate confirms by simple majority.
               </p>
-              <details className="mt-3 max-w-2xl text-sm text-muted">
+              <details className="mt-3 max-w-2xl text-body text-muted">
                 <summary className="cursor-pointer font-medium text-foreground">
                   How the Court works
                 </summary>
@@ -337,14 +337,14 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
               <div className="mt-4 flex items-center gap-6 border-t border-card-border pt-4">
                 <div>
                   <span className="text-body-sm font-medium text-muted">Seated</span>
-                  <p className="text-base font-bold tabular-nums">
+                  <p className="text-body-lg font-bold tabular-nums">
                     {seatedCount}
-                    <span className="text-xs font-normal text-muted"> / 9</span>
+                    <span className="text-body-sm font-normal text-muted"> / 9</span>
                   </p>
                 </div>
                 <div>
                   <span className="text-body-sm font-medium text-muted">Pending votes</span>
-                  <p className="text-base font-bold tabular-nums">{activeNominations.length}</p>
+                  <p className="text-body-lg font-bold tabular-nums">{activeNominations.length}</p>
                 </div>
               </div>
             </div>
@@ -354,9 +354,9 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
             id="senate-confirmations"
             className="scroll-mt-24 rounded-xl border border-card-border bg-card p-4 shadow-card"
           >
-            <h2 className="text-base font-semibold text-foreground">Senate confirmations</h2>
+            <h2 className="text-body-lg font-semibold text-foreground">Senate confirmations</h2>
             {activeNominations.length === 0 ? (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 No Supreme Court nominations are awaiting a vote.
               </p>
             ) : (
@@ -380,14 +380,14 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
           >
             <button
               onClick={() => setActiveTab("bench")}
-              className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(activeTab === "bench")}`}
+              className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${pillClass(activeTab === "bench")}`}
               aria-current={activeTab === "bench" ? "page" : undefined}
             >
               Bench
             </button>
             <button
               onClick={() => setActiveTab("docket")}
-              className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${pillClass(activeTab === "docket")}`}
+              className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${pillClass(activeTab === "docket")}`}
               aria-current={activeTab === "docket" ? "page" : undefined}
             >
               Docket
@@ -400,14 +400,14 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
                 <div className="rounded-xl border border-card-border bg-card p-4 shadow-card">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-base font-semibold text-foreground">
+                      <h2 className="text-body-lg font-semibold text-foreground">
                         President - nominate a Justice
                       </h2>
-                      <p className="text-sm text-muted">
+                      <p className="text-body text-muted">
                         Sends a nomination to the Senate for confirmation before the seat is filled.
                       </p>
                       {vacantSeats.map((seat) => (
-                        <p key={seat.seatNumber} className="mt-1 text-xs text-muted">
+                        <p key={seat.seatNumber} className="mt-1 text-body-sm text-muted">
                           {vacancyNotice(seat)}
                         </p>
                       ))}
@@ -420,10 +420,10 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
               )}
 
               <section>
-                <h2 className="mb-4 text-sm font-semibold text-muted">The bench</h2>
+                <h2 className="mb-4 text-body font-semibold text-muted">The bench</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {data.seats.length === 0 ? (
-                    <div className="col-span-full rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
+                    <div className="col-span-full rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted">
                       The Court has not been seeded for this game yet.
                     </div>
                   ) : (
@@ -441,13 +441,13 @@ export default function SupremeCourtClient({ countryId }: { countryId: CountryId
                           />
                           {pendingForSeat && (
                             <div className="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
-                              <p className="truncate text-xs font-medium text-foreground">
+                              <p className="truncate text-body-sm font-medium text-foreground">
                                 {pendingForSeat.nomineeName} - Senate vote pending
                               </p>
                               {data.isPresident && (
                                 <button
                                   onClick={() => openNominateModal(seat.seatNumber)}
-                                  className="mt-1 text-xs text-primary hover:underline"
+                                  className="mt-1 text-body-sm text-primary hover:underline"
                                 >
                                   Replace nomination
                                 </button>

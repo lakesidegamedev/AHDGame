@@ -76,15 +76,15 @@ export function FxReserveTransferPanel({ countryCode, canAct, onUpdate }: Props)
 
   return (
     <section className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
-      <h2 className="mb-2 text-lg font-semibold">FX reserve transfer</h2>
-      <p className="mb-4 text-sm text-muted">
+      <h2 className="mb-2 text-heading font-semibold">FX reserve transfer</h2>
+      <p className="mb-4 text-body text-muted">
         Move treasury cash to the Central Bank&apos;s FX reserve pool. This is a one-time transfer,
         not a change to annual spending. Capped at 0.5% of annual revenue per turn. One transfer per
         turn.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col text-sm">
+        <label className="flex flex-col text-body">
           Amount ({sym})
           <input
             type="number"
@@ -95,7 +95,7 @@ export function FxReserveTransferPanel({ countryCode, canAct, onUpdate }: Props)
             disabled={!canAct || submitting}
           />
         </label>
-        <label className="flex flex-col text-sm">
+        <label className="flex flex-col text-body">
           Justification (optional, 200 chars)
           <input
             type="text"
@@ -116,7 +116,7 @@ export function FxReserveTransferPanel({ countryCode, canAct, onUpdate }: Props)
 
       {feedback && (
         <p
-          className={`mt-3 text-sm ${
+          className={`mt-3 text-body ${
             feedback.type === "success" ? "text-green-400" : "text-red-400"
           }`}
         >

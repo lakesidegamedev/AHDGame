@@ -84,7 +84,7 @@ export function ApiKeysSection() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         {t("apiKeys.intro")}{" "}
         <a
           href={`${DOCS_URL}/api/public-v1.html`}
@@ -97,40 +97,40 @@ export function ApiKeysSection() {
       </p>
 
       {error && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300">
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-body-sm text-red-300">
           {error}
         </div>
       )}
 
       {/* Personal API Keys */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">{t("apiKeys.personalTitle")}</h3>
-        <p className="text-xs text-muted">{t("apiKeys.personalHint")}</p>
-        <p className="text-xs text-muted">{t("apiKeys.rateLimitHint")}</p>
+        <h3 className="text-body-lg font-semibold text-foreground">{t("apiKeys.personalTitle")}</h3>
+        <p className="text-body-sm text-muted">{t("apiKeys.personalHint")}</p>
+        <p className="text-body-sm text-muted">{t("apiKeys.rateLimitHint")}</p>
         <div className="flex gap-2">
           <input
             value={userKeyName}
             onChange={(e) => setUserKeyName(e.target.value)}
             placeholder={t("apiKeys.keyNamePlaceholder")}
-            className="rounded border border-card-border bg-background px-3 py-2 text-sm"
+            className="rounded border border-card-border bg-background px-3 py-2 text-body"
           />
           <select
             value={userKeyScope}
             onChange={(e) => setUserKeyScope(e.target.value as "public" | "private")}
-            className="rounded border border-card-border bg-background px-3 py-2 text-sm"
+            className="rounded border border-card-border bg-background px-3 py-2 text-body"
           >
             <option value="public">{t("apiKeys.readOnly")}</option>
             <option value="private">{t("apiKeys.readSend")}</option>
           </select>
           <button
-            className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground"
+            className="rounded bg-primary px-3 py-2 text-body text-primary-foreground"
             onClick={createUserKey}
           >
             {t("apiKeys.createKey")}
           </button>
         </div>
         {newUserToken ? (
-          <div className="rounded border border-card-border bg-background p-3 text-xs break-all">
+          <div className="rounded border border-card-border bg-background p-3 text-body-sm break-all">
             {t("apiKeys.copyOnce")} <strong>{newUserToken}</strong>
           </div>
         ) : null}
@@ -138,11 +138,11 @@ export function ApiKeysSection() {
           {userKeys.map((k) => (
             <div
               key={k._id}
-              className="flex items-center justify-between rounded border border-card-border p-3 text-sm"
+              className="flex items-center justify-between rounded border border-card-border p-3 text-body"
             >
               <div>
                 <div className="font-medium">{k.name}</div>
-                <div className="text-xs text-muted">
+                <div className="text-body-sm text-muted">
                   <span className={scopeColor(k.scope)}>{scopeLabel(k.scope)}</span> ·{" "}
                   {t("apiKeys.requests", { count: k.requestCount ?? 0 })} ·{" "}
                   {t("apiKeys.lastUsed", {
@@ -154,14 +154,16 @@ export function ApiKeysSection() {
                 </div>
               </div>
               <button
-                className="rounded border border-red-500/40 px-2 py-1 text-xs text-red-300"
+                className="rounded border border-red-500/40 px-2 py-1 text-body-sm text-red-300"
                 onClick={() => revokeUserKey(k._id)}
               >
                 {t("apiKeys.revoke")}
               </button>
             </div>
           ))}
-          {userKeys.length === 0 && <p className="text-xs text-muted">{t("apiKeys.noKeys")}</p>}
+          {userKeys.length === 0 && (
+            <p className="text-body-sm text-muted">{t("apiKeys.noKeys")}</p>
+          )}
         </div>
       </div>
     </div>

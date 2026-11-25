@@ -44,7 +44,7 @@ export function ElectionScheduleCard({
       {showStatusStrip && <ElectionPhaseStatusStrip phaseStatus={phaseStatus} />}
 
       <details className="group mt-2">
-        <summary className="cursor-pointer list-none text-[11px] font-medium text-muted hover:text-foreground">
+        <summary className="cursor-pointer list-none text-body-sm font-medium text-muted hover:text-foreground">
           <span className="group-open:hidden">Show full schedule</span>
           <span className="hidden group-open:inline">Hide full schedule</span>
         </summary>

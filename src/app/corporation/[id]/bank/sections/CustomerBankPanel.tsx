@@ -94,7 +94,7 @@ export function CustomerBankPanel({
       <BankPanel title={`Bank with ${bankName}`} meta="as a customer">
         <div className="grid gap-x-8 gap-y-4 py-1.5 md:grid-cols-2">
           <div id="customer-deposit" className="min-w-0 space-y-1.5">
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               <span className="font-medium text-foreground">Deposit savings</span>
               {depositRatePercent != null && (
                 <>
@@ -118,7 +118,7 @@ export function CustomerBankPanel({
                 onChange={(e) => setDepositAmount(e.target.value)}
                 placeholder={`Amount (${currency})`}
                 aria-label={`Deposit amount in ${currency}`}
-                className="h-8 w-48 rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+                className="h-8 w-48 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
               />
               <SmallButton tone="primary" disabled={busy} onClick={() => void deposit()}>
                 {busy ? "…" : "Deposit"}
@@ -127,14 +127,14 @@ export function CustomerBankPanel({
           </div>
 
           <div id="customer-loan" className="min-w-0 space-y-1.5">
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               <span className="font-medium text-foreground">Borrow from {bankName}</span>. Review a
               personal or corporation loan in the banking hub. It shows the quoted rate,
               destination, payment estimate, maximum, and approval status before you submit.
             </p>
             <Link
               href="/banking"
-              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-body-sm font-medium text-foreground hover:bg-card-elevated"
             >
               Review loan terms
             </Link>

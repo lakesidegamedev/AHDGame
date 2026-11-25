@@ -23,7 +23,7 @@ export function DelegationBench({
 
   return (
     <section aria-label={title} className={`rounded-xl border p-4 ${frame}`}>
-      <h2 className={`mb-3 font-mono text-body-xs font-bold tracking-wider ${accent}`}>{title}</h2>
+      <h2 className={`mb-3 font-mono text-body-sm font-bold tracking-wider ${accent}`}>{title}</h2>
       <div className="flex flex-col gap-2.5">
         {seats.map((seat) => (
           <div
@@ -37,7 +37,7 @@ export function DelegationBench({
                 {seat.committedPoints.toFixed(1)} pts
               </span>
             </div>
-            <div className="font-mono text-body-xs tracking-wide text-muted">
+            <div className="font-mono text-body-sm tracking-wide text-muted">
               {seat.tier} · {seat.multiplier} ·{" "}
               {seat.isViewer ? "your seat" : seat.actedThisTurn ? "acted this turn" : "quiet"}
             </div>
@@ -53,7 +53,7 @@ export function DelegationBench({
               full width of the card instead, so the title reads whole on its
               own line with the holder beneath it.
             */}
-            <dl className="flex flex-col gap-1 font-mono text-body-xs">
+            <dl className="flex flex-col gap-1 font-mono text-body-sm">
               {seat.offices.map((office) => (
                 <div key={office.role}>
                   <dt className="truncate text-muted">{office.title}</dt>
@@ -88,7 +88,7 @@ export function DelegationBench({
 export function OpenFloorPanel({ openFloor }: { openFloor: DossierView["openFloor"] }) {
   return (
     <section className="rounded-xl border border-success/20 bg-success/[0.03] p-4">
-      <h2 className="mb-2 font-mono text-body-xs font-bold tracking-wider text-success">
+      <h2 className="mb-2 font-mono text-body-sm font-bold tracking-wider text-success">
         ✎ THE OPEN FLOOR
       </h2>
       <p className="font-mono text-body-sm leading-relaxed text-muted">

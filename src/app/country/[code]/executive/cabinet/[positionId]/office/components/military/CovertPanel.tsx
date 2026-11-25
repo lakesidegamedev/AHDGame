@@ -75,7 +75,7 @@ export function CovertPanel({
 
   if (!status) {
     return (
-      <div className="rounded-xl border border-card-border bg-card px-4 py-6 text-center text-[13px] text-muted">
+      <div className="rounded-xl border border-card-border bg-card px-4 py-6 text-center text-body-sm text-muted">
         Loading the special programme...
       </div>
     );
@@ -110,8 +110,10 @@ export function CovertPanel({
 
       <div className="rounded-xl border border-card-border bg-card">
         <div className="border-b border-card-border px-4 py-2.5">
-          <h3 className="text-sm font-semibold text-foreground">Special construction programme</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">
+            Special construction programme
+          </h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             Off the books. Nothing here appears on any budget line or public surface. Funding harder
             moves faster and burns brighter; the Soviets are watching.
           </p>
@@ -143,7 +145,7 @@ export function CovertPanel({
                     }}
                   />
                   <span
-                    className={`text-[13px] font-semibold ${
+                    className={`text-body-sm font-semibold ${
                       done || current ? "text-foreground" : "text-muted"
                     }`}
                   >
@@ -153,7 +155,7 @@ export function CovertPanel({
                     {done ? "Complete" : current ? "In progress" : "Locked"}
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted">{stage.desc}</p>
+                <p className="mt-1 text-body-sm leading-relaxed text-muted">{stage.desc}</p>
                 {current && (
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#2a2a36]">
                     <div
@@ -171,8 +173,8 @@ export function CovertPanel({
       {!state.completed && (
         <div className="rounded-xl border border-card-border bg-card">
           <div className="border-b border-card-border px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-foreground">Funding level</h3>
-            <p className="mt-0.5 text-[11px] text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">Funding level</h3>
+            <p className="mt-0.5 text-body-sm text-muted">
               Drawn quietly from the defence appropriation each turn. A turn the treasury cannot
               cover makes no progress. An idle programme cools.
             </p>
@@ -183,14 +185,14 @@ export function CovertPanel({
                 key={opt.key}
                 disabled={busy || !canAct || state.funding === opt.key}
                 onClick={() => void onSetFunding(opt.key)}
-                className={`rounded-lg border px-3 py-2 text-[12px] font-semibold disabled:opacity-50 ${
+                className={`rounded-lg border px-3 py-2 text-body-sm font-semibold disabled:opacity-50 ${
                   state.funding === opt.key
                     ? "border-[color-mix(in_srgb,var(--gov)_40%,transparent)] bg-[color-mix(in_srgb,var(--gov)_20%,transparent)] text-gov-soft"
                     : "border-card-border text-muted hover:text-foreground"
                 }`}
               >
                 {FUNDING_LABEL[opt.key]}
-                <span className="tabular ml-1.5 text-[10px] font-normal">
+                <span className="tabular ml-1.5 text-body-sm font-normal">
                   {opt.cost > 0 ? `${fmtMoneyAbs(currencySymbol, opt.cost)}/turn` : "no cost"}
                 </span>
               </button>
@@ -202,8 +204,8 @@ export function CovertPanel({
       {state.completed && (
         <div className="rounded-xl border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_6%,transparent)]">
           <div className="border-b border-card-border px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-foreground">The device is assembled</h3>
-            <p className="mt-0.5 text-[11px] text-muted">
+            <h3 className="text-body-lg font-semibold text-foreground">The device is assembled</h3>
+            <p className="mt-0.5 text-body-sm text-muted">
               {brokenOut
                 ? `The breakout test was conducted on turn ${state.brokenOutTurn}. The programme is public.`
                 : "A working bomb waits on a political decision. A breakout test announces it to every capital at once: the sharpest tension spike in the system, a Soviet reckoning, and no way back."}
@@ -218,7 +220,7 @@ export function CovertPanel({
                     setConfirmingBreakout(false);
                     void onBreakout();
                   }}
-                  className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] px-3 py-2 text-[12px] font-semibold text-[var(--error)] disabled:opacity-50"
+                  className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] px-3 py-2 text-body-sm font-semibold text-[var(--error)] disabled:opacity-50"
                 >
                   Confirm breakout test
                 </button>
@@ -226,12 +228,12 @@ export function CovertPanel({
                 <button
                   disabled={busy}
                   onClick={() => setConfirmingBreakout(true)}
-                  className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_15%,transparent)] px-3 py-2 text-[12px] font-semibold text-[var(--error)] disabled:opacity-50"
+                  className="rounded-lg border border-[color-mix(in_srgb,var(--error)_40%,transparent)] bg-[color-mix(in_srgb,var(--error)_15%,transparent)] px-3 py-2 text-body-sm font-semibold text-[var(--error)] disabled:opacity-50"
                 >
                   Breakout test
                 </button>
               )}
-              <span className="text-[11px] text-muted">This cannot be undone.</span>
+              <span className="text-body-sm text-muted">This cannot be undone.</span>
             </div>
           )}
         </div>

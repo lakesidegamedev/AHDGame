@@ -53,7 +53,7 @@ export const ConfidenceGaugeReadout = memo(function ConfidenceGaugeReadout({
           </span>
         </div>
         <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-2xl font-semibold text-foreground">{Math.round(clamped)}</span>
+          <span className="text-heading font-semibold text-foreground">{Math.round(clamped)}</span>
           <span className="text-body-sm text-muted">/ 100</span>
         </div>
         <div
@@ -77,22 +77,22 @@ export const ConfidenceGaugeReadout = memo(function ConfidenceGaugeReadout({
         aria-label={t("history.title")}
       >
         <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h3 className="text-sm font-semibold text-foreground">{t("history.title")}</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">{t("history.title")}</h3>
           {history.length > 0 && (
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               {t("history.points", { count: history.length })}
             </span>
           )}
         </div>
         {chartData.length < 2 ? (
-          <p className="text-sm text-muted">{t("history.notEnoughData")}</p>
+          <p className="text-body text-muted">{t("history.notEnoughData")}</p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
               <XAxis
                 dataKey="index"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 12 }}
                 stroke="var(--color-muted)"
                 tickFormatter={(index: number) => chartData[index]?.turnLabel ?? ""}
                 minTickGap={24}
@@ -100,7 +100,7 @@ export const ConfidenceGaugeReadout = memo(function ConfidenceGaugeReadout({
               <YAxis
                 domain={[0, 100]}
                 ticks={[0, 25, 50, 75, 100]}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 12 }}
                 stroke="var(--color-muted)"
               />
               <Tooltip
@@ -138,10 +138,10 @@ export const ConfidenceGaugeReadout = memo(function ConfidenceGaugeReadout({
         {/* The 500-change limit only matters once there is a history to limit;
             under the empty state it repeated the same point. */}
         {chartData.length >= 2 && (
-          <p className="mt-2 text-xs text-muted">{t("history.retention")}</p>
+          <p className="mt-2 text-body-sm text-muted">{t("history.retention")}</p>
         )}
         {recent.length > 0 && (
-          <ol className="mt-3 space-y-1 border-t border-card-border pt-3 text-xs text-muted">
+          <ol className="mt-3 space-y-1 border-t border-card-border pt-3 text-body-sm text-muted">
             {recent.map((point) => (
               <li key={`${point.index}-${point.reason}`} className="flex justify-between gap-3">
                 <span>

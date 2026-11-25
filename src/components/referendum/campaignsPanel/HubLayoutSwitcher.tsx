@@ -31,7 +31,7 @@ export function HubLayoutSwitcher({ active }: { active: HubLayout }) {
             key={l.id}
             type="button"
             onClick={() => go(l.id)}
-            className={`rounded-lg border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+            className={`rounded-lg border px-3.5 py-1.5 text-body-sm font-semibold transition-colors ${
               on
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-card-border bg-card text-muted hover:text-foreground"

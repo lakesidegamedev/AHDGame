@@ -44,13 +44,13 @@ function FilterPills({
   if (options.length <= 1) return null;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="shrink-0 text-xs text-muted">{label}</span>
+      <span className="shrink-0 text-body-sm text-muted">{label}</span>
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-full border px-3 py-1 text-body-sm font-medium transition-colors ${
             value === opt.value
               ? "border-primary/40 bg-primary/15 text-primary"
               : "border-card-border bg-background text-muted hover:text-foreground"
@@ -103,7 +103,7 @@ export function ChangelogFeedFilter({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search releases..."
-          className="w-full rounded-lg border border-card-border bg-background px-4 py-2 pl-9 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-card-border bg-background px-4 py-2 pl-9 text-body text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
         />
         <svg
           className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
@@ -122,7 +122,7 @@ export function ChangelogFeedFilter({
           <button
             type="button"
             onClick={() => onSearchChange("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-body-sm text-muted hover:text-foreground"
           >
             ✕
           </button>
@@ -161,7 +161,7 @@ export function ChangelogFeedFilter({
       )}
 
       {hasActiveFilter && resultCount !== undefined && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {resultCount} release{resultCount !== 1 ? "s" : ""} match
         </p>
       )}

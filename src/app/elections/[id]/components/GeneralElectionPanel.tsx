@@ -363,11 +363,11 @@ export function GeneralElectionPanel({
         }
       }}
     >
-      <div className="space-y-4 text-sm">
+      <div className="space-y-4 text-body">
         {supportResult ? (
           <div className="space-y-2">
-            <p className="text-success text-sm font-medium">Contribution successful!</p>
-            <p className="text-muted text-xs">
+            <p className="text-success text-body font-medium">Contribution successful!</p>
+            <p className="text-muted text-body-sm">
               Added{" "}
               <span className="text-foreground font-medium">
                 {supportResult.strengthAdded.toFixed(1)}
@@ -386,7 +386,7 @@ export function GeneralElectionPanel({
                 setSupportingCampaignId(null);
                 setSupportResult(null);
               }}
-              className="w-full rounded-lg bg-primary/10 border border-primary/30 px-4 py-2 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+              className="w-full rounded-lg bg-primary/10 border border-primary/30 px-4 py-2 text-body-sm font-medium text-primary hover:bg-primary/20 transition-colors"
             >
               Done
             </button>
@@ -406,7 +406,7 @@ export function GeneralElectionPanel({
                       onClick={() => setSupportClicks(opt.value)}
                       disabled={supporting || !opt.enabled}
                       title={opt.enabled ? undefined : "You cannot afford this many"}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`rounded-lg border px-3 py-1.5 text-body-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                         isActive
                           ? "border-primary/60 bg-primary/15 text-primary"
                           : "border-card-border text-muted hover:text-foreground"
@@ -417,12 +417,12 @@ export function GeneralElectionPanel({
                   );
                 })}
               </div>
-              <p className="mt-1.5 text-[11px] text-muted">
+              <p className="mt-1.5 text-body-sm text-muted">
                 A batch costs exactly what the same number of single contributions would: it just
                 spends them in one go.
               </p>
             </div>
-            <p className="text-muted text-xs">
+            <p className="text-muted text-body-sm">
               {supportPreview ? (
                 <>
                   Spend{" "}
@@ -453,16 +453,16 @@ export function GeneralElectionPanel({
                     strength, which raises the price of the next batch. Say so
                     rather than leaving Confirm mysteriously dead. */}
             {supportPreview && !supportPreview.affordable && (
-              <p className="text-error text-xs">
+              <p className="text-error text-body-sm">
                 You can afford {supportContext?.maxClicks ?? 0} of these right now.
               </p>
             )}
-            <InlineError error={supportError} className="text-error text-xs" />
+            <InlineError error={supportError} className="text-error text-body-sm" />
             <div className="flex gap-2">
               <button
                 onClick={handleSupportConfirm}
                 disabled={supporting || !supportPreview?.affordable}
-                className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+                className="flex-1 rounded-lg bg-primary px-3 py-2 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {supporting
                   ? "Contributing..."
@@ -476,7 +476,7 @@ export function GeneralElectionPanel({
                   setSupportError("");
                 }}
                 disabled={supporting}
-                className="flex-1 rounded-lg border border-card-border px-3 py-2 text-xs font-medium text-muted hover:text-foreground transition-colors"
+                className="flex-1 rounded-lg border border-card-border px-3 py-2 text-body-sm font-medium text-muted hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -620,7 +620,7 @@ export function GeneralElectionPanel({
         {/* Charts */}
         {showTrends && (
           <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
-            <div className="text-sm font-semibold mb-3">Election trends</div>
+            <div className="text-body font-semibold mb-3">Election trends</div>
             <GeneralVoteCharts
               snapshots={tally.turnSnapshots}
               series={lineSeries}

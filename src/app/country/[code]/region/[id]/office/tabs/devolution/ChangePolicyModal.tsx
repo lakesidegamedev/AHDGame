@@ -83,10 +83,10 @@ export function ChangePolicyModal({
         className="w-full max-w-lg rounded-xl border border-card-border bg-card p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-heading font-semibold">
           Change devolution policy{adminOverride ? " (Admin)" : ""}
         </h2>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-body text-muted">
           {adminOverride
             ? "Admin override — bypasses the AP cost and cooldown."
             : `Costs ${DEVOLUTION_POLICY_CHANGE_AP_COST} Office AP. Locked for the cooldown after changing.`}
@@ -102,7 +102,7 @@ export function ChangePolicyModal({
                 type="button"
                 onClick={() => setSelected(p)}
                 disabled={isCurrent}
-                className={`flex w-full items-center justify-between rounded-md border px-4 py-3 text-left text-sm transition-colors ${
+                className={`flex w-full items-center justify-between rounded-md border px-4 py-3 text-left text-body transition-colors ${
                   isPicked
                     ? "border-primary bg-primary/10"
                     : isCurrent
@@ -118,13 +118,13 @@ export function ChangePolicyModal({
         </div>
 
         {error && (
-          <div className="mt-4 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+          <div className="mt-4 rounded-md border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-body text-rose-500">
             {error}
           </div>
         )}
 
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-xs text-muted">
+          <div className="text-body-sm text-muted">
             {adminOverride ? (
               <span>Admin mode</span>
             ) : (
@@ -141,7 +141,7 @@ export function ChangePolicyModal({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-md border border-card-border px-4 py-2 text-sm transition-colors hover:bg-card-border/40"
+              className="rounded-md border border-card-border px-4 py-2 text-body transition-colors hover:bg-card-border/40"
             >
               Cancel
             </button>
@@ -149,7 +149,7 @@ export function ChangePolicyModal({
               type="button"
               onClick={handleSubmit}
               disabled={!canSubmit}
-              className={`rounded-md px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`rounded-md px-4 py-2 text-body font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 adminOverride ? "bg-error hover:bg-error/80" : "bg-primary hover:bg-primary/90"
               }`}
             >

@@ -25,7 +25,7 @@ export function PoliticalOperationsTabs({ activeTab, onChange }: Props) {
           aria-selected={activeTab === t.id}
           disabled={t.disabled}
           onClick={() => !t.disabled && onChange(t.id)}
-          className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-sm ${
+          className={`shrink-0 whitespace-nowrap px-4 py-1.5 text-body ${
             t.disabled
               ? `${PILL_SHAPE} cursor-not-allowed text-muted/50`
               : pillClass(activeTab === t.id)

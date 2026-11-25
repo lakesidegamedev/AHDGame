@@ -31,17 +31,17 @@ export function Layer1Tab({
             className={`rounded-xl border bg-card p-4 shadow-card ${ok ? "border-card-border" : "border-error"}`}
           >
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-muted">{dim}</h3>
+              <h3 className="text-body-lg font-semibold text-muted">{dim}</h3>
               <div className="flex items-center gap-2">
                 {!ok && (
                   <button
                     onClick={() => onNormalize(dim)}
-                    className="rounded border border-error/40 bg-error/10 px-2 py-0.5 text-[11px] font-medium text-error transition-colors hover:bg-error/20"
+                    className="rounded border border-error/40 bg-error/10 px-2 py-0.5 text-body-sm font-medium text-error transition-colors hover:bg-error/20"
                   >
                     Normalize
                   </button>
                 )}
-                <span className={`text-xs tabular-nums ${ok ? "text-success" : "text-error"}`}>
+                <span className={`text-body-sm tabular-nums ${ok ? "text-success" : "text-error"}`}>
                   Σ {sum.toFixed(1)}{" "}
                   {ok ? "✓" : `— off by ${delta > 0 ? "+" : ""}${delta.toFixed(1)}, needs 100`}
                 </span>
@@ -49,7 +49,7 @@ export function Layer1Tab({
             </div>
             {entries.map(([key, e]) => (
               <div key={key} className="border-t border-card-border py-2 first:border-t-0">
-                <p className="text-xs font-medium text-foreground">{key}</p>
+                <p className="text-body-sm font-medium text-foreground">{key}</p>
                 <StatSlider
                   label="Share % (preview only, census, not saved)"
                   value={e.share}

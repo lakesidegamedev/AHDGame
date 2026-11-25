@@ -97,8 +97,8 @@ export function CabinetAdminTab({
   return (
     <div data-testid="cabinet-admin-tab" className="space-y-6">
       <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-sm font-semibold text-muted">Direct appointment (admin)</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-body font-semibold text-muted">Direct appointment (admin)</h2>
+        <p className="mt-1 text-body text-muted">
           Seats the character immediately, bypassing the normal appointment flow. Replaces the
           current holder if the seat is filled.
         </p>
@@ -106,7 +106,7 @@ export function CabinetAdminTab({
           <select
             value={selectedPositionId}
             onChange={(e) => setSelectedPositionId(e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+            className="rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
             aria-label="Position"
           >
             <option value="">Select position…</option>
@@ -120,7 +120,7 @@ export function CabinetAdminTab({
           <select
             value={selectedCharId}
             onChange={(e) => setSelectedCharId(e.target.value)}
-            className="min-w-0 rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
+            className="min-w-0 rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground"
             aria-label="Character"
           >
             <option value="">Select character…</option>
@@ -150,7 +150,7 @@ export function CabinetAdminTab({
         </div>
         {charactersError && (
           <div className="mt-3 flex items-center gap-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2">
-            <p className="text-sm text-error">Failed to load the character list.</p>
+            <p className="text-body text-error">Failed to load the character list.</p>
             <Button variant="secondary" onClick={loadCharacters}>
               Retry
             </Button>
@@ -159,8 +159,8 @@ export function CabinetAdminTab({
       </section>
 
       <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
-        <h2 className="text-sm font-semibold text-muted">Seats (admin)</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-body font-semibold text-muted">Seats (admin)</h2>
+        <p className="mt-1 text-body text-muted">
           Admin removal carries no cooldown. Reset Cooldown clears the 24-turn appointment cooldown
           on a seat so it can be filled again immediately.
         </p>
@@ -173,8 +173,8 @@ export function CabinetAdminTab({
                 className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{seat.name}</p>
-                  <p className="text-xs text-muted">
+                  <p className="text-body font-medium text-foreground">{seat.name}</p>
+                  <p className="text-body-sm text-muted">
                     {seat.memberName ?? (onCooldown ? "Vacant · on cooldown" : "Vacant")}
                   </p>
                 </div>

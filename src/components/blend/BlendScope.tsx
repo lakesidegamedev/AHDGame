@@ -31,7 +31,7 @@ export function BlendScope({ title, lede, children }: BlendScopeProps) {
         style={{
           margin: lede ? "0 0 4px" : "0 0 18px",
           fontFamily: FONT.sans,
-          fontSize: 23,
+          fontSize: 20,
           fontWeight: 600,
         }}
       >
@@ -42,7 +42,7 @@ export function BlendScope({ title, lede, children }: BlendScopeProps) {
           style={{
             margin: "0 0 18px",
             fontFamily: FONT.sans,
-            fontSize: 14.5,
+            fontSize: 14,
             lineHeight: 1.55,
             color: BLEND.muted,
           }}

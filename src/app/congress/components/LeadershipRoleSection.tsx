@@ -69,7 +69,7 @@ export function HouseLeadershipRoleSection({
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-body-lg font-semibold">{title}</h3>
       {current ? (
         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-card-border bg-card p-4">
           <div className="min-w-0 flex-1">
@@ -94,7 +94,7 @@ export function HouseLeadershipRoleSection({
           />
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-card-border bg-card/50 p-4 text-center text-sm text-muted">
+        <div className="rounded-xl border border-dashed border-card-border bg-card/50 p-4 text-center text-body text-muted">
           No {title}.{" "}
           {isVoting
             ? "Election in progress — plurality wins."
@@ -144,7 +144,7 @@ export function HouseLeadershipRoleSection({
           {election?.status !== "voting" && (
             <button
               onClick={onStartElection}
-              className="rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 px-4 text-sm font-medium text-amber-400 hover:bg-amber-500/20"
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 px-4 text-body font-medium text-amber-400 hover:bg-amber-500/20"
             >
               Start 24h {title} election
             </button>
@@ -152,14 +152,14 @@ export function HouseLeadershipRoleSection({
           {isVoting && (
             <button
               onClick={onForceEnd}
-              className="rounded-xl border border-green-500/40 bg-green-500/10 py-2 px-4 text-sm font-medium text-green-400 hover:bg-green-500/20"
+              className="rounded-xl border border-green-500/40 bg-green-500/10 py-2 px-4 text-body font-medium text-green-400 hover:bg-green-500/20"
             >
               Force end {title} election
             </button>
           )}
           <button
             onClick={onReset}
-            className="rounded-xl border border-red-500/30 bg-red-500/10 py-2 px-4 text-sm font-medium text-red-400 hover:bg-red-500/20"
+            className="rounded-xl border border-red-500/30 bg-red-500/10 py-2 px-4 text-body font-medium text-red-400 hover:bg-red-500/20"
           >
             Reset {title} election
           </button>
@@ -168,7 +168,7 @@ export function HouseLeadershipRoleSection({
       {isMember && isInParty && !hasActiveCandidacy && isVoting && (
         <button
           onClick={onDeclare}
-          className="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+          className="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 py-2 text-body font-medium text-primary hover:bg-primary/10"
         >
           + Declare for {title}
         </button>
@@ -213,7 +213,7 @@ export function SenateLeadershipRoleSection({
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-body-lg font-semibold">{title}</h3>
       {current ? (
         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-card-border bg-card p-4">
           <div className="min-w-0 flex-1">
@@ -238,7 +238,7 @@ export function SenateLeadershipRoleSection({
           />
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-card-border bg-card/50 p-4 text-center text-sm text-muted">
+        <div className="rounded-xl border border-dashed border-card-border bg-card/50 p-4 text-center text-body text-muted">
           No {title}.{" "}
           {isVoting
             ? "Election in progress — plurality wins."
@@ -288,7 +288,7 @@ export function SenateLeadershipRoleSection({
           {election?.status !== "voting" && (
             <button
               onClick={onStartElection}
-              className="rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 px-4 text-sm font-medium text-amber-400 hover:bg-amber-500/20"
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 py-2 px-4 text-body font-medium text-amber-400 hover:bg-amber-500/20"
             >
               Start 24h {title === "President Pro Tempore" ? "Pro tempore" : title} election
             </button>
@@ -296,14 +296,14 @@ export function SenateLeadershipRoleSection({
           {isVoting && (
             <button
               onClick={onForceEnd}
-              className="rounded-xl border border-green-500/40 bg-green-500/10 py-2 px-4 text-sm font-medium text-green-400 hover:bg-green-500/20"
+              className="rounded-xl border border-green-500/40 bg-green-500/10 py-2 px-4 text-body font-medium text-green-400 hover:bg-green-500/20"
             >
               Force end {title === "President Pro Tempore" ? "Pro tempore" : title} election
             </button>
           )}
           <button
             onClick={onReset}
-            className="rounded-xl border border-red-500/30 bg-red-500/10 py-2 px-4 text-sm font-medium text-red-400 hover:bg-red-500/20"
+            className="rounded-xl border border-red-500/30 bg-red-500/10 py-2 px-4 text-body font-medium text-red-400 hover:bg-red-500/20"
           >
             Reset {title === "President Pro Tempore" ? "Pro tempore" : title} election
           </button>
@@ -313,7 +313,7 @@ export function SenateLeadershipRoleSection({
         <button
           onClick={onDeclare}
           disabled={declaring}
-          className="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 py-2 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+          className="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 py-2 text-body font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
         >
           {declaring ? "Declaring…" : `+ Declare for ${title}`}
         </button>

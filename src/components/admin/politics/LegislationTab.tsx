@@ -102,7 +102,7 @@ export function LegislationTab() {
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted shadow-card">
+        <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted shadow-card">
           No registered countries in {activeContinent} yet.
         </div>
       )}

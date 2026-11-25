@@ -44,7 +44,7 @@ export function LoadingSpinner({
           className={`animate-spin rounded-full border-primary border-t-transparent ${SIZE_CLASSES[size]}`}
           aria-hidden
         />
-        {label && <p className="text-sm text-muted">{label}</p>}
+        {label && <p className="text-body text-muted">{label}</p>}
       </div>
     </div>
   );

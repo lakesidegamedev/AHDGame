@@ -13,25 +13,25 @@ function getPriorityBadge(priority: TaskPriority) {
   switch (priority) {
     case "critical":
       return (
-        <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           Critical
         </span>
       );
     case "high":
       return (
-        <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           High
         </span>
       );
     case "medium":
       return (
-        <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           Medium
         </span>
       );
     case "low":
       return (
-        <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+        <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded text-body-sm font-bold uppercase tracking-wider">
           Low
         </span>
       );
@@ -127,7 +127,7 @@ export function TasksPageClient() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2 text-body font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted hover:text-foreground"
@@ -152,7 +152,7 @@ export function TasksPageClient() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "all")}
-                className="h-9 rounded-md border border-card-border bg-card px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="h-9 rounded-md border border-card-border bg-card px-3 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="all">All status</option>
                 <option value="pending">Pending</option>
@@ -163,7 +163,7 @@ export function TasksPageClient() {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | "all")}
-                className="h-9 rounded-md border border-card-border bg-card px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="h-9 rounded-md border border-card-border bg-card px-3 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="all">All priority</option>
                 <option value="critical">Critical</option>
@@ -175,7 +175,7 @@ export function TasksPageClient() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as TaskType | "all")}
-                className="h-9 rounded-md border border-card-border bg-card px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="h-9 rounded-md border border-card-border bg-card px-3 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="all">All types</option>
                 <option value="bug">Bugs</option>
@@ -186,7 +186,7 @@ export function TasksPageClient() {
 
             <button
               onClick={() => setShowForm(true)}
-              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-body font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               + New task
             </button>
@@ -200,9 +200,9 @@ export function TasksPageClient() {
             {showSeparated ? (
               <>
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-body-lg font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
                     Active tasks{" "}
-                    <span className="bg-card-border px-1.5 py-0.5 rounded text-xs text-foreground">
+                    <span className="bg-card-border px-1.5 py-0.5 rounded text-body-sm text-foreground">
                       {activeTasks.length}
                     </span>
                   </h3>
@@ -216,9 +216,9 @@ export function TasksPageClient() {
 
                 {completedTasks.length > 0 && (
                   <section className="space-y-3">
-                    <h3 className="text-sm font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-body-lg font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
                       Completed{" "}
-                      <span className="bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded text-xs">
+                      <span className="bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded text-body-sm">
                         {completedTasks.length}
                       </span>
                     </h3>
@@ -346,36 +346,41 @@ function LessonCard({
               <button
                 key={cat}
                 onClick={() => saveCategory(cat)}
-                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-opacity hover:opacity-80 ${LESSON_CATEGORY_CLASSES[cat]} ${cat === lesson.category ? "ring-1 ring-current" : "opacity-60"}`}
+                className={`text-body-sm font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-opacity hover:opacity-80 ${LESSON_CATEGORY_CLASSES[cat]} ${cat === lesson.category ? "ring-1 ring-current" : "opacity-60"}`}
               >
                 {cat}
               </button>
             ))}
-            <button onClick={() => setEditingCategory(false)} className="text-xs text-muted ml-1">
+            <button
+              onClick={() => setEditingCategory(false)}
+              className="text-body-sm text-muted ml-1"
+            >
               ✕
             </button>
           </div>
         ) : (
           <button
             onClick={() => setEditingCategory(true)}
-            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-opacity hover:opacity-70 ${LESSON_CATEGORY_CLASSES[lesson.category]}`}
+            className={`text-body-sm font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-opacity hover:opacity-70 ${LESSON_CATEGORY_CLASSES[lesson.category]}`}
             title="Click to change category"
           >
             {lesson.category}
           </button>
         )}
-        {lesson.taskTitle && <span className="text-xs text-muted">re: {lesson.taskTitle}</span>}
-        <span className="ml-auto text-xs text-muted">
+        {lesson.taskTitle && (
+          <span className="text-body-sm text-muted">re: {lesson.taskTitle}</span>
+        )}
+        <span className="ml-auto text-body-sm text-muted">
           <LocalTime value={lesson.createdAt} options={{ dateStyle: "medium" }} />
         </span>
       </div>
-      <p className="text-sm leading-relaxed">{lesson.lesson}</p>
+      <p className="text-body leading-relaxed">{lesson.lesson}</p>
       {/* Tags row */}
       <div className="flex flex-wrap items-center gap-1.5 pt-1">
         {tags.map((tag) => (
           <span
             key={tag}
-            className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+            className="text-body-sm px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
           >
             #{tag}
           </span>
@@ -394,16 +399,16 @@ function LessonCard({
                 if (e.key === "Escape") setEditingTags(false);
               }}
               placeholder="tag1, tag2, ..."
-              className="flex-1 min-w-0 rounded border border-card-border bg-card-elevated px-2 py-0.5 text-xs placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 min-w-0 rounded border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
               onClick={saveTags}
               disabled={saving}
-              className="text-xs px-2 py-0.5 rounded bg-primary text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="text-body-sm px-2 py-0.5 rounded bg-primary text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {saving ? "…" : "Save"}
             </button>
-            <button onClick={() => setEditingTags(false)} className="text-xs text-muted">
+            <button onClick={() => setEditingTags(false)} className="text-body-sm text-muted">
               ✕
             </button>
           </div>
@@ -413,7 +418,7 @@ function LessonCard({
               setTagsInput(tags.join(", "));
               setEditingTags(true);
             }}
-            className="text-[10px] text-muted hover:text-foreground transition-colors px-1"
+            className="text-body-sm text-muted hover:text-foreground transition-colors px-1"
             title="Edit tags"
           >
             {tags.length === 0 ? "+ add tags" : "edit tags"}
@@ -461,7 +466,7 @@ function LessonsTab() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value as LessonCategory | "all")}
-          className="h-9 rounded-md border border-card-border bg-card px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+          className="h-9 rounded-md border border-card-border bg-card px-3 text-body text-foreground focus:border-primary focus:outline-none"
         >
           <option value="all">All categories</option>
           {LESSON_CATEGORIES.map((cat) => (
@@ -470,13 +475,13 @@ function LessonsTab() {
             </option>
           ))}
         </select>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {filtered.length} lesson{filtered.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-card-border p-12 text-center text-sm text-muted">
+        <div className="rounded-lg border border-dashed border-card-border p-12 text-center text-body text-muted">
           {lessons.length === 0
             ? "No lessons learned yet. Claude logs these after completing tasks."
             : "No lessons match this filter."}
@@ -507,7 +512,7 @@ function TaskList({
 }) {
   if (tasks.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-card-border p-8 text-center text-sm text-muted">
+      <div className="rounded-lg border border-dashed border-card-border p-8 text-center text-body text-muted">
         No tasks found in this section.
       </div>
     );
@@ -554,7 +559,7 @@ function TaskList({
                   {task.title}
                 </button>
                 {task.status === "in_progress" && (
-                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-500">
+                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-body-sm font-medium text-blue-500">
                     In progress
                   </span>
                 )}
@@ -563,7 +568,7 @@ function TaskList({
                 <select
                   value={task.status}
                   onChange={(e) => onStatusChange(task, e.target.value as TaskStatus)}
-                  className="h-6 rounded border border-card-border bg-background px-1 text-xs text-muted focus:border-primary focus:outline-none"
+                  className="h-6 rounded border border-card-border bg-background px-1 text-body-sm text-muted focus:border-primary focus:outline-none"
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In progress</option>
@@ -587,10 +592,10 @@ function TaskList({
             </div>
 
             {task.description && (
-              <p className="text-sm text-muted line-clamp-2">{task.description}</p>
+              <p className="text-body text-muted line-clamp-2">{task.description}</p>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted">
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-body-sm text-muted">
               <div className="flex items-center gap-1.5" title="Type">
                 {getTypeIcon(task.type)}
                 <span className="capitalize">{task.type}</span>

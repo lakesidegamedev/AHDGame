@@ -24,7 +24,7 @@ export function Avatar({ name, partyColor, className }: AvatarProps) {
   return (
     <span
       className={[
-        "relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-card-elevated text-[10px] font-semibold tracking-wide text-muted select-none",
+        "relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-card-elevated text-body-sm font-semibold tracking-wide text-muted select-none",
         className,
       ]
         .filter(Boolean)

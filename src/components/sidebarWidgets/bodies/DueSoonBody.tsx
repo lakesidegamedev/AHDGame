@@ -76,7 +76,7 @@ export function DueSoonBody({
   const t = useTranslations("nav.widgets.dueSoon");
   // Measured from when the server built the list, which refreshes with each poll.
   const now = Date.parse(data.asOf);
-  if (data.items.length === 0) return <p className="text-xs text-muted">{t("empty")}</p>;
+  if (data.items.length === 0) return <p className="text-body-sm text-muted">{t("empty")}</p>;
   const shown = data.items.slice(0, compact ? 5 : data.items.length);
   const more = data.total - shown.length;
   return (
@@ -87,7 +87,7 @@ export function DueSoonBody({
             <Link
               href={item.href}
               onClick={onNavigate}
-              className="flex items-stretch gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
+              className="flex items-stretch gap-2 rounded px-1 py-1 text-body-sm hover:bg-white/5"
             >
               {/* Urgency stripe; the countdown text carries the same in words. */}
               <span
@@ -95,7 +95,7 @@ export function DueSoonBody({
                 className={`w-0.5 shrink-0 rounded-full ${STRIPE[urgencyOf(dueSoonRemaining(item, data.currentTurn, now))]}`}
               />
               <span className="min-w-0 flex-1">
-                <span className="block text-[11px] text-muted">
+                <span className="block text-body-sm text-muted">
                   {t(`kinds.${item.kind}`)}
                   {item.position && ` · ${t(`positions.${item.position}`)}`}
                 </span>
@@ -106,7 +106,7 @@ export function DueSoonBody({
           </li>
         ))}
       </ul>
-      {more > 0 && <p className="px-1 text-[11px] text-muted">{t("more", { count: more })}</p>}
+      {more > 0 && <p className="px-1 text-body-sm text-muted">{t("more", { count: more })}</p>}
     </div>
   );
 }

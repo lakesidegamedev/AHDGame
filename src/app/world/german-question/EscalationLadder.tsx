@@ -46,7 +46,7 @@ export function EscalationLadder({ view, onArmed }: { view: DossierView; onArmed
         off ? "border-card-border bg-card-muted/40" : "border-warning/40 bg-warning/[0.05]"
       }`}
     >
-      <h2 className="mb-3 font-mono text-body-xs font-bold tracking-wider text-gold-muted">
+      <h2 className="mb-3 font-mono text-body-sm font-bold tracking-wider text-gold-muted">
         ESCALATION LADDER · {off ? "STOOD DOWN" : `DEFCON ${view.defcon}`}
       </h2>
 
@@ -75,14 +75,14 @@ export function EscalationLadder({ view, onArmed }: { view: DossierView; onArmed
                 rung.here
                   ? "text-body-sm font-bold text-foreground"
                   : rung.passed
-                    ? "text-body-xs text-muted"
-                    : "text-body-xs text-muted/70"
+                    ? "text-body-sm text-muted"
+                    : "text-body-sm text-muted/70"
               }`}
             >
               {rung.label}
             </span>
             {rung.here && (
-              <span className="ml-auto shrink-0 font-mono text-body-xs font-semibold text-warning">
+              <span className="ml-auto shrink-0 font-mono text-body-sm font-semibold text-warning">
                 ◀ HERE
               </span>
             )}
@@ -108,7 +108,7 @@ export function EscalationLadder({ view, onArmed }: { view: DossierView; onArmed
       )}
 
       {off ? (
-        <p className="mt-3 rounded-md border border-dashed border-card-border p-3 font-mono text-body-xs leading-relaxed text-muted">
+        <p className="mt-3 rounded-md border border-dashed border-card-border p-3 font-mono text-body-sm leading-relaxed text-muted">
           LADDER STOOD DOWN: {seat?.escalateGate ?? "escalation is switched off for this question."}
         </p>
       ) : seat?.canEscalate ? (
@@ -121,7 +121,7 @@ export function EscalationLadder({ view, onArmed }: { view: DossierView; onArmed
             disabled={pending}
             onClick={() => void declare()}
             title="Open the war. The influence contest closes and the settlement goes to whoever wins."
-            className="mt-3 w-full rounded-md border border-error bg-error/15 p-2.5 font-mono text-body-xs font-bold tracking-wider text-error hover:bg-error/25 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 w-full rounded-md border border-error bg-error/15 p-2.5 font-mono text-body-sm font-bold tracking-wider text-error hover:bg-error/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "DECLARING…" : "DECLARE WAR"}
           </button>
@@ -137,24 +137,24 @@ export function EscalationLadder({ view, onArmed }: { view: DossierView; onArmed
                   ? `The four-power channel is still sitting. The ladder opens on turn ${view.opensAtTurn}.`
                   : "The ladder must reach rung 4 on coercive plays before it can be forced."
             }
-            className="mt-3 w-full rounded-md border border-warning/40 bg-warning/[0.07] p-2.5 font-mono text-body-xs font-semibold tracking-wider text-warning hover:bg-warning/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 w-full rounded-md border border-warning/40 bg-warning/[0.07] p-2.5 font-mono text-body-sm font-semibold tracking-wider text-warning hover:bg-warning/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "FORCING…" : "ESCALATE"}
           </button>
         )
       ) : (
-        <p className="mt-3 rounded-md border border-dashed border-card-border p-3 font-mono text-body-xs leading-relaxed text-muted">
+        <p className="mt-3 rounded-md border border-dashed border-card-border p-3 font-mono text-body-sm leading-relaxed text-muted">
           NO ESCALATION AUTHORITY: {seat?.escalateGate ?? "only a delegation may take the ladder."}
         </p>
       )}
 
       {error && (
-        <p role="alert" className="mt-2 font-mono text-body-xs text-error">
+        <p role="alert" className="mt-2 font-mono text-body-sm text-error">
           {error}
         </p>
       )}
 
-      <p className="mt-2.5 font-mono text-body-xs leading-relaxed text-gold-muted">
+      <p className="mt-2.5 font-mono text-body-sm leading-relaxed text-gold-muted">
         {off
           ? "While the ladder is stood down, coercive plays land as ordinary plays and leave no heat. The question can only be settled on the index."
           : "At rung 5 the influence contest closes and a conflict between NATO and the Warsaw Pact opens on the Conflicts board. The settlement goes to whoever wins it."}

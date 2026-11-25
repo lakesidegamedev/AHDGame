@@ -42,7 +42,7 @@ function CommodityErrorState({ message }: { message: string }) {
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-4xl px-4 sm:px-6 py-8">
         <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-          <h2 className="text-lg font-semibold text-error">{message}</h2>
+          <h2 className="text-heading font-semibold text-error">{message}</h2>
           <BackButton />
         </div>
       </main>

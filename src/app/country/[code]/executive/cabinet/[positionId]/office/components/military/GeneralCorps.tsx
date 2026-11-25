@@ -120,7 +120,7 @@ export function GeneralCorps({
             value={pick}
             onChange={(e) => setPick(e.target.value)}
             disabled={busy || candidates.length === 0}
-            className="min-w-0 flex-1 rounded-lg border border-card-border bg-card px-3 py-2 text-[13px] text-foreground"
+            className="min-w-0 flex-1 rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-foreground"
           >
             <option value="">
               {candidates.length === 0 ? "No eligible characters" : "Select a character…"}
@@ -135,16 +135,16 @@ export function GeneralCorps({
             type="button"
             disabled={!pick || busy}
             onClick={() => pick && commission(pick)}
-            className="shrink-0 rounded-lg bg-[var(--gov)] px-3 py-2 text-[12px] font-bold text-[#1a1200] disabled:opacity-40"
+            className="shrink-0 rounded-lg bg-[var(--gov)] px-3 py-2 text-body-sm font-bold text-[#1a1200] disabled:opacity-40"
           >
             Commission
           </button>
         </div>
       )}
-      <InlineError error={error} className="mb-2 text-[11px] text-error" />
+      <InlineError error={error} className="mb-2 text-body-sm text-error" />
 
       {corps.length === 0 ? (
-        <p className="text-[12px] text-muted">
+        <p className="text-body-sm text-muted">
           No generals commissioned. Commission a character to build a general staff.
         </p>
       ) : (
@@ -156,7 +156,7 @@ export function GeneralCorps({
             >
               <Link
                 href={`/character/${m.characterId}`}
-                className="min-w-0 flex-1 truncate text-[13px] text-foreground hover:text-gov-soft hover:underline"
+                className="min-w-0 flex-1 truncate text-body-sm text-foreground hover:text-gov-soft hover:underline"
                 title="Open this general's profile — doctrine is trained there"
               >
                 {m.name}
@@ -173,7 +173,7 @@ export function GeneralCorps({
                     onClick={() => commission(m.characterId)}
                     aria-label={`Re-appoint ${m.name}`}
                     title="Re-appoint — their record is restored"
-                    className="shrink-0 rounded-md border border-card-border px-2 py-0.5 text-[10px] font-semibold text-muted hover:text-foreground"
+                    className="shrink-0 rounded-md border border-card-border px-2 py-0.5 text-body-sm font-semibold text-muted hover:text-foreground"
                   >
                     RE-APPOINT
                   </button>
@@ -184,7 +184,7 @@ export function GeneralCorps({
                     onClick={() => dismiss(m.characterId)}
                     aria-label={`Dismiss ${m.name}`}
                     title="Dismiss — their record is kept, but they lose every command and posting"
-                    className="shrink-0 rounded-md border border-card-border px-2 py-0.5 text-[10px] font-semibold text-muted hover:text-error"
+                    className="shrink-0 rounded-md border border-card-border px-2 py-0.5 text-body-sm font-semibold text-muted hover:text-error"
                   >
                     DISMISS
                   </button>

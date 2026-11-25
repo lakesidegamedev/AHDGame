@@ -71,7 +71,7 @@ export function RecentAdminActionsCard({ onNavigate }: RecentAdminActionsCardPro
               key={row._id}
               className="flex gap-2.5 border-b border-card-border/50 py-2 last:border-b-0"
             >
-              <span className="w-14 shrink-0 pt-px font-mono text-body-xs text-muted">
+              <span className="w-14 shrink-0 pt-px font-mono text-body-sm text-muted">
                 {validTime ? (
                   <LocalTime value={when} options={{ hour: "2-digit", minute: "2-digit" }} />
                 ) : (
@@ -84,7 +84,7 @@ export function RecentAdminActionsCard({ onNavigate }: RecentAdminActionsCardPro
                   <span className="break-all text-muted">{row.action}</span>
                 </div>
                 {(row.subject?.name || row.subject?.type) && (
-                  <div className="truncate text-body-xs text-muted">
+                  <div className="truncate text-body-sm text-muted">
                     {row.subject?.name ?? row.subject?.type}
                     {row.outcome && row.outcome !== "ok" ? ` · ${row.outcome}` : ""}
                   </div>

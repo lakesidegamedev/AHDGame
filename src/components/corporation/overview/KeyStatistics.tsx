@@ -49,7 +49,7 @@ function RowLink({ onClick, children }: { onClick: () => void; children: ReactNo
     <button
       type="button"
       onClick={onClick}
-      className="shrink-0 text-xs text-muted underline decoration-card-border underline-offset-2 hover:text-foreground hover:decoration-foreground"
+      className="shrink-0 text-body-sm text-muted underline decoration-card-border underline-offset-2 hover:text-foreground hover:decoration-foreground"
     >
       {children}
     </button>
@@ -73,15 +73,15 @@ function Column({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-3.5 border-b border-card-border pb-4 pt-4 md:border-b-0 md:border-l md:px-5 md:first:border-l-0 md:first:pl-0 md:last:pr-0">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{title}</h3>
+      <h3 className="text-body-lg font-semibold uppercase tracking-[0.12em] text-muted">{title}</h3>
       {lead != null && (
         <div>
           <div
-            className={`font-mono text-[28px] font-semibold leading-none tracking-tight tabular-nums ${leadClass}`}
+            className={`font-mono text-display font-semibold leading-none tracking-tight tabular-nums ${leadClass}`}
           >
             {lead}
           </div>
-          {leadNote != null && <div className="mt-1.5 text-xs text-muted">{leadNote}</div>}
+          {leadNote != null && <div className="mt-1.5 text-body-sm text-muted">{leadNote}</div>}
         </div>
       )}
       {chart}
@@ -266,7 +266,7 @@ export function KeyStatistics({
         chart={
           split ? (
             <div>
-              <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+              <div className="mb-1.5 text-body-sm font-semibold uppercase tracking-[0.12em] text-muted">
                 {recordedSplit && recordedTurn != null
                   ? `Where revenue went, turn ${recordedTurn}`
                   : "Where revenue goes"}

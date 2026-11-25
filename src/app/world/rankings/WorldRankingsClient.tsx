@@ -153,7 +153,7 @@ export default function WorldRankingsClient() {
           </Link>{" "}
           / Rankings
         </p>
-        <h1 className="mt-2 text-display font-bold tracking-tight text-foreground sm:text-[2.25rem] sm:leading-tight">
+        <h1 className="mt-2 text-display font-bold tracking-tight text-foreground sm:text-display sm:leading-tight">
           Nations ranked
         </h1>
         <p className="mt-2 text-body-lg text-muted">
@@ -286,7 +286,7 @@ export default function WorldRankingsClient() {
 
           <section className="space-y-3" aria-label="Compare nations">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2 className="text-heading-lg font-semibold tracking-tight text-foreground">
+              <h2 className="text-heading font-semibold tracking-tight text-foreground">
                 Compare nations
               </h2>
               {compared.length > 0 && (

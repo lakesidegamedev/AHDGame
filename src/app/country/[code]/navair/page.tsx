@@ -76,9 +76,9 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
   if (!commands) {
     return (
       <main className="mx-auto max-w-4xl p-6">
-        <h1 className="text-lg text-neutral-100">Naval and air command</h1>
-        <p className="mt-1 text-sm text-neutral-400">{countryName}</p>
-        <p className="mt-6 text-sm text-neutral-300">
+        <h1 className="text-heading text-neutral-100">Naval and air command</h1>
+        <p className="mt-1 text-body text-neutral-400">{countryName}</p>
+        <p className="mt-6 text-body text-neutral-300">
           You do not command this nation&apos;s forces. Fleet and air dispositions are only visible
           to the officeholder.
         </p>
@@ -274,8 +274,8 @@ export default async function NavairCommandPage({ params }: { params: Promise<{ 
 
   return (
     <main className="mx-auto max-w-4xl p-6">
-      <h1 className="text-lg text-neutral-100">Naval and air command</h1>
-      <p className="mt-1 text-sm text-neutral-400">{countryName}</p>
+      <h1 className="text-heading text-neutral-100">Naval and air command</h1>
+      <p className="mt-1 text-body text-neutral-400">{countryName}</p>
 
       <div className="mt-6">
         <NavairCommandClient

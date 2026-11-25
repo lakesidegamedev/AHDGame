@@ -87,7 +87,7 @@ export function MarketSharePanel({
   if (series.length === 0) {
     return (
       <DenseSection title="Market share">
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           No historical output data yet. Your share of global commodity supply will appear here
           after a few turns of activity. Check the Commodities tab for current flows.
         </p>
@@ -161,14 +161,14 @@ export function MarketSharePanel({
         />
       }
     >
-      <p className="py-1 text-xs text-muted">
+      <p className="py-1 text-body-sm text-muted">
         Your corporation&rsquo;s share of global commodity output over time, by physical units
         produced, not industry revenue. Output compares your production with global supply, both per
         turn; stockpile is the global shadow inventory from the market ledger.
       </p>
 
       {basisChange && (
-        <p className="py-1 text-xs text-foreground">
+        <p className="py-1 text-body-sm text-foreground">
           <span className="font-semibold text-warning">
             Reporting basis changed at turn {basisChange.turn}.
           </span>{" "}
@@ -218,7 +218,7 @@ export function MarketSharePanel({
             }}
           />
         ) : (
-          <p className="py-2 text-xs text-muted">
+          <p className="py-2 text-body-sm text-muted">
             Need at least two turns of data for {active?.label ?? "this commodity"}.
           </p>
         )}

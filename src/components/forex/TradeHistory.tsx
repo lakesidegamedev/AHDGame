@@ -55,7 +55,7 @@ export function TradeHistory() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-error/20 bg-error/5 p-6 text-center text-error text-sm">
+      <div className="rounded-xl border border-error/20 bg-error/5 p-6 text-center text-error text-body">
         {error}
       </div>
     );
@@ -64,8 +64,8 @@ export function TradeHistory() {
   if (orders.length === 0) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-8 text-center">
-        <p className="text-muted text-sm">No completed trades yet.</p>
-        <p className="text-muted/60 text-xs mt-1">
+        <p className="text-muted text-body">No completed trades yet.</p>
+        <p className="text-muted/60 text-body-sm mt-1">
           Executed and cancelled orders will appear here.
         </p>
       </div>
@@ -75,11 +75,11 @@ export function TradeHistory() {
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border">
-        <h2 className="text-sm font-bold text-foreground">Trade history</h2>
-        <p className="text-xs text-muted mt-0.5">Your last {orders.length} completed orders</p>
+        <h2 className="text-body font-bold text-foreground">Trade history</h2>
+        <p className="text-body-sm text-muted mt-0.5">Your last {orders.length} completed orders</p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border bg-card-elevated">
               <th className="px-4 py-3 text-left text-body-sm font-medium text-muted">Date</th>
@@ -101,30 +101,30 @@ export function TradeHistory() {
           <tbody className="divide-y divide-card-border">
             {orders.map((order, idx) => (
               <tr key={order._id} className={idx % 2 === 0 ? "bg-card" : "bg-card-elevated/30"}>
-                <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
+                <td className="px-4 py-3 text-body-sm text-muted whitespace-nowrap">
                   <LocalTime value={order.createdAt} options={DATE_LABEL_OPTIONS} />
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-xs font-medium text-foreground capitalize">
+                  <span className="text-body-sm font-medium text-foreground capitalize">
                     {order.type}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-mono text-xs font-medium text-foreground">
+                  <span className="font-mono text-body-sm font-medium text-foreground">
                     {order.fromCurrency} → {order.toCurrency}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-xs text-foreground">
+                <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm text-foreground">
                   {formatAmount(order.amount)}
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-xs hidden sm:table-cell">
+                <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm hidden sm:table-cell">
                   {order.filledAmount > 0 ? (
                     <span className="text-success">{formatAmount(order.filledAmount)}</span>
                   ) : (
                     <span className="text-muted">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-xs hidden md:table-cell">
+                <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm hidden md:table-cell">
                   {"filledRate" in order && order.filledRate != null ? (
                     <span className="text-foreground">
                       {(order.filledRate as number) >= 10
@@ -141,12 +141,12 @@ export function TradeHistory() {
                     <span className="text-muted">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right font-mono tabular-nums text-xs text-muted hidden md:table-cell">
+                <td className="px-4 py-3 text-right font-mono tabular-nums text-body-sm text-muted hidden md:table-cell">
                   {order.spreadCharged > 0 ? `-${formatAmount(order.spreadCharged)}` : "—"}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-body-sm font-medium capitalize ${
                       STATUS_STYLES[order.status] ?? "bg-card-elevated text-muted"
                     }`}
                   >

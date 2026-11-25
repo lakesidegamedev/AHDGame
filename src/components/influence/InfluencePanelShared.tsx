@@ -33,7 +33,7 @@ export function InfluenceResultMessage({ result }: { result: InfluenceResult }) 
   return (
     <div
       role="status"
-      className={`mb-4 rounded-lg p-3 text-sm ${
+      className={`mb-4 rounded-lg p-3 text-body ${
         result.success
           ? "bg-green-500/20 text-green-400"
           : result.outcome === "backfire"
@@ -51,7 +51,7 @@ export function InfluenceResultMessage({ result }: { result: InfluenceResult }) 
  */
 export function InfluenceErrorMessage({ message }: { message: string }) {
   return (
-    <div role="alert" className="mb-4 rounded-lg bg-red-500/20 p-3 text-sm text-red-400">
+    <div role="alert" className="mb-4 rounded-lg bg-red-500/20 p-3 text-body text-red-400">
       {message}
     </div>
   );
@@ -81,7 +81,7 @@ export function CostAndChanceSummary({
 
   return (
     <div className="rounded-lg bg-background p-3">
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-2 gap-2 text-body">
         <div>
           <span className="text-muted">Action cost:</span>{" "}
           <span className="font-medium">{actionCost}</span>
@@ -97,7 +97,7 @@ export function CostAndChanceSummary({
         <div className="col-span-2">
           <span className="text-muted">Estimated response:</span>{" "}
           <span
-            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-body-sm font-semibold ${
               isLikely
                 ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
                 : "border-red-500/40 bg-red-500/15 text-red-300"

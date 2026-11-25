@@ -29,7 +29,7 @@ export function ReferralsSection({ userId, referralCount }: ReferralsSectionProp
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted leading-relaxed">
+      <p className="text-body text-muted leading-relaxed">
         {t.rich("referrals.intro", {
           strong: (chunks) => <strong className="text-foreground">{chunks}</strong>,
         })}
@@ -39,13 +39,13 @@ export function ReferralsSection({ userId, referralCount }: ReferralsSectionProp
       <div>
         <p className="mb-1.5 text-body-sm font-medium text-muted">{t("referrals.inviteLink")}</p>
         <div className="flex items-center gap-2">
-          <code className="flex-1 truncate rounded-lg border border-card-border bg-card-elevated px-4 py-2.5 font-mono text-sm text-foreground tracking-wider select-all">
+          <code className="flex-1 truncate rounded-lg border border-card-border bg-card-elevated px-4 py-2.5 font-mono text-body text-foreground tracking-wider select-all">
             /register?ref={userId}
           </code>
           <button
             type="button"
             onClick={handleCopyLink}
-            className={`shrink-0 inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-body font-medium transition-colors ${
               copied === "link"
                 ? "border-success/40 bg-success/10 text-success"
                 : "border-card-border bg-card hover:bg-card-elevated text-foreground"
@@ -60,13 +60,13 @@ export function ReferralsSection({ userId, referralCount }: ReferralsSectionProp
       <div>
         <p className="mb-1.5 text-body-sm font-medium text-muted">{t("referrals.referralCode")}</p>
         <div className="flex items-center gap-2">
-          <code className="flex-1 rounded-lg border border-card-border bg-card-elevated px-4 py-2.5 font-mono text-sm text-foreground tracking-wider select-all">
+          <code className="flex-1 rounded-lg border border-card-border bg-card-elevated px-4 py-2.5 font-mono text-body text-foreground tracking-wider select-all">
             {userId}
           </code>
           <button
             type="button"
             onClick={handleCopyCode}
-            className={`shrink-0 inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-body font-medium transition-colors ${
               copied === "code"
                 ? "border-success/40 bg-success/10 text-success"
                 : "border-card-border bg-card hover:bg-card-elevated text-foreground"
@@ -125,8 +125,10 @@ export function ReferralsSection({ userId, referralCount }: ReferralsSectionProp
           </svg>
         </div>
         <div>
-          <p className="text-2xl font-bold tabular-nums">{referralCount}</p>
-          <p className="text-xs text-muted">{t("referrals.joined", { count: referralCount })}</p>
+          <p className="text-heading font-bold tabular-nums">{referralCount}</p>
+          <p className="text-body-sm text-muted">
+            {t("referrals.joined", { count: referralCount })}
+          </p>
         </div>
       </div>
     </div>

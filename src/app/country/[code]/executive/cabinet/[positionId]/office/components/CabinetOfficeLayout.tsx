@@ -98,10 +98,10 @@ export function CabinetOfficeLayout({
             {registry && (
               <div className="dossier-label whitespace-nowrap text-gov-soft/80">{registry}</div>
             )}
-            <h1 className="mt-1.5 text-[22px] font-bold leading-[1.1] tracking-tight text-white sm:text-[26px]">
+            <h1 className="mt-1.5 text-heading font-bold leading-[1.1] tracking-tight text-white sm:text-display">
               {positionName}
             </h1>
-            <div className="mt-0.5 text-[13px] text-gov-soft/90">{department}</div>
+            <div className="mt-0.5 text-body-sm text-gov-soft/90">{department}</div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {member ? (
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black px-2.5 py-1">
@@ -115,7 +115,7 @@ export function CabinetOfficeLayout({
                   />
                   <Link
                     href={`/character/${member.sequentialId ?? member.characterId}`}
-                    className="text-xs font-medium text-white/90 hover:text-white"
+                    className="text-body-sm font-medium text-white/90 hover:text-white"
                   >
                     {member.characterName}
                   </Link>
@@ -130,7 +130,7 @@ export function CabinetOfficeLayout({
                   )}
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-full border border-warning/40 bg-black px-2.5 py-1 text-xs font-semibold text-warning">
+                <span className="inline-flex items-center rounded-full border border-warning/40 bg-black px-2.5 py-1 text-body-sm font-semibold text-warning">
                   Vacant
                 </span>
               )}
@@ -143,7 +143,7 @@ export function CabinetOfficeLayout({
                 </Badge>
               )}
               {showActions && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black px-2.5 py-1 text-xs font-medium text-white/80">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black px-2.5 py-1 text-body-sm font-medium text-white/80">
                   <svg
                     className="h-3 w-3 text-gov-soft"
                     viewBox="0 0 24 24"

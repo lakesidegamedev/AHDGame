@@ -9,7 +9,7 @@ interface Props {
 
 export function GameHealthSummaryCards({ snapshot }: Props) {
   if (!snapshot) {
-    return <p className="text-sm text-muted">No health data available yet.</p>;
+    return <p className="text-body text-muted">No health data available yet.</p>;
   }
 
   const counts = gameHealthPhaseCounts(snapshot);
@@ -55,9 +55,11 @@ export function GameHealthSummaryCards({ snapshot }: Props) {
           key={card.label}
           className="rounded-lg border border-border bg-card p-3 text-center shadow-sm"
         >
-          <p className="text-xs text-muted">{card.label}</p>
-          <p className={`text-xl font-bold ${card.color ?? "text-foreground"}`}>{card.value}</p>
-          <p className="text-xs text-muted">{card.sub}</p>
+          <p className="text-body-sm text-muted">{card.label}</p>
+          <p className={`text-heading font-bold ${card.color ?? "text-foreground"}`}>
+            {card.value}
+          </p>
+          <p className="text-body-sm text-muted">{card.sub}</p>
         </div>
       ))}
     </div>

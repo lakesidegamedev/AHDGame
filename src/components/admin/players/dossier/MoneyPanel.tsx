@@ -61,12 +61,12 @@ export function MoneyPanel({ userId, totals, recent }: MoneyPanelProps) {
       <div className="mt-4">
         <div className={`mb-1.5 ${OVERLINE_CLS}`}>Recent transactions ({recent.length})</div>
         {recent.length === 0 ? (
-          <p className="py-4 text-center text-xs text-muted">No transactions on record.</p>
+          <p className="py-4 text-center text-body-sm text-muted">No transactions on record.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left text-xs">
+            <table className="w-full min-w-[520px] text-left text-body-sm">
               <thead>
-                <tr className="border-b border-card-border/70 text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border/70 text-body font-semibold text-foreground">
                   <th className="py-1.5 pr-3 font-semibold">Type</th>
                   <th className="py-1.5 pr-3 font-semibold">Subject</th>
                   <th className="py-1.5 pr-3 font-semibold">Counterparty</th>
@@ -79,7 +79,7 @@ export function MoneyPanel({ userId, totals, recent }: MoneyPanelProps) {
                 {recent.map((row) => (
                   <tr key={row.id} className={row.flagged ? "bg-red-500/[0.04]" : undefined}>
                     <td className="py-1.5 pr-3">
-                      <span className="font-mono text-[10px] tracking-tight text-foreground/80">
+                      <span className="font-mono text-body-sm tracking-tight text-foreground/80">
                         {row.type}
                       </span>
                       {row.flagged && (
@@ -142,7 +142,7 @@ function TotalTile({
     <div className="rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2.5">
       <div className="text-body-sm font-medium text-muted">{label}</div>
       <div
-        className={`mt-1 text-lg font-bold tabular-nums tracking-tight ${toneClass}`}
+        className={`mt-1 text-heading font-bold tabular-nums tracking-tight ${toneClass}`}
         title={`${sign}${value.toLocaleString("en-US")} (anchor currency)`}
       >
         {sign}

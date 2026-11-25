@@ -83,12 +83,12 @@ export function GroupOverviewCard({
         {!hideGroupLink && (
           <Link
             href={"/corporation/" + group.rootCorporationId + "/group"}
-            className="text-sm underline"
+            className="text-body underline"
           >
             {t("viewGroup")}
           </Link>
         )}
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Members of a formalized group file together for loss relief within each country and share
           brand and logistics strength, converging on the strongest member each turn.
         </p>
@@ -123,11 +123,11 @@ export function GroupOverviewCard({
                       {m.name}
                     </Link>
                     {m.tickerSymbol && (
-                      <span className="ml-1.5 font-mono text-[11px] text-muted">
+                      <span className="ml-1.5 font-mono text-body-sm text-muted">
                         {m.tickerSymbol}
                       </span>
                     )}
-                    {m.isRoot && <span className="ml-1.5 text-[11px] text-muted">parent</span>}
+                    {m.isRoot && <span className="ml-1.5 text-body-sm text-muted">parent</span>}
                   </Td>
                   <Td align="right">{formatAmount(m.revenueAnchor)}</Td>
                   <Td align="right">{m.sectorCount}</Td>
@@ -165,7 +165,9 @@ export function GroupOverviewCard({
         </KVList>
         {audits.length > 0 && (
           <div>
-            <p className="pb-1 text-xs font-medium text-muted">Recent transfer pricing audits</p>
+            <p className="pb-1 text-body-sm font-medium text-muted">
+              Recent transfer pricing audits
+            </p>
             <table className="w-full border-collapse">
               <tbody>
                 {audits.map((a, i) => (

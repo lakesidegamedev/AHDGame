@@ -40,7 +40,7 @@ export default function IntorgIndexClient() {
         <header className="rounded-2xl border border-card-border bg-card p-5 shadow-card sm:p-6">
           <Link
             href="/world"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-body-sm font-medium text-muted hover:text-foreground"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -55,10 +55,10 @@ export default function IntorgIndexClient() {
           <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-body-sm font-medium text-muted">Diplomacy</p>
-              <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
+              <h1 className="text-display font-bold text-foreground sm:text-display">
                 International organizations
               </h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted">
+              <p className="mt-1 max-w-2xl text-body text-muted">
                 Multilateral institutions, free-trade agreements, and elected leadership. Foreign
                 ministers may apply to join, propose legislation, and vote on behalf of their
                 country.
@@ -66,7 +66,7 @@ export default function IntorgIndexClient() {
             </div>
             {viewer &&
               (viewer.foreignMinisterCountryName || viewer.headOfGovernmentCountryName) && (
-                <div className="rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-xs">
+                <div className="rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-body-sm">
                   <p className="font-semibold uppercase tracking-widest text-secondary">
                     Diplomatic role
                   </p>
@@ -88,7 +88,7 @@ export default function IntorgIndexClient() {
             <Skeleton className="h-32 w-full rounded-xl" />
           </div>
         ) : !data ? (
-          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
             Could not load organizations. Try refreshing.
           </div>
         ) : (

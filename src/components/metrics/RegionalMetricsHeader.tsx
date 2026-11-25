@@ -66,11 +66,11 @@ export function RegionalMetricsHeader({
           >
             {dossier}
           </div>
-          <h2 className={`mt-0.5 truncate text-xl font-bold text-white`}>{regionName}</h2>
+          <h2 className={`mt-0.5 truncate text-heading font-bold text-white`}>{regionName}</h2>
         </div>
         {stat !== undefined && (
           <div className="shrink-0 text-right">
-            <div className="text-lg font-bold tabular-nums text-white">{stat}</div>
+            <div className="text-heading font-bold tabular-nums text-white">{stat}</div>
             {statLabel && (
               <div
                 className="text-body-sm font-medium"

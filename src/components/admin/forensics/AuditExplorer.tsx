@@ -284,8 +284,8 @@ export default function AuditExplorer({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Forensic explorer</h2>
-          <p className="mt-0.5 text-xs text-muted">
+          <h2 className="text-heading font-semibold tracking-tight">Forensic explorer</h2>
+          <p className="mt-0.5 text-body-sm text-muted">
             Search the unified action-audit spine — follow any action to its full trace.
           </p>
         </div>
@@ -297,14 +297,14 @@ export default function AuditExplorer({
               runQuery(false);
             }}
             disabled={loading}
-            className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-sm transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none"
+            className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none"
           >
             Refresh
           </button>
           {isAdmin && (
             <a
               href={exportHref}
-              className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-sm transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+              className="inline-flex h-9 items-center rounded-lg border border-card-border px-3 text-body transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
             >
               Export
             </a>
@@ -313,7 +313,7 @@ export default function AuditExplorer({
       </div>
 
       {!isAdmin && (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300/90">
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-body-sm text-amber-300/90">
           Moderator view — privileged (admin-category) rows, raw metadata/network details, and
           export are hidden.
         </div>
@@ -328,21 +328,21 @@ export default function AuditExplorer({
       />
 
       {truncated && (
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300/90">
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-body-sm text-amber-300/90">
           Showing a capped result set — narrow your filters (actor, category, or time range) to see
           everything.
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2.5 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2.5 text-body text-red-400">
           <p>{error}</p>
           <button
             onClick={() => {
               cursorRef.current = null;
               runQuery(false);
             }}
-            className="mt-1.5 rounded text-xs underline underline-offset-2 transition-colors hover:text-red-300 motion-reduce:transition-none"
+            className="mt-1.5 rounded text-body-sm underline underline-offset-2 transition-colors hover:text-red-300 motion-reduce:transition-none"
           >
             Retry
           </button>
@@ -381,14 +381,14 @@ export default function AuditExplorer({
                   d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
                 />
               </svg>
-              <p className="text-sm font-medium">No matching actions</p>
-              <p className="mt-1 text-xs text-muted">
+              <p className="text-body font-medium">No matching actions</p>
+              <p className="mt-1 text-body-sm text-muted">
                 Loosen or clear the filters to widen the net.
               </p>
               <button
                 type="button"
                 onClick={() => setFilters(EMPTY_FILTERS)}
-                className="mt-3 rounded text-xs text-primary underline underline-offset-2 transition-colors hover:text-primary-dark motion-reduce:transition-none"
+                className="mt-3 rounded text-body-sm text-primary underline underline-offset-2 transition-colors hover:text-primary-dark motion-reduce:transition-none"
               >
                 Reset filters
               </button>

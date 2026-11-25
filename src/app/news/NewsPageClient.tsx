@@ -89,7 +89,7 @@ export function NewsPageClient({
                         setComposerMode("text");
                         setComposerFeedType("article");
                       }}
-                      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-md ring-1 ring-primary/30 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+                      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-body font-semibold text-primary-foreground shadow-md ring-1 ring-primary/30 transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
                     >
                       <svg
                         className="h-4 w-4 shrink-0"
@@ -113,7 +113,7 @@ export function NewsPageClient({
                         setComposerMode("text");
                         setComposerFeedType("advertisement");
                       }}
-                      className="flex items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-sm font-semibold text-amber-100 shadow-md transition-colors hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+                      className="flex items-center gap-1.5 rounded-lg border border-amber-400/50 bg-amber-500/15 px-3 py-2 text-body font-semibold text-amber-100 shadow-md transition-colors hover:bg-amber-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
                     >
                       Place ad
                     </button>
@@ -122,12 +122,12 @@ export function NewsPageClient({
               </div>
 
               <div className="min-w-0">
-                <p className="mb-1 text-xs italic text-white/80 drop-shadow">
+                <p className="mb-1 text-body-sm italic text-white/80 drop-shadow">
                   Free reporting and optional sponsored placements
                 </p>
                 <h1
                   data-coach="nav-news"
-                  className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl"
+                  className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-display"
                 >
                   News & events
                 </h1>
@@ -136,7 +136,7 @@ export function NewsPageClient({
           </div>
           {/* Editorial intro for crawlers and discovery */}
           <div className="border-t border-card-border bg-card px-5 py-4 sm:px-6">
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The in-character news wire for A House Divided. Read player-written headlines,
               campaign updates, policy editorials, and election coverage from across the world.
               Posts refresh as the hourly game clock advances. Registered players can publish free
@@ -179,7 +179,7 @@ export function NewsPageClient({
             <div className="space-y-2">
               {/* Toggle row */}
               <div className="flex items-center justify-between">
-                <div className="flex rounded-lg border border-white/20 bg-black/70 p-0.5 text-xs font-medium">
+                <div className="flex rounded-lg border border-white/20 bg-black/70 p-0.5 text-body-sm font-medium">
                   <button
                     type="button"
                     onClick={() => setComposerMode("text")}
@@ -198,7 +198,7 @@ export function NewsPageClient({
                 <button
                   type="button"
                   onClick={() => setComposerFeedType(null)}
-                  className="text-xs text-white/60 hover:text-white"
+                  className="text-body-sm text-white/60 hover:text-white"
                 >
                   Close
                 </button>
@@ -206,7 +206,7 @@ export function NewsPageClient({
 
               {composerMode === "banner" ? (
                 <div className="rounded-xl border border-card-border bg-card p-4">
-                  <h2 className="text-sm font-semibold text-foreground mb-3">Upload banner ad</h2>
+                  <h2 className="text-body font-semibold text-foreground mb-3">Upload banner ad</h2>
                   <BannerAdComposer onClose={() => setComposerFeedType(null)} />
                 </div>
               ) : (

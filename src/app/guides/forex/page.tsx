@@ -26,9 +26,9 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 const TABLE_WRAP = "overflow-x-auto rounded-lg border border-card-border";
-const TABLE = "w-full min-w-[480px] text-sm";
+const TABLE = "w-full min-w-[480px] text-body";
 const TH =
-  "border-b border-card-border bg-card px-3 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted";
+  "border-b border-card-border bg-card px-3 py-2 text-left text-body-sm font-bold uppercase tracking-wider text-muted";
 const TD = "border-b border-card-border/50 px-3 py-2 text-muted";
 
 const TOC_ITEMS = [
@@ -47,7 +47,7 @@ export default function ForexGuidePage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -56,8 +56,8 @@ export default function ForexGuidePage() {
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Currency exchange (forex)</h1>
-          <p className="mt-2 text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Currency exchange (forex)</h1>
+          <p className="mt-2 text-body text-muted">
             Exchange rate mechanics, trading tiers, volume pressure, and cross-currency strategies
           </p>
         </div>
@@ -68,7 +68,7 @@ export default function ForexGuidePage() {
           {/* ── 1. Overview ── */}
           <section className="space-y-4">
             <SectionHeader id="overview">1. How forex works</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Countries use the currencies configured for their world and era; some share a
               currency. In multiplayer, floating exchange rates move at half past the hour and on
               the hourly turn, based on economic conditions (interest rates, inflation, GDP growth,
@@ -89,7 +89,7 @@ export default function ForexGuidePage() {
               </Link>
               .
             </Callout>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Rates are measured against an internal &ldquo;anchor&rdquo; unit rather than directly
               against each other. Cross-rates are derived from the anchors: USD/JPY is simply the
               JPY anchor rate divided by the USD anchor rate. In practice you only ever see the pair
@@ -128,7 +128,7 @@ export default function ForexGuidePage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               These are examples, not a complete currency roster. Available currencies and their
               names depend on the world and era. Check the exchange screen for the currencies
               available in your game and their current rates before placing a trade.
@@ -138,14 +138,14 @@ export default function ForexGuidePage() {
           {/* ── 3. Rate movement ── */}
           <section className="space-y-4">
             <SectionHeader id="rate-movement">3. How exchange rates move</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Each turn, floating rates update through three components: macro fundamental drift
               (about 80% of direction), player volume pressure (about 20%), and a little random
               noise.
             </p>
 
             <SubHeader>Macro fundamental drift</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Each country&apos;s rate drifts toward a target implied by its economy relative to its
               neutral baseline:
             </p>
@@ -157,7 +157,7 @@ export default function ForexGuidePage() {
   − (tradeGrowth − baselineTrade)       × 0.005  // trade surplus → stronger currency
 )`}
             </FormulaBlock>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               The rate closes 5% of the gap to its target every turn, so a significant shock takes
               roughly a full game year (~48 turns) to converge 90% of the way. That is deliberate:
               currency moves are multi-month trends you have time to spot, position for, and exit.
@@ -170,14 +170,14 @@ export default function ForexGuidePage() {
             </Callout>
 
             <SubHeader>Player volume pressure</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Net buy/sell volume over the past 24 turns creates a short-term offset, capped at ±5%,
               which feeds in at 20% weight. Heavy buying strengthens a currency a little and
               temporarily; it cannot overpower fundamentals, and whales cannot force extreme swings.
             </p>
 
             <SubHeader>Noise and guardrails</SubHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               A ±0.4% per-turn jitter keeps movements from being perfectly predictable, and every
               rate is hard-capped at ±50% from its base rate. A currency cannot hyperinflate to zero
               or moon without limit.
@@ -219,7 +219,7 @@ export default function ForexGuidePage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               <strong className="text-foreground">Tier 1 (market maker)</strong> fills instantly at
               the current rate plus a {pct(MARKET_MAKER_SPREAD)} base fee. It is also what
               auto-convert uses when you buy a foreign asset without holding that currency.{" "}
@@ -231,7 +231,7 @@ export default function ForexGuidePage() {
               offer to a named character at the lowest fee. They accept or decline, no
               counter-offers, and offers expire after 24 turns by default.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Your own market and limit trades also pay a size fee that rises toward{" "}
               {pct(FOREX_SIZE_FEE_MAX)} on very large conversions. It counts everything you
               converted in the last 24 turns, so splitting a big trade into small ones costs the
@@ -250,7 +250,7 @@ export default function ForexGuidePage() {
           {/* ── 5. Wallet ── */}
           <section className="space-y-4">
             <SectionHeader id="wallet">5. The multi-currency wallet</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Your character holds two money pools.{" "}
               <strong className="text-foreground">Campaign funds</strong> are always in your home
               currency. They pay for campaign spending, ads, and party actions and are never
@@ -258,7 +258,7 @@ export default function ForexGuidePage() {
               is multi-currency: each currency is a separate balance, and foreign income lands
               directly in the matching slot.
             </p>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               When you make a personal purchase denominated in a foreign currency, the game spends
               your existing balance in that currency first (free, no spread), auto-converts any
               shortfall from your home currency at the market-maker rate ({pct(MARKET_MAKER_SPREAD)}{" "}
@@ -269,7 +269,7 @@ export default function ForexGuidePage() {
           {/* ── 6. Foreign income ── */}
           <section className="space-y-4">
             <SectionHeader id="foreign-income">6. Foreign income</SectionHeader>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 <strong className="text-foreground">Dividends</strong> from foreign stocks are
                 auto-converted to your home currency at the market-maker rate. There is no
@@ -295,11 +295,11 @@ export default function ForexGuidePage() {
           {/* ── 7. Strategy ── */}
           <section className="space-y-4">
             <SectionHeader id="strategy">7. Reading the macro board</SectionHeader>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Because 80% of rate direction comes from fundamentals, forex trading here is mostly
               macro analysis. The questions that matter each game week:
             </p>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 <strong className="text-foreground">Which central banks are moving?</strong> Rate
                 hikes strengthen a currency over the following weeks; cuts weaken it. Central bank
@@ -320,7 +320,7 @@ export default function ForexGuidePage() {
                 spending bill can be a forex signal before it is a bond-market signal.
               </li>
             </ul>
-            <p className="text-sm text-muted leading-relaxed">
+            <p className="text-body text-muted leading-relaxed">
               Cross-country investors should also remember the second-order effect: if you buy
               Japanese stock and the yen strengthens, your holding gains in home-currency terms even
               if the share price never moves. Currency appreciation and asset appreciation stack.
@@ -330,7 +330,7 @@ export default function ForexGuidePage() {
           {/* ── 8. Tips ── */}
           <section className="space-y-4">
             <SectionHeader id="tips">8. Quick tips</SectionHeader>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-muted leading-relaxed">
+            <ul className="list-disc space-y-2 pl-5 text-body text-muted leading-relaxed">
               <li>
                 Trends take ~48 turns to fully play out. You don&apos;t need to catch the exact turn
                 a central bank moves, just the month it moves in.

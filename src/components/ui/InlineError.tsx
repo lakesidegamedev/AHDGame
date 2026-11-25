@@ -25,7 +25,7 @@ export function InlineError({
   error,
   fallbackMessage,
   onRetry,
-  className = "text-sm text-error",
+  className = "text-body text-error",
 }: InlineErrorProps) {
   if (error === null || error === undefined || error === false || error === "") return null;
   // A plain string is a message that already carries its own code (see
@@ -42,7 +42,7 @@ export function InlineError({
     <div role="alert" className={className}>
       <span>{d.message}</span>{" "}
       {d.code && (
-        <span className="font-mono text-xs text-muted" data-testid="inline-error-code">
+        <span className="font-mono text-body-sm text-muted" data-testid="inline-error-code">
           {d.code}
           {d.ref ? ` / ${d.ref.length > 12 ? d.ref.slice(0, 8) : d.ref}` : ""}
         </span>
@@ -51,7 +51,7 @@ export function InlineError({
         <button
           type="button"
           onClick={onRetry}
-          className="ml-2 text-xs font-medium text-primary hover:underline"
+          className="ml-2 text-body-sm font-medium text-primary hover:underline"
         >
           Retry
         </button>

@@ -71,7 +71,7 @@ export function Masthead({
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
           <div className="min-w-0">
-            <h1 className="break-words text-display font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
+            <h1 className="break-words text-display font-bold leading-tight tracking-tight text-foreground sm:text-display">
               {countryDisplayName}
             </h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -102,7 +102,7 @@ export function Masthead({
 
         <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="flex items-baseline gap-1">
-            <span className={`text-5xl font-semibold leading-none tabular-nums ${tone.text}`}>
+            <span className={`text-display font-semibold leading-none tabular-nums ${tone.text}`}>
               {shown}
             </span>
             <span className="text-body-lg text-muted">/100</span>

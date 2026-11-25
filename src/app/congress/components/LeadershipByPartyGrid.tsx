@@ -62,7 +62,7 @@ function LeaderRow({
           <button
             type="button"
             onClick={onAssign}
-            className="rounded border border-card-border bg-card px-2 py-1 text-xs text-muted hover:text-foreground"
+            className="rounded border border-card-border bg-card px-2 py-1 text-body-sm text-muted hover:text-foreground"
           >
             Assign
           </button>
@@ -70,7 +70,7 @@ function LeaderRow({
             <button
               type="button"
               onClick={onClear}
-              className="rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs text-red-400"
+              className="rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-body-sm text-red-400"
             >
               Clear
             </button>
@@ -105,11 +105,11 @@ function PartyPanel({
   return (
     <div className="overflow-hidden rounded-xl border border-card-border bg-card">
       <div className="border-b border-card-border bg-card/80 px-4 py-3">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <p className="mt-0.5 text-xs text-muted">
+        <h3 className="text-body-lg font-semibold text-foreground">{title}</h3>
+        <p className="mt-0.5 text-body-sm text-muted">
           {subtitle} - {seats} seats
         </p>
-        {detail ? <p className="mt-1 text-xs text-muted/80">{detail}</p> : null}
+        {detail ? <p className="mt-1 text-body-sm text-muted/80">{detail}</p> : null}
       </div>
       <div className="space-y-0 p-4">
         {leaders.map((leader) => (

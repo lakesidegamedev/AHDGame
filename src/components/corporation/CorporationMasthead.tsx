@@ -179,7 +179,7 @@ export function CorporationMasthead({
           {/* Arrow and printed sign both, so direction never rests on colour alone. */}
           {revenueGrowth.pct > 0 ? "▲ +" : revenueGrowth.pct < 0 ? "▼ −" : ""}
           {Math.abs(revenueGrowth.pct).toFixed(1)}%
-          <span className="ml-1 font-sans text-[11px] font-medium text-muted">
+          <span className="ml-1 font-sans text-body-sm font-medium text-muted">
             {revenueGrowth.realized ? "/yr" : "/turn"}
           </span>
         </span>
@@ -276,7 +276,7 @@ export function CorporationMasthead({
         <>
           {formatMarketingStrength(corporation.marketingStrength)}
           {growth != null && Number.isFinite(growth) && growth !== 0 && (
-            <span className={`ml-1.5 text-[11px] font-medium ${signTone(growth)}`}>
+            <span className={`ml-1.5 text-body-sm font-medium ${signTone(growth)}`}>
               {growth > 0 ? "+" : ""}
               {growth.toFixed(2)}
             </span>
@@ -364,7 +364,7 @@ export function CorporationMasthead({
           actions={
             <>
               {onTrade && (
-                <SmallButton tone="primary" onClick={onTrade} className="h-10 px-4 text-sm">
+                <SmallButton tone="primary" onClick={onTrade} className="h-10 px-4 text-body">
                   Trade shares
                 </SmallButton>
               )}
@@ -373,7 +373,7 @@ export function CorporationMasthead({
                 <SmallButton
                   onClick={() => setSettingsOpen(true)}
                   ariaLabel="Corporation settings"
-                  className="h-10 px-4 text-sm"
+                  className="h-10 px-4 text-body"
                 >
                   Settings
                 </SmallButton>
@@ -400,7 +400,7 @@ export function CorporationMasthead({
       </div>
 
       {corporation.description?.trim() && (
-        <p className="max-w-3xl text-sm text-muted">{corporation.description.trim()}</p>
+        <p className="max-w-3xl text-body text-muted">{corporation.description.trim()}</p>
       )}
 
       {(ceoIsInactive || nationalizationRisk || threatActive) && (
@@ -458,7 +458,7 @@ export function CorporationMasthead({
       )}
 
       {fogged && (
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           ~ marks an estimate from the{" "}
           {financialFogOfWar.fogSourceTurn != null
             ? `turn ${financialFogOfWar.fogSourceTurn}`

@@ -53,18 +53,18 @@ export function CharacterDangerZone({ characterName }: Props) {
 
   return (
     <>
-      <h4 className="text-sm font-semibold text-foreground mb-1">Retire character</h4>
-      <p className="text-sm text-muted mb-2">
+      <h4 className="text-body font-semibold text-foreground mb-1">Retire character</h4>
+      <p className="text-body text-muted mb-2">
         Retiring your character preserves their record in your account history. You will be able to
         create a new character afterward. This action cannot be undone.
       </p>
-      <p className="text-sm text-muted mb-6">
+      <p className="text-body text-muted mb-6">
         Your character&apos;s achievements, career history, and stats will be saved as a snapshot in
         your retired characters archive.
       </p>
       <button
         onClick={() => setShowConfirm(true)}
-        className="rounded-xl border border-error/50 bg-error/10 px-4 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error/20"
+        className="rounded-xl border border-error/50 bg-error/10 px-4 py-2.5 text-body font-medium text-error transition-colors hover:bg-error/20"
       >
         Retire character
       </button>
@@ -100,16 +100,16 @@ export function CharacterDangerZone({ characterName }: Props) {
                     />
                   </svg>
                 </div>
-                <h3 id="retire-dialog-title" className="text-base font-bold text-error">
+                <h3 id="retire-dialog-title" className="text-body-lg font-bold text-error">
                   Retire character
                 </h3>
               </div>
-              <p className="text-sm text-muted mb-4">
+              <p className="text-body text-muted mb-4">
                 This will <strong className="text-foreground">permanently retire</strong> your
                 character. Their record will be preserved in your account, but you will no longer be
                 able to play as them.
               </p>
-              <p className="mb-3 text-sm text-foreground">
+              <p className="mb-3 text-body text-foreground">
                 Type{" "}
                 <span className="font-bold font-mono bg-error/10 px-1.5 py-0.5 rounded text-error">
                   {characterName}
@@ -130,7 +130,7 @@ export function CharacterDangerZone({ characterName }: Props) {
                   }
                 }}
                 placeholder={`Type ${characterName} to confirm`}
-                className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-background ${
+                className={`w-full rounded-xl border px-4 py-2.5 text-body focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all bg-background ${
                   confirmText === characterName
                     ? "border-success/60 ring-2 ring-success/20 focus:ring-success/30"
                     : shake
@@ -156,7 +156,7 @@ export function CharacterDangerZone({ characterName }: Props) {
                 <button
                   onClick={closeDialog}
                   disabled={retiring}
-                  className="rounded-xl border border-card-border px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                  className="rounded-xl border border-card-border px-4 py-2.5 text-body text-muted transition-colors hover:text-foreground disabled:opacity-50"
                 >
                   Cancel
                 </button>

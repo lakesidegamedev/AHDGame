@@ -229,7 +229,7 @@ export default function PlayerEventCard() {
 
       {result ? (
         <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3">
-          <div className="text-body-xs font-semibold tracking-wider text-violet-400 uppercase">
+          <div className="text-body-sm font-semibold tracking-wider text-violet-400 uppercase">
             Outcome: {result.tierLabel}
           </div>
           <p className="mt-1 text-body text-foreground">
@@ -331,7 +331,7 @@ export default function PlayerEventCard() {
         </>
       )}
 
-      <InlineError error={error} className="text-sm font-medium text-error" />
+      <InlineError error={error} className="text-body font-medium text-error" />
       {!result && (
         <p className="text-body-sm text-muted">
           No action points required. If you don&apos;t respond in time, &ldquo;

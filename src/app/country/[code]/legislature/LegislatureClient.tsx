@@ -111,10 +111,10 @@ export default function LegislatureClient({
       <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl space-y-6">
           <header className="space-y-3 rounded-xl border border-card-border bg-card p-5 sm:p-6">
-            <p className="text-sm font-medium text-muted">{t("eyebrow")}</p>
-            <h1 className="text-2xl font-bold">{displayedName}</h1>
-            <p className="text-sm leading-relaxed text-muted">{t("overview")}</p>
-            <p className="text-sm leading-relaxed text-muted">{t("eligibility")}</p>
+            <p className="text-body font-medium text-muted">{t("eyebrow")}</p>
+            <h1 className="text-heading font-bold">{displayedName}</h1>
+            <p className="text-body leading-relaxed text-muted">{t("overview")}</p>
+            <p className="text-body leading-relaxed text-muted">{t("eligibility")}</p>
           </header>
           <RussianConstitutionalDecisionPanel />
           <FederationDecisionPanel countryId={countryId} legislatureName={displayedName} embedded />
@@ -144,7 +144,7 @@ export default function LegislatureClient({
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center">
-        <p data-coach="nav-legislature" className="text-2xl font-bold text-foreground">
+        <p data-coach="nav-legislature" className="text-heading font-bold text-foreground">
           {displayedName}
         </p>
         <p className="mt-2 text-muted">

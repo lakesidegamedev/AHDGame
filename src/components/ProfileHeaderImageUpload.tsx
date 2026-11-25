@@ -62,16 +62,16 @@ export function ProfileHeaderImageUpload({
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 px-2 sm:px-3">
               <div
-                className={`text-center text-muted ${isCompact ? "text-[10px] leading-tight sm:text-xs" : "text-sm"}`}
+                className={`text-center text-muted ${isCompact ? "text-body-sm leading-tight sm:text-body-sm" : "text-body"}`}
               >
                 <span className="font-medium text-foreground">Header image</span>
                 {!isCompact && (
-                  <span className="mt-1 block text-xs" aria-hidden>
+                  <span className="mt-1 block text-body-sm" aria-hidden>
                     {UPLOAD_IMAGE_HINTS.profileBanner.short}
                   </span>
                 )}
                 {isCompact && (
-                  <span className="mt-0.5 block text-[10px] opacity-90" aria-hidden>
+                  <span className="mt-0.5 block text-body-sm opacity-90" aria-hidden>
                     {UPLOAD_IMAGE_HINTS.profileBanner.short}
                   </span>
                 )}
@@ -98,7 +98,7 @@ export function ProfileHeaderImageUpload({
             ) : (
               <span
                 className={`rounded-lg bg-background/90 font-semibold text-foreground shadow-sm ${
-                  isCompact ? "px-2 py-1 text-[10px] sm:text-xs" : "px-3 py-1.5 text-xs"
+                  isCompact ? "px-2 py-1 text-body-sm sm:text-body-sm" : "px-3 py-1.5 text-body-sm"
                 }`}
               >
                 {isCompact ? "Change" : "Upload header image"}
@@ -116,11 +116,11 @@ export function ProfileHeaderImageUpload({
         className="hidden"
       />
 
-      <InlineError error={error} className="text-xs text-error" />
-      <p className="text-[11px] text-muted">
+      <InlineError error={error} className="text-body-sm text-error" />
+      <p className="text-body-sm text-muted">
         JPEG, PNG, WebP, or GIF · max 4 MB
         {!isCompact && (
-          <span className="block mt-0.5 text-[10px] leading-snug" aria-hidden>
+          <span className="block mt-0.5 text-body-sm leading-snug" aria-hidden>
             {UPLOAD_IMAGE_HINTS.profileBanner.short}
           </span>
         )}

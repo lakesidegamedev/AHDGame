@@ -19,7 +19,7 @@ export default function ProductionFlow({ suppliers, consumers }: ProductionFlowP
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-card-elevated/50 transition-colors"
       >
-        <h2 className="text-lg font-bold text-foreground">Production flow</h2>
+        <h2 className="text-heading font-bold text-foreground">Production flow</h2>
         <svg
           className={`w-5 h-5 text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           fill="none"
@@ -34,14 +34,14 @@ export default function ProductionFlow({ suppliers, consumers }: ProductionFlowP
         <div className="px-6 pb-6 border-t border-card-border/50">
           <div className="grid sm:grid-cols-2 gap-6 pt-4">
             <div>
-              <h3 className="text-sm font-bold text-foreground mb-1">Suppliers</h3>
-              <p className="text-xs text-muted mb-3">Sectors that produce this commodity</p>
+              <h3 className="text-body-lg font-bold text-foreground mb-1">Suppliers</h3>
+              <p className="text-body-sm text-muted mb-3">Sectors that produce this commodity</p>
               {suppliers.length === 0 ? (
-                <p className="text-sm text-muted">No sectors supply this commodity.</p>
+                <p className="text-body text-muted">No sectors supply this commodity.</p>
               ) : (
                 <div className="space-y-2">
                   {suppliers.map((s) => (
-                    <div key={s.label} className="flex items-center justify-between text-sm">
+                    <div key={s.label} className="flex items-center justify-between text-body">
                       <span className="text-foreground">{s.label}</span>
                       <span className="text-success font-medium tabular-nums">
                         {(s.rate * 100).toFixed(0)}% of revenue
@@ -53,16 +53,16 @@ export default function ProductionFlow({ suppliers, consumers }: ProductionFlowP
             </div>
 
             <div>
-              <h3 className="text-sm font-bold text-foreground mb-1">Consumers</h3>
-              <p className="text-xs text-muted mb-3">
+              <h3 className="text-body-lg font-bold text-foreground mb-1">Consumers</h3>
+              <p className="text-body-sm text-muted mb-3">
                 Sectors that consume this commodity as input
               </p>
               {consumers.length === 0 ? (
-                <p className="text-sm text-muted">No sectors demand this commodity.</p>
+                <p className="text-body text-muted">No sectors demand this commodity.</p>
               ) : (
                 <div className="space-y-2">
                   {consumers.map((s) => (
-                    <div key={s.label} className="flex items-center justify-between text-sm">
+                    <div key={s.label} className="flex items-center justify-between text-body">
                       <span className="text-foreground">{s.label}</span>
                       <span className="text-error font-medium tabular-nums">
                         {(s.rate * 100).toFixed(0)}% of revenue

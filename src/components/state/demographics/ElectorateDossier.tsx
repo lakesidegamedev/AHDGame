@@ -217,7 +217,7 @@ export function ElectorateDossier({
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
+              className={`px-3.5 py-1.5 text-body-sm font-semibold capitalize transition-colors ${
                 v === "admin"
                   ? activeView === v
                     ? "bg-red-500/20 text-red-400"
@@ -242,7 +242,7 @@ export function ElectorateDossier({
               setDim(s.dim);
               setSelectedId(null);
             }}
-            className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`rounded-lg px-3 py-1 text-body-sm font-semibold transition-colors ${
               s.dim === section.dim
                 ? "bg-primary/15 text-primary"
                 : "text-muted hover:text-foreground"
@@ -259,7 +259,7 @@ export function ElectorateDossier({
           <div className="mb-2 flex flex-wrap items-baseline gap-3">
             <span className="text-body-sm font-medium text-muted">State projection</span>
             <span
-              className="text-xl font-bold tabular-nums"
+              className="text-heading font-bold tabular-nums"
               style={{ color: leader?.color ?? "var(--foreground)" }}
             >
               {marginLabel}
@@ -280,7 +280,7 @@ export function ElectorateDossier({
               className="absolute -top-1 -bottom-1 left-1/2 w-0.5 -translate-x-1/2 rounded bg-foreground/70"
             />
           </div>
-          <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[11px] text-muted">
+          <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-body-sm text-muted">
             {projection.map((p) => (
               <span key={p.partyId}>
                 {p.name} <b style={{ color: p.color }}>{p.matchPct}%</b>
@@ -302,14 +302,14 @@ export function ElectorateDossier({
             >
               <div className="flex items-baseline justify-between">
                 <span
-                  className="text-[10px] font-bold uppercase tracking-widest"
+                  className="text-body-sm font-bold uppercase tracking-widest"
                   style={{ color: c.color }}
                 >
                   {c.title}
                 </span>
-                <span className="text-[11px] text-muted">{c.members.length} groups</span>
+                <span className="text-body-sm text-muted">{c.members.length} groups</span>
               </div>
-              <div className="text-2xl font-bold tabular-nums" style={{ color: c.color }}>
+              <div className="text-heading font-bold tabular-nums" style={{ color: c.color }}>
                 {c.pct.toFixed(0)}%
               </div>
             </div>
@@ -324,12 +324,12 @@ export function ElectorateDossier({
             <div key={c.key}>
               <div className="sticky top-0 z-[1] flex items-center justify-between bg-card px-4 pb-2 pt-3">
                 <span
-                  className="text-[10px] font-bold uppercase tracking-widest"
+                  className="text-body-sm font-bold uppercase tracking-widest"
                   style={{ color: c.color }}
                 >
                   {c.title}
                 </span>
-                <span className="text-[11px] tabular-nums text-muted">{c.pct.toFixed(0)}%</span>
+                <span className="text-body-sm tabular-nums text-muted">{c.pct.toFixed(0)}%</span>
               </div>
               {c.members.map((g) => {
                 const isSel = g.id === selected?.id;
@@ -344,7 +344,7 @@ export function ElectorateDossier({
                     }`}
                   >
                     <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-body-sm font-bold"
                       style={{
                         backgroundColor: `${leanColor(g.economicLean)}22`,
                         color: leanColor(g.economicLean),
@@ -355,14 +355,14 @@ export function ElectorateDossier({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[13px] font-medium text-foreground">
+                        <span className="truncate text-body-sm font-medium text-foreground">
                           {g.label}
                         </span>
-                        <span className="shrink-0 text-[13px] font-bold tabular-nums text-foreground">
+                        <span className="shrink-0 text-body-sm font-bold tabular-nums text-foreground">
                           {g.sharePct.toFixed(1)}%
                         </span>
                       </div>
-                      <div className="mt-0.5 truncate text-[11px] text-muted">
+                      <div className="mt-0.5 truncate text-body-sm text-muted">
                         Econ: {econWord(g.economicLean)} · Social: {socWord(g.socialLean)}
                       </div>
                       <div className="mt-1 h-1 overflow-hidden rounded-full bg-card-border/40">
@@ -387,7 +387,7 @@ export function ElectorateDossier({
           <div className="p-5">
             <div className="mb-4 flex items-start gap-4">
               <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-bold"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-heading font-bold"
                 style={{
                   backgroundColor: `${leanColor(selected.economicLean)}22`,
                   color: leanColor(selected.economicLean),
@@ -398,9 +398,9 @@ export function ElectorateDossier({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-bold text-foreground">{selected.label}</h3>
+                  <h3 className="text-body-lg font-bold text-foreground">{selected.label}</h3>
                   <span
-                    className="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                    className="rounded-md px-2 py-0.5 text-body-sm font-bold uppercase tracking-wide"
                     style={{
                       color: selected.lean.color,
                       backgroundColor: `${selected.lean.color}22`,
@@ -409,7 +409,7 @@ export function ElectorateDossier({
                     {selected.lean.label}
                   </span>
                 </div>
-                <p className="mt-1 text-[13px] text-muted">
+                <p className="mt-1 text-body-sm text-muted">
                   {section.dimLabel} · {selected.sharePct.toFixed(1)}% of this region&apos;s voters
                 </p>
               </div>
@@ -419,28 +419,30 @@ export function ElectorateDossier({
             <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div className="rounded-xl border border-card-border bg-card-muted/30 px-3 py-2.5">
                 <div className="text-body-sm font-medium text-muted">Share of electorate</div>
-                <div className="text-xl font-bold tabular-nums text-foreground">
+                <div className="text-heading font-bold tabular-nums text-foreground">
                   {selected.sharePct.toFixed(1)}%
                 </div>
               </div>
               <div className="rounded-xl border border-card-border bg-card-muted/30 px-3 py-2.5">
                 <div className="text-body-sm font-medium text-muted">Turnout habit</div>
-                <div className="text-sm font-bold text-foreground">
+                <div className="text-body font-bold text-foreground">
                   {turnoutWord(selected.turnout)}
                 </div>
-                <div className="text-[11px] text-muted">{selected.turnout.toFixed(0)}% show up</div>
+                <div className="text-body-sm text-muted">
+                  {selected.turnout.toFixed(0)}% show up
+                </div>
               </div>
               <div
                 className="rounded-xl border bg-card-muted/30 px-3 py-2.5"
                 style={{ borderColor: `${selected.lean.color}55` }}
               >
                 <div className="text-body-sm font-medium text-muted">Leaning toward</div>
-                <div className="text-sm font-bold" style={{ color: selected.lean.color }}>
+                <div className="text-body font-bold" style={{ color: selected.lean.color }}>
                   {selected.lean.isTossUp
                     ? "No clear favorite"
                     : (selected.matches[0]?.name ?? "—")}
                 </div>
-                <div className="text-[11px] text-muted">
+                <div className="text-body-sm text-muted">
                   {selected.lean.isTossUp ? "Persuadable" : "Closest platform match"}
                 </div>
               </div>
@@ -452,19 +454,19 @@ export function ElectorateDossier({
             <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="rounded-xl border border-card-border bg-card-muted/30 px-3 py-2.5">
                 <div className="text-body-sm font-medium text-muted">Economic lean</div>
-                <div className={`text-sm font-bold ${leanTextClass(selected.economicLean)}`}>
+                <div className={`text-body font-bold ${leanTextClass(selected.economicLean)}`}>
                   {econWord(selected.economicLean)}
                 </div>
-                <div className="text-[11px] text-muted">
+                <div className="text-body-sm text-muted">
                   Average {fmtLean(selected.economicLean)} · Left -5 to right +5
                 </div>
               </div>
               <div className="rounded-xl border border-card-border bg-card-muted/30 px-3 py-2.5">
                 <div className="text-body-sm font-medium text-muted">Social lean</div>
-                <div className={`text-sm font-bold ${leanTextClass(selected.socialLean)}`}>
+                <div className={`text-body font-bold ${leanTextClass(selected.socialLean)}`}>
                   {socWord(selected.socialLean)}
                 </div>
-                <div className="text-[11px] text-muted">
+                <div className="text-body-sm text-muted">
                   Average {fmtLean(selected.socialLean)} · Progressive -5 to traditional +5
                 </div>
               </div>
@@ -485,7 +487,7 @@ export function ElectorateDossier({
               />
             )}
             {activeView === "admin" && canEdit && !selectedPriorities && (
-              <p className="mb-4 text-xs text-muted">
+              <p className="mb-4 text-body-sm text-muted">
                 Legislative priorities are not configured for this group.
               </p>
             )}
@@ -493,17 +495,17 @@ export function ElectorateDossier({
               <section aria-label="Legislative priorities" className="mb-4">
                 <h4 className="mb-2 text-body-sm font-medium text-muted">Legislative priorities</h4>
                 <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-3">
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                  <div className="mb-1 text-body-sm font-bold uppercase tracking-wide text-primary">
                     Primary
                   </div>
-                  <div className="text-sm font-semibold text-foreground">
+                  <div className="text-body font-semibold text-foreground">
                     {selectedPriorities.primary.lawName}
                   </div>
-                  <div className="mt-1 text-xs text-muted">
+                  <div className="mt-1 text-body-sm text-muted">
                     Desired level: {selectedPriorities.primary.policyOptionName}
                   </div>
                 </div>
-                <div className="mb-2 mt-3 text-[10px] font-bold uppercase tracking-wide text-muted">
+                <div className="mb-2 mt-3 text-body-sm font-bold uppercase tracking-wide text-muted">
                   Secondary
                 </div>
                 <ul className="space-y-2">
@@ -512,10 +514,10 @@ export function ElectorateDossier({
                       key={priority.lawTypeId}
                       className="rounded-xl border border-card-border px-3 py-2.5"
                     >
-                      <div className="text-xs font-semibold text-foreground">
+                      <div className="text-body-sm font-semibold text-foreground">
                         {priority.lawName}
                       </div>
-                      <div className="mt-1 text-xs text-muted">
+                      <div className="mt-1 text-body-sm text-muted">
                         Desired level: {priority.policyOptionName}
                       </div>
                     </li>
@@ -533,7 +535,7 @@ export function ElectorateDossier({
                     <div className="space-y-2">
                       {selected.matches.map((m) => (
                         <div key={m.partyId}>
-                          <div className="mb-1 flex items-center justify-between text-xs">
+                          <div className="mb-1 flex items-center justify-between text-body-sm">
                             <span className="flex items-center gap-2 font-medium text-foreground">
                               <span
                                 className="h-2.5 w-2.5 rounded-full"

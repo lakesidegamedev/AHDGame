@@ -57,10 +57,10 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
   );
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pages);
-  const inputClass = "rounded-lg border border-card-border bg-card px-3 py-2 text-sm";
+  const inputClass = "rounded-lg border border-card-border bg-card px-3 py-2 text-body";
   if (signInRequired) {
     return (
-      <p className="py-6 text-sm text-muted">
+      <p className="py-6 text-body text-muted">
         <Link
           href="/login?returnTo=%2Fmarket%3Ftab%3Dsub-groups"
           className="text-primary hover:underline"
@@ -73,9 +73,9 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
   return (
     <PanelState loading={loading} error={error}>
       <div className="space-y-4">
-        <p className="text-xs text-muted">{t("basis")}</p>
+        <p className="text-body-sm text-muted">{t("basis")}</p>
         {all.some((g) => g.isNpp) && (
-          <label className="flex items-center justify-end gap-2 text-sm text-muted">
+          <label className="flex items-center justify-end gap-2 text-body text-muted">
             <input
               type="checkbox"
               className="accent-primary"
@@ -143,9 +143,9 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
           </button>
         </div>
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <caption className="sr-only">{t("title")}</caption>
-            <thead className="bg-card-elevated text-xs text-muted">
+            <thead className="bg-card-elevated text-body-sm text-muted">
               <tr>
                 {[
                   "name",
@@ -173,7 +173,9 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
                       <CorporationLogo name={g.name} logoUrl={g.logoUrl} />
                       <span>
                         {g.name}
-                        <span className="block text-xs font-normal text-muted">{g.parentName}</span>
+                        <span className="block text-body-sm font-normal text-muted">
+                          {g.parentName}
+                        </span>
                       </span>
                     </Link>
                   </td>
@@ -195,9 +197,9 @@ export function SubsidiaryGroupsPanel({ country = "global" }: { country?: string
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && <p className="p-6 text-sm text-muted">{t("empty")}</p>}
+          {filtered.length === 0 && <p className="p-6 text-body text-muted">{t("empty")}</p>}
         </div>
-        <div className="flex items-center justify-between gap-3 text-sm text-muted">
+        <div className="flex items-center justify-between gap-3 text-body text-muted">
           <span>{t("pagination", { page: current, pages, count: filtered.length })}</span>
           <div className="flex gap-2">
             <button

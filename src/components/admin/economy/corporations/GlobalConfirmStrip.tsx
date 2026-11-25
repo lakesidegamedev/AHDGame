@@ -17,7 +17,7 @@ export function GlobalConfirmStrip({
   dispatch: Dispatch<CorporationsAdminAction>;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-warning/10 border border-warning/30 px-4 py-3 text-sm">
+    <div className="flex items-center gap-3 rounded-lg bg-warning/10 border border-warning/30 px-4 py-3 text-body">
       <span className="text-warning font-medium">
         {globalConfirm === "resetAll"
           ? "Reset timers on all corporations?"
@@ -26,13 +26,13 @@ export function GlobalConfirmStrip({
       <button
         onClick={() => onConfirm(globalConfirm)}
         disabled={actionLoading === globalConfirm}
-        className="px-3 py-1 rounded bg-warning text-warning-foreground text-xs font-medium hover:opacity-90"
+        className="px-3 py-1 rounded bg-warning text-warning-foreground text-body-sm font-medium hover:opacity-90"
       >
         Confirm
       </button>
       <button
         onClick={() => dispatch({ type: "SET_GLOBAL_CONFIRM", value: null })}
-        className="text-xs text-muted hover:text-foreground"
+        className="text-body-sm text-muted hover:text-foreground"
       >
         Cancel
       </button>

@@ -25,12 +25,12 @@ interface TrendChipProps {
 export function TrendChip({ trend: rawTrend, value, isHigherBetter }: TrendChipProps) {
   const trend = trendPercent(rawTrend, value);
   if (trend == null || Math.abs(trend) < 0.05) {
-    return <span className="text-[11px] text-muted">flat</span>;
+    return <span className="text-body-sm text-muted">flat</span>;
   }
   const good = isHigherBetter ? trend > 0 : trend < 0;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] font-semibold tabular-nums ${
+      className={`inline-flex items-center gap-0.5 whitespace-nowrap text-body-sm font-semibold tabular-nums ${
         good ? "text-success" : "text-error"
       }`}
     >

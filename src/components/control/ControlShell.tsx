@@ -80,7 +80,7 @@ export function ControlShell({
           <Link href="/control" className="text-body font-semibold text-foreground">
             Control panel
           </Link>
-          <span className="rounded border border-card-border px-1.5 py-0.5 text-body-xs text-muted">
+          <span className="rounded border border-card-border px-1.5 py-0.5 text-body-sm text-muted">
             {ROLE_LABEL[role]}
           </span>
           <span className="hidden text-body-sm text-muted sm:inline">{username}</span>
@@ -108,7 +108,7 @@ export function ControlShell({
               onClick={() => setPaletteOpen(true)}
               className="rounded-md border border-card-border px-2.5 py-1 text-body-sm text-muted hover:text-foreground"
             >
-              Jump to tool <kbd className="ml-1 font-mono text-body-xs">Ctrl K</kbd>
+              Jump to tool <kbd className="ml-1 font-mono text-body-sm">Ctrl K</kbd>
             </button>
           </div>
         </header>

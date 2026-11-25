@@ -109,34 +109,34 @@ export function BankFundsPanel({
   const totalWeight = Object.values(weights).reduce((sum, weight) => sum + Number(weight || 0), 0);
   return (
     <section className="space-y-3 border-t border-card-border pt-4">
-      <h3 className="text-sm font-semibold">Funds</h3>
+      <h3 className="text-body-lg font-semibold">Funds</h3>
       {data.funds.length > 0 && (
         <ul className="space-y-2">
           {data.funds.map((f) => (
             <li key={f.id}>
               <Link
-                className="text-sm underline"
+                className="text-body underline"
                 href={`/stockmarket/${(f.countryId ?? "global").toLowerCase()}/fund/${encodeURIComponent(f.slug)}`}
               >
                 {f.name}
               </Link>
-              <span className="ml-2 text-xs text-muted">{f.status}</span>
+              <span className="ml-2 text-body-sm text-muted">{f.status}</span>
             </li>
           ))}
         </ul>
       )}
       {data.canCreate && data.stockChoices.length > 0 && (
         <form onSubmit={(event) => void create(event)} className="space-y-3">
-          <p className="text-sm">
+          <p className="text-body">
             Pick up to 10 companies. At least a quarter stays in cash. Each company can hold at most
             15% of the fund value.
           </p>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Investors own fund units. Their money stays separate from bank deposits, reserves and
             investments.
           </p>
           <div className="flex flex-wrap gap-3">
-            <label className="text-xs">
+            <label className="text-body-sm">
               Fund name
               <input
                 aria-label="Fund name"
@@ -148,7 +148,7 @@ export function BankFundsPanel({
                 className="block border border-card-border bg-background p-2"
               />
             </label>
-            <label className="text-xs">
+            <label className="text-body-sm">
               Ticker
               <input
                 aria-label="Ticker"
@@ -165,7 +165,7 @@ export function BankFundsPanel({
               .filter((c) => picked.includes(c.id) || picked.length < 10)
               .map((c) => (
                 <div className="flex items-center gap-3" key={c.id}>
-                  <label className="text-sm">
+                  <label className="text-body">
                     <input
                       type="checkbox"
                       checked={picked.includes(c.id)}
@@ -183,7 +183,7 @@ export function BankFundsPanel({
                     {c.ticker ? ` (${c.ticker})` : ""}
                   </label>
                   {picked.includes(c.id) && (
-                    <label className="text-xs">
+                    <label className="text-body-sm">
                       Weight (%)
                       <input
                         aria-label={`${c.name} weight (%)`}
@@ -203,11 +203,11 @@ export function BankFundsPanel({
                 </div>
               ))}
           </div>
-          <p className="text-xs">
+          <p className="text-body-sm">
             Companies: {totalWeight.toFixed(2)}%. Cash: {(100 - totalWeight).toFixed(2)}%.
           </p>
           <div className="flex flex-wrap gap-3">
-            <label className="text-xs">
+            <label className="text-body-sm">
               Bank fee (% per game year)
               <input
                 aria-label="Bank fee (% per game year)"
@@ -221,7 +221,7 @@ export function BankFundsPanel({
                 className="block w-28 border border-card-border bg-background p-2"
               />
             </label>
-            <label className="text-xs">
+            <label className="text-body-sm">
               {money.code ? `Bank seed investment, ${money.code}` : "Bank seed investment"}
               <input
                 aria-label="Bank's seed investment"
@@ -235,7 +235,7 @@ export function BankFundsPanel({
               />
             </label>
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Creation costs {formatAmount(FUND_CHARTER_FEE_ANCHOR)} plus your seed investment, paid
             from corporate cash. The seed buys ordinary units that stay invested while other
             investors or withdrawals remain. The fee and company choices are fixed for this fund.
@@ -243,12 +243,12 @@ export function BankFundsPanel({
           <button
             type="submit"
             disabled={busy || !picked.length || totalWeight > 75}
-            className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:bg-card-border disabled:text-muted"
+            className="rounded bg-primary px-3 py-2 text-body text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {busy ? "Creating fund..." : "Create fund"}
           </button>
           {error && (
-            <p role="alert" className="text-sm text-error">
+            <p role="alert" className="text-body text-error">
               {error}
             </p>
           )}

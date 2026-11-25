@@ -202,7 +202,7 @@ interface GatesState {
 function DefaultBadge() {
   return (
     <span
-      className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+      className="shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider"
       style={{ background: "rgba(59,130,246,0.12)", color: "var(--primary)" }}
       title="Enabled by default on every fresh seed / reset"
     >
@@ -328,7 +328,7 @@ export function FeatureGatesPanel() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading feature gates…</span>
+          <span className="text-body text-muted">Loading feature gates…</span>
         </div>
       </div>
     );
@@ -337,7 +337,7 @@ export function FeatureGatesPanel() {
   if (!state) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
-        <p className="text-sm text-destructive">Could not load feature gates.</p>
+        <p className="text-body text-destructive">Could not load feature gates.</p>
       </div>
     );
   }
@@ -345,8 +345,8 @@ export function FeatureGatesPanel() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-card sm:p-6">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold">Feature gates</h3>
-        <p className="text-xs leading-relaxed text-muted">
+        <h3 className="text-body-lg font-semibold">Feature gates</h3>
+        <p className="text-body-sm leading-relaxed text-muted">
           One control surface for every game feature flag, plus the command economy. Gates marked{" "}
           <span className="font-semibold text-primary">seed default</span> ship enabled on every
           fresh world; the rest are staged rollouts. NPP economy and line of credit are core systems
@@ -355,7 +355,7 @@ export function FeatureGatesPanel() {
       </div>
 
       {error ? (
-        <p className="mb-3 text-xs text-destructive" role="alert">
+        <p className="mb-3 text-body-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
@@ -371,10 +371,10 @@ export function FeatureGatesPanel() {
               className="rounded-lg border border-card-border bg-background/40 p-4"
             >
               <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold">{gate.label}</span>
+                <span className="text-body font-semibold">{gate.label}</span>
                 <span className="text-body-sm font-medium text-muted">{liveVersion} live</span>
               </div>
-              <p className="mb-3 text-xs text-muted">{gate.desc}</p>
+              <p className="mb-3 text-body-sm text-muted">{gate.desc}</p>
               <div className="inline-flex gap-1 rounded-lg border border-card-border bg-card p-1">
                 {(["v1", "v2"] as const).map((choice) => (
                   <button
@@ -392,7 +392,7 @@ export function FeatureGatesPanel() {
                         gate.system
                       )
                     }
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                       selection === choice
                         ? "bg-primary text-primary-foreground"
                         : "text-muted hover:bg-background hover:text-foreground"
@@ -402,11 +402,11 @@ export function FeatureGatesPanel() {
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-muted">
+              <p className="mt-2 text-body-sm text-muted">
                 Next reset: {selection}. Changing this selection does not switch the running world.
               </p>
               {!v2Ready ? (
-                <p className="mt-2 text-[11px] text-muted">
+                <p className="mt-2 text-body-sm text-muted">
                   v2 is staged and cannot be enabled until this system is fully wired and verified.
                 </p>
               ) : null}
@@ -419,14 +419,14 @@ export function FeatureGatesPanel() {
       <div className="mb-5 rounded-lg border border-card-border bg-background/40 p-4">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">NPP autonomy</span>
+            <span className="text-body font-semibold">NPP autonomy</span>
             <DefaultBadge />
           </div>
           <span className="text-body-sm font-medium text-muted">
             {NPP_LEVELS.find((l) => l.value === state.nppAutonomyLevel)?.label}
           </span>
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Fresh seeds start at <span className="font-semibold">v4</span>. {NPP_LEVEL_AXIS_NOTE}{" "}
           {NPP_LEVELS.find((l) => l.value === state.nppAutonomyLevel)?.blurb}
         </p>
@@ -439,7 +439,7 @@ export function FeatureGatesPanel() {
                 type="button"
                 disabled={savingKey === "level"}
                 onClick={() => void post({ kind: "level", value: lvl.value }, "level")}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
@@ -453,7 +453,7 @@ export function FeatureGatesPanel() {
         {/* TLDR — what each level does, visible before enabling anything. */}
         <ul className="mt-3 space-y-1 border-t border-card-border pt-2.5">
           {NPP_LEVELS.map((lvl) => (
-            <li key={lvl.value} className="flex gap-2 text-[11px] leading-relaxed">
+            <li key={lvl.value} className="flex gap-2 text-body-sm leading-relaxed">
               <span
                 className={`w-24 shrink-0 font-semibold ${
                   state.nppAutonomyLevel === lvl.value ? "text-primary" : "text-foreground"
@@ -469,7 +469,7 @@ export function FeatureGatesPanel() {
 
       <div className="mb-5 rounded-lg border border-card-border bg-background/40 p-4">
         <div className="mb-1 flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold">NPP foreign policy</span>
+          <span className="text-body font-semibold">NPP foreign policy</span>
           <span className="text-body-sm font-medium text-muted">
             {
               NPP_FOREIGN_POLICY_MODES.find((mode) => mode.value === state.nppForeignPolicyMode)
@@ -477,7 +477,7 @@ export function FeatureGatesPanel() {
             }
           </span>
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Defaults to shadow when absent. Active mode can cast organization votes, table diplomacy,
           aid allies, support alliance war entry, impose embargoes, and introduce tariff bills.
         </p>
@@ -496,7 +496,7 @@ export function FeatureGatesPanel() {
                     "foreign-policy-mode"
                   )
                 }
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
@@ -507,7 +507,7 @@ export function FeatureGatesPanel() {
             );
           })}
         </div>
-        <p className="mt-3 border-t border-card-border pt-2.5 text-[11px] leading-relaxed text-muted">
+        <p className="mt-3 border-t border-card-border pt-2.5 text-body-sm leading-relaxed text-muted">
           {
             NPP_FOREIGN_POLICY_MODES.find((mode) => mode.value === state.nppForeignPolicyMode)
               ?.blurb
@@ -515,7 +515,7 @@ export function FeatureGatesPanel() {
         </p>
         <div className="mt-3 border-t border-card-border pt-3">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold">Active capability stage</span>
+            <span className="text-body-sm font-semibold">Active capability stage</span>
             <span className="text-body-sm font-medium text-muted">
               {
                 NPP_FOREIGN_POLICY_STAGES.find(
@@ -539,7 +539,7 @@ export function FeatureGatesPanel() {
                       "foreign-policy-stage"
                     )
                   }
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                  className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                     active
                       ? "bg-primary text-primary-foreground"
                       : "text-muted hover:bg-background hover:text-foreground"
@@ -550,7 +550,7 @@ export function FeatureGatesPanel() {
               );
             })}
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+          <p className="mt-2 text-body-sm leading-relaxed text-muted">
             {
               NPP_FOREIGN_POLICY_STAGES.find((stage) => stage.value === state.nppForeignPolicyStage)
                 ?.blurb
@@ -562,7 +562,7 @@ export function FeatureGatesPanel() {
       <div className="mb-5 rounded-lg border border-card-border bg-background/40 p-4">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">NPP entry viability</span>
+            <span className="text-body font-semibold">NPP entry viability</span>
             <DefaultBadge />
           </div>
           <span className="text-body-sm font-medium text-muted">
@@ -572,7 +572,7 @@ export function FeatureGatesPanel() {
             }
           </span>
         </div>
-        <p className="mb-3 text-xs text-muted">
+        <p className="mb-3 text-body-sm text-muted">
           Safety rollout for autonomous mine founding. Observe is the seed and legacy-world default,
           so deployment cannot reject a placement until an admin explicitly promotes it.
         </p>
@@ -591,7 +591,7 @@ export function FeatureGatesPanel() {
                     "npp-entry-viability-mode"
                   )
                 }
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
@@ -602,7 +602,7 @@ export function FeatureGatesPanel() {
             );
           })}
         </div>
-        <p className="mt-3 border-t border-card-border pt-2.5 text-[11px] leading-relaxed text-muted">
+        <p className="mt-3 border-t border-card-border pt-2.5 text-body-sm leading-relaxed text-muted">
           {
             NPP_ENTRY_VIABILITY_MODES.find((mode) => mode.value === state.nppEntryViabilityMode)
               ?.blurb
@@ -616,11 +616,11 @@ export function FeatureGatesPanel() {
         <div className="rounded-lg border border-card-border bg-background/40 p-4">
           <div className="mb-1 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">
+              <span className="text-body font-semibold">
                 Command economy (USSR/China planned regime)
               </span>
               <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+                className="shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider"
                 style={{
                   background: commandEconomyEnabled
                     ? "rgba(34,197,94,0.15)"
@@ -640,7 +640,7 @@ export function FeatureGatesPanel() {
                   "commandEconomyEnabled"
                 )
               }
-              className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+              className={`shrink-0 rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                 commandEconomyEnabled
                   ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
                   : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
@@ -653,11 +653,11 @@ export function FeatureGatesPanel() {
                   : "Enable"}
             </button>
           </div>
-          <p className="mb-3 text-xs text-muted">
+          <p className="mb-3 text-body-sm text-muted">
             Fixed non-convertible currencies, administered prices, shortage/overhang, second
             economy. Set from the era on every bootstrap.
           </p>
-          <label className="block text-xs text-muted">
+          <label className="block text-body-sm text-muted">
             <span className="mb-1 flex items-center justify-between gap-2">
               <span>Second-economy tolerance</span>
               <span className="font-semibold text-foreground tabular-nums">
@@ -681,7 +681,7 @@ export function FeatureGatesPanel() {
               }}
               className="mt-1 w-full accent-[var(--primary)] disabled:opacity-50"
             />
-            <span className="mt-1 flex justify-between text-[10px] text-muted">
+            <span className="mt-1 flex justify-between text-body-sm text-muted">
               <span>0 — full repression</span>
               <span>1 — tolerated</span>
             </span>
@@ -701,9 +701,9 @@ export function FeatureGatesPanel() {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium">{gate.label}</span>
+                  <span className="truncate text-body font-medium">{gate.label}</span>
                   <span
-                    className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+                    className="shrink-0 rounded-full px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider"
                     style={{
                       background: on ? "rgba(34,197,94,0.15)" : "rgba(148,163,184,0.15)",
                       color: on ? "var(--success)" : "var(--muted)",
@@ -713,13 +713,13 @@ export function FeatureGatesPanel() {
                   </span>
                   {isDefaultOn(gate.key) ? <DefaultBadge /> : null}
                 </div>
-                <p className="truncate text-[11px] text-muted">{gate.desc}</p>
+                <p className="truncate text-body-sm text-muted">{gate.desc}</p>
               </div>
               <button
                 type="button"
                 disabled={saving}
                 onClick={() => void post({ kind: "boolean", key: gate.key, value: !on }, gate.key)}
-                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`shrink-0 rounded-md border px-3 py-1.5 text-body-sm font-medium transition-colors disabled:opacity-50 ${
                   on
                     ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
                     : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"

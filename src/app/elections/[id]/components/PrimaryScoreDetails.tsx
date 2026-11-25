@@ -14,7 +14,7 @@ export function PrimaryScoreDetails({ breakdown }: { breakdown: RegionalPrimaryS
   ] as const;
 
   return (
-    <details className="mt-1.5 text-xs text-muted">
+    <details className="mt-1.5 text-body-sm text-muted">
       <summary className="cursor-pointer font-medium text-foreground">
         {format.format(breakdown.score)} points now · See breakdown
       </summary>

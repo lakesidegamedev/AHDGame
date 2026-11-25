@@ -46,7 +46,7 @@ export function CorpEconomicModelBadge({ countryId, sectorType }: CorpEconomicMo
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-xs ${favored ? "text-success" : "text-error"}`}
+      className={`inline-flex items-center gap-1 text-body-sm ${favored ? "text-success" : "text-error"}`}
       title={`${view.currentName} (intensity ${view.intensity}/100)`}
     >
       {favored ? "Favored" : "Disfavored"} under {view.currentName}

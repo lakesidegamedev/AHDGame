@@ -39,7 +39,7 @@ export function Change({ value }: { value: number | null }) {
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-xs leading-relaxed text-muted">{children}</p>;
+  return <p className="text-body-sm leading-relaxed text-muted">{children}</p>;
 }
 
 export function signedMoney(amount: number, code: CurrencyCode | null): string {
@@ -61,7 +61,7 @@ export function WidgetLinks({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-xs">
+    <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-body-sm">
       {links.map((link) => (
         <Link
           key={link.href}

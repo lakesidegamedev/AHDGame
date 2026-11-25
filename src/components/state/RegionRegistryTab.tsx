@@ -90,7 +90,7 @@ export function RegionRegistryTab({
             </CardSkeleton>
           ))}
         </div>
-        <div className="text-center font-mono text-body-xs uppercase tracking-widest text-muted">
+        <div className="text-center font-mono text-body-sm uppercase tracking-widest text-muted">
           Retrieving {regionName} situation data…
         </div>
       </div>
@@ -100,10 +100,10 @@ export function RegionRegistryTab({
   if (error || !data) {
     return (
       <div className="mx-auto mt-12 max-w-lg rounded-lg border border-card-border bg-card p-8 text-center shadow-card">
-        <span className="inline-block -rotate-1 rounded border border-error px-2.5 py-0.5 font-mono text-body-xs uppercase tracking-widest text-error">
+        <span className="inline-block -rotate-1 rounded border border-error px-2.5 py-0.5 font-mono text-body-sm uppercase tracking-widest text-error">
           Transmission interrupted
         </span>
-        <h2 className="mt-4 text-heading-lg text-foreground">Registry data unavailable</h2>
+        <h2 className="mt-4 text-heading text-foreground">Registry data unavailable</h2>
         <p className="mt-2 text-body text-muted">
           The {regionName} situation registry could not be reached. Figures shown elsewhere may be
           out of date. This does not affect stored historical series.
@@ -195,7 +195,7 @@ export function RegionRegistryTab({
       )}
       {/* The retired regional board carried this link, and it is the natural
           next step from a region's numbers: the country they add up to. */}
-      <p className="mt-4 text-body-xs text-muted">
+      <p className="mt-4 text-body-sm text-muted">
         These are {data.regionName}&apos;s own registry values. The national figures they aggregate
         into are on the{" "}
         <Link

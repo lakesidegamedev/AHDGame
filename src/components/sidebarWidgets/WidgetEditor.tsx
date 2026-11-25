@@ -32,16 +32,16 @@ export function WidgetEditor({ layout, options, menus, onChange }: WidgetEditorP
   const available = options.filter((option) => !layout.tray.includes(option.key));
   const full = layout.tray.length >= MAX_TRAY_WIDGETS;
   const button =
-    "rounded px-1.5 py-0.5 text-xs text-muted hover:bg-white/5 hover:text-foreground disabled:opacity-30";
+    "rounded px-1.5 py-0.5 text-body-sm text-muted hover:bg-white/5 hover:text-foreground disabled:opacity-30";
 
   return (
     <div className="space-y-5">
       <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-2">
+        <h3 className="mb-2 text-body-lg font-semibold uppercase tracking-wide text-fg-2">
           {t("tray.inTray")}
         </h3>
         {layout.tray.length === 0 ? (
-          <p className="text-xs text-muted">{t("tray.empty")}</p>
+          <p className="text-body-sm text-muted">{t("tray.empty")}</p>
         ) : (
           <ol className="space-y-1">
             {layout.tray.map((key, index) => (
@@ -49,7 +49,7 @@ export function WidgetEditor({ layout, options, menus, onChange }: WidgetEditorP
                 key={key}
                 className="flex items-center gap-1 rounded-lg border border-card-border bg-background/50 px-2 py-1.5"
               >
-                <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                <span className="min-w-0 flex-1 truncate text-body text-foreground">
                   {label(key)}
                 </span>
                 <button
@@ -88,7 +88,7 @@ export function WidgetEditor({ layout, options, menus, onChange }: WidgetEditorP
 
       {available.length > 0 && (
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-2">
+          <h3 className="mb-2 text-body-lg font-semibold uppercase tracking-wide text-fg-2">
             {t("tray.add")}
           </h3>
           <div className="flex flex-wrap gap-1.5">
@@ -98,7 +98,7 @@ export function WidgetEditor({ layout, options, menus, onChange }: WidgetEditorP
                 type="button"
                 disabled={full}
                 onClick={() => onChange({ ...layout, tray: [...layout.tray, option.key] })}
-                className="rounded-full border border-card-border px-2.5 py-1 text-xs text-foreground hover:bg-white/5 disabled:opacity-40"
+                className="rounded-full border border-card-border px-2.5 py-1 text-body-sm text-foreground hover:bg-white/5 disabled:opacity-40"
               >
                 + {option.label}
               </button>
@@ -109,13 +109,13 @@ export function WidgetEditor({ layout, options, menus, onChange }: WidgetEditorP
 
       {menus.length > 0 && (
         <section>
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-2">
+          <h3 className="mb-1 text-body-lg font-semibold uppercase tracking-wide text-fg-2">
             {t("tray.menus")}
           </h3>
-          <p className="mb-2 text-xs text-muted">{t("tray.menusHint")}</p>
+          <p className="mb-2 text-body-sm text-muted">{t("tray.menusHint")}</p>
           <div className="space-y-1.5">
             {menus.map((menu) => (
-              <label key={menu} className="flex items-center justify-between gap-3 text-sm">
+              <label key={menu} className="flex items-center justify-between gap-3 text-body">
                 <span className="text-foreground">{t(`menus.${menu}`)}</span>
                 <select
                   value={layout.nav[menu] ?? ""}
@@ -125,7 +125,7 @@ export function WidgetEditor({ layout, options, menus, onChange }: WidgetEditorP
                     else delete nav[menu];
                     onChange({ ...layout, nav });
                   }}
-                  className="max-w-[12rem] rounded-md border border-card-border bg-background px-2 py-1 text-xs text-foreground"
+                  className="max-w-[12rem] rounded-md border border-card-border bg-background px-2 py-1 text-body-sm text-foreground"
                 >
                   <option value="">{t("tray.menuNone")}</option>
                   {options.map((option) => (

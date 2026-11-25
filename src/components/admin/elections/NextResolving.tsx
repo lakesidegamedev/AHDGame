@@ -78,7 +78,7 @@ export function NextResolving({
   return (
     <div className="rounded-lg border border-card-border bg-card p-3">
       <div className="mb-2 text-body-sm font-medium text-muted">Next resolving</div>
-      <div className="text-[11px]">
+      <div className="text-body-sm">
         {visible.map(({ election: e, isPrimaryNext, unitsLeft, unit }) => {
           const flagCountry =
             isGlobal && e.countryId ? (e.countryId as keyof typeof COUNTRY_CLIENT_CONFIGS) : null;
@@ -102,7 +102,7 @@ export function NextResolving({
               </span>
               <span className="ml-2 flex shrink-0 items-center gap-1.5">
                 <span
-                  className={`rounded px-1.5 py-0.5 text-[9px] font-medium ${
+                  className={`rounded px-1.5 py-0.5 text-body-sm font-medium ${
                     isPrimaryNext
                       ? "bg-amber-500/15 text-amber-500"
                       : "bg-green-500/15 text-green-500"
@@ -127,7 +127,7 @@ export function NextResolving({
         {hasMore && (
           <button
             onClick={onToggle}
-            className="mt-1 w-full text-center text-[10px] text-primary hover:underline"
+            className="mt-1 w-full text-center text-body-sm text-primary hover:underline"
           >
             {expanded ? "Show less" : `Show ${upcoming.length - INITIAL_COUNT} more`}
           </button>

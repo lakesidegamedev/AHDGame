@@ -113,13 +113,13 @@ export function AssignmentPicker({
 
   return (
     <div className="rounded-lg border border-card-border bg-background p-3 space-y-2">
-      <InlineError error={error} className="text-xs text-error" />
+      <InlineError error={error} className="text-body-sm text-error" />
       <textarea
         rows={2}
         placeholder="Optional note shown on the slate row"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        className="w-full rounded-md border border-card-border bg-card px-2 py-1 text-xs"
+        className="w-full rounded-md border border-card-border bg-card px-2 py-1 text-body-sm"
       />
       {assignment && (
         <p className={`text-body-sm ${isFull ? "text-amber-300" : "text-muted"}`}>
@@ -186,13 +186,13 @@ function CandidateAssignmentList({
     <div className="rounded-lg border border-card-border bg-card p-2">
       <div className="mb-2 text-body-sm font-semibold text-muted">{title}</div>
       {rows.length === 0 ? (
-        <p className="text-xs text-muted">{emptyLabel}</p>
+        <p className="text-body-sm text-muted">{emptyLabel}</p>
       ) : (
         <ul className="max-h-64 overflow-y-auto divide-y divide-card-border/40">
           {rows.map((row) => (
             <li key={row.key} className="flex items-center justify-between gap-2 py-1.5">
               <div className="min-w-0">
-                <div className="truncate text-xs">{row.name}</div>
+                <div className="truncate text-body-sm">{row.name}</div>
                 {row.officeLabel && (
                   <div className="text-body-sm text-muted">{formatSlateLabel(row.officeLabel)}</div>
                 )}

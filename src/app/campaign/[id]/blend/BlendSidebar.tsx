@@ -104,14 +104,14 @@ export function RunningMateBlock({
         style={{
           marginTop: 2,
           fontFamily: FONT.sans,
-          fontSize: 13,
+          fontSize: 12,
           color: BLEND.mutedDim,
         }}
       >
         Running mate
       </div>
       {vm.ticket.pendingRunningMateName ? (
-        <div style={{ marginTop: 4, fontFamily: FONT.sans, fontSize: 13, color: BLEND.mutedDim }}>
+        <div style={{ marginTop: 4, fontFamily: FONT.sans, fontSize: 12, color: BLEND.mutedDim }}>
           Invited {vm.ticket.pendingRunningMateName}, waiting for them to accept
         </div>
       ) : null}
@@ -150,7 +150,7 @@ export function SupportBlock({
         style={{
           marginTop: 3,
           fontFamily: FONT.sans,
-          fontSize: 12.5,
+          fontSize: 12,
           color: BLEND.mutedDim,
         }}
       >
@@ -164,7 +164,7 @@ export function SupportBlock({
         style={{
           marginTop: 2,
           fontFamily: FONT.sans,
-          fontSize: 12.5,
+          fontSize: 12,
           lineHeight: 1.5,
           color: BLEND.mutedDim,
         }}
@@ -175,7 +175,7 @@ export function SupportBlock({
         <span
           style={{
             fontFamily: FONT.mono,
-            fontSize: 36,
+            fontSize: 30,
             fontWeight: 500,
             letterSpacing: "-0.03em",
           }}
@@ -223,7 +223,7 @@ export function SupportBlock({
           display: "flex",
           justifyContent: "space-between",
           fontFamily: FONT.mono,
-          fontSize: 9.5,
+          fontSize: 12,
           color: BLEND.mutedDimmer,
         }}
       >
@@ -245,7 +245,7 @@ export function SupportBlock({
                 background: vm.support.canRally ? BLEND.accent : BLEND.hairlineStrong,
                 padding: 9,
                 fontFamily: FONT.mono,
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: ".08em",
                 fontWeight: 700,
                 color: vm.support.canRally ? "#fff" : BLEND.muted,
@@ -264,7 +264,7 @@ export function SupportBlock({
                 background: "transparent",
                 padding: 10,
                 fontFamily: FONT.mono,
-                fontSize: 11.5,
+                fontSize: 12,
                 letterSpacing: ".08em",
                 fontWeight: 700,
                 cursor: "pointer",
@@ -279,7 +279,7 @@ export function SupportBlock({
               style={{
                 marginTop: 7,
                 fontFamily: FONT.sans,
-                fontSize: 12.5,
+                fontSize: 12,
                 color: BLEND.mutedDim,
               }}
             >
@@ -332,7 +332,7 @@ export function ManagersBlock({
         <span
           style={{
             fontFamily: FONT.mono,
-            fontSize: 10,
+            fontSize: 12,
             color: BLEND.mutedDim,
             fontVariantNumeric: "tabular-nums",
           }}
@@ -344,7 +344,7 @@ export function ManagersBlock({
         style={{
           margin: "6px 0 0",
           fontFamily: FONT.sans,
-          fontSize: 12.5,
+          fontSize: 12,
           lineHeight: 1.5,
           color: BLEND.mutedDim,
         }}
@@ -357,7 +357,7 @@ export function ManagersBlock({
           style={{
             margin: "8px 0 0",
             fontFamily: FONT.sans,
-            fontSize: 13,
+            fontSize: 12,
             color: BLEND.mutedDim,
           }}
         >
@@ -377,7 +377,7 @@ export function ManagersBlock({
                 padding: "5px 9px",
               }}
             >
-              <span style={{ fontFamily: FONT.sans, fontSize: 13, fontWeight: 600 }}>{m.name}</span>
+              <span style={{ fontFamily: FONT.sans, fontSize: 12, fontWeight: 600 }}>{m.name}</span>
               {canManageTicket ? (
                 <button
                   type="button"
@@ -389,7 +389,7 @@ export function ManagersBlock({
                     background: "transparent",
                     padding: 0,
                     font: "inherit",
-                    fontSize: 13,
+                    fontSize: 12,
                     lineHeight: 1,
                     color: BLEND.muted,
                     cursor: "pointer",
@@ -408,7 +408,7 @@ export function ManagersBlock({
           style={{
             margin: "9px 0 0",
             fontFamily: FONT.mono,
-            fontSize: 10,
+            fontSize: 12,
             lineHeight: 1.5,
             color: BLEND.mutedDim,
           }}
@@ -495,7 +495,7 @@ export function BlendSidebar({
             <span
               style={{
                 fontFamily: FONT.mono,
-                fontSize: 32,
+                fontSize: 30,
                 fontWeight: 500,
                 color: BLEND.accent,
                 letterSpacing: "-0.03em",
@@ -517,7 +517,7 @@ export function BlendSidebar({
             style={{
               margin: "10px 0 14px",
               fontFamily: FONT.sans,
-              fontSize: 13.5,
+              fontSize: 14,
               lineHeight: 1.5,
               color: BLEND.muted,
             }}
@@ -541,7 +541,7 @@ export function BlendSidebar({
                 background: "transparent",
                 padding: 9,
                 fontFamily: FONT.mono,
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: ".08em",
                 fontWeight: 700,
                 color: vm.strength.canContribute ? BLEND.accent : BLEND.muted,

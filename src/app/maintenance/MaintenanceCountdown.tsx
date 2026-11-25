@@ -35,7 +35,7 @@ export function MaintenanceCountdown({ expectedEnd }: { expectedEnd: string }) {
   if (timeLeft === null) {
     return (
       <div className="mb-2 rounded-xl border border-success/30 bg-success/10 p-4">
-        <p className="text-sm font-medium text-success">
+        <p className="text-body font-medium text-success">
           Maintenance should be complete — try refreshing the page.
         </p>
       </div>
@@ -55,13 +55,13 @@ export function MaintenanceCountdown({ expectedEnd }: { expectedEnd: string }) {
         {segments.map(({ label, value }, i) => (
           <div key={label} className="flex items-center gap-3">
             <div className="flex flex-col items-center">
-              <span className="rounded-lg border border-card-border bg-card px-4 py-2 font-mono text-2xl font-bold tabular-nums shadow-card sm:text-3xl">
+              <span className="rounded-lg border border-card-border bg-card px-4 py-2 font-mono text-heading font-bold tabular-nums shadow-card sm:text-display">
                 {value === undefined ? "--" : String(value).padStart(2, "0")}
               </span>
               <span className="mt-1.5 text-body-sm font-medium text-muted">{label}</span>
             </div>
             {i < segments.length - 1 && (
-              <span className="mb-5 text-xl font-bold text-muted/40">:</span>
+              <span className="mb-5 text-heading font-bold text-muted/40">:</span>
             )}
           </div>
         ))}

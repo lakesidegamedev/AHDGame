@@ -60,12 +60,12 @@ export function GeneralElectionShellClient({
                 type="button"
                 onClick={() => setSelectedStateId(id)}
                 aria-pressed={id === selectedStateId}
-                className={`px-2.5 py-1 text-xs ${pillClass(id === selectedStateId)}`}
+                className={`px-2.5 py-1 text-body-sm ${pillClass(id === selectedStateId)}`}
               >
                 {nameFor(id)}
               </button>
             ))}
-            <span className="self-center text-[11px] text-muted/60">closest races</span>
+            <span className="self-center text-body-sm text-muted/60">closest races</span>
           </div>
         )}
 
@@ -74,7 +74,7 @@ export function GeneralElectionShellClient({
           <select
             value={selectedStateId ?? ""}
             onChange={(e) => setSelectedStateId(e.target.value || null)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm sm:max-w-xs"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body sm:max-w-xs"
           >
             {allStateIds.map((id) => (
               <option key={id} value={id}>
@@ -100,7 +100,7 @@ export function GeneralElectionShellClient({
           />
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-card-border bg-card p-4 text-xs text-muted">
+        <div className="rounded-xl border border-dashed border-card-border bg-card p-4 text-body-sm text-muted">
           No state data is available for this election yet.
         </div>
       )}

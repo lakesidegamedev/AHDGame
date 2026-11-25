@@ -455,7 +455,7 @@ export default function CampaignManagerClient(props: CampaignManagerClientProps)
           }}
           aria-busy={loading}
         >
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
+          <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0 }}>{t("title")}</h1>
           <div className="lg:hidden">
             <MobileTabs tab={mobileTab} onTab={setMobileTab} />
           </div>

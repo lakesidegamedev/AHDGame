@@ -109,14 +109,14 @@ export function AutoCrisisPanel({
     <div className="rounded border border-border">
       <button
         onClick={() => setShowAuto((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-sm font-semibold hover:bg-accent/40"
+        className="flex w-full items-center justify-between px-3 py-2 text-body font-semibold hover:bg-accent/40"
       >
         <span>Auto crisis system</span>
         <span className="text-muted">{showAuto ? "▾" : "▸"}</span>
       </button>
       {showAuto && (
         <div className="space-y-4 border-t border-border p-3">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Gated by the Auto-Disasters master toggle above. Regional disasters spawn on a
             per-country cadence; economic and political crises trigger on national metrics
             (condition) or a deterministic per-turn roll (random). Each template has its own
@@ -132,8 +132,8 @@ export function AutoCrisisPanel({
           <div className="rounded border border-border bg-accent/20 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-medium">Vietnam escalation chain</p>
-                <p className="text-xs text-muted">
+                <p className="text-body font-medium">Vietnam escalation chain</p>
+                <p className="text-body-sm text-muted">
                   Starts the chain now instead of waiting for the turn loop: opens the advisory
                   rung, gives Washington and Moscow a commitment decision each with a 24 hour
                   window, and files the wire coverage. Safe to press twice; it only ever starts once
@@ -143,7 +143,7 @@ export function AutoCrisisPanel({
               <button
                 onClick={handleStartVietnam}
                 disabled={startingVietnam}
-                className="shrink-0 rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                className="shrink-0 rounded border border-border px-3 py-1.5 text-body font-medium hover:bg-accent disabled:opacity-50"
               >
                 {startingVietnam ? "Starting..." : "Start Vietnam chain"}
               </button>
@@ -153,20 +153,20 @@ export function AutoCrisisPanel({
           <div className="rounded border border-border bg-accent/20 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-medium">The German Question</p>
-                <p className="text-xs text-muted">
+                <p className="text-body font-medium">The German Question</p>
+                <p className="text-body-sm text-muted">
                   Asks the German Question now. The turn loop never starts it. It only opens in a
                   world where West and East Germany are still separate countries, and only one
                   question can be live at a time. Calling it off changes nothing in the world.
                 </p>
                 {germanQuestion?.warning && !germanQuestion.live && (
-                  <p className="mt-1 text-xs text-amber-500">{germanQuestion.warning}</p>
+                  <p className="mt-1 text-body-sm text-amber-500">{germanQuestion.warning}</p>
                 )}
               </div>
               <button
                 onClick={() => handleGermanQuestion(germanQuestion?.live ? "close" : "open")}
                 disabled={germanBusy || germanQuestion === null}
-                className="shrink-0 rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                className="shrink-0 rounded border border-border px-3 py-1.5 text-body font-medium hover:bg-accent disabled:opacity-50"
               >
                 {germanBusy
                   ? "Working..."
@@ -177,12 +177,12 @@ export function AutoCrisisPanel({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-body">
             <label className="text-muted">Force-trigger country:</label>
             <select
               value={forceCountry}
               onChange={(e) => setForceCountry(e.target.value)}
-              className="rounded border border-border bg-background px-2 py-1 text-sm"
+              className="rounded border border-border bg-background px-2 py-1 text-body"
             >
               {COUNTRY_ORDER.map((c) => (
                 <option key={c} value={c}>
@@ -190,11 +190,11 @@ export function AutoCrisisPanel({
                 </option>
               ))}
             </select>
-            <span className="text-xs text-muted">(ignored for global crises)</span>
+            <span className="text-body-sm text-muted">(ignored for global crises)</span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full border-collapse text-body">
               <thead>
                 <tr className="border-b border-border text-left text-muted">
                   <th className="py-2 pr-4">Template</th>
@@ -226,8 +226,8 @@ export function AutoCrisisPanel({
                       <td className="py-2 pr-4 font-medium">{t.name}</td>
                       <td className="py-2 pr-4">{t.kind}</td>
                       <td className="py-2 pr-4">{t.scope}</td>
-                      <td className="py-2 pr-4 text-xs text-muted">{gating}</td>
-                      <td className="py-2 pr-4 text-xs">{trigger}</td>
+                      <td className="py-2 pr-4 text-body-sm text-muted">{gating}</td>
+                      <td className="py-2 pr-4 text-body-sm">{trigger}</td>
                       <td className="py-2 pr-4 tabular-nums">{t.cooldownTurns}</td>
                       <td className="py-2">
                         <button
@@ -254,9 +254,9 @@ export function AutoCrisisPanel({
 
           {autoCooldowns.length > 0 && (
             <div>
-              <h4 className="mb-1 text-sm font-semibold">On cooldown</h4>
+              <h4 className="mb-1 text-body font-semibold">On cooldown</h4>
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
+                <table className="w-full border-collapse text-body">
                   <thead>
                     <tr className="border-b border-border text-left text-muted">
                       <th className="py-1 pr-4">Template</th>

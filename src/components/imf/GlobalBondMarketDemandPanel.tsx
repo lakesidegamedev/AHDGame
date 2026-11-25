@@ -17,7 +17,7 @@ export function GlobalBondMarketDemandPanel() {
     .sort(([a], [b]) => a.localeCompare(b));
   return (
     <section>
-      <h2 className="text-sm font-semibold text-muted">
+      <h2 className="text-body font-semibold text-muted">
         <span className="mr-2 inline-block h-3 w-0.5 bg-rose-600 align-middle" />
         Sovereign debt
       </h2>

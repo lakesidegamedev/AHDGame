@@ -365,14 +365,14 @@ export default function SectorsTab({
       <div className="flex flex-wrap items-center justify-between gap-2">
         {sectorTypes.length > 0 ? (
           <div className="flex items-center gap-2">
-            <label htmlFor={typeSelectId} className="text-xs text-muted">
+            <label htmlFor={typeSelectId} className="text-body-sm text-muted">
               Sector type
             </label>
             <select
               id={typeSelectId}
               value={activeTypeFilter}
               onChange={(e) => setFilterType(e.target.value)}
-              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none"
+              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="">All types ({sectors.length})</option>
               {sectorTypes.map((t) => (
@@ -444,14 +444,14 @@ export default function SectorsTab({
               aria-label="Filter sectors by name or state"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              className="h-7 w-28 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-xs text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+              className="h-7 w-28 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
             />
           </>
         }
       >
         {/* Logistics sprawl */}
         {totalSectors >= SPRAWL_SECTOR_THRESHOLD - 2 && (
-          <p className="py-1.5 text-xs text-muted">
+          <p className="py-1.5 text-body-sm text-muted">
             <span className="font-medium text-foreground">Sprawl. </span>
             {currentSprawlPenalty < 0 ? (
               <span className="font-medium text-error">
@@ -496,7 +496,7 @@ export default function SectorsTab({
         />
 
         {sectors.length === 0 ? (
-          <p className="py-2 text-xs text-muted">No sectors yet.</p>
+          <p className="py-2 text-body-sm text-muted">No sectors yet.</p>
         ) : (
           <>
             <SectorTableHeader
@@ -589,15 +589,15 @@ export default function SectorsTab({
 
                 return (
                   <div
-                    className={`hidden lg:grid ${tableGrid} items-center gap-x-3 border-t border-card-border px-2 py-1.5 text-[13px] font-medium`}
+                    className={`hidden lg:grid ${tableGrid} items-center gap-x-3 border-t border-card-border px-2 py-1.5 text-body-sm font-medium`}
                   >
                     <span
-                      className="text-xs text-muted"
+                      className="text-body-sm text-muted"
                       title="Internal supply income and charges are removed from this total."
                     >
                       Total, {n} sectors
                       {consolidated ? (
-                        <span className="block text-[10px]">Internal transfers excluded</span>
+                        <span className="block text-body-sm">Internal transfers excluded</span>
                       ) : null}
                     </span>
                     <span></span>
@@ -632,14 +632,14 @@ export default function SectorsTab({
                       {showReconciliation ? (
                         <span
                           data-testid="sector-total-reconciliation"
-                          className={`${cellNum} text-[10px] font-normal text-muted`}
+                          className={`${cellNum} text-body-sm font-normal text-muted`}
                           title={`The rows above add up to ${fmtMoney(reconciliation.rowsProfit * scaleFactor)}. Each row is charged ${fmtMoney(reconciliation.charge * scaleFactor)} for supplies from your other sites and credited ${fmtMoney(reconciliation.income * scaleFactor)} for supplies it sent. The total removes both, so it differs from the rows by ${fmtMoney(reconciliation.netCharge * scaleFactor)}.`}
                         >
                           Rows add to {fmtMoney(reconciliation.rowsProfit * scaleFactor)}
                         </span>
                       ) : null}
                     </span>
-                    <span className={`${cellNum} text-right text-xs text-foreground`}>
+                    <span className={`${cellNum} text-right text-body-sm text-foreground`}>
                       {financialsRedacted ? "n/a" : totalWorkers.toLocaleString("en-US")}
                     </span>
                     <span></span>
@@ -677,9 +677,9 @@ export default function SectorsTab({
                 const n = sortedSectors.length;
 
                 return (
-                  <div className="hidden border-t border-card-border text-[13px] font-medium lg:block">
+                  <div className="hidden border-t border-card-border text-body-sm font-medium lg:block">
                     <div className={`grid ${tableGrid} items-center gap-x-3 px-2 py-1.5`}>
-                      <span className="text-xs text-muted">Total, {n} sectors</span>
+                      <span className="text-body-sm text-muted">Total, {n} sectors</span>
                       <span></span>
                       <span></span>
                       <span></span>
@@ -691,7 +691,7 @@ export default function SectorsTab({
                       <span className={`${cellNum} text-right ${signTone(totalProfit)}`}>
                         {fmtMoney(totalProfit * scaleFactor)}
                       </span>
-                      <span className={`${cellNum} text-right text-xs text-foreground`}>
+                      <span className={`${cellNum} text-right text-body-sm text-foreground`}>
                         {financialsRedacted ? "n/a" : totalWorkers.toLocaleString("en-US")}
                       </span>
                       <span></span>
@@ -699,7 +699,7 @@ export default function SectorsTab({
                     <div
                       className={`grid ${tableGrid} items-center gap-x-3 border-t border-card-border/60 px-2 py-1.5 font-normal`}
                     >
-                      <span className="text-xs text-muted">Average</span>
+                      <span className="text-body-sm text-muted">Average</span>
                       <span></span>
                       <span></span>
                       <span className={`${cellNum} text-right text-foreground`}>
@@ -717,7 +717,7 @@ export default function SectorsTab({
                       <span className={`${cellNum} text-right ${signTone(totalProfit / n)}`}>
                         {fmtMoney((totalProfit / n) * scaleFactor)}
                       </span>
-                      <span className={`${cellNum} text-right text-xs text-foreground`}>
+                      <span className={`${cellNum} text-right text-body-sm text-foreground`}>
                         {financialsRedacted
                           ? "n/a"
                           : Math.round(totalWorkers / n).toLocaleString("en-US")}

@@ -43,8 +43,8 @@ export function NatHoldingsTab({ vm }: { vm: NationalCorporationViewModel }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-card-border bg-card p-4">
-        <h2 className="text-heading-sm font-semibold text-foreground">State holdings</h2>
-        <p className="mt-1 text-body-xs text-muted">
+        <h2 className="text-heading font-semibold text-foreground">State holdings</h2>
+        <p className="mt-1 text-body-sm text-muted">
           Every nationalized sector is absorbed into this single National Corporation. Money on each
           holding is a total for one financial day (24 turns), not the amount remitted to the
           treasury.
@@ -102,7 +102,7 @@ function HoldingCard({
                   <Pill className="border-card-border bg-card-muted text-muted">{s.stateName}</Pill>
                   {triggerTone && <Pill className={triggerTone}>{s.acquisitionTrigger}</Pill>}
                 </div>
-                <div className="mt-1 text-[11px] text-muted">
+                <div className="mt-1 text-body-sm text-muted">
                   {s.acquisitionFrom ? (
                     <>
                       absorbed from <span className="text-foreground/80">{s.acquisitionFrom}</span>
@@ -173,7 +173,7 @@ function HoldingCard({
         </button>
         <Link
           href={`/corporation/${corporationId}/sector/${s.sectorId}`}
-          className="mx-4 mb-4 inline-flex items-center justify-center gap-1.5 rounded-lg border border-card-border bg-card-muted px-3 py-2 text-body-xs font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5 lg:my-4 lg:ml-0"
+          className="mx-4 mb-4 inline-flex items-center justify-center gap-1.5 rounded-lg border border-card-border bg-card-muted px-3 py-2 text-body-sm font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5 lg:my-4 lg:ml-0"
         >
           Open sector
           <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -212,10 +212,10 @@ function HoldingDetail({
         {/* Efficiency formula */}
         <div className="rounded-lg border border-card-border bg-card p-3.5">
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gold">
+            <span className="text-body-sm font-semibold uppercase tracking-wide text-gold">
               Dynamic efficiency
             </span>
-            <span className="text-[10px] text-muted">replaces the flat −15%</span>
+            <span className="text-body-sm text-muted">replaces the flat −15%</span>
           </div>
           <div className="flex flex-wrap items-stretch gap-1.5">
             {terms.map((t, i) => (
@@ -229,17 +229,17 @@ function HoldingDetail({
                   >
                     {pp(t.val)}
                   </div>
-                  <div className="text-[8px] text-muted">{t.note}</div>
+                  <div className="text-body-sm text-muted">{t.note}</div>
                 </div>
                 <span className="self-center text-muted">{i < terms.length - 1 ? "+" : "="}</span>
               </div>
             ))}
             <div className="flex-1 rounded-md border border-gold/40 bg-gold/10 px-2 py-1.5 text-center">
-              <div className="text-[8px] uppercase tracking-wide text-gold/80">Effective</div>
+              <div className="text-body-sm uppercase tracking-wide text-gold/80">Effective</div>
               <div className="text-body font-bold tabular-nums text-gold">{pp(e.total)}%</div>
             </div>
           </div>
-          <p className="mt-2.5 text-[11px] leading-snug text-muted">
+          <p className="mt-2.5 text-body-sm leading-snug text-muted">
             A low-corruption, high-capacity region runs an SOE close to −5%; corruption and
             price-control mandates widen the drag. Governance quality{" "}
             <span className="text-foreground">matters</span> — there is no one-size-fits-all
@@ -249,10 +249,10 @@ function HoldingDetail({
 
         {/* SOE vs private */}
         <div className="rounded-lg border border-card-border bg-card p-3.5">
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gold">
+          <div className="mb-2 text-body-sm font-semibold uppercase tracking-wide text-gold">
             State enterprise vs. private operator
           </div>
-          <div className="grid grid-cols-2 gap-2 text-center text-[11px]">
+          <div className="grid grid-cols-2 gap-2 text-center text-body-sm">
             <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 font-semibold text-primary">
               As state enterprise
             </div>
@@ -283,7 +283,7 @@ function HoldingDetail({
             a={s.employmentGuaranteed ? "Floor guaranteed" : "Market"}
             b="At-will"
           />
-          <div className="mt-2.5 rounded-md border border-gold/30 bg-gold/5 px-3 py-2 text-[11px] leading-snug text-foreground/85">
+          <div className="mt-2.5 rounded-md border border-gold/30 bg-gold/5 px-3 py-2 text-body-sm leading-snug text-foreground/85">
             The state gives up{" "}
             <span className="font-semibold text-error">
               {money(profitGap, currency)} per financial day
@@ -294,7 +294,7 @@ function HoldingDetail({
             </span>{" "}
             of public value and regulated prices. That trade is the whole point of holding it.
           </div>
-          <div className="mt-2.5 text-[11px] leading-snug text-muted">
+          <div className="mt-2.5 text-body-sm leading-snug text-muted">
             <span className="font-semibold text-foreground">
               Sector totals are not treasury remittance.
             </span>{" "}
@@ -316,7 +316,7 @@ function HoldingDetail({
 function Pill({ children, className }: { children: React.ReactNode; className: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${className}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-body-sm font-medium ${className}`}
     >
       {children}
     </span>
@@ -345,7 +345,7 @@ function Cell({
   return (
     <div>
       <div className="min-h-6 text-body-sm font-medium leading-tight text-muted">{label}</div>
-      <div className={`mt-0.5 text-[13px] font-bold tabular-nums ${t}`}>{value}</div>
+      <div className={`mt-0.5 text-body-sm font-bold tabular-nums ${t}`}>{value}</div>
     </div>
   );
 }
@@ -375,7 +375,7 @@ function CompareRow({
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-card-border py-1.5 last:border-0">
       <span
-        className={`text-right text-[12px] tabular-nums ${
+        className={`text-right text-body-sm tabular-nums ${
           aBetter ? "font-semibold text-success" : "text-foreground"
         }`}
       >
@@ -383,7 +383,7 @@ function CompareRow({
       </span>
       <span className="px-1 text-center text-body-sm font-medium text-muted">{label}</span>
       <span
-        className={`text-[12px] tabular-nums ${bBetter ? "font-semibold text-success" : "text-foreground"}`}
+        className={`text-body-sm tabular-nums ${bBetter ? "font-semibold text-success" : "text-foreground"}`}
       >
         {b}
       </span>

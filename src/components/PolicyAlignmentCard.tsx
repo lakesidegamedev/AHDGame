@@ -39,7 +39,7 @@ export function PolicyAlignmentCard({
   const [view, setView] = useState<PolicyAlignmentView>(defaultView);
 
   const tabClass = (active: boolean) =>
-    `rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+    `rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
       active ? "bg-primary text-primary-foreground shadow-sm" : "text-muted hover:text-foreground"
     }`;
 
@@ -48,7 +48,7 @@ export function PolicyAlignmentCard({
       <div
         className={`mb-4 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between ${hideTitle ? "sm:justify-end" : ""}`}
       >
-        {!hideTitle && <h3 className="text-sm font-bold text-muted">Policy alignment</h3>}
+        {!hideTitle && <h3 className="text-body-lg font-bold text-muted">Policy alignment</h3>}
         <div
           className="inline-flex rounded-lg border border-card-border bg-card-muted/40 p-0.5"
           role="tablist"

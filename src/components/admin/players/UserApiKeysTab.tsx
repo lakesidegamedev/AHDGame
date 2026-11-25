@@ -126,10 +126,10 @@ export function UserApiKeysTab() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">User API keys</h2>
+      <h2 className="text-heading font-semibold">User API keys</h2>
 
       {error && (
-        <div className="rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <div className="rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           {error}
         </div>
       )}
@@ -137,28 +137,28 @@ export function UserApiKeysTab() {
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted">Search user or key name</label>
+          <label className="text-body-sm font-medium text-muted">Search user or key name</label>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter by username or key name..."
-            className="rounded border border-card-border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+            className="rounded border border-card-border bg-background px-3 py-1.5 text-body outline-none focus:border-primary"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted">Scope</label>
+          <label className="text-body-sm font-medium text-muted">Scope</label>
           <select
             value={scopeFilter}
             onChange={(e) => setScopeFilter(e.target.value as "all" | "public" | "private")}
-            className="rounded border border-card-border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+            className="rounded border border-card-border bg-background px-3 py-1.5 text-body outline-none focus:border-primary"
           >
             <option value="all">All</option>
             <option value="public">Public</option>
             <option value="private">Private</option>
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-body">
           <input
             type="checkbox"
             checked={includeRevoked}
@@ -169,7 +169,7 @@ export function UserApiKeysTab() {
         </label>
       </div>
 
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {total} key{total !== 1 ? "s" : ""} total
         {search ? ` matching "${search}"` : ""}
         {!includeRevoked ? " (active only)" : ""}
@@ -177,7 +177,7 @@ export function UserApiKeysTab() {
 
       {/* Table */}
       <div className="overflow-x-auto rounded border border-card-border">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-card-border bg-card">
               <th
@@ -234,30 +234,30 @@ export function UserApiKeysTab() {
                 <td className="px-3 py-2">
                   <div className="font-medium">{key.username}</div>
                   {key.characterName && (
-                    <div className="text-xs text-muted">{key.characterName}</div>
+                    <div className="text-body-sm text-muted">{key.characterName}</div>
                   )}
                 </td>
                 <td className="px-3 py-2">{key.name}</td>
                 <td className="px-3 py-2">{scopeLabel(key.scope)}</td>
-                <td className="px-3 py-2 font-mono text-xs text-muted">{key.prefix}</td>
+                <td className="px-3 py-2 font-mono text-body-sm text-muted">{key.prefix}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{key.requestCount}</td>
-                <td className="px-3 py-2 text-xs text-muted">
+                <td className="px-3 py-2 text-body-sm text-muted">
                   {key.lastUsedAt ? (
                     <LocalTime value={key.lastUsedAt} options={{ dateStyle: "medium" }} />
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-muted">
+                <td className="px-3 py-2 text-body-sm text-muted">
                   <LocalTime value={key.createdAt} options={{ dateStyle: "medium" }} />
                 </td>
                 <td className="px-3 py-2">
                   {key.revokedAt ? (
-                    <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-xs font-medium text-red-400">
+                    <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-body-sm font-medium text-red-400">
                       Revoked
                     </span>
                   ) : (
-                    <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-xs font-medium text-green-400">
+                    <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-body-sm font-medium text-green-400">
                       Active
                     </span>
                   )}
@@ -267,7 +267,7 @@ export function UserApiKeysTab() {
                     <button
                       onClick={() => handleRevoke(key._id, key.name)}
                       disabled={revoking === key._id}
-                      className="rounded px-2 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                      className="rounded px-2 py-1 text-body-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50"
                     >
                       {revoking === key._id ? "Revoking..." : "Revoke"}
                     </button>

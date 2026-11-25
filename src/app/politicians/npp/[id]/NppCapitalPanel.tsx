@@ -174,7 +174,7 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
 
   if (loading || !state) {
     return (
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-400">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-body text-zinc-400">
         Loading direct interaction...
       </div>
     );
@@ -193,36 +193,36 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
     <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-500">Direct interaction | {nppName}</h2>
+          <h2 className="text-body font-semibold text-zinc-500">Direct interaction | {nppName}</h2>
           <div className="mt-2 flex items-center gap-3">
             <div>
-              <span className="text-xs text-zinc-500">Relationship</span>
+              <span className="text-body-sm text-zinc-500">Relationship</span>
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold tabular-nums">
+                <span className="text-heading font-bold tabular-nums">
                   {state.relationship.score > 0 ? "+" : ""}
                   {state.relationship.score}
                 </span>
                 <span
-                  className={`rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${badge.className}`}
+                  className={`rounded-full border px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider ${badge.className}`}
                 >
                   {badge.label}
                 </span>
               </div>
             </div>
             <div className="ml-4 border-l border-zinc-800 pl-4">
-              <span className="text-xs text-zinc-500">Actions</span>
-              <div className="text-2xl font-bold tabular-nums">{state.balance.current}</div>
+              <span className="text-body-sm text-zinc-500">Actions</span>
+              <div className="text-heading font-bold tabular-nums">{state.balance.current}</div>
             </div>
             <div className="ml-4 border-l border-zinc-800 pl-4">
-              <span className="text-xs text-zinc-500">Campaign funds</span>
-              <div className="text-2xl font-bold tabular-nums">
+              <span className="text-body-sm text-zinc-500">Campaign funds</span>
+              <div className="text-heading font-bold tabular-nums">
                 {state.currencySymbol}
                 {state.balance.funds.toLocaleString("en-US")}
               </div>
             </div>
           </div>
         </div>
-        <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-cyan-200">
+        <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-body-sm font-semibold uppercase tracking-widest text-cyan-200">
           No RNG - deterministic
         </span>
       </div>
@@ -256,24 +256,24 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
               }`}
             >
               <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold">{action.label}</span>
-                <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-cyan-200">
+                <span className="text-body font-semibold">{action.label}</span>
+                <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wider text-cyan-200">
                   {action.actionCost} Actions
                 </span>
               </div>
-              <p className="mb-2 text-xs leading-snug text-zinc-400">{action.description}</p>
+              <p className="mb-2 text-body-sm leading-snug text-zinc-400">{action.description}</p>
               {action.fundCost > 0 && (
-                <p className="mb-2 text-xs text-emerald-300/90">
+                <p className="mb-2 text-body-sm text-emerald-300/90">
                   {state.currencySymbol}
                   {action.fundCost.toLocaleString("en-US")} campaign funds
                 </p>
               )}
-              <p className="text-xs text-emerald-300/90">{action.effectBlurb}</p>
+              <p className="text-body-sm text-emerald-300/90">{action.effectBlurb}</p>
               {action.availabilityNote && (
-                <p className="mt-1 text-xs text-cyan-200/80">{action.availabilityNote}</p>
+                <p className="mt-1 text-body-sm text-cyan-200/80">{action.availabilityNote}</p>
               )}
               {reasons.length > 0 && (
-                <p className="mt-1 text-xs text-amber-300/90">{reasons.join(" | ")}</p>
+                <p className="mt-1 text-body-sm text-amber-300/90">{reasons.join(" | ")}</p>
               )}
             </button>
           );
@@ -283,13 +283,13 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
       {pickerOpen === "request_endorsement" && (
         <div className="space-y-3 rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-cyan-200">
+            <h3 className="text-body-lg font-semibold text-cyan-200">
               Choose a candidacy for {nppName} to endorse
             </h3>
             <button
               type="button"
               onClick={closePicker}
-              className="text-sm text-zinc-400 hover:text-zinc-200"
+              className="text-body text-zinc-400 hover:text-zinc-200"
             >
               Cancel
             </button>
@@ -297,7 +297,7 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
           <select
             value={selectedCandidacyId}
             onChange={(e) => setSelectedCandidacyId(e.target.value)}
-            className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-body"
           >
             {state.pickerOptions.candidacies.map((c) => (
               <option key={c.id} value={c.id}>
@@ -306,7 +306,7 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
             ))}
           </select>
           {selectedCandidacy && selectedCandidacyChip && (
-            <div className="flex items-center gap-2 text-xs text-zinc-300">
+            <div className="flex items-center gap-2 text-body-sm text-zinc-300">
               <span
                 className={`rounded-full border px-2 py-0.5 font-semibold uppercase tracking-wider ${selectedCandidacyChip.className}`}
               >
@@ -326,7 +326,7 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
               !selectedCandidacy?.canRequest
             }
             onClick={confirmEndorsement}
-            className="rounded-md border border-cyan-500/60 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-cyan-500/60 bg-cyan-500/15 px-4 py-2 text-body font-semibold text-cyan-100 transition-colors hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting === "request_endorsement"
               ? "Requesting..."
@@ -337,7 +337,7 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
 
       {message && (
         <div
-          className={`rounded-md border px-3 py-2 text-sm ${
+          className={`rounded-md border px-3 py-2 text-body ${
             message.tone === "ok"
               ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
               : "border-red-500/40 bg-red-500/10 text-red-200"
@@ -347,7 +347,7 @@ export function NppCapitalPanel({ nppId, nppName }: { nppId: string; nppName: st
         </div>
       )}
 
-      <p className="text-xs text-zinc-500">
+      <p className="text-body-sm text-zinc-500">
         These interactions spend your normal action pool and, for boost/reduce stat work, your
         campaign funds.
       </p>

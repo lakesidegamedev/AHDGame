@@ -22,7 +22,7 @@ export function CabinetTabBar({
             key={t.id}
             type="button"
             onClick={() => onSelect(t.id)}
-            className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-[13px] font-semibold ${
+            className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-body-sm font-semibold ${
               active
                 ? "border-[var(--gov)] text-white"
                 : "border-transparent text-white/50 hover:text-white/80"

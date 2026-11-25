@@ -30,7 +30,7 @@ interface DocketResponse {
  */
 export function DocketExplainer() {
   return (
-    <div className="space-y-1 text-xs text-muted">
+    <div className="space-y-1 text-body-sm text-muted">
       <p>
         <span className="font-semibold text-foreground">Affirmed history:</span> the seated
         justices&apos; majority on the case&apos;s axis matched the real ruling, so history plays
@@ -72,7 +72,7 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error">
+      <div className="rounded-xl border border-error/30 bg-error/10 p-4 text-body text-error">
         {error}
       </div>
     );
@@ -93,9 +93,9 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Upcoming cases</h2>
+        <h2 className="text-body-lg font-semibold text-foreground">Upcoming cases</h2>
         {upcomingCases.length === 0 && (
-          <p className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
+          <p className="rounded-xl border border-card-border bg-card p-4 text-body text-muted">
             {proceduralOnly
               ? "No cases are awaiting a hearing. New cases can arise during play and get a hearing date when they are filed."
               : "No cases are currently on the docket."}
@@ -103,8 +103,8 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
         )}
         {upcomingCases.map((c) => (
           <div key={c.caseKey} className="rounded-xl border border-card-border bg-card p-4">
-            <p className="text-sm font-semibold text-foreground">{c.title}</p>
-            <p className="mt-0.5 text-xs text-muted">
+            <p className="text-body font-semibold text-foreground">{c.title}</p>
+            <p className="mt-0.5 text-body-sm text-muted">
               {c.hearingDueTurn != null
                 ? `Hearing on Turn ${c.hearingDueTurn}`
                 : `Scheduled for ${c.decisionYear}`}
@@ -116,9 +116,9 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-foreground">Decided cases</h2>
+        <h2 className="text-body-lg font-semibold text-foreground">Decided cases</h2>
         {cases.length === 0 && (
-          <p className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
+          <p className="rounded-xl border border-card-border bg-card p-4 text-body text-muted">
             No rulings have been recorded.
           </p>
         )}
@@ -130,8 +130,8 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
               className="flex flex-col gap-2 rounded-xl border border-card-border bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">{c.title}</p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="truncate text-body font-semibold text-foreground">{c.title}</p>
+                <p className="mt-0.5 text-body-sm text-muted">
                   {c.decisionYear} · {c.axis === "economic" ? "Economic" : "Social"} axis
                   {c.decisionSeatedFor != null && c.decisionSeatedAgainst != null && (
                     <>
@@ -142,7 +142,7 @@ export function DocketHistoryTab({ countryCode }: { countryCode: string }) {
                 </p>
               </div>
               <span
-                className={`shrink-0 self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide sm:self-center ${
+                className={`shrink-0 self-start rounded-full border px-2.5 py-1 text-body-sm font-semibold uppercase tracking-wide sm:self-center ${
                   diverged
                     ? "border-warning/40 bg-warning/10 text-warning"
                     : "border-card-border bg-card-elevated text-muted"

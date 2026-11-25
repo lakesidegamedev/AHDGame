@@ -117,14 +117,14 @@ export function WikiSiteHeader({ playUrl, docsUrl }: WikiSiteHeaderProps) {
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:px-6">
         <Link
           href="/wiki"
-          className="shrink-0 text-base font-semibold text-foreground hover:text-primary"
+          className="shrink-0 text-body-lg font-semibold text-foreground hover:text-primary"
         >
           Wiki
         </Link>
         <WikiSearchBox />
         <nav
           aria-label="Wiki site links"
-          className="ml-auto flex shrink-0 items-center gap-3 text-sm"
+          className="ml-auto flex shrink-0 items-center gap-3 text-body"
         >
           <a href={playUrl} className="text-muted transition-colors hover:text-foreground">
             Play
@@ -211,11 +211,11 @@ function WikiAccountMenu({ playUrl }: { playUrl: string }) {
           role="menu"
           className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-card-border bg-card py-1 shadow-modal"
         >
-          <p className="truncate px-3 py-2 text-sm font-medium text-foreground">{profile.name}</p>
+          <p className="truncate px-3 py-2 text-body font-medium text-foreground">{profile.name}</p>
           <a
             role="menuitem"
             href={wikiGamePath(playUrl, "/profile")}
-            className="block px-3 py-2 text-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            className="block px-3 py-2 text-body text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
             onClick={() => setOpen(false)}
           >
             Profile
@@ -224,7 +224,7 @@ function WikiAccountMenu({ playUrl }: { playUrl: string }) {
             type="button"
             role="menuitem"
             onClick={() => void signOut()}
-            className="block w-full px-3 py-2 text-left text-sm text-error transition-colors hover:bg-card-elevated"
+            className="block w-full px-3 py-2 text-left text-body text-error transition-colors hover:bg-card-elevated"
           >
             Sign out
           </button>
@@ -357,7 +357,7 @@ function WikiSearchBox() {
         aria-expanded={showPanel}
         aria-controls={listId}
         aria-autocomplete="list"
-        className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-foreground placeholder:text-muted/70 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40"
+        className="w-full rounded-lg border border-card-border bg-card px-3 py-1.5 text-body text-foreground placeholder:text-muted/70 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40"
       />
       {showPanel && (
         <ul
@@ -366,11 +366,11 @@ function WikiSearchBox() {
           className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-card-border bg-card py-1 shadow-modal"
         >
           {loading && hits.length === 0 && !error && (
-            <li className="px-3 py-2 text-sm text-muted">Searching...</li>
+            <li className="px-3 py-2 text-body text-muted">Searching...</li>
           )}
-          {error && <li className="px-3 py-2 text-sm text-muted">{error}</li>}
+          {error && <li className="px-3 py-2 text-body text-muted">{error}</li>}
           {!loading && !error && hits.length === 0 && (
-            <li className="px-3 py-2 text-sm text-muted">No matching pages.</li>
+            <li className="px-3 py-2 text-body text-muted">No matching pages.</li>
           )}
           {groups.map((group) => (
             // A named group keeps the visual sectioning available to screen
@@ -391,7 +391,7 @@ function WikiSearchBox() {
                     >
                       <Link
                         href={wikiHitHref(hit)}
-                        className={`block px-3 py-2 text-sm hover:bg-card-elevated ${
+                        className={`block px-3 py-2 text-body hover:bg-card-elevated ${
                           index === active ? "bg-card-elevated" : ""
                         }`}
                         onMouseEnter={() => setActive(index)}
@@ -399,7 +399,7 @@ function WikiSearchBox() {
                       >
                         <span className="block font-medium text-foreground">{hit.title}</span>
                         {hit.description ? (
-                          <span className="mt-0.5 line-clamp-1 block text-xs text-muted">
+                          <span className="mt-0.5 line-clamp-1 block text-body-sm text-muted">
                             {hit.description}
                           </span>
                         ) : null}

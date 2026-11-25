@@ -168,7 +168,7 @@ function GoPublicCard({
   return (
     <GovernanceRow label="Listing" summary="Private" actionLabel="Go public">
       <div className="space-y-2">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Issue new shares to the public float at the current price (
           {formatPriceFine(toInternal(corporation.sharePrice), liquidCode)}/share). The treasury
           receives cash as those shares are bought. Your{" "}
@@ -176,7 +176,7 @@ function GoPublicCard({
           share falls as new shares are issued.
         </p>
 
-        <label className="flex items-start gap-2 text-xs">
+        <label className="flex items-start gap-2 text-body-sm">
           <input
             type="checkbox"
             checked={dualClass}
@@ -198,7 +198,7 @@ function GoPublicCard({
           </span>
         </label>
         {dualClass && (
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex items-center gap-2 text-body-sm text-muted">
             Votes per founder share
             <input
               type="range"
@@ -213,7 +213,7 @@ function GoPublicCard({
           </label>
         )}
 
-        <label className="flex items-center gap-2 text-xs text-muted">
+        <label className="flex items-center gap-2 text-body-sm text-muted">
           Public float
           <input
             type="range"
@@ -239,7 +239,7 @@ function GoPublicCard({
               setFloatPct(next);
               if (next <= IPO_MAX_FLOAT_PCT) setHighFloatAck(false);
             }}
-            className="h-7 w-14 rounded-md border border-card-border bg-background px-1.5 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+            className="h-7 w-14 rounded-md border border-card-border bg-background px-1.5 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
             aria-label="Public float percent"
           />
           %
@@ -276,7 +276,7 @@ function GoPublicCard({
         )}
 
         {requiresHighFloatAck && (
-          <label className="flex items-start gap-2 text-xs text-warning">
+          <label className="flex items-start gap-2 text-body-sm text-warning">
             <input
               type="checkbox"
               checked={highFloatAck}
@@ -411,7 +411,7 @@ function PrivatizeCard({
       actionLabel="Take private"
     >
       <div className="space-y-2">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {isFullOwner
             ? "You own every share, so there is no one to buy out. The corporation can be taken private at once, at no cost."
             : `Buy out every minority holder at a ${(PRIVATIZATION_BUYOUT_PREMIUM * 100).toFixed(0)}% premium and take the corporation private. The price locks when the vote opens; the cash is reserved from your personal funds and refunded if the vote fails. The vote passes once a majority of eligible shareholders approve.`}
@@ -444,13 +444,13 @@ function PrivatizeCard({
                 <KVRow label="Your personal cash" value={fmtLocal(quote.personalCash)} />
               </>
             ) : (
-              <p className="text-xs text-muted">
+              <p className="text-body-sm text-muted">
                 {quoteFailed ? "The buyout quote could not be loaded." : "Loading the buyout quote"}
               </p>
             )}
           </dl>
         )}
-        {blockedReason && <p className="text-xs text-warning">{blockedReason}</p>}
+        {blockedReason && <p className="text-body-sm text-warning">{blockedReason}</p>}
         <SmallButton
           tone="primary"
           onClick={handleOpenVote}

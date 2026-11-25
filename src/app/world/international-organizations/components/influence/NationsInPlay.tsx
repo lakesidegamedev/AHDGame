@@ -161,7 +161,7 @@ export function NationsInPlay({
 
   return (
     <section className="space-y-2 rounded-lg border border-card-border bg-card p-4">
-      <h3 className="text-body-sm font-semibold text-foreground">Nations in play</h3>
+      <h3 className="text-body-lg font-semibold text-foreground">Nations in play</h3>
 
       <div className="flex flex-wrap gap-1">
         {(Object.keys(SORTS) as SortMode[]).map((m) => (
@@ -170,7 +170,7 @@ export function NationsInPlay({
             type="button"
             onClick={() => setMode(m)}
             aria-pressed={mode === m}
-            className={`px-2.5 py-1 text-body-xs ${pillClass(mode === m)}`}
+            className={`px-2.5 py-1 text-body-sm ${pillClass(mode === m)}`}
           >
             {SORTS[m].label}
           </button>
@@ -191,7 +191,7 @@ export function NationsInPlay({
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-body-sm text-foreground">{t.name}</span>
-                <span className="font-mono text-body-xs tabular-nums text-muted">{metric(t)}</span>
+                <span className="font-mono text-body-sm tabular-nums text-muted">{metric(t)}</span>
               </div>
               <ShareBar
                 poles={view.poles}
@@ -199,7 +199,7 @@ export function NationsInPlay({
                 nonAligned={t.nonAligned}
                 remainderLabel={view.remainderLabel}
               />
-              <span className="text-body-xs text-muted">
+              <span className="text-body-sm text-muted">
                 {t.status}
                 {t.crisis ? " · flashpoint" : ""}
               </span>
@@ -212,7 +212,7 @@ export function NationsInPlay({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="text-body-xs text-muted hover:text-foreground"
+          className="text-body-sm text-muted hover:text-foreground"
         >
           Show all {ranked.length}
         </button>

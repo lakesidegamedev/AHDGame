@@ -98,8 +98,8 @@ export function CrisisCollapsedList({
       >
         <CrisisThumb src={worst.image} className="h-10 w-14" />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-foreground">{summary.headline}</span>
-          <span className="block truncate text-xs text-muted">
+          <span className="block text-body font-semibold text-foreground">{summary.headline}</span>
+          <span className="block truncate text-body-sm text-muted">
             Worst: {worst.title}, {place(worst)}
             {respondable > 0 ? ` · ${respondable} you can respond to` : ""}
           </span>
@@ -124,17 +124,19 @@ export function CrisisCollapsedList({
               >
                 <CrisisThumb src={row.image} className="h-9 w-12" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-foreground">
+                  <span className="block truncate text-body font-medium text-foreground">
                     {row.title}
                   </span>
-                  <span className="block truncate text-xs text-muted">
+                  <span className="block truncate text-body-sm text-muted">
                     {place(row)} · {row.stage}
                   </span>
                 </span>
                 {row.canRespond ? (
-                  <span className="shrink-0 text-xs font-medium text-success">You can respond</span>
+                  <span className="shrink-0 text-body-sm font-medium text-success">
+                    You can respond
+                  </span>
                 ) : (
-                  <span className="hidden shrink-0 text-xs text-muted sm:inline">
+                  <span className="hidden shrink-0 text-body-sm text-muted sm:inline">
                     No response for you
                   </span>
                 )}
@@ -142,7 +144,7 @@ export function CrisisCollapsedList({
               </Link>
             </li>
           ))}
-          <li className="px-3 py-2 text-xs">
+          <li className="px-3 py-2 text-body-sm">
             <Link href="/world/crises" className="text-primary hover:underline">
               Open the crisis board
             </Link>

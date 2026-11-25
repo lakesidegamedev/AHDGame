@@ -59,18 +59,18 @@ export function ScotusVoteRow({
         <p className="font-medium text-foreground">
           {nomination.nomineeName} → Seat #{nomination.seatNumber}
           {nomination.nomineeMode === "npp" && (
-            <span className="ml-2 rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-[10px] font-medium text-muted align-middle">
+            <span className="ml-2 rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm font-medium text-muted align-middle">
               <NppAbbr />
             </span>
           )}
         </p>
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           {nomination.votesFor} for · {nomination.votesAgainst} against · {nomination.votesAbstain}{" "}
           abstain
           {nomination.votingEndsAt && ` · ${countdown}`}
         </p>
         {nomination.myVote && (
-          <p className="text-xs text-muted mt-1">Your vote: {nomination.myVote}</p>
+          <p className="text-body-sm text-muted mt-1">Your vote: {nomination.myVote}</p>
         )}
       </div>
       {isSenator && (
@@ -78,7 +78,7 @@ export function ScotusVoteRow({
           <button
             onClick={() => onVote(nomination.id, "for")}
             disabled={votingId !== null}
-            className={`min-h-[44px] min-w-[64px] touch-manipulation rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+            className={`min-h-[44px] min-w-[64px] touch-manipulation rounded-lg px-3 py-2 text-body-sm font-medium transition-colors ${
               nomination.myVote === "for"
                 ? "bg-success/20 text-success border border-success/50"
                 : "border border-card-border bg-card hover:bg-card-elevated text-foreground"
@@ -89,7 +89,7 @@ export function ScotusVoteRow({
           <button
             onClick={() => onVote(nomination.id, "against")}
             disabled={votingId !== null}
-            className={`min-h-[44px] min-w-[64px] touch-manipulation rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+            className={`min-h-[44px] min-w-[64px] touch-manipulation rounded-lg px-3 py-2 text-body-sm font-medium transition-colors ${
               nomination.myVote === "against"
                 ? "bg-error/20 text-error border border-error/50"
                 : "border border-card-border bg-card hover:bg-card-elevated text-foreground"
@@ -100,7 +100,7 @@ export function ScotusVoteRow({
           <button
             onClick={() => onVote(nomination.id, "abstain")}
             disabled={votingId !== null}
-            className={`min-h-[44px] min-w-[64px] touch-manipulation rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+            className={`min-h-[44px] min-w-[64px] touch-manipulation rounded-lg px-3 py-2 text-body-sm font-medium transition-colors ${
               nomination.myVote === "abstain"
                 ? "bg-muted/20 text-muted border border-muted/50"
                 : "border border-card-border bg-card hover:bg-card-elevated text-foreground"

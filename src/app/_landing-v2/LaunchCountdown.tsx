@@ -47,7 +47,7 @@ export function LaunchCountdown({ schedule }: { schedule: LaunchSchedule | null 
 
   return (
     <div className="mb-6">
-      <dl className="flex max-w-full flex-col gap-y-2 rounded-md border border-white/15 bg-black/40 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.12em] sm:inline-flex sm:gap-y-1.5 sm:text-xs">
+      <dl className="flex max-w-full flex-col gap-y-2 rounded-md border border-white/15 bg-black/40 px-4 py-3 font-mono text-body-sm uppercase tracking-[0.12em] sm:inline-flex sm:gap-y-1.5 sm:text-body-sm">
         {schedule.opensAt && (
           <Row label={t("landing.world2027.opensLabel")} at={schedule.opensAt} locale={locale} />
         )}
@@ -59,7 +59,7 @@ export function LaunchCountdown({ schedule }: { schedule: LaunchSchedule | null 
           />
         )}
       </dl>
-      {note && <p className="mt-2 text-xs text-white/55">{note}</p>}
+      {note && <p className="mt-2 text-body-sm text-white/55">{note}</p>}
     </div>
   );
 }

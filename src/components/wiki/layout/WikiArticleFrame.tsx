@@ -5,7 +5,7 @@ import { WikiContentsList } from "@/components/wiki/layout/WikiContentsList";
 
 function GlanceTable({ rows }: { rows: GlanceRow[] }) {
   return (
-    <table className="w-full border-collapse text-[12.5px]">
+    <table className="w-full border-collapse text-body-sm">
       <tbody>
         {rows.map((r) => (
           <tr key={r.label} className="border-b border-card-border/60 last:border-b-0">
@@ -20,7 +20,7 @@ function GlanceTable({ rows }: { rows: GlanceRow[] }) {
 
 export function WikiKeyHints() {
   return (
-    <div className="mt-8 hidden gap-4 text-[11px] text-muted [@media(hover:hover)]:flex">
+    <div className="mt-8 hidden gap-4 text-body-sm text-muted [@media(hover:hover)]:flex">
       <span>
         <Kbd>/</Kbd> search
       </span>
@@ -36,7 +36,7 @@ export function WikiKeyHints() {
 
 function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="rounded-[3px] bg-card px-1.5 py-px font-mono text-[10px] text-muted">
+    <kbd className="rounded-[3px] bg-card px-1.5 py-px font-mono text-body-sm text-muted">
       {children}
     </kbd>
   );
@@ -67,7 +67,7 @@ export function WikiArticleFrame({
       <div className="mx-auto min-w-0 max-w-[860px] px-4 pb-14 pt-7 sm:px-8 xl:mx-0 xl:px-11">
         {glance && (
           <details aria-label="At a glance" className="mb-3 xl:hidden">
-            <summary className="cursor-pointer py-1 text-[13px] font-semibold text-foreground">
+            <summary className="cursor-pointer py-1 text-body-sm font-semibold text-foreground">
               At a glance
             </summary>
             <div className="mt-2 rounded-md p-3" style={{ background: "var(--card-muted)" }}>
@@ -86,7 +86,7 @@ export function WikiArticleFrame({
         >
           {glance && (
             <section aria-label="At a glance" className="mb-7">
-              <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <div className="mb-1.5 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 At a glance
               </div>
               <GlanceTable rows={glance} />

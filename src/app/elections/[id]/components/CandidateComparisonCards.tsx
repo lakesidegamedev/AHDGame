@@ -54,33 +54,33 @@ export function CandidateComparisonCards({
                 <div className="flex items-center gap-2 mb-1">
                   <Link
                     href={href}
-                    className="text-xl font-bold hover:text-primary transition-colors"
+                    className="text-heading font-bold hover:text-primary transition-colors"
                   >
                     {c.characterName}
                   </Link>
                   {idx === 0 && winner?.id === c.id && (
-                    <span className="text-yellow-400 text-xl">★</span>
+                    <span className="text-yellow-400 text-heading">★</span>
                   )}
                 </div>
-                <div className="text-sm font-medium mb-1" style={{ color }}>
+                <div className="text-body font-medium mb-1" style={{ color }}>
                   {c.partyName}
                 </div>
                 {c.runningMateName && (
-                  <div className="text-xs text-muted">Running mate: {c.runningMateName}</div>
+                  <div className="text-body-sm text-muted">Running mate: {c.runningMateName}</div>
                 )}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <div className="text-xs text-muted mb-1">Electoral votes</div>
-                <div className="text-2xl font-bold tabular-nums" style={{ color }}>
+                <div className="text-body-sm text-muted mb-1">Electoral votes</div>
+                <div className="text-heading font-bold tabular-nums" style={{ color }}>
                   {ev}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted mb-1">Popular vote</div>
-                <div className="text-2xl font-bold tabular-nums" style={{ color }}>
+                <div className="text-body-sm text-muted mb-1">Popular vote</div>
+                <div className="text-heading font-bold tabular-nums" style={{ color }}>
                   {pct.toFixed(1)}%
                 </div>
               </div>
@@ -88,16 +88,16 @@ export function CandidateComparisonCards({
 
             <div className="grid grid-cols-3 gap-3 pt-4 border-t border-card-border">
               <div>
-                <div className="text-xs text-muted mb-1">States won</div>
-                <div className="text-lg font-semibold">{statesWon}</div>
+                <div className="text-body-sm text-muted mb-1">States won</div>
+                <div className="text-heading font-semibold">{statesWon}</div>
               </div>
               <div>
-                <div className="text-xs text-muted mb-1">Total votes</div>
-                <div className="text-sm font-semibold">{formatVotes(votes)}</div>
+                <div className="text-body-sm text-muted mb-1">Total votes</div>
+                <div className="text-body font-semibold">{formatVotes(votes)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted mb-1">Favorability</div>
-                <div className="text-sm font-semibold text-yellow-400">
+                <div className="text-body-sm text-muted mb-1">Favorability</div>
+                <div className="text-body font-semibold text-yellow-400">
                   {c.favorability.toFixed(0)}%
                 </div>
               </div>

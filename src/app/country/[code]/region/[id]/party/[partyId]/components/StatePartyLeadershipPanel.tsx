@@ -74,26 +74,28 @@ function AdminAppointmentPanel({
   return (
     <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400 uppercase tracking-wide">
+        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-body-sm font-bold text-red-400 uppercase tracking-wide">
           Admin
         </span>
-        <span className="text-sm font-semibold">Direct appointment</span>
+        <span className="text-body font-semibold">Direct appointment</span>
       </div>
-      <p className="text-xs text-muted/70">
+      <p className="text-body-sm text-muted/70">
         Directly appoint or vacate any leadership position. Active elections for the affected
         position will be cancelled automatically.
       </p>
       {message && (
-        <div className={`rounded-lg p-2.5 text-xs ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-2.5 text-body-sm ${getMessageStyle(message)}`}>{message}</div>
       )}
       <div className="space-y-2">
         {(["chair", "viceChair", "treasurer"] as Position[]).map((position) => (
           <div key={position} className="flex flex-wrap items-center gap-3">
-            <span className="text-xs text-muted w-20 shrink-0">{APPOINT_LABELS[position]}:</span>
+            <span className="text-body-sm text-muted w-20 shrink-0">
+              {APPOINT_LABELS[position]}:
+            </span>
             <select
               value={selections[position]}
               onChange={(e) => setSelections((prev) => ({ ...prev, [position]: e.target.value }))}
-              className="flex-1 min-w-40 rounded-lg border border-card-border bg-background px-3 py-1.5 text-sm transition-colors duration-150 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 min-w-40 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body transition-colors duration-150 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">(Vacant)</option>
               {[...members]
@@ -107,7 +109,7 @@ function AdminAppointmentPanel({
             <button
               onClick={() => appoint(position)}
               disabled={loading !== null}
-              className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-40"
+              className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-body-sm font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-40"
             >
               {loading === position ? "…" : "Appoint"}
             </button>
@@ -147,7 +149,7 @@ export function StatePartyLeadershipPanel({
         </div>
         <Link
           href={partyUrl(stateParty.countryId ?? DEFAULT_LEGACY_COUNTRY_ID, stateParty.partyId)}
-          className="text-xs text-primary hover:underline"
+          className="text-body-sm text-primary hover:underline"
         >
           {stateParty.partyName} National →
         </Link>
@@ -182,7 +184,7 @@ export function StatePartyLeadershipPanel({
         <div className="flex items-baseline justify-between gap-2">
           <div className="text-body-sm font-medium text-muted">Campaigner</div>
           <span
-            className="rounded-full border border-card-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted"
+            className="rounded-full border border-card-border px-2 py-0.5 text-body-sm font-bold uppercase tracking-wider text-muted"
             title="Chair-assigned. Spends the state party's Political Strength (PS) to build Organization on its behalf."
           >
             Spend on behalf
@@ -214,7 +216,7 @@ export function StatePartyLeadershipPanel({
             onUpdate();
           }}
         />
-        <p className="text-[11px] text-muted">
+        <p className="text-body-sm text-muted">
           Only party members whose home state is {displayCanadianRegionCode(stateParty.stateId)} can
           be picked. Campaigners can spend the state party&apos;s PS to build Organization.
           Managing, moving, and recruiting non-player politicians (NPPs) stays with the chair, vice

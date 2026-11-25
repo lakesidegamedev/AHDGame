@@ -40,7 +40,7 @@ export function ElectionMap({
         className="rounded-lg overflow-hidden bg-card-elevated/50"
       />
 
-      <div className="flex flex-wrap gap-4 text-xs text-muted">
+      <div className="flex flex-wrap gap-4 text-body-sm text-muted">
         {parties.map(({ partyId, name, color }) => (
           <span key={partyId} className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-sm inline-block" style={{ backgroundColor: color }} />

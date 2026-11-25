@@ -151,10 +151,10 @@ export function CareerLadder({
               className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full"
               style={{ background: isTop ? accent : "#000", border: `2px solid ${accent}` }}
             />
-            <p className="text-[13px] tabular-nums text-white/55">{monthYear(s.date)}</p>
+            <p className="text-body-sm tabular-nums text-white/55">{monthYear(s.date)}</p>
             <p
               className={`text-balance font-semibold leading-tight tracking-[-0.01em] ${
-                isTop ? "text-[22px] text-white" : "text-[17px] text-white/80"
+                isTop ? "text-heading text-white" : "text-body-lg text-white/80"
               }`}
             >
               {s.label}
@@ -187,14 +187,14 @@ export function RaceBars({
           <div className="flex items-baseline justify-between gap-3">
             <p className="min-w-0 truncate">
               <span
-                className="text-[16px] font-semibold"
+                className="text-body-lg font-semibold"
                 style={{ color: c.isYou ? accent : "rgba(255,255,255,.9)" }}
               >
                 {c.name}
               </span>
-              <span className="ml-2 text-[13px] text-white/45">{c.partyName}</span>
+              <span className="ml-2 text-body-sm text-white/45">{c.partyName}</span>
             </p>
-            <p className="shrink-0 text-[15px] font-semibold tabular-nums text-white/85">
+            <p className="shrink-0 text-body font-semibold tabular-nums text-white/85">
               {pct(c.share)}
             </p>
           </div>

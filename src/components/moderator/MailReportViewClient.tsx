@@ -103,14 +103,14 @@ export function MailReportViewClient({
   };
 
   if (loading) {
-    return <p className="py-12 text-center text-sm text-muted">Loading conversation…</p>;
+    return <p className="py-12 text-center text-body text-muted">Loading conversation…</p>;
   }
 
   if (error || !detail) {
     return (
       <div className="py-12 text-center">
-        <p className="text-sm text-error">{error ?? "Report not found"}</p>
-        <Link href={backHref} className="mt-3 inline-block text-sm text-primary hover:underline">
+        <p className="text-body text-error">{error ?? "Report not found"}</p>
+        <Link href={backHref} className="mt-3 inline-block text-body text-primary hover:underline">
           ← Back to mail reports
         </Link>
       </div>
@@ -129,13 +129,13 @@ export function MailReportViewClient({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href={backHref} className="text-xs text-muted hover:text-foreground">
+          <Link href={backHref} className="text-body-sm text-muted hover:text-foreground">
             ← Back to mail reports
           </Link>
-          <h1 className="mt-2 text-xl font-semibold text-foreground">
+          <h1 className="mt-2 text-heading font-semibold text-foreground">
             {subject ?? "Deleted message"}
           </h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-body text-muted">
             Reported <LocalTime value={report.createdAt} options={DATE_LABEL_OPTIONS} />
             {reporterUsername ? ` by @${reporterUsername}` : ""}
             {" · "}
@@ -145,21 +145,21 @@ export function MailReportViewClient({
       </div>
 
       {report.adminNote && (
-        <div className="rounded-lg border border-card-border bg-card-elevated px-4 py-3 text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-card-elevated px-4 py-3 text-body text-muted">
           <span className="font-semibold text-foreground">Staff note:</span> {report.adminNote}
         </div>
       )}
 
       <div className="rounded-xl border border-card-border bg-card">
         <div className="border-b border-card-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Conversation</h2>
-          <p className="mt-0.5 text-xs text-muted">
+          <h2 className="text-body font-semibold text-foreground">Conversation</h2>
+          <p className="mt-0.5 text-body-sm text-muted">
             Full thread between the players. The reported message is highlighted.
           </p>
         </div>
 
         {messages.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted italic">
+          <p className="px-4 py-8 text-center text-body text-muted italic">
             The reported message was deleted and is no longer available.
           </p>
         ) : (
@@ -171,7 +171,7 @@ export function MailReportViewClient({
                   key={msg.id}
                   className={`px-4 py-4 ${msg.isReported ? "bg-error/5 ring-1 ring-inset ring-error/20" : ""}`}
                 >
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <div className="flex flex-wrap items-center gap-2 text-body-sm text-muted">
                     {msg.fromCharacterSequentialId ? (
                       <Link
                         href={`/character/${msg.fromCharacterSequentialId}`}
@@ -194,17 +194,19 @@ export function MailReportViewClient({
                       <LocalTime value={msg.createdAt} options={DATE_LABEL_OPTIONS} />
                     </span>
                     {msg.isReported && (
-                      <span className="rounded bg-error/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-error">
+                      <span className="rounded bg-error/15 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-error">
                         Reported
                       </span>
                     )}
                     {deleted && (
-                      <span className="rounded bg-zinc-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                      <span className="rounded bg-zinc-500/15 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-zinc-400">
                         Deleted
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">{msg.body}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-body text-foreground/90">
+                    {msg.body}
+                  </p>
                 </div>
               );
             })}
@@ -214,16 +216,16 @@ export function MailReportViewClient({
 
       {report.status === "pending" && (
         <div className="rounded-xl border border-card-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Moderation actions</h2>
+          <h2 className="text-body font-semibold text-foreground">Moderation actions</h2>
           <div className="space-y-1">
-            <label className="text-xs text-muted">Staff note (optional)</label>
+            <label className="text-body-sm text-muted">Staff note (optional)</label>
             <input
               type="text"
               maxLength={500}
               value={actionNote}
               onChange={(e) => setActionNote(e.target.value)}
               placeholder="Reason for action…"
-              className="w-full rounded-lg border border-card-border bg-zinc-950 px-3 py-2 text-sm text-foreground focus:border-zinc-500 focus:outline-none"
+              className="w-full rounded-lg border border-card-border bg-zinc-950 px-3 py-2 text-body text-foreground focus:border-zinc-500 focus:outline-none"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -231,7 +233,7 @@ export function MailReportViewClient({
               type="button"
               onClick={() => void takeAction("dismiss")}
               disabled={actioning !== null}
-              className="rounded-lg bg-zinc-500/10 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-zinc-500/20 disabled:opacity-50"
+              className="rounded-lg bg-zinc-500/10 px-3 py-1.5 text-body-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-500/20 disabled:opacity-50"
             >
               Dismiss
             </button>
@@ -239,7 +241,7 @@ export function MailReportViewClient({
               type="button"
               onClick={() => void takeAction("delete_mail")}
               disabled={actioning !== null || messages.length === 0}
-              className="rounded-lg bg-yellow-500/10 px-3 py-1.5 text-xs font-medium text-yellow-400 transition-colors hover:bg-yellow-500/20 disabled:opacity-50"
+              className="rounded-lg bg-yellow-500/10 px-3 py-1.5 text-body-sm font-medium text-yellow-400 transition-colors hover:bg-yellow-500/20 disabled:opacity-50"
             >
               Delete mail
             </button>
@@ -247,7 +249,7 @@ export function MailReportViewClient({
               type="button"
               onClick={() => void takeAction("warn")}
               disabled={actioning !== null}
-              className="rounded-lg bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
+              className="rounded-lg bg-blue-500/10 px-3 py-1.5 text-body-sm font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
             >
               Warn sender
             </button>
@@ -255,7 +257,7 @@ export function MailReportViewClient({
               type="button"
               onClick={() => void takeAction("ban")}
               disabled={actioning !== null}
-              className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+              className="rounded-lg bg-red-500/10 px-3 py-1.5 text-body-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
             >
               Ban sender
             </button>

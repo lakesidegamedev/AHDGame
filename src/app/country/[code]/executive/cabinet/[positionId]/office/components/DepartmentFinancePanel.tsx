@@ -260,15 +260,15 @@ export function DepartmentFinancePanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-body-sm font-medium text-muted">Department account</p>
-            <h2 className="text-lg font-semibold">{department.departmentName}</h2>
+            <h2 className="text-heading font-semibold">{department.departmentName}</h2>
           </div>
-          <span className="rounded-full border border-card-border px-3 py-1 text-xs font-semibold uppercase">
+          <span className="rounded-full border border-card-border px-3 py-1 text-body-sm font-semibold uppercase">
             {department.kind.replaceAll("_", " ")}
           </span>
         </div>
-        <p className="mt-3 text-sm text-muted">{department.explanation}</p>
+        <p className="mt-3 text-body text-muted">{department.explanation}</p>
         {department.balance !== undefined && (
-          <dl className="mt-4 grid gap-x-5 gap-y-3 border-t border-card-border pt-4 text-sm sm:grid-cols-5">
+          <dl className="mt-4 grid gap-x-5 gap-y-3 border-t border-card-border pt-4 text-body sm:grid-cols-5">
             <div>
               <dt className="text-muted">Annual authority</dt>
               <dd>{money(department.annualAuthority ?? 0, currencySymbol)}</dd>
@@ -292,7 +292,7 @@ export function DepartmentFinancePanel({
           </dl>
         )}
         {department.lastAuthorityPaid !== undefined && (
-          <div className="mt-4 border-t border-card-border pt-4 text-sm">
+          <div className="mt-4 border-t border-card-border pt-4 text-body">
             <dl>
               <div>
                 <dt
@@ -304,7 +304,7 @@ export function DepartmentFinancePanel({
                 <dd>{money(department.lastAuthorityPaid ?? 0, currencySymbol)}</dd>
               </div>
             </dl>
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-2 text-body-sm text-muted">
               Enacted appropriations are credited in full. Any national shortfall is reflected in
               the National Budget; supplier arrears are shown separately above.
             </p>
@@ -343,7 +343,7 @@ export function DepartmentFinancePanel({
                   role="tab"
                   aria-selected={activeProgramTab === "overview"}
                   onClick={() => setRequestedProgramTab("overview")}
-                  className={`shrink-0 px-3 py-1.5 text-sm ${pillClass(activeProgramTab === "overview")}`}
+                  className={`shrink-0 px-3 py-1.5 text-body ${pillClass(activeProgramTab === "overview")}`}
                 >
                   Overview
                 </button>
@@ -355,7 +355,7 @@ export function DepartmentFinancePanel({
                     title={program.programName}
                     aria-selected={activeProgramTab === program.programId}
                     onClick={() => setRequestedProgramTab(program.programId!)}
-                    className={`max-w-56 shrink-0 truncate px-3 py-1.5 text-sm ${pillClass(activeProgramTab === program.programId)}`}
+                    className={`max-w-56 shrink-0 truncate px-3 py-1.5 text-body ${pillClass(activeProgramTab === program.programId)}`}
                   >
                     {program.programName}
                   </button>
@@ -383,25 +383,27 @@ export function DepartmentFinancePanel({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-semibold">Program allocation</h3>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 text-body text-muted">
                     {demandMode
                       ? "Set discretionary services from 0% to 200% of their existing claims. Legal obligations remain at 100%. Requests do not create money; available authority and capacity limit delivery."
                       : "Set the department's emphasis when same-tier program claims exceed available funds. Existing commitments and arrears are paid first."}
                   </p>
                 </div>
-                <span className={allocationsValid ? "text-sm text-muted" : "text-sm text-error"}>
+                <span
+                  className={allocationsValid ? "text-body text-muted" : "text-body text-error"}
+                >
                   {demandMode ? "Independent requests" : `${allocationTotal.toFixed(1)}%`}
                 </span>
               </div>
               {demandMode && (
                 <div className="mt-4 rounded-lg border border-card-border bg-card-muted/30 p-4">
-                  <h4 className="text-sm font-semibold">What funding levels mean</h4>
-                  <p className="mt-1 text-xs leading-relaxed text-muted">
+                  <h4 className="text-body font-semibold">What funding levels mean</h4>
+                  <p className="mt-1 text-body-sm leading-relaxed text-muted">
                     Requests are settled each turn. They guide how the department uses paid funds,
                     but do not change the law&apos;s appropriation, create cash, or remove capacity
                     limits.
                   </p>
-                  <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+                  <dl className="mt-3 grid gap-3 text-body-sm sm:grid-cols-3">
                     <div>
                       <dt className="font-semibold text-warning">Below 100%</dt>
                       <dd className="mt-1 leading-relaxed text-muted">
@@ -432,18 +434,18 @@ export function DepartmentFinancePanel({
                   aria-live="polite"
                   className="mt-4 rounded-lg border border-card-border bg-background/35 p-4"
                 >
-                  <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                  <dl className="grid gap-4 text-body sm:grid-cols-2">
                     <div>
                       <dt className="text-muted">Total funding requested</dt>
-                      <dd className="mt-1 text-lg font-semibold tabular-nums text-foreground">
+                      <dd className="mt-1 text-heading font-semibold tabular-nums text-foreground">
                         {money(totalFundingRequested, currencySymbol)}
                       </dd>
-                      <span className="text-xs text-muted">per turn</span>
+                      <span className="text-body-sm text-muted">per turn</span>
                     </div>
                     <div>
                       <dt className="text-muted">Department funding remaining</dt>
                       <dd
-                        className={`mt-1 text-lg font-semibold tabular-nums ${
+                        className={`mt-1 text-heading font-semibold tabular-nums ${
                           fundingPreview.allocationRemaining > 0
                             ? "text-success"
                             : fundingPreview.allocationRemaining < 0
@@ -453,10 +455,10 @@ export function DepartmentFinancePanel({
                       >
                         {signedMoney(fundingPreview.allocationRemaining, currencySymbol)}
                       </dd>
-                      <span className="text-xs text-muted">after next-turn requests</span>
+                      <span className="text-body-sm text-muted">after next-turn requests</span>
                     </div>
                   </dl>
-                  <p className="mt-3 text-xs leading-relaxed text-muted">
+                  <p className="mt-3 text-body-sm leading-relaxed text-muted">
                     Remaining allocation includes the next enacted appropriation and available
                     department cash after existing encumbrances and arrears.
                   </p>
@@ -480,38 +482,38 @@ export function DepartmentFinancePanel({
                   return (
                     <div
                       key={programId}
-                      className="grid items-center gap-3 text-sm sm:grid-cols-[minmax(12rem,1fr)_minmax(12rem,2fr)_auto]"
+                      className="grid items-center gap-3 text-body sm:grid-cols-[minmax(12rem,1fr)_minmax(12rem,2fr)_auto]"
                     >
                       <div>
                         <span className="flex flex-wrap items-center gap-2">
                           <label htmlFor={sliderId}>{program.programName}</label>
                           {fundingControl === "required" && (
-                            <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+                            <span className="rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-success">
                               Required by law
                             </span>
                           )}
                           {fundingControl === "no_separate_allocation" && (
-                            <span className="rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                            <span className="rounded-full border border-card-border bg-card-muted px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-muted">
                               No separate allocation
                             </span>
                           )}
                         </span>
                         {draftInvalid ? (
-                          <span className="mt-1 block text-xs text-error">
+                          <span className="mt-1 block text-body-sm text-error">
                             Enter a whole number from 0 to 200.
                           </span>
                         ) : fundingPerTurn !== undefined ? (
-                          <span className="mt-1 block text-xs tabular-nums text-muted">
+                          <span className="mt-1 block text-body-sm tabular-nums text-muted">
                             Funding request per turn: {money(fundingPerTurn, currencySymbol)}
                           </span>
                         ) : fundingControl === "no_separate_allocation" ? (
-                          <span className="mt-1 block text-xs text-muted">
+                          <span className="mt-1 block text-body-sm text-muted">
                             No separate per-turn funding request
                           </span>
                         ) : null}
                       </div>
                       {fundingControl === "no_separate_allocation" ? (
-                        <span className="text-xs text-muted sm:col-span-2">
+                        <span className="text-body-sm text-muted sm:col-span-2">
                           This law has no discretionary Cabinet funding control.
                         </span>
                       ) : (
@@ -554,7 +556,7 @@ export function DepartmentFinancePanel({
               {canAct && adjustablePrograms.length > 0 && (
                 <button
                   type="button"
-                  className="mt-4 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
+                  className="mt-4 rounded-md bg-primary px-3 py-2 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                   disabled={allocationLocked || saving || !allocationsValid}
                   onClick={saveAllocations}
                 >

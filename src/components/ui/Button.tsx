@@ -22,9 +22,9 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-7 px-2.5 text-xs rounded-md",
-  md: "h-9 px-3.5 text-[13px] rounded-lg",
-  lg: "h-11 px-4.5 text-sm rounded-lg",
+  sm: "h-7 px-2.5 text-body-sm rounded-md",
+  md: "h-9 px-3.5 text-body-sm rounded-lg",
+  lg: "h-11 px-4.5 text-body rounded-lg",
 };
 
 // Icon-only buttons keep their visual size but extend the tap target to a

@@ -90,7 +90,7 @@ export default function CommoditiesTab({
   if (commodities.length === 0) {
     return (
       <DenseSection title="Commodity flows">
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           {data?.isPrivate
             ? "Commodity flows are not disclosed for private corporations."
             : "This corporation isn't producing or consuming any commodities yet."}
@@ -148,7 +148,7 @@ export default function CommoditiesTab({
         <Td align="right" className="text-foreground">
           {c.market.coverTurns != null ? `${c.market.coverTurns.toFixed(1)}d` : ""}
         </Td>
-        <Td numeric={false} className="text-xs">
+        <Td numeric={false} className="text-body-sm">
           <Link
             href={`/commodity/${c.commodity}`}
             className="text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
@@ -163,7 +163,7 @@ export default function CommoditiesTab({
   const commodityCell = (c: CorpCommodityFlow) => (
     <Td>
       <span className="text-foreground">{c.label}</span>{" "}
-      <span className="text-[11px] text-muted">{c.unit}</span>
+      <span className="text-body-sm text-muted">{c.unit}</span>
     </Td>
   );
   const priceCell = (c: CorpCommodityFlow) => (
@@ -208,13 +208,13 @@ export default function CommoditiesTab({
     return (
       <div className="pt-4">
         <div className="flex flex-wrap items-baseline gap-x-2 border-b border-card-border pb-1">
-          <h3 id={id} className="text-[13px] font-semibold text-foreground">
+          <h3 id={id} className="text-body-lg font-semibold text-foreground">
             {title}
           </h3>
-          <span className="text-xs text-muted">{meta}</span>
+          <span className="text-body-sm text-muted">{meta}</span>
         </div>
         {rows.length === 0 ? (
-          <p className="py-2 text-xs text-muted">{empty}</p>
+          <p className="py-2 text-body-sm text-muted">{empty}</p>
         ) : (
           <TableScroll>
             <table aria-labelledby={id} className="w-full border-collapse">
@@ -325,7 +325,7 @@ export default function CommoditiesTab({
         title="Daily commodity flows"
         meta={`${commodities.length} ${commodities.length === 1 ? "commodity" : "commodities"}`}
       >
-        <p className="py-1 text-xs text-muted">
+        <p className="py-1 text-body-sm text-muted">
           Market value uses current prices for all output and input use. Cash sales and purchases
           come from actual trades. Net production is this corporation&apos;s own output minus its
           input use, added up across every site. Purchases do not change it. A surplus here does not
@@ -339,7 +339,7 @@ export default function CommoditiesTab({
           quantities are the same on both screens: units bought a day in the last settled turn.
         </p>
         {features.length > 0 && (
-          <p className="pb-1 text-xs text-muted">
+          <p className="pb-1 text-body-sm text-muted">
             Market features on: {features.join(", ")}.
             {isCeo && data?.supplyAgreementsEnabled && (
               <>
@@ -417,7 +417,7 @@ function PrivateSupplyRow({
     <tr>
       <td
         colSpan={cols}
-        className="border-b border-card-border/60 pb-2 pl-4 pr-2 text-xs text-muted"
+        className="border-b border-card-border/60 pb-2 pl-4 pr-2 text-body-sm text-muted"
       >
         <span className="font-medium text-foreground">Private supply</span>{" "}
         <span className="font-mono tabular-nums text-foreground">
@@ -570,13 +570,13 @@ function RegionBreakdown({
                         <span className="text-foreground">{r.stateName}</span>
                       )}
                       {r.region && (
-                        <span className="ml-1.5 text-[11px] text-muted">{r.region}</span>
+                        <span className="ml-1.5 text-body-sm text-muted">{r.region}</span>
                       )}
                     </Td>
-                    <Td wrap className="text-xs text-muted">
+                    <Td wrap className="text-body-sm text-muted">
                       {summary(inputs)}
                     </Td>
-                    <Td wrap className="text-xs text-muted">
+                    <Td wrap className="text-body-sm text-muted">
                       {summary(outputs)}
                     </Td>
                     <Td
@@ -608,7 +608,7 @@ function RegionBreakdown({
                           aria-expanded={isOpen}
                           aria-controls={panelId}
                           aria-label={`${isOpen ? "Hide" : "Show"} ${r.stateName} inputs and outputs`}
-                          className="inline-flex h-6 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2 text-[11px] text-foreground hover:bg-card-elevated"
+                          className="inline-flex h-6 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2 text-body-sm text-foreground hover:bg-card-elevated"
                         >
                           {isOpen ? "Hide" : "Show"}
                         </button>
@@ -681,23 +681,23 @@ function RegionLines({
 }) {
   return (
     <div className="min-w-0">
-      <h4 className="pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">{title}</h4>
+      <h4 className="pb-1 text-body-sm font-medium uppercase tracking-wide text-muted">{title}</h4>
       {lines.length === 0 ? (
-        <p className="py-1 text-xs text-muted">{empty}</p>
+        <p className="py-1 text-body-sm text-muted">{empty}</p>
       ) : (
         <>
           <ul>
             {lines.map((line) => (
               <li
                 key={line.commodity}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,5rem)_auto_auto] items-center gap-x-3 border-b border-card-border/60 py-1 text-[13px]"
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,5rem)_auto_auto] items-center gap-x-3 border-b border-card-border/60 py-1 text-body-sm"
               >
                 <span className="truncate text-foreground">{line.label}</span>
                 <DataBar value={line.units} max={maxUnits} tone={tone} />
                 <span className="text-right font-mono tabular-nums text-foreground">
                   {fmtUnits(line.units)}
                   {line.unit && (
-                    <span className="ml-1 font-sans text-[11px] text-muted">{line.unit}</span>
+                    <span className="ml-1 font-sans text-body-sm text-muted">{line.unit}</span>
                   )}
                 </span>
                 <span className="text-right font-mono tabular-nums text-muted">
@@ -707,7 +707,7 @@ function RegionLines({
             ))}
           </ul>
           <p
-            className="flex justify-between pt-1.5 text-[13px] font-medium text-foreground"
+            className="flex justify-between pt-1.5 text-body-sm font-medium text-foreground"
             title={partialNote}
           >
             <span>{totalLabel}</span>

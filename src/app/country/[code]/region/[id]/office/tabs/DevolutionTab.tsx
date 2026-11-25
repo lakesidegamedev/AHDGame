@@ -138,18 +138,18 @@ export function DevolutionTab(props: Props) {
       {/* Regional head of government party election bonus */}
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm text-muted">Election bonus</h2>
-          <div className="text-xs text-muted">
+          <h2 className="text-body text-muted">Election bonus</h2>
+          <div className="text-body-sm text-muted">
             Active at {HIGH_DESIRE_BONUS_THRESHOLD}+ · steps every {HIGH_DESIRE_BONUS_BAND_SIZE}pp ·
             capped at +{HIGH_DESIRE_BONUS_MAX_PCT}%
           </div>
         </div>
         {props.highDesireElectionBonus > 0 ? (
           <div className="mt-3 flex items-end gap-3">
-            <div className="text-3xl font-bold tabular-nums text-emerald-500">
+            <div className="text-display font-bold tabular-nums text-emerald-500">
               +{(props.highDesireElectionBonus * 100).toFixed(1)}%
             </div>
-            <div className="pb-1 text-sm text-muted">
+            <div className="pb-1 text-body text-muted">
               vote bonus to{" "}
               <span className="font-medium text-foreground/90">
                 {props.firstMinisterPartyName ?? `the ${governments.regional}'s party`}
@@ -158,24 +158,24 @@ export function DevolutionTab(props: Props) {
             </div>
           </div>
         ) : props.currentPolicy !== "independence" ? (
-          <div className="mt-3 text-sm text-muted">
+          <div className="mt-3 text-body text-muted">
             No bonus active. Devolution Policy must be set to{" "}
             {getDevolutionPolicyLabel(props.stateId, "independence")} and{" "}
             {getIndependenceMetricLabel(props.stateId).toLowerCase()} must reach{" "}
             {HIGH_DESIRE_BONUS_THRESHOLD}.
           </div>
         ) : props.currentValue < HIGH_DESIRE_BONUS_THRESHOLD ? (
-          <div className="mt-3 text-sm text-muted">
+          <div className="mt-3 text-body text-muted">
             No bonus active. {getIndependenceMetricLabel(props.stateId).toLowerCase()} must reach{" "}
             {HIGH_DESIRE_BONUS_THRESHOLD} to unlock +{HIGH_DESIRE_BONUS_FIRST_PCT}%.
           </div>
         ) : (
-          <div className="mt-3 text-sm text-muted">
+          <div className="mt-3 text-body text-muted">
             No bonus active. The current {governments.regional} must belong to a party.
           </div>
         )}
         <ul
-          className="mt-4 grid gap-2 text-center text-xs"
+          className="mt-4 grid gap-2 text-center text-body-sm"
           style={{
             gridTemplateColumns: `repeat(${HIGH_DESIRE_BONUS_TIER_COUNT}, minmax(0, 1fr))`,
           }}
@@ -203,8 +203,8 @@ export function DevolutionTab(props: Props) {
       {/* Policy selector */}
       <div className="rounded-xl border border-card-border bg-card p-6">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm text-muted">Devolution policy</h2>
-          <div className="text-xs text-muted">
+          <h2 className="text-body text-muted">Devolution policy</h2>
+          <div className="text-body-sm text-muted">
             {DEVOLUTION_POLICY_CHANGE_AP_COST} AP · {DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS}-turn
             cooldown
           </div>
@@ -220,16 +220,16 @@ export function DevolutionTab(props: Props) {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">
+                  <span className="text-body font-semibold">
                     {getDevolutionPolicyLabel(props.stateId, policy)}
                   </span>
                   {isCurrent && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-body-sm font-semibold uppercase text-primary-foreground">
                       Current
                     </span>
                   )}
                 </div>
-                <p className="mt-2 text-xs leading-snug text-muted">
+                <p className="mt-2 text-body-sm leading-snug text-muted">
                   {policyBlurb(props.stateId, policy)}
                 </p>
               </div>
@@ -238,7 +238,7 @@ export function DevolutionTab(props: Props) {
         </div>
         {props.viewerCanManage && (
           <div className="mt-4 flex items-center justify-between">
-            <div className="text-xs text-muted">
+            <div className="text-body-sm text-muted">
               {onCooldown
                 ? `Locked for ${cooldownRemaining} more turns`
                 : apShort
@@ -249,7 +249,7 @@ export function DevolutionTab(props: Props) {
               type="button"
               onClick={() => setModalMode("normal")}
               disabled={!canChange}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               Change policy
             </button>
@@ -260,15 +260,15 @@ export function DevolutionTab(props: Props) {
       {props.viewerIsAdmin && (
         <div className="flex flex-col gap-2 rounded-xl border border-error/40 bg-error/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Admin — change Devolution Policy</div>
-            <div className="text-xs text-muted">
+            <div className="text-body font-semibold">Admin — change Devolution Policy</div>
+            <div className="text-body-sm text-muted">
               Bypasses the office-holder check, AP cost, and cooldown.
             </div>
           </div>
           <button
             type="button"
             onClick={() => setModalMode("admin")}
-            className="self-end rounded-lg bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/80 sm:self-auto"
+            className="self-end rounded-lg bg-error px-3 py-1.5 text-body font-medium text-white hover:bg-error/80 sm:self-auto"
           >
             + Admin override
           </button>

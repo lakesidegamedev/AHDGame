@@ -122,18 +122,18 @@ export function LegislativePrioritiesEditor({
       aria-label="Edit legislative priorities"
       className="mb-4 rounded-xl border border-red-500/30 bg-red-500/5 p-4"
     >
-      <h4 className="text-sm font-semibold text-red-400">Edit legislative priorities</h4>
-      <p className="mt-1 text-xs text-muted">
+      <h4 className="text-body font-semibold text-red-400">Edit legislative priorities</h4>
+      <p className="mt-1 text-body-sm text-muted">
         Changes apply to this group in this region and survive world resets. Choose a law and its
         desired level for each priority.
       </p>
       {error && (
-        <p role="alert" className="mt-3 text-xs text-error">
+        <p role="alert" className="mt-3 text-body-sm text-error">
           {error}
         </p>
       )}
       {notice && (
-        <p role="status" className="mt-3 text-xs text-success">
+        <p role="status" className="mt-3 text-body-sm text-success">
           {notice}
         </p>
       )}
@@ -145,12 +145,12 @@ export function LegislativePrioritiesEditor({
               setError(null);
               setRetry((value) => value + 1);
             }}
-            className="mt-3 text-xs text-red-400 underline"
+            className="mt-3 text-body-sm text-red-400 underline"
           >
             Retry
           </button>
         ) : (
-          <p role="status" className="mt-3 text-xs text-muted">
+          <p role="status" className="mt-3 text-body-sm text-muted">
             Loading law options...
           </p>
         )
@@ -163,12 +163,12 @@ export function LegislativePrioritiesEditor({
           className="mt-4 space-y-3"
         >
           {data.invalidOverride && (
-            <p className="text-xs text-warning">
+            <p className="text-body-sm text-warning">
               A saved law or level is no longer available. Showing authored defaults until you save
               a valid selection or restore defaults.
             </p>
           )}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {data.isOverride ? "Using admin-edited priorities." : "Using authored defaults."}
           </p>
           {draft.map((priority, index) => {
@@ -180,8 +180,8 @@ export function LegislativePrioritiesEditor({
                 disabled={busy}
                 className="space-y-2 rounded-lg border border-red-500/20 p-3"
               >
-                <legend className="px-1 text-xs font-semibold text-red-400">{label}</legend>
-                <label className="block text-xs text-muted">
+                <legend className="px-1 text-body-sm font-semibold text-red-400">{label}</legend>
+                <label className="block text-body-sm text-muted">
                   {label} law
                   <select
                     aria-label={`${label} law`}
@@ -195,7 +195,7 @@ export function LegislativePrioritiesEditor({
                         )
                       )
                     }
-                    className="mt-1 w-full min-w-0 rounded-lg border border-card-border bg-card px-2 py-2 text-xs text-foreground"
+                    className="mt-1 w-full min-w-0 rounded-lg border border-card-border bg-card px-2 py-2 text-body-sm text-foreground"
                   >
                     {!law && <option value={priority.lawTypeId}>Law unavailable</option>}
                     {data.laws.map((entry) => (
@@ -205,7 +205,7 @@ export function LegislativePrioritiesEditor({
                     ))}
                   </select>
                 </label>
-                <label className="block text-xs text-muted">
+                <label className="block text-body-sm text-muted">
                   {label} level
                   <select
                     aria-label={`${label} level`}
@@ -217,7 +217,7 @@ export function LegislativePrioritiesEditor({
                         )
                       )
                     }
-                    className="mt-1 w-full min-w-0 rounded-lg border border-card-border bg-card px-2 py-2 text-xs text-foreground"
+                    className="mt-1 w-full min-w-0 rounded-lg border border-card-border bg-card px-2 py-2 text-body-sm text-foreground"
                   >
                     <option value="">Choose a level</option>
                     {priority.policyOptionId &&
@@ -235,7 +235,7 @@ export function LegislativePrioritiesEditor({
             );
           })}
           {!valid && (
-            <p className="text-xs text-warning">
+            <p className="text-body-sm text-warning">
               Choose four different laws and a valid level for each.
             </p>
           )}
@@ -243,7 +243,7 @@ export function LegislativePrioritiesEditor({
             <button
               type="submit"
               disabled={busy || !valid}
-              className="rounded-lg bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-400 disabled:opacity-50"
+              className="rounded-lg bg-red-500/20 px-3 py-2 text-body-sm font-semibold text-red-400 disabled:opacity-50"
             >
               {busy ? "Saving..." : "Save priorities"}
             </button>
@@ -251,7 +251,7 @@ export function LegislativePrioritiesEditor({
               type="button"
               disabled={busy || !data.isOverride}
               onClick={() => void submit(true)}
-              className="rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-400 disabled:opacity-50"
+              className="rounded-lg border border-red-500/30 px-3 py-2 text-body-sm text-red-400 disabled:opacity-50"
             >
               Restore defaults
             </button>

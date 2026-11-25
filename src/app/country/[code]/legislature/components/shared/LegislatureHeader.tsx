@@ -89,7 +89,7 @@ export default function LegislatureHeader({
                   aria-controls="legislature-content"
                   aria-disabled={opt.disabled}
                   onClick={() => !opt.disabled && chamberSwitcher.onSwitch(opt.key)}
-                  className={`px-4 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${PILL_SHAPE} ${
+                  className={`px-4 py-1.5 text-body focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${PILL_SHAPE} ${
                     opt.disabled
                       ? "cursor-not-allowed text-white/30"
                       : chamberSwitcher.active === opt.key
@@ -104,10 +104,10 @@ export default function LegislatureHeader({
           )}
           {/* Bottom: title + subtitle */}
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-2xl">
+            <h2 className="text-heading font-bold tracking-tight text-white drop-shadow-md sm:text-heading">
               {title}
             </h2>
-            <p className="mt-1 text-sm text-white/90 drop-shadow sm:text-base">{subtitle}</p>
+            <p className="mt-1 text-body text-white/90 drop-shadow sm:text-body-lg">{subtitle}</p>
           </div>
         </div>
       </div>
@@ -120,7 +120,7 @@ export default function LegislatureHeader({
             {stats.majorityParty.seats > stats.totalSeats / 2 ? "Majority party" : "Largest party"}
           </span>
           <span
-            className="text-base font-bold tabular-nums"
+            className="text-body-lg font-bold tabular-nums"
             style={{ color: stats.majorityParty.color }}
           >
             {stats.majorityParty.name}
@@ -130,7 +130,7 @@ export default function LegislatureHeader({
         {/* Seats */}
         <div className="flex flex-col px-5 py-3 min-w-[100px]">
           <span className="text-body-sm font-medium text-muted">Seats</span>
-          <span className="text-base font-bold tabular-nums">
+          <span className="text-body-lg font-bold tabular-nums">
             {stats.majorityParty.seats} / {stats.totalSeats}
           </span>
         </div>
@@ -141,16 +141,16 @@ export default function LegislatureHeader({
             {stats.leader?.label ?? "Leader"}
           </span>
           {stats.leader && !stats.leader.id ? (
-            <span className="text-base font-bold truncate">{stats.leader.name}</span>
+            <span className="text-body-lg font-bold truncate">{stats.leader.name}</span>
           ) : stats.leader ? (
             <Link
               href={`/character/${stats.leader.sequentialId ?? stats.leader.id}`}
-              className="text-base font-bold text-primary hover:underline truncate"
+              className="text-body-lg font-bold text-primary hover:underline truncate"
             >
               {stats.leader.name}
             </Link>
           ) : (
-            <span className="text-base font-bold text-muted">Vacant</span>
+            <span className="text-body-lg font-bold text-muted">Vacant</span>
           )}
         </div>
 
@@ -161,16 +161,16 @@ export default function LegislatureHeader({
               {stats.minorityLeader?.label ?? "Minority leader"}
             </span>
             {stats.minorityLeader && !stats.minorityLeader.id ? (
-              <span className="text-base font-bold truncate">{stats.minorityLeader.name}</span>
+              <span className="text-body-lg font-bold truncate">{stats.minorityLeader.name}</span>
             ) : stats.minorityLeader ? (
               <Link
                 href={`/character/${stats.minorityLeader.sequentialId ?? stats.minorityLeader.id}`}
-                className="text-base font-bold text-primary hover:underline truncate"
+                className="text-body-lg font-bold text-primary hover:underline truncate"
               >
                 {stats.minorityLeader.name}
               </Link>
             ) : (
-              <span className="text-base font-bold text-muted">Vacant</span>
+              <span className="text-body-lg font-bold text-muted">Vacant</span>
             )}
           </div>
         )}

@@ -34,12 +34,12 @@ export async function CountryCrisisNotice({
       className={`rounded-xl border border-card-border bg-card px-4 py-3 ${className ?? ""}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Active crises</h2>
-        <Link className="text-sm text-primary hover:underline" href="/world/crises">
+        <h2 className="text-body font-semibold text-foreground">Active crises</h2>
+        <Link className="text-body text-primary hover:underline" href="/world/crises">
           Crisis board
         </Link>
       </div>
-      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-body">
         {crises.map((crisis) => (
           <li key={crisis._id.toString()}>
             <Link

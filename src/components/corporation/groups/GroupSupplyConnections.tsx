@@ -12,20 +12,20 @@ export function GroupSupplyConnections({ data }: { data: GroupManagementView }) 
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="text-lg font-semibold">{t("supplyUI.connections")}</h3>
-        <p className="mt-1 text-sm text-muted">{t("supplyUI.connectionsHelp")}</p>
+        <h3 className="text-body-lg font-semibold">{t("supplyUI.connections")}</h3>
+        <p className="mt-1 text-body text-muted">{t("supplyUI.connectionsHelp")}</p>
       </div>
       {!data.canManage ? (
-        <p className="text-sm text-muted">{t("supplyUI.connectionsPrivate")}</p>
+        <p className="text-body text-muted">{t("supplyUI.connectionsPrivate")}</p>
       ) : !connections ? (
-        <p className="text-sm text-muted">{t("supplyUI.unavailableConnections")}</p>
+        <p className="text-body text-muted">{t("supplyUI.unavailableConnections")}</p>
       ) : !connections.length ? (
-        <p className="rounded-lg border border-card-border bg-card p-4 text-sm text-muted">
+        <p className="rounded-lg border border-card-border bg-card p-4 text-body text-muted">
           {t("supplyUI.noConnections")}
         </p>
       ) : (
         <>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {t("supplyUI.connectionCount", {
               shown: connections.length,
               count: f?.connectionCount ?? connections.length,
@@ -37,13 +37,13 @@ export function GroupSupplyConnections({ data }: { data: GroupManagementView }) 
                 className="min-w-0 space-y-3 rounded-xl border border-card-border bg-card p-5"
                 key={JSON.stringify([c.supplierId, c.buyerId, c.commodity])}
               >
-                <p className="text-xs uppercase tracking-wide text-gold">
+                <p className="text-body-sm uppercase tracking-wide text-gold">
                   {c.commodityLabel ?? c.commodity}
                 </p>
                 <h4 className="break-words font-semibold">
                   {names.get(c.supplierId) ?? c.supplierId} → {names.get(c.buyerId) ?? c.buyerId}
                 </h4>
-                <dl className="space-y-2 text-sm">
+                <dl className="space-y-2 text-body">
                   {[
                     [
                       t("supplyUI.units"),
@@ -62,7 +62,7 @@ export function GroupSupplyConnections({ data }: { data: GroupManagementView }) 
                     </div>
                   ))}
                 </dl>
-                <p className="text-xs text-muted">{t("supplyUI.deliveryNote")}</p>
+                <p className="text-body-sm text-muted">{t("supplyUI.deliveryNote")}</p>
               </article>
             ))}
           </div>

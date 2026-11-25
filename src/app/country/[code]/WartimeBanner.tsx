@@ -19,7 +19,7 @@ export function WartimeBanner({ notice }: { notice: CountryWarNotice }) {
       : "/world/crises?view=conflicts";
 
   return (
-    <div className="border-b border-error/30 bg-error/10 px-4 py-2 text-center text-sm text-error">
+    <div className="border-b border-error/30 bg-error/10 px-4 py-2 text-center text-body text-error">
       <span>{sentence(notice)} </span>
       <Link href={href} className="font-semibold underline underline-offset-2 hover:opacity-80">
         {notice.conflictNumber !== null ? "See the war" : "See the conflicts"}

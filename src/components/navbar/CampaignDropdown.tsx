@@ -30,7 +30,7 @@ export function CampaignDropdown() {
         onClick={() => setIsOpen((v) => !v)}
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        className={`relative flex items-center gap-1 px-2.5 py-1 text-sm transition-colors hover:text-foreground ${
+        className={`relative flex items-center gap-1 px-2.5 py-1 text-body transition-colors hover:text-foreground ${
           active
             ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70"
             : "text-muted"
@@ -66,8 +66,8 @@ export function CampaignDropdown() {
                   current ? "bg-white/5" : ""
                 }`}
               >
-                <span className="text-sm font-medium text-foreground">{item.label}</span>
-                <span className="text-xs leading-snug text-muted">{item.description}</span>
+                <span className="text-body font-medium text-foreground">{item.label}</span>
+                <span className="text-body-sm leading-snug text-muted">{item.description}</span>
               </Link>
             );
           })}

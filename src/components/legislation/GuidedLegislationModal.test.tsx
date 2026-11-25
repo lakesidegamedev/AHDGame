@@ -544,7 +544,7 @@ describe("GuidedLegislationModal", () => {
     fireEvent.change(screen.getByLabelText("Metric to affect"), { target: { value: "16" } });
     fireEvent.click(screen.getByText("Primary care access").closest("button")!);
     expect(screen.getByText("At equilibrium")).toBeTruthy();
-    expect(screen.getByText("▲").className).toContain("text-sm");
+    expect(screen.getByText("▲").className).toContain("text-body");
     expect(screen.queryByText(/Effective health coverage: \+0\.24$/)).toBeNull();
     expect(screen.getByText("Allocation +125/yr")).toBeTruthy();
     expect(screen.getByText("Budget change +25/yr")).toBeTruthy();
@@ -570,7 +570,7 @@ describe("GuidedLegislationModal", () => {
     expect(screen.queryByText(/L19/)).toBeNull();
     fireEvent.click(screen.getByText("Community clinic expansion").closest("button")!);
 
-    expect(screen.getByText("▲").className).toContain("text-sm");
+    expect(screen.getByText("▲").className).toContain("text-body");
     expect(
       screen.getByText("Expected metric direction from current law at full implementation")
     ).toBeTruthy();

@@ -20,8 +20,8 @@ export function DepositorBookPanel({
   const t = useTranslations("corporations.bankConsole.depositors");
   return (
     <BankPanel kind="monitor" title={t("title")}>
-      <p className="py-2 text-xs text-muted">{t("description")}</p>
-      {book.source === "legacy" && <p className="pb-2 text-xs text-muted">{t("legacy")}</p>}
+      <p className="py-2 text-body-sm text-muted">{t("description")}</p>
+      {book.source === "legacy" && <p className="pb-2 text-body-sm text-muted">{t("legacy")}</p>}
       <TableScroll>
         <table className="w-full min-w-[320px] border-collapse">
           <thead>
@@ -54,8 +54,8 @@ export function DepositorBookPanel({
           </tfoot>
         </table>
       </TableScroll>
-      {book.rows.length === 0 && <p className="py-2 text-xs text-muted">{t("empty")}</p>}
-      <p className="py-2 text-xs text-muted">
+      {book.rows.length === 0 && <p className="py-2 text-body-sm text-muted">{t("empty")}</p>}
+      <p className="py-2 text-body-sm text-muted">
         {t("households", { amount: formatBankMoney(householdDeposits, currency) })}
       </p>
     </BankPanel>

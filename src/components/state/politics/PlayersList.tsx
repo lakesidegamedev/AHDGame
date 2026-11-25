@@ -30,7 +30,7 @@ export function PlayersList({
 
   return (
     <section className="min-w-0 rounded-xl border border-card-border bg-card p-5 sm:p-6">
-      <h2 className="mb-3 text-heading-sm font-semibold text-foreground">Players</h2>
+      <h2 className="mb-3 text-heading font-semibold text-foreground">Players</h2>
       {players.length > 0 ? (
         <>
           <div className={`overflow-x-auto overflow-y-auto ${!playersExpanded ? "max-h-60" : ""}`}>

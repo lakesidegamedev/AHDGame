@@ -95,11 +95,11 @@ export function PolicyMasthead({
                 Economic
                 <span className="ml-1 font-normal opacity-80">(average of enacted laws)</span>
               </div>
-              <div className="text-sm font-bold">
+              <div className="text-body font-bold">
                 {axes?.economic != null ? (
                   <>
                     <PositionLabel value={axes.economic} axis="economic" countryId={countryId} />{" "}
-                    <span className="font-mono text-[11px] font-medium text-white/50">
+                    <span className="font-mono text-body-sm font-medium text-white/50">
                       {formatLeanValue(axes.economic)}
                     </span>
                   </>
@@ -118,11 +118,11 @@ export function PolicyMasthead({
                   {socialIsCountryPosition ? "(country position)" : "(average of enacted laws)"}
                 </span>
               </div>
-              <div className="text-sm font-bold">
+              <div className="text-body font-bold">
                 {socialValue != null ? (
                   <>
                     <PositionLabel value={socialValue} axis="social" countryId={countryId} />{" "}
-                    <span className="font-mono text-[11px] font-medium text-white/50">
+                    <span className="font-mono text-body-sm font-medium text-white/50">
                       {formatLeanValue(socialValue)}
                     </span>
                   </>
@@ -139,7 +139,7 @@ export function PolicyMasthead({
                 type="button"
                 onClick={() => onViewChange(option)}
                 aria-pressed={view === option}
-                className={`px-3 py-1 text-xs capitalize ${PILL_SHAPE} ${
+                className={`px-3 py-1 text-body-sm capitalize ${PILL_SHAPE} ${
                   view === option ? PILL_SELECTED : "text-white/55 hover:text-white"
                 }`}
               >

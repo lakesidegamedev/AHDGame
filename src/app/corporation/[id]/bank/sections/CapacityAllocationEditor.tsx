@@ -101,12 +101,12 @@ export function CapacityAllocationEditor({
     >
       <div className="grid gap-x-8 gap-y-3 py-1.5 md:grid-cols-2">
         <div className="space-y-1.5">
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Share of your financial-sector capacity that backs your branch network. A larger share
             lets your bank hold more deposits. It never reduces the financial services your sites
             make and sell. Range 10% to 90%.
           </p>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Ceiling{" "}
             <span className="font-mono tabular-nums text-foreground">
               {formatBankMoney(depositCeiling, currency)}
@@ -117,7 +117,7 @@ export function CapacityAllocationEditor({
           </p>
         </div>
         <label className="block min-w-0 space-y-1.5">
-          <span className="flex justify-between text-xs text-muted">
+          <span className="flex justify-between text-body-sm text-muted">
             <span>Deposit network share</span>
             <span className="font-mono tabular-nums text-foreground">
               {(share * 100).toFixed(0)}%
@@ -133,13 +133,13 @@ export function CapacityAllocationEditor({
             aria-label="Deposit network share"
           />
           {previewCeiling != null && previewBinds != null ? (
-            <span className="block text-[11px] text-muted">
+            <span className="block text-body-sm text-muted">
               At {(share * 100).toFixed(0)}% the ceiling would be{" "}
               {formatBankMoney(previewCeiling, currency)}, binding on{" "}
               {previewBinds === "equity" ? "12x book equity" : "deposit network"}.
             </span>
           ) : (
-            <span className="block text-[11px] text-muted">
+            <span className="block text-body-sm text-muted">
               Moving share to branches raises the branch-capacity half of the ceiling; the
               12x-equity half does not move.
             </span>

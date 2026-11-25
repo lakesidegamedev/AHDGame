@@ -15,7 +15,7 @@ function dotColor(side?: "yes" | "no"): string {
   return "var(--ref-amber)";
 }
 
-const navBtn = "rounded-lg border border-card-border px-3 py-1.5 text-sm";
+const navBtn = "rounded-lg border border-card-border px-3 py-1.5 text-body";
 
 /**
  * Paginated campaign wire — a newest-first timeline of curated, fully-named
@@ -37,9 +37,9 @@ export function CampaignWire({
 }) {
   return (
     <div className="rounded-2xl border border-card-border bg-card p-5 shadow-card">
-      <h2 className="mb-4 text-sm font-semibold text-muted">Campaign wire</h2>
+      <h2 className="mb-4 text-body font-semibold text-muted">Campaign wire</h2>
       {events.length === 0 ? (
-        <div className="text-[12.5px] font-bold text-muted">No campaign activity yet.</div>
+        <div className="text-body-sm font-bold text-muted">No campaign activity yet.</div>
       ) : (
         <ul className="space-y-3">
           {events.map((e, i) => (
@@ -51,11 +51,11 @@ export function CampaignWire({
               />
               <div className="min-w-0 flex-1">
                 <div className="text-body-sm font-medium text-muted">Turn {e.turn}</div>
-                <div className="text-[13px] text-foreground">{e.summary}</div>
+                <div className="text-body-sm text-foreground">{e.summary}</div>
               </div>
               {e.delta != null ? (
                 <span
-                  className="ml-2 flex-none rounded-md px-2 py-0.5 text-[11px] font-bold"
+                  className="ml-2 flex-none rounded-md px-2 py-0.5 text-body-sm font-bold"
                   style={{
                     color: e.delta >= 0 ? "var(--ref-yes)" : "var(--ref-no)",
                     background:
@@ -68,7 +68,7 @@ export function CampaignWire({
                   {e.delta.toFixed(1)} {e.delta >= 0 ? labels.yes : labels.no}
                 </span>
               ) : (
-                <span className="ml-2 flex-none rounded-md border border-card-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                <span className="ml-2 flex-none rounded-md border border-card-border px-2 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-muted">
                   {e.kind}
                 </span>
               )}
@@ -99,7 +99,7 @@ export function CampaignWire({
           ) : (
             <span className={`${navBtn} cursor-not-allowed text-muted/40`}>Next ›</span>
           )}
-          <span className="ml-2 text-xs text-muted">
+          <span className="ml-2 text-body-sm text-muted">
             Page {page} of {totalPages}
           </span>
         </div>

@@ -287,14 +287,14 @@ function SectorTable({
                       </Link>
                       {s.embargoSuspended && (
                         <span
-                          className="ml-1.5 text-[11px] text-error"
+                          className="ml-1.5 text-body-sm text-error"
                           title="Suspended by embargo"
                         >
                           embargo
                         </span>
                       )}
                       {s.mothballed && (
-                        <span className="ml-1.5 text-[11px] text-muted" title="Mothballed">
+                        <span className="ml-1.5 text-body-sm text-muted" title="Mothballed">
                           mothballed
                         </span>
                       )}
@@ -615,10 +615,10 @@ export default function OverviewTab({
       >
         {myShares > 0 ? (
           <>
-            <div className="font-mono text-[28px] font-semibold leading-none tracking-tight tabular-nums text-foreground">
+            <div className="font-mono text-display font-semibold leading-none tracking-tight tabular-nums text-foreground">
               {fmt(myShares * corporation.sharePrice)}
             </div>
-            <div className="mb-2 mt-1.5 text-xs text-muted">Market value</div>
+            <div className="mb-2 mt-1.5 text-body-sm text-muted">Market value</div>
             <KVList>
               <KVRow label="Shares held" value={myShares.toLocaleString("en-US")} />
               <KVRow
@@ -628,7 +628,7 @@ export default function OverviewTab({
             </KVList>
           </>
         ) : (
-          <p className="py-1 text-xs text-muted">You hold no shares in this corporation.</p>
+          <p className="py-1 text-body-sm text-muted">You hold no shares in this corporation.</p>
         )}
       </LedgerTicket>
     ) : null;
@@ -697,7 +697,7 @@ export default function OverviewTab({
         {modeBar}
         {growthPanel}
         {!financials && (
-          <p className="border-y border-card-border py-2 text-xs text-muted">
+          <p className="border-y border-card-border py-2 text-body-sm text-muted">
             Privately held. Revenue, cash and the books are disclosed to the CEO only.
           </p>
         )}
@@ -759,7 +759,7 @@ export default function OverviewTab({
           )}
 
           {!financials && (
-            <p className="border-y border-card-border py-2 text-xs text-muted">
+            <p className="border-y border-card-border py-2 text-body-sm text-muted">
               Privately held. Revenue, cash and the books are disclosed to the CEO only.
             </p>
           )}
@@ -780,7 +780,7 @@ export default function OverviewTab({
             }
           >
             {sectors.length === 0 ? (
-              <p className="py-2 text-xs text-muted">
+              <p className="py-2 text-body-sm text-muted">
                 No sectors yet.
                 {isCeo ? " Open Sectors to found the first plant." : ""}
               </p>
@@ -1024,7 +1024,7 @@ function OverviewModeBar({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {mode === "simple"
           ? "Simple view: what needs you, the core figures and your biggest sectors."
           : "Pro view: every figure and the full sector table."}

@@ -53,7 +53,7 @@ export function PartyCard({
             countryId={party.countryId}
           />
           <div className="min-w-0">
-            <h3 className="flex items-baseline gap-2 text-heading-sm font-semibold text-foreground">
+            <h3 className="flex items-baseline gap-2 text-body-lg font-semibold text-foreground">
               <PartySwatch color={party.color} className="self-center" />
               <span className="line-clamp-2 break-words group-hover:underline group-hover:underline-offset-4">
                 {party.name}

@@ -28,28 +28,28 @@ export function RaceResultCard({ unit, candidatesById, index, weightLabel }: Rac
       style={{ animationDelay: `${Math.min(index, 20) * 45}ms` }}
     >
       <div className="mb-1.5 flex items-start justify-between gap-2">
-        <span className="truncate text-sm font-semibold" title={unit.name}>
+        <span className="truncate text-body font-semibold" title={unit.name}>
           {unit.name}
         </span>
         {weightLabel && unit.weight > 0 && (
-          <span className="shrink-0 rounded bg-card-border/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted tabular-nums">
+          <span className="shrink-0 rounded bg-card-border/60 px-1.5 py-0.5 text-body-sm font-semibold text-muted tabular-nums">
             {unit.weight} {weightLabel}
           </span>
         )}
       </div>
 
       {notReporting ? (
-        <p className="text-xs italic text-muted">No votes reported</p>
+        <p className="text-body-sm italic text-muted">No votes reported</p>
       ) : (
         <>
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 text-body-sm">
             <span
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: leader?.partyColor ?? "#9CA3AF" }}
             />
             <span className="truncate font-medium">{leader?.name ?? "—"}</span>
           </div>
-          <div className="mt-0.5 text-[11px] text-muted tabular-nums">
+          <div className="mt-0.5 text-body-sm text-muted tabular-nums">
             {unit.tied ? "Tied" : formatMargin(unit.leaderMargin, unit.leaderMarginPct)}
           </div>
         </>
@@ -67,7 +67,7 @@ export function RaceResultCard({ unit, candidatesById, index, weightLabel }: Rac
             }}
           />
         </div>
-        <span className="w-8 text-right text-[10px] text-muted tabular-nums">
+        <span className="w-8 text-right text-body-sm text-muted tabular-nums">
           {unit.reportingPct}%
         </span>
       </div>

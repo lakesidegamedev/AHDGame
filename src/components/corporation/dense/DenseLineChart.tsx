@@ -209,7 +209,7 @@ export function DenseLineChart({
 
       {active != null && tooltip && activeX != null && (
         <div
-          className="pointer-events-none absolute top-1 space-y-0.5 rounded-md border border-card-border bg-card px-2 py-1.5 text-xs shadow-card"
+          className="pointer-events-none absolute top-1 space-y-0.5 rounded-md border border-card-border bg-card px-2 py-1.5 text-body-sm shadow-card"
           style={activeX > width / 2 ? { left: PAD_LEFT + 4 } : { right: PAD_RIGHT + 4 }}
         >
           <div className="font-mono text-muted">Turn {turns[active]}</div>
@@ -218,7 +218,7 @@ export function DenseLineChart({
       )}
 
       {series.length > 1 && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-body-sm text-muted">
           {series.map((s) => (
             <span key={s.label} className="inline-flex items-center gap-1.5">
               <svg width="16" height="6" aria-hidden className={s.tone}>

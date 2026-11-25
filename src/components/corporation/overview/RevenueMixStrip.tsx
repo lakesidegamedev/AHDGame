@@ -60,7 +60,7 @@ export function RevenueMixStrip({
         {items.map((i) => (
           <span
             key={i.key}
-            className="min-w-0 truncate font-mono text-[11px] tabular-nums text-muted"
+            className="min-w-0 truncate font-mono text-body-sm tabular-nums text-muted"
             style={{ width: pctWidth(i.pct) }}
           >
             {i.pct >= LABEL_MIN_PCT && (
@@ -72,7 +72,7 @@ export function RevenueMixStrip({
           </span>
         ))}
       </div>
-      <ul className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-muted">
+      <ul className="flex flex-wrap gap-x-3.5 gap-y-1 text-body-sm text-muted">
         {types.map(([type, label]) => (
           <li key={type} className="inline-flex items-center gap-1.5">
             <span

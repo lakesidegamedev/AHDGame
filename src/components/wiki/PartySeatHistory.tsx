@@ -63,16 +63,18 @@ export function PartySeatHistory({ history, color }: { history: History[]; color
   if (history.length === 0) return null;
   return (
     <section className="mb-8 rounded-xl border border-card-border bg-card/60 p-6 shadow-card">
-      <h2 className="mb-4 text-xl font-semibold text-foreground">Seat history</h2>
+      <h2 className="mb-4 text-heading font-semibold text-foreground">Seat history</h2>
       <div className="space-y-8">
         {history.map((chamber) => (
           <div key={chamber.chamberLabel}>
-            <h3 className="mb-2 text-sm font-medium text-foreground">{chamber.chamberLabel}</h3>
+            <h3 className="mb-2 text-body-lg font-medium text-foreground">
+              {chamber.chamberLabel}
+            </h3>
             <SeatLine points={chamber.points} color={color} />
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
-                  <tr className="border-b border-card-border text-left text-xs uppercase text-muted">
+                  <tr className="border-b border-card-border text-left text-body-sm uppercase text-muted">
                     <th className="py-1 pr-3 font-semibold">Year</th>
                     <th className="py-1 pr-3 font-semibold">Election</th>
                     <th className="py-1 pr-3 text-right font-semibold">Seats</th>

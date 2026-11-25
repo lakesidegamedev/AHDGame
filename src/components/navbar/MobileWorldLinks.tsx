@@ -31,7 +31,7 @@ export function MobileWorldLinks({ pathname, onNavigate, ...opts }: MobileWorldL
           key={item.id}
           href={item.href}
           onClick={onNavigate}
-          className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
+          className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${
             item.primary
               ? isNavActive(pathname, item.href)
                 ? "bg-white/5 font-medium"

@@ -51,7 +51,7 @@ const STATUS_STYLE: Record<AltClusterStatus, string> = {
 };
 
 const SELECT_CLS =
-  "h-9 rounded-lg border border-card-border bg-card px-2.5 text-sm transition-colors hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none";
+  "h-9 rounded-lg border border-card-border bg-card px-2.5 text-body transition-colors hover:border-muted/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/25 motion-reduce:transition-none";
 
 export function ClusterList({
   clusters,
@@ -75,7 +75,7 @@ export function ClusterList({
     <div className="space-y-4">
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
+        <label className="flex items-center gap-1.5 text-body-sm font-medium text-muted">
           Min confidence
           <select
             value={String(filters.minConfidence)}
@@ -90,7 +90,7 @@ export function ClusterList({
           </select>
         </label>
 
-        <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
+        <label className="flex items-center gap-1.5 text-body-sm font-medium text-muted">
           Status
           <select
             value={filters.status}
@@ -108,7 +108,7 @@ export function ClusterList({
           </select>
         </label>
 
-        <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
+        <label className="flex items-center gap-1.5 text-body-sm font-medium text-muted">
           Signal
           <select
             value={filters.signal}
@@ -128,7 +128,7 @@ export function ClusterList({
 
         <button
           onClick={() => onFiltersChange({ ...filters, hasBanned: !filters.hasBanned })}
-          className={`h-9 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none ${
+          className={`h-9 rounded-lg border px-3 text-body font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none ${
             filters.hasBanned
               ? "border-red-400/40 bg-red-500/15 text-red-400"
               : "border-card-border text-muted hover:border-muted/50 hover:text-foreground"
@@ -141,14 +141,14 @@ export function ClusterList({
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="ml-auto h-9 rounded-lg border border-card-border px-3 text-sm transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none"
+          className="ml-auto h-9 rounded-lg border border-card-border px-3 text-body transition-colors hover:bg-card-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50 motion-reduce:transition-none"
         >
           {loading ? "Loading…" : "Refresh"}
         </button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-body text-red-400">
           {error}
         </div>
       )}
@@ -170,8 +170,8 @@ export function ClusterList({
               d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
             />
           </svg>
-          <p className="text-sm font-medium">No suspected rings above threshold</p>
-          <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
+          <p className="text-body font-medium">No suspected rings above threshold</p>
+          <p className="mx-auto mt-1 max-w-sm text-body-sm text-muted">
             {filters.minConfidence > 0 || filters.status || filters.signal || filters.hasBanned
               ? "Try relaxing the filters."
               : "Nothing has scored above the auto-open threshold this compute pass."}
@@ -212,7 +212,7 @@ export function ClusterList({
       {hasMore && !loading && (
         <button
           onClick={onLoadMore}
-          className="h-10 w-full rounded-lg border border-card-border text-sm text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
+          className="h-10 w-full rounded-lg border border-card-border text-body text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 motion-reduce:transition-none"
         >
           Load more
         </button>
@@ -250,7 +250,7 @@ function ClusterCard({
       <div className="flex items-start justify-between gap-3 pl-1">
         <div>
           <div className="text-body-sm font-medium text-muted">Wanted</div>
-          <div className="mt-0.5 text-sm font-semibold tracking-tight">
+          <div className="mt-0.5 text-body font-semibold tracking-tight">
             {cluster.size} account{cluster.size === 1 ? "" : "s"}
           </div>
         </div>
@@ -259,17 +259,17 @@ function ClusterCard({
 
       <div className="flex flex-wrap items-center gap-1.5 pl-1">
         <span
-          className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLE[cluster.status]}`}
+          className={`rounded-md px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${STATUS_STYLE[cluster.status]}`}
         >
           {STATUS_LABEL[cluster.status]}
         </span>
         {bannedCount > 0 && (
-          <span className="rounded-md border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+          <span className="rounded-md border border-red-400/25 bg-red-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-red-400">
             {bannedCount} banned
           </span>
         )}
         {top && (
-          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-body-sm font-medium text-primary">
             {top.label}
           </span>
         )}
@@ -297,7 +297,7 @@ function ClusterCard({
           </li>
         ))}
         {cluster.size > cluster.memberPreview.length && (
-          <li className="flex items-center justify-center rounded-lg border border-dashed border-card-border/60 px-2 py-3 text-[11px] text-muted">
+          <li className="flex items-center justify-center rounded-lg border border-dashed border-card-border/60 px-2 py-3 text-body-sm text-muted">
             +{cluster.size - cluster.memberPreview.length} more
           </li>
         )}

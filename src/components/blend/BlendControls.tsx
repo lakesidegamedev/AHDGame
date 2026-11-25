@@ -61,7 +61,7 @@ const FIELD_STYLE: React.CSSProperties = {
   padding: "9px 11px",
   font: "inherit",
   fontFamily: FONT.mono,
-  fontSize: 13,
+  fontSize: 12,
   color: BLEND.ink,
 };
 
@@ -112,7 +112,7 @@ export function BlendNote({
         padding: "11px 14px",
         background: "rgba(255,255,255,.02)",
         fontFamily: FONT.sans,
-        fontSize: 13.5,
+        fontSize: 14,
         lineHeight: 1.55,
         color: tone === "muted" ? BLEND.muted : color,
       }}
@@ -156,7 +156,7 @@ export function BlendProse({ children }: { children: ReactNode }) {
       style={{
         margin: "0 0 12px",
         fontFamily: FONT.sans,
-        fontSize: 13.5,
+        fontSize: 14,
         lineHeight: 1.55,
         color: BLEND.muted,
       }}

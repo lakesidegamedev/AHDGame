@@ -37,10 +37,10 @@ export function InboxEmpty({ filterLabel, variant = "default" }: InboxEmptyProps
       </span>
 
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-foreground">
+        <p className="text-body font-semibold text-foreground">
           {isPriority ? "Nothing needs you right now" : "All caught up"}
         </p>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {isPriority
             ? "No pending votes, events, crises, nominations, or unread mail."
             : filterLabel && filterLabel !== "All"

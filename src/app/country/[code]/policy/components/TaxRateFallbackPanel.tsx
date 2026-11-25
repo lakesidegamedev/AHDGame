@@ -38,7 +38,7 @@ export function TaxRateFallbackPanel({ taxRates }: { taxRates: StateTaxRates }) 
   return (
     <section className="overflow-hidden rounded-xl border border-card-border bg-card">
       <div className="bg-card-muted px-5 py-3">
-        <span className="text-heading-sm font-semibold">Tax rates</span>
+        <span className="text-heading font-semibold">Tax rates</span>
       </div>
       <ul className="space-y-3 px-5 py-4">
         {ROWS.map((tax) => (
@@ -48,9 +48,9 @@ export function TaxRateFallbackPanel({ taxRates }: { taxRates: StateTaxRates }) 
           >
             <div className="min-w-0 flex-1">
               <div className="font-medium text-foreground">{tax.name}</div>
-              <div className="mt-0.5 text-xs text-muted">{tax.description}</div>
+              <div className="mt-0.5 text-body-sm text-muted">{tax.description}</div>
             </div>
-            <span className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-lg font-bold text-primary">
+            <span className="rounded border border-primary/40 bg-primary/10 px-3 py-1 text-heading font-bold text-primary">
               {taxRates[tax.id]}%
             </span>
           </li>

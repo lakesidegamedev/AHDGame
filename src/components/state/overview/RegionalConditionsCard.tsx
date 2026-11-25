@@ -113,7 +113,7 @@ function ApprovalMeter({
         <div>
           <div className="text-body-sm text-muted">Approval</div>
           <div
-            className={`text-3xl font-bold tabular-nums leading-none ${approvalColor(approval)}`}
+            className={`text-display font-bold tabular-nums leading-none ${approvalColor(approval)}`}
           >
             {approval.toFixed(1)}%
           </div>
@@ -122,7 +122,7 @@ function ApprovalMeter({
           {baseApproval != null && (
             <>
               <div className="text-body-sm text-muted">Base</div>
-              <div className="text-sm font-semibold tabular-nums text-foreground">
+              <div className="text-body font-semibold tabular-nums text-foreground">
                 {baseApproval.toFixed(1)}%
               </div>
             </>
@@ -162,14 +162,14 @@ function DriverRow({ modifier }: { modifier: ActiveModifier }) {
     >
       <span
         className={
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-xs font-bold tabular-nums " +
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-body-sm font-bold tabular-nums " +
           (positive ? "bg-success/15 text-success" : "bg-error/15 text-error")
         }
         aria-hidden
       >
         {positive ? "+" : "−"}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+      <span className="min-w-0 flex-1 truncate text-body font-medium text-foreground">
         {modifier.label}
       </span>
       <span className="flex shrink-0 flex-col items-end gap-0.5 text-right">
@@ -242,7 +242,7 @@ export function RegionalConditionsCard({
             aria-hidden
           />
           <div>
-            <h2 className="text-heading-sm font-semibold text-foreground">Regional conditions</h2>
+            <h2 className="text-heading font-semibold text-foreground">Regional conditions</h2>
             {open ? (
               <p className="mt-0.5 max-w-prose text-body text-muted">
                 Conditions lifting or dragging government approval.

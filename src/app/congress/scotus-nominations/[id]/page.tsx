@@ -97,10 +97,10 @@ function ScotusNominationDetailContent() {
   if (error && !nom) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 gap-4">
-        <p className="text-error text-sm">{error}</p>
+        <p className="text-error text-body">{error}</p>
         <Link
           href="/congress?chamber=senate&tab=bills"
-          className="text-sm text-primary hover:underline"
+          className="text-body text-primary hover:underline"
         >
           ← Back to Senate bills
         </Link>
@@ -124,7 +124,7 @@ function ScotusNominationDetailContent() {
       <main className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
         <Link
           href="/congress?chamber=senate&tab=bills"
-          className="text-sm text-muted hover:text-foreground transition-colors"
+          className="text-body text-muted hover:text-foreground transition-colors"
         >
           ← Back to Senate
         </Link>
@@ -132,42 +132,42 @@ function ScotusNominationDetailContent() {
         <div className="rounded-xl border border-card-border bg-card shadow-panel p-6 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             {nom.status === "active" ? (
-              <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-400">
+              <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-body-sm font-semibold text-yellow-400">
                 Voting open
               </span>
             ) : nom.status === "confirmed" ? (
-              <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+              <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-body-sm font-semibold text-success">
                 Confirmed
               </span>
             ) : nom.status === "rejected" ? (
-              <span className="rounded-full border border-error/30 bg-error/10 px-3 py-1 text-xs font-semibold text-error">
+              <span className="rounded-full border border-error/30 bg-error/10 px-3 py-1 text-body-sm font-semibold text-error">
                 Rejected
               </span>
             ) : (
-              <span className="rounded-full border border-card-border px-3 py-1 text-xs text-muted capitalize">
+              <span className="rounded-full border border-card-border px-3 py-1 text-body-sm text-muted capitalize">
                 {nom.status}
               </span>
             )}
-            <span className="rounded-full border border-card-border px-2 py-0.5 text-[10px] text-muted">
+            <span className="rounded-full border border-card-border px-2 py-0.5 text-body-sm text-muted">
               Senate · Supreme Court nomination
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold leading-tight">
+          <h1 className="text-heading font-bold leading-tight">
             {nom.nomineeCharacterName ?? "Unknown"} → {nom.positionName}
             {nom.nomineeMode === "npp" && (
-              <span className="ml-2 align-middle rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-[10px] font-medium text-muted">
+              <span className="ml-2 align-middle rounded-full border border-card-border bg-card-elevated px-2 py-0.5 text-body-sm font-medium text-muted">
                 <NppAbbr />
               </span>
             )}
           </h1>
 
-          <p className="text-sm text-muted leading-relaxed">
+          <p className="text-body text-muted leading-relaxed">
             Supreme Court nomination · Senate confirmation required. Simple majority within 24
             hours.
           </p>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted pt-1 border-t border-card-border/40">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-muted pt-1 border-t border-card-border/40">
             <span>
               Nominated by{" "}
               <span className="font-medium">{nom.proposedByPresidentName ?? "President"}</span>
@@ -179,7 +179,7 @@ function ScotusNominationDetailContent() {
           {nom.nomineeCharacterId && (
             <Link
               href={`/character/${nom.nomineeSequentialId ?? nom.nomineeCharacterId}`}
-              className="inline-block text-sm text-primary hover:underline"
+              className="inline-block text-body text-primary hover:underline"
             >
               View nominee profile →
             </Link>
@@ -187,17 +187,17 @@ function ScotusNominationDetailContent() {
         </div>
 
         {error && (
-          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-sm text-error">
+          <div className="rounded-lg bg-error/10 border border-error/30 px-4 py-3 text-body text-error">
             {error}
           </div>
         )}
 
         <div className="rounded-xl border border-card-border bg-card shadow-panel p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h3 className="text-sm font-semibold">Senate vote</h3>
+            <h3 className="text-body-lg font-semibold">Senate vote</h3>
             {nom.votingEndsAt && nom.status === "active" && (
               <span
-                className={`text-xs tabular-nums font-mono ${countdown === "Expired" ? "text-error" : "text-yellow-400"}`}
+                className={`text-body-sm tabular-nums font-mono ${countdown === "Expired" ? "text-error" : "text-yellow-400"}`}
               >
                 ⏱ {countdown}
               </span>
@@ -228,7 +228,7 @@ function ScotusNominationDetailContent() {
             />
           </div>
 
-          <div className="flex flex-wrap gap-4 text-xs">
+          <div className="flex flex-wrap gap-4 text-body-sm">
             <span className="text-success">
               ✓ {vFor} For ({Number.isFinite(pctFor) ? pctFor.toFixed(0) : 0}%)
             </span>
@@ -239,7 +239,7 @@ function ScotusNominationDetailContent() {
           </div>
 
           {nom.myVote && (
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Your vote:{" "}
               <span
                 className={`font-semibold ${nom.myVote === "for" ? "text-success" : nom.myVote === "against" ? "text-error" : "text-muted"}`}
@@ -267,7 +267,7 @@ function ScotusNominationDetailContent() {
                   key={v}
                   onClick={() => handleVote(v)}
                   disabled={voting}
-                  className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors capitalize min-h-[44px] touch-manipulation ${
+                  className={`flex-1 rounded-lg border py-2 text-body font-medium transition-colors capitalize min-h-[44px] touch-manipulation ${
                     nom.myVote === v
                       ? v === "for"
                         ? "border-success/50 bg-success/20 text-success"
@@ -284,13 +284,13 @@ function ScotusNominationDetailContent() {
           )}
 
           {!nom.isSenator && (
-            <p className="text-xs text-muted pt-1">
+            <p className="text-body-sm text-muted pt-1">
               Only Senators can vote on Supreme Court nominations.
             </p>
           )}
         </div>
 
-        <Link href={scotusHref} className="inline-block text-sm text-primary hover:underline">
+        <Link href={scotusHref} className="inline-block text-body text-primary hover:underline">
           View Supreme Court →
         </Link>
       </main>

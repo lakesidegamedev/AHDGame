@@ -8,13 +8,13 @@ export function PlayerIncomeTaxStatement({ statement }: { statement: PlayerTaxSt
   return (
     <section className="rounded-xl border border-card-border bg-card p-4 space-y-3">
       <h3 className="font-medium">{t("title")}</h3>
-      <p className="text-sm">
+      <p className="text-body">
         {t("startingTier")}: {t("tiers." + statement.initialTier)}. {t("currentTier")}:{" "}
         {t("tiers." + statement.currentTier)}.
       </p>
       {statement.assessments.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr>
                 <th>{t("turn")}</th>
@@ -50,7 +50,7 @@ export function PlayerIncomeTaxStatement({ statement }: { statement: PlayerTaxSt
           </table>
         </div>
       ) : (
-        <p className="text-sm text-muted">{t("none")}</p>
+        <p className="text-body text-muted">{t("none")}</p>
       )}
     </section>
   );

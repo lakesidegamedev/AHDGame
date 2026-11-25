@@ -211,7 +211,7 @@ export default function RunMeter({
         ))}
       </div>
       {overCapacity && (
-        <p className="mt-2 text-body-xs text-muted" data-testid="run-over-capacity">
+        <p className="mt-2 text-body-sm text-muted" data-testid="run-over-capacity">
           {productionPolicyLevel > 0
             ? `Made ${fmtPct(madeShare)} of installed capacity. Your production push (+${productionPolicyLevel}%) runs ${sites} past capacity, up to ${fmtPct(pushCap)} of it, at extra input cost and wear.${pastPushCap ? " Installed capacity is lower now than when last turn ran, so the share reads above that limit." : ""}`
             : `Made ${fmtPct(madeShare)} of installed capacity.`}
@@ -222,7 +222,7 @@ export default function RunMeter({
         if (rows.length === 0) return null;
         return (
           <div key={group} className="mt-3">
-            <p className="mb-1 text-body-xs font-semibold uppercase tracking-wide text-muted">
+            <p className="mb-1 text-body-sm font-semibold uppercase tracking-wide text-muted">
               {GROUP_TITLE[group]}
             </p>
             <ul className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">

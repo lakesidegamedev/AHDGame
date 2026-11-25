@@ -133,11 +133,11 @@ export default function CommodityCountryRail({
   return (
     <div className="flex min-h-0 flex-col border-t border-card-border lg:border-l lg:border-t-0">
       <div className="flex items-baseline justify-between px-4 pb-2 pt-3">
-        <h3 className="text-sm font-semibold text-foreground">{MODE_TITLE[mode]}</h3>
-        <span className="text-[11px] text-muted">{rows.length}</span>
+        <h3 className="text-body-lg font-semibold text-foreground">{MODE_TITLE[mode]}</h3>
+        <span className="text-body-sm text-muted">{rows.length}</span>
       </div>
       {rows.length === 0 ? (
-        <p className="px-4 pb-4 text-xs text-muted">No country has a book in this view.</p>
+        <p className="px-4 pb-4 text-body-sm text-muted">No country has a book in this view.</p>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2 lg:max-h-[440px]">
           {rows.map((row, index) => {
@@ -156,7 +156,7 @@ export default function CommodityCountryRail({
                   }`}
                   title="Open regional map"
                 >
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-body-sm">
                     <span className="w-4 text-right tabular-nums text-muted">{index + 1}</span>
                     <CountryFlag country={row.countryId} size="sm" />
                     <span className="min-w-0 flex-1 truncate font-medium text-foreground">

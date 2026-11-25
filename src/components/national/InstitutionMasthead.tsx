@@ -86,10 +86,10 @@ export function InstitutionMasthead({
             >
               {id.registry}
             </div>
-            <h1 className="mt-1 text-xl font-bold leading-[1.1] tracking-tight text-white sm:text-2xl">
+            <h1 className="mt-1 text-heading font-bold leading-[1.1] tracking-tight text-white sm:text-heading">
               {id.title}
               {id.titleEn && (
-                <span className="ml-2 align-middle text-base font-semibold text-white/55 sm:text-lg">
+                <span className="ml-2 align-middle text-body-lg font-semibold text-white/55 sm:text-heading">
                   {id.titleEn}
                 </span>
               )}
@@ -125,7 +125,7 @@ export function MastheadChip({
           : "border-white/25 text-white/85";
   return (
     <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneClass}`}
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-body-sm font-semibold ${toneClass}`}
     >
       {children}
     </span>
@@ -147,7 +147,7 @@ export function MastheadStat({
       <div className="text-body-sm font-semibold" style={{ color: hexToRgba(accentSoft, 0.6) }}>
         {label}
       </div>
-      <div className="font-mono text-2xl font-bold text-white">{value}</div>
+      <div className="font-mono text-heading font-bold text-white">{value}</div>
     </div>
   );
 }

@@ -54,14 +54,14 @@ export function CountryReadinessPanel() {
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-      <h3 className="text-sm font-semibold text-white">Country readiness diagnostic</h3>
-      <p className="text-xs text-muted">
+      <h3 className="text-body-lg font-semibold text-white">Country readiness diagnostic</h3>
+      <p className="text-body-sm text-muted">
         Run the seed/collection readiness checks for a country. Reads only — never writes. Lists
         per-check status (regions, parties, statePartyOrg, seats, NPPs, elected officials,
         demographics, state metrics, legislation types, plus country-specific extras).
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs text-muted" htmlFor="country-readiness-select">
+        <label className="text-body-sm text-muted" htmlFor="country-readiness-select">
           Country
         </label>
         <select
@@ -69,7 +69,7 @@ export function CountryReadinessPanel() {
           value={countryId}
           onChange={(e) => setCountryId(e.target.value as CountryId)}
           disabled={loading}
-          className="text-sm px-2 py-1 rounded border border-card-border bg-card-elevated text-white disabled:opacity-40"
+          className="text-body px-2 py-1 rounded border border-card-border bg-card-elevated text-white disabled:opacity-40"
         >
           {registered.map((id) => (
             <option key={id} value={id}>
@@ -80,14 +80,14 @@ export function CountryReadinessPanel() {
         <button
           onClick={handleDiagnose}
           disabled={loading}
-          className="text-sm px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 transition-colors"
+          className="text-body px-3 py-1.5 rounded border border-white/20 text-white hover:bg-white/10 disabled:opacity-40 transition-colors"
         >
           {loading ? "Checking…" : "Diagnose"}
         </button>
       </div>
-      <InlineError error={error} className="text-xs text-red-400" />
+      <InlineError error={error} className="text-body-sm text-red-400" />
       {report && (
-        <div className="text-xs space-y-2">
+        <div className="text-body-sm space-y-2">
           <p>
             <span className={`font-medium ${report.ready ? "text-green-400" : "text-amber-400"}`}>
               {report.ready ? "Ready" : "Not ready"}

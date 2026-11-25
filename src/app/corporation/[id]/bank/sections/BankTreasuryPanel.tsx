@@ -174,7 +174,7 @@ export function BankTreasuryPanel({
         />
       }
     >
-      <div className="grid grid-cols-2 gap-2 py-2 text-xs sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 py-2 text-body-sm sm:grid-cols-4">
         <div>
           <span className="text-muted">Vault cash</span>
           <div className="font-mono">{formatBankMoney(overview.cashReserves, currency)}</div>
@@ -194,14 +194,14 @@ export function BankTreasuryPanel({
           <div className="font-mono">{formatBankMoney(overview.markValueLocal, currency)}</div>
         </div>
       </div>
-      <p className="pb-2 text-xs text-muted">
+      <p className="pb-2 text-body-sm text-muted">
         The floor covers required reserves, the existing household withdrawal buffer, next-turn
         interest, and any central bank liquidity advance, which stays in cash until it is repaid.
         Bill marks use current pool bids; sale proceeds are limited to cash actually available in
         the pool.
       </p>
       {hasManualTrade && (
-        <label className="mb-2 flex items-center gap-2 text-xs">
+        <label className="mb-2 flex items-center gap-2 text-body-sm">
           Units per manual trade
           <input
             aria-label="Bill units per trade"
@@ -218,7 +218,7 @@ export function BankTreasuryPanel({
       )}
       {overview.primaryOffers && overview.primaryOffers.length > 0 && (
         <section
-          className="mb-3 rounded border border-card-border p-2 text-xs"
+          className="mb-3 rounded border border-card-border p-2 text-body-sm"
           aria-label="Sovereign primary offers"
         >
           <h3 className="font-medium">Sovereign primary offers</h3>
@@ -252,7 +252,7 @@ export function BankTreasuryPanel({
         </section>
       )}
       {overview.positions.length === 0 ? (
-        <p className="py-2 text-xs text-muted">
+        <p className="py-2 text-body-sm text-muted">
           No same-currency sovereign bills are currently available.
         </p>
       ) : (
@@ -260,7 +260,7 @@ export function BankTreasuryPanel({
           {overview.positions.map((position) => (
             <div
               key={position.bondId}
-              className="grid gap-2 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              className="grid gap-2 py-2 text-body-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div>
                 <div className="font-medium">

@@ -66,7 +66,7 @@ export function MetricDetailView({
             <div className="font-mono text-body-sm uppercase tracking-widest text-muted">
               {category.displayName} · {data.countryDisplayName}
             </div>
-            <h2 className="mt-1.5 text-heading-lg font-bold leading-tight text-foreground">
+            <h2 className="mt-1.5 text-heading font-bold leading-tight text-foreground">
               {metric.displayName}
             </h2>
             <p className="mt-2 max-w-[60ch] text-body-sm leading-relaxed text-muted">

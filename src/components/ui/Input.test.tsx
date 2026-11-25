@@ -16,7 +16,7 @@ describe("Input", () => {
   it("uses 16px text so iOS Safari does not zoom on focus (ticket #1114)", () => {
     render(<Input aria-label="Name" />);
     expect(screen.getByRole("textbox", { name: "Name" }).className.split(/\s+/)).toContain(
-      "text-base"
+      "text-body-lg"
     );
   });
 

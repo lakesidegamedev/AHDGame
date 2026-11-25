@@ -65,7 +65,7 @@ export default function VicePresidentOfficePage() {
       <div className="min-h-screen bg-background pb-16">
         <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <div className="rounded-xl border border-error/30 bg-error/10 p-6 text-center">
-            <h2 className="text-lg font-semibold text-error">{error ?? "Failed to load"}</h2>
+            <h2 className="text-heading font-semibold text-error">{error ?? "Failed to load"}</h2>
           </div>
         </main>
       </div>
@@ -79,9 +79,9 @@ export default function VicePresidentOfficePage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-body-sm font-medium text-muted">{countryName}</div>
-              <h1 className="mt-1 text-2xl font-bold text-foreground">Vice president</h1>
+              <h1 className="mt-1 text-heading font-bold text-foreground">Vice president</h1>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-card-border bg-card-muted px-2.5 py-1 text-xs font-medium text-foreground/80">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-card-border bg-card-muted px-2.5 py-1 text-body-sm font-medium text-foreground/80">
               {data.vpActionsRemaining}/{data.actionCap} Actions
             </span>
           </div>

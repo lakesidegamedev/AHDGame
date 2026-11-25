@@ -60,11 +60,11 @@ export function SovereignRatePanel({ current, previous }: SovereignRatePanelProp
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
       <div className="flex items-baseline justify-between gap-3">
-        <div className="text-sm font-semibold text-foreground">Why this rate</div>
-        <div className="text-[11px] text-muted">current close against the prior fiscal year</div>
+        <div className="text-body font-semibold text-foreground">Why this rate</div>
+        <div className="text-body-sm text-muted">current close against the prior fiscal year</div>
       </div>
 
-      <div className="mt-2 grid grid-cols-[minmax(8rem,1.4fr)_auto_auto_4.5rem] gap-x-3 border-b border-card-border pb-1 text-[11px] text-muted">
+      <div className="mt-2 grid grid-cols-[minmax(8rem,1.4fr)_auto_auto_4.5rem] gap-x-3 border-b border-card-border pb-1 text-body-sm text-muted">
         <span>Component</span>
         <span className="text-right">This close</span>
         <span className="text-right">Prior close</span>
@@ -92,7 +92,7 @@ export function SovereignRatePanel({ current, previous }: SovereignRatePanelProp
         previous={before?.effectiveRate ?? null}
       />
 
-      <div className="mt-2 space-y-0.5 text-[11px] text-muted">
+      <div className="mt-2 space-y-0.5 text-body-sm text-muted">
         {now.imfCapApplied && (
           <p>The IMF programme caps the ladder at {pct(now.afterImfCapRate)}.</p>
         )}

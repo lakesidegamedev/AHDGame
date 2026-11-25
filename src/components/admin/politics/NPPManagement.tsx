@@ -298,7 +298,7 @@ export function NPPManagement() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         Generate or remove Non-Player Politicians from elections. State preference weighting
         controls where free-floating NPPs are placed.
       </p>
@@ -307,15 +307,15 @@ export function NPPManagement() {
       <div className="rounded-xl border border-card-border bg-card p-4 shadow-card">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-lg text-foreground">NPP autonomy</h3>
-            <p className="mt-0.5 max-w-xl text-sm text-muted">
+            <h3 className="text-body-lg text-foreground">NPP autonomy</h3>
+            <p className="mt-0.5 max-w-xl text-body text-muted">
               When on, NPPs in disabled or econ-only countries govern themselves — an autonomous
               technocrat runs the central bank toward the dual mandate (and, as later phases ship,
               they pass laws and form governments). Has no effect in player-enabled countries.
             </p>
           </div>
           <button
-            className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+            className={`inline-flex shrink-0 items-center justify-center rounded-lg border px-4 py-2 text-body font-semibold transition-colors ${
               nppAutonomyEnabled
                 ? "border-green-500 bg-green-500/10 text-green-400 hover:bg-green-500/20"
                 : "border-card-border bg-background text-muted hover:bg-accent"
@@ -333,36 +333,36 @@ export function NPPManagement() {
 
       {/* Message */}
       {message && (
-        <div className={`rounded-lg p-3 text-sm ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`rounded-lg p-3 text-body ${getMessageStyle(message)}`}>{message}</div>
       )}
 
       {/* Stats */}
       {stats && (
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-lg border border-card-border bg-card p-4">
-            <div className="text-sm text-muted">Total NPPs</div>
-            <div className="mt-1 text-3xl font-bold tabular-nums">{stats.totalNPPs}</div>
+            <div className="text-body text-muted">Total NPPs</div>
+            <div className="mt-1 text-display font-bold tabular-nums">{stats.totalNPPs}</div>
           </div>
           <div className="rounded-lg border border-card-border bg-card p-4">
-            <div className="text-sm text-muted">In elections</div>
-            <div className="mt-1 text-3xl font-bold tabular-nums text-blue-400">
+            <div className="text-body text-muted">In elections</div>
+            <div className="mt-1 text-display font-bold tabular-nums text-blue-400">
               {stats.nppCandidates}
             </div>
           </div>
           <div className="rounded-lg border border-card-border bg-card p-4 sm:col-span-3">
-            <div className="text-sm text-muted mb-3">By party</div>
+            <div className="text-body text-muted mb-3">By party</div>
             {stats.nppsByPartyGrouped ? (
               <div className="space-y-4">
                 {Object.entries(stats.nppsByPartyGrouped)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([countryId, partyList]) => (
                     <div key={countryId}>
-                      <div className="text-xs font-semibold text-muted mb-2">{countryId}</div>
+                      <div className="text-body-sm font-semibold text-muted mb-2">{countryId}</div>
                       <div className="flex flex-wrap gap-2">
                         {partyList.map((p) => (
                           <span
                             key={`${countryId}-${p.partyId}`}
-                            className="rounded-full border border-card-border bg-background px-2.5 py-1 text-xs font-medium"
+                            className="rounded-full border border-card-border bg-background px-2.5 py-1 text-body-sm font-medium"
                             style={{ color: p.color }}
                           >
                             {p.partyName}: {p.count}
@@ -379,7 +379,7 @@ export function NPPManagement() {
                   return (
                     <span
                       key={p.party}
-                      className="rounded-full border border-card-border bg-background px-2 py-0.5 text-xs font-medium"
+                      className="rounded-full border border-card-border bg-background px-2 py-0.5 text-body-sm font-medium"
                       style={{ color: party?.color || "#888" }}
                     >
                       {p.party.charAt(0).toUpperCase()}: {p.count}
@@ -398,7 +398,7 @@ export function NPPManagement() {
 
         {/* Country scope */}
         <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium">Country scope</label>
+          <label className="mb-2 block text-body font-medium">Country scope</label>
           <div className="flex flex-wrap gap-2">
             {["all" as const, ...registered].map((scope) => (
               <button
@@ -408,7 +408,7 @@ export function NPPManagement() {
                   setSelectedStates([]);
                   setSelectedParties([]);
                 }}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
                   countryScope === scope
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-card-border bg-card text-muted hover:text-foreground"
@@ -425,7 +425,7 @@ export function NPPManagement() {
         {/* State / Region selector */}
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium">
+            <label className="text-body font-medium">
               {countryHasFeature("usUi", countryScope)
                 ? "States"
                 : countryScope === "all"
@@ -435,7 +435,7 @@ export function NPPManagement() {
             </label>
             <button
               onClick={() => setShowStateSelector(!showStateSelector)}
-              className="text-xs text-primary hover:underline"
+              className="text-body-sm text-primary hover:underline"
             >
               {showStateSelector ? "Hide" : "Show"} Selector
             </button>
@@ -446,7 +446,7 @@ export function NPPManagement() {
                 <button
                   key={state}
                   onClick={() => toggleState(state)}
-                  className="group flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+                  className="group flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-3 py-1 text-body font-medium text-primary transition-colors hover:bg-primary/20"
                 >
                   {state}
                   <svg
@@ -466,13 +466,13 @@ export function NPPManagement() {
               ))}
               <button
                 onClick={() => setSelectedStates([])}
-                className="text-xs text-red-400 hover:text-red-300"
+                className="text-body-sm text-red-400 hover:text-red-300"
               >
                 Clear all
               </button>
             </div>
           ) : (
-            <p className="text-sm text-muted">
+            <p className="text-body text-muted">
               All{" "}
               {countryHasFeature("usUi", countryScope)
                 ? "states"
@@ -491,13 +491,13 @@ export function NPPManagement() {
                 ([country, label, ids]) =>
                   (countryScope === country || countryScope === "all") && (
                     <div key={country}>
-                      <p className="mb-1.5 text-xs font-medium text-muted">{label}</p>
+                      <p className="mb-1.5 text-body-sm font-medium text-muted">{label}</p>
                       <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-card-border bg-background p-3 sm:grid-cols-4 md:grid-cols-6">
                         {ids.map((state) => (
                           <button
                             key={state}
                             onClick={() => toggleState(state)}
-                            className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                            className={`rounded px-2 py-1.5 text-body-sm font-medium transition-colors ${
                               selectedStates.includes(state)
                                 ? "bg-primary text-primary-foreground"
                                 : "border border-card-border bg-card text-muted hover:text-foreground"
@@ -516,7 +516,7 @@ export function NPPManagement() {
 
         {/* Party selector */}
         <div>
-          <label className="mb-2 block text-sm font-medium">Parties to generate</label>
+          <label className="mb-2 block text-body font-medium">Parties to generate</label>
           <div className="flex flex-wrap gap-2">
             {parties.map((party) => {
               const key = partyKey(party);
@@ -531,7 +531,7 @@ export function NPPManagement() {
                     borderColor: `${party.color}80`,
                     color: selectedParties.includes(key) ? "white" : party.color,
                   }}
-                  className="rounded-lg border px-4 py-2 text-sm font-medium transition-all hover:shadow-sm"
+                  className="rounded-lg border px-4 py-2 text-body font-medium transition-all hover:shadow-sm"
                 >
                   {party.name.replace(" Party", "")}
                 </button>
@@ -545,7 +545,7 @@ export function NPPManagement() {
       <button
         onClick={handleGenerateNPPs}
         disabled={loading || selectedParties.length === 0}
-        className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+        className="w-full rounded-lg bg-primary px-4 py-3 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         {loading ? "Generating..." : "Generate NPPs for elections"}
       </button>
@@ -553,14 +553,14 @@ export function NPPManagement() {
       {/* Spawn free NPPs */}
       <div className="rounded-xl border border-card-border bg-card p-5">
         <h3 className="mb-2 font-semibold">Spawn free-floating NPPs</h3>
-        <p className="mb-4 text-xs text-muted">
+        <p className="mb-4 text-body-sm text-muted">
           Creates NPPs not tied to any election. State selection is weighted by party ideology
           alignment, existing party presence, or both.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="mb-2 block text-sm font-medium">Count</label>
+            <label className="mb-2 block text-body font-medium">Count</label>
             <input
               type="number"
               min={1}
@@ -569,15 +569,15 @@ export function NPPManagement() {
               onChange={(e) =>
                 setSpawnCount(Math.max(1, Math.min(500, parseInt(e.target.value) || 1)))
               }
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">Party</label>
+            <label className="mb-2 block text-body font-medium">Party</label>
             <select
               value={spawnParty}
               onChange={(e) => setSpawnParty(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">— Select party —</option>
               {parties.map((p) => {
@@ -591,11 +591,11 @@ export function NPPManagement() {
             </select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium">State preference</label>
+            <label className="mb-2 block text-body font-medium">State preference</label>
             <select
               value={spawnMode}
               onChange={(e) => setSpawnMode(e.target.value as "lean" | "members" | "both")}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="both">Both (lean + members)</option>
               <option value="lean">Party lean match</option>
@@ -607,19 +607,19 @@ export function NPPManagement() {
         <button
           onClick={handleSpawnNPPs}
           disabled={loading || !spawnParty}
-          className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+          className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
         >
           {loading ? "Spawning…" : `Spawn ${spawnCount} NPP${spawnCount !== 1 ? "s" : ""}`}
         </button>
 
         {spawnResult && spawnResult.topStates.length > 0 && (
           <div className="mt-4 space-y-2 rounded-lg border border-card-border bg-background p-3">
-            <p className="text-xs font-medium">Distribution (top states):</p>
+            <p className="text-body-sm font-medium">Distribution (top states):</p>
             <div className="flex flex-wrap gap-2">
               {spawnResult.topStates.map(({ state, count }) => (
                 <span
                   key={state}
-                  className="rounded-full bg-primary/10 border border-primary/30 px-2.5 py-1 text-xs font-medium"
+                  className="rounded-full bg-primary/10 border border-primary/30 px-2.5 py-1 text-body-sm font-medium"
                 >
                   {state} × {count}
                 </span>
@@ -631,7 +631,7 @@ export function NPPManagement() {
 
       {/* Destructive actions */}
       <details className="group rounded-xl border border-red-500/30 bg-red-500/5">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-sm font-medium text-red-400 hover:text-red-300">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-body font-medium text-red-400 hover:text-red-300">
           <svg
             className="h-4 w-4 transition-transform group-open:rotate-90"
             fill="none"
@@ -647,35 +647,35 @@ export function NPPManagement() {
           <button
             onClick={handleRemoveNPPs}
             disabled={loading}
-            className="w-full rounded-lg bg-yellow-500/20 px-4 py-2 text-sm font-medium text-yellow-400 border border-yellow-500/50 transition-colors hover:bg-yellow-500/30 disabled:opacity-50"
+            className="w-full rounded-lg bg-yellow-500/20 px-4 py-2 text-body font-medium text-yellow-400 border border-yellow-500/50 transition-colors hover:bg-yellow-500/30 disabled:opacity-50"
           >
             {loading ? "..." : "Remove NPP candidates"}
           </button>
           <button
             onClick={() => handleDeleteAllNPPs("candidates_only")}
             disabled={loading}
-            className="w-full rounded-lg bg-orange-500/20 px-4 py-2 text-sm font-medium text-orange-400 border border-orange-500/50 transition-colors hover:bg-orange-500/30 disabled:opacity-50"
+            className="w-full rounded-lg bg-orange-500/20 px-4 py-2 text-body font-medium text-orange-400 border border-orange-500/50 transition-colors hover:bg-orange-500/30 disabled:opacity-50"
           >
             {loading ? "..." : "Clear election entries only"}
           </button>
           <button
             onClick={() => handleDeleteAllNPPs("vacate_seats")}
             disabled={loading}
-            className="w-full rounded-lg bg-purple-500/20 px-4 py-2 text-sm font-medium text-purple-400 border border-purple-500/50 transition-colors hover:bg-purple-500/30 disabled:opacity-50"
+            className="w-full rounded-lg bg-purple-500/20 px-4 py-2 text-body font-medium text-purple-400 border border-purple-500/50 transition-colors hover:bg-purple-500/30 disabled:opacity-50"
           >
             {loading ? "..." : "Vacate retired NPP seats"}
           </button>
           <button
             onClick={() => handleDeleteAllNPPs("independents_only")}
             disabled={loading}
-            className="w-full rounded-lg bg-cyan-500/20 px-4 py-2 text-sm font-medium text-cyan-400 border border-cyan-500/50 transition-colors hover:bg-cyan-500/30 disabled:opacity-50"
+            className="w-full rounded-lg bg-cyan-500/20 px-4 py-2 text-body font-medium text-cyan-400 border border-cyan-500/50 transition-colors hover:bg-cyan-500/30 disabled:opacity-50"
           >
             {loading ? "..." : "Retire independent NPPs only"}
           </button>
           <button
             onClick={() => handleDeleteAllNPPs("retire_all")}
             disabled={loading}
-            className="w-full rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 border border-red-500/50 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+            className="w-full rounded-lg bg-red-500/20 px-4 py-2 text-body font-medium text-red-400 border border-red-500/50 transition-colors hover:bg-red-500/30 disabled:opacity-50"
           >
             {loading ? "..." : "Retire all NPPs"}
           </button>
@@ -700,11 +700,11 @@ export function NPPManagement() {
                 />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{npp.name}</div>
-                  <div className="text-xs text-muted">
+                  <div className="text-body-sm text-muted">
                     {npp.homeState} · {npp.party.charAt(0).toUpperCase() + npp.party.slice(1)}
                   </div>
                 </div>
-                <div className="flex-shrink-0 text-sm font-medium text-primary">
+                <div className="flex-shrink-0 text-body font-medium text-primary">
                   {npp.politicalInfluence.toFixed(1)}%
                 </div>
               </div>
@@ -715,7 +715,7 @@ export function NPPManagement() {
 
       {/* Utilities */}
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-muted hover:text-foreground">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-body font-medium text-muted hover:text-foreground">
           <svg
             className="h-4 w-4 transition-transform group-open:rotate-90"
             fill="none"
@@ -739,7 +739,7 @@ export function NPPManagement() {
               await post({ action: "backfill_images" });
             }}
             disabled={loading}
-            className="rounded-lg border border-card-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-card disabled:opacity-50"
+            className="rounded-lg border border-card-border bg-background px-4 py-2 text-body font-medium transition-colors hover:bg-card disabled:opacity-50"
           >
             {loading ? "..." : "Backfill missing avatars"}
           </button>

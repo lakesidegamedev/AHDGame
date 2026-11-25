@@ -230,7 +230,7 @@ export function UnionSectorsTable({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         One representing union per shop. Unionization is its members&apos; share of the workforce. A
         successful raid transfers representation; there are no competing memberships or plurality
         contests. Current approval is a comparison, not a forecast: approval can change before a
@@ -238,25 +238,25 @@ export function UnionSectorsTable({
       </p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-muted">Search</span>
+          <span className="text-body-sm font-medium text-muted">Search</span>
           <input
             type="search"
             value={filter.text}
             onChange={(e) => setFilter((f) => ({ ...f, text: e.target.value }))}
             placeholder="Corporation or state"
             aria-label="Filter sectors by corporation or state"
-            className="w-48 rounded-lg border border-card-border bg-background px-3 py-1.5 text-xs"
+            className="w-48 rounded-lg border border-card-border bg-background px-3 py-1.5 text-body-sm"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-muted">Strike status</span>
+          <span className="text-body-sm font-medium text-muted">Strike status</span>
           <select
             value={filter.status}
             onChange={(e) =>
               setFilter((f) => ({ ...f, status: e.target.value as SectorStatus | "" }))
             }
             aria-label="Filter sectors by strike status"
-            className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-xs"
+            className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-body-sm"
           >
             <option value="">Any status</option>
             {(Object.keys(SECTOR_STATUS_FILTER_LABEL) as SectorStatus[]).map((status) => (
@@ -267,14 +267,14 @@ export function UnionSectorsTable({
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-muted">Representation</span>
+          <span className="text-body-sm font-medium text-muted">Representation</span>
           <select
             value={filter.holding}
             onChange={(e) =>
               setFilter((f) => ({ ...f, holding: e.target.value as SectorHolding | "" }))
             }
             aria-label="Filter sectors by representing union"
-            className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-xs"
+            className="rounded-lg border border-card-border bg-background px-2 py-1.5 text-body-sm"
           >
             <option value="">Any union</option>
             {(Object.keys(SECTOR_HOLDING_FILTER_LABEL) as SectorHolding[]).map((holding) => (
@@ -288,12 +288,12 @@ export function UnionSectorsTable({
           <button
             type="button"
             onClick={() => setFilter(EMPTY_SECTOR_FILTER)}
-            className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+            className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
           >
             Clear filters
           </button>
         )}
-        <span className="ml-auto text-xs tabular-nums text-muted">
+        <span className="ml-auto text-body-sm tabular-nums text-muted">
           {filtered ? `${visible.length} of ${sectors.length} shops` : `${sectors.length} shops`} ·{" "}
           {totalMembers.toLocaleString("en-US")} of {totalWorkers.toLocaleString("en-US")} workers
           organized across all unions
@@ -304,7 +304,7 @@ export function UnionSectorsTable({
         <div
           role="region"
           aria-label="Selected drives"
-          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-body"
         >
           <span className="font-semibold">
             {quote.count} {quote.count === 1 ? "shop" : "shops"} selected
@@ -315,7 +315,7 @@ export function UnionSectorsTable({
             {Math.round(treasury).toLocaleString("en-US")} treasury
           </span>
           {atBatchMax && (
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               Up to {ORGANIZE_SECTORS_BATCH_MAX} drives per batch.
             </span>
           )}
@@ -323,7 +323,7 @@ export function UnionSectorsTable({
             <button
               type="button"
               onClick={() => setSelected([])}
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-card-elevated"
+              className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-medium transition-colors hover:bg-card-elevated"
             >
               Clear
             </button>
@@ -331,13 +331,13 @@ export function UnionSectorsTable({
               type="button"
               disabled={actionPending || quote.blocker != null}
               onClick={runBatch}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+              className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               Run {quote.count} {quote.count === 1 ? "drive" : "drives"}
             </button>
           </div>
           {quote.blocker && (
-            <p className="w-full text-xs font-medium text-error">{quote.blocker}</p>
+            <p className="w-full text-body-sm font-medium text-error">{quote.blocker}</p>
           )}
         </div>
       )}
@@ -351,9 +351,9 @@ export function UnionSectorsTable({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-card-border bg-card">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[760px] text-body">
             <thead>
-              <tr className="border-b border-card-border bg-card-elevated text-left text-sm font-semibold text-foreground">
+              <tr className="border-b border-card-border bg-card-elevated text-left text-body font-semibold text-foreground">
                 {canOrganize && (
                   <th className="w-8 px-3 py-3">
                     <input
@@ -390,7 +390,7 @@ export function UnionSectorsTable({
                             }`}
                           >
                             {col.label}
-                            <span aria-hidden className="w-2 text-[9px]">
+                            <span aria-hidden className="w-2 text-body-sm">
                               {active ? (sortDir === "asc" ? "▲" : "▼") : ""}
                             </span>
                           </button>
@@ -447,15 +447,15 @@ export function UnionSectorsTable({
                       {s.representingUnionId ? (
                         <Link
                           href={`/unions/${s.representingUnionId}`}
-                          className={`text-xs hover:underline ${rival ? "text-warning" : "text-primary"}`}
+                          className={`text-body-sm hover:underline ${rival ? "text-warning" : "text-primary"}`}
                         >
                           {s.representingUnionName ?? `Unknown union (${s.representingUnionId})`}
                         </Link>
                       ) : (
-                        <span className="text-xs text-muted">Unrepresented</span>
+                        <span className="text-body-sm text-muted">Unrepresented</span>
                       )}
                       {rival && (
-                        <div className="mt-1 space-y-0.5 text-[10px] tabular-nums text-muted">
+                        <div className="mt-1 space-y-0.5 text-body-sm tabular-nums text-muted">
                           {approvalEdge == null ? (
                             <p>
                               Rival approval unavailable
@@ -490,7 +490,7 @@ export function UnionSectorsTable({
                     <td className="px-3 py-3 text-muted">{displayCanadianRegionCode(s.stateId)}</td>
                     <td className="px-3 py-3 text-right font-mono tabular-nums">
                       <div>{members.toLocaleString("en-US")}</div>
-                      <div className="text-[10px] text-muted">
+                      <div className="text-body-sm text-muted">
                         of {(s.workers ?? 0).toLocaleString("en-US")}
                       </div>
                     </td>
@@ -519,19 +519,19 @@ export function UnionSectorsTable({
                     </td>
                     <td className="px-3 py-3">
                       {s.strikeActive || s.strikeBlockReason === "already_striking" ? (
-                        <span className="rounded-md bg-error/15 px-2 py-0.5 text-xs font-medium text-error">
+                        <span className="rounded-md bg-error/15 px-2 py-0.5 text-body-sm font-medium text-error">
                           Striking
                         </span>
                       ) : s.strikeBlockReason === "underorganized" ? (
-                        <span className="text-xs text-muted">Needs organizing</span>
+                        <span className="text-body-sm text-muted">Needs organizing</span>
                       ) : s.strikeBlockReason === "sector_cooldown" ? (
-                        <span className="text-xs text-warning">
+                        <span className="text-body-sm text-warning">
                           Cooldown to turn {s.strikeCooldownUntilTurn}
                         </span>
                       ) : s.strikeBlockReason === "collective_agreement" ? (
-                        <span className="text-xs font-medium text-info">Under agreement</span>
+                        <span className="text-body-sm font-medium text-info">Under agreement</span>
                       ) : (
-                        <span className="text-xs font-medium text-success">Strike ready</span>
+                        <span className="text-body-sm font-medium text-success">Strike ready</span>
                       )}
                     </td>
                     {canOrganize && (
@@ -540,11 +540,11 @@ export function UnionSectorsTable({
                           type="button"
                           disabled={actionPending || cannotAfford}
                           onClick={() => onOrganize(s.sectorId)}
-                          className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+                          className="rounded-lg bg-primary px-2.5 py-1 text-body-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                         >
                           {rival ? "Raid" : "Organize"}
                         </button>
-                        <div className="mt-0.5 text-[10px] tabular-nums text-muted">
+                        <div className="mt-0.5 text-body-sm tabular-nums text-muted">
                           {organizeActionCost} AP · {rowCost.toLocaleString("en-US")} · +
                           {organizeGain.toFixed(1)}%
                         </div>
@@ -562,7 +562,7 @@ export function UnionSectorsTable({
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="text-xs font-medium text-primary hover:underline"
+          className="text-body-sm font-medium text-primary hover:underline"
         >
           {showAll ? `Show the first ${PAGE_SIZE}` : `Show all ${visible.length} shops`}
         </button>

@@ -32,7 +32,9 @@ export function StatusBadge({ status, onChange }: StatusBadgeProps) {
 
   if (!onChange) {
     return (
-      <span className={`rounded px-2 py-0.5 text-xs capitalize whitespace-nowrap ${colorClass}`}>
+      <span
+        className={`rounded px-2 py-0.5 text-body-sm capitalize whitespace-nowrap ${colorClass}`}
+      >
         {label}
       </span>
     );
@@ -43,7 +45,7 @@ export function StatusBadge({ status, onChange }: StatusBadgeProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`rounded px-2 py-0.5 text-xs capitalize whitespace-nowrap cursor-pointer transition-opacity hover:opacity-80 ${colorClass}`}
+        className={`rounded px-2 py-0.5 text-body-sm capitalize whitespace-nowrap cursor-pointer transition-opacity hover:opacity-80 ${colorClass}`}
         title="Click to change status"
       >
         {label}
@@ -66,7 +68,7 @@ export function StatusBadge({ status, onChange }: StatusBadgeProps) {
                     setOpen(false);
                   }
                 }}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-background/60 disabled:opacity-40 ${
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-body-sm transition-colors hover:bg-background/60 disabled:opacity-40 ${
                   isActive ? "font-medium" : ""
                 }`}
               >

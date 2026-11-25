@@ -84,10 +84,10 @@ export function SpinOffModal({
       {...dialogProps}
     >
       <div className="w-full max-w-md rounded-xl border border-card-border bg-card p-5 space-y-4">
-        <h2 id={titleId} className="text-base font-bold text-foreground">
+        <h2 id={titleId} className="text-body-lg font-bold text-foreground">
           Spin off a subsidiary
         </h2>
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Move all sectors of one type into a new, wholly-owned private corporation run by a
           different CEO. Estimated cost: {formatAmount(estimatedCostAnchor)}
           {selectedCount > 0 && (
@@ -100,7 +100,7 @@ export function SpinOffModal({
         </p>
 
         <p
-          className={`rounded-lg border px-3 py-2 text-xs ${
+          className={`rounded-lg border px-3 py-2 text-body-sm ${
             onCooldown
               ? "border-error/40 bg-error/10 text-error"
               : "border-warning/40 bg-warning/10 text-warning"
@@ -114,11 +114,11 @@ export function SpinOffModal({
         </p>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted">Sector type</label>
+          <label className="text-body-sm text-muted">Sector type</label>
           <select
             value={sectorType}
             onChange={(e) => setSectorType(e.target.value)}
-            className="rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm"
+            className="rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body"
           >
             {sectorOptions.map((o) => (
               <option key={o.type} value={o.type}>
@@ -129,29 +129,29 @@ export function SpinOffModal({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted">New corporation name</label>
+          <label className="text-body-sm text-muted">New corporation name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            className="rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm"
+            className="rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted">Ticker (optional)</label>
+          <label className="text-body-sm text-muted">Ticker (optional)</label>
           <input
             type="text"
             value={tickerSymbol}
             onChange={(e) => setTickerSymbol(e.target.value.toUpperCase())}
             maxLength={5}
-            className="rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm"
+            className="rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-body">
             <input
               type="radio"
               name="spinoffCeo"
@@ -160,7 +160,7 @@ export function SpinOffModal({
             />
             NPP caretaker (auto-selected)
           </label>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-body">
             <input
               type="radio"
               name="spinoffCeo"
@@ -179,7 +179,7 @@ export function SpinOffModal({
                 }}
               />
               {selected && (
-                <p className="text-xs text-muted">
+                <p className="text-body-sm text-muted">
                   Selected: <span className="font-semibold text-foreground">{selected.name}</span>
                 </p>
               )}
@@ -187,13 +187,13 @@ export function SpinOffModal({
           )}
         </div>
 
-        {err && <p className="text-xs text-error">{err}</p>}
+        {err && <p className="text-body-sm text-error">{err}</p>}
 
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-card-border px-3 py-1.5 text-xs font-semibold"
+            className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm font-semibold"
           >
             Cancel
           </button>
@@ -207,7 +207,7 @@ export function SpinOffModal({
               name.trim().length === 0 ||
               (ceoType === "character" && !selected)
             }
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-3 py-1.5 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {busy
               ? "Working…"

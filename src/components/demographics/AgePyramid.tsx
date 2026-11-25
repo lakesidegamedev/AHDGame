@@ -9,7 +9,7 @@ const FEMALE = "#f472b6";
 
 function EmptyPyramid() {
   return (
-    <div className="rounded-lg border border-card-border bg-card p-6 text-center text-sm text-muted">
+    <div className="rounded-lg border border-card-border bg-card p-6 text-center text-body text-muted">
       No population data available.
     </div>
   );
@@ -35,7 +35,7 @@ export function AgePyramid({
     <div className="rounded-lg border border-card-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h4 className="text-body-sm font-medium text-muted">Age &amp; sex pyramid</h4>
-        <div className="flex gap-3 text-[11px]">
+        <div className="flex gap-3 text-body-sm">
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full" style={{ background: MALE }} />
             <span>Male</span>
@@ -55,7 +55,7 @@ export function AgePyramid({
           return (
             <div
               key={b.label}
-              className="flex items-center gap-1 text-[10px]"
+              className="flex items-center gap-1 text-body-sm"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >

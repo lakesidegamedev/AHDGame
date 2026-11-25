@@ -84,7 +84,7 @@ export function CreateCommandDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-card-border p-5">
-          <h3 className="text-base font-semibold text-foreground">New theater command</h3>
+          <h3 className="text-body-lg font-semibold text-foreground">New theater command</h3>
           <button
             type="button"
             onClick={onClose}
@@ -102,7 +102,7 @@ export function CreateCommandDialog({
               value={draft.name}
               onChange={(e) => set({ name: e.target.value })}
               placeholder="e.g. Southern Command"
-              className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px] text-foreground"
+              className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm text-foreground"
             />
           </div>
 
@@ -115,7 +115,7 @@ export function CreateCommandDialog({
                   type="button"
                   onClick={() => set({ type: t })}
                   aria-pressed={draft.type === t}
-                  className={`px-3 py-1.5 text-[12px] ${pillClass(draft.type === t)}`}
+                  className={`px-3 py-1.5 text-body-sm ${pillClass(draft.type === t)}`}
                 >
                   {COMMAND_TYPES[t].label}
                 </button>
@@ -131,7 +131,7 @@ export function CreateCommandDialog({
                 aria-label="Posture"
                 value={draft.posture}
                 onChange={(e) => set({ posture: e.target.value as CommandPosture })}
-                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px] text-foreground"
+                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm text-foreground"
               >
                 {POSTURES.map((p) => (
                   <option key={p} value={p}>
@@ -146,7 +146,7 @@ export function CreateCommandDialog({
               <select
                 value={draft.supply}
                 onChange={(e) => set({ supply: e.target.value as SupplyPriority })}
-                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px] text-foreground"
+                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm text-foreground"
               >
                 {SUPPLIES.map((s) => (
                   <option key={s} value={s}>
@@ -171,7 +171,7 @@ export function CreateCommandDialog({
                     type="button"
                     disabled={disabled}
                     onClick={() => toggleRegion(r.id)}
-                    className={`rounded-md border px-2 py-1 text-[11px] ${
+                    className={`rounded-md border px-2 py-1 text-body-sm ${
                       active
                         ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] text-gov-soft"
                         : "border-card-border text-muted hover:text-foreground"
@@ -189,7 +189,7 @@ export function CreateCommandDialog({
               Commanders · {draft.commanderIds.length}
             </div>
             {commanders.length === 0 ? (
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 No commissioned generals in this country yet.
               </p>
             ) : (
@@ -202,7 +202,7 @@ export function CreateCommandDialog({
                       type="button"
                       onClick={() => toggleCommander(cm.id)}
                       title={`${cm.spec} · Lvl ${cm.level} · fit ${cm.fit}`}
-                      className={`rounded-md border px-2 py-1 text-[11px] ${
+                      className={`rounded-md border px-2 py-1 text-body-sm ${
                         active
                           ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] text-gov-soft"
                           : "border-card-border text-muted hover:text-foreground"
@@ -217,7 +217,7 @@ export function CreateCommandDialog({
           </div>
 
           {warnings.length > 0 && (
-            <ul className="flex flex-col gap-0.5 text-[11px] text-warning">
+            <ul className="flex flex-col gap-0.5 text-body-sm text-warning">
               {warnings.map((w) => (
                 <li key={w}>⚠ {w}</li>
               ))}
@@ -234,7 +234,7 @@ export function CreateCommandDialog({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-card-border px-3 py-2 text-[12px] font-semibold text-muted hover:text-foreground"
+              className="rounded-lg border border-card-border px-3 py-2 text-body-sm font-semibold text-muted hover:text-foreground"
             >
               Cancel
             </button>
@@ -242,7 +242,7 @@ export function CreateCommandDialog({
               type="button"
               disabled={!canConfirm}
               onClick={() => onCreate(draft)}
-              className="rounded-lg bg-[var(--gov)] px-4 py-2 text-[12px] font-bold text-[#1a1200] disabled:opacity-40"
+              className="rounded-lg bg-[var(--gov)] px-4 py-2 text-body-sm font-bold text-[#1a1200] disabled:opacity-40"
             >
               Create command
             </button>

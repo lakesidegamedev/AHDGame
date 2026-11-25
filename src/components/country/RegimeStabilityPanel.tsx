@@ -120,14 +120,14 @@ export function RegimeStabilityPanel({ countryCode }: Props) {
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Regime stability</h3>
-          <p className="mt-0.5 text-xs text-muted" data-testid="regime-band-label">
+          <h3 className="text-body-lg font-semibold text-foreground">Regime stability</h3>
+          <p className="mt-0.5 text-body-sm text-muted" data-testid="regime-band-label">
             {bandStyle.label}
           </p>
         </div>
         {data.stage !== "stable" && (
           <span
-            className={`rounded-full border px-2 py-0.5 text-xs ${STAGE_CHIP_STYLE[data.stage]}`}
+            className={`rounded-full border px-2 py-0.5 text-body-sm ${STAGE_CHIP_STYLE[data.stage]}`}
             data-testid="regime-stage-label"
           >
             {STAGE_LABEL[data.stage]}
@@ -136,14 +136,14 @@ export function RegimeStabilityPanel({ countryCode }: Props) {
       </div>
 
       {STAGE_BLURB[data.stage] && (
-        <p className="mt-3 text-xs italic text-foreground/75" data-testid="regime-stage-blurb">
+        <p className="mt-3 text-body-sm italic text-foreground/75" data-testid="regime-stage-blurb">
           {STAGE_BLURB[data.stage]}
         </p>
       )}
 
       {data.underStrain && (
         <p
-          className="mt-3 text-xs font-medium text-rose-600 dark:text-rose-400"
+          className="mt-3 text-body-sm font-medium text-rose-600 dark:text-rose-400"
           data-testid="regime-under-strain"
         >
           Regime under strain
@@ -151,7 +151,10 @@ export function RegimeStabilityPanel({ countryCode }: Props) {
       )}
 
       {data.recentTransitions.length > 0 && (
-        <ul className="mt-3 space-y-1 text-xs text-muted" data-testid="regime-recent-transitions">
+        <ul
+          className="mt-3 space-y-1 text-body-sm text-muted"
+          data-testid="regime-recent-transitions"
+        >
           {data.recentTransitions.map((t) => (
             <li key={`${t.turn}-${t.from}-${t.to}`}>
               {STAGE_LABEL[t.from as RegimePublic["stage"]] ?? t.from} →{" "}

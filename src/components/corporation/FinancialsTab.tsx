@@ -208,7 +208,7 @@ export default function FinancialsTab({
         <p
           role="note"
           data-testid="fog-estimate-label"
-          className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-medium text-warning"
+          className="rounded border border-warning/40 bg-warning/10 px-3 py-2 text-body font-medium text-warning"
         >
           Estimate from the last quarterly report, within about{" "}
           {Math.round((financialFogOfWar?.maxDeviation ?? 0.1) * 100)}%. Not the live books.
@@ -224,7 +224,7 @@ export default function FinancialsTab({
             <KVRow label={tArrears("paid")} value={money.fmt(financials.arrears.paidLastTurn)} />
             <KVRow label={tArrears("remaining")} value={money.fmt(financials.arrears.remaining)} />
           </KVList>
-          <p className="mt-2 text-xs text-muted">{tArrears("explanation")}</p>
+          <p className="mt-2 text-body-sm text-muted">{tArrears("explanation")}</p>
         </DenseSection>
       )}
 
@@ -245,7 +245,7 @@ export default function FinancialsTab({
               : "no quarterly report on record yet"
           }
         >
-          <p className="py-1 text-xs text-muted">
+          <p className="py-1 text-body-sm text-muted">
             You are not an insider, so figures marked ~ are estimates. The CEO and the controlling
             parent see the live books.
           </p>
@@ -306,13 +306,13 @@ export default function FinancialsTab({
             meta={MONEY_PERIOD_PER_LABEL[periodView]}
             actions={
               showCountries ? (
-                <label className="flex items-center gap-1.5 text-xs text-muted">
+                <label className="flex items-center gap-1.5 text-body-sm text-muted">
                   Country
                   <select
                     aria-label="Country"
                     value={selectedCountry ? selectedCountry.countryId : "all"}
                     onChange={(e) => setCountry(e.target.value)}
-                    className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none"
+                    className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-body-sm text-foreground focus:border-foreground focus:outline-none"
                   >
                     <option value="all">All</option>
                     {countryRows.map((r) => (
@@ -344,7 +344,7 @@ export default function FinancialsTab({
                     onSelect={setCountry}
                   />
                 )}
-                <p className="py-2 text-xs text-muted">
+                <p className="py-2 text-body-sm text-muted">
                   Forecast figures use today&apos;s sectors and budgets, so they describe the next
                   turn. The last recorded turn is shown separately and can differ after changes to
                   capacity, production or spending.
@@ -734,7 +734,7 @@ export default function FinancialsTab({
           <aside className="min-w-0 space-y-6">
             <DenseSection title="Cost mix" meta="share of revenue">
               {costMix.length === 0 ? (
-                <p className="py-1 text-xs text-muted">No costs this period.</p>
+                <p className="py-1 text-body-sm text-muted">No costs this period.</p>
               ) : (
                 <table className="w-full border-collapse">
                   <tbody>
@@ -756,13 +756,13 @@ export default function FinancialsTab({
             </DenseSection>
 
             {financials.historicalIncomeUnavailable && (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 Recorded income is unavailable because its historical currency conversion is
                 missing. The statement shows a forecast.
               </p>
             )}
             {financials.historicalBondFeesUnavailable && (
-              <p className="text-sm text-muted">
+              <p className="text-body text-muted">
                 Historical bond settlement evidence is unavailable. Last-turn income includes
                 estimated bond flows and may differ from cash received or paid.
               </p>
@@ -804,7 +804,7 @@ export default function FinancialsTab({
               !corporation.countryOwnerId ? (
                 <Link
                   href={`/portfolio/corporation/${corpId}`}
-                  className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+                  className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
                 >
                   Investment portfolio
                 </Link>
@@ -813,7 +813,7 @@ export default function FinancialsTab({
           >
             <BalanceSheetRings sheet={balanceSheet} fmt={fmt} />
             <details className="group mt-5 border-t border-card-border pt-3">
-              <summary className="cursor-pointer list-none text-xs [&::-webkit-details-marker]:hidden font-semibold text-muted hover:text-foreground">
+              <summary className="cursor-pointer list-none text-body-sm [&::-webkit-details-marker]:hidden font-semibold text-muted hover:text-foreground">
                 <span className="group-open:hidden">Every line</span>
                 <span className="hidden group-open:inline">Hide lines</span>
               </summary>
@@ -1025,7 +1025,7 @@ export default function FinancialsTab({
                       >
                         Prev
                       </SmallButton>
-                      <span className="font-mono text-xs text-muted">
+                      <span className="font-mono text-body-sm text-muted">
                         {npvPage + 1}/{npvPages}
                       </span>
                       <SmallButton

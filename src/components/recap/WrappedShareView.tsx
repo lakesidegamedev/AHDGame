@@ -29,13 +29,13 @@ export function WrappedShareView({ recap }: { recap: CharacterRecap }) {
           <button
             type="button"
             onClick={() => setPlaying(true)}
-            className="flex-1 rounded-full bg-white px-5 py-3 text-[15px] font-semibold text-black transition-opacity hover:opacity-90"
+            className="flex-1 rounded-full bg-white px-5 py-3 text-body font-semibold text-black transition-opacity hover:opacity-90"
           >
             Play the story
           </button>
           <Link
             href="/"
-            className="flex-1 rounded-full border border-white/25 px-5 py-3 text-center text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
+            className="flex-1 rounded-full border border-white/25 px-5 py-3 text-center text-body font-semibold text-white transition-colors hover:bg-white/10"
           >
             Play A House Divided
           </Link>

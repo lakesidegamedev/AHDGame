@@ -49,7 +49,7 @@ export function ParentDirectionNote({ corpId, parent, onRefresh }: ParentDirecti
   return (
     <section
       aria-label="Parent management"
-      className="flex flex-wrap items-center justify-between gap-3 rounded border border-card-border bg-card px-4 py-3 text-sm"
+      className="flex flex-wrap items-center justify-between gap-3 rounded border border-card-border bg-card px-4 py-3 text-body"
     >
       <p className="text-muted">
         Managed by{" "}
@@ -64,12 +64,14 @@ export function ParentDirectionNote({ corpId, parent, onRefresh }: ParentDirecti
         {message && (
           <span
             role="status"
-            className={message.type === "error" ? "text-xs text-red-500" : "text-xs text-muted"}
+            className={
+              message.type === "error" ? "text-body-sm text-red-500" : "text-body-sm text-muted"
+            }
           >
             {message.text}
           </span>
         )}
-        <label className="cursor-pointer rounded border border-card-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-background">
+        <label className="cursor-pointer rounded border border-card-border px-3 py-1.5 text-body-sm font-medium text-foreground hover:bg-background">
           {uploading ? "Uploading..." : "Change logo"}
           <input
             type="file"

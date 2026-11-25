@@ -49,14 +49,14 @@ export function CategoryCard({
         <span className="text-primary">
           <CategoryIcon icon={CATEGORY_ICONS[category.id] ?? "library"} className="h-4 w-4" />
         </span>
-        <h3 className="flex-1 text-body font-semibold leading-tight text-foreground">
+        <h3 className="flex-1 text-body-lg font-semibold leading-tight text-foreground">
           {category.displayName}
         </h3>
         <StatusBadge score={category.score} label={category.status} />
       </div>
       <div className="flex items-end justify-between gap-2">
         <div>
-          <span className={`text-heading-lg font-extrabold tabular-nums ${tone.text}`}>
+          <span className={`text-heading font-extrabold tabular-nums ${tone.text}`}>
             {Math.round(category.score)}
           </span>
           <span className="text-body-sm text-muted">/100</span>

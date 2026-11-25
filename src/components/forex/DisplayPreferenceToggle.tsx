@@ -90,9 +90,9 @@ export function DisplayPreferenceToggle() {
             }`}
             aria-hidden
           />
-          <h3 className="text-sm font-bold text-foreground">Display currency</h3>
+          <h3 className="text-body-lg font-bold text-foreground">Display currency</h3>
           {showReviewFlag && (
-            <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning">
+            <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-body-sm font-bold uppercase tracking-wide text-warning">
               Review
             </span>
           )}
@@ -103,7 +103,7 @@ export function DisplayPreferenceToggle() {
         <div className="space-y-4 border-t border-card-border px-5 pb-5 pt-4">
           {showReviewFlag && (
             <div className="flex flex-col gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-foreground/90">
+              <p className="text-body-sm text-foreground/90">
                 <span className="font-semibold text-foreground">First time here?</span> Pick how
                 money is shown across the site (stocks, bonds, wallet, treasuries). You can change
                 this anytime.
@@ -111,14 +111,14 @@ export function DisplayPreferenceToggle() {
               <button
                 type="button"
                 onClick={acknowledgePrefsTip}
-                className="shrink-0 rounded-md bg-foreground/10 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-foreground/15"
+                className="shrink-0 rounded-md bg-foreground/10 px-3 py-1.5 text-body-sm font-semibold text-foreground transition-colors hover:bg-foreground/15"
               >
                 Got it
               </button>
             </div>
           )}
 
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Choose how monetary amounts are shown across the site. This affects stock prices,
             balances, bond values, and treasury figures everywhere you see a number.
           </p>
@@ -131,7 +131,7 @@ export function DisplayPreferenceToggle() {
                   key={String(key)}
                   type="button"
                   onClick={() => setDisplayCurrencyPreference(key)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
                     displayCurrencyPreference === key
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted hover:text-foreground"
@@ -155,7 +155,7 @@ export function DisplayPreferenceToggle() {
                   key={code}
                   type="button"
                   onClick={() => setDisplayCurrencyPreference(code)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-md px-3 py-1.5 text-body-sm font-medium transition-colors ${
                     displayCurrencyPreference === code
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted hover:text-foreground"
@@ -167,7 +167,7 @@ export function DisplayPreferenceToggle() {
             </div>
           </div>
 
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             <span className="font-semibold text-foreground">{activeLabel}:</span>{" "}
             {activeDescription}
           </p>

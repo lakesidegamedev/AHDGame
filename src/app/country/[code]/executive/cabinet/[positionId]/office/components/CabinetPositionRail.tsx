@@ -73,7 +73,7 @@ export function CabinetPositionRail({
       <select
         value={activePositionId}
         onChange={(e) => router.push(href(e.target.value))}
-        className="mb-3 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-[13px] font-medium text-foreground outline-none focus:border-[var(--gov)] lg:hidden"
+        className="mb-3 w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm font-medium text-foreground outline-none focus:border-[var(--gov)] lg:hidden"
         aria-label="Switch cabinet seat"
       >
         {grouped.map(({ group, seats }) => (
@@ -104,7 +104,7 @@ export function CabinetPositionRail({
                       key={p.id}
                       href={href(p.id)}
                       aria-current={active ? "page" : undefined}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors ${
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-body-sm transition-colors ${
                         active
                           ? "bg-[color-mix(in_srgb,var(--gov)_15%,transparent)] font-semibold text-gov-soft"
                           : "text-muted hover:bg-card-muted hover:text-foreground"

@@ -93,7 +93,7 @@ export function NationDropdownPanel({
           <div className="flex items-center gap-2 border-b border-card-border/60 px-3 py-2.5">
             <button
               onClick={() => onShowNationPicker(false)}
-              className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-body-sm text-muted hover:text-foreground transition-colors"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -126,11 +126,11 @@ export function NationDropdownPanel({
                   }`}
                 >
                   <CountryFlag country={id} size="lg" />
-                  <span className="text-xs leading-tight text-foreground truncate w-full">
+                  <span className="text-body-sm leading-tight text-foreground truncate w-full">
                     {countryName(id)}
                   </span>
                   {isHome && (
-                    <span className="text-[10px] text-muted leading-none">
+                    <span className="text-body-sm text-muted leading-none">
                       {t("countrySwitcher.homeBadge")}
                     </span>
                   )}
@@ -149,17 +149,17 @@ export function NationDropdownPanel({
             <Link
               href={countryUrl(userCountry)}
               onClick={() => onClose()}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+              className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
             >
               <CountryFlag country={userCountry} size="sm" />
               <span>{countryName(userCountry)}</span>
-              <span className="ml-1 text-xs text-muted">{t("menus.nation.homeSuffix")}</span>
+              <span className="ml-1 text-body-sm text-muted">{t("menus.nation.homeSuffix")}</span>
             </Link>
             {cabinetOffice && (
               <Link
                 href={cabinetOfficeUrl(cabinetOffice.countryCode, cabinetOffice.positionId)}
                 onClick={() => onClose()}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+                className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
               >
                 <svg
                   className="h-4 w-4 text-muted"
@@ -181,7 +181,7 @@ export function NationDropdownPanel({
               <Link
                 href={scotusJusticeOfficeUrl(justiceOffice.countryCode)}
                 onClick={() => onClose()}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+                className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
               >
                 <svg
                   className="h-4 w-4 text-muted"
@@ -203,7 +203,7 @@ export function NationDropdownPanel({
               <Link
                 href={partyUrl(currentPartyCountry, currentParty.id)}
                 onClick={() => onClose()}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+                className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
               >
                 <svg
                   className="h-4 w-4 text-muted"
@@ -227,7 +227,7 @@ export function NationDropdownPanel({
               <Link
                 href="/political-operations"
                 onClick={() => onClose()}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+                className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
               >
                 <svg
                   className="h-4 w-4 text-muted"
@@ -258,14 +258,14 @@ export function NationDropdownPanel({
               key={section.title}
               title={t(section.titleKey)}
               collapsible={section.collapsible}
-              labelClassName="px-4 pt-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted/80"
+              labelClassName="px-4 pt-2 pb-1 text-body-sm font-medium uppercase tracking-wider text-muted/80"
             >
               {section.items.map((item) => (
                 <Link
                   key={item.id}
                   href={item.href}
                   onClick={() => onClose()}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+                  className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
                 >
                   {NATION_DETAIL_ICONS[item.id]}
                   <span className="truncate">{item.labelKey ? t(item.labelKey) : item.label}</span>
@@ -276,7 +276,7 @@ export function NationDropdownPanel({
 
           <button
             onClick={() => onShowNationPicker(true)}
-            className="flex w-full items-center gap-2 border-t border-card-border px-4 py-2.5 text-sm text-muted transition-colors hover:bg-background/60 hover:text-foreground"
+            className="flex w-full items-center gap-2 border-t border-card-border px-4 py-2.5 text-body text-muted transition-colors hover:bg-background/60 hover:text-foreground"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path

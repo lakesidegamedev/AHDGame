@@ -76,7 +76,7 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
   return (
     <section className="mb-10 ">
       <SectionLabel as="h3">{chamber.chamberLabel} result</SectionLabel>
-      <p className="mb-4 text-sm text-muted">
+      <p className="mb-4 text-body text-muted">
         {chamber.totalSeats} seats across {chamber.regionCount} regions.
         {showVotes ? ` ${chamber.totalVotes.toLocaleString("en-US")} votes cast.` : ""}
         {hasPrevious ? ` Changes are against the ${chamber.previous?.label}.` : ""}
@@ -85,32 +85,32 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
       <SeatArc chamber={chamber} />
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[32rem] text-sm">
+        <table className="w-full min-w-[32rem] text-body">
           <thead>
-            <tr className="border-b border-card-border text-left text-xs uppercase text-muted">
-              <th className="border-b border-card-border py-1.5 pr-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+            <tr className="border-b border-card-border text-left text-body-sm uppercase text-muted">
+              <th className="border-b border-card-border py-1.5 pr-3 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Party
               </th>
               {showVotes && (
-                <th className="border-b border-card-border py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th className="border-b border-card-border py-1.5 pr-3 text-right text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                   Votes
                 </th>
               )}
               {showVotes && (
-                <th className="border-b border-card-border py-1.5 pr-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th className="border-b border-card-border py-1.5 pr-3 text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                   Vote share
                 </th>
               )}
-              <th className="border-b border-card-border py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+              <th className="border-b border-card-border py-1.5 pr-3 text-right text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                 Seats
               </th>
               {hasPrevious && (
-                <th className="border-b border-card-border py-1.5 pr-3 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th className="border-b border-card-border py-1.5 pr-3 text-right text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                   Change
                 </th>
               )}
               {hasPrevious && showVotes && (
-                <th className="border-b border-card-border py-1.5 text-right text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th className="border-b border-card-border py-1.5 text-right text-body-sm font-semibold uppercase tracking-[0.06em] text-muted">
                   Swing (pts)
                 </th>
               )}
@@ -145,7 +145,7 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
                           }}
                         />
                       </div>
-                      <span className="tabular-nums text-xs text-muted">
+                      <span className="tabular-nums text-body-sm text-muted">
                         {p.votePct == null ? "" : formatPct(p.votePct)}
                       </span>
                     </div>
@@ -175,7 +175,7 @@ export function ChamberResultsSection({ chamber }: { chamber: ChamberResult }) {
       </div>
 
       {gov && gov.governingPartyName && (
-        <div className="mt-5 border-b border-card-border/60 py-2.5 text-sm">
+        <div className="mt-5 border-b border-card-border/60 py-2.5 text-body">
           <h4 className="mb-1 font-semibold text-foreground">Government formed</h4>
           <p className="text-muted">
             {gov.governingPartyName}

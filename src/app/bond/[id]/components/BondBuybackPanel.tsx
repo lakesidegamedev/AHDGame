@@ -73,8 +73,8 @@ export function BondBuybackPanel({
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h2 className="text-sm font-semibold text-muted mb-4">Retire debt</h2>
-      <p className="text-xs text-muted mb-4">
+      <h2 className="text-body font-semibold text-muted mb-4">Retire debt</h2>
+      <p className="text-body-sm text-muted mb-4">
         Buy back bond units from investors to reduce outstanding debt.
         {bond.defaulted && (
           <span className="text-warning">
@@ -85,7 +85,7 @@ export function BondBuybackPanel({
       </p>
       <div className="flex items-end gap-4 flex-wrap">
         <div>
-          <label className="block text-xs text-muted mb-1.5">Units to retire</label>
+          <label className="block text-body-sm text-muted mb-1.5">Units to retire</label>
           <input
             type="number"
             value={units || ""}
@@ -100,10 +100,10 @@ export function BondBuybackPanel({
             }}
             min={1}
             max={bond.publicFloat}
-            className="w-32 rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
+            className="w-32 rounded-lg border border-card-border bg-background px-3 py-2 text-body focus:border-primary/60 focus:outline-none"
           />
         </div>
-        <div className="rounded-lg border border-card-border bg-card-elevated/40 px-4 py-2.5 text-sm space-y-1">
+        <div className="rounded-lg border border-card-border bg-card-elevated/40 px-4 py-2.5 text-body space-y-1">
           <div className="flex justify-between gap-8">
             <span className="text-muted">Cost per unit</span>
             <span className="tabular-nums font-medium text-foreground">
@@ -124,8 +124,8 @@ export function BondBuybackPanel({
           </div>
         </div>
       </div>
-      <InlineError error={error} className="mt-3 text-xs text-error" />
-      {success && <p className="mt-3 text-xs text-success">{success}</p>}
+      <InlineError error={error} className="mt-3 text-body-sm text-error" />
+      {success && <p className="mt-3 text-body-sm text-success">{success}</p>}
       <Button
         variant="secondary"
         onClick={handleBuyback}

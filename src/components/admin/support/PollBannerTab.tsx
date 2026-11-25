@@ -25,7 +25,7 @@ import {
 } from "@/lib/pollBanner";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
+  "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
 
 const TONE_META: Record<PollBannerTone, { label: string; description: string }> = {
   info: { label: "Info", description: "Routine. Reads as an ordinary notice." },
@@ -135,7 +135,7 @@ export function PollBannerTab() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <span className="text-sm text-muted">Loading poll banner...</span>
+          <span className="text-body text-muted">Loading poll banner...</span>
         </div>
       </div>
     );
@@ -146,15 +146,15 @@ export function PollBannerTab() {
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-sm font-semibold">Poll banner</h3>
-            <p className="text-xs text-muted">
+            <h3 className="text-body-lg font-semibold">Poll banner</h3>
+            <p className="text-body-sm text-muted">
               A strip under the navbar, shown to everyone including signed-out visitors. Players
               cannot dismiss it, so it stays up until you switch it off. It stays off the sign in,
               register, banned and maintenance pages, which carry no navigation.
             </p>
           </div>
           <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase ${
+            className={`shrink-0 rounded-full px-2.5 py-1 text-body-sm font-semibold tracking-wider uppercase ${
               enabled ? "bg-success/15 text-success" : "bg-card-border/40 text-muted"
             }`}
           >
@@ -163,7 +163,7 @@ export function PollBannerTab() {
         </div>
 
         {updatedBy && (
-          <div className="mb-4 rounded-lg border border-card-border bg-background/40 p-3 text-xs text-muted">
+          <div className="mb-4 rounded-lg border border-card-border bg-background/40 p-3 text-body-sm text-muted">
             Last saved by <span className="font-medium text-foreground">{updatedBy}</span>
             {updatedAt && (
               <>
@@ -180,7 +180,7 @@ export function PollBannerTab() {
         <div className="space-y-3">
           <div>
             <label
-              className="mb-1 block text-xs font-medium text-muted"
+              className="mb-1 block text-body-sm font-medium text-muted"
               htmlFor="poll-banner-message"
             >
               Message
@@ -194,7 +194,7 @@ export function PollBannerTab() {
               maxLength={POLL_BANNER_MESSAGE_MAX}
               className={INPUT_CLASS}
             />
-            <p className="mt-1 text-[10px] text-muted/60">
+            <p className="mt-1 text-body-sm text-muted/60">
               {message.length} of {POLL_BANNER_MESSAGE_MAX} characters
             </p>
           </div>
@@ -202,7 +202,7 @@ export function PollBannerTab() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label
-                className="mb-1 block text-xs font-medium text-muted"
+                className="mb-1 block text-body-sm font-medium text-muted"
                 htmlFor="poll-banner-link-label"
               >
                 Link text
@@ -216,14 +216,14 @@ export function PollBannerTab() {
                 maxLength={POLL_BANNER_LINK_LABEL_MAX}
                 className={INPUT_CLASS}
               />
-              <p className="mt-1 text-[10px] text-muted/60">
+              <p className="mt-1 text-body-sm text-muted/60">
                 Defaults to &quot;{DEFAULT_POLL_BANNER_LINK_LABEL}&quot; if left blank.
               </p>
             </div>
 
             <div>
               <label
-                className="mb-1 block text-xs font-medium text-muted"
+                className="mb-1 block text-body-sm font-medium text-muted"
                 htmlFor="poll-banner-tone"
               >
                 Tone
@@ -240,12 +240,15 @@ export function PollBannerTab() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[10px] text-muted/60">{TONE_META[tone].description}</p>
+              <p className="mt-1 text-body-sm text-muted/60">{TONE_META[tone].description}</p>
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted" htmlFor="poll-banner-url">
+            <label
+              className="mb-1 block text-body-sm font-medium text-muted"
+              htmlFor="poll-banner-url"
+            >
               Link URL
             </label>
             <input
@@ -258,14 +261,14 @@ export function PollBannerTab() {
               className={INPUT_CLASS}
             />
             {!urlLooksSafe && (
-              <p className="mt-1 text-[10px] text-error">
+              <p className="mt-1 text-body-sm text-error">
                 Link must be an absolute http:// or https:// address
               </p>
             )}
           </div>
 
           <label
-            className="flex cursor-pointer items-center gap-2 text-sm"
+            className="flex cursor-pointer items-center gap-2 text-body"
             htmlFor="poll-banner-enabled"
           >
             <input
@@ -280,12 +283,12 @@ export function PollBannerTab() {
         </div>
 
         {error && (
-          <div className="mt-3 rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
+          <div className="mt-3 rounded-lg border border-error/30 bg-error/10 p-2 text-body-sm text-error">
             {error}
           </div>
         )}
         {saved && !error && (
-          <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-2 text-xs text-success">
+          <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-2 text-body-sm text-success">
             Saved.
           </div>
         )}
@@ -294,7 +297,7 @@ export function PollBannerTab() {
           type="button"
           onClick={handleSave}
           disabled={saving || loadFailed}
-          className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors disabled:bg-card-border disabled:text-muted"
+          className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-body font-medium text-primary-foreground transition-colors disabled:bg-card-border disabled:text-muted"
         >
           {saving && (
             <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -305,7 +308,7 @@ export function PollBannerTab() {
 
       <div className="rounded-xl border border-card-border bg-card p-6 shadow-card">
         <h4 className="mb-1 text-body-sm font-medium text-muted">Preview</h4>
-        <p className="mb-3 text-[11px] text-muted/70">
+        <p className="mb-3 text-body-sm text-muted/70">
           Exactly what players see, rendered by the same component. Shown here whether or not the
           banner is currently switched on.
         </p>
@@ -320,7 +323,7 @@ export function PollBannerTab() {
             }}
           />
         ) : (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Fill in a message and a link to see the banner as players will.
           </p>
         )}

@@ -22,9 +22,9 @@ const TONE: Record<ReferendumMomentum["direction"], string> = {
  * total. Null momentum (too little history) renders the neutral inert dash.
  */
 export function MomentumIndicator({ momentum }: { momentum: ReferendumMomentum | null }) {
-  if (!momentum) return <span className="text-[12.5px] font-bold text-muted">—</span>;
+  if (!momentum) return <span className="text-body-sm font-bold text-muted">—</span>;
   return (
-    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold">
+    <span className="inline-flex items-center gap-1.5 text-body-sm font-bold">
       <span className={`inline-flex items-center gap-1 ${TONE[momentum.direction]}`}>
         <span aria-hidden>{ARROW[momentum.direction]}</span>
         {signed(momentum.recentDelta)}

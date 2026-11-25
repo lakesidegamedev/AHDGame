@@ -25,7 +25,7 @@ export default async function ControlToolPage({ params }: Props) {
 
   return (
     <section aria-labelledby="tool-title" className="space-y-4">
-      <h1 id="tool-title" className="text-heading-sm font-semibold text-foreground">
+      <h1 id="tool-title" className="text-heading font-semibold text-foreground">
         {tool.label}
       </h1>
       <ToolBody tool={tool} role={role} />

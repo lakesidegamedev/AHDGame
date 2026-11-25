@@ -41,7 +41,7 @@ export function GdpDecompositionCard({
       <div className="mb-3 flex items-baseline justify-between">
         <h4 className="text-body-sm font-medium text-muted">GDP &amp; Growth</h4>
         <span
-          className={`text-[10px] font-semibold ${d.isExpansionary ? "text-success" : "text-error"}`}
+          className={`text-body-sm font-semibold ${d.isExpansionary ? "text-success" : "text-error"}`}
         >
           {d.isExpansionary ? "Above trend" : "Below trend"}
         </span>
@@ -50,13 +50,13 @@ export function GdpDecompositionCard({
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div>
           <span className="block text-body-sm font-medium text-muted">GDP</span>
-          <span className="text-sm font-bold tabular-nums text-foreground">
+          <span className="text-body font-bold tabular-nums text-foreground">
             {gdp != null ? formatGDP(gdp, getCurrencyPrefix(countryId)) : "—"}
           </span>
         </div>
         <div>
           <span className="block text-body-sm font-medium text-muted">Growth /yr</span>
-          <span className="text-sm font-bold tabular-nums text-foreground">{pct(d.total)}</span>
+          <span className="text-body font-bold tabular-nums text-foreground">{pct(d.total)}</span>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ export function GdpDecompositionCard({
             title={`Cyclical ${pct(d.cyclical)}`}
           />
         </div>
-        <div className="flex justify-between text-[11px]">
+        <div className="flex justify-between text-body-sm">
           <span className="text-info">Trend {pct(d.potential)}</span>
           <span className={d.cyclical >= 0 ? "text-success" : "text-error"}>
             Cyclical {pct(d.cyclical)}
@@ -87,7 +87,7 @@ export function GdpDecompositionCard({
           {outputGap != null && (
             <div>
               <span className="block text-body-sm font-medium text-muted">Output gap</span>
-              <span className="text-xs font-semibold tabular-nums text-foreground">
+              <span className="text-body-sm font-semibold tabular-nums text-foreground">
                 {pct(outputGap)}
               </span>
             </div>
@@ -95,7 +95,7 @@ export function GdpDecompositionCard({
           {laborForce != null && (
             <div>
               <span className="block text-body-sm font-medium text-muted">Labor force</span>
-              <span className="text-xs font-semibold tabular-nums text-foreground">
+              <span className="text-body-sm font-semibold tabular-nums text-foreground">
                 {laborForce.toLocaleString("en-US")}
               </span>
             </div>

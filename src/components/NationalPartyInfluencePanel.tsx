@@ -473,19 +473,21 @@ export function NationalPartyInfluencePanel({
       }}
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold">National party NPP influence</h2>
-        <div className="flex items-center gap-4 text-sm">
+        <h2 className="text-heading font-semibold">National party NPP influence</h2>
+        <div className="flex items-center gap-4 text-body">
           <span>
             <span className="text-muted">Action points: </span>
             <span className="font-medium">
               {data.nppActionPoints ?? 0} / {data.nppActionPointCap ?? 0}
             </span>
-            <span className="ml-1 text-xs text-muted">(+{data.nppActionPointRegen ?? 0}/turn)</span>
+            <span className="ml-1 text-body-sm text-muted">
+              (+{data.nppActionPointRegen ?? 0}/turn)
+            </span>
           </span>
         </div>
       </div>
 
-      <div className="mb-4 rounded-lg bg-blue-500/10 p-3 text-sm text-blue-400">
+      <div className="mb-4 rounded-lg bg-blue-500/10 p-3 text-body text-blue-400">
         National party leadership can influence same-party NPPs in any {regionLabelLower} and
         coordinate relocations when the party needs to shift talent around the map.
       </div>
@@ -511,12 +513,12 @@ export function NationalPartyInfluencePanel({
           />
 
           <details className="mt-4 rounded-lg border border-card-border">
-            <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-muted">
+            <summary className="cursor-pointer px-3 py-2 text-body font-medium text-muted">
               Advanced actions: relocate, oppose a candidate, or queue
             </summary>
             <div className="space-y-1 p-3">
               <div className="mb-4">
-                <label className="mb-2 block text-sm font-medium">Select {regionLabel}</label>
+                <label className="mb-2 block text-body font-medium">Select {regionLabel}</label>
                 <select
                   aria-label="Advanced: select state"
                   value={selectedState}
@@ -529,7 +531,7 @@ export function NationalPartyInfluencePanel({
                     setSelectedCandidate("");
                     setSelectedTargetState("");
                   }}
-                  className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                 >
                   <option value="">-- Select a {regionLabelLower} --</option>
                   {statesWithNPPs.map((state) => (
@@ -544,7 +546,7 @@ export function NationalPartyInfluencePanel({
 
               {selectedState && racesInSelectedState.length > 0 && (
                 <div className="mb-4">
-                  <label className="mb-2 block text-sm font-medium">Select race</label>
+                  <label className="mb-2 block text-body font-medium">Select race</label>
                   <select
                     aria-label="Advanced: select race"
                     value={selectedRace}
@@ -556,7 +558,7 @@ export function NationalPartyInfluencePanel({
                       setSelectedCandidate("");
                       setSelectedTargetState("");
                     }}
-                    className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                   >
                     <option value="">-- Select a race --</option>
                     {racesInSelectedState.map((race) => (
@@ -571,7 +573,7 @@ export function NationalPartyInfluencePanel({
               {selectedState && selectedRace && nppsInSelectedState.length > 0 && (
                 <>
                   <div className="mb-4">
-                    <label className="mb-2 block text-sm font-medium">
+                    <label className="mb-2 block text-body font-medium">
                       Select NPP to influence
                     </label>
                     <select
@@ -584,7 +586,7 @@ export function NationalPartyInfluencePanel({
                         setSelectedCandidate("");
                         setSelectedTargetState("");
                       }}
-                      className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                     >
                       <option value="">-- Select an NPP --</option>
                       {nppsInSelectedState.map((npp) => (
@@ -597,7 +599,7 @@ export function NationalPartyInfluencePanel({
 
                   {selectedNPP && selectedNPPData && (
                     <>
-                      <div className="mb-4 rounded-lg bg-background p-4 text-sm">
+                      <div className="mb-4 rounded-lg bg-background p-4 text-body">
                         <div className="mb-3 flex items-center justify-between">
                           <Link
                             href={`/politicians/npp/${selectedNPP}`}
@@ -618,32 +620,32 @@ export function NationalPartyInfluencePanel({
                         {selectedNPPData.stats && (
                           <div className="grid grid-cols-2 gap-3 border-t border-card-border pt-3 sm:grid-cols-3">
                             <div className="flex flex-col">
-                              <span className="text-xs text-muted">Favorability</span>
+                              <span className="text-body-sm text-muted">Favorability</span>
                               <span className="font-medium">
                                 {formatNationalNppStat(selectedNPPData.stats.favorability)}/100
                               </span>
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-xs text-muted">Political influence</span>
+                              <span className="text-body-sm text-muted">Political influence</span>
                               <span className="font-medium">
                                 {formatNationalNppStat(selectedNPPData.stats.politicalInfluence)}
                                 /100
                               </span>
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-xs text-muted">Loyalty</span>
+                              <span className="text-body-sm text-muted">Loyalty</span>
                               <span className="font-medium">
                                 {formatNationalNppStat(selectedNPPData.stats.loyalty)}/100
                               </span>
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-xs text-muted">Ambition</span>
+                              <span className="text-body-sm text-muted">Ambition</span>
                               <span className="font-medium">
                                 {formatNationalNppStat(selectedNPPData.stats.ambition)}/100
                               </span>
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-xs text-muted">Stubbornness</span>
+                              <span className="text-body-sm text-muted">Stubbornness</span>
                               <span className="font-medium">
                                 {formatNationalNppStat(selectedNPPData.stats.stubbornness)}/100
                               </span>
@@ -653,7 +655,7 @@ export function NationalPartyInfluencePanel({
                       </div>
 
                       <div className="mb-4">
-                        <label className="mb-2 block text-sm font-medium">Select action</label>
+                        <label className="mb-2 block text-body font-medium">Select action</label>
                         <div className="grid gap-2 sm:grid-cols-2">
                           {actionsForSelectedTarget.map((action) => (
                             <button
@@ -674,8 +676,10 @@ export function NationalPartyInfluencePanel({
                               }`}
                             >
                               <div className="font-medium">{action.name}</div>
-                              <div className="mt-1 text-xs text-muted">{action.description}</div>
-                              <div className="mt-2 flex items-center gap-3 text-xs">
+                              <div className="mt-1 text-body-sm text-muted">
+                                {action.description}
+                              </div>
+                              <div className="mt-2 flex items-center gap-3 text-body-sm">
                                 <span>{action.actionCost} AP</span>
                                 {action.baseFundCost > 0 && (
                                   <span className="text-green-400">
@@ -684,7 +688,7 @@ export function NationalPartyInfluencePanel({
                                 )}
                               </div>
                               {!action.available && action.unavailableReason && (
-                                <div className="mt-2 text-xs text-red-400">
+                                <div className="mt-2 text-body-sm text-red-400">
                                   {action.unavailableReason}
                                 </div>
                               )}
@@ -697,7 +701,7 @@ export function NationalPartyInfluencePanel({
                         <div className="space-y-4 border-t border-card-border pt-4">
                           {selectedAction === "oppose_candidate" && (
                             <div>
-                              <label className="mb-2 block text-sm font-medium">
+                              <label className="mb-2 block text-body font-medium">
                                 Select election
                               </label>
                               <select
@@ -706,7 +710,7 @@ export function NationalPartyInfluencePanel({
                                   setSelectedElection(e.target.value);
                                   setSelectedCandidate("");
                                 }}
-                                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                               >
                                 <option value="">-- Select an election --</option>
                                 {electionsInState.map((election) => (
@@ -716,7 +720,7 @@ export function NationalPartyInfluencePanel({
                                 ))}
                               </select>
                               {electionsInState.length === 0 && (
-                                <p className="mt-1 text-xs text-muted">
+                                <p className="mt-1 text-body-sm text-muted">
                                   No active elections in{" "}
                                   {getStateDisplayName(selectedState, data.stateNames)}
                                 </p>
@@ -726,13 +730,13 @@ export function NationalPartyInfluencePanel({
 
                           {selectedAction === "oppose_candidate" && selectedElection && (
                             <div>
-                              <label className="mb-2 block text-sm font-medium">
+                              <label className="mb-2 block text-body font-medium">
                                 Select candidate
                               </label>
                               <select
                                 value={selectedCandidate}
                                 onChange={(e) => setSelectedCandidate(e.target.value)}
-                                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                               >
                                 <option value="">-- Select a candidate --</option>
                                 {(() => {
@@ -764,7 +768,7 @@ export function NationalPartyInfluencePanel({
 
                           {selectedAction === "relocate_state" && (
                             <div>
-                              <label className="mb-2 block text-sm font-medium">
+                              <label className="mb-2 block text-body font-medium">
                                 Select target {regionLabel}
                               </label>
                               <select
@@ -772,7 +776,7 @@ export function NationalPartyInfluencePanel({
                                 onChange={(e) => {
                                   setSelectedTargetState(e.target.value);
                                 }}
-                                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+                                className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
                               >
                                 <option value="">-- Select a target {regionLabelLower} --</option>
                                 {targetStateOptions.map((state) => (
@@ -791,7 +795,7 @@ export function NationalPartyInfluencePanel({
                                 ))}
                               </select>
                               {targetStateOptions.length === 0 && (
-                                <p className="mt-1 text-xs text-muted">
+                                <p className="mt-1 text-body-sm text-muted">
                                   No alternate {regionLabelLower}s are available for this relocation
                                   request.
                                 </p>
@@ -799,7 +803,7 @@ export function NationalPartyInfluencePanel({
                               {relocationBlockReason && (
                                 <p
                                   role="status"
-                                  className="mt-2 rounded-lg bg-yellow-500/20 p-2 text-xs text-yellow-400"
+                                  className="mt-2 rounded-lg bg-yellow-500/20 p-2 text-body-sm text-yellow-400"
                                 >
                                   {relocationBlockReason}
                                 </p>
@@ -828,7 +832,7 @@ export function NationalPartyInfluencePanel({
                                 (selectedAction === "relocate_state" &&
                                   (!selectedTargetState || relocationBlockReason !== null))
                               }
-                              className="flex-1 rounded-lg py-2 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                              className="flex-1 rounded-lg py-2 text-body font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
                               style={{ backgroundColor: partyColor }}
                             >
                               {executing ? "Attempting..." : "Execute now"}
@@ -842,7 +846,7 @@ export function NationalPartyInfluencePanel({
                                 (selectedAction === "relocate_state" &&
                                   (!selectedTargetState || relocationBlockReason !== null))
                               }
-                              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-sm font-medium transition-colors hover:bg-card-muted disabled:opacity-50"
+                              className="flex-1 rounded-lg border border-card-border bg-card py-2 text-body font-medium transition-colors hover:bg-card-muted disabled:opacity-50"
                             >
                               Add to queue
                             </button>

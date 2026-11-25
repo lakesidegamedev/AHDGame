@@ -32,7 +32,7 @@ export function RaceModeSwitch({ mode }: { mode: RaceMode }) {
             style={{
               padding: "6px 14px",
               fontFamily: FONT.mono,
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: ".08em",
               textTransform: "uppercase",
               textDecoration: "none",

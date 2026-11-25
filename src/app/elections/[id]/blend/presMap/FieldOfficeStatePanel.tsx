@@ -16,7 +16,7 @@ const BUTTON: CSSProperties = {
   background: "transparent",
   padding: "7px 13px",
   fontFamily: FONT.mono,
-  fontSize: 10.5,
+  fontSize: 12,
   letterSpacing: ".08em",
   fontWeight: 700,
   textTransform: "uppercase",
@@ -81,7 +81,7 @@ export function FieldOfficeCountyCard({
           {sub.name} County
         </div>
         {sub.officeId ? (
-          <span style={{ fontFamily: FONT.mono, fontSize: 10, color: BLEND.gold }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 12, color: BLEND.gold }}>
             OFFICE OPEN
           </span>
         ) : null}
@@ -155,7 +155,7 @@ export function FieldOfficeCountyCard({
                   style={{
                     margin: "6px 0 0",
                     fontFamily: FONT.sans,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     color: BLEND.caution,
                   }}
                 >
@@ -222,7 +222,7 @@ export function FieldOfficeStatePanel({
         label={`Field offices in ${stateName}`}
         openWhen={active || layer.selectedCounty !== null}
       >
-        <p style={{ margin: 0, fontSize: 13, color: BLEND.muted }}>
+        <p style={{ margin: 0, fontSize: 12, color: BLEND.muted }}>
           {region.officeCount === 0
             ? "No offices here yet."
             : `${region.officeCount} office${region.officeCount === 1 ? "" : "s"}, turnout boost ${formatPct(region.effectPct)}.`}
@@ -239,7 +239,7 @@ export function FieldOfficeStatePanel({
                   gap: 8,
                   padding: "6px 0",
                   borderTop: `1px solid ${BLEND.hairline}`,
-                  fontSize: 13,
+                  fontSize: 12,
                 }}
               >
                 <button
@@ -271,7 +271,7 @@ export function FieldOfficeStatePanel({
                     onClick={() => void layer.closeOffice(o.id, o.label)}
                     disabled={layer.busy !== null}
                     aria-label={`Close the ${o.label} office`}
-                    style={{ ...BUTTON, padding: "3px 8px", fontSize: 9.5, color: BLEND.mutedDim }}
+                    style={{ ...BUTTON, padding: "3px 8px", fontSize: 12, color: BLEND.mutedDim }}
                   >
                     {layer.busy === `close:${o.id}` ? "..." : "Close"}
                   </button>
@@ -292,7 +292,7 @@ export function FieldOfficeStatePanel({
         ) : null}
 
         {(active || listCounties) && !view && !layer.loadError ? (
-          <p style={{ margin: "8px 0 0", fontSize: 12.5, color: BLEND.mutedDim }}>
+          <p style={{ margin: "8px 0 0", fontSize: 12, color: BLEND.mutedDim }}>
             Loading counties...
           </p>
         ) : null}
@@ -319,7 +319,7 @@ export function FieldOfficeStatePanel({
                       border: 0,
                       color: BLEND.ink,
                       font: "inherit",
-                      fontSize: 13,
+                      fontSize: 12,
                       cursor: "pointer",
                       textAlign: "left",
                     }}
@@ -341,7 +341,7 @@ export function FieldOfficeStatePanel({
             style={{
               margin: "8px 0 0",
               fontFamily: FONT.mono,
-              fontSize: 11,
+              fontSize: 12,
               color: layer.message.ok ? BLEND.positive : BLEND.negative,
             }}
           >
@@ -349,7 +349,7 @@ export function FieldOfficeStatePanel({
           </p>
         ) : null}
         {layer.loadError ? (
-          <p role="alert" style={{ margin: "8px 0 0", fontSize: 12.5, color: BLEND.negative }}>
+          <p role="alert" style={{ margin: "8px 0 0", fontSize: 12, color: BLEND.negative }}>
             {layer.loadError}
           </p>
         ) : null}

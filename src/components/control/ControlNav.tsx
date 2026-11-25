@@ -17,7 +17,7 @@ export function ControlNav({ groups, onNavigate }: ControlNavProps) {
     <nav aria-label="Control panel" className="flex flex-col gap-4 px-2 py-3">
       {groups.map(({ area, tools }) => (
         <div key={area.id} className="flex flex-col gap-0.5">
-          <div className="px-2.5 pb-1 text-body-xs font-medium uppercase tracking-wide text-muted">
+          <div className="px-2.5 pb-1 text-body-sm font-medium uppercase tracking-wide text-muted">
             {area.label}
           </div>
           {tools.map((tool) => {

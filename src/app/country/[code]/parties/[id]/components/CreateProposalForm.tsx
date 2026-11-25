@@ -277,7 +277,7 @@ export function CreateProposalForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="text-xs px-3 py-1.5 rounded-lg border border-card-border bg-card hover:bg-card-hover text-muted hover:text-foreground transition-colors"
+        className="text-body-sm px-3 py-1.5 rounded-lg border border-card-border bg-card hover:bg-card-hover text-muted hover:text-foreground transition-colors"
       >
         + New proposal
       </button>
@@ -287,14 +287,17 @@ export function CreateProposalForm({
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">New proposal</h3>
-        <button onClick={() => setOpen(false)} className="text-xs text-muted hover:text-foreground">
+        <h3 className="text-body-lg font-semibold">New proposal</h3>
+        <button
+          onClick={() => setOpen(false)}
+          className="text-body-sm text-muted hover:text-foreground"
+        >
           Cancel
         </button>
       </div>
 
       {/* Type selector */}
-      {isDefaultParty && <p className="text-sm text-muted">{DEFAULT_PARTY_RENAME_ERROR}</p>}
+      {isDefaultParty && <p className="text-body text-muted">{DEFAULT_PARTY_RENAME_ERROR}</p>}
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -310,7 +313,7 @@ export function CreateProposalForm({
           <button
             key={t}
             onClick={() => handleTypeChange(t)}
-            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+            className={`text-body-sm px-3 py-1 rounded-full border transition-colors ${
               type === t
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-card-border text-muted hover:text-foreground"
@@ -337,9 +340,9 @@ export function CreateProposalForm({
       {type === "rename" && (
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-muted mb-1">New name</label>
+            <label className="block text-body-sm text-muted mb-1">New name</label>
             <input
-              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-sm"
+              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-body"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               maxLength={40}
@@ -347,9 +350,9 @@ export function CreateProposalForm({
             />
           </div>
           <div>
-            <label className="block text-xs text-muted mb-1">New abbreviation</label>
+            <label className="block text-body-sm text-muted mb-1">New abbreviation</label>
             <input
-              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-sm"
+              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-body"
               value={newAbbreviation}
               onChange={(e) => setNewAbbreviation(e.target.value)}
               maxLength={6}
@@ -372,7 +375,7 @@ export function CreateProposalForm({
               <button
                 key={opt.value}
                 onClick={() => setAxis(opt.value)}
-                className={`text-xs py-1.5 rounded border transition-colors ${
+                className={`text-body-sm py-1.5 rounded border transition-colors ${
                   axis === opt.value
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-card-border text-muted hover:text-foreground"
@@ -385,7 +388,7 @@ export function CreateProposalForm({
           <div className="flex gap-2">
             <button
               onClick={() => setDirection(-1)}
-              className={`flex-1 text-xs py-1.5 rounded border transition-colors ${
+              className={`flex-1 text-body-sm py-1.5 rounded border transition-colors ${
                 direction === -1
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-card-border text-muted hover:text-foreground"
@@ -395,7 +398,7 @@ export function CreateProposalForm({
             </button>
             <button
               onClick={() => setDirection(1)}
-              className={`flex-1 text-xs py-1.5 rounded border transition-colors ${
+              className={`flex-1 text-body-sm py-1.5 rounded border transition-colors ${
                 direction === 1
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-card-border text-muted hover:text-foreground"
@@ -404,7 +407,7 @@ export function CreateProposalForm({
               Right (+1)
             </button>
           </div>
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Position shifts move the selected axis by ±1 (clamped to ±5). Each axis carries its own
             336-turn cooldown after a successful shift.
           </p>
@@ -414,12 +417,12 @@ export function CreateProposalForm({
       {/* Election method */}
       {type === "electionMethod" && (
         <div className="space-y-2">
-          <label className="block text-xs text-muted">Leadership election method</label>
+          <label className="block text-body-sm text-muted">Leadership election method</label>
           {ELECTION_METHOD_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setElectionMethod(opt.value)}
-              className={`w-full text-left px-3 py-2 rounded border text-xs transition-colors ${
+              className={`w-full text-left px-3 py-2 rounded border text-body-sm transition-colors ${
                 electionMethod === opt.value
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-card-border text-muted hover:text-foreground"
@@ -435,7 +438,7 @@ export function CreateProposalForm({
       {/* Election duration */}
       {type === "electionDuration" && (
         <div className="space-y-2">
-          <label className="block text-xs text-muted">
+          <label className="block text-body-sm text-muted">
             Election duration (turns): 168 min (1 week), 420 max (2.5 weeks)
           </label>
           <input
@@ -443,11 +446,11 @@ export function CreateProposalForm({
             min={168}
             max={420}
             step={1}
-            className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-sm"
+            className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-body"
             value={electionDurationTurns}
             onChange={(e) => setElectionDurationTurns(Number(e.target.value))}
           />
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             ≈ {(electionDurationTurns / 168).toFixed(1)} week(s). Applies to new elections created
             after this proposal passes.
           </p>
@@ -457,14 +460,14 @@ export function CreateProposalForm({
       {/* Remove Officer */}
       {type === "removeOfficeHolder" && (
         <div>
-          <label className="block text-xs text-muted mb-1">Officer to remove</label>
+          <label className="block text-body-sm text-muted mb-1">Officer to remove</label>
           {loadingOfficers ? (
-            <p className="text-xs text-muted">Loading officers…</p>
+            <p className="text-body-sm text-muted">Loading officers…</p>
           ) : officers.length === 0 ? (
-            <p className="text-xs text-muted">No removable officers (all seats vacant).</p>
+            <p className="text-body-sm text-muted">No removable officers (all seats vacant).</p>
           ) : (
             <select
-              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-sm"
+              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-body"
               value={removeOfficerId}
               onChange={(e) => setRemoveOfficerId(e.target.value)}
             >
@@ -480,7 +483,7 @@ export function CreateProposalForm({
             </select>
           )}
           {!loadingOfficers && officers.some((o) => lockFor(o)) && (
-            <ul className="text-xs text-muted mt-1 space-y-0.5">
+            <ul className="text-body-sm text-muted mt-1 space-y-0.5">
               {officers.map((o) => {
                 const lock = lockFor(o);
                 return lock ? (
@@ -491,7 +494,7 @@ export function CreateProposalForm({
               })}
             </ul>
           )}
-          <p className="text-xs text-muted mt-1">
+          <p className="text-body-sm text-muted mt-1">
             The target is excluded from voting on their own removal. 60% of remaining filled
             committee + leadership roles must vote yes. If a chair is removed, the vice-chair acts
             as chair until a new chair is elected or admin-appointed. Removing a campaigner strips
@@ -505,7 +508,7 @@ export function CreateProposalForm({
       {/* Transaction approval mode */}
       {type === "transactionApprovalMode" && (
         <div className="space-y-2">
-          <label className="block text-xs text-muted">Treasury action approval mode</label>
+          <label className="block text-body-sm text-muted">Treasury action approval mode</label>
           {[
             {
               value: "double" as const,
@@ -526,7 +529,7 @@ export function CreateProposalForm({
                 key={opt.value}
                 onClick={() => !isCurrent && setTxnMode(opt.value)}
                 disabled={isCurrent}
-                className={`w-full text-left px-3 py-2 rounded border text-xs transition-colors ${
+                className={`w-full text-left px-3 py-2 rounded border text-body-sm transition-colors ${
                   isCurrent
                     ? "border-card-border text-muted opacity-50 cursor-not-allowed"
                     : txnMode === opt.value
@@ -542,7 +545,7 @@ export function CreateProposalForm({
               </button>
             );
           })}
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Affects future Send-to-Member and Transfer-to-State-Party actions only. Pending
             transactions already in flight finish in their original mode.
           </p>
@@ -552,12 +555,12 @@ export function CreateProposalForm({
       {/* Merge target */}
       {type === "merge" && (
         <div>
-          <label className="block text-xs text-muted mb-1">Merge into party</label>
+          <label className="block text-body-sm text-muted mb-1">Merge into party</label>
           {loadingParties ? (
-            <p className="text-xs text-muted">Loading parties…</p>
+            <p className="text-body-sm text-muted">Loading parties…</p>
           ) : (
             <select
-              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-sm"
+              className="w-full bg-background border border-card-border rounded px-3 py-1.5 text-body"
               value={targetPartyId}
               onChange={(e) => setTargetPartyId(e.target.value)}
             >
@@ -569,7 +572,7 @@ export function CreateProposalForm({
               ))}
             </select>
           )}
-          <p className="text-xs text-muted mt-1">
+          <p className="text-body-sm text-muted mt-1">
             Both committees must pass for the merge to take effect.
           </p>
           <div className="mt-3">
@@ -578,12 +581,12 @@ export function CreateProposalForm({
         </div>
       )}
 
-      {msg && <p className="text-xs text-red-400">{msg}</p>}
+      {msg && <p className="text-body-sm text-red-400">{msg}</p>}
 
       <button
         onClick={handleSubmit}
         disabled={submitting}
-        className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+        className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-body font-medium hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         {submitting ? "Submitting…" : "Submit proposal"}
       </button>

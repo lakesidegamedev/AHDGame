@@ -17,14 +17,14 @@ export default function NationsView({ ledger }: { ledger: WorldTradeLedger }) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 sm:p-5">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-bold text-foreground">
+        <h3 className="text-body-lg font-bold text-foreground">
           Trade balance league <span className="font-normal text-muted">· net exports, ranked</span>
         </h3>
-        <span className="text-[10px] text-muted">◀ deficit · surplus ▶</span>
+        <span className="text-body-sm text-muted">◀ deficit · surplus ▶</span>
       </div>
 
       {ledger.nations.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">No nations are trading yet.</p>
+        <p className="py-6 text-center text-body text-muted">No nations are trading yet.</p>
       )}
 
       {ledger.nations.map((n, i) => {
@@ -34,16 +34,18 @@ export default function NationsView({ ledger }: { ledger: WorldTradeLedger }) {
             key={n.code}
             className="flex items-center gap-3 border-t border-card-border py-3 first:border-t-0"
           >
-            <span className="w-5 text-right font-mono text-xs font-bold text-muted">{i + 1}</span>
+            <span className="w-5 text-right font-mono text-body-sm font-bold text-muted">
+              {i + 1}
+            </span>
             <span
-              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-bold"
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-mono text-body-sm font-bold"
               style={{ border: `1.5px solid ${n.hue}`, color: n.hue, background: `${n.hue}24` }}
             >
               {n.code}
             </span>
             <div className="w-40 min-w-0">
-              <div className="truncate text-sm font-semibold text-foreground">{n.name}</div>
-              <div className="font-mono text-[10.5px] text-muted">
+              <div className="truncate text-body font-semibold text-foreground">{n.name}</div>
+              <div className="font-mono text-body-sm text-muted">
                 exp {formatAmountChip(n.exports)} · imp {formatAmountChip(n.imports)}
               </div>
             </div>
@@ -63,7 +65,7 @@ export default function NationsView({ ledger }: { ledger: WorldTradeLedger }) {
               </div>
             </div>
             <span
-              className={`inline-flex w-24 items-center justify-end gap-1 text-right font-mono text-sm font-bold tabular-nums ${directionToneClass(
+              className={`inline-flex w-24 items-center justify-end gap-1 text-right font-mono text-body font-bold tabular-nums ${directionToneClass(
                 n.net
               )}`}
             >

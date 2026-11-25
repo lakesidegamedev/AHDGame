@@ -50,7 +50,7 @@ export function AskLengthSelect({
       onChange={(e) => onChange(parseLength(e.target.value))}
       aria-label="Answer length"
       title={LENGTHS.find((l) => l.id === value)?.hint}
-      className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-[11px]"
+      className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-body-lg text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-body-sm"
     >
       {LENGTHS.map((l) => (
         <option key={l.id} value={l.id}>

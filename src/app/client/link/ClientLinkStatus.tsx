@@ -42,13 +42,13 @@ export function ClientLinkStatus({
     >
       {status === "linked" && (
         <div
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-2xl text-success"
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-heading text-success"
           aria-hidden="true"
         >
           ✓
         </div>
       )}
-      <h1 className="mt-5 text-3xl font-semibold tracking-tight">
+      <h1 className="mt-5 text-display font-semibold tracking-tight">
         {t(`${status}Title`, { device })}
       </h1>
       <p className="mt-3 text-muted">{t(`${status}Description`, { device, username })}</p>

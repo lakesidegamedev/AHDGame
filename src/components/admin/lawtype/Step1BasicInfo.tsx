@@ -21,7 +21,7 @@ export function Step1BasicInfo({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label className="block text-body font-medium mb-1">
             ID <span className="text-red-400">*</span>
           </label>
           <input
@@ -32,15 +32,15 @@ export function Step1BasicInfo({
             }
             disabled={isEditing}
             placeholder="us_federal_education_funding"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm disabled:opacity-50"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body disabled:opacity-50"
           />
-          <p className="text-[10px] text-muted mt-1">
+          <p className="text-body-sm text-muted mt-1">
             snake_case, cannot be changed after creation
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label className="block text-body font-medium mb-1">
             Name <span className="text-red-400">*</span>
           </label>
           <input
@@ -48,31 +48,31 @@ export function Step1BasicInfo({
             value={state.name}
             onChange={(e) => updateField("name", e.target.value)}
             placeholder="Federal Education Funding"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
+        <label className="block text-body font-medium mb-1">Description</label>
         <textarea
           value={state.description}
           onChange={(e) => updateField("description", e.target.value)}
           placeholder="Bills affecting federal K-12 and higher education spending"
           rows={2}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label className="block text-body font-medium mb-1">
             Policy domain <span className="text-red-400">*</span>
           </label>
           <select
             value={state.policyDomain}
             onChange={(e) => updateField("policyDomain", e.target.value)}
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm capitalize"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body capitalize"
           >
             {policyDomains.map((d) => (
               <option key={d} value={d} className="capitalize">
@@ -83,19 +83,19 @@ export function Step1BasicInfo({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Sub-Category</label>
+          <label className="block text-body font-medium mb-1">Sub-Category</label>
           <input
             type="text"
             value={state.subCategory}
             onChange={(e) => updateField("subCategory", e.target.value)}
             placeholder="Federal funding"
-            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Allowed scope</label>
+        <label className="block text-body font-medium mb-2">Allowed scope</label>
         <div className="space-y-2">
           {[
             {
@@ -124,8 +124,8 @@ export function Step1BasicInfo({
                 className="mt-1"
               />
               <div>
-                <span className="text-sm font-medium">{opt.label}</span>
-                <p className="text-[10px] text-muted">{opt.desc}</p>
+                <span className="text-body font-medium">{opt.label}</span>
+                <p className="text-body-sm text-muted">{opt.desc}</p>
               </div>
             </label>
           ))}
@@ -133,7 +133,7 @@ export function Step1BasicInfo({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Budget cost (%)</label>
+        <label className="block text-body font-medium mb-1">Budget cost (%)</label>
         <div className="flex items-center gap-3">
           <input
             type="number"
@@ -143,21 +143,21 @@ export function Step1BasicInfo({
             value={state.budgetCost}
             onChange={(e) => updateField("budgetCost", parseFloat(e.target.value) || 0)}
             placeholder="0"
-            className="w-32 rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+            className="w-32 rounded-lg border border-card-border bg-background px-3 py-2 text-body"
           />
-          <span className="text-sm text-muted">%</span>
+          <span className="text-body text-muted">%</span>
         </div>
-        <p className="text-[10px] text-yellow-400/80 mt-1">
+        <p className="text-body-sm text-yellow-400/80 mt-1">
           Budgets not yet implemented. This value is stored but has no effect.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Budget category</label>
+        <label className="block text-body font-medium mb-1">Budget category</label>
         <select
           value={state.budgetCategory}
           onChange={(e) => updateField("budgetCategory", e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body"
         >
           <option value="">Select category...</option>
           <option value="healthcare">Healthcare</option>
@@ -170,13 +170,13 @@ export function Step1BasicInfo({
           <option value="environment">Environment</option>
           <option value="other">Other</option>
         </select>
-        <p className="text-[10px] text-muted mt-1">
+        <p className="text-body-sm text-muted mt-1">
           Which spending category this legislation falls under.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Persistence</label>
+        <label className="block text-body font-medium mb-2">Persistence</label>
         <div className="space-y-2">
           {[
             {
@@ -211,7 +211,7 @@ export function Step1BasicInfo({
               />
               <div>
                 <span
-                  className={`text-sm font-medium ${
+                  className={`text-body font-medium ${
                     state.isPermanent === opt.value
                       ? opt.color === "green"
                         ? "text-green-400"
@@ -221,7 +221,7 @@ export function Step1BasicInfo({
                 >
                   {opt.label}
                 </span>
-                <p className="text-[10px] text-muted">{opt.desc}</p>
+                <p className="text-body-sm text-muted">{opt.desc}</p>
               </div>
             </label>
           ))}

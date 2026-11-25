@@ -23,12 +23,12 @@ export function GroupParticipation({
   const pending = member.effectiveTurn !== null && member.effectiveTurn > data.currentTurn;
   return (
     <section className="rounded-xl border border-card-border bg-card p-5 space-y-3">
-      <p className="text-xs uppercase tracking-wide text-muted">
+      <p className="text-body-sm uppercase tracking-wide text-muted">
         {t(member.isRoot ? "supplyUI.roleParent" : "supplyUI.rolePlayer")}
       </p>
       <h3 className="font-semibold">{member.name}</h3>
-      {independent && <p className="text-sm text-muted">{t("participationUnavailable")}</p>}
-      <label className="flex items-center gap-3 text-sm">
+      {independent && <p className="text-body text-muted">{t("participationUnavailable")}</p>}
+      <label className="flex items-center gap-3 text-body">
         <input
           className="h-4 w-4 accent-primary"
           type="checkbox"
@@ -38,7 +38,7 @@ export function GroupParticipation({
         />
         {t("receiveSupply")}
       </label>
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {member.receiving === null
           ? t("private")
           : independent
@@ -50,23 +50,23 @@ export function GroupParticipation({
                 : t("optedOut")}
       </p>
       {pending && member.receiving !== null && !independent && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           {t("supplyUI.currentParticipation", {
             status: t(member.receiving ? "participating" : "optedOut"),
           })}
         </p>
       )}
-      <p className="text-xs text-muted">{t("receivingOnly")}</p>
-      {member.canEdit && <p className="text-xs text-muted">{t("supplyUI.ownControl")}</p>}
+      <p className="text-body-sm text-muted">{t("receivingOnly")}</p>
+      {member.canEdit && <p className="text-body-sm text-muted">{t("supplyUI.ownControl")}</p>}
       {!office && (
         <Link
-          className="inline-block text-sm text-info underline"
+          className="inline-block text-body text-info underline"
           href={"/corporation/" + member.pathId + (member.canEdit ? "?tab=ceo" : "")}
         >
           {t(member.canEdit ? "supplyUI.ceoOffice" : "viewCorporation")}
         </Link>
       )}
-      {!member.canEdit && <p className="text-xs text-muted">{t("ownCeoOnly")}</p>}
+      {!member.canEdit && <p className="text-body-sm text-muted">{t("ownCeoOnly")}</p>}
     </section>
   );
 }

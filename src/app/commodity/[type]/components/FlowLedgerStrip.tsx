@@ -22,7 +22,7 @@ export default function FlowLedgerStrip({
         <span className="text-body-sm font-medium text-muted">
           World totals, ignoring shipping limits
         </span>
-        <span className="text-[10px] text-muted tabular-nums">turn {flows.turn}</span>
+        <span className="text-body-sm text-muted tabular-nums">turn {flows.turn}</span>
       </div>
       <div
         className={`grid gap-3 text-center ${
@@ -30,43 +30,43 @@ export default function FlowLedgerStrip({
         }`}
       >
         <div title="Pooled availability: the smaller of world supply and world ledger demand. This does not apply route or country reachability.">
-          <div className="text-sm font-bold tabular-nums text-foreground">
+          <div className="text-body font-bold tabular-nums text-foreground">
             {formatUnits(flows.clearedUnitsPooled, unit)}
           </div>
-          <div className="text-[10px] text-muted mt-0.5">Could sell</div>
+          <div className="text-body-sm text-muted mt-0.5">Could sell</div>
         </div>
         <div title="Calibrated world ledger demand above world supply. Reachable buyer intent can be higher because this pool ignores location and delivery limits.">
           <div
-            className={`text-sm font-bold tabular-nums ${
+            className={`text-body font-bold tabular-nums ${
               flows.unmetDemandUnitsPooled > 0 ? "text-error" : "text-muted"
             }`}
           >
             {formatUnits(flows.unmetDemandUnitsPooled, unit)}
           </div>
-          <div className="text-[10px] text-muted mt-0.5">Orders above supply</div>
+          <div className="text-body-sm text-muted mt-0.5">Orders above supply</div>
         </div>
         <div title="World supply above calibrated world ledger demand. This pooled estimate does not apply route or country reachability.">
           <div
-            className={`text-sm font-bold tabular-nums ${
+            className={`text-body font-bold tabular-nums ${
               flows.surplusUnitsPooled > 0 ? "text-warning" : "text-muted"
             }`}
           >
             {formatUnits(flows.surplusUnitsPooled, unit)}
           </div>
-          <div className="text-[10px] text-muted mt-0.5">Supply above orders</div>
+          <div className="text-body-sm text-muted mt-0.5">Supply above orders</div>
         </div>
         {flows.stockUnits != null && (
           <div title="Global stockpile after this turn's flows and spoilage. Not yet affecting prices.">
-            <div className="text-sm font-bold tabular-nums text-foreground">
+            <div className="text-body font-bold tabular-nums text-foreground">
               {formatUnits(flows.stockUnits, unit)}
             </div>
-            <div className="text-[10px] text-muted mt-0.5">Stock</div>
+            <div className="text-body-sm text-muted mt-0.5">Stock</div>
           </div>
         )}
         {flows.stockUnits != null && (
           <div title="How many turns the current stockpile would satisfy demand with zero production. Low cover means a shock reprices fast; high cover means an overhang.">
             <div
-              className={`text-sm font-bold tabular-nums ${
+              className={`text-body font-bold tabular-nums ${
                 flows.coverTurns == null
                   ? "text-muted"
                   : flows.coverTurns < 6
@@ -78,7 +78,7 @@ export default function FlowLedgerStrip({
             >
               {flows.coverTurns == null ? "—" : `${flows.coverTurns}t`}
             </div>
-            <div className="text-[10px] text-muted mt-0.5">Turns of stock</div>
+            <div className="text-body-sm text-muted mt-0.5">Turns of stock</div>
           </div>
         )}
       </div>

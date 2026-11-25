@@ -29,7 +29,7 @@ export function PositionLabel({ value, axis, countryId, className = "" }: Positi
   const axisName = axis === "economic" ? "Economic" : "Social";
 
   return (
-    <Tooltip content={<span className="font-mono text-xs">{`${axisName}: ${score}`}</span>}>
+    <Tooltip content={<span className="font-mono text-body-sm">{`${axisName}: ${score}`}</span>}>
       <span data-score={score} className={`cursor-help ${colorClass} ${className}`}>
         {label}
       </span>

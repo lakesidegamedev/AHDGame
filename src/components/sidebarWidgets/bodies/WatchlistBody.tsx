@@ -44,7 +44,8 @@ export function WatchlistBody({
   const watchlist = useWatchlist();
   // Rows the player just removed disappear before the next refresh.
   const rows = data.rows.filter((row) => watchlist.isWatched(row));
-  if (rows.length === 0) return <p className="text-xs leading-relaxed text-muted">{t("empty")}</p>;
+  if (rows.length === 0)
+    return <p className="text-body-sm leading-relaxed text-muted">{t("empty")}</p>;
   return (
     <ul className="space-y-0.5">
       {rows.map((row) => {
@@ -52,12 +53,12 @@ export function WatchlistBody({
         return (
           <li key={`${row.kind}:${row.id}`} className="flex items-center gap-1">
             {row.name === null ? (
-              <span className="flex min-w-0 flex-1 px-1 py-1 text-xs text-muted">{name}</span>
+              <span className="flex min-w-0 flex-1 px-1 py-1 text-body-sm text-muted">{name}</span>
             ) : (
               <Link
                 href={rowHref(row)}
                 onClick={onNavigate}
-                className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
+                className="flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-1 text-body-sm hover:bg-white/5"
               >
                 <span
                   className={`shrink-0 truncate font-semibold text-foreground ${compact ? "w-20" : "w-24"}`}
@@ -80,7 +81,7 @@ export function WatchlistBody({
               onClick={() => watchlist.remove(row)}
               aria-label={t("remove", { name })}
               title={t("remove", { name })}
-              className="shrink-0 rounded px-1.5 py-1 text-xs text-muted hover:bg-white/5 hover:text-foreground"
+              className="shrink-0 rounded px-1.5 py-1 text-body-sm text-muted hover:bg-white/5 hover:text-foreground"
             >
               <span aria-hidden="true">×</span>
             </button>

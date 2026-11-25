@@ -109,21 +109,21 @@ function Pagination({
   const end = Math.min(page * PAGE_SIZE, total);
   return (
     <div className="flex items-center justify-between mt-3 pt-3 border-t border-card-border">
-      <span className="text-xs text-muted tabular-nums">
+      <span className="text-body-sm text-muted tabular-nums">
         {start}–{end} of {total}
       </span>
       <div className="flex gap-1">
         <button
           onClick={onPrev}
           disabled={page === 1}
-          className="px-2 py-1 text-xs rounded-md border border-card-border text-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-2 py-1 text-body-sm rounded-md border border-card-border text-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           ‹ Prev
         </button>
         <button
           onClick={onNext}
           disabled={page === totalPages}
-          className="px-2 py-1 text-xs rounded-md border border-card-border text-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-2 py-1 text-body-sm rounded-md border border-card-border text-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           Next ›
         </button>
@@ -143,8 +143,8 @@ function MarketingBudgets({
   const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / PAGE_SIZE)));
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 sm:col-span-2">
-      <h2 className="text-lg font-bold text-foreground mb-1">Marketing budgets by company</h2>
-      <p className="text-xs text-muted mb-3">
+      <h2 className="text-heading font-bold text-foreground mb-1">Marketing budgets by company</h2>
+      <p className="text-body-sm text-muted mb-3">
         Current configured daily budgets in ₳, the game&apos;s shared accounting unit (not pegged to
         any currency)
         {marketLabel ? `; companies by headquarters in the ${marketLabel.toLowerCase()}` : ""}.{" "}
@@ -152,7 +152,7 @@ function MarketingBudgets({
         delivery.
       </p>
       {rows.length === 0 && (
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           No companies with positive marketing budgets in this market.
         </p>
       )}
@@ -161,10 +161,10 @@ function MarketingBudgets({
           <Link
             key={c.corpId}
             href={`/corporation/${c.sequentialId ?? c.corpId}`}
-            className="flex items-center justify-between text-sm hover:bg-card-elevated/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
+            className="flex items-center justify-between text-body hover:bg-card-elevated/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs text-muted tabular-nums font-mono w-4 text-right shrink-0">
+              <span className="text-body-sm text-muted tabular-nums font-mono w-4 text-right shrink-0">
                 {(currentPage - 1) * PAGE_SIZE + i + 1}
               </span>
               <CorporationLogo
@@ -175,7 +175,7 @@ function MarketingBudgets({
               />
               <span className="text-foreground font-medium truncate">{c.name}</span>
               {c.typeLabel && (
-                <span className="text-[10px] text-muted shrink-0">{c.typeLabel}</span>
+                <span className="text-body-sm text-muted shrink-0">{c.typeLabel}</span>
               )}
             </div>
             <span className="text-foreground font-medium tabular-nums shrink-0 ml-2">
@@ -248,8 +248,8 @@ export default function TopProducersConsumers({
     <div className="grid sm:grid-cols-2 gap-6 mb-6">
       {topProducers.length > 0 && (
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="text-lg font-bold text-foreground mb-1">Top producers</h2>
-          <p className="text-xs text-muted mb-3">
+          <h2 className="text-heading font-bold text-foreground mb-1">Top producers</h2>
+          <p className="text-body-sm text-muted mb-3">
             {settled
               ? "Companies by units offered on the market, with their share of what companies offered. With the rows below they add up to the market's supply"
               : extractionBasis
@@ -263,10 +263,10 @@ export default function TopProducersConsumers({
               <Link
                 key={c.corpId}
                 href={`/corporation/${c.sequentialId ?? c.corpId}`}
-                className="flex items-center justify-between text-sm hover:bg-card-elevated/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
+                className="flex items-center justify-between text-body hover:bg-card-elevated/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs text-muted tabular-nums font-mono w-4 text-right shrink-0">
+                  <span className="text-body-sm text-muted tabular-nums font-mono w-4 text-right shrink-0">
                     {(producerPage - 1) * PAGE_SIZE + i + 1}
                   </span>
                   <CorporationLogo
@@ -277,13 +277,13 @@ export default function TopProducersConsumers({
                   />
                   <span className="text-foreground font-medium truncate">{c.name}</span>
                   {c.typeLabel && (
-                    <span className="text-[10px] text-muted shrink-0">{c.typeLabel}</span>
+                    <span className="text-body-sm text-muted shrink-0">{c.typeLabel}</span>
                   )}
                 </div>
                 <span className="text-success font-medium tabular-nums shrink-0 ml-2">
                   {formatUnits(c.units, unit)}
                   {producerTotalUnits > 0 && (
-                    <span className="ml-1.5 text-xs text-muted">
+                    <span className="ml-1.5 text-body-sm text-muted">
                       {Math.round((Math.max(0, c.units) / producerTotalUnits) * 100)}%
                     </span>
                   )}
@@ -312,8 +312,8 @@ export default function TopProducersConsumers({
 
       {(topConsumers.length > 0 || syntheticDemandSources.length > 0) && (
         <div className="rounded-xl border border-card-border bg-card p-6">
-          <h2 className="text-lg font-bold text-foreground mb-1">Top consumers</h2>
-          <p className="text-xs text-muted mb-3">
+          <h2 className="text-heading font-bold text-foreground mb-1">Top consumers</h2>
+          <p className="text-body-sm text-muted mb-3">
             {settled
               ? "Companies by units ordered on the market (plant inputs and marketing). With the rows below they add up to the market's demand"
               : "Largest corporations by estimated input demand (model estimates, not in the same unit as the market totals)"}
@@ -323,16 +323,16 @@ export default function TopProducersConsumers({
             {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
             {settled ? `. Figures are ${PER_TURN}.` : "."}
           </p>
-          {consumerNote && <p className="text-xs text-muted mb-3">{consumerNote}</p>}
-          {governmentNote && <p className="text-xs text-muted mb-3">{governmentNote}</p>}
+          {consumerNote && <p className="text-body-sm text-muted mb-3">{consumerNote}</p>}
+          {governmentNote && <p className="text-body-sm text-muted mb-3">{governmentNote}</p>}
           {fillNotes && (
-            <p className="text-xs text-muted mb-3">
+            <p className="text-body-sm text-muted mb-3">
               {fillNotes.totals}
               {fillNotes.sharing ? ` ${fillNotes.sharing}` : ""}
             </p>
           )}
           {demandGap && (
-            <p className="text-xs text-muted mb-3">
+            <p className="text-body-sm text-muted mb-3">
               Company figures are estimated from plant output and utilisation, not recorded orders.
               {demandGap.over > 0
                 ? ` The listed buyers add up to ${formatUnits(demandGap.over, unit)} more than the recorded demand of ${formatUnits(marketDemand ?? 0, unit)}.`
@@ -344,10 +344,10 @@ export default function TopProducersConsumers({
               <Link
                 key={c.corpId}
                 href={`/corporation/${c.sequentialId ?? c.corpId}`}
-                className="flex items-center justify-between text-sm hover:bg-card-elevated/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
+                className="flex items-center justify-between text-body hover:bg-card-elevated/50 -mx-2 px-2 py-1 rounded-lg transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs text-muted tabular-nums font-mono w-4 text-right shrink-0">
+                  <span className="text-body-sm text-muted tabular-nums font-mono w-4 text-right shrink-0">
                     {(consumerPage - 1) * PAGE_SIZE + i + 1}
                   </span>
                   <CorporationLogo
@@ -358,7 +358,7 @@ export default function TopProducersConsumers({
                   />
                   <span className="text-foreground font-medium truncate">{c.name}</span>
                   {c.typeLabel && (
-                    <span className="text-[10px] text-muted shrink-0">{c.typeLabel}</span>
+                    <span className="text-body-sm text-muted shrink-0">{c.typeLabel}</span>
                   )}
                 </div>
                 <span className="text-error font-medium tabular-nums shrink-0 ml-2">
@@ -371,22 +371,22 @@ export default function TopProducersConsumers({
               syntheticDemandSources?.map((source) => (
                 <div
                   key={source.name}
-                  className="flex items-center justify-between text-sm -mx-2 px-2 py-1 rounded-lg bg-card-elevated/30 border border-dashed border-card-border"
+                  className="flex items-center justify-between text-body -mx-2 px-2 py-1 rounded-lg bg-card-elevated/30 border border-dashed border-card-border"
                   title={source.description}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-muted tabular-nums font-mono w-4 text-right shrink-0">
+                    <span className="text-body-sm text-muted tabular-nums font-mono w-4 text-right shrink-0">
                       ⚙
                     </span>
                     <span className="text-muted font-medium truncate">{source.name}</span>
-                    <span className="text-[10px] text-muted shrink-0">
+                    <span className="text-body-sm text-muted shrink-0">
                       {source.receivedUnits != null ? "Buyer" : "System"}
                     </span>
                   </div>
                   <span className="text-muted font-medium tabular-nums shrink-0 ml-2 text-right">
                     {formatUnits(source.units, unit)}
                     {source.receivedUnits != null && (
-                      <span className="block text-[10px] font-normal">
+                      <span className="block text-body-sm font-normal">
                         {formatUnits(source.receivedUnits, unit)} received
                       </span>
                     )}
@@ -398,15 +398,15 @@ export default function TopProducersConsumers({
               demandGap &&
               demandGap.unlisted > 0 && (
                 <div
-                  className="flex items-center justify-between text-sm -mx-2 px-2 py-1 rounded-lg bg-card-elevated/30 border border-dashed border-card-border"
+                  className="flex items-center justify-between text-body -mx-2 px-2 py-1 rounded-lg bg-card-elevated/30 border border-dashed border-card-border"
                   title="Recorded demand that is not matched to a listed company or buyer group."
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-muted tabular-nums font-mono w-4 text-right shrink-0">
+                    <span className="text-body-sm text-muted tabular-nums font-mono w-4 text-right shrink-0">
                       ⚙
                     </span>
                     <span className="text-muted font-medium truncate">Other buyers</span>
-                    <span className="text-[10px] text-muted shrink-0">Unlisted</span>
+                    <span className="text-body-sm text-muted shrink-0">Unlisted</span>
                   </div>
                   <span className="text-muted font-medium tabular-nums shrink-0 ml-2 text-right">
                     {formatUnits(demandGap.unlisted, unit)}
@@ -454,12 +454,12 @@ function ListTotals({
   return (
     <div className="mt-2 space-y-1 border-t border-card-border pt-2" data-testid="list-totals">
       {rows.map((r) => (
-        <div key={r.key} className="flex items-center justify-between text-sm">
+        <div key={r.key} className="flex items-center justify-between text-body">
           <span className="text-muted">{r.label}</span>
           <span className="tabular-nums text-muted">{formatUnits(r.units, unit)}</span>
         </div>
       ))}
-      <div className="flex items-center justify-between text-sm font-semibold">
+      <div className="flex items-center justify-between text-body font-semibold">
         <span className="text-foreground">{totalLabel}</span>
         <span className="tabular-nums text-foreground">
           {formatUnits(total, unit)} {PER_TURN}

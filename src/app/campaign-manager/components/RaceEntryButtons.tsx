@@ -8,7 +8,7 @@ const BUTTON = {
   padding: "0 12px",
   borderRadius: 8,
   fontFamily: FONT.sans,
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 600,
 } as const;
 

@@ -63,7 +63,10 @@ export function SaleTaxPreview({
     };
   }, [corpId, shares, holdingTerm, pricePerShare, inputKey]);
   return (
-    <div className="rounded-lg border border-card-border p-3 text-sm space-y-2" aria-live="polite">
+    <div
+      className="rounded-lg border border-card-border p-3 text-body space-y-2"
+      aria-live="polite"
+    >
       <p>
         Tax is withheld from share-sale profits before cash reaches your wallet. Cost basis is
         deducted first; the selected holding term and your current tax tier determine the rates.
@@ -88,7 +91,7 @@ export function SaleTaxPreview({
           separate from the tax withheld on this sale.
         </p>
       )}
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         {unavailable
           ? "The estimate is unavailable. Check your selected shares and try again. "
           : ""}

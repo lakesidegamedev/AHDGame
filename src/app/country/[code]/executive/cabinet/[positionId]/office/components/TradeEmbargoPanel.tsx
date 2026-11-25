@@ -40,7 +40,7 @@ interface Props {
 const DEFAULT_DURATION = 24;
 
 const inputClass =
-  "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60";
+  "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60";
 
 /**
  * Trade-minister panel for unilateral, temporary embargoes (consumes
@@ -169,8 +169,8 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">Trade embargoes</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="text-heading font-semibold text-foreground">Trade embargoes</h2>
+        <p className="mt-1 text-body text-muted">
           Impose a temporary embargo on another nation&apos;s trade — block a flow outright or cap
           it — to deny them a commodity or refuse their goods. Takes effect next turn and expires
           automatically. Costs {TRADE_EMBARGO_CABINET_ACTION_COST} cabinet action; up to{" "}
@@ -182,7 +182,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
       {/* ── Active embargoes ── */}
       <div className="mb-5 space-y-4">
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-muted">
+          <h3 className="mb-2 text-body-lg font-semibold text-muted">
             Imposed by {resolveCountryName(countryId)}
           </h3>
           {loading ? (
@@ -201,7 +201,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
               ))}
             </ul>
           ) : imposedByUs.length === 0 ? (
-            <p className="text-sm text-muted/70">No active embargoes.</p>
+            <p className="text-body text-muted/70">No active embargoes.</p>
           ) : (
             <ul className="space-y-2">
               {imposedByUs.map((e) => (
@@ -210,8 +210,8 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
                   className="flex items-center justify-between gap-3 rounded-lg border border-card-border bg-card-elevated px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm text-foreground">{summaryOf(e)}</p>
-                    <p className="text-[11px] text-muted">
+                    <p className="truncate text-body text-foreground">{summaryOf(e)}</p>
+                    <p className="text-body-sm text-muted">
                       {e.origin === "legislation"
                         ? "By law"
                         : e.origin === "crisis"
@@ -247,7 +247,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
 
         {imposedOnUs.length > 0 && (
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-muted">
+            <h3 className="mb-2 text-body-lg font-semibold text-muted">
               Imposed on {resolveCountryName(countryId)}
             </h3>
             <ul className="space-y-2">
@@ -256,10 +256,10 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
                   key={e.id}
                   className="rounded-lg border border-card-border bg-card-elevated px-3 py-2"
                 >
-                  <p className="truncate text-sm text-foreground">
+                  <p className="truncate text-body text-foreground">
                     {resolveCountryName(e.sourceCountry)}: {summaryOf(e)}
                   </p>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-body-sm text-muted">
                     {e.origin === "legislation"
                       ? "By law"
                       : e.origin === "crisis"
@@ -277,11 +277,11 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
 
       {/* ── Impose form ── */}
       <div className="space-y-3 rounded-lg border border-card-border bg-card-elevated p-4">
-        <h3 className="text-sm font-semibold text-foreground">Impose an embargo</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">Impose an embargo</h3>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="emb-target" className="mb-1 block text-xs font-medium text-muted">
+            <label htmlFor="emb-target" className="mb-1 block text-body-sm font-medium text-muted">
               Target country
             </label>
             <select
@@ -301,7 +301,10 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
           </div>
 
           <div>
-            <label htmlFor="emb-commodity" className="mb-1 block text-xs font-medium text-muted">
+            <label
+              htmlFor="emb-commodity"
+              className="mb-1 block text-body-sm font-medium text-muted"
+            >
               Commodity
             </label>
             <select
@@ -321,7 +324,10 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
           </div>
 
           <div>
-            <label htmlFor="emb-direction" className="mb-1 block text-xs font-medium text-muted">
+            <label
+              htmlFor="emb-direction"
+              className="mb-1 block text-body-sm font-medium text-muted"
+            >
               Direction
             </label>
             <select
@@ -338,7 +344,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
           </div>
 
           <div>
-            <label htmlFor="emb-mode" className="mb-1 block text-xs font-medium text-muted">
+            <label htmlFor="emb-mode" className="mb-1 block text-body-sm font-medium text-muted">
               Restriction
             </label>
             <select
@@ -359,7 +365,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
 
           {mode === "cap" && (
             <div>
-              <label htmlFor="emb-cap" className="mb-1 block text-xs font-medium text-muted">
+              <label htmlFor="emb-cap" className="mb-1 block text-body-sm font-medium text-muted">
                 Cap (units)
               </label>
               <input
@@ -377,7 +383,10 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
           )}
 
           <div>
-            <label htmlFor="emb-duration" className="mb-1 block text-xs font-medium text-muted">
+            <label
+              htmlFor="emb-duration"
+              className="mb-1 block text-body-sm font-medium text-muted"
+            >
               Duration (turns)
             </label>
             <input
@@ -397,7 +406,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
               }
               className={inputClass}
             />
-            <p className="mt-1 text-[11px] italic text-muted/60">
+            <p className="mt-1 text-body-sm italic text-muted/60">
               Max {TRADE_EMBARGO_MAX_DURATION_TURNS} turns — use legislation for a durable embargo.
             </p>
           </div>
@@ -413,18 +422,18 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
             Impose embargo
           </Button>
           {canAct ? (
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               Costs {TRADE_EMBARGO_CABINET_ACTION_COST} cabinet action · {actionsRemaining}{" "}
               remaining
             </span>
           ) : (
-            <span className="text-xs text-muted">
+            <span className="text-body-sm text-muted">
               Only the trade minister may impose embargoes.
             </span>
           )}
           {feedback && (
             <span
-              className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+              className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
             >
               {feedback.message}
             </span>

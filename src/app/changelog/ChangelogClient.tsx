@@ -125,10 +125,10 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
           <div className="absolute bottom-0 left-0 right-0 p-6">
             <div className="flex items-end justify-between">
               <div>
-                <h1 className="mb-1 text-3xl font-bold tracking-tight text-white">
+                <h1 className="mb-1 text-display font-bold tracking-tight text-white">
                   {adminView ? "Developer changelog" : "What’s new"}
                 </h1>
-                <p className="text-sm text-white/70">
+                <p className="text-body text-white/70">
                   {adminView
                     ? "Per-release technical notes from v0.4.0 onward."
                     : "Release notes for A House Divided. Open a release to read the full post."}
@@ -137,7 +137,7 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
               {isAdmin && (
                 <button
                   onClick={() => setAdminView(!adminView)}
-                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                     adminView
                       ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                       : "border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
@@ -153,23 +153,27 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
         <HeroStatsStrip>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Latest</span>
-            <span className="text-base font-bold tabular-nums text-primary">v{latestVersion}</span>
+            <span className="text-body-lg font-bold tabular-nums text-primary">
+              v{latestVersion}
+            </span>
           </div>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Releases</span>
-            <span className="text-base font-bold tabular-nums text-foreground">
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
               {activePosts.length}
             </span>
           </div>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Feed since</span>
-            <span className="text-base font-bold tabular-nums text-foreground">{sinceLabel}</span>
+            <span className="text-body-lg font-bold tabular-nums text-foreground">
+              {sinceLabel}
+            </span>
           </div>
           <div className="flex flex-col px-5 py-3 min-w-max">
             <span className="text-body-sm font-medium text-muted">Archive</span>
             <Link
               href="/changelog/legacy"
-              className="text-base font-bold text-foreground hover:text-primary"
+              className="text-body-lg font-bold text-foreground hover:text-primary"
             >
               Pre-0.4.0
             </Link>
@@ -178,7 +182,7 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
             <span className="text-body-sm font-medium text-muted">NPP engine</span>
             <Link
               href="/changelog/npp"
-              className="text-base font-bold tabular-nums text-foreground hover:text-primary"
+              className="text-body-lg font-bold tabular-nums text-foreground hover:text-primary"
             >
               {NPP_ENGINE_VERSION}
             </Link>
@@ -206,7 +210,7 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
       </div>
 
       {filteredPosts.length === 0 ? (
-        <div className="py-8 text-center text-sm text-muted">
+        <div className="py-8 text-center text-body text-muted">
           No releases match the current filters.
         </div>
       ) : (
@@ -240,7 +244,7 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
           <button
             type="button"
             onClick={() => setShowLegacyDev(!showLegacyDev)}
-            className="text-sm font-medium text-primary hover:underline"
+            className="text-body font-medium text-primary hover:underline"
           >
             {showLegacyDev ? "Hide" : "Show"} developer history before v0.4.0
           </button>
@@ -268,7 +272,7 @@ export function ChangelogClient({ publicPosts }: ChangelogClientProps) {
         </div>
       )}
 
-      <p className="mt-10 text-center text-sm text-muted">
+      <p className="mt-10 text-center text-body text-muted">
         Looking for older player-facing notes?{" "}
         <Link href="/changelog/legacy" className="text-primary hover:underline">
           Browse the legacy changelog

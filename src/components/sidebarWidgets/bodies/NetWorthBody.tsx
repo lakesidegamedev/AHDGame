@@ -25,10 +25,10 @@ export function NetWorthBody({ data, compact }: { data: NetWorthWidgetData; comp
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-lg font-semibold tabular-nums text-foreground">
+        <span className="text-heading font-semibold tabular-nums text-foreground">
           {formatAmountAtRates(latest.value, ratesFor(latest.rate))}
         </span>
-        <span className="text-xs">
+        <span className="text-body-sm">
           <Change value={sinceLast} /> <span className="text-muted">{t("sinceLastTurn")}</span>
         </span>
       </div>
@@ -48,7 +48,7 @@ export function NetWorthBody({ data, compact }: { data: NetWorthWidgetData; comp
             }
             className="h-auto w-full"
           />
-          <p className="text-[11px] text-muted">
+          <p className="text-body-sm text-muted">
             <Change value={windowChange(values)} /> {t("overTurns", { count: values.length })}
           </p>
         </>

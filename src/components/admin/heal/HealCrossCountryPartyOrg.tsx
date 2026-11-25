@@ -29,8 +29,8 @@ export function HealCrossCountryPartyOrg() {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div>
-        <h3 className="font-semibold text-sm">Heal cross-country party organization</h3>
-        <p className="mt-1 text-xs text-muted">
+        <h3 className="font-semibold text-body-lg">Heal cross-country party organization</h3>
+        <p className="mt-1 text-body-sm text-muted">
           Removes statePartyOrg records where a party appears in states belonging to a different
           country (e.g., US parties in UK regions). This can happen if parties were created before
           country filtering was added.
@@ -46,7 +46,7 @@ export function HealCrossCountryPartyOrg() {
       />
 
       {diagnostic && (
-        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
+        <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-body-sm">
           {diagnostic.status === "ok" ? (
             <p className="text-success">{diagnostic.message}</p>
           ) : (
@@ -54,7 +54,7 @@ export function HealCrossCountryPartyOrg() {
               <p className="font-medium text-warning">{diagnostic.message}</p>
               {diagnostic.records.length > 0 && (
                 <div className="mt-2 max-h-48 overflow-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-body-sm">
                     <thead>
                       <tr className="text-left text-muted border-b border-card-border">
                         <th className="pb-1">State</th>

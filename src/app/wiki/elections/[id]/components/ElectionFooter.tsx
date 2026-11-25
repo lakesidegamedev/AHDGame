@@ -12,27 +12,27 @@ interface ElectionFooterProps {
 export function ElectionFooter({ election }: ElectionFooterProps) {
   return (
     <footer className="mt-12 border-t border-card-border pt-6 pb-4">
-      <h3 className="mb-4 text-base font-semibold text-foreground">See also</h3>
+      <h3 className="mb-4 text-body-lg font-semibold text-foreground">See also</h3>
       <div className="space-y-3">
         <div>
           <p className="mb-2 text-body-sm font-medium text-muted">Navigation</p>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/wiki/elections"
-              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-body text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               ← Election history
             </Link>
             <Link
               href={`/wiki/elections/browse/${election.year}/${election.electionType}`}
-              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-body text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               {election.year} {typeLabel(election.electionType, true)}
             </Link>
             {election.electionType !== "president" && (
               <Link
                 href={`/wiki/elections/browse/${election.state}/${election.electionType}`}
-                className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+                className="border-b border-card-border/60 py-2.5.5 text-body text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
               >
                 {election.stateName} {typeLabel(election.electionType)}
               </Link>
@@ -44,21 +44,21 @@ export function ElectionFooter({ election }: ElectionFooterProps) {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/wiki/election-mechanics"
-              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-body text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               Election mechanics
             </Link>
             {election.electionType !== "president" && (
               <Link
                 href={`/state/${election.state}`}
-                className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+                className="border-b border-card-border/60 py-2.5.5 text-body text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
               >
                 {election.stateName}
               </Link>
             )}
             <Link
               href="/wiki/parties"
-              className="border-b border-card-border/60 py-2.5.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
+              className="border-b border-card-border/60 py-2.5.5 text-body text-muted transition-colors hover:border-primary/40 hover:text-primary hover:bg-card/60"
             >
               Political parties
             </Link>
@@ -66,7 +66,7 @@ export function ElectionFooter({ election }: ElectionFooterProps) {
         </div>
       </div>
       <div className="mt-6 pt-4 border-t border-card-border/50">
-        <p className="text-xs text-muted/60 text-center">
+        <p className="text-body-sm text-muted/60 text-center">
           This article is part of the A House Divided wiki. All election data reflects in-game
           historical records.
         </p>

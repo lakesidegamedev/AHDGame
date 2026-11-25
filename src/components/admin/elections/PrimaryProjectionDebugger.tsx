@@ -141,24 +141,26 @@ export function PrimaryProjectionDebugger() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Primary projection debugger</h3>
-          <p className="mt-0.5 text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">
+            Primary projection debugger
+          </h3>
+          <p className="mt-0.5 text-body-sm text-muted">
             Read-only. Reconciles the per-state primary projection that powers
-            <code className="mx-1 rounded bg-card px-1 py-0.5 text-[11px]">
+            <code className="mx-1 rounded bg-card px-1 py-0.5 text-body-sm">
               /president/primary/[party]
             </code>
             against the per-state pages from a single canonical source.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted" htmlFor="primary-debug-party">
+          <label className="text-body-sm text-muted" htmlFor="primary-debug-party">
             Party
           </label>
           <select
             id="primary-debug-party"
             value={partyId}
             onChange={(e) => setPartyId(e.target.value)}
-            className="rounded-md border border-card-border bg-background px-2 py-1 text-xs"
+            className="rounded-md border border-card-border bg-background px-2 py-1 text-body-sm"
           >
             {!data?.partyOptions?.length && <option value="">—</option>}
             {data?.partyOptions?.map((p) => (
@@ -171,7 +173,7 @@ export function PrimaryProjectionDebugger() {
             type="button"
             onClick={() => fetchData(partyId)}
             disabled={loading}
-            className="rounded-md border border-card-border bg-background px-3 py-1 text-xs hover:bg-card disabled:opacity-50"
+            className="rounded-md border border-card-border bg-background px-3 py-1 text-body-sm hover:bg-card disabled:opacity-50"
           >
             {loading ? "Loading…" : "Refresh"}
           </button>
@@ -179,19 +181,19 @@ export function PrimaryProjectionDebugger() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-body-sm text-red-300">
           {error}
         </div>
       )}
 
       {data && !data.ok && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-body-sm text-amber-200">
           {data.message ?? apiErrorText(data, "Unknown error")}
         </div>
       )}
 
       {data?.warnings && data.warnings.length > 0 && (
-        <ul className="space-y-1 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
+        <ul className="space-y-1 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-body-sm text-amber-200">
           {data.warnings.map((w, i) => (
             <li key={i}>⚠ {w}</li>
           ))}
@@ -202,7 +204,7 @@ export function PrimaryProjectionDebugger() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Tile label="Party">
             {data.party.name}
-            <div className="text-[11px] text-muted">
+            <div className="text-body-sm text-muted">
               EP {data.party.economicPosition.toFixed(1)} · SP{" "}
               {data.party.socialPosition.toFixed(1)}
             </div>
@@ -215,13 +217,13 @@ export function PrimaryProjectionDebugger() {
 
       {candidates.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-card-border bg-card">
-          <div className="border-b border-card-border bg-background px-4 py-2 text-sm font-semibold text-foreground">
+          <div className="border-b border-card-border bg-background px-4 py-2 text-body font-semibold text-foreground">
             Candidate aggregates · vote share vs delegate share
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-body-sm">
               <thead>
-                <tr className="border-b border-card-border bg-background text-left text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border bg-background text-left text-body font-semibold text-foreground">
                   <th className="px-3 py-2">Candidate</th>
                   <th className="px-3 py-2 text-right" title="Sum across states">
                     National votes
@@ -252,7 +254,7 @@ export function PrimaryProjectionDebugger() {
                       <td className="px-3 py-2 font-semibold">
                         <span className={i === 0 ? "text-yellow-400" : ""}>{c.characterName}</span>
                         {c.isNPP && (
-                          <span className="ml-1.5 rounded bg-purple-500/20 px-1 py-0.5 text-[9px] text-purple-300">
+                          <span className="ml-1.5 rounded bg-purple-500/20 px-1 py-0.5 text-body-sm text-purple-300">
                             NPP
                           </span>
                         )}
@@ -307,7 +309,7 @@ export function PrimaryProjectionDebugger() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-card-border bg-background/60 px-4 py-2 text-[11px] text-muted">
+          <div className="border-t border-card-border bg-background/60 px-4 py-2 text-body-sm text-muted">
             <strong className="text-foreground/80">Reading the Δ column:</strong> Vote% is the sum
             of every state&apos;s projected/actual votes for that candidate, divided by all primary
             votes. Del. share is projected delegates over total delegates. A large positive Δ means
@@ -319,16 +321,16 @@ export function PrimaryProjectionDebugger() {
 
       {perState.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-card-border bg-card">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border bg-background px-4 py-2 text-sm font-semibold text-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border bg-background px-4 py-2 text-body font-semibold text-foreground">
             <span>Per-state breakdown</span>
-            <div className="flex items-center gap-2 text-[10px] normal-case">
+            <div className="flex items-center gap-2 text-body-sm normal-case">
               <span>Filter:</span>
               {(["all", "actual", "projected", "none"] as const).map((f) => (
                 <button
                   key={f}
                   type="button"
                   onClick={() => setStateFilter(f)}
-                  className={`rounded px-2 py-0.5 text-[10px] uppercase tracking-wider transition-colors ${
+                  className={`rounded px-2 py-0.5 text-body-sm uppercase tracking-wider transition-colors ${
                     stateFilter === f
                       ? "bg-primary/30 text-foreground"
                       : "bg-background text-muted hover:text-foreground"
@@ -343,9 +345,9 @@ export function PrimaryProjectionDebugger() {
             </div>
           </div>
           <div className="max-h-[640px] overflow-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-body-sm">
               <thead className="sticky top-0 bg-background">
-                <tr className="border-b border-card-border text-left text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border text-left text-body font-semibold text-foreground">
                   <th className="px-3 py-2">State</th>
                   <th className="px-3 py-2">Source</th>
                   <th className="px-3 py-2">Alloc</th>
@@ -390,18 +392,18 @@ export function PrimaryProjectionDebugger() {
                           >
                             {s.allocationMethod}
                             {s.allocationSource === "chair-override" && (
-                              <span className="ml-1 text-[9px] uppercase text-amber-400">
+                              <span className="ml-1 text-body-sm uppercase text-amber-400">
                                 override
                               </span>
                             )}
                             {s.allocationSource === "tally" && (
-                              <span className="ml-1 text-[9px] uppercase text-green-400">
+                              <span className="ml-1 text-body-sm uppercase text-green-400">
                                 locked
                               </span>
                             )}
                             {s.isHybridApprox && (
                               <span
-                                className="ml-1 text-[9px] uppercase text-blue-400"
+                                className="ml-1 text-body-sm uppercase text-blue-400"
                                 title="Hybrid PR + per-CD WTA — collapsed to PR for the statewide pool"
                               >
                                 hybrid≈
@@ -439,7 +441,7 @@ export function PrimaryProjectionDebugger() {
                                   return (
                                     <div
                                       key={cid}
-                                      className="rounded-md border border-card-border bg-background p-2 text-[11px]"
+                                      className="rounded-md border border-card-border bg-background p-2 text-body-sm"
                                     >
                                       <div className="font-semibold text-foreground">{name}</div>
                                       <div className="text-muted">
@@ -472,7 +474,7 @@ function Tile({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="rounded-xl border border-card-border bg-card p-3">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold">{children}</div>
+      <div className="mt-0.5 text-body font-semibold">{children}</div>
     </div>
   );
 }

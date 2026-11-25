@@ -48,7 +48,7 @@ export function CanadianRidingCampaigns({
   }
   return (
     <div className="mt-4 space-y-2 border-t border-card-border pt-3">
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         Party officers can campaign to change riding placement within their party&apos;s provincial
         seat allocation. Uses the same political strength cost, cap and decay as US district
         campaigns.
@@ -61,7 +61,7 @@ export function CanadianRidingCampaigns({
           id="canadian-campaign-riding"
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
-          className="max-w-full rounded border border-card-border bg-card px-2 py-1 text-sm"
+          className="max-w-full rounded border border-card-border bg-card px-2 py-1 text-body"
         >
           {ridings.map((r) => (
             <option key={r.id} value={r.id}>
@@ -73,13 +73,13 @@ export function CanadianRidingCampaigns({
           type="button"
           disabled={busy || !selected}
           onClick={campaign}
-          className="rounded bg-accent px-3 py-1 text-sm text-white disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-body text-white disabled:opacity-50"
         >
           {busy ? "Campaigning..." : "Campaign Here"}
         </button>
       </div>
       {message && (
-        <p role="status" className="text-xs text-muted">
+        <p role="status" className="text-body-sm text-muted">
           {message}
         </p>
       )}

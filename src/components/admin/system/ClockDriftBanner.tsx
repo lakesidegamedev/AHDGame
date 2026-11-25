@@ -29,7 +29,7 @@ export function ClockDriftBanner({
 
   if (clock.pauseKind === "auto-drift") {
     return (
-      <div className="bg-error/10 text-error px-4 py-2 text-sm">
+      <div className="bg-error/10 text-error px-4 py-2 text-body">
         <strong>Cron auto-paused.</strong>{" "}
         {clock.pauseReason ?? "Drift exceeded auto-pause threshold."}{" "}
         <a className="underline" href={panelHref}>

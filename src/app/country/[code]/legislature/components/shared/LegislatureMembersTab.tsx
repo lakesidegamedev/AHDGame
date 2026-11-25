@@ -23,7 +23,7 @@ export function LegislatureMembersTab({
 }: Props) {
   if (loading) return <LegislatureRowsSkeleton kind="members" />;
   if (!members)
-    return <p className="text-center text-sm text-muted py-12">Composition data unavailable.</p>;
+    return <p className="text-center text-body text-muted py-12">Composition data unavailable.</p>;
   return (
     <LegislatureCompositionSection
       {...props}

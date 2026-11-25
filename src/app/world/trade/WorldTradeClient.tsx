@@ -76,13 +76,13 @@ export default function WorldTradeClient({ ledger }: { ledger: WorldTradeLedger 
                 role="tab"
                 aria-selected={view === t.id}
                 onClick={() => setView(t.id)}
-                className={`px-4 py-1.5 text-sm ${pillClass(view === t.id)}`}
+                className={`px-4 py-1.5 text-body ${pillClass(view === t.id)}`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <span className="text-[11.5px] text-muted">{NOTES[view]}</span>
+          <span className="text-body-sm text-muted">{NOTES[view]}</span>
         </div>
 
         {/* Section heading for the outline; each view carries its own title. */}

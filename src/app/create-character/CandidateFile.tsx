@@ -92,7 +92,7 @@ export function CandidateFile({
   return (
     <div className="overflow-hidden rounded-lg border border-card-border bg-card shadow-panel">
       <div className="flex items-center justify-between gap-2 border-b border-card-border px-4 py-2">
-        <span className="font-mono text-body-xs uppercase tracking-[0.18em] text-muted">
+        <span className="font-mono text-body-sm uppercase tracking-[0.18em] text-muted">
           Candidate file
         </span>
         {countryFlagUrl && countryName && (
@@ -165,7 +165,7 @@ export function CandidateFile({
         </div>
 
         {(portrait.error || header.error) && (
-          <p role="alert" className="mb-1.5 text-body-xs text-error">
+          <p role="alert" className="mb-1.5 text-body-sm text-error">
             {portrait.error ?? header.error}
           </p>
         )}
@@ -311,7 +311,7 @@ function ImagePickButton({
   return (
     <span className={`flex items-center gap-1 ${className}`}>
       <label
-        className="flex h-6 cursor-pointer items-center gap-1 rounded border border-card-border bg-background/90 px-1.5 text-body-xs text-muted transition-colors hover:border-primary/50 hover:text-foreground"
+        className="flex h-6 cursor-pointer items-center gap-1 rounded border border-card-border bg-background/90 px-1.5 text-body-sm text-muted transition-colors hover:border-primary/50 hover:text-foreground"
         title={`Add a ${label} (optional)`}
       >
         <svg
@@ -341,7 +341,7 @@ function ImagePickButton({
           type="button"
           onClick={image.clear}
           title={`Remove ${label}`}
-          className="flex h-6 w-6 items-center justify-center rounded border border-card-border bg-background/90 text-body-xs text-muted transition-colors hover:border-error/50 hover:text-error"
+          className="flex h-6 w-6 items-center justify-center rounded border border-card-border bg-background/90 text-body-sm text-muted transition-colors hover:border-error/50 hover:text-error"
         >
           <span aria-hidden>×</span>
           <span className="sr-only">{`Remove ${label}`}</span>
@@ -354,7 +354,7 @@ function ImagePickButton({
 function FileRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 px-4 py-1.5">
-      <dt className="shrink-0 font-mono text-body-xs uppercase tracking-[0.12em] text-muted">
+      <dt className="shrink-0 font-mono text-body-sm uppercase tracking-[0.12em] text-muted">
         {label}
       </dt>
       <dd className="min-w-0 text-right text-body-sm">{children}</dd>
@@ -377,12 +377,12 @@ function VerdictLine({
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0 text-body-sm text-muted">{label}</span>
         <span
-          className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-body-xs font-semibold ${meta.toneClass}`}
+          className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-body-sm font-semibold ${meta.toneClass}`}
         >
           {meta.label} {distance.toFixed(1)}
         </span>
       </div>
-      {detail && <p className="mt-0.5 text-body-xs leading-snug text-muted/70">{detail}</p>}
+      {detail && <p className="mt-0.5 text-body-sm leading-snug text-muted/70">{detail}</p>}
     </div>
   );
 }

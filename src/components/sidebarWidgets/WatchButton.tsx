@@ -18,12 +18,12 @@ const TONES: Record<Tone, { on: string; off: string; size: string }> = {
   card: {
     on: "border-primary/50 bg-primary/15 text-primary",
     off: "border-card-border bg-card text-fg-2 hover:text-foreground",
-    size: "h-10 px-3 text-sm",
+    size: "h-10 px-3 text-body",
   },
   image: {
     on: "border-white/40 bg-white/20 text-white",
     off: "border-white/10 bg-black/50 text-white/80 hover:text-white",
-    size: "h-8 px-2.5 text-xs",
+    size: "h-8 px-2.5 text-body-sm",
   },
 };
 

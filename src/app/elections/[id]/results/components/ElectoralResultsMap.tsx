@@ -60,8 +60,8 @@ export function ElectoralResultsMap({ units, candidatesById }: ElectoralResultsM
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold">Electoral map</h3>
-        <span className="text-xs text-muted">solid = called · faded = leading</span>
+        <h3 className="text-body-lg font-semibold">Electoral map</h3>
+        <span className="text-body-sm text-muted">solid = called · faded = leading</span>
       </div>
       <USAMapPaths stateData={stateData} />
     </div>

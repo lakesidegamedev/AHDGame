@@ -93,13 +93,13 @@ export function CurrencyHolders({ currency }: { currency: CurrencyCode }) {
   if (loading && !data) return <Skeleton className="h-96 w-full rounded-xl" />;
   if (error)
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted">
         {error}
       </div>
     );
   if (!data || data.total === 0)
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted">
         No recorded holders of {currency} yet.
       </div>
     );
@@ -110,8 +110,8 @@ export function CurrencyHolders({ currency }: { currency: CurrencyCode }) {
   return (
     <div className="rounded-xl border border-card-border bg-card shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-card-border">
-        <h2 className="text-sm font-bold text-foreground">Largest holders of {currency}</h2>
-        <p className="text-xs text-muted mt-0.5">
+        <h2 className="text-body font-bold text-foreground">Largest holders of {currency}</h2>
+        <p className="text-body-sm text-muted mt-0.5">
           Who holds {currency} across the world — player wallets, corporate treasuries, and national
           central-bank reserves. {data.total.toLocaleString("en-US")} holders ·{" "}
           {formatCurrencyFaceAmount(data.grandTotal, currency)} total.
@@ -132,7 +132,7 @@ export function CurrencyHolders({ currency }: { currency: CurrencyCode }) {
               const count = data.byType[t]?.count ?? 0;
               const pct = grand > 0 ? Math.round((total / grand) * 100) : 0;
               return (
-                <li key={t} className="flex items-center justify-between gap-2 text-xs">
+                <li key={t} className="flex items-center justify-between gap-2 text-body-sm">
                   <span className="flex items-center gap-1.5 text-muted">
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
@@ -149,7 +149,7 @@ export function CurrencyHolders({ currency }: { currency: CurrencyCode }) {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr className="border-b border-card-border text-left">
                 <th className="pb-2 pr-3 text-body-sm font-medium text-muted">#</th>
@@ -171,7 +171,7 @@ export function CurrencyHolders({ currency }: { currency: CurrencyCode }) {
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium text-foreground">{r.name}</span>
                       <span
-                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TYPE_META[r.type].chip}`}
+                        className={`shrink-0 rounded-full px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide ${TYPE_META[r.type].chip}`}
                       >
                         {r.type === "reserve" ? "Reserve" : r.type === "corp" ? "Corp" : "User"}
                       </span>
@@ -189,7 +189,7 @@ export function CurrencyHolders({ currency }: { currency: CurrencyCode }) {
           </table>
 
           {/* Pagination */}
-          <div className="mt-3 flex items-center justify-between text-xs text-muted">
+          <div className="mt-3 flex items-center justify-between text-body-sm text-muted">
             <span>
               Page {data.page + 1} of {totalPages}
             </span>

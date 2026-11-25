@@ -122,7 +122,7 @@ export function OfficeSection({
     <section className="space-y-3">
       {/* Each office group is a section heading: the button sits inside it, the
           standard accordion pattern, so the page outline lists every office. */}
-      <h2 className="m-0 text-base font-normal">
+      <h2 className="m-0 text-body-lg font-normal">
         <button
           type="button"
           onClick={() => onToggle(section.key)}
@@ -141,10 +141,10 @@ export function OfficeSection({
           </svg>
 
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-base font-bold tracking-tight text-foreground">
+            <span className="block truncate text-body-lg font-bold tracking-tight text-foreground">
               {section.label}
             </span>
-            <span className="mt-0.5 block text-xs text-muted">
+            <span className="mt-0.5 block text-body-sm text-muted">
               {section.total} race{section.total === 1 ? "" : "s"}
               <span className="mx-1.5 opacity-50">·</span>
               {section.contested} contested
@@ -161,7 +161,7 @@ export function OfficeSection({
 
           {deadline && (
             <span className="shrink-0 text-right">
-              <span className="block text-sm font-medium tabular-nums text-foreground">
+              <span className="block text-body font-medium tabular-nums text-foreground">
                 {deadline}
               </span>
               <span className="block text-body-sm font-medium text-muted">Next to close</span>
@@ -171,7 +171,7 @@ export function OfficeSection({
       </h2>
 
       {isPremierLabel(section.label) && (
-        <p className="px-1 text-xs text-muted">{PREMIER_ELECTION_NOTE}</p>
+        <p className="px-1 text-body-sm text-muted">{PREMIER_ELECTION_NOTE}</p>
       )}
 
       {expanded && (
@@ -184,7 +184,7 @@ export function OfficeSection({
             renderActions={renderActions}
           />
           {section.elections.some((e) => e.polling?.source === "primary") && (
-            <p className="text-xs text-muted">{PRIMARY_ESTIMATE_NOTE}</p>
+            <p className="text-body-sm text-muted">{PRIMARY_ESTIMATE_NOTE}</p>
           )}
           {footer}
         </div>

@@ -22,10 +22,10 @@ export function LegislationSystemGate({ failed, onClose }: LegislationSystemGate
         >
           ×
         </button>
-        <h2 id="legislation-system-gate-title" className="pr-8 text-lg font-semibold">
+        <h2 id="legislation-system-gate-title" className="pr-8 text-heading font-semibold">
           {failed ? "Legislation system unavailable" : "Loading legislation system"}
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-body text-muted-foreground">
           {failed
             ? "The game could not confirm which legislation system this world uses. No proposal form was opened to prevent an incompatible bill. Refresh the page and try again."
             : "Checking this world's legislation rules before opening the proposal form..."}

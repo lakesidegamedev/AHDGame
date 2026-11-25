@@ -29,8 +29,10 @@ export function WarEntryStatusPanel({ org }: { org: OrgSummary }) {
         <div key={operation.resolutionId} className="mt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-semibold text-foreground">{operation.conflictName}</div>
-              <div className="text-[11px] text-muted">
+              <div className="text-body font-semibold text-foreground">
+                {operation.conflictName}
+              </div>
+              <div className="text-body-sm text-muted">
                 {operation.militaryOrganizationId === org.id
                   ? operation.militaryOrganizationId
                   : `${operation.militaryOrganizationId} military status`}
@@ -41,7 +43,7 @@ export function WarEntryStatusPanel({ org }: { org: OrgSummary }) {
                     ? "Offensive coalition, national votes required"
                     : "Discretionary coalition entry"}
               </div>
-              <div className="mt-0.5 text-[11px] text-muted">
+              <div className="mt-0.5 text-body-sm text-muted">
                 Entry means war with {joinNames(operation.opposingNames)}
               </div>
             </div>
@@ -61,7 +63,7 @@ export function WarEntryStatusPanel({ org }: { org: OrgSummary }) {
                   className="rounded-lg border border-card-border bg-card-muted px-3 py-2"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 truncate text-[13px] font-semibold text-foreground">
+                    <div className="min-w-0 truncate text-body-sm font-semibold text-foreground">
                       {member?.flagEmoji} {member?.countryName ?? entry.countryId}
                     </div>
                     <span className="shrink-0 text-body-sm font-medium text-muted">
@@ -71,7 +73,7 @@ export function WarEntryStatusPanel({ org }: { org: OrgSummary }) {
                     </span>
                   </div>
                   {entry.status === "pending" && entry.lower && (
-                    <div className="mt-1 text-[11px] tabular-nums text-muted">
+                    <div className="mt-1 text-body-sm tabular-nums text-muted">
                       Lower {entry.lower.for} for, {entry.lower.against} against
                       {entry.upper
                         ? ` · Upper ${entry.upper.for} for, ${entry.upper.against} against`
@@ -79,7 +81,7 @@ export function WarEntryStatusPanel({ org }: { org: OrgSummary }) {
                     </div>
                   )}
                   {entry.stake === "principal_belligerent" && (
-                    <div className="mt-1 text-[11px] text-muted">Principal belligerent</div>
+                    <div className="mt-1 text-body-sm text-muted">Principal belligerent</div>
                   )}
                 </div>
               );

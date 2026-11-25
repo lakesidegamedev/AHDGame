@@ -37,8 +37,8 @@ export default function WikiNotFound() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
-      <h1 className="text-2xl font-bold text-foreground">That wiki page does not exist</h1>
-      <p className="mt-2 text-sm text-muted">
+      <h1 className="text-heading font-bold text-foreground">That wiki page does not exist</h1>
+      <p className="mt-2 text-body text-muted">
         It may have been renamed or removed.{" "}
         {suggestions.length > 0 ? "These pages might be what you wanted:" : null}
       </p>
@@ -52,7 +52,7 @@ export default function WikiNotFound() {
               >
                 <span className="font-medium text-foreground">{s.title}</span>
                 {s.description && (
-                  <span className="mt-0.5 line-clamp-1 block text-xs text-muted">
+                  <span className="mt-0.5 line-clamp-1 block text-body-sm text-muted">
                     {s.description}
                   </span>
                 )}
@@ -61,7 +61,7 @@ export default function WikiNotFound() {
           ))}
         </ul>
       )}
-      <p className="mt-6 text-sm">
+      <p className="mt-6 text-body">
         <Link href="/wiki" className="text-primary hover:underline">
           Back to the wiki home
         </Link>

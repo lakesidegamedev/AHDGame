@@ -105,7 +105,7 @@ export function NavbarTopFlair({ bootLoading }: { bootLoading: boolean }) {
       {mode === "indeterminate" && (
         <div
           role="status"
-          className="pointer-events-none fixed left-1/2 top-2 z-[100] -translate-x-1/2 rounded-full border border-card-border bg-card/95 px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted shadow-card"
+          className="pointer-events-none fixed left-1/2 top-2 z-[100] -translate-x-1/2 rounded-full border border-card-border bg-card/95 px-2.5 py-0.5 font-mono text-body-sm uppercase tracking-[0.12em] text-muted shadow-card"
         >
           Loading
         </div>

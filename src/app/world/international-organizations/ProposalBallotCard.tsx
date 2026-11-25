@@ -71,12 +71,12 @@ export function ProposalBallotCard({
     <article className="rounded-xl border border-card-border bg-card p-5 shadow-card">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
         <div>{children}</div>
-        <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+        <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-body-sm font-medium text-warning">
           Voting
         </span>
       </div>
       <div className="mb-3">
-        <div className="mb-1 flex items-center justify-between text-xs text-muted">
+        <div className="mb-1 flex items-center justify-between text-body-sm text-muted">
           <span>
             {yesCount} / {expectedVoters.length} {isDeclaration ? "player nations" : "members"} in
             favour, {requirement}

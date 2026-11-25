@@ -50,14 +50,14 @@ function ProjTile({
   return (
     <div className="rounded-lg border border-card-border bg-card-muted p-3">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className={`mt-1 text-lg font-bold tabular-nums ${valueTone}`}>{value}</div>
+      <div className={`mt-1 text-heading font-bold tabular-nums ${valueTone}`}>{value}</div>
       {delta != null && (
-        <div className={`text-[11px] tabular-nums ${deltaGood ? "text-success" : "text-error"}`}>
+        <div className={`text-body-sm tabular-nums ${deltaGood ? "text-success" : "text-error"}`}>
           {delta >= 0 ? "+" : "−"}
           {formatFundsCompact(Math.abs(delta), sym)} vs now
         </div>
       )}
-      {sub && <div className="text-[11px] text-muted">{sub}</div>}
+      {sub && <div className="text-body-sm text-muted">{sub}</div>}
     </div>
   );
 }
@@ -89,7 +89,7 @@ export function MinisterCallouts({ inputs, subtitle, fiscalYear }: MinisterCallo
             <path d="M10 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L10 14.3 5.2 16.7l.9-5.4L2.2 7.7l5.4-.8z" />
           </svg>
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-gold/80">
+            <div className="text-body-sm font-bold uppercase tracking-wide text-gold/80">
               Finance Minister briefing
             </div>
             <p className="mt-1 max-w-3xl text-body-sm leading-relaxed text-foreground/90">
@@ -117,7 +117,7 @@ export function MinisterCallouts({ inputs, subtitle, fiscalYear }: MinisterCallo
                 {f.title}
               </span>
             </div>
-            <p className="mt-1.5 text-body-xs leading-snug text-muted">{f.detail}</p>
+            <p className="mt-1.5 text-body-sm leading-snug text-muted">{f.detail}</p>
           </div>
         ))}
       </div>
@@ -125,11 +125,13 @@ export function MinisterCallouts({ inputs, subtitle, fiscalYear }: MinisterCallo
       {/* Next-FY projection */}
       <div className="rounded-xl border border-card-border bg-card p-4">
         <div className="mb-3">
-          <div className="text-sm font-semibold text-foreground">FY{fiscalYear + 1} projection</div>
-          <div className="text-body-xs text-muted">
+          <div className="text-body font-semibold text-foreground">
+            FY{fiscalYear + 1} projection
+          </div>
+          <div className="text-body-sm text-muted">
             Illustrative — revenue tracks GDP, spending tracks inflation + demographics
           </div>
-          <div className="mt-0.5 text-body-xs text-muted">
+          <div className="mt-0.5 text-body-sm text-muted">
             {describeProjectionAssumptions(inputs)}
           </div>
         </div>

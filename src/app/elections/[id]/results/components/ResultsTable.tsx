@@ -49,7 +49,7 @@ export function ResultsTable({ units, candidatesById, unitLabel, title }: Result
 
   if (units.length === 0) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-5 text-center text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-5 text-center text-body text-muted">
         No results reported yet.
       </div>
     );
@@ -59,7 +59,7 @@ export function ResultsTable({ units, candidatesById, unitLabel, title }: Result
     <button
       type="button"
       onClick={() => setSortKey(key)}
-      className={`text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+      className={`text-body-sm font-semibold uppercase tracking-wider transition-colors ${
         sortKey === key ? "text-foreground" : "text-muted hover:text-foreground"
       } ${alignRight ? "text-right" : "text-left"}`}
     >
@@ -70,9 +70,9 @@ export function ResultsTable({ units, candidatesById, unitLabel, title }: Result
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5">
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+      <h3 className="mb-3 text-body-lg font-semibold">{title}</h3>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-sm">
+        <table className="w-full min-w-[560px] text-body">
           <thead>
             <tr className="border-b border-card-border">
               <th className="pb-2 pr-3">{headerButton("name", unitLabel)}</th>
@@ -114,7 +114,7 @@ export function ResultsTable({ units, candidatesById, unitLabel, title }: Result
                   <td className="py-2 pr-3 text-right text-muted tabular-nums">
                     {unit.reportingPct}%
                   </td>
-                  <td className={`py-2 text-right text-xs font-medium ${status.className}`}>
+                  <td className={`py-2 text-right text-body-sm font-medium ${status.className}`}>
                     {status.text}
                   </td>
                 </tr>

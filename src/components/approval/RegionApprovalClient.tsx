@@ -73,7 +73,7 @@ export function RegionApprovalClient({
   return (
     <div className="min-h-screen bg-background pb-16">
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <div className="flex items-center gap-2 mb-4 text-xs text-muted">
+        <div className="flex items-center gap-2 mb-4 text-body-sm text-muted">
           <Link href={nationalHref} className="hover:text-foreground transition-colors">
             {countryShortLabel} Approval &amp; active effects
           </Link>
@@ -81,10 +81,10 @@ export function RegionApprovalClient({
           <span>{displayCanadianRegionCode(data?.stateName ?? stateId)}</span>
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">
+        <h1 className="text-heading font-bold mb-1">
           {displayCanadianRegionCode(data?.stateName ?? stateId)} - Approval &amp; active effects
         </h1>
-        <p className="text-sm text-muted mb-8">{t("regionalIntro")}</p>
+        <p className="text-body text-muted mb-8">{t("regionalIntro")}</p>
 
         {loading && (
           <div className="rounded-xl border border-card-border bg-card p-12 text-center">
@@ -104,29 +104,29 @@ export function RegionApprovalClient({
               <div className="flex flex-wrap items-end gap-8">
                 <div>
                   <p className="text-body-sm font-medium text-muted mb-1">Base score</p>
-                  <p className="text-4xl font-bold tabular-nums text-foreground">
+                  <p className="text-display font-bold tabular-nums text-foreground">
                     {data.governmentApprovalBase.toFixed(1)}%
                   </p>
-                  <p className="text-xs text-muted mt-1">{t("beforeEffects")}</p>
+                  <p className="text-body-sm text-muted mt-1">{t("beforeEffects")}</p>
                 </div>
-                <div className="text-2xl text-muted font-light">&rarr;</div>
+                <div className="text-heading text-muted font-light">&rarr;</div>
                 <div>
                   <p className="text-body-sm font-medium text-muted mb-1">Net approval</p>
                   <p
-                    className={`text-4xl font-bold tabular-nums ${netApproval >= 0 ? "text-success" : "text-warning"}`}
+                    className={`text-display font-bold tabular-nums ${netApproval >= 0 ? "text-success" : "text-warning"}`}
                   >
                     {netApproval >= 0 ? "+" : ""}
                     {netApproval}
                   </p>
-                  <p className="text-xs text-muted mt-1">
+                  <p className="text-body-sm text-muted mt-1">
                     {t("activeAfterLimits", { count: modifiers.length })}
                   </p>
                 </div>
-                <div className="text-2xl text-muted font-light">=</div>
+                <div className="text-heading text-muted font-light">=</div>
                 <div>
                   <p className="text-body-sm font-medium text-muted mb-1">{t("target")}</p>
                   <p
-                    className={`text-5xl font-bold tabular-nums ${approvalColor(data.governmentApproval)}`}
+                    className={`text-display font-bold tabular-nums ${approvalColor(data.governmentApproval)}`}
                   >
                     {data.governmentApproval.toFixed(1)}%
                   </p>
@@ -136,7 +136,7 @@ export function RegionApprovalClient({
 
             <div className="rounded-xl border border-card-border bg-card p-6 shadow-panel">
               <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                <h2 className="text-sm font-semibold text-muted">Active effects</h2>
+                <h2 className="text-body font-semibold text-muted">Active effects</h2>
                 {modifiers.length > 0 && (
                   <NetEffectTotals
                     approvalLabel="Net approval"
@@ -147,7 +147,7 @@ export function RegionApprovalClient({
               </div>
               <ModifierList modifiers={modifiers} emptyText="No active effects." />
               {reconciliation && modifiers.length > 0 && (
-                <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-sm">
+                <dl className="mt-4 space-y-1 border-t border-card-border/40 pt-3 text-body">
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted">Base score</dt>
                     <dd className="tabular-nums">{reconciliation.base.toFixed(1)}</dd>
@@ -183,13 +183,13 @@ export function RegionApprovalClient({
         <div className="mt-8 flex items-center gap-3 pt-4 border-t border-card-border/40">
           <Link
             href={backHref}
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
           >
             &larr; {data?.stateName ?? "Back"}
           </Link>
           <Link
             href={nationalHref}
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
           >
             {countryShortLabel} Approval rankings
           </Link>

@@ -40,7 +40,7 @@ export function AuctionsSection({
 }) {
   return (
     <section className="rounded-xl border border-card-border bg-card p-5">
-      <h2 className="text-heading-sm font-semibold text-foreground">Open auctions</h2>
+      <h2 className="text-heading font-semibold text-foreground">Open auctions</h2>
       <p className="mt-1 text-body-sm text-muted">
         Privatization auctions for state holdings being sold to private buyers. Bids are held in
         escrow, and raising replaces your earlier bid. The highest bid at or above the reserve wins
@@ -171,12 +171,12 @@ function AuctionRow({
           >
             {auction.corpName}
           </Link>
-          <div className="mt-0.5 text-body-xs text-muted">
+          <div className="mt-0.5 text-body-sm text-muted">
             <span className="capitalize">{auction.leadSectorType.replace(/_/g, " ")}</span> · HQ{" "}
             {auction.hqStateName}
           </div>
         </div>
-        <span className="shrink-0 text-body-xs text-muted">
+        <span className="shrink-0 text-body-sm text-muted">
           {turnsLeft} turn{turnsLeft === 1 ? "" : "s"} left · {auction.bidCount} bid
           {auction.bidCount === 1 ? "" : "s"}
         </span>
@@ -187,7 +187,7 @@ function AuctionRow({
         {auction.sectors.map((s) => (
           <span
             key={`${s.sectorType}-${s.stateId}`}
-            className="inline-flex items-center gap-1 rounded-full border border-card-border bg-card px-2 py-0.5 text-body-xs text-muted"
+            className="inline-flex items-center gap-1 rounded-full border border-card-border bg-card px-2 py-0.5 text-body-sm text-muted"
           >
             <span className="capitalize text-foreground">{s.sectorType.replace(/_/g, " ")}</span>·{" "}
             {s.stateName} · {money(s.revenuePerTurn)}/turn
@@ -196,7 +196,7 @@ function AuctionRow({
       </div>
 
       {/* Key figures */}
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-body-xs sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-body-sm sm:grid-cols-4">
         <Figure label="Revenue/turn" value={money(auction.totalRevenuePerTurn)} />
         <Figure label="Valuation" value={money(auction.valuationLocal)} />
         <Figure label="Reserve" value={money(auction.reservePrice)} />
@@ -220,17 +220,17 @@ function AuctionRow({
             {auction.bidHistory.map((b, i) => (
               <li
                 key={`${b.bidderName}-${b.amount}-${b.placedAtTurn}-${i}`}
-                className="flex items-center justify-between gap-3 text-body-xs"
+                className="flex items-center justify-between gap-3 text-body-sm"
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate text-foreground">{b.bidderName}</span>
                   {b.bidderType === "corporation" && (
-                    <span className="shrink-0 rounded border border-card-border px-1 text-[10px] text-muted">
+                    <span className="shrink-0 rounded border border-card-border px-1 text-body-sm text-muted">
                       corp
                     </span>
                   )}
                   {b.amount === auction.highestBid && (
-                    <span className="shrink-0 rounded border border-success/30 bg-success/10 px-1 text-[10px] text-success">
+                    <span className="shrink-0 rounded border border-success/30 bg-success/10 px-1 text-body-sm text-success">
                       leading
                     </span>
                   )}
@@ -247,7 +247,7 @@ function AuctionRow({
       {/* Bid form (residents only) */}
       {viewerIsResident ? (
         <div className="mt-3 flex flex-wrap items-end gap-2">
-          <label className="flex flex-col text-body-xs text-muted">
+          <label className="flex flex-col text-body-sm text-muted">
             Bid · min {money(minBid)}
             <input
               type="number"
@@ -259,7 +259,7 @@ function AuctionRow({
             />
           </label>
           {eligibleCorps.length > 0 && (
-            <label className="flex flex-col text-body-xs text-muted">
+            <label className="flex flex-col text-body-sm text-muted">
               Bid as
               <select
                 value={asCorp}
@@ -279,7 +279,7 @@ function AuctionRow({
           <Button onClick={bid} disabled={!canBid}>
             {busy ? "Bidding…" : "Place bid"}
           </Button>
-          <p className="w-full text-body-xs text-muted">
+          <p className="w-full text-body-sm text-muted">
             {asCorp ? "Corporation has " : "You have "}
             <span
               className={hasAmount && !canAfford ? "font-medium text-error" : "text-foreground"}
@@ -300,7 +300,7 @@ function AuctionRow({
 
       {feedback && (
         <p
-          className={`mt-2 text-body-xs ${feedback.type === "success" ? "text-success" : "text-error"}`}
+          className={`mt-2 text-body-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
         >
           {feedback.message}
         </p>

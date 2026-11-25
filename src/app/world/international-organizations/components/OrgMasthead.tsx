@@ -81,7 +81,7 @@ export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewe
               {identity.hq !== "—" && ` · HQ ${identity.hq}`}
               {identity.founded > 0 && ` · est. ${identity.founded}`}
             </div>
-            <h1 className="mt-1.5 text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-[28px]">
+            <h1 className="mt-1.5 text-heading font-bold leading-tight tracking-tight text-foreground sm:text-display">
               {def.name}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -99,7 +99,7 @@ export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewe
               </Badge>
               {yourMembership && (
                 <span
-                  className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                  className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-body-sm font-medium"
                   style={{
                     borderColor: "color-mix(in srgb, var(--org) 40%, transparent)",
                     color: "var(--org-soft)",
@@ -120,7 +120,7 @@ export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewe
               <Link
                 key={t.seg}
                 href={`${base}/${t.seg}`}
-                className={`whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-[13px] font-semibold transition-colors ${
+                className={`whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-body-sm font-semibold transition-colors ${
                   active ? "text-foreground" : "border-transparent text-muted hover:text-foreground"
                 }`}
                 style={active ? { borderColor: "var(--org)" } : undefined}
@@ -155,7 +155,7 @@ export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewe
       {/* acting chip */}
       {viewer && (you || agenda) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-card-border bg-card px-4 py-2.5">
-          <span className="text-[12px] text-muted">
+          <span className="text-body-sm text-muted">
             Acting as{" "}
             {you ? (
               <>
@@ -171,7 +171,7 @@ export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewe
           <span className="flex flex-wrap items-center gap-1.5">
             {agenda && (
               <span
-                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-body-sm font-semibold"
                 style={{
                   borderColor: "color-mix(in srgb, var(--org) 40%, transparent)",
                   color: "var(--org-soft)",
@@ -183,7 +183,7 @@ export function OrgMasthead({ org, viewer }: { org: OrgSummary; viewer: OrgViewe
             )}
             {you && (
               <span
-                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-body-sm font-semibold"
                 style={{
                   borderColor: "color-mix(in srgb, var(--org) 40%, transparent)",
                   color: "var(--org-soft)",

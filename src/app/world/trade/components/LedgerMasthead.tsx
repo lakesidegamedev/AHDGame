@@ -70,7 +70,7 @@ export default function LedgerMasthead({ ledger }: { ledger: WorldTradeLedger })
               background: "linear-gradient(160deg,#2a2233,#1d1a26)",
             }}
           >
-            <span className="text-3xl font-bold" style={{ color: GOLD }}>
+            <span className="text-display font-bold" style={{ color: GOLD }}>
               ₳
             </span>
           </div>
@@ -78,13 +78,13 @@ export default function LedgerMasthead({ ledger }: { ledger: WorldTradeLedger })
             <div className="text-body-sm font-medium" style={{ color: GOLD_SOFT }}>
               World trade organisation · settlement &amp; customs registry
             </div>
-            <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
+            <h1 className="mt-1 text-heading font-bold text-white sm:text-display">
               World trade ledger
-              <span className="ml-2 align-middle text-sm font-semibold text-white/50">
+              <span className="ml-2 align-middle text-body font-semibold text-white/50">
                 balance of trade
               </span>
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-body-sm">
               <span
                 className="rounded-full px-2.5 py-0.5 font-semibold text-white"
                 style={{ border: `1px solid ${GOLD}66`, background: `${GOLD}29` }}
@@ -113,7 +113,7 @@ export default function LedgerMasthead({ ledger }: { ledger: WorldTradeLedger })
         </div>
         <div className="relative mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
           <span className="text-body-sm font-medium text-white/45">Reading</span>
-          <span className="text-[11.5px] text-white/65">
+          <span className="text-body-sm text-white/65">
             {h.largestSurplus && h.largestDeficit
               ? `${nameOf(ledger, h.largestSurplus.code)} runs the world's largest surplus against ${nameOf(
                   ledger,
@@ -130,11 +130,11 @@ export default function LedgerMasthead({ ledger }: { ledger: WorldTradeLedger })
           <div key={c.label} className="flex flex-col gap-1 px-4 py-3">
             <span className="whitespace-nowrap text-body-sm font-medium text-muted">{c.label}</span>
             <span
-              className={`font-mono text-base font-bold tabular-nums leading-tight ${c.tone ?? "text-foreground"}`}
+              className={`font-mono text-body-lg font-bold tabular-nums leading-tight ${c.tone ?? "text-foreground"}`}
             >
               {c.value}
             </span>
-            <span className="text-[11px] text-muted">{c.sub}</span>
+            <span className="text-body-sm text-muted">{c.sub}</span>
           </div>
         ))}
       </div>

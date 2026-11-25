@@ -29,7 +29,7 @@ export function CommandRoster({
 }) {
   if (commands.length === 0) {
     return (
-      <p className="text-[12px] text-muted">
+      <p className="text-body-sm text-muted">
         No commands established yet. Create one to build the national command structure.
       </p>
     );
@@ -61,7 +61,7 @@ export function CommandRoster({
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+              <span className="min-w-0 flex-1 truncate text-body font-semibold text-foreground">
                 {c.name}
               </span>
               {(over || noCommander) && (
@@ -69,7 +69,7 @@ export function CommandRoster({
               )}
               <Badge tone={selected ? "gov" : "muted"}>{COMMAND_TYPES[c.type].short}</Badge>
             </div>
-            <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-muted">
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-body-sm text-muted">
               <span className="truncate">{primary}</span>
               <span className="tabular shrink-0">
                 {load}/{c.cap} load

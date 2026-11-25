@@ -70,8 +70,8 @@ export function FundOrgPanel({ org, viewer, onChange }: Props) {
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Fund the organization</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-foreground">Fund the organization</h3>
+          <p className="text-body-sm text-muted">
             Send treasury money to the pooled fund (auto-converted to the fund&apos;s currency at no
             cost). Raises a national-legislature appropriation bill — members only.
           </p>
@@ -89,9 +89,9 @@ export function FundOrgPanel({ org, viewer, onChange }: Props) {
 
       {showForm && viewerIsMember && viewerFmCountry && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h4 className="text-sm font-semibold text-foreground">Appropriate funds</h4>
+          <h4 className="text-body font-semibold text-foreground">Appropriate funds</h4>
           <div className="mt-3 max-w-xs">
-            <label className="text-xs font-medium text-muted" htmlFor="fund-amount">
+            <label className="text-body-sm font-medium text-muted" htmlFor="fund-amount">
               Amount ({entityName(viewerFmCountry)} local currency)
             </label>
             <input
@@ -101,10 +101,10 @@ export function FundOrgPanel({ org, viewer, onChange }: Props) {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="1000000"
-              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
             />
           </div>
-          <InlineError error={error} className="mt-2 text-xs text-error" />
+          <InlineError error={error} className="mt-2 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Send to the legislature
@@ -116,7 +116,7 @@ export function FundOrgPanel({ org, viewer, onChange }: Props) {
         </div>
       )}
 
-      {success && <p className="text-xs text-success">{success}</p>}
+      {success && <p className="text-body-sm text-success">{success}</p>}
     </section>
   );
 }

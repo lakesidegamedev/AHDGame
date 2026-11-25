@@ -68,15 +68,15 @@ export function RegionalTargetPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">{config.name}</h2>
-        <p className="text-sm text-muted mt-1">{config.description}</p>
+        <h2 className="text-heading font-semibold text-foreground">{config.name}</h2>
+        <p className="text-body text-muted mt-1">{config.description}</p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
         <div className="flex-1">
           <label
             htmlFor="regional-target-select"
-            className="block text-xs font-medium text-muted mb-1"
+            className="block text-body-sm font-medium text-muted mb-1"
           >
             Target region
           </label>
@@ -86,7 +86,7 @@ export function RegionalTargetPanel({
             disabled={!canAct}
             onChange={(e) => setSelected(e.target.value)}
             className={[
-              "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-sm text-foreground",
+              "w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body text-foreground",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
               !canAct ? "cursor-not-allowed opacity-50" : "",
             ]
@@ -113,7 +113,7 @@ export function RegionalTargetPanel({
           </Button>
           {feedback && (
             <span
-              className={`text-sm ${feedback.type === "success" ? "text-success" : "text-error"}`}
+              className={`text-body ${feedback.type === "success" ? "text-success" : "text-error"}`}
             >
               {feedback.message}
             </span>

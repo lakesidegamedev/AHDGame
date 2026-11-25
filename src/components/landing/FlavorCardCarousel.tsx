@@ -18,23 +18,23 @@ function BriefCard({ card, index }: { card: FlavorCard; index: number }) {
   return (
     <div className={CARD_CLASSES}>
       <div className="relative flex h-[180px] flex-col justify-between overflow-hidden border-b border-card-border bg-[linear-gradient(to_bottom,rgba(95,227,255,0.07),transparent_70%)] px-4 pb-3 pt-4">
-        <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-muted">
+        <span className="font-mono text-body-sm uppercase tracking-[0.2em] text-muted">
           {card.title}
         </span>
-        <span className="font-mono text-[3.25rem] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+        <span className="font-mono text-display font-semibold leading-none tracking-tight text-foreground tabular-nums">
           {card.year}
         </span>
-        <span className="self-start rounded-full border border-card-border bg-card px-2 py-0.5 text-body-xs font-medium text-muted">
+        <span className="self-start rounded-full border border-card-border bg-card px-2 py-0.5 text-body-sm font-medium text-muted">
           {card.country}
         </span>
       </div>
       <div className="p-4">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono text-body-xs text-red-300">
+          <span className="font-mono text-body-sm text-red-300">
             {String(index + 1).padStart(2, "0")}
           </span>
         </div>
-        <h3 className="text-heading-sm font-semibold text-foreground">{card.name}</h3>
+        <h3 className="text-body-lg font-semibold text-foreground">{card.name}</h3>
         <p className="mt-2 text-body-sm leading-relaxed text-muted">{card.quote}</p>
       </div>
     </div>
@@ -63,20 +63,20 @@ function StaticCard({ card, index }: { card: FlavorCard; index: number }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
         <div className="absolute bottom-2 left-3 right-3">
-          <span className="rounded-full border border-card-border bg-card px-2 py-0.5 text-body-xs font-medium text-muted">
+          <span className="rounded-full border border-card-border bg-card px-2 py-0.5 text-body-sm font-medium text-muted">
             {card.country}
           </span>
         </div>
       </div>
       <div className="p-4">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono text-body-xs text-red-300">
+          <span className="font-mono text-body-sm text-red-300">
             {String(index + 1).padStart(2, "0")}
           </span>
-          <span className="text-body-xs text-muted">{card.year}</span>
+          <span className="text-body-sm text-muted">{card.year}</span>
         </div>
-        <h3 className="text-heading-sm font-semibold text-foreground">{card.name}</h3>
-        <p className="mt-0.5 text-body-xs text-muted">{card.title}</p>
+        <h3 className="text-body-lg font-semibold text-foreground">{card.name}</h3>
+        <p className="mt-0.5 text-body-sm text-muted">{card.title}</p>
         <p className="mt-2 text-body-sm italic leading-relaxed text-muted">
           &ldquo;{card.quote}&rdquo;
         </p>

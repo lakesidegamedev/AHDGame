@@ -65,12 +65,12 @@ function HolderRow({ holder }: { holder: ShareHistoryStructureChangeHolder }) {
             : "Character";
   return (
     <tr className="border-b border-card-border/30 last:border-0">
-      <td className="py-1 pr-3 text-xs text-muted">{kindLabel}</td>
-      <td className="py-1 pr-3 text-sm">{holder.name}</td>
-      <td className="py-1 pr-3 text-right font-mono text-sm">
+      <td className="py-1 pr-3 text-body-sm text-muted">{kindLabel}</td>
+      <td className="py-1 pr-3 text-body">{holder.name}</td>
+      <td className="py-1 pr-3 text-right font-mono text-body">
         {holder.shares.toLocaleString("en-US")}
       </td>
-      <td className="py-1 text-right font-mono text-sm">{fmtPercent(holder.percent)}</td>
+      <td className="py-1 text-right font-mono text-body">{fmtPercent(holder.percent)}</td>
     </tr>
   );
 }
@@ -153,11 +153,11 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
   return (
     <section className="min-w-0">
       <div className="mb-1 flex min-h-8 items-center justify-between gap-3 border-b border-card-border pb-1.5">
-        <h2 className="text-sm font-semibold text-foreground">Share history</h2>
+        <h2 className="text-body font-semibold text-foreground">Share history</h2>
         {loading ? (
           <Skeleton className="h-4 w-44" />
         ) : (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             {total === 0
               ? "No share activity yet."
               : `${rangeStart.toLocaleString("en-US")} to ${rangeEnd.toLocaleString("en-US")} of ${total.toLocaleString("en-US")}`}
@@ -165,12 +165,12 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
         )}
       </div>
 
-      <p className="text-xs text-muted">
+      <p className="text-body-sm text-muted">
         Totals show gross trade value. Personal tax withholding and arrears collections are shown in
         your personal tax statement.
       </p>
       {error && (
-        <div role="alert" className="py-2 text-xs text-error">
+        <div role="alert" className="py-2 text-body-sm text-error">
           {error}
         </div>
       )}
@@ -184,7 +184,7 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
       )}
 
       {!loading && entries.length === 0 && !error && (
-        <div className="py-2 text-xs text-muted">
+        <div className="py-2 text-body-sm text-muted">
           No share movements recorded yet. Issuances, buys, sells, fills, and corrections will
           appear here once they occur.
         </div>
@@ -192,9 +192,9 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
 
       {entries.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full border-collapse text-body">
             <thead>
-              <tr className="border-b border-card-border text-left text-[11px] text-muted">
+              <tr className="border-b border-card-border text-left text-body-sm text-muted">
                 <th className="py-2 pr-3 font-medium">Date</th>
                 <th className="py-2 pr-3 font-medium">Event</th>
                 <th className="py-2 pr-3 font-medium">From</th>
@@ -226,16 +226,16 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
                             }}
                           />
                         </div>
-                        <div className="text-xs text-muted/70">Turn {e.turn}</div>
+                        <div className="text-body-sm text-muted/70">Turn {e.turn}</div>
                       </td>
                       <td className="py-2 pr-3">
                         <span
-                          className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${KIND_BADGE_CLASS[e.kind]}`}
+                          className={`inline-flex items-center rounded border px-2 py-0.5 text-body-sm font-medium ${KIND_BADGE_CLASS[e.kind]}`}
                         >
                           {KIND_LABELS[e.kind]}
                         </span>
                         {e.note && (
-                          <div className="mt-1 text-xs text-muted max-w-md line-clamp-2">
+                          <div className="mt-1 text-body-sm text-muted max-w-md line-clamp-2">
                             {e.note}
                           </div>
                         )}
@@ -279,18 +279,18 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1 || loading}
-            className="rounded-md border border-card-border px-3 py-1.5 text-sm hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-card-border px-3 py-1.5 text-body hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
           >
             Previous
           </button>
-          <span className="text-sm text-muted">
+          <span className="text-body text-muted">
             Page {page} of {pageCount}
           </span>
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
             disabled={page >= pageCount || loading}
-            className="rounded-md border border-card-border px-3 py-1.5 text-sm hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-card-border px-3 py-1.5 text-body hover:bg-card-elevated disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
           </button>

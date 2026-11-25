@@ -96,8 +96,8 @@ export default function CeoCapitalPanel({
       <DenseSection id="ceo-dividend" title="Dividend">
         <div className="space-y-2 pt-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-xs text-muted">Payout of net income</span>
-            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+            <span className="text-body-sm text-muted">Payout of net income</span>
+            <span className="font-mono text-heading font-semibold tabular-nums text-foreground">
               {editDividendRate}%
             </span>
           </div>
@@ -124,11 +124,13 @@ export default function CeoCapitalPanel({
                 }}
               >
                 <span className="h-2 w-px bg-warning" />
-                <span className="text-[10px] tabular-nums text-warning">min {floorRate}%</span>
+                <span className="text-body-sm tabular-nums text-warning">min {floorRate}%</span>
               </span>
             )}
-            <span className="absolute bottom-0 left-0 text-[10px] tabular-nums text-muted">0%</span>
-            <span className="absolute bottom-0 right-0 text-[10px] tabular-nums text-muted">
+            <span className="absolute bottom-0 left-0 text-body-sm tabular-nums text-muted">
+              0%
+            </span>
+            <span className="absolute bottom-0 right-0 text-body-sm tabular-nums text-muted">
               {MAX_DIVIDEND_RATE}%
             </span>
           </div>
@@ -170,7 +172,7 @@ export default function CeoCapitalPanel({
       <DenseSection title="Funding">
         {isPublic && (
           <div className="flex items-center justify-between gap-3 py-1">
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Buy newly issued shares to move personal cash in. The company keeps the 15% premium.
             </p>
             <SmallButton onClick={openFundCompany}>Fund company</SmallButton>
@@ -180,10 +182,10 @@ export default function CeoCapitalPanel({
           <CapitalInjectionPanel corpId={corpId} corporation={corporation} onRefresh={onRefresh} />
         )}
         <div className="flex items-center justify-between gap-3 border-t border-card-border/60 py-1.5">
-          <p className="text-xs text-muted">Stocks and bonds the corporation holds.</p>
+          <p className="text-body-sm text-muted">Stocks and bonds the corporation holds.</p>
           <Link
             href={`/portfolio?corp=${encodeURIComponent(corpId)}`}
-            className="shrink-0 text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+            className="shrink-0 text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
           >
             Open portfolio
           </Link>

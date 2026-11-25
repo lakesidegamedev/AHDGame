@@ -164,25 +164,25 @@ export function DeliverAddressModal({
       aria-labelledby="deliver-address-title"
     >
       <div className="w-full max-w-2xl rounded-2xl border border-card-border bg-card p-6 shadow-modal max-h-[90vh] overflow-y-auto">
-        <h2 id="deliver-address-title" className="text-lg font-semibold mb-1">
+        <h2 id="deliver-address-title" className="text-heading font-semibold mb-1">
           Deliver {headingLabel}
         </h2>
-        <p className="text-xs text-muted mb-4">
+        <p className="text-body-sm text-muted mb-4">
           {isNational
             ? `Lay out your priorities. Bumps national approval, nudges co-partisan legislators on emphasized categories of federal bills, and (optionally) rallies a demographic group's turnout in every ${countryName} state.`
             : "Lay out your priorities. Bumps your approval, nudges co-partisan legislators on emphasized categories, and (optionally) rallies a demographic group's turnout."}
         </p>
 
-        <label className="block text-xs text-muted mb-1">Title</label>
+        <label className="block text-body-sm text-muted mb-1">Title</label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. A New Chapter for Arizona"
           maxLength={ADDRESS_TITLE_MAX_LENGTH}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-1"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-1"
           disabled={submitting}
         />
-        <div className="mb-3 flex justify-between text-[11px] text-muted">
+        <div className="mb-3 flex justify-between text-body-sm text-muted">
           <span>
             {titleLen < ADDRESS_TITLE_MIN_LENGTH
               ? `Minimum ${ADDRESS_TITLE_MIN_LENGTH} characters`
@@ -193,23 +193,23 @@ export function DeliverAddressModal({
           </span>
         </div>
 
-        <label className="block text-xs text-muted mb-1">Speech (optional)</label>
+        <label className="block text-body-sm text-muted mb-1">Speech (optional)</label>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="My fellow Arizonans, today we stand at a crossroads…"
           rows={5}
           maxLength={ADDRESS_BODY_MAX_LENGTH}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-1"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-1"
           disabled={submitting}
         />
-        <div className="mb-3 flex justify-end text-[11px] text-muted">
+        <div className="mb-3 flex justify-end text-body-sm text-muted">
           <span>
             {body.length}/{ADDRESS_BODY_MAX_LENGTH}
           </span>
         </div>
 
-        <label className="block text-xs text-muted mb-1">
+        <label className="block text-body-sm text-muted mb-1">
           Emphasis categories ({ADDRESS_EMPHASIS_MIN}-{ADDRESS_EMPHASIS_MAX})
         </label>
         <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-card-border p-2 sm:grid-cols-3">
@@ -219,7 +219,7 @@ export function DeliverAddressModal({
             return (
               <label
                 key={c}
-                className={`flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-background/40 ${
+                className={`flex items-center gap-2 rounded px-2 py-1 text-body hover:bg-background/40 ${
                   reachedCap ? "opacity-50" : ""
                 }`}
               >
@@ -239,11 +239,13 @@ export function DeliverAddressModal({
             picker would imply targeting is available when it is not. */}
         {targetSections.length > 0 && (
           <>
-            <label className="block text-xs text-muted mb-1">Target demographic (optional)</label>
+            <label className="block text-body-sm text-muted mb-1">
+              Target demographic (optional)
+            </label>
             <select
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
-              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+              className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
               disabled={submitting}
             >
               <option value="">— No targeting —</option>
@@ -261,7 +263,7 @@ export function DeliverAddressModal({
         )}
 
         {/* Effects preview */}
-        <div className="mb-3 rounded-lg border border-card-border bg-background/40 px-3 py-2 text-xs">
+        <div className="mb-3 rounded-lg border border-card-border bg-background/40 px-3 py-2 text-body-sm">
           <div className="text-muted text-body-sm font-medium mb-1">Effects</div>
           <ul className="space-y-0.5">
             <li>
@@ -290,7 +292,7 @@ export function DeliverAddressModal({
           </ul>
         </div>
 
-        <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted mb-3">
+        <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted mb-3">
           {adminOverride ? (
             <span className="font-semibold text-error">Cost waived (Admin override)</span>
           ) : (
@@ -317,19 +319,19 @@ export function DeliverAddressModal({
           )}
         </div>
 
-        <InlineError error={error} className="mb-3 text-sm text-error" />
+        <InlineError error={error} className="mb-3 text-body text-error" />
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
+            className="rounded-lg px-3 py-1.5 text-body text-muted hover:bg-background/60"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 ${
+            className={`rounded-lg px-3 py-1.5 text-body font-medium text-white disabled:opacity-50 ${
               adminOverride ? "bg-error hover:bg-error/80" : "bg-primary hover:bg-primary/80"
             }`}
           >

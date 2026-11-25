@@ -138,7 +138,7 @@ export default function CreateImperialCharacterPage() {
   if (eligibleCountries.length === 0) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">No eligible countries</h1>
+        <h1 className="text-heading font-bold mb-4">No eligible countries</h1>
         <p className="text-muted">
           All eligible countries already have an imperial character, or no countries support
           imperial characters.
@@ -150,14 +150,18 @@ export default function CreateImperialCharacterPage() {
   return (
     <div className="mx-auto max-w-lg px-4 py-8 sm:py-16">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Create imperial character</h1>
-        <p className="mt-2 text-sm text-muted">Create a ceremonial head of state for a country.</p>
+        <h1 className="text-heading font-bold tracking-tight sm:text-display">
+          Create imperial character
+        </h1>
+        <p className="mt-2 text-body text-muted">
+          Create a ceremonial head of state for a country.
+        </p>
       </div>
 
       {error && (
         <div
           ref={errorRef}
-          className="mb-6 rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger"
+          className="mb-6 rounded-xl border border-danger/30 bg-danger/10 p-4 text-body text-danger"
         >
           {error}
         </div>
@@ -173,7 +177,7 @@ export default function CreateImperialCharacterPage() {
               setCountry(e.target.value);
               setHomeState("");
             }}
-            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-sm text-foreground"
+            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-body text-foreground"
           >
             <option value="">Select a country...</option>
             {eligibleCountries.map((c) => (
@@ -193,9 +197,9 @@ export default function CreateImperialCharacterPage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Arthur Vale, Aiko Mori"
             maxLength={50}
-            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted/50"
+            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-body text-foreground placeholder:text-muted/50"
           />
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             2–50 characters. The title ({titlePreview ?? "King/Emperor"}) is added automatically.
           </p>
         </div>
@@ -209,7 +213,7 @@ export default function CreateImperialCharacterPage() {
                 key={g}
                 type="button"
                 onClick={() => setGender(g)}
-                className={`flex-1 rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                className={`flex-1 rounded-xl border px-4 py-3 text-body font-medium transition-colors ${
                   gender === g
                     ? "border-primary/50 bg-primary/15 text-primary"
                     : "border-card-border bg-card text-muted hover:text-foreground"
@@ -220,7 +224,7 @@ export default function CreateImperialCharacterPage() {
             ))}
           </div>
           {titlePreview && (
-            <p className="mt-2 text-xs text-primary">
+            <p className="mt-2 text-body-sm text-primary">
               Title: <span className="font-semibold">{titlePreview}</span>
               {name && (
                 <span>
@@ -241,7 +245,7 @@ export default function CreateImperialCharacterPage() {
             onChange={(e) => setRoyalHouse(e.target.value)}
             placeholder="e.g., House of Windsor"
             maxLength={80}
-            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted/50"
+            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-body text-foreground placeholder:text-muted/50"
           />
         </div>
 
@@ -252,7 +256,7 @@ export default function CreateImperialCharacterPage() {
             value={homeState}
             onChange={(e) => setHomeState(e.target.value)}
             disabled={!country}
-            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-sm text-foreground disabled:opacity-50"
+            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-body text-foreground disabled:opacity-50"
           >
             <option value="">{country ? "Select a province..." : "Select a country first"}</option>
             {filteredStates.map((s) => (
@@ -261,7 +265,7 @@ export default function CreateImperialCharacterPage() {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Also sets the headquarters for the starter corporation.
           </p>
         </div>
@@ -280,16 +284,16 @@ export default function CreateImperialCharacterPage() {
             placeholder="Write a short biography..."
             maxLength={500}
             rows={3}
-            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted/50 resize-none"
+            className="w-full rounded-xl border border-card-border bg-card px-4 py-3 text-body text-foreground placeholder:text-muted/50 resize-none"
           />
-          <p className="mt-1 text-xs text-muted text-right">{bio.length}/500</p>
+          <p className="mt-1 text-body-sm text-muted text-right">{bio.length}/500</p>
         </div>
 
         {/* Starter Corporation Preview */}
         {selectedCountry && (
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
             <p className="text-body-sm font-medium text-amber-400 mb-1">Starter corporation</p>
-            <p className="text-sm text-foreground">
+            <p className="text-body text-foreground">
               A <span className="font-semibold">Real estate</span> corporation will be automatically
               created with $50,000,000 starting capital.
             </p>

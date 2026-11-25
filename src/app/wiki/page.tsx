@@ -199,10 +199,10 @@ function SpotlightRow({ page, showViews }: { page: WikiPageSpotlight; showViews?
   return (
     <Link
       href={`/wiki/${page.slug}`}
-      className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-card-elevated group"
+      className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-body transition-colors hover:bg-card-elevated group"
     >
       <span className="truncate text-foreground group-hover:text-primary">{page.title}</span>
-      <span className="shrink-0 text-xs text-muted/60 tabular-nums">
+      <span className="shrink-0 text-body-sm text-muted/60 tabular-nums">
         {showViews && page.viewCount != null
           ? `${formatViewCount(page.viewCount)} views`
           : formatRelativeDate(page.createdAt)}
@@ -287,7 +287,7 @@ function PaginationNav({
   return (
     <nav
       aria-label={`${section} pagination`}
-      className="mt-4 flex flex-wrap items-center justify-center gap-1 text-sm"
+      className="mt-4 flex flex-wrap items-center justify-center gap-1 text-body"
     >
       {current > 1 ? (
         <Link
@@ -364,10 +364,10 @@ function WikiFullListSection({
     <section id={id} className="scroll-mt-24">
       <div className="mb-3 flex items-end justify-between gap-3 border-b border-card-border pb-2">
         <div>
-          <h3 className="text-lg font-bold text-foreground">{title}</h3>
-          <p className="mt-1 text-sm text-muted">{description}</p>
+          <h3 className="text-body-lg font-bold text-foreground">{title}</h3>
+          <p className="mt-1 text-body text-muted">{description}</p>
         </div>
-        <span className="shrink-0 text-xs text-muted tabular-nums">
+        <span className="shrink-0 text-body-sm text-muted tabular-nums">
           {total > 0 ? `${startIdx + 1}-${endIdx} of ${total}` : "0 pages"}
         </span>
       </div>
@@ -378,14 +378,14 @@ function WikiFullListSection({
               key={`${page.kind ?? "page"}-${page.slug}`}
               href={page.href}
               title={page.description}
-              className="block break-inside-avoid py-1 text-sm text-muted decoration-primary/30 underline-offset-2 hover:text-primary hover:underline"
+              className="block break-inside-avoid py-1 text-body text-muted decoration-primary/30 underline-offset-2 hover:text-primary hover:underline"
             >
               {page.title}
             </Link>
           ))}
         </div>
       ) : (
-        <p className="border-b border-card-border/60 py-2.5 text-sm text-muted">
+        <p className="border-b border-card-border/60 py-2.5 text-body text-muted">
           No pages in this group yet.
         </p>
       )}
@@ -497,18 +497,18 @@ export default async function WikiOverviewPage({
           <aside className="hidden lg:block space-y-6">
             <div className="sticky top-20 space-y-6">
               <nav className="space-y-1">
-                <h3 className="mb-3 px-3 text-sm font-bold text-muted">Game content</h3>
+                <h3 className="mb-3 px-3 text-body-lg font-bold text-muted">Game content</h3>
                 {officialCategories.map((category) => (
                   <Link
                     key={category.id}
                     href={`/wiki/category/${category.slug}`}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-body font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
                   >
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">
                       {CATEGORY_ICON_PATHS[category.id] ?? DEFAULT_ICON}
                     </span>
                     <span>{category.name}</span>
-                    <span className="ml-auto tabular-nums text-xs text-muted/50">
+                    <span className="ml-auto tabular-nums text-body-sm text-muted/50">
                       {categoryPageCounts.get(category.id) || 0}
                     </span>
                   </Link>
@@ -517,19 +517,19 @@ export default async function WikiOverviewPage({
                 {communityCategories.length > 0 && (
                   <>
                     <div className="pt-3 pb-1">
-                      <h3 className="px-3 text-sm font-bold text-muted">Community</h3>
+                      <h3 className="px-3 text-body-lg font-bold text-muted">Community</h3>
                     </div>
                     {communityCategories.map((category) => (
                       <Link
                         key={category.id}
                         href={`/wiki/category/${category.slug}`}
-                        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+                        className="flex items-center gap-3 rounded-md px-3 py-2 text-body font-medium text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
                       >
                         <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">
                           {CATEGORY_ICON_PATHS[category.id] ?? DEFAULT_ICON}
                         </span>
                         <span>{category.name}</span>
-                        <span className="ml-auto tabular-nums text-xs text-muted/50">
+                        <span className="ml-auto tabular-nums text-body-sm text-muted/50">
                           {categoryPageCounts.get(category.id) || 0}
                         </span>
                       </Link>
@@ -546,17 +546,17 @@ export default async function WikiOverviewPage({
             <div className="">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-3">
+                  <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-3">
                     Documentation
                   </p>
-                  <h1 className="mb-2 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+                  <h1 className="mb-2 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
                     Game wiki
                   </h1>
                 </div>
                 {user && (
                   <Link
                     href="/wiki/new"
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                   >
                     {canPublishDirectly ? "Create page" : "Submit page"}
                   </Link>
@@ -574,11 +574,11 @@ export default async function WikiOverviewPage({
             {/* Learning paths */}
             <section className="">
               <div className="mb-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-1">
+                <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-1">
                   Start with a route
                 </p>
-                <h2 className="text-xl font-bold text-foreground">Learning paths</h2>
-                <p className="mt-1 text-sm text-muted">
+                <h2 className="text-heading font-bold text-foreground">Learning paths</h2>
+                <p className="mt-1 text-body text-muted">
                   Ordered reading lists for your first campaign, economic play, advanced politics,
                   and war.
                 </p>
@@ -590,11 +590,11 @@ export default async function WikiOverviewPage({
                     href={`/wiki/paths/${path.slug}`}
                     className="group border-b border-card-border/60 py-2.5 transition-colors hover:border-primary/50 hover:bg-card-elevated"
                   >
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-primary">
+                    <h3 className="text-body-lg font-semibold text-foreground group-hover:text-primary">
                       {path.title}
                     </h3>
-                    <p className="mt-1 line-clamp-2 text-xs text-muted">{path.description}</p>
-                    <p className="mt-2 text-xs text-muted/70">
+                    <p className="mt-1 line-clamp-2 text-body-sm text-muted">{path.description}</p>
+                    <p className="mt-2 text-body-sm text-muted/70">
                       {path.pages.length} steps · {path.estimatedTime}
                     </p>
                   </Link>
@@ -604,11 +604,11 @@ export default async function WikiOverviewPage({
 
             {/* Spotlight */}
             <div className="">
-              <h2 className="mb-4 text-base font-bold text-foreground">Spotlight</h2>
+              <h2 className="mb-4 text-body-lg font-bold text-foreground">Spotlight</h2>
               <div className="grid gap-6 sm:grid-cols-2">
                 {/* Recently Added */}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-2">
+                  <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-2">
                     Recently added
                   </p>
                   {recentPages.length > 0 ? (
@@ -618,13 +618,13 @@ export default async function WikiOverviewPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted/60">No pages yet.</p>
+                    <p className="text-body text-muted/60">No pages yet.</p>
                   )}
                 </div>
 
                 {/* Most Viewed */}
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-2">
+                  <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-2">
                     Most viewed
                   </p>
                   {mostViewedPages.length > 0 ? (
@@ -634,7 +634,7 @@ export default async function WikiOverviewPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted/60">
+                    <p className="text-body text-muted/60">
                       View counts will appear here as pages are visited.
                     </p>
                   )}
@@ -645,8 +645,8 @@ export default async function WikiOverviewPage({
             {/* Guides */}
             <section id="guides" className="scroll-mt-24 ">
               <div className="mb-4 flex items-center justify-between gap-4">
-                <h2 className="text-base font-bold text-foreground">Guides</h2>
-                <span className="text-xs text-muted">
+                <h2 className="text-body-lg font-bold text-foreground">Guides</h2>
+                <span className="text-body-sm text-muted">
                   Task-first walkthroughs: what to click, in what order
                 </span>
               </div>
@@ -658,17 +658,19 @@ export default async function WikiOverviewPage({
                       href={page.href ?? `/wiki/${page.slug}`}
                       className="group border-b border-card-border/60 py-2.5 transition-colors hover:border-primary/50 hover:bg-card-elevated"
                     >
-                      <p className="text-sm font-medium text-foreground group-hover:text-primary">
+                      <p className="text-body font-medium text-foreground group-hover:text-primary">
                         {page.title}
                       </p>
                       {page.description && (
-                        <p className="mt-0.5 line-clamp-2 text-xs text-muted">{page.description}</p>
+                        <p className="mt-0.5 line-clamp-2 text-body-sm text-muted">
+                          {page.description}
+                        </p>
                       )}
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted/60">No guides yet.</p>
+                <p className="text-body text-muted/60">No guides yet.</p>
               )}
             </section>
 
@@ -676,13 +678,13 @@ export default async function WikiOverviewPage({
             <div className="">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted mb-1">
+                  <p className="text-body-sm font-semibold uppercase tracking-[0.06em] text-muted mb-1">
                     Your pages
                   </p>
-                  <h2 className="mb-1 text-xl font-bold text-foreground">
+                  <h2 className="mb-1 text-heading font-bold text-foreground">
                     Write a wiki page for yourself or your corporation
                   </h2>
-                  <p className="max-w-2xl text-sm text-muted">
+                  <p className="max-w-2xl text-body text-muted">
                     Use the in-app editor: full markdown, inline image uploads, wiki-style links,
                     and embedded widgets. Perfect for biographies, company histories, and campaign
                     platforms.
@@ -691,13 +693,13 @@ export default async function WikiOverviewPage({
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/wiki/my"
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    className="rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
                   >
                     My pages
                   </Link>
                   <Link
                     href="/wiki/new"
-                    className="rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-card-elevated"
+                    className="rounded-md border border-card-border bg-card px-4 py-2 text-body font-medium text-foreground hover:bg-card-elevated"
                   >
                     New article
                   </Link>
@@ -714,7 +716,7 @@ export default async function WikiOverviewPage({
                 <h3 className="font-semibold text-foreground transition-colors group-hover:text-primary">
                   New player guide
                 </h3>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-body text-muted">
                   Learn the basics: campaigns, elections, influence, and the turn cycle.
                 </p>
               </Link>
@@ -726,7 +728,7 @@ export default async function WikiOverviewPage({
                 <h3 className="font-semibold text-foreground transition-colors group-hover:text-primary">
                   Election mechanics
                 </h3>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-body text-muted">
                   Primaries, general elections, snap elections, and voter behavior.
                 </p>
               </Link>
@@ -738,7 +740,7 @@ export default async function WikiOverviewPage({
                 <h3 className="font-semibold text-foreground transition-colors group-hover:text-primary">
                   Reference
                 </h3>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-body text-muted">
                   Formulas, tables, and technical details for advanced play.
                 </p>
               </Link>
@@ -746,7 +748,7 @@ export default async function WikiOverviewPage({
 
             {/* Browse Topics */}
             <div>
-              <h2 className="mb-4 text-lg font-bold text-foreground border-b border-card-border pb-2">
+              <h2 className="mb-4 text-heading font-bold text-foreground border-b border-card-border pb-2">
                 Browse topics
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -760,10 +762,10 @@ export default async function WikiOverviewPage({
                       {CATEGORY_ICON_PATHS[category.id] ?? DEFAULT_ICON}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-sm text-foreground truncate">
+                      <h3 className="font-semibold text-body-lg text-foreground truncate">
                         {category.name}
                       </h3>
-                      <p className="text-xs text-muted line-clamp-1">{category.description}</p>
+                      <p className="text-body-sm text-muted line-clamp-1">{category.description}</p>
                     </div>
                   </Link>
                 ))}
@@ -773,8 +775,8 @@ export default async function WikiOverviewPage({
             {/* Full Page Index */}
             <div className="space-y-8">
               <div className="border-b border-card-border pb-2">
-                <h2 className="text-lg font-bold text-foreground">Full page list</h2>
-                <p className="mt-1 text-sm text-muted">
+                <h2 className="text-heading font-bold text-foreground">Full page list</h2>
+                <p className="mt-1 text-body text-muted">
                   Every wiki entry grouped by how it is maintained.
                 </p>
               </div>

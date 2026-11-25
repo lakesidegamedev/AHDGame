@@ -64,7 +64,7 @@ export default function CanvassingActionPage() {
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Voter canvassing</h1>
+          <h1 className="text-display font-bold text-foreground">Voter canvassing</h1>
           <p className="mt-2 text-muted">
             Target voters who align with your positions for maximum effectiveness.
           </p>
@@ -81,7 +81,7 @@ export default function CanvassingActionPage() {
         <div className="mt-6">
           <button
             onClick={() => router.push("/actions")}
-            className="text-sm text-primary hover:text-primary-dark transition-colors"
+            className="text-body text-primary hover:text-primary-dark transition-colors"
           >
             ← Back to Actions
           </button>

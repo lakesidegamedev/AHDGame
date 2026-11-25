@@ -82,7 +82,7 @@ export function AdminAlertsStrip({ onNavigate }: AdminAlertsStripProps) {
   return (
     <div className={`flex items-center gap-3 border-b px-3 py-1.5 text-body-sm sm:px-4 ${frame}`}>
       <span
-        className={`shrink-0 rounded px-1.5 py-px text-body-xs font-bold tracking-wider uppercase ${
+        className={`shrink-0 rounded px-1.5 py-px text-body-sm font-bold tracking-wider uppercase ${
           worst === "error" ? "bg-error/20 text-error" : "bg-warning/20 text-warning"
         }`}
       >

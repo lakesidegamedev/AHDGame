@@ -41,8 +41,10 @@ export default function MergerReviewPanel() {
   return (
     <section className="min-w-0">
       <div className="flex min-h-8 items-baseline gap-2 border-b border-card-border pb-1.5">
-        <h2 className="text-sm font-semibold text-foreground">Merger review</h2>
-        <p className="text-xs text-muted">deals of yours that competition policy has touched</p>
+        <h2 className="text-body font-semibold text-foreground">Merger review</h2>
+        <p className="text-body-sm text-muted">
+          deals of yours that competition policy has touched
+        </p>
       </div>
       <ul className="divide-y divide-card-border/60">
         {data.involving.map((review) => (

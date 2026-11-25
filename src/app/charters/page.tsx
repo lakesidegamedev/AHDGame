@@ -51,22 +51,22 @@ export default async function ChartersListPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-baseline justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Party charters</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-heading font-bold">Party charters</h1>
+          <p className="mt-1 text-body text-muted">
             Charters you&apos;re a founder on. Sign or reject pending drafts; track active
             ratifications.
           </p>
         </div>
         <Link
           href={`/country/${user.character?.countryId.toLowerCase() ?? "us"}/parties`}
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-body font-medium text-primary hover:underline"
         >
           Browse parties →
         </Link>
       </div>
 
       {charters.length === 0 ? (
-        <div className="rounded-lg border border-card-border bg-card p-6 text-center text-sm text-muted">
+        <div className="rounded-lg border border-card-border bg-card p-6 text-center text-body text-muted">
           You&apos;re not on any charter yet. Charters appear here once another player names you as
           a founder, or when you draft your own.
         </div>
@@ -90,11 +90,11 @@ export default async function ChartersListPage() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h2 className="truncate text-base font-semibold">
+                      <h2 className="truncate text-body-lg font-semibold">
                         {charter.proposedName}{" "}
                         <span className="font-normal text-muted">({charter.proposedAbbr})</span>
                       </h2>
-                      <p className="mt-1 text-xs text-muted">
+                      <p className="mt-1 text-body-sm text-muted">
                         {charter.countryId} ·{" "}
                         {charter.status === "pending-signatures"
                           ? `${signedCount}/${requiredCount} signed`
@@ -107,9 +107,9 @@ export default async function ChartersListPage() {
                       <Badge variant="solid" color={STATUS_VARIANT[charter.status]}>
                         {charter.status}
                       </Badge>
-                      {mySig?.signedAt && <span className="text-[10px] text-success">signed</span>}
+                      {mySig?.signedAt && <span className="text-body-sm text-success">signed</span>}
                       {mySig?.rejectedAt && (
-                        <span className="text-[10px] text-error">you rejected</span>
+                        <span className="text-body-sm text-error">you rejected</span>
                       )}
                     </div>
                   </div>

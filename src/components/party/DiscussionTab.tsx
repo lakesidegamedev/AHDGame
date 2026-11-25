@@ -35,7 +35,7 @@ function formatCooldown(seconds: number): string {
 
 function PostContent({ content }: { content: string }) {
   return (
-    <div className="prose-sm prose-invert max-w-none text-sm text-foreground">
+    <div className="prose-sm prose-invert max-w-none text-body text-foreground">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -55,7 +55,7 @@ function PostContent({ content }: { content: string }) {
           ),
           em: ({ children }) => <em className="italic">{children}</em>,
           code: ({ children }) => (
-            <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-xs">
+            <code className="rounded bg-card-elevated px-1 py-0.5 font-mono text-body-sm">
               {children}
             </code>
           ),
@@ -180,28 +180,28 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
     <div className="space-y-4">
       {/* Compose */}
       <div className="rounded-xl border border-card-border bg-card p-4">
-        <h3 className="mb-3 text-sm font-semibold text-foreground">New post</h3>
+        <h3 className="mb-3 text-body-lg font-semibold text-foreground">New post</h3>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Write your post… (Markdown supported)"
-          className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
           rows={4}
           disabled={submitLoading || cooldownRemaining > 0}
         />
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className={`text-xs ${isOverLimit ? "text-red-400" : "text-muted"}`}>
+          <span className={`text-body-sm ${isOverLimit ? "text-red-400" : "text-muted"}`}>
             {content.length}/{MAX_CONTENT}
           </span>
           <div className="flex items-center gap-3">
             {cooldownRemaining > 0 && (
-              <span className="text-xs text-muted">
+              <span className="text-body-sm text-muted">
                 Next post in {formatCooldown(cooldownRemaining)}
               </span>
             )}
             {message && (
               <span
-                className={`text-xs ${message.startsWith("✓") ? "text-green-400" : "text-red-400"}`}
+                className={`text-body-sm ${message.startsWith("✓") ? "text-green-400" : "text-red-400"}`}
               >
                 {message}
               </span>
@@ -209,7 +209,7 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
             <button
               onClick={handleSubmit}
               disabled={!canPost || submitLoading}
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
+              className="rounded-lg bg-primary px-4 py-1.5 text-body font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {submitLoading ? "Posting…" : "Post"}
             </button>
@@ -233,7 +233,7 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted italic">
+          <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted italic">
             <p>No posts yet. Be the first to start the discussion.</p>
             <a
               href={COMMUNITY_DISCORD_URL}
@@ -248,20 +248,20 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
           posts.map((post) => (
             <div key={post.id} className="rounded-xl border border-card-border bg-card p-4">
               {post.deleted ? (
-                <p className="text-xs italic text-muted">[Post removed by moderator]</p>
+                <p className="text-body-sm italic text-muted">[Post removed by moderator]</p>
               ) : (
                 <>
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-foreground">{post.authorName}</span>
+                    <span className="text-body font-medium text-foreground">{post.authorName}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted">
+                      <span className="text-body-sm text-muted">
                         <LocalTime value={post.createdAt} />
                       </span>
                       {isModerator && (
                         <button
                           onClick={() => handleDelete(post.id)}
                           disabled={deletingId === post.id}
-                          className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                          className="rounded px-2 py-0.5 text-body-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                         >
                           {deletingId === post.id ? "…" : "Delete"}
                         </button>
@@ -282,17 +282,17 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
           <button
             onClick={() => fetchPosts(page - 1)}
             disabled={page <= 1 || loading}
-            className="rounded px-3 py-1 text-sm text-muted hover:text-foreground disabled:opacity-40"
+            className="rounded px-3 py-1 text-body text-muted hover:text-foreground disabled:opacity-40"
           >
             ← Prev
           </button>
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             {page} / {totalPages}
           </span>
           <button
             onClick={() => fetchPosts(page + 1)}
             disabled={page >= totalPages || loading}
-            className="rounded px-3 py-1 text-sm text-muted hover:text-foreground disabled:opacity-40"
+            className="rounded px-3 py-1 text-body text-muted hover:text-foreground disabled:opacity-40"
           >
             Next →
           </button>

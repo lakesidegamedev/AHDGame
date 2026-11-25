@@ -51,7 +51,7 @@ export function EditorialStancePanel({
 
   if (!isCeo) {
     return (
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         {t("published", {
           economic: stanceValue(stance?.economic ?? 0),
           social: stanceValue(stance?.social ?? 0),
@@ -81,10 +81,10 @@ export function EditorialStancePanel({
         social: stanceValue(stance?.social ?? 0),
       })}
     >
-      <p className="py-1 text-sm text-muted">{t("description")}</p>
+      <p className="py-1 text-body text-muted">{t("description")}</p>
       <div className="grid gap-4 py-2 sm:grid-cols-2">
         {axes.map((axis) => (
-          <label key={axis.key} className="grid gap-1 text-sm">
+          <label key={axis.key} className="grid gap-1 text-body">
             <span>
               {t(axis.key)}: <span className="font-mono">{stanceValue(axis.value)}</span>
             </span>
@@ -98,7 +98,7 @@ export function EditorialStancePanel({
               onChange={(event) => axis.set(Number(event.target.value))}
               aria-label={t(axis.key)}
             />
-            <span className="flex justify-between text-xs text-muted">
+            <span className="flex justify-between text-body-sm text-muted">
               <span>{axis.low}</span>
               <span>{axis.high}</span>
             </span>
@@ -115,10 +115,10 @@ export function EditorialStancePanel({
           >
             {saving ? t("saving") : t("save")}
           </SmallButton>
-          {!changed && <span className="text-xs text-muted">{t("unchanged")}</span>}
+          {!changed && <span className="text-body-sm text-muted">{t("unchanged")}</span>}
         </div>
       ) : (
-        <p className="text-xs text-muted">{t("ceoOnly")}</p>
+        <p className="text-body-sm text-muted">{t("ceoOnly")}</p>
       )}
       <InlineStatus message={error} tone="error" className="pt-2" />
     </DenseSection>

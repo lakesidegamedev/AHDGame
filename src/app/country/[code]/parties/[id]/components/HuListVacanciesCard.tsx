@@ -73,10 +73,10 @@ export function HuListVacanciesCard({
   }
   return (
     <section className="rounded-xl border border-card-border bg-card p-6">
-      <h2 className="text-lg font-semibold">{t("title")}</h2>
-      <p className="mt-2 text-sm text-muted">{t("description")}</p>
+      <h2 className="text-heading font-semibold">{t("title")}</h2>
+      <p className="mt-2 text-body text-muted">{t("description")}</p>
       {message && (
-        <p role="status" className="mt-2 text-sm">
+        <p role="status" className="mt-2 text-body">
           {message}
         </p>
       )}
@@ -87,7 +87,7 @@ export function HuListVacanciesCard({
       ) : (
         vacancies.map((vacancy) => (
           <div key={vacancy.slotPersonId} className="mt-4 space-y-2">
-            <label htmlFor={`hu-list-${vacancy.slotPersonId}`} className="block text-sm">
+            <label htmlFor={`hu-list-${vacancy.slotPersonId}`} className="block text-body">
               {t("seat", { tier: t(vacancy.tier), district: vacancy.districtId })}
             </label>
             {!vacancy.candidates.length ? (

@@ -21,7 +21,7 @@ export function SupplyAdvice({
         ? "text-amber-400"
         : "text-red-400";
   return (
-    <div className="mt-2 text-xs text-neutral-300">
+    <div className="mt-2 text-body-sm text-neutral-300">
       <p className={color}>
         Next-turn supply estimate: {Math.round(advice.supply)}% (
         {advice.supply >= 70 ? "Good" : advice.supply > 25 ? "Limited" : "Critical"})

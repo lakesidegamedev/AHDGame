@@ -75,7 +75,7 @@ export function CompareView({
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-card-border bg-card p-4 shadow-card">
-        <h2 className="flex-1 text-heading-lg font-bold text-foreground">Country comparison</h2>
+        <h2 className="flex-1 text-heading font-bold text-foreground">Country comparison</h2>
         <div className="flex flex-wrap gap-2">
           {POLITICAL_METRIC_COUNTRY_IDS.map((id) => {
             const on = selected[id];

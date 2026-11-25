@@ -404,7 +404,7 @@ export function PolicyEffectIndicators({
             inactive ? (
               <span
                 key={name}
-                className="inline-flex items-center gap-0.5 text-xs text-muted/60 line-through"
+                className="inline-flex items-center gap-0.5 text-body-sm text-muted/60 line-through"
                 title="Not tracked in this era"
               >
                 {name} — Not tracked in this era
@@ -412,7 +412,7 @@ export function PolicyEffectIndicators({
             ) : (
               <span
                 key={name}
-                className={`inline-flex items-center gap-0.5 text-xs ${
+                className={`inline-flex items-center gap-0.5 text-body-sm ${
                   isGood ? "text-success" : "text-error"
                 }`}
               >
@@ -433,7 +433,7 @@ export function PolicyEffectIndicators({
           {approvalEffects.map(({ name, direction, isGood, isMajor }) => (
             <span
               key={name}
-              className={`inline-flex items-center gap-0.5 text-xs ${
+              className={`inline-flex items-center gap-0.5 text-body-sm ${
                 isGood ? "text-success" : "text-error"
               }`}
             >

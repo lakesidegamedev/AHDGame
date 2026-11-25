@@ -25,9 +25,9 @@ function getRankColor(index: number): string {
 }
 
 function RankChange({ value }: { value: number | null }) {
-  if (value == null || value === 0) return <span className="text-muted text-xs">—</span>;
-  if (value > 0) return <span className="text-success text-xs font-medium">▲{value}</span>;
-  return <span className="text-error text-xs font-medium">▼{Math.abs(value)}</span>;
+  if (value == null || value === 0) return <span className="text-muted text-body-sm">—</span>;
+  if (value > 0) return <span className="text-success text-body-sm font-medium">▲{value}</span>;
+  return <span className="text-error text-body-sm font-medium">▼{Math.abs(value)}</span>;
 }
 
 function WealthChange({
@@ -110,14 +110,14 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-foreground">Wealth leaderboard</h2>
+            <h2 className="text-heading font-bold text-foreground">Wealth leaderboard</h2>
             <div
               className="flex items-center gap-1 rounded-lg border border-card-border bg-card p-0.5"
               title="Net subtracts line-of-credit debt; gross compares wealth before borrowing"
             >
               <button
                 onClick={() => setShowNet(true)}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-2.5 py-1 text-body-sm font-semibold rounded-md transition-colors ${
                   showNet ? "bg-primary/15 text-primary" : "text-muted hover:text-foreground"
                 }`}
               >
@@ -125,7 +125,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
               </button>
               <button
                 onClick={() => setShowNet(false)}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-2.5 py-1 text-body-sm font-semibold rounded-md transition-colors ${
                   !showNet ? "bg-primary/15 text-primary" : "text-muted hover:text-foreground"
                 }`}
               >
@@ -138,7 +138,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
               <button
                 key={opt.field}
                 onClick={() => handleSort(opt.field)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                   sortField === opt.field
                     ? "bg-primary/10 text-primary border border-primary/20"
                     : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
@@ -159,7 +159,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                 setFilterText(e.target.value);
                 setPage(0);
               }}
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+              className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body pl-9 focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
             />
             <svg
               className="absolute left-3 top-2.5 h-4 w-4 text-muted"
@@ -182,7 +182,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                 setFilterCountry(e.target.value);
                 setPage(0);
               }}
-              className="rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary/60 focus:outline-none"
+              className="rounded-lg border border-card-border bg-card px-3 py-2 text-body text-foreground focus:border-primary/60 focus:outline-none"
             >
               <option value="">All countries</option>
               {countries.map((c) => (
@@ -200,7 +200,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                 setFilterCountry("");
                 setPage(0);
               }}
-              className="rounded-lg border border-card-border bg-card px-3 py-2 text-xs font-medium text-muted hover:text-foreground transition-colors whitespace-nowrap"
+              className="rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm font-medium text-muted hover:text-foreground transition-colors whitespace-nowrap"
             >
               Clear · {sortedEntries.length}/{entries.length}
             </button>
@@ -210,7 +210,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
 
       <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-body">
             <thead className="bg-card-elevated border-b border-card-border">
               <tr>
                 <th className="px-4 py-3 text-muted text-body-sm font-medium w-10">#</th>
@@ -226,7 +226,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                     <th
                       key={opt.field}
                       onClick={() => handleSort(opt.field)}
-                      className={`px-4 py-3 font-semibold uppercase text-[10px] tracking-wider text-right cursor-pointer select-none ${hidden} ${
+                      className={`px-4 py-3 font-semibold uppercase text-body-sm tracking-wider text-right cursor-pointer select-none ${hidden} ${
                         sortField === opt.field
                           ? "text-primary"
                           : "text-muted hover:text-foreground"
@@ -286,7 +286,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                                 {entry.name}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-muted">
+                            <div className="flex items-center gap-1 text-body-sm text-muted">
                               <span className="truncate">
                                 {displayCanadianRegionCode(entry.state)}
                               </span>
@@ -305,7 +305,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                       <td className="px-4 py-3 text-right font-mono font-bold tabular-nums text-foreground">
                         {formatAmount(displayWealth(entry))}
                         {(entry.locDebtValue ?? 0) > 0 && (
-                          <span className="block text-[10px] font-normal text-muted">
+                          <span className="block text-body-sm font-normal text-muted">
                             −{formatAmount(entry.locDebtValue ?? 0)} debt
                           </span>
                         )}
@@ -336,7 +336,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-2 pt-1">
-          <span className="text-xs text-muted">
+          <span className="text-body-sm text-muted">
             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sortedEntries.length)} of{" "}
             {sortedEntries.length}
           </span>
@@ -344,17 +344,17 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
             <button
               onClick={() => setPage(page - 1)}
               disabled={page === 0}
-              className="px-3 py-1.5 rounded-md text-xs font-medium border border-card-border bg-card text-muted hover:text-foreground hover:bg-card-elevated transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              className="px-3 py-1.5 rounded-md text-body-sm font-medium border border-card-border bg-card text-muted hover:text-foreground hover:bg-card-elevated transition-colors disabled:opacity-40 disabled:pointer-events-none"
             >
               ← Prev
             </button>
-            <span className="px-3 py-1.5 text-xs text-muted">
+            <span className="px-3 py-1.5 text-body-sm text-muted">
               {page + 1} / {totalPages}
             </span>
             <button
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages - 1}
-              className="px-3 py-1.5 rounded-md text-xs font-medium border border-card-border bg-card text-muted hover:text-foreground hover:bg-card-elevated transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              className="px-3 py-1.5 rounded-md text-body-sm font-medium border border-card-border bg-card text-muted hover:text-foreground hover:bg-card-elevated transition-colors disabled:opacity-40 disabled:pointer-events-none"
             >
               Next →
             </button>

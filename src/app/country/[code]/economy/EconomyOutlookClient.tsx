@@ -115,7 +115,7 @@ export function EconomyOutlookClient() {
             <Skeleton className="h-28 w-full rounded-xl" />
           </div>
         ) : error || !data ? (
-          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-card-border bg-card p-8 text-center text-body text-muted">
             <p>The economic outlook did not load. The server may be busy processing a turn.</p>
             <button
               type="button"
@@ -166,11 +166,11 @@ export function EconomyOutlookClient() {
                 {data.stateOwnership.status.tier !== "none" && (
                   <div className="rounded-xl border border-card-border bg-card px-5 py-4 shadow-sm">
                     <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="text-sm font-bold text-foreground">
+                      <h3 className="text-body-lg font-bold text-foreground">
                         State ownership concentration
                       </h3>
                       <span
-                        className={`text-lg font-bold tabular-nums ${
+                        className={`text-heading font-bold tabular-nums ${
                           data.stateOwnership.status.tier === "high"
                             ? "text-error"
                             : data.stateOwnership.status.tier === "elevated"
@@ -181,13 +181,13 @@ export function EconomyOutlookClient() {
                         {Math.round(data.stateOwnership.concentration)}%
                       </span>
                     </div>
-                    <div className="mt-1 text-[11px] font-semibold text-muted">
+                    <div className="mt-1 text-body-sm font-semibold text-muted">
                       {data.stateOwnership.status.label} concentration of corporate revenue
                     </div>
-                    <p className="mt-2 text-[11px] leading-snug text-muted">
+                    <p className="mt-2 text-body-sm leading-snug text-muted">
                       {data.stateOwnership.status.note}
                     </p>
-                    <p className="mt-1 text-[11px] leading-snug text-muted">
+                    <p className="mt-1 text-body-sm leading-snug text-muted">
                       This is the share of corporate revenue earned by state-owned companies. The
                       sector tiles show the corporate-owned share of each market, which is a
                       different measure.
@@ -197,10 +197,10 @@ export function EconomyOutlookClient() {
               </div>
               <div className="rounded-xl border border-card-border bg-card px-5 py-4 shadow-sm lg:col-span-7">
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="text-sm font-bold text-foreground">
+                  <h3 className="text-body-lg font-bold text-foreground">
                     Sector mix <span className="font-normal text-muted">· national</span>
                   </h3>
-                  <span className="text-[10px] text-muted">
+                  <span className="text-body-sm text-muted">
                     aggregated across {config.regionLabelPlural.toLowerCase()} · tile links to
                     largest market
                   </span>

@@ -147,7 +147,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
 
   if (loading && !data) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-body text-muted">
         Loading Priority Region…
       </div>
     );
@@ -160,11 +160,11 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Priority region</h2>
-        <span className="text-xs text-muted">Planning focus for adjacent states</span>
+        <h2 className="text-heading font-semibold">Priority region</h2>
+        <span className="text-body-sm text-muted">Planning focus for adjacent states</span>
       </div>
 
-      <p className="text-xs text-muted mb-4">
+      <p className="text-body-sm text-muted mb-4">
         Pick 2-3 adjacent states (4 with a Governor anchor) where this party will concentrate its
         organizing efforts. Build Org contributes the same fixed bucket unit in every state, so this
         designation does not multiply it. Once set, the cluster is{" "}
@@ -172,12 +172,12 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
         cooldown expires.
       </p>
 
-      {msg && <div className={`mb-4 rounded-lg p-3 text-sm ${getMessageStyle(msg)}`}>{msg}</div>}
+      {msg && <div className={`mb-4 rounded-lg p-3 text-body ${getMessageStyle(msg)}`}>{msg}</div>}
 
       {/* Current cluster (if any) */}
       {cluster && (
         <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <div className="mb-2 text-xs font-semibold text-primary">
+          <div className="mb-2 text-body-sm font-semibold text-primary">
             Current cluster
             {isLocked && (
               <span className="ml-2 text-muted">
@@ -189,7 +189,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
             )}
           </div>
           {cluster.stateIds.length === 0 ? (
-            <p className="text-sm text-muted italic">
+            <p className="text-body text-muted italic">
               All cluster states have been evicted (loss of presence). The slot stays locked until
               the cooldown expires.
             </p>
@@ -198,7 +198,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
               {cluster.stateIds.map((id) => (
                 <span
                   key={id}
-                  className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary"
+                  className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-body-sm text-primary"
                 >
                   {stateNameById[id] ?? id}
                 </span>
@@ -211,7 +211,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
       {/* Setter UI — visible only when slot is unlocked */}
       {!isLocked && (
         <div className="space-y-3">
-          <div className="text-xs font-semibold text-muted">
+          <div className="text-body-sm font-semibold text-muted">
             {cluster ? "Re-set cluster" : "Set initial cluster"}
             <span className="ml-2 normal-case text-body-sm text-muted/70">
               {picked.length} / {maxPicks} picked
@@ -247,7 +247,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
                           ? "Your party holds the state-level executive here — qualifies the cluster for +1 slot."
                           : undefined
                   }
-                  className={`rounded-lg border px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 ${
+                  className={`rounded-lg border px-3 py-2 text-body-sm transition-colors flex items-center justify-between gap-2 ${
                     isPicked
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-card-border text-muted hover:border-primary/40 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-card-border disabled:hover:text-muted"
@@ -270,7 +270,7 @@ export function PriorityRegionCard({ party, countryCode }: PriorityRegionCardPro
           <button
             onClick={handleSubmit}
             disabled={submitting || picked.length < 2 || !picksAreConnected}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Locking in…" : "Lock in priority region"}
           </button>

@@ -37,13 +37,13 @@ export function ElectionFilterBar({
   const registered = useRegisteredCountries();
   return (
     <div className="mb-4 flex items-center gap-3 flex-wrap">
-      <span className="text-sm text-muted">Filter:</span>
+      <span className="text-body text-muted">Filter:</span>
       <select
         value={filterCountry}
         onChange={(e) =>
           dispatch({ type: "SET_FILTER_COUNTRY", value: e.target.value as CountryFilter })
         }
-        className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+        className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
       >
         <option value="">All countries</option>
         {registered.map((id) => (
@@ -57,7 +57,7 @@ export function ElectionFilterBar({
         onChange={(e) =>
           dispatch({ type: "SET_FILTER_TYPE", value: e.target.value as ElectionTypeFilter })
         }
-        className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+        className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
       >
         <option value="">All types</option>
         <option value="senate">Senate only</option>
@@ -82,7 +82,7 @@ export function ElectionFilterBar({
       <select
         value={filterState}
         onChange={(e) => dispatch({ type: "SET_FILTER_STATE", value: e.target.value })}
-        className="rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+        className="rounded-lg border border-card-border bg-background px-3 py-2 text-body"
       >
         <option value="">All states/Regions</option>
         <optgroup label="US">
@@ -117,7 +117,7 @@ export function ElectionFilterBar({
       <button
         onClick={onRefresh}
         disabled={loading}
-        className="rounded-lg border border-card-border px-3 py-2 text-sm hover:bg-background"
+        className="rounded-lg border border-card-border px-3 py-2 text-body hover:bg-background"
       >
         Refresh
       </button>

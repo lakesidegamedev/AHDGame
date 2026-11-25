@@ -117,12 +117,12 @@ export default async function CampaignPage() {
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
       <div className="max-w-lg w-full">
         <div className="rounded-xl border border-card-border bg-card p-8 text-center space-y-4">
-          <h1 className="text-2xl font-bold text-foreground">No presidential campaign</h1>
+          <h1 className="text-heading font-bold text-foreground">No presidential campaign</h1>
           <p className="text-muted">
             The campaign manager is a presidential-race feature. You are not currently running in a
             presidential race or managing a presidential campaign.
           </p>
-          <p className="text-sm text-muted/70">
+          <p className="text-body text-muted/70">
             Campaign management becomes available when you&apos;re a candidate in a presidential
             primary or general election, or are assigned as the campaign&apos;s manager.
           </p>

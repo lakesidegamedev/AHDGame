@@ -92,24 +92,24 @@ export default function AppointSenatorModal({
   return (
     <Modal open title={`Appoint US Senator for ${state}`} onClose={onClose}>
       <div className="mb-4 space-y-2">
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           <strong className="text-foreground">Vacancy:</strong> Class {senateClass} Senate seat
         </p>
-        <p className="text-sm text-muted">
+        <p className="text-body text-muted">
           <strong className="text-foreground">Term:</strong> Until next Class {senateClass} election
         </p>
       </div>
 
       {fetchingCandidates ? (
-        <div className="mb-4 text-sm text-muted">Loading eligible candidates...</div>
+        <div className="mb-4 text-body text-muted">Loading eligible candidates...</div>
       ) : candidates.length === 0 ? (
-        <div className="mb-4 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+        <div className="mb-4 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-body text-warning">
           No eligible candidates found in {state}. Candidates must be players or NPPs from your
           state who do not currently hold office.
         </div>
       ) : (
         <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-foreground">
+          <label className="mb-2 block text-body font-medium text-foreground">
             Select appointee:
           </label>
           <select
@@ -131,12 +131,12 @@ export default function AppointSenatorModal({
         </div>
       )}
 
-      <div className="mb-4 rounded border border-info/30 bg-info/10 px-3 py-2 text-sm text-info">
+      <div className="mb-4 rounded border border-info/30 bg-info/10 px-3 py-2 text-body text-info">
         Note: Appointed senator serves until the next Class {senateClass} election.
       </div>
 
       {error && (
-        <div className="mb-4 rounded border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+        <div className="mb-4 rounded border border-error/30 bg-error/10 px-3 py-2 text-body text-error">
           {error}
         </div>
       )}
@@ -145,14 +145,14 @@ export default function AppointSenatorModal({
         <button
           onClick={onClose}
           disabled={loading}
-          className="flex-1 rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-card-elevated disabled:opacity-50 transition-colors"
+          className="flex-1 rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-foreground hover:bg-card-elevated disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleAppoint}
           disabled={loading || candidates.length === 0}
-          className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
+          className="flex-1 rounded-lg bg-primary px-4 py-2 text-body font-medium text-primary-foreground hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
         >
           {loading ? "Appointing..." : "Confirm appointment"}
         </button>

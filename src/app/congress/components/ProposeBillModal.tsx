@@ -111,7 +111,7 @@ function SupplementaryLoadError({ message, onRetry }: { message: string; onRetry
   return (
     <div
       role="alert"
-      className="flex items-center justify-between gap-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs text-error"
+      className="flex items-center justify-between gap-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-body-sm text-error"
     >
       <span>{message}</span>
       <button

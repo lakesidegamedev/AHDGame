@@ -50,7 +50,7 @@ export const StatePanel = forwardRef<HTMLDivElement, StatePanelProps>(function S
           <div style={{ ...BLEND_LABEL, fontSize: 11, letterSpacing: ".08em" }}>
             {state.id} / {state.ev} ELECTORAL {state.ev === 1 ? "VOTE" : "VOTES"}
           </div>
-          <h3 style={{ margin: "2px 0 0", fontSize: 21, fontWeight: 600, lineHeight: 1.15 }}>
+          <h3 style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 600, lineHeight: 1.15 }}>
             {state.name}
           </h3>
         </div>

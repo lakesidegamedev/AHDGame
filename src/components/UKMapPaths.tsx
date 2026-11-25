@@ -198,7 +198,7 @@ export function UKMapPaths({
       {/* Tooltip */}
       {hovered && tooltipPos && tooltipContent.length > 0 && (
         <div
-          className="absolute pointer-events-none z-10 px-2 py-1.5 rounded text-xs bg-slate-900 border border-slate-600 shadow-lg max-w-[200px]"
+          className="absolute pointer-events-none z-10 px-2 py-1.5 rounded text-body-sm bg-slate-900 border border-slate-600 shadow-lg max-w-[200px]"
           style={{
             left: tooltipPos.x + 12,
             top: tooltipPos.y + (flipTooltip ? -12 : -8),

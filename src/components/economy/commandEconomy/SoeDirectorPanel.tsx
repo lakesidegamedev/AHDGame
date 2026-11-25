@@ -70,7 +70,7 @@ export function SoeDirectorPanel({ dashboard, soe, onSaved }: Props) {
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-bold text-foreground">{soe.corpName}</h3>
+        <h3 className="text-body-lg font-bold text-foreground">{soe.corpName}</h3>
         <Badge color="success" variant="subtle">
           {soe.sectorLabel}
         </Badge>
@@ -87,20 +87,20 @@ export function SoeDirectorPanel({ dashboard, soe, onSaved }: Props) {
 
       <div className="mt-4 space-y-4">
         <div>
-          <label className="text-xs font-semibold text-foreground">Production target</label>
+          <label className="text-body-sm font-semibold text-foreground">Production target</label>
           <input
             type="number"
             min={0}
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-right text-body tabular-nums text-foreground focus:border-primary focus:outline-none"
           />
-          <p className="mt-1 text-[10px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             A stretch target above capacity pushes output but risks missing the plan.
           </p>
         </div>
         <div>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-body-sm">
             <span className="font-semibold text-foreground">Labour vs quality</span>
             <span className="tabular-nums text-muted">
               {labor < 40 ? "Quantity" : labor > 60 ? "Quality" : "Balanced"}
@@ -112,25 +112,25 @@ export function SoeDirectorPanel({ dashboard, soe, onSaved }: Props) {
             value={labor}
             onChange={(e) => setLabor(Number(e.target.value))}
           />
-          <p className="mt-1 text-[10px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Chase raw output on the left, chase efficiency and quality on the right.
           </p>
         </div>
         <div>
-          <label className="text-xs font-semibold text-foreground">Investment request</label>
+          <label className="text-body-sm font-semibold text-foreground">Investment request</label>
           <input
             type="number"
             min={0}
             value={request}
             onChange={(e) => setRequest(e.target.value)}
-            className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-right text-sm tabular-nums text-foreground focus:border-primary focus:outline-none"
+            className="mt-1 w-full rounded-md border border-card-border bg-card px-2 py-1.5 text-right text-body tabular-nums text-foreground focus:border-primary focus:outline-none"
           />
-          <p className="mt-1 text-[10px] text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             Ask Gosbank for capital. A request draws more directed credit toward this plant.
           </p>
           {capacityAdvice && (
             <div
-              className={`mt-2 rounded-lg border p-3 text-[11px] leading-snug ${
+              className={`mt-2 rounded-lg border p-3 text-body-sm leading-snug ${
                 capacityAdvice.severity === "warning"
                   ? "border-warning/40 bg-warning/10 text-warning"
                   : "border-card-border bg-card-muted/40 text-muted"
@@ -150,7 +150,7 @@ export function SoeDirectorPanel({ dashboard, soe, onSaved }: Props) {
         </div>
       </div>
 
-      <InlineError error={error} className="mt-3 text-xs text-error" />
+      <InlineError error={error} className="mt-3 text-body-sm text-error" />
       <div className="mt-4">
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? "Saving..." : "Update enterprise"}
@@ -164,7 +164,7 @@ function Readout({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">{value}</div>
+      <div className="mt-0.5 text-body font-bold tabular-nums text-foreground">{value}</div>
     </div>
   );
 }

@@ -23,7 +23,7 @@ interface IdentityPanelProps {
   context: DossierContext;
 }
 
-const MONO_CLS = "font-mono text-[11px] tracking-tight";
+const MONO_CLS = "font-mono text-body-sm tracking-tight";
 
 export function IdentityPanel({ identity, devicesAndIps, context }: IdentityPanelProps) {
   const isAdmin = context === "admin";
@@ -80,7 +80,7 @@ export function IdentityPanel({ identity, devicesAndIps, context }: IdentityPane
           editorializes about the network itself. */}
       {ipDetails && (
         <div
-          className={`mt-4 rounded-lg border px-3 py-2.5 text-xs ${
+          className={`mt-4 rounded-lg border px-3 py-2.5 text-body-sm ${
             netRisk
               ? "border-amber-500/25 bg-amber-500/5"
               : "border-card-border/70 bg-card-elevated/40"
@@ -99,7 +99,7 @@ export function IdentityPanel({ identity, devicesAndIps, context }: IdentityPane
               {ipDetails.isProxy && <NetChip label="Proxy" />}
               {ipDetails.isHosting && <NetChip label="Hosting" />}
               {!netRisk && (
-                <span className="rounded-md border border-green-500/20 bg-green-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-400">
+                <span className="rounded-md border border-green-500/20 bg-green-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-green-400">
                   Residential
                 </span>
               )}
@@ -133,12 +133,12 @@ export function IdentityPanel({ identity, devicesAndIps, context }: IdentityPane
           Device &amp; IP sightings ({devicesAndIps.length})
         </div>
         {devicesAndIps.length === 0 ? (
-          <p className="py-3 text-center text-xs text-muted">No device or IP data recorded.</p>
+          <p className="py-3 text-center text-body-sm text-muted">No device or IP data recorded.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-left text-xs">
+            <table className="w-full min-w-[480px] text-left text-body-sm">
               <thead>
-                <tr className="border-b border-card-border/70 text-sm font-semibold text-foreground">
+                <tr className="border-b border-card-border/70 text-body font-semibold text-foreground">
                   <th className="py-1.5 pr-3 font-semibold">IP</th>
                   <th className="py-1.5 pr-3 font-semibold">Fingerprint</th>
                   <th className="py-1.5 pr-3 font-semibold">Tracking</th>
@@ -185,9 +185,9 @@ function Field({
 }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
-      <dt className="w-32 flex-shrink-0 text-[11px] font-medium text-muted">{label}</dt>
+      <dt className="w-32 flex-shrink-0 text-body-sm font-medium text-muted">{label}</dt>
       <dd
-        className={`min-w-0 truncate text-xs text-foreground/90 ${mono ? "font-mono text-[11px] tracking-tight" : ""}`}
+        className={`min-w-0 truncate text-body-sm text-foreground/90 ${mono ? "font-mono text-body-sm tracking-tight" : ""}`}
         title={value ?? undefined}
       >
         {value ?? (adminOnlyHint ? <AdminOnlyDash /> : "—")}
@@ -200,14 +200,14 @@ function Field({
 function AdminOnlyDash() {
   return (
     <span className="text-muted" title="Visible to admins only.">
-      — <span className="text-[9px] font-semibold uppercase tracking-wide">admin</span>
+      — <span className="text-body-sm font-semibold uppercase tracking-wide">admin</span>
     </span>
   );
 }
 
 function NetChip({ label }: { label: string }) {
   return (
-    <span className="rounded-md border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+    <span className="rounded-md border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide text-amber-400">
       {label}
     </span>
   );

@@ -230,8 +230,8 @@ function CardContent({
         <div className="flex items-center gap-2">
           <CountryFlag country={_countryId} size="md" />
           <div>
-            <h3 className="text-sm font-bold text-foreground">{config.name}</h3>
-            <p className="text-[10px] text-muted">{commodityLabel}</p>
+            <h3 className="text-body-lg font-bold text-foreground">{config.name}</h3>
+            <p className="text-body-sm text-muted">{commodityLabel}</p>
           </div>
         </div>
         <button
@@ -282,7 +282,7 @@ function CardContent({
         />
       </div>
 
-      <p className="mx-3 mb-3 rounded-lg border border-card-border bg-card-elevated/50 px-3 py-2 text-xs leading-relaxed text-muted">
+      <p className="mx-3 mb-3 rounded-lg border border-card-border bg-card-elevated/50 px-3 py-2 text-body-sm leading-relaxed text-muted">
         <strong className="font-semibold text-foreground">Thinking of building?</strong>{" "}
         {BUILD_OUTLOOK_COPY[countryBuildOutlook(market)]}
       </p>
@@ -295,7 +295,7 @@ function CardContent({
               e.stopPropagation();
               onModeChange("supply");
             }}
-            className={`flex-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+            className={`flex-1 rounded-md px-2 py-1 text-body-sm font-bold uppercase tracking-wider transition-colors ${
               mode === "supply"
                 ? "bg-success text-white"
                 : "bg-card-elevated text-muted hover:text-foreground"
@@ -308,7 +308,7 @@ function CardContent({
               e.stopPropagation();
               onModeChange("demand");
             }}
-            className={`flex-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+            className={`flex-1 rounded-md px-2 py-1 text-body-sm font-bold uppercase tracking-wider transition-colors ${
               mode === "demand"
                 ? "bg-error text-white"
                 : "bg-card-elevated text-muted hover:text-foreground"
@@ -321,7 +321,7 @@ function CardContent({
               e.stopPropagation();
               onModeChange("price");
             }}
-            className={`flex-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+            className={`flex-1 rounded-md px-2 py-1 text-body-sm font-bold uppercase tracking-wider transition-colors ${
               mode === "price"
                 ? "bg-primary text-primary-foreground"
                 : "bg-card-elevated text-muted hover:text-foreground"
@@ -337,7 +337,7 @@ function CardContent({
                 e.stopPropagation();
                 onViewCountryMap();
               }}
-              className="w-full px-3 py-2.5 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="w-full px-3 py-2.5 text-body font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               View national map
             </button>
@@ -346,7 +346,7 @@ function CardContent({
                 e.stopPropagation();
                 onViewCountryPage();
               }}
-              className="w-full text-center text-xs text-muted hover:text-foreground transition-colors py-0.5"
+              className="w-full text-center text-body-sm text-muted hover:text-foreground transition-colors py-0.5"
             >
               View country page →
             </button>
@@ -357,7 +357,7 @@ function CardContent({
               e.stopPropagation();
               onViewCountryPage();
             }}
-            className="w-full px-3 py-2 text-xs font-semibold rounded-lg border border-card-border bg-card hover:bg-card-elevated transition-colors text-foreground"
+            className="w-full px-3 py-2 text-body-sm font-semibold rounded-lg border border-card-border bg-card hover:bg-card-elevated transition-colors text-foreground"
           >
             View country page
           </button>
@@ -365,7 +365,7 @@ function CardContent({
       </div>
 
       {/* Region count hint */}
-      <div className="px-4 pb-2 text-[10px] text-muted">
+      <div className="px-4 pb-2 text-body-sm text-muted">
         {data.stateCount} {data.stateCount === 1 ? "region" : "regions"} with commodity data
       </div>
     </div>
@@ -389,10 +389,10 @@ function TradeTotal({
       : "border-info/35 bg-info/5 text-info";
   return (
     <div className={`rounded-lg border px-2.5 py-2.5 ${accent}`}>
-      <div className="text-xs font-semibold">{label}</div>
-      <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">{value}</div>
+      <div className="text-body-sm font-semibold">{label}</div>
+      <div className="mt-0.5 text-body font-bold tabular-nums text-foreground">{value}</div>
       {parts && (
-        <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-1 gap-y-1 border-t border-card-border pt-1.5 text-[11px] leading-tight">
+        <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-1 gap-y-1 border-t border-card-border pt-1.5 text-body-sm leading-tight">
           {parts.map((part) => (
             <div key={part.label} className="contents">
               <dt className="text-muted">{part.label}</dt>
@@ -419,8 +419,8 @@ function StatRow({
   return (
     <div className="px-4 py-2 bg-card">
       <div className="text-body-sm font-medium text-muted">{label}</div>
-      <div className={`text-sm font-bold tabular-nums ${color}`}>{value}</div>
-      {sub && <div className="text-[10px] text-muted">{sub}</div>}
+      <div className={`text-body font-bold tabular-nums ${color}`}>{value}</div>
+      {sub && <div className="text-body-sm text-muted">{sub}</div>}
     </div>
   );
 }

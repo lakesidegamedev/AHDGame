@@ -59,7 +59,7 @@ export function AskUsageBars({
   return (
     <div className="space-y-1.5">
       <div>
-        <div className="mb-1 flex justify-between text-[11px] text-muted">
+        <div className="mb-1 flex justify-between text-body-sm text-muted">
           <span>Energy</span>
           <span>
             <b className="font-semibold text-foreground">{left}%</b> left, {aboutLeft(view)}
@@ -80,7 +80,7 @@ export function AskUsageBars({
         </div>
       </div>
       {week && view.weekly && (
-        <div className="flex items-center gap-2 text-[10px] text-muted">
+        <div className="flex items-center gap-2 text-body-sm text-muted">
           <span className="h-0.5 w-12 overflow-hidden rounded-full bg-card-elevated" aria-hidden>
             <i
               className="block h-full rounded-full bg-primary/60"
@@ -90,7 +90,7 @@ export function AskUsageBars({
           <span>{week}</span>
         </div>
       )}
-      <div className="flex items-center justify-between text-[10px] text-muted">
+      <div className="flex items-center justify-between text-body-sm text-muted">
         <span>
           {planLabel ? `${planLabel} plan` : ""}
           {planLabel && now !== null ? " · " : ""}
@@ -129,7 +129,7 @@ export function AskUsageLine({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="flex w-full items-center gap-2 text-[11px] text-muted hover:text-foreground"
+      className="flex w-full items-center gap-2 text-body-sm text-muted hover:text-foreground"
     >
       <span className="h-1 w-12 overflow-hidden rounded-full bg-card-elevated" aria-hidden>
         <i

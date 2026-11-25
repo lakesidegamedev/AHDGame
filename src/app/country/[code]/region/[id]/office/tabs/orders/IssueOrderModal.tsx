@@ -210,21 +210,21 @@ export function IssueOrderModal({
       aria-labelledby="issue-order-title"
     >
       <div className="w-full max-w-2xl rounded-2xl border border-card-border bg-card p-6 shadow-modal max-h-[85dvh] overflow-y-auto">
-        <h2 id="issue-order-title" className="text-lg font-semibold mb-3">
+        <h2 id="issue-order-title" className="text-heading font-semibold mb-3">
           {adminOverride ? `Issue ${orderName} (Admin)` : `Issue ${orderName}`}
         </h2>
-        <p className="text-xs text-muted mb-4">
+        <p className="text-body-sm text-muted mb-4">
           {`An ${orderName} nudges a ${scope === "national" ? "national" : "state"} policy by up to ${EXEC_ORDER_MAX_STEPS} steps for ${EXEC_ORDER_DURATION_TURNS} turns, or until rescinded or superseded by legislation.`}
           {adminOverride
             ? " Admin override bypasses AP cost."
             : ` Costs ${EXEC_ORDER_AP_COST_PER_STEP} office AP per step.`}
         </p>
 
-        <label className="block text-xs text-muted mb-1">Category</label>
+        <label className="block text-body-sm text-muted mb-1">Category</label>
         <select
           value={category}
           onChange={(e) => pickCategory(e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3 capitalize"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3 capitalize"
           disabled={submitting}
           aria-label="Category"
         >
@@ -235,11 +235,11 @@ export function IssueOrderModal({
           ))}
         </select>
 
-        <label className="block text-xs text-muted mb-1">Policy</label>
+        <label className="block text-body-sm text-muted mb-1">Policy</label>
         <select
           value={legId}
           onChange={(e) => pickType(e.target.value)}
-          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm mb-3"
+          className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body mb-3"
           disabled={submitting || typesForCategory.length === 0}
           aria-label="Policy"
         >
@@ -258,7 +258,7 @@ export function IssueOrderModal({
 
         {legId && (
           <>
-            <label className="block text-xs text-muted mb-1">Shift</label>
+            <label className="block text-body-sm text-muted mb-1">Shift</label>
             <div className="grid grid-cols-2 gap-2 mb-3 sm:grid-cols-4">
               {SHIFT_BUTTONS.map((b) => {
                 const clamped = shiftWouldClamp(b.shift);
@@ -271,17 +271,17 @@ export function IssueOrderModal({
                     type="button"
                     onClick={() => setShift(b.shift)}
                     disabled={submitting || clamped}
-                    className={`rounded-lg border px-3 py-2 text-xs text-left transition-colors disabled:opacity-50 ${
+                    className={`rounded-lg border px-3 py-2 text-body-sm text-left transition-colors disabled:opacity-50 ${
                       shift === b.shift
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-card-border text-muted"
                     }`}
                     title={clamped ? "Would clamp at policy boundary" : ""}
                   >
-                    <div className="font-semibold text-sm">
+                    <div className="font-semibold text-body">
                       {b.arrows} {cost} AP
                     </div>
-                    <div className="text-[11px] mt-0.5">
+                    <div className="text-body-sm mt-0.5">
                       {destName ? (
                         <>
                           Toward <span className="font-medium">{destName}</span>
@@ -296,7 +296,7 @@ export function IssueOrderModal({
             </div>
 
             {policyOptions.length > 0 ? (
-              <div className="mb-3 rounded-lg border border-card-border bg-background/40 p-3 text-xs">
+              <div className="mb-3 rounded-lg border border-card-border bg-background/40 p-3 text-body-sm">
                 <div className="flex flex-col gap-1">
                   <div>
                     <span className="text-muted">Current law: </span>
@@ -353,7 +353,7 @@ export function IssueOrderModal({
           </>
         )}
 
-        <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-xs text-muted mb-3">
+        <div className="rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body-sm text-muted mb-3">
           {adminOverride ? (
             <span>Cost waived (admin override) · Duration: {EXEC_ORDER_DURATION_TURNS} turns</span>
           ) : (
@@ -371,19 +371,19 @@ export function IssueOrderModal({
           )}
         </div>
 
-        <InlineError error={error} className="mb-3 text-sm text-error" />
+        <InlineError error={error} className="mb-3 text-body text-error" />
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
+            className="rounded-lg px-3 py-1.5 text-body text-muted hover:bg-background/60"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={!canSubmit}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 ${
+            className={`rounded-lg px-3 py-1.5 text-body font-medium text-white disabled:opacity-50 ${
               adminOverride ? "bg-error hover:bg-error/80" : "bg-primary hover:bg-primary/80"
             }`}
           >

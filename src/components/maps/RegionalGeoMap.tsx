@@ -718,7 +718,7 @@ export function RegionalGeoMap({
         <div
           ref={tooltipRef}
           role="tooltip"
-          className={`pointer-events-none absolute z-10 w-[260px] max-w-full rounded-xl border p-3 text-xs ${renderTooltip ? "border-card-border bg-card text-foreground shadow-panel" : "border-slate-600 bg-slate-950/95 shadow-2xl backdrop-blur"}`}
+          className={`pointer-events-none absolute z-10 w-[260px] max-w-full rounded-xl border p-3 text-body-sm ${renderTooltip ? "border-card-border bg-card text-foreground shadow-panel" : "border-slate-600 bg-slate-950/95 shadow-2xl backdrop-blur"}`}
           style={{
             left: Math.max(
               0,

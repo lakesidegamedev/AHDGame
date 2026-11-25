@@ -15,7 +15,7 @@ export function FundPagination({
   return (
     <nav
       aria-label="Fund list pagination"
-      className="flex items-center justify-between gap-3 border-t border-card-border px-4 py-3 text-sm"
+      className="flex items-center justify-between gap-3 border-t border-card-border px-4 py-3 text-body"
     >
       <button
         type="button"

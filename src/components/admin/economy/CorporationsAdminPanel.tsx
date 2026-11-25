@@ -383,7 +383,7 @@ export function CorporationsAdminPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold">Corporations</h2>
+        <h2 className="text-heading font-semibold">Corporations</h2>
         <div className="flex gap-2">
           <button
             onClick={() =>
@@ -392,7 +392,7 @@ export function CorporationsAdminPanel() {
                 value: globalConfirm === "resetAll" ? null : "resetAll",
               })
             }
-            className="text-xs px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
+            className="text-body-sm px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
           >
             Reset all timers
           </button>
@@ -403,7 +403,7 @@ export function CorporationsAdminPanel() {
                 value: globalConfirm === "resumeAll" ? null : "resumeAll",
               })
             }
-            className="text-xs px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
+            className="text-body-sm px-3 py-1.5 rounded border border-card-border hover:bg-background/60 transition-colors"
           >
             Resume all suspended
           </button>
@@ -414,7 +414,7 @@ export function CorporationsAdminPanel() {
                 value: inline?.type === "spawnNpp" ? null : { type: "spawnNpp", corpId: "global" },
               })
             }
-            className="text-xs px-3 py-1.5 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+            className="text-body-sm px-3 py-1.5 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
           >
             Spawn NPP corp
           </button>
@@ -445,13 +445,16 @@ export function CorporationsAdminPanel() {
       {/* Summary cards */}
       {summary && <CorpSummaryCards summary={summary} />}
 
-      <InlineError error={error} className="text-sm text-error bg-error/10 rounded-lg px-4 py-3" />
+      <InlineError
+        error={error}
+        className="text-body text-error bg-error/10 rounded-lg px-4 py-3"
+      />
       {actionError && (
-        <p className="text-sm text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
+        <p className="text-body text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
       )}
 
       {loading ? (
-        <div className="text-muted text-sm py-8 text-center">Loading…</div>
+        <div className="text-muted text-body py-8 text-center">Loading…</div>
       ) : (
         <CorporationsTable
           corps={corps}

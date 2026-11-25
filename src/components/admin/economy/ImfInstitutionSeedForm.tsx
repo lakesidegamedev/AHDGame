@@ -57,7 +57,7 @@ export function ImfInstitutionSeedForm({ onSuccess, compact }: ImfInstitutionSee
 
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
-      <p className="text-sm text-muted">
+      <p className="text-body text-muted">
         Pick two characters (distinct accounts). Choose which one is CEO. Initial cap table is an
         even split ({compact ? "50/50" : "50% / 50%"}). IMF uses a US / USD HQ and is hidden from
         the exchange.
@@ -65,14 +65,14 @@ export function ImfInstitutionSeedForm({ onSuccess, compact }: ImfInstitutionSee
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Shareholder 1</label>
+          <label className="mb-1 block text-body-sm font-medium text-muted">Shareholder 1</label>
           {shareholder1 ? (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body">
               <span>{shareholder1.name}</span>
               <button
                 type="button"
                 onClick={() => setShareholder1(null)}
-                className="text-xs text-muted hover:text-foreground"
+                className="text-body-sm text-muted hover:text-foreground"
               >
                 Clear
               </button>
@@ -86,14 +86,14 @@ export function ImfInstitutionSeedForm({ onSuccess, compact }: ImfInstitutionSee
           )}
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted">Shareholder 2</label>
+          <label className="mb-1 block text-body-sm font-medium text-muted">Shareholder 2</label>
           {shareholder2 ? (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-card-border bg-card/50 px-3 py-2 text-body">
               <span>{shareholder2.name}</span>
               <button
                 type="button"
                 onClick={() => setShareholder2(null)}
-                className="text-xs text-muted hover:text-foreground"
+                className="text-body-sm text-muted hover:text-foreground"
               >
                 Clear
               </button>
@@ -110,10 +110,10 @@ export function ImfInstitutionSeedForm({ onSuccess, compact }: ImfInstitutionSee
 
       {canSubmit && (
         <fieldset className="space-y-2">
-          <legend className="text-xs font-medium text-muted">
+          <legend className="text-body-sm font-medium text-muted">
             CEO (must be shareholder 1 or 2)
           </legend>
-          <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex flex-wrap gap-4 text-body">
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
@@ -142,18 +142,18 @@ export function ImfInstitutionSeedForm({ onSuccess, compact }: ImfInstitutionSee
         type="button"
         onClick={() => void submit()}
         disabled={!canSubmit || loading}
-        className="min-h-[44px] rounded-lg border border-primary bg-primary/10 px-6 py-2 text-sm font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+        className="min-h-[44px] rounded-lg border border-primary bg-primary/10 px-6 py-2 text-body font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? "Saving…" : "Create or repair IMF institution"}
       </button>
 
       {message && (
-        <p className="text-sm text-green-400" role="status">
+        <p className="text-body text-green-400" role="status">
           {message}
         </p>
       )}
       {error && (
-        <p className="text-sm text-red-400" role="alert">
+        <p className="text-body text-red-400" role="alert">
           {error}
         </p>
       )}

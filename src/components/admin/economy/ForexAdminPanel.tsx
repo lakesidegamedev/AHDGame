@@ -129,7 +129,7 @@ function RateHistoryChart({
 
   if (allDeviations.length < 2 || allTurns.length < 2) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-6 text-center text-body text-muted">
         Not enough history data to display chart.
       </div>
     );
@@ -192,11 +192,13 @@ function RateHistoryChart({
     <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
       <div className="flex items-center justify-between px-5 py-3 border-b border-card-border">
         <div>
-          <h3 className="text-sm font-semibold">Rate history</h3>
-          <p className="text-xs text-muted">% deviation from base · compare multiple currencies</p>
+          <h3 className="text-body-lg font-semibold">Rate history</h3>
+          <p className="text-body-sm text-muted">
+            % deviation from base · compare multiple currencies
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md border border-card-border text-xs overflow-hidden">
+          <div className="flex rounded-md border border-card-border text-body-sm overflow-hidden">
             <button
               onClick={() => setViewMode("last")}
               className={`px-2.5 py-1 transition-colors ${viewMode === "last" ? "bg-primary text-primary-foreground" : "hover:bg-background/60"}`}
@@ -210,7 +212,7 @@ function RateHistoryChart({
               All
             </button>
           </div>
-          <span className="text-xs text-muted mx-1">Turns</span>
+          <span className="text-body-sm text-muted mx-1">Turns</span>
           <div className="flex gap-1">
             {currencies.map((c) => {
               const color = CURRENCY_COLORS[c.currencyCode] ?? "#94a3b8";
@@ -219,7 +221,7 @@ function RateHistoryChart({
                 <button
                   key={c.currencyCode}
                   onClick={() => toggle(c.currencyCode)}
-                  className="text-xs font-semibold px-2.5 py-1 rounded-md border transition-all"
+                  className="text-body-sm font-semibold px-2.5 py-1 rounded-md border transition-all"
                   style={{
                     borderColor: isActive ? color : "var(--card-border)",
                     backgroundColor: isActive ? color + "22" : "transparent",
@@ -342,7 +344,7 @@ function RateHistoryChart({
 
         {/* Hover tooltip */}
         {hoverIndex !== null && series.length > 0 && series[0].data[hoverIndex] && (
-          <div className="flex items-center gap-4 mt-2 text-xs text-muted">
+          <div className="flex items-center gap-4 mt-2 text-body-sm text-muted">
             <span>Turn {series[0].data[hoverIndex].turn}</span>
             {series.map((s) => {
               const pt = s.data[hoverIndex];
@@ -362,7 +364,7 @@ function RateHistoryChart({
         )}
 
         {/* Legend */}
-        <div className="flex gap-4 mt-3 text-xs">
+        <div className="flex gap-4 mt-3 text-body-sm">
           {series.map((s) => (
             <span key={s.code} className="flex items-center gap-1.5">
               <span
@@ -502,8 +504,8 @@ export function ForexAdminPanel() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold">Forex</h2>
-        <div className="flex items-center gap-3 text-sm">
+        <h2 className="text-heading font-semibold">Forex</h2>
+        <div className="flex items-center gap-3 text-body">
           <button
             type="button"
             disabled={seedRunning}
@@ -530,7 +532,7 @@ export function ForexAdminPanel() {
                 setSeedRunning(false);
               }
             }}
-            className="rounded border border-card-border bg-card-elevated px-3 py-1 text-sm hover:bg-card-elevated/80 disabled:opacity-50"
+            className="rounded border border-card-border bg-card-elevated px-3 py-1 text-body hover:bg-card-elevated/80 disabled:opacity-50"
           >
             {seedRunning ? "Seeding…" : "Seed FX reserves"}
           </button>
@@ -541,13 +543,13 @@ export function ForexAdminPanel() {
             max={240}
             value={turnWindow}
             onChange={(e) => setTurnWindow(Number(e.target.value))}
-            className="w-20 rounded border border-card-border bg-background px-2 py-1 text-sm"
+            className="w-20 rounded border border-card-border bg-background px-2 py-1 text-body"
           />
         </div>
       </div>
 
       {seedResult && (
-        <div className="rounded-lg border border-card-border bg-card px-4 py-3 text-sm">
+        <div className="rounded-lg border border-card-border bg-card px-4 py-3 text-body">
           {seedResult.error ? (
             <p className="text-error">Seed failed: {seedResult.error}</p>
           ) : (
@@ -575,17 +577,20 @@ export function ForexAdminPanel() {
         <RateHistoryChart currencies={currencies} turnWindow={turnWindow} />
       )}
 
-      <InlineError error={error} className="text-sm text-error bg-error/10 rounded-lg px-4 py-3" />
+      <InlineError
+        error={error}
+        className="text-body text-error bg-error/10 rounded-lg px-4 py-3"
+      />
       {actionError && (
-        <p className="text-sm text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
+        <p className="text-body text-error bg-error/10 rounded-lg px-4 py-3">{actionError}</p>
       )}
 
       {loading ? (
-        <div className="text-muted text-sm py-8 text-center">Loading…</div>
+        <div className="text-muted text-body py-8 text-center">Loading…</div>
       ) : (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead className="bg-background/50">
                 <tr>
                   {["Currency", "Rate", "Base Rate", "Deviation", "Trend", "Actions"].map((h) => (
@@ -603,7 +608,7 @@ export function ForexAdminPanel() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{row.currencyCode}</span>
                           {row.hardPeg != null && (
-                            <span className="text-[10px] font-semibold uppercase bg-warning/20 text-warning px-1.5 py-0.5 rounded">
+                            <span className="text-body-sm font-semibold uppercase bg-warning/20 text-warning px-1.5 py-0.5 rounded">
                               Pegged
                             </span>
                           )}
@@ -634,7 +639,7 @@ export function ForexAdminPanel() {
                       </td>
                       <td className="px-4 py-3">
                         {row.countryId === "INT" ? (
-                          <span className="text-xs text-muted">Internal unit — fixed</span>
+                          <span className="text-body-sm text-muted">Internal unit — fixed</span>
                         ) : (
                           <div className="flex gap-2">
                             <button
@@ -644,7 +649,7 @@ export function ForexAdminPanel() {
                                 setActionError(null);
                               }}
                               disabled={actionLoading === row.countryId}
-                              className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                              className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                             >
                               Nudge
                             </button>
@@ -652,7 +657,7 @@ export function ForexAdminPanel() {
                               <button
                                 onClick={() => handleUnpeg(row.countryId)}
                                 disabled={actionLoading === row.countryId}
-                                className="text-xs px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
+                                className="text-body-sm px-2 py-1 rounded border border-error/40 text-error hover:bg-error/10 transition-colors"
                               >
                                 Unpeg
                               </button>
@@ -664,7 +669,7 @@ export function ForexAdminPanel() {
                                   setActionError(null);
                                 }}
                                 disabled={actionLoading === row.countryId}
-                                className="text-xs px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
+                                className="text-body-sm px-2 py-1 rounded border border-card-border hover:bg-background/60 transition-colors"
                               >
                                 Peg
                               </button>
@@ -679,7 +684,7 @@ export function ForexAdminPanel() {
                       <tr key={`${row.countryId}-nudge`}>
                         <td colSpan={6} className="px-4 py-3 bg-background/40">
                           <div className="flex items-center gap-3">
-                            <span className="text-xs text-muted">Set rate to:</span>
+                            <span className="text-body-sm text-muted">Set rate to:</span>
                             <input
                               type="number"
                               step="0.0001"
@@ -687,12 +692,12 @@ export function ForexAdminPanel() {
                               value={nudgeValue}
                               onChange={(e) => setNudgeValue(e.target.value)}
                               placeholder={row.rate.toFixed(4)}
-                              className="w-32 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                              className="w-32 rounded border border-card-border bg-background px-2 py-1 text-body"
                             />
                             <button
                               onClick={() => handleNudge(row.countryId)}
                               disabled={actionLoading === row.countryId}
-                              className="text-xs px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                              className="text-body-sm px-3 py-1 rounded bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                             >
                               Apply
                             </button>
@@ -701,11 +706,13 @@ export function ForexAdminPanel() {
                                 setNudgeOpen(null);
                                 setNudgeValue("");
                               }}
-                              className="text-xs text-muted hover:text-foreground"
+                              className="text-body-sm text-muted hover:text-foreground"
                             >
                               Cancel
                             </button>
-                            <span className="text-xs text-muted">Drift resumes next turn.</span>
+                            <span className="text-body-sm text-muted">
+                              Drift resumes next turn.
+                            </span>
                           </div>
                         </td>
                       </tr>
@@ -716,7 +723,7 @@ export function ForexAdminPanel() {
                       <tr key={`${row.countryId}-peg`}>
                         <td colSpan={6} className="px-4 py-3 bg-background/40">
                           <div className="flex items-center gap-3">
-                            <span className="text-xs text-muted">Peg rate at:</span>
+                            <span className="text-body-sm text-muted">Peg rate at:</span>
                             <input
                               type="number"
                               step="0.0001"
@@ -724,12 +731,12 @@ export function ForexAdminPanel() {
                               value={pegValue}
                               onChange={(e) => setPegValue(e.target.value)}
                               placeholder={row.rate.toFixed(4)}
-                              className="w-32 rounded border border-card-border bg-background px-2 py-1 text-sm"
+                              className="w-32 rounded border border-card-border bg-background px-2 py-1 text-body"
                             />
                             <button
                               onClick={() => handlePeg(row.countryId)}
                               disabled={actionLoading === row.countryId}
-                              className="text-xs px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 transition-opacity"
+                              className="text-body-sm px-3 py-1 rounded bg-warning text-warning-foreground hover:opacity-90 transition-opacity"
                             >
                               Set peg
                             </button>
@@ -738,11 +745,11 @@ export function ForexAdminPanel() {
                                 setPegOpen(null);
                                 setPegValue("");
                               }}
-                              className="text-xs text-muted hover:text-foreground"
+                              className="text-body-sm text-muted hover:text-foreground"
                             >
                               Cancel
                             </button>
-                            <span className="text-xs text-muted">
+                            <span className="text-body-sm text-muted">
                               Rate will be held until peg is removed.
                             </span>
                           </div>

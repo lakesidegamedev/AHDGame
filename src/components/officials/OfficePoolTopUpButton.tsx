@@ -87,8 +87,8 @@ export function OfficePoolTopUpButton({
       >
         Buy 1 action ({cost} AP)
       </Button>
-      {reason && <p className="text-xs text-muted">{reason}</p>}
-      {error && <p className="text-xs text-error">{error}</p>}
+      {reason && <p className="text-body-sm text-muted">{reason}</p>}
+      {error && <p className="text-body-sm text-error">{error}</p>}
     </div>
   );
 }

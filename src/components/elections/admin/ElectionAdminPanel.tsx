@@ -46,14 +46,14 @@ export function ElectionAdminPanel({
   return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
       <div className="mb-3 flex items-center gap-2">
-        <span className="text-sm font-medium text-amber-400">Admin controls</span>
+        <span className="text-body font-medium text-amber-400">Admin controls</span>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         {!isEnded && (
           <button
             onClick={handleResolveElection}
             disabled={loading || inPrimary}
-            className="rounded-lg border border-amber-500/50 bg-amber-500/20 px-3 py-2 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/30 disabled:opacity-50"
+            className="rounded-lg border border-amber-500/50 bg-amber-500/20 px-3 py-2 text-body font-medium text-amber-400 transition-colors hover:bg-amber-500/30 disabled:opacity-50"
             title={
               inPrimary
                 ? "End primary first, then resolve"
@@ -65,7 +65,7 @@ export function ElectionAdminPanel({
         )}
       </div>
       {message && (
-        <div className={`mt-3 rounded-lg p-2 text-sm ${getMessageStyle(message)}`}>{message}</div>
+        <div className={`mt-3 rounded-lg p-2 text-body ${getMessageStyle(message)}`}>{message}</div>
       )}
     </div>
   );

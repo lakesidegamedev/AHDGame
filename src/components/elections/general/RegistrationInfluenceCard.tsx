@@ -26,8 +26,8 @@ export function RegistrationInfluenceCard({
   if (!breakdown) {
     return (
       <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
-        <h3 className="mb-2 text-sm font-semibold text-muted">{t("registration.title")}</h3>
-        <p className="text-xs italic text-muted">
+        <h3 className="mb-2 text-body-lg font-semibold text-muted">{t("registration.title")}</h3>
+        <p className="text-body-sm italic text-muted">
           {t("registration.noData", { state: stateName, stateId })}
         </p>
       </div>
@@ -37,8 +37,8 @@ export function RegistrationInfluenceCard({
   if (!breakdown.bootstrapped) {
     return (
       <div className="rounded-xl border border-dashed border-card-border bg-card p-4 shadow-sm">
-        <h3 className="mb-2 text-sm font-semibold text-muted">{t("registration.title")}</h3>
-        <p className="text-xs leading-snug">
+        <h3 className="mb-2 text-body-lg font-semibold text-muted">{t("registration.title")}</h3>
+        <p className="text-body-sm leading-snug">
           {t.rich("registration.populating", {
             b: (chunks) => <span className="font-semibold">{chunks}</span>,
             state: stateName,
@@ -55,12 +55,12 @@ export function RegistrationInfluenceCard({
   return (
     <div className="rounded-xl border border-card-border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-muted">{t("registration.title")}</h3>
+        <h3 className="text-body-lg font-semibold text-muted">{t("registration.title")}</h3>
         <span className="text-body-sm font-medium text-muted">
           {displayCanadianRegionCode(stateId)}
         </span>
       </div>
-      <p className="mb-3 text-xs text-muted leading-snug">
+      <p className="mb-3 text-body-sm text-muted leading-snug">
         {t("registration.intro", { state: stateName })}
       </p>
 
@@ -96,7 +96,7 @@ export function RegistrationInfluenceCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-col gap-1.5 text-xs">
+      <div className="mt-3 flex flex-col gap-1.5 text-body-sm">
         {breakdown.partyShares.map((p) => (
           <div key={p.partyId} className="flex items-center gap-2">
             <span
@@ -113,7 +113,7 @@ export function RegistrationInfluenceCard({
                 of that party's vote persuasion can still move in one cycle, the
                 same fraction the engine peels (`effectivePeelableFraction`). */}
             <span
-              className="shrink-0 tabular-nums text-[10px] text-muted"
+              className="shrink-0 tabular-nums text-body-sm text-muted"
               title={t("registration.movableTitle", { party: p.partyAbbr })}
             >
               {t("registration.movableValue", {
@@ -147,12 +147,12 @@ export function RegistrationInfluenceCard({
         ) : null}
       </div>
 
-      <p className="mt-2 text-[10px] leading-snug text-muted">{t("registration.movableNote")}</p>
+      <p className="mt-2 text-body-sm leading-snug text-muted">{t("registration.movableNote")}</p>
 
       {/* Sanity hint when shares don't sum to ~100, the underlying data needs renormalization. */}
       {totalParty + independent + unregistered < 95 ||
       totalParty + independent + unregistered > 105 ? (
-        <p className="mt-2 text-[10px] italic text-muted opacity-70">
+        <p className="mt-2 text-body-sm italic text-muted opacity-70">
           {t("registration.normalizationNote", {
             pct: (totalParty + independent + unregistered).toFixed(1),
           })}

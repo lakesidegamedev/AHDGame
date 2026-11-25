@@ -89,7 +89,7 @@ const STATUS_WORD: Record<CountryAvailabilityState, string> = {
   hidden: "Under development",
 };
 
-const SECTION_HEADING = "text-heading-lg font-semibold tracking-tight text-foreground";
+const SECTION_HEADING = "text-heading font-semibold tracking-tight text-foreground";
 const NAV_BUTTON =
   "rounded-md border border-card-border px-4 py-2 text-body font-medium text-foreground transition-colors hover:bg-card-elevated";
 
@@ -486,7 +486,7 @@ export default function CountryOverviewClient({
                     unoptimized={bypassNextImageOptimization(config.heroImage)}
                   />
                 )}
-                <h1 className="min-w-0 break-words text-display font-bold tracking-tight text-foreground sm:text-[2.25rem] sm:leading-tight">
+                <h1 className="min-w-0 break-words text-display font-bold tracking-tight text-foreground sm:text-display sm:leading-tight">
                   {name}
                 </h1>
               </div>

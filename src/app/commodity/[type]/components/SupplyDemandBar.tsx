@@ -71,10 +71,10 @@ export default function SupplyDemandBar({
     >
       <div className="flex items-baseline justify-between gap-2">
         <div>
-          <h3 className="text-body-sm font-medium text-foreground">Supply and demand</h3>
-          {marketLabel && <div className="mt-0.5 text-[10px] text-muted">{marketLabel}</div>}
+          <h3 className="text-body-lg font-medium text-foreground">Supply and demand</h3>
+          {marketLabel && <div className="mt-0.5 text-body-sm text-muted">{marketLabel}</div>}
         </div>
-        <span className="text-[10px] text-muted">Per turn, last turn</span>
+        <span className="text-body-sm text-muted">Per turn, last turn</span>
       </div>
 
       <div className="mt-3 space-y-3">
@@ -107,7 +107,7 @@ export default function SupplyDemandBar({
       </div>
 
       {sold !== null && market && market.supply > 0 && (
-        <p className="mt-3 text-xs text-muted" data-testid="balance-sold">
+        <p className="mt-3 text-body-sm text-muted" data-testid="balance-sold">
           <span className="font-semibold text-foreground">
             {world ? "Sellers sold" : "Local producers sold"} {formatUnits(sold, unit)}
           </span>{" "}
@@ -115,11 +115,11 @@ export default function SupplyDemandBar({
         </p>
       )}
       {market && stockNote(market, unit) && (
-        <p className="mt-2 text-xs text-muted" data-testid="balance-stock">
+        <p className="mt-2 text-body-sm text-muted" data-testid="balance-stock">
           {stockNote(market, unit)}
         </p>
       )}
-      <p className="mt-2 text-xs leading-relaxed text-muted" data-testid="balance-verdict">
+      <p className="mt-2 text-body-sm leading-relaxed text-muted" data-testid="balance-verdict">
         {verdict}
       </p>
     </section>
@@ -147,8 +147,8 @@ function BalanceRow({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
-        <span className={`text-xs font-semibold ${tone}`}>{title}</span>
-        <span className="text-sm font-bold tabular-nums text-foreground">
+        <span className={`text-body-sm font-semibold ${tone}`}>{title}</span>
+        <span className="text-body font-bold tabular-nums text-foreground">
           {parts.length > 0 ? formatWholeUnits(whole.total, unit) : formatUnits(total, unit)}
         </span>
       </div>
@@ -163,7 +163,7 @@ function BalanceRow({
         ))}
       </div>
       {parts.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-x-3 text-[10px] text-muted tabular-nums">
+        <div className="mt-1 flex flex-wrap gap-x-3 text-body-sm text-muted tabular-nums">
           {parts.map((p, i) => (
             <span key={p.label} className="inline-flex items-center gap-1">
               <span className={`inline-block h-2 w-2 rounded-sm ${p.className}`} aria-hidden />

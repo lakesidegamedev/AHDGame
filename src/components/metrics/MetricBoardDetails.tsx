@@ -246,7 +246,7 @@ export function EffectLine({
   const favorable = points >= 0;
   return (
     <p
-      className={`text-[11px] font-semibold ${favorable ? "text-success" : "text-error"}`}
+      className={`text-body-sm font-semibold ${favorable ? "text-success" : "text-error"}`}
       title={`${label}: ${sources.join(", ")}`}
     >
       {favorable ? "+" : ""}
@@ -271,7 +271,7 @@ export function EffectDetail({
         {sources.map((source) => (
           <span
             key={source}
-            className="rounded border border-card-border bg-card px-2 py-0.5 font-mono text-[10px] text-foreground"
+            className="rounded border border-card-border bg-card px-2 py-0.5 font-mono text-body-sm text-foreground"
           >
             {source}
           </span>
@@ -353,21 +353,21 @@ export function StandingLawDetail({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-semibold text-foreground">{law.currentLawTitle}</div>
-          <div className="mt-0.5 text-body-xs text-muted">
+          <div className="mt-0.5 text-body-sm text-muted">
             {law.familyTitle} · {law.policyLevelTitle}
           </div>
         </div>
         <span
-          className={`flex-shrink-0 rounded border border-card-border bg-card px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${presentation.className}`}
+          className={`flex-shrink-0 rounded border border-card-border bg-card px-2 py-0.5 font-mono text-body-sm uppercase tracking-wide ${presentation.className}`}
         >
           {presentation.label}
         </span>
       </div>
-      <p className="mt-2 text-body-xs leading-relaxed text-muted">{presentation.explanation}</p>
+      <p className="mt-2 text-body-sm leading-relaxed text-muted">{presentation.explanation}</p>
       {law.favorableNormalizedPoints !== null &&
         law.state !== "implementation_stalled" &&
         law.state !== "awaiting_first_funding" && (
-          <div className={`mt-2 text-body-xs font-semibold ${presentation.className}`}>
+          <div className={`mt-2 text-body-sm font-semibold ${presentation.className}`}>
             {law.favorableNormalizedPoints >= 0 ? "+" : ""}
             {law.favorableNormalizedPoints.toFixed(2)} gross law contribution before opening
             baseline
@@ -380,7 +380,7 @@ export function StandingLawDetail({
 function PolicyPressureSummary({ pressure }: { pressure: MetricPolicyPressure }) {
   const signed = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
   return (
-    <div className="mt-2 text-body-xs text-muted">
+    <div className="mt-2 text-body-sm text-muted">
       <p>
         Current law contribution {signed(pressure.grossLaw)}; opening-law baseline{" "}
         {signed(pressure.openingLaw)}; law change {signed(pressure.netLaw)}; Cabinet{" "}
@@ -432,17 +432,19 @@ export function MetricRow({
       >
         <div className="w-24 flex-shrink-0 text-center">
           <span
-            className={`inline-flex rounded border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${interpretationTone(metric.interpretation)}`}
+            className={`inline-flex rounded border px-2 py-1 text-body-sm font-semibold uppercase tracking-wide ${interpretationTone(metric.interpretation)}`}
           >
             {interpretationShort(metric.interpretation)}
           </span>
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h3 className="text-body font-semibold leading-snug text-foreground">{metric.name}</h3>
+            <h3 className="text-body-lg font-semibold leading-snug text-foreground">
+              {metric.name}
+            </h3>
             <InfoTooltip
               trigger={
-                <span className="select-none text-[13px] leading-none text-muted/60">ⓘ</span>
+                <span className="select-none text-body-sm leading-none text-muted/60">ⓘ</span>
               }
               width={300}
             >
@@ -475,7 +477,7 @@ export function MetricRow({
             </div>
           )}
           {metric.policyPressure && (
-            <p className="mt-1 text-body-xs text-muted">
+            <p className="mt-1 text-body-sm text-muted">
               Combined policy driver: {metric.policyPressure.combined >= 0 ? "+" : ""}
               {metric.policyPressure.combined.toFixed(2)} after the policy limit. Open for the
               baseline and funding breakdown.
@@ -487,7 +489,7 @@ export function MetricRow({
             {valueLabel(metric, countryId)}
           </div>
           <div
-            className="mt-0.5 text-body-xs text-muted"
+            className="mt-0.5 text-body-sm text-muted"
             title="Game-calibrated condition score. Higher is better; this is not the raw metric value."
           >
             Condition score:{" "}
@@ -495,10 +497,10 @@ export function MetricRow({
               ? "Not scored"
               : `${metric.conditionScore.toFixed(1)} / 100`}
           </div>
-          <div className="mt-0.5 text-body-xs text-muted">
+          <div className="mt-0.5 text-body-sm text-muted">
             {interpretationLabel(metric.interpretation)}
           </div>
-          <div className="mt-0.5 text-body-xs text-muted">
+          <div className="mt-0.5 text-body-sm text-muted">
             {metricFreshnessLabel(
               metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
               metric.observation.source.includes("national rollup"),
@@ -555,13 +557,13 @@ export function CategoryDetail({
           <CategoryIcon icon={CATEGORY_ICONS[category.id] ?? "library"} className="h-6 w-6" />
         </span>
         <div className="min-w-[200px] flex-1">
-          <h2 className="text-heading-lg font-bold text-foreground">{category.name}</h2>
+          <h2 className="text-heading font-bold text-foreground">{category.name}</h2>
           <div className="mt-0.5 text-body-sm text-muted">
             {displayName} · {category.metrics.length} simulation metrics in the units shown
           </div>
         </div>
         <div className="text-right">
-          <div className="flex items-center justify-end gap-1 font-mono text-body-xs uppercase tracking-wider text-muted">
+          <div className="flex items-center justify-end gap-1 font-mono text-body-sm uppercase tracking-wider text-muted">
             Domain condition
             <InfoTooltip trigger={<span className="cursor-help text-muted">ⓘ</span>} width={300}>
               Average of the domain&apos;s game-calibrated metric condition scores. It summarizes
@@ -576,7 +578,7 @@ export function CategoryDetail({
           </div>
         </div>
         <div className="text-body-sm text-muted">
-          <div className="font-mono text-body-xs uppercase tracking-wider">Observation quality</div>
+          <div className="font-mono text-body-sm uppercase tracking-wider">Observation quality</div>
           <div className="mt-0.5">
             {sourced} recorded or derived · {category.provisional} provisional
           </div>
@@ -589,7 +591,7 @@ export function CategoryDetail({
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,2.1fr)_minmax(250px,1fr)]">
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-body-xs uppercase tracking-widest text-muted">
+            <span className="font-mono text-body-sm uppercase tracking-widest text-muted">
               Primary metrics · reported units
             </span>
             <label className="flex items-center gap-2 text-body-sm text-muted">
@@ -617,10 +619,10 @@ export function CategoryDetail({
 
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-            <div className="mb-2.5 font-mono text-body-xs uppercase tracking-widest text-muted">
+            <div className="mb-2.5 font-mono text-body-sm uppercase tracking-widest text-muted">
               Reading direction
             </div>
-            <div className="flex flex-col gap-2 text-body-xs text-muted">
+            <div className="flex flex-col gap-2 text-body-sm text-muted">
               <span>
                 <strong className="text-success">Higher:</strong> a higher value is generally
                 favorable.
@@ -639,7 +641,7 @@ export function CategoryDetail({
             </div>
           </div>
           <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-            <div className="mb-2.5 font-mono text-body-xs uppercase tracking-widest text-muted">
+            <div className="mb-2.5 font-mono text-body-sm uppercase tracking-widest text-muted">
               Active policy pressure
             </div>
             {category.influenced > 0 ? (
@@ -664,7 +666,7 @@ export function CategoryDetail({
             )}
           </div>
           <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-            <div className="mb-2.5 font-mono text-body-xs uppercase tracking-widest text-muted">
+            <div className="mb-2.5 font-mono text-body-sm uppercase tracking-widest text-muted">
               Observation quality
             </div>
             <p className="text-body-sm leading-relaxed text-muted">
@@ -748,27 +750,27 @@ export function MetricDetail({
       <header className="rounded-lg border border-card-border bg-card p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <div className="font-mono text-body-xs uppercase tracking-widest text-muted">
+            <div className="font-mono text-body-sm uppercase tracking-widest text-muted">
               {displayName} · {readableCategory(metricDomainId(metric))}
             </div>
-            <h2 className="mt-1 text-heading-lg font-bold text-foreground">{metric.name}</h2>
+            <h2 className="mt-1 text-heading font-bold text-foreground">{metric.name}</h2>
             <p className="mt-2 text-body leading-relaxed text-muted">
               {playerMetricDescription(metric)}
             </p>
           </div>
           <div className="text-right">
-            <div className="text-heading-lg font-extrabold tabular-nums text-foreground">
+            <div className="text-heading font-extrabold tabular-nums text-foreground">
               {valueLabel(metric, board.countryId)}
             </div>
             {regionalComparison && (
-              <div className={`mt-1 text-body-xs tabular-nums ${regionalComparison.className}`}>
+              <div className={`mt-1 text-body-sm tabular-nums ${regionalComparison.className}`}>
                 {regionalComparison.text}
               </div>
             )}
             {regionalRank && (
-              <div className="mt-1 text-body-xs tabular-nums text-muted">{regionalRank}</div>
+              <div className="mt-1 text-body-sm tabular-nums text-muted">{regionalRank}</div>
             )}
-            <div className="mt-1 text-body-xs text-muted">
+            <div className="mt-1 text-body-sm text-muted">
               {interpretationLabel(metric.interpretation)}
             </div>
           </div>
@@ -785,14 +787,14 @@ export function MetricDetail({
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
           <div className="flex flex-col gap-4">
             <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-              <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
+              <h3 className="font-mono text-body-lg uppercase tracking-widest text-muted">
                 Historical series
               </h3>
               {detail.openingNotice && (
-                <p className="mb-2 text-body-xs text-muted">{detail.openingNotice}</p>
+                <p className="mb-2 text-body-sm text-muted">{detail.openingNotice}</p>
               )}
               {detail.historyNotice && (
-                <p className="mb-2 text-body-xs text-muted">{detail.historyNotice}</p>
+                <p className="mb-2 text-body-sm text-muted">{detail.historyNotice}</p>
               )}
               <ResetMetricHistoryChart
                 countryId={board.countryId}
@@ -802,7 +804,7 @@ export function MetricDetail({
             </div>
             {board.scope === "national" && (
               <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-                <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
+                <h3 className="font-mono text-body-lg uppercase tracking-widest text-muted">
                   Regional breakdown
                 </h3>
                 {detail.regions.length === 0 ? (
@@ -834,7 +836,7 @@ export function MetricDetail({
             )}
           </div>
           <aside className="flex flex-col gap-4">
-            <div className="rounded-lg border border-card-border bg-card p-4 text-body-xs">
+            <div className="rounded-lg border border-card-border bg-card p-4 text-body-sm">
               <p>
                 Condition score:{" "}
                 {metric.conditionScore === null
@@ -847,10 +849,10 @@ export function MetricDetail({
               {metric.policyPressure && <PolicyPressureSummary pressure={metric.policyPressure} />}
             </div>
             <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-              <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
+              <h3 className="font-mono text-body-lg uppercase tracking-widest text-muted">
                 How this measure works
               </h3>
-              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-body-xs">
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-body-sm">
                 <dt className="text-muted">Responsible system</dt>
                 <dd className="text-foreground">{metricOwnerLabel(metric.owner)}</dd>
                 <dt className="text-muted">Data basis</dt>
@@ -880,12 +882,12 @@ export function MetricDetail({
                 <dt className="text-muted">Data quality</dt>
                 <dd className="text-foreground">{metricQualityLabel(metric.observation.status)}</dd>
               </dl>
-              <p className="mt-3 border-t border-card-border pt-3 text-body-xs leading-relaxed text-muted">
+              <p className="mt-3 border-t border-card-border pt-3 text-body-sm leading-relaxed text-muted">
                 {metricQualityExplanation(metric.observation.status)}
               </p>
             </div>
             <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-              <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
+              <h3 className="font-mono text-body-lg uppercase tracking-widest text-muted">
                 Policy environment
               </h3>
               <div className="mt-3 flex flex-col gap-2">
@@ -922,7 +924,7 @@ export function MetricDetail({
               </div>
             </div>
             <div className="rounded-lg border border-card-border bg-card p-4 shadow-card">
-              <h3 className="font-mono text-body-xs uppercase tracking-widest text-muted">
+              <h3 className="font-mono text-body-lg uppercase tracking-widest text-muted">
                 Related metrics
               </h3>
               <div className="mt-3 flex flex-col gap-2">

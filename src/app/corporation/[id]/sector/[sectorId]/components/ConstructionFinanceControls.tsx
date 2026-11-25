@@ -152,8 +152,8 @@ export default function ConstructionFinanceControls({
       className="min-w-0 rounded-lg border border-card-border p-4 space-y-3"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-1">
-        <h3 className="text-body-sm font-semibold text-foreground">{t("paymentTitle")}</h3>
-        <p className="text-body-xs text-muted">
+        <h3 className="text-body-lg font-semibold text-foreground">{t("paymentTitle")}</h3>
+        <p className="text-body-sm text-muted">
           {t("cashBalance", { amount: native(Math.round(cashAnchor * view.localPerAnchor)) })}
         </p>
       </div>
@@ -232,7 +232,7 @@ export default function ConstructionFinanceControls({
                   setConsent(false);
                 }}
               />
-              <span className="mt-1.5 block text-body-xs font-normal text-muted">
+              <span className="mt-1.5 block text-body-sm font-normal text-muted">
                 {t("principalLimit", { amount: native(limit) })}
               </span>
             </label>
@@ -284,7 +284,7 @@ export default function ConstructionFinanceControls({
             />
             <span>
               <span className="block font-medium text-foreground">{t("loanPledge")}</span>
-              <span className="mt-1 block text-body-xs text-muted">{t("loanPledgeHelp")}</span>
+              <span className="mt-1 block text-body-sm text-muted">{t("loanPledgeHelp")}</span>
             </span>
           </label>
           {!affordable && (

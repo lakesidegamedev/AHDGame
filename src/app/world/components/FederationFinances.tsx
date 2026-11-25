@@ -11,8 +11,8 @@ export default function FederationFinances({ snapshots }: { snapshots: LegacySer
   if (!snapshots.length) return null;
   return (
     <section className="space-y-5">
-      <h2 className="text-xl font-semibold">{t("title")}</h2>
-      <p className="text-sm text-muted">{t("accounting")}</p>
+      <h2 className="text-heading font-semibold">{t("title")}</h2>
+      <p className="text-body text-muted">{t("accounting")}</p>
       {snapshots.map((snapshot) => (
         <article
           key={snapshot.sourceCountryId}
@@ -47,7 +47,7 @@ export default function FederationFinances({ snapshots }: { snapshots: LegacySer
             </div>
           </dl>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-body">
               <thead>
                 <tr>
                   <th scope="col">{t("successor")}</th>
@@ -66,7 +66,7 @@ export default function FederationFinances({ snapshots }: { snapshots: LegacySer
               </tbody>
             </table>
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-body text-muted">
             {t(snapshot.servicingKind === "continuing-state" ? "continuingRisk" : "risk")}
           </p>
         </article>

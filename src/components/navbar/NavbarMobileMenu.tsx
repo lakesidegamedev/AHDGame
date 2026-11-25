@@ -185,7 +185,7 @@ export function NavbarMobileMenu({
               onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "profile" })}
               onPointerEnter={preloadProfileSwitcher}
               onFocus={preloadProfileSwitcher}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5"
               aria-expanded={profileOpen}
             >
               <span className="flex min-w-0 items-center gap-2">
@@ -233,7 +233,7 @@ export function NavbarMobileMenu({
             <Link
               href="/profile"
               onClick={onClose}
-              className={`flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/profile") ? "bg-white/5 font-medium text-foreground" : "text-foreground"}`}
+              className={`flex items-center rounded-lg px-3 py-2.5 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, "/profile") ? "bg-white/5 font-medium text-foreground" : "text-foreground"}`}
               aria-current={isNavActive(pathname, "/profile") ? "page" : undefined}
             >
               {t("common.profile")}
@@ -249,7 +249,7 @@ export function NavbarMobileMenu({
               key={item.id}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, item.href) ? "bg-white/5 font-medium" : ""}`}
+              className={`flex items-center rounded-lg px-3 py-2.5 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, item.href) ? "bg-white/5 font-medium" : ""}`}
               aria-current={isNavActive(pathname, item.href) ? "page" : undefined}
             >
               {item.label}
@@ -272,7 +272,7 @@ export function NavbarMobileMenu({
               <div>
                 <button
                   onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "staff" })}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5"
                   aria-expanded={staffOpen}
                 >
                   <span className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export function NavbarMobileMenu({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={onClose}
-                          className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                          className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                         >
                           {t(i.labelKey)}
                         </a>
@@ -318,7 +318,7 @@ export function NavbarMobileMenu({
                           key={i.label}
                           href={i.href}
                           onClick={onClose}
-                          className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, i.href) ? "bg-white/5 font-medium" : "text-muted"}`}
+                          className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, i.href) ? "bg-white/5 font-medium" : "text-muted"}`}
                           aria-current={isNavActive(pathname, i.href) ? "page" : undefined}
                         >
                           {t(i.labelKey)}
@@ -336,7 +336,7 @@ export function NavbarMobileMenu({
           <div>
             <button
               onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "state" })}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5"
               aria-expanded={stateOpen}
             >
               {homeState.name}
@@ -347,7 +347,7 @@ export function NavbarMobileMenu({
                 <Link
                   href={regionUrl(homeState.countryId, homeState.id)}
                   onClick={onClose}
-                  className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, regionUrl(homeState.countryId, homeState.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
+                  className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, regionUrl(homeState.countryId, homeState.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
                   aria-current={
                     isNavActive(pathname, regionUrl(homeState.countryId, homeState.id))
                       ? "page"
@@ -360,7 +360,7 @@ export function NavbarMobileMenu({
                   <Link
                     href={regionPartyUrl(homeState.countryId, homeState.id, currentParty.id)}
                     onClick={onClose}
-                    className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, regionPartyUrl(homeState.countryId, homeState.id, currentParty.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, regionPartyUrl(homeState.countryId, homeState.id, currentParty.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
                   >
                     {stateAdjective} {currentParty.name}
                   </Link>
@@ -368,21 +368,21 @@ export function NavbarMobileMenu({
                 <Link
                   href={`${regionUrl(homeState.countryId, homeState.id)}?tab=economy`}
                   onClick={onClose}
-                  className="flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 text-muted"
+                  className="flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 text-muted"
                 >
                   {t("state.economy")}
                 </Link>
                 <Link
                   href={regionElectionsUrl(homeState.countryId, homeState.id)}
                   onClick={onClose}
-                  className="flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 text-muted"
+                  className="flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 text-muted"
                 >
                   {t("state.elections")}
                 </Link>
                 <Link
                   href={regionLegislatureUrl(homeState.countryId, homeState.id)}
                   onClick={onClose}
-                  className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, regionLegislatureUrl(homeState.countryId, homeState.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
+                  className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, regionLegislatureUrl(homeState.countryId, homeState.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
                 >
                   {stateLegislatureLabel}
                 </Link>
@@ -390,7 +390,7 @@ export function NavbarMobileMenu({
                   <Link
                     href={`${regionUrl(homeState.countryId.toLowerCase(), homeState.id.toLowerCase())}/office`}
                     onClick={onClose}
-                    className="flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 text-muted"
+                    className="flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 text-muted"
                   >
                     {t("state.office")}
                   </Link>
@@ -399,7 +399,7 @@ export function NavbarMobileMenu({
                   <Link
                     href={campaignManagerHref({ race: activeElection.id })}
                     onClick={onClose}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, campaignManagerHref({ race: activeElection.id })) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, campaignManagerHref({ race: activeElection.id })) ? "bg-white/5 font-medium" : "text-muted"}`}
                     aria-current={
                       isNavActive(pathname, campaignManagerHref({ race: activeElection.id }))
                         ? "page"
@@ -407,12 +407,12 @@ export function NavbarMobileMenu({
                     }
                   >
                     <span>{t("state.myElection")}</span>
-                    <span className="ml-2 max-w-[120px] truncate text-xs text-muted">
+                    <span className="ml-2 max-w-[120px] truncate text-body-sm text-muted">
                       {activeElection.label}
                     </span>
                   </Link>
                 ) : (
-                  <div className="flex items-center rounded-lg px-3 py-2 text-sm text-muted opacity-50">
+                  <div className="flex items-center rounded-lg px-3 py-2 text-body text-muted opacity-50">
                     {t("state.myElectionNone")}
                   </div>
                 )}
@@ -420,10 +420,10 @@ export function NavbarMobileMenu({
                   <Link
                     href={`/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}`}
                     onClick={onClose}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, `/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}`) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, `/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}`) ? "bg-white/5 font-medium" : "text-muted"}`}
                   >
                     <span>{t("state.myOffice")}</span>
-                    <span className="ml-2 max-w-[120px] truncate text-xs text-muted">
+                    <span className="ml-2 max-w-[120px] truncate text-body-sm text-muted">
                       {cabinetOffice.positionName}
                     </span>
                   </Link>
@@ -438,7 +438,7 @@ export function NavbarMobileMenu({
           <div>
             <button
               onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "nation" })}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5"
               aria-expanded={nationOpen}
             >
               <div className="flex items-center gap-2">
@@ -453,18 +453,18 @@ export function NavbarMobileMenu({
                 <Link
                   href={countryUrl(userCountry)}
                   onClick={onClose}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
                 >
                   <CountryFlag country={userCountry} size="sm" />
                   <span>{countryName(userCountry)}</span>
-                  <span className="text-xs text-muted/60">{t("menus.nation.homeSuffix")}</span>
+                  <span className="text-body-sm text-muted/60">{t("menus.nation.homeSuffix")}</span>
                 </Link>
 
                 {cabinetOffice && (
                   <Link
                     href={`/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}/office`}
                     onClick={onClose}
-                    className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, `/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}/office`) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, `/country/${cabinetOffice.countryCode}/executive/cabinet/${cabinetOffice.positionId}/office`) ? "bg-white/5 font-medium" : "text-muted"}`}
                   >
                     {t("menus.nation.cabinetOffice")} · {cabinetOffice.positionName}
                   </Link>
@@ -474,7 +474,7 @@ export function NavbarMobileMenu({
                   <Link
                     href={scotusJusticeOfficeUrl(justiceOffice.countryCode)}
                     onClick={onClose}
-                    className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, scotusJusticeOfficeUrl(justiceOffice.countryCode)) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, scotusJusticeOfficeUrl(justiceOffice.countryCode)) ? "bg-white/5 font-medium" : "text-muted"}`}
                   >
                     {t("menus.nation.justiceOffice")}
                   </Link>
@@ -484,7 +484,7 @@ export function NavbarMobileMenu({
                   <Link
                     href={partyUrl(currentPartyCountry, currentParty.id)}
                     onClick={onClose}
-                    className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, partyUrl(currentPartyCountry, currentParty.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, partyUrl(currentPartyCountry, currentParty.id)) ? "bg-white/5 font-medium" : "text-muted"}`}
                     aria-current={
                       isNavActive(pathname, partyUrl(currentPartyCountry, currentParty.id))
                         ? "page"
@@ -499,7 +499,7 @@ export function NavbarMobileMenu({
                   <Link
                     href="/political-operations"
                     onClick={onClose}
-                    className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/political-operations") ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, "/political-operations") ? "bg-white/5 font-medium" : "text-muted"}`}
                     aria-current={
                       isNavActive(pathname, "/political-operations") ? "page" : undefined
                     }
@@ -556,7 +556,7 @@ export function NavbarMobileMenu({
           <div>
             <button
               onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "world" })}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5"
               aria-expanded={worldOpen}
             >
               {t("common.world")}
@@ -581,7 +581,7 @@ export function NavbarMobileMenu({
           <Link
             href="/contests"
             onClick={onClose}
-            className={`flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5 ${isNavActive(pathname, "/contests") ? "bg-white/5" : ""}`}
+            className={`flex w-full items-center rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5 ${isNavActive(pathname, "/contests") ? "bg-white/5" : ""}`}
             aria-current={isNavActive(pathname, "/contests") ? "page" : undefined}
           >
             {t("common.contests")}
@@ -592,7 +592,7 @@ export function NavbarMobileMenu({
         <div>
           <button
             onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "help" })}
-            className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-body font-medium text-foreground transition-colors hover:bg-white/5"
             aria-expanded={helpOpen}
           >
             {t("help.helpInformation")}
@@ -610,7 +610,7 @@ export function NavbarMobileMenu({
                   <Link
                     href={wikiHref}
                     onClick={onClose}
-                    className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${wikiActive ? "bg-white/5 font-medium" : "text-muted"}`}
+                    className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${wikiActive ? "bg-white/5 font-medium" : "text-muted"}`}
                     aria-current={wikiActive ? "page" : undefined}
                   >
                     {showWiki ? t("help.wikiGuides") : t("help.guides")}
@@ -620,7 +620,7 @@ export function NavbarMobileMenu({
               <Link
                 href="/about"
                 onClick={onClose}
-                className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/about") ? "bg-white/5 font-medium" : "text-muted"}`}
+                className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, "/about") ? "bg-white/5 font-medium" : "text-muted"}`}
                 aria-current={isNavActive(pathname, "/about") ? "page" : undefined}
               >
                 {t("help.about")}
@@ -628,7 +628,7 @@ export function NavbarMobileMenu({
               <Link
                 href="/feedback"
                 onClick={onClose}
-                className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/feedback") ? "bg-white/5 font-medium text-foreground" : "text-muted"}`}
+                className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, "/feedback") ? "bg-white/5 font-medium text-foreground" : "text-muted"}`}
                 aria-current={isNavActive(pathname, "/feedback") ? "page" : undefined}
               >
                 {t("help.suggestions")}
@@ -640,7 +640,7 @@ export function NavbarMobileMenu({
                   onOpenFeedback?.();
                 }}
                 disabled={feedbackCapturing}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-white/5 disabled:cursor-wait disabled:opacity-70"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-body text-muted transition-colors hover:bg-white/5 disabled:cursor-wait disabled:opacity-70"
               >
                 {feedbackCapturing && (
                   <svg className="h-4 w-4 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -666,7 +666,7 @@ export function NavbarMobileMenu({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onClose}
-                className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
               >
                 Discord
               </a>
@@ -675,7 +675,7 @@ export function NavbarMobileMenu({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onClose}
-                className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
               >
                 {t("help.patreon")}
               </a>
@@ -684,14 +684,14 @@ export function NavbarMobileMenu({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onClose}
-                className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                className="store-purchase-cta flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
               >
                 {t("help.supporterWall")}
               </a>
               <a
                 href={HELP_SUPPORT_EMAIL}
                 onClick={onClose}
-                className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
               >
                 {t("help.emailSupport")}
               </a>
@@ -700,7 +700,7 @@ export function NavbarMobileMenu({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onClose}
-                className="flex items-center rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-white/5"
+                className="flex items-center rounded-lg px-3 py-2 text-body text-muted transition-colors hover:bg-white/5"
               >
                 {t("help.serverStatus")}
               </a>
@@ -708,7 +708,7 @@ export function NavbarMobileMenu({
               <Link
                 href="/privacy"
                 onClick={onClose}
-                className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/privacy") ? "bg-white/5 font-medium text-foreground" : "text-muted"}`}
+                className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, "/privacy") ? "bg-white/5 font-medium text-foreground" : "text-muted"}`}
                 aria-current={isNavActive(pathname, "/privacy") ? "page" : undefined}
               >
                 {t("help.privacy")}
@@ -716,7 +716,7 @@ export function NavbarMobileMenu({
               <Link
                 href="/terms"
                 onClick={onClose}
-                className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${isNavActive(pathname, "/terms") ? "bg-white/5 font-medium text-foreground" : "text-muted"}`}
+                className={`flex items-center rounded-lg px-3 py-2 text-body transition-colors hover:bg-white/5 ${isNavActive(pathname, "/terms") ? "bg-white/5 font-medium text-foreground" : "text-muted"}`}
                 aria-current={isNavActive(pathname, "/terms") ? "page" : undefined}
               >
                 {t("help.terms")}
@@ -731,14 +731,14 @@ export function NavbarMobileMenu({
           <Link
             href="/login"
             onClick={onClose}
-            className="flex items-center justify-center rounded-lg border border-card-border bg-card py-2.5 text-sm font-medium text-foreground"
+            className="flex items-center justify-center rounded-lg border border-card-border bg-card py-2.5 text-body font-medium text-foreground"
           >
             {t("common.signIn")}
           </Link>
           <Link
             href="/register"
             onClick={onClose}
-            className="flex items-center justify-center rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground"
+            className="flex items-center justify-center rounded-lg bg-primary py-2.5 text-body font-semibold text-primary-foreground"
           >
             {t("common.register")}
           </Link>
@@ -749,14 +749,14 @@ export function NavbarMobileMenu({
       <Link
         href="/changelog"
         onClick={onClose}
-        className="flex items-center justify-center gap-2 border-t border-card-border/60 px-4 py-2 text-center text-xs text-muted hover:text-foreground transition-colors"
+        className="flex items-center justify-center gap-2 border-t border-card-border/60 px-4 py-2 text-center text-body-sm text-muted hover:text-foreground transition-colors"
       >
         <span>
           v{process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"} ·{" "}
           {process.env.NEXT_PUBLIC_GIT_COMMIT ?? "dev"}
         </span>
         {process.env.NEXT_PUBLIC_IS_PREVIEW === "true" && (
-          <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+          <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-body-sm font-semibold text-amber-600 dark:text-amber-400">
             {t("common.preview")}
           </span>
         )}

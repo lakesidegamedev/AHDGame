@@ -190,10 +190,10 @@ export function CreateOrgForm({
 
       {showForm && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-body-lg font-semibold text-foreground">
             Found a new international organization
           </h3>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-body-sm text-muted">
             {entityName(viewerCountry)} will become the sole founding member. Other countries can
             apply to join.
           </p>
@@ -217,7 +217,7 @@ export function CreateOrgForm({
                 onChange={(e) => update("shortName", e.target.value)}
                 maxLength={5}
               />
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 Up to 5 characters. Forms the page address (lowercased) — e.g. EAP → /eap.
               </p>
             </div>
@@ -229,7 +229,7 @@ export function CreateOrgForm({
                 value={form.description}
                 onChange={(e) => update("description", e.target.value)}
                 maxLength={500}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
                 placeholder="Short summary of the organization's purpose."
               />
             </div>
@@ -241,7 +241,7 @@ export function CreateOrgForm({
                 value={form.charter}
                 onChange={(e) => update("charter", e.target.value)}
                 maxLength={2000}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
                 placeholder="Founding principles, obligations, scope."
               />
             </div>
@@ -261,7 +261,7 @@ export function CreateOrgForm({
                 id="org-category"
                 value={form.category}
                 onChange={(e) => update("category", e.target.value as OrganizationCategory)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-body text-foreground focus:border-primary focus:outline-none"
               >
                 {CREATABLE_ORGANIZATION_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -269,14 +269,14 @@ export function CreateOrgForm({
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 {ORGANIZATION_CATEGORY_META[form.category].blurb}
               </p>
             </div>
             {form.category === "bloc" && (
               <fieldset className="sm:col-span-2">
-                <legend className="text-sm font-medium text-foreground">Alignment color</legend>
-                <p className="mt-1 text-[11px] text-muted">{t("colorDescription")}</p>
+                <legend className="text-body font-medium text-foreground">Alignment color</legend>
+                <p className="mt-1 text-body-sm text-muted">{t("colorDescription")}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {CUSTOM_ALIGNMENT_POLE_TOKENS.map((token) => {
                     const option = POLE_COLOR_OPTIONS[token];
@@ -288,7 +288,7 @@ export function CreateOrgForm({
                         type="button"
                         aria-pressed={selected}
                         onClick={() => update("alignmentAccentToken", color)}
-                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-foreground transition-colors ${
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-body-sm font-medium text-foreground transition-colors ${
                           selected
                             ? `${option.selected} bg-card ring-2`
                             : "border-card-border bg-background hover:border-foreground/30"
@@ -325,7 +325,7 @@ export function CreateOrgForm({
                     className="h-12 w-12 rounded-lg border border-card-border object-contain"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-card-border text-[10px] text-muted">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-card-border text-body-sm text-muted">
                     none
                   </div>
                 )}
@@ -339,26 +339,26 @@ export function CreateOrgForm({
                       const f = e.target.files?.[0];
                       if (f) uploadLogo(f);
                     }}
-                    className="text-xs text-muted file:mr-2 file:rounded-md file:border file:border-card-border file:bg-card file:px-2 file:py-1 file:text-xs file:text-foreground"
+                    className="text-body-sm text-muted file:mr-2 file:rounded-md file:border file:border-card-border file:bg-card file:px-2 file:py-1 file:text-body-sm file:text-foreground"
                   />
                   {logoPath && (
                     <button
                       type="button"
                       onClick={() => setLogoPath(null)}
-                      className="self-start text-[11px] text-muted hover:text-foreground"
+                      className="self-start text-body-sm text-muted hover:text-foreground"
                     >
                       Remove
                     </button>
                   )}
                 </div>
               </div>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-body-sm text-muted">
                 {logoUploading ? "Uploading…" : "Square works best. PNG/JPEG/WebP/GIF, up to 2 MB."}
               </p>
-              <InlineError error={logoError} className="mt-1 text-[11px] text-error" />
+              <InlineError error={logoError} className="mt-1 text-body-sm text-error" />
             </div>
           </div>
-          <InlineError error={error} className="mt-3 text-xs text-error" />
+          <InlineError error={error} className="mt-3 text-body-sm text-error" />
           <div className="mt-4 flex gap-2">
             <Button variant="primary" size="md" onClick={submit} isLoading={submitting}>
               Found organization

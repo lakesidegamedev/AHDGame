@@ -30,7 +30,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-[860px] px-4 py-7 sm:px-8">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
+      <nav className="mb-6 flex items-center gap-2 text-body text-muted">
         <Link href="/wiki" className="hover:text-foreground">
           Wiki
         </Link>
@@ -43,7 +43,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
       </nav>
 
       <header className="mb-8">
-        <h1 className="text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
+        <h1 className="text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
           {data.label}
         </h1>
         <p className="mt-2 text-muted">
@@ -53,10 +53,12 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
 
       {flavor && (
         <section className="mb-8 ">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">About this role</h2>
+          <h2 className="mb-3 text-heading font-semibold text-foreground">About this role</h2>
           <p className="text-muted leading-relaxed">{flavor.blurb}</p>
-          <h3 className="mt-4 mb-2 text-sm font-medium text-foreground">Key responsibilities</h3>
-          <ul className="list-inside list-disc space-y-1 text-sm text-muted">
+          <h3 className="mt-4 mb-2 text-body-lg font-medium text-foreground">
+            Key responsibilities
+          </h3>
+          <ul className="list-inside list-disc space-y-1 text-body text-muted">
             {flavor.responsibilities.map((r, i) => (
               <li key={i}>{r}</li>
             ))}
@@ -65,7 +67,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
       )}
 
       <section className="">
-        <h2 className="mb-4 text-[21px] font-extrabold tracking-[-0.03em] text-foreground">
+        <h2 className="mb-4 text-heading font-extrabold tracking-[-0.03em] text-foreground">
           Current holder
         </h2>
         <div className="flex items-center gap-4 border-b border-card-border/60 py-2.5">
@@ -90,7 +92,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
               )}
               {holder.partyName && holder.partyName !== "-" && (
                 <span
-                  className="rounded px-1.5 py-0.5 text-xs font-medium"
+                  className="rounded px-1.5 py-0.5 text-body-sm font-medium"
                   style={{
                     backgroundColor: holder.partyColor + "30",
                     color: holder.partyColor,
@@ -100,7 +102,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
                 </span>
               )}
               {holder.state && (
-                <span className="text-sm text-muted">
+                <span className="text-body text-muted">
                   ({displayCanadianRegionCode(holder.state)})
                 </span>
               )}
@@ -110,7 +112,7 @@ export default async function WikiLeadershipPage({ params }: PageProps) {
       </section>
 
       <footer className="mt-12 border-t border-card-border pt-6">
-        <Link href="/wiki/congress" className="text-sm text-muted hover:text-primary">
+        <Link href="/wiki/congress" className="text-body text-muted hover:text-primary">
           ← View Congress & leadership
         </Link>
       </footer>

@@ -20,8 +20,8 @@ export default function InvestmentForecast({
   if (!forecast) return <p className="text-body-sm text-muted">{t("noForecast")}</p>;
   return (
     <div>
-      <h3 className="text-body-sm font-semibold text-foreground">{t("forecastTitle")}</h3>
-      <table className="mt-1 w-full text-body-xs tabular-nums">
+      <h3 className="text-body-lg font-semibold text-foreground">{t("forecastTitle")}</h3>
+      <table className="mt-1 w-full text-body-sm tabular-nums">
         <thead>
           <tr className="text-left text-muted">
             <th scope="col" className="py-0.5 font-medium" />

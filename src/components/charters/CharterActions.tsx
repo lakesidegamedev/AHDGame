@@ -75,7 +75,7 @@ export function CharterActions({
 
   if (alreadySigned) {
     return (
-      <div className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success">
+      <div className="rounded-md border border-success/40 bg-success/10 p-3 text-body text-success">
         You have signed this charter.
       </div>
     );
@@ -83,7 +83,7 @@ export function CharterActions({
 
   if (alreadyRejected) {
     return (
-      <div className="rounded-md border border-error/40 bg-error/10 p-3 text-sm text-error">
+      <div className="rounded-md border border-error/40 bg-error/10 p-3 text-body text-error">
         You have rejected this charter. The proposer can replace your slot via the
         founder-replacement flow.
       </div>
@@ -114,7 +114,7 @@ export function CharterActions({
             placeholder="Optional reason (max 500 chars)"
             maxLength={500}
             rows={2}
-            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-card-border bg-card px-3 py-2 text-body"
           />
           <Button
             onClick={reject}
@@ -127,7 +127,7 @@ export function CharterActions({
         </div>
       )}
       {error && (
-        <div className="rounded-md border border-error/40 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-md border border-error/40 bg-error/10 p-3 text-body text-error">
           {error}
         </div>
       )}

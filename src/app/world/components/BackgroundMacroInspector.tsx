@@ -42,10 +42,10 @@ export default function BackgroundMacroInspector({
       onTouchMove={(event) => event.stopPropagation()}
       onTouchEnd={(event) => event.stopPropagation()}
     >
-      <label className="block text-sm font-medium">
+      <label className="block text-body font-medium">
         Inspect a background country ({countries.length} with aggregate data)
         <select
-          className="mt-2 w-full rounded-lg border border-card-border bg-background p-2 text-sm"
+          className="mt-2 w-full rounded-lg border border-card-border bg-background p-2 text-body"
           value={selected?.entityId ?? ""}
           onChange={(event) => onSelect(event.target.value || null)}
         >
@@ -60,10 +60,10 @@ export default function BackgroundMacroInspector({
       {selected && summary && (
         <aside
           aria-label={`${selected.displayName} macro summary`}
-          className="mt-4 space-y-3 text-sm"
+          className="mt-4 space-y-3 text-body"
         >
           <div className="flex items-center justify-between gap-3">
-            <h3 className="font-bold text-base">{selected.displayName}</h3>
+            <h3 className="font-bold text-body-lg">{selected.displayName}</h3>
             <button
               type="button"
               className="rounded border border-card-border px-3 py-2"

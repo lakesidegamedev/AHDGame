@@ -46,22 +46,22 @@ export default function RedistrictPage({
         <div>
           <Link
             href={`${regionUrl(code.toLowerCase(), id.toLowerCase())}`}
-            className="text-sm text-primary hover:underline"
+            className="text-body text-primary hover:underline"
           >
             ← Back to {id.toUpperCase()}
           </Link>
-          <h1 className="text-3xl font-bold mt-2">Redistrict {id.toUpperCase()}</h1>
+          <h1 className="text-display font-bold mt-2">Redistrict {id.toUpperCase()}</h1>
         </div>
         <RedistrictingGuide />
         <InlineError error={error} className="text-error" />
         {data?.isAdminOverride ? (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-body text-red-400">
             Admin override — normal redistricting gates are bypassed for this session.
           </div>
         ) : null}
         {data && !data.canRedraw && (
           <>
-            <div className="rounded-lg border border-card-border bg-card px-4 py-3 text-sm text-muted">
+            <div className="rounded-lg border border-card-border bg-card px-4 py-3 text-body text-muted">
               {data.reason ?? "You cannot redraw this map right now."}
             </div>
             {data.districts.length > 0 && (

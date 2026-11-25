@@ -38,7 +38,9 @@ export function NppSlotTierTable({ currentOrg, className = "" }: NppSlotTierTabl
     <div className={`rounded-lg border border-card-border bg-card-elevated p-3 ${className}`}>
       <div className="mb-2 flex items-center justify-between">
         <span className="text-body-sm font-medium text-muted">Slots by state org</span>
-        {hasOrg && <span className="text-[10px] text-muted">current {currentOrg.toFixed(0)}%</span>}
+        {hasOrg && (
+          <span className="text-body-sm text-muted">current {currentOrg.toFixed(0)}%</span>
+        )}
       </div>
       <div className="space-y-0.5">
         {RECRUITMENT_SLOT_TIERS.map((tier, i) => {
@@ -46,7 +48,7 @@ export function NppSlotTierTable({ currentOrg, className = "" }: NppSlotTierTabl
           return (
             <div
               key={tier.minOrg}
-              className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+              className={`flex items-center justify-between rounded px-2 py-1 text-body-sm ${
                 active ? "bg-primary/10 text-primary" : "text-muted"
               }`}
             >

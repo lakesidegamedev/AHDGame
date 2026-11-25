@@ -115,7 +115,7 @@ export function CeoPayCard({ corpId }: { corpId: string }) {
   return (
     <DenseSection id="ceo-pay" title="CEO pay" meta={demand ? "Raise requested" : undefined}>
       <div className="space-y-2 py-1">
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Better CEOs cut your management overhead. A new CEO starts at a low level.
         </p>
         <div className="divide-y divide-card-border border-y border-card-border">
@@ -125,10 +125,10 @@ export function CeoPayCard({ corpId }: { corpId: string }) {
         </div>
         {demand && (
           <div className="space-y-2 border-y border-card-border py-2">
-            <p className="text-sm font-medium">
+            <p className="text-body font-medium">
               Your CEO (level {demand.level}) asks for {formatAmount(demand.amount)} per day.
             </p>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               Unanswered by turn {demand.expiresTurn}, your standing policy decides.
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -146,7 +146,7 @@ export function CeoPayCard({ corpId }: { corpId: string }) {
                 value={counter}
                 onChange={(e) => setCounter(Math.max(0, Number(e.target.value) || 0))}
                 aria-label="Counter offer per day"
-                className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-right text-body-sm tabular-nums text-foreground focus:border-foreground focus:outline-none"
               />
               <SmallButton
                 disabled={busy}
@@ -165,7 +165,7 @@ export function CeoPayCard({ corpId }: { corpId: string }) {
           </div>
         )}
         {!demand && lastDecision && (
-          <p className="text-xs text-muted">{decisionLine(lastDecision, formatAmount)}</p>
+          <p className="text-body-sm text-muted">{decisionLine(lastDecision, formatAmount)}</p>
         )}
         <InlineStatus message={error} tone="error" />
       </div>

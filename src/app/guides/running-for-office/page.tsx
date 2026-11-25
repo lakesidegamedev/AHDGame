@@ -51,7 +51,7 @@ export default function RunningForOfficeIndexPage() {
     <div className="min-h-screen bg-background pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted">
+        <nav className="mb-6 flex items-center gap-1.5 text-body text-muted">
           <Link href="/guides" className="hover:text-foreground transition-colors">
             Guides
           </Link>
@@ -60,12 +60,12 @@ export default function RunningForOfficeIndexPage() {
         </nav>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Running for office</h1>
-          <p className="mt-2 text-sm text-muted">Choose your country to get started</p>
+          <h1 className="text-display font-bold tracking-tight">Running for office</h1>
+          <p className="mt-2 text-body text-muted">Choose your country to get started</p>
         </div>
 
         <div className="mb-8 space-y-4">
-          <p className="text-sm text-muted leading-relaxed">
+          <p className="text-body text-muted leading-relaxed">
             Elections are the beating heart of A House Divided. Every seat in the simulation, from a
             US state legislature district to Prime Minister, is won at the ballot box against other
             players and NPC politicians, on a live clock where one real hour is one game week.
@@ -75,7 +75,7 @@ export default function RunningForOfficeIndexPage() {
             bank <strong className="text-foreground">Political influence</strong> to unlock bigger
             moves, and time your push so you peak in the final weeks, not the first ones.
           </p>
-          <p className="text-sm text-muted leading-relaxed">
+          <p className="text-body text-muted leading-relaxed">
             What differs is the system you&apos;re playing in. American races are candidate-first:
             you win a primary before you ever see the general, and first-past-the-post (or
             ranked-choice in some states) decides the winner. Parliamentary races in the UK and
@@ -84,7 +84,7 @@ export default function RunningForOfficeIndexPage() {
             each path office-by-office: what it costs, what the vote formula rewards, and the
             mistakes that sink first campaigns.
           </p>
-          <p className="text-sm text-muted leading-relaxed">
+          <p className="text-body text-muted leading-relaxed">
             New to the game entirely? Start with the{" "}
             <Link href="/wiki/first-campaign-walkthrough" className="text-primary hover:underline">
               First campaign walkthrough
@@ -119,12 +119,12 @@ export default function RunningForOfficeIndexPage() {
                 </svg>
               </div>
               <h2 className="mb-1.5 font-semibold text-foreground">{opt.label}</h2>
-              <p className="text-sm text-muted leading-relaxed">{opt.description}</p>
+              <p className="text-body text-muted leading-relaxed">{opt.description}</p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {opt.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-card-border px-2 py-0.5 text-xs text-muted"
+                    className="rounded-full border border-card-border px-2 py-0.5 text-body-sm text-muted"
                   >
                     {tag}
                   </span>

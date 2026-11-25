@@ -92,7 +92,7 @@ const FLAG_TYPE_LABEL: Record<string, string> = {
 };
 
 const INPUT_CLS =
-  "min-h-[36px] rounded border border-card-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary";
+  "min-h-[36px] rounded border border-card-border bg-background px-3 py-1.5 text-body focus:outline-none focus:ring-1 focus:ring-primary";
 
 function fmtAmount(amount: number, currency: string) {
   const sign = amount >= 0 ? "+" : "";
@@ -314,7 +314,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
           onChange={(e) => setFilters((f) => ({ ...f, turnMax: e.target.value }))}
         />
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-body">
           <input
             type="checkbox"
             checked={filters.flaggedOnly}
@@ -327,7 +327,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
         <button
           onClick={() => load()}
           disabled={loading}
-          className="min-h-[36px] rounded border border-primary bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+          className="min-h-[36px] rounded border border-primary bg-primary/10 px-3 py-1.5 text-body font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
         >
           {loading ? "Loading…" : "Apply"}
         </button>
@@ -350,7 +350,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
               if (filters.turnMax) p.set("turnMax", filters.turnMax);
               return p.toString();
             })()}`}
-            className="min-h-[36px] inline-flex items-center rounded border border-card-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-card/60"
+            className="min-h-[36px] inline-flex items-center rounded border border-card-border bg-card px-3 py-1.5 text-body font-medium text-foreground hover:bg-card/60"
             title="Export current filter as CSV (max 50,000 rows)"
           >
             Export CSV
@@ -360,9 +360,9 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
 
       {/* Table */}
       <div className="overflow-x-auto rounded border border-card-border">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="bg-card">
-            <tr className="text-left text-xs font-medium text-muted">
+            <tr className="text-left text-body-sm font-medium text-muted">
               <th className="px-3 py-2">Turn</th>
               <th className="px-3 py-2">Time</th>
               <th className="px-3 py-2">Subject</th>
@@ -392,8 +392,8 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                       entry.flagged ? "border-l-2 border-l-red-500" : ""
                     }`}
                   >
-                    <td className="px-3 py-2 font-mono text-xs">{entry.turn}</td>
-                    <td className="px-3 py-2 text-xs text-muted whitespace-nowrap">
+                    <td className="px-3 py-2 font-mono text-body-sm">{entry.turn}</td>
+                    <td className="px-3 py-2 text-body-sm text-muted whitespace-nowrap">
                       <LocalTime value={entry.createdAt} options={LEDGER_TIME_OPTS} />
                     </td>
                     <td className="px-3 py-2">
@@ -409,33 +409,33 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                       >
                         {entry.subjectName}
                         {entry.subjectDeletedAt && (
-                          <span className="ml-1 rounded bg-muted/20 px-1 py-0.5 text-[10px] font-semibold uppercase text-muted">
+                          <span className="ml-1 rounded bg-muted/20 px-1 py-0.5 text-body-sm font-semibold uppercase text-muted">
                             deleted
                           </span>
                         )}
                         {entry.subjectSequentialId !== undefined && (
-                          <span className="ml-1 text-[10px] text-muted">
+                          <span className="ml-1 text-body-sm text-muted">
                             #{entry.subjectSequentialId}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-muted">{entry.subjectType}</div>
+                      <div className="text-body-sm text-muted">{entry.subjectType}</div>
                     </td>
                     <td
-                      className="px-3 py-2 font-mono text-xs"
+                      className="px-3 py-2 font-mono text-body-sm"
                       title={TX_TYPE_LABELS[entry.type as FinancialTxType] ?? entry.type}
                     >
                       {TX_TYPE_LABELS[entry.type as FinancialTxType] ?? entry.type}
                     </td>
                     <td
-                      className={`px-3 py-2 text-right font-mono text-xs ${
+                      className={`px-3 py-2 text-right font-mono text-body-sm ${
                         entry.amount >= 0 ? "text-green-400" : "text-red-400"
                       }`}
                     >
                       {fmtAmount(entry.amount, "")}
                     </td>
-                    <td className="px-3 py-2 text-xs">{entry.currencyCode}</td>
-                    <td className="px-3 py-2 text-xs text-muted">
+                    <td className="px-3 py-2 text-body-sm">{entry.currencyCode}</td>
+                    <td className="px-3 py-2 text-body-sm text-muted">
                       <span
                         className={entry.counterpartyDeletedAt ? "line-through" : ""}
                         title={
@@ -447,7 +447,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                         {entry.counterpartyName ?? "—"}
                       </span>
                       {entry.counterpartyDeletedAt && (
-                        <span className="ml-1 rounded bg-muted/20 px-1 py-0.5 text-[10px] font-semibold uppercase text-muted">
+                        <span className="ml-1 rounded bg-muted/20 px-1 py-0.5 text-body-sm font-semibold uppercase text-muted">
                           deleted
                         </span>
                       )}
@@ -458,14 +458,14 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                           {activeFlags.map((f, i) => (
                             <span
                               key={i}
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${SEVERITY_COLOR[f.severity]}`}
+                              className={`rounded px-1.5 py-0.5 text-body-sm font-semibold ${SEVERITY_COLOR[f.severity]}`}
                             >
                               {f.type}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-muted">—</span>
+                        <span className="text-body-sm text-muted">—</span>
                       )}
                     </td>
                   </tr>
@@ -481,7 +481,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                               <div className="mb-1 text-body-sm font-medium text-muted">Meta</div>
                               <dl className="space-y-0.5">
                                 {Object.entries(entry.meta).map(([k, v]) => (
-                                  <div key={k} className="flex gap-2 text-xs">
+                                  <div key={k} className="flex gap-2 text-body-sm">
                                     <dt className="text-muted min-w-[120px]">{k}</dt>
                                     <dd className="font-mono text-foreground break-all">
                                       {String(v)}
@@ -517,14 +517,14 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                                               : SEVERITY_DOT[flag.severity]
                                           }`}
                                         />
-                                        <span className="text-xs font-semibold">
+                                        <span className="text-body-sm font-semibold">
                                           {flag.type}
                                           {flag.dismissed && (
                                             <span className="ml-1 text-muted">(dismissed)</span>
                                           )}
                                         </span>
                                       </div>
-                                      <p className="text-xs text-muted">{flag.detail}</p>
+                                      <p className="text-body-sm text-muted">{flag.detail}</p>
                                     </div>
                                     <button
                                       onClick={(e) => {
@@ -532,7 +532,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                                         dismissFlag(entry._id, idx, !flag.dismissed);
                                       }}
                                       disabled={dismissing === `${entry._id}:${idx}`}
-                                      className="shrink-0 rounded border border-card-border bg-background px-2 py-1 text-xs hover:bg-card disabled:opacity-50"
+                                      className="shrink-0 rounded border border-card-border bg-background px-2 py-1 text-body-sm hover:bg-card disabled:opacity-50"
                                     >
                                       {flag.dismissed ? "Un-dismiss" : "Dismiss"}
                                     </button>
@@ -543,7 +543,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
                           )}
 
                           {entry.balanceAfter !== undefined && (
-                            <div className="text-xs">
+                            <div className="text-body-sm">
                               <span className="text-muted">Balance after: </span>
                               <span className="font-mono">
                                 {entry.balanceAfter.toLocaleString("en-US", {
@@ -568,7 +568,7 @@ function TransactionTimeline({ apiBase, prefilterSubjectId, prefilterSubjectName
         <button
           onClick={() => load(nextCursor ?? undefined)}
           disabled={loading}
-          className="w-full rounded border border-card-border py-2 text-sm text-muted hover:bg-card disabled:opacity-50"
+          className="w-full rounded border border-card-border py-2 text-body text-muted hover:bg-card disabled:opacity-50"
         >
           {loading ? "Loading…" : "Load more"}
         </button>
@@ -662,7 +662,7 @@ function SuspectAlerts({ apiBase, onDrillIn }: AlertsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted">
+      <div className="text-body text-muted">
         {total} entity group{total !== 1 ? "s" : ""} with active flags
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -681,13 +681,13 @@ function SuspectAlerts({ apiBase, onDrillIn }: AlertsProps) {
                 className="flex items-start justify-between gap-2 text-left"
               >
                 <div>
-                  <div className="font-medium text-sm">{group.subjectName}</div>
-                  <div className="text-xs text-muted capitalize">{group.subjectType}</div>
+                  <div className="font-medium text-body">{group.subjectName}</div>
+                  <div className="text-body-sm text-muted capitalize">{group.subjectType}</div>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className={`h-2 w-2 rounded-full ${SEVERITY_DOT[group.highestSeverity]}`} />
                   <span
-                    className={`text-xs font-semibold ${SEVERITY_COLOR[group.highestSeverity]}`}
+                    className={`text-body-sm font-semibold ${SEVERITY_COLOR[group.highestSeverity]}`}
                   >
                     {group.highestSeverity}
                   </span>
@@ -697,13 +697,13 @@ function SuspectAlerts({ apiBase, onDrillIn }: AlertsProps) {
                 {group.flagTypes.map((ft) => (
                   <span
                     key={ft}
-                    className="rounded bg-card-border px-1.5 py-0.5 text-[10px] font-medium text-muted"
+                    className="rounded bg-card-border px-1.5 py-0.5 text-body-sm font-medium text-muted"
                   >
                     {FLAG_TYPE_LABEL[ft] ?? ft}
                   </span>
                 ))}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted">
+              <div className="flex items-center justify-between text-body-sm text-muted">
                 <span>
                   {group.flagCount} active flag{group.flagCount !== 1 ? "s" : ""}
                 </span>
@@ -719,7 +719,7 @@ function SuspectAlerts({ apiBase, onDrillIn }: AlertsProps) {
                   <button
                     onClick={() => runReconcile(group)}
                     disabled={reconciling === group.entityKey}
-                    className="rounded border border-card-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-card disabled:opacity-50"
+                    className="rounded border border-card-border bg-background px-2 py-1 text-body-sm font-medium hover:bg-card disabled:opacity-50"
                   >
                     {reconciling === group.entityKey
                       ? "Reconciling…"
@@ -729,14 +729,14 @@ function SuspectAlerts({ apiBase, onDrillIn }: AlertsProps) {
                   </button>
                   <button
                     onClick={() => onDrillIn(group.subjectId, group.subjectName)}
-                    className="rounded border border-card-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-card"
+                    className="rounded border border-card-border bg-background px-2 py-1 text-body-sm font-medium hover:bg-card"
                   >
                     Open timeline →
                   </button>
                 </div>
               )}
               {reconciled && (
-                <div className="rounded border border-card-border bg-background/50 p-2 text-[11px]">
+                <div className="rounded border border-card-border bg-background/50 p-2 text-body-sm">
                   {reconciled.reconcilable ? (
                     <>
                       <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
@@ -818,8 +818,8 @@ export function FinancialLedgerAdminPanel({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-base font-semibold">Financial ledger</h2>
-        <p className="mt-0.5 text-xs text-muted">
+        <h2 className="text-body-lg font-semibold">Financial ledger</h2>
+        <p className="mt-0.5 text-body-sm text-muted">
           96-hour rolling audit log — all financial transactions across characters, corporations,
           parties, and government.
         </p>
@@ -834,7 +834,7 @@ export function FinancialLedgerAdminPanel({
               setInnerTab(tab);
               if (tab !== "timeline") clearDrill();
             }}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
+            className={`px-4 py-2 text-body font-medium transition-colors ${
               innerTab === tab
                 ? "border-b-2 border-primary text-primary"
                 : "text-muted hover:text-foreground"
@@ -847,12 +847,12 @@ export function FinancialLedgerAdminPanel({
 
       {/* Drill-in breadcrumb */}
       {innerTab === "timeline" && drillSubjectId && (
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-body">
           <span className="text-muted">Filtered to:</span>
           <span className="font-medium">{drillSubjectName}</span>
           <button
             onClick={clearDrill}
-            className="ml-auto text-xs text-muted underline hover:text-foreground"
+            className="ml-auto text-body-sm text-muted underline hover:text-foreground"
           >
             Clear filter
           </button>

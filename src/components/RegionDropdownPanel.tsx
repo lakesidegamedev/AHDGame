@@ -55,7 +55,7 @@ export function RegionDropdownPanel({
         <Link
           href={regionPartyUrl(regionCountryId, regionId, currentParty.id)}
           onClick={() => onClose()}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+          className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
         >
           <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -72,7 +72,7 @@ export function RegionDropdownPanel({
       <Link
         href={regionUrl(regionCountryId, regionId)}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -89,7 +89,7 @@ export function RegionDropdownPanel({
         <Link
           href={regionLegislatureUrl(regionCountryId, nationId)}
           onClick={() => onClose()}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+          className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
         >
           <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -105,7 +105,7 @@ export function RegionDropdownPanel({
       <Link
         href={legislatureUrl(regionCountryId)}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -121,7 +121,7 @@ export function RegionDropdownPanel({
       <Link
         href={countryUrl(regionCountryId)}
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60 border-t border-card-border"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60 border-t border-card-border"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -136,7 +136,7 @@ export function RegionDropdownPanel({
       <Link
         href="/world"
         onClick={() => onClose()}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-background/60"
+        className="flex items-center gap-2 px-4 py-2.5 text-body text-foreground transition-colors hover:bg-background/60"
       >
         <svg className="h-4 w-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path

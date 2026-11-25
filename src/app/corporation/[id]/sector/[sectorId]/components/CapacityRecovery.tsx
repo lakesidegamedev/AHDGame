@@ -52,7 +52,7 @@ export default function CapacityRecovery({
         className="my-3 w-full accent-primary"
       />
       <p className="text-body-sm text-muted">{t("recoveryExplanation")}</p>
-      <p className="mt-2 text-body-xs text-muted">
+      <p className="mt-2 text-body-sm text-muted">
         <span
           title={`${formatUnits(((plants.capacityUnits ?? 0) * percent) / 100)} ${CAPACITY_UNIT_LABEL} at full run`}
         >

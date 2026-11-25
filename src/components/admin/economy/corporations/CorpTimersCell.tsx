@@ -29,7 +29,7 @@ export function CorpTimersCell({ row, currentTurn }: { row: CorpRow; currentTurn
   }
 
   if (timers.length === 0) {
-    return <span className="text-xs text-success font-medium">No timers active</span>;
+    return <span className="text-body-sm text-success font-medium">No timers active</span>;
   }
 
   return (
@@ -37,7 +37,7 @@ export function CorpTimersCell({ row, currentTurn }: { row: CorpRow; currentTurn
       {timers.map((t) => (
         <span
           key={t.label}
-          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded w-fit ${
+          className={`text-body-sm font-semibold px-1.5 py-0.5 rounded w-fit ${
             t.remaining != null && t.remaining <= 0
               ? "bg-success/20 text-success"
               : "bg-warning/20 text-warning"

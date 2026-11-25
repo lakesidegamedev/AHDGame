@@ -36,7 +36,7 @@ export function CompassLegend({ position, parties, electorate, regionNoun }: Com
 
   return (
     <div className="border-t border-card-border pt-3">
-      <p className="mb-1.5 font-mono text-body-xs uppercase tracking-[0.16em] text-muted">
+      <p className="mb-1.5 font-mono text-body-sm uppercase tracking-[0.16em] text-muted">
         Distance from your pin
       </p>
       <ul className="space-y-1">
@@ -78,7 +78,7 @@ function DistanceChip({ distance }: { distance: number }) {
   const meta = ALIGNMENT_META[alignmentBand(distance)];
   return (
     <span
-      className={`shrink-0 rounded border px-1.5 font-mono text-body-xs font-semibold ${meta.toneClass}`}
+      className={`shrink-0 rounded border px-1.5 font-mono text-body-sm font-semibold ${meta.toneClass}`}
       title={meta.label}
     >
       {distance.toFixed(1)}

@@ -124,7 +124,7 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h3 className="text-sm font-semibold">Treasury transaction log</h3>
+          <h3 className="text-body-lg font-semibold">Treasury transaction log</h3>
           <p
             className="mt-0.5 text-body-sm text-muted"
             title="National treasury transactions only. State party and caucus treasury activity appears on their own pages."
@@ -135,7 +135,7 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
         </div>
         <div className="flex flex-wrap gap-2">
           <select
-            className="rounded-md border border-card-border bg-background px-2 py-1 text-xs"
+            className="rounded-md border border-card-border bg-background px-2 py-1 text-body-sm"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
@@ -147,7 +147,7 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
             ))}
           </select>
           <select
-            className="rounded-md border border-card-border bg-background px-2 py-1 text-xs"
+            className="rounded-md border border-card-border bg-background px-2 py-1 text-body-sm"
             value={direction}
             onChange={(e) => setDirection(e.target.value as "all" | "credit" | "debit")}
           >
@@ -175,10 +175,10 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
           ))}
         </div>
       )}
-      <InlineError error={error} className="text-xs text-error" />
+      <InlineError error={error} className="text-body-sm text-error" />
 
       {!loading && !error && items.length === 0 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           No transactions yet - events will appear here as the party makes or receives funds.
         </p>
       )}
@@ -186,7 +186,7 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
       {items.length > 0 && (
         <ul className="divide-y divide-card-border/40">
           {items.map((row) => (
-            <li key={row.id} className="flex items-start justify-between gap-3 py-2 text-xs">
+            <li key={row.id} className="flex items-start justify-between gap-3 py-2 text-body-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span
@@ -248,7 +248,7 @@ export function TreasuryTransactionLog({ countryCode, partyId }: Props) {
           type="button"
           disabled={loadingMore}
           onClick={fetchNextPage}
-          className="w-full rounded-md border border-card-border bg-background py-2 text-xs text-muted hover:text-foreground transition-colors disabled:opacity-50"
+          className="w-full rounded-md border border-card-border bg-background py-2 text-body-sm text-muted hover:text-foreground transition-colors disabled:opacity-50"
         >
           {loadingMore ? "Loading..." : "Load more"}
         </button>

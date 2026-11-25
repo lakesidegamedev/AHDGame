@@ -45,9 +45,9 @@ export function EstateCard({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] font-semibold text-foreground">{estate.name}</span>
+              <span className="text-body-sm font-semibold text-foreground">{estate.name}</span>
               <span
-                className="rounded border px-1.5 py-0.5 text-[10px] font-semibold"
+                className="rounded border px-1.5 py-0.5 text-body-sm font-semibold"
                 style={{
                   borderColor: TIER_COLOR[estate.tier] + "66",
                   color: TIER_COLOR[estate.tier],
@@ -57,7 +57,7 @@ export function EstateCard({
                 {TIER_LABELS[estate.tier]}
               </span>
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
+            <div className="mt-0.5 flex items-center gap-2 text-body-sm text-muted">
               <span>{FUNDING_LEVELS.find((f) => f.id === estate.fundingLevel)?.label}</span>
               <span>·</span>
               <span>{estate.outputBase.toLocaleString("en-US")} cap.</span>
@@ -65,7 +65,7 @@ export function EstateCard({
               <span>{siteLabel}</span>
             </div>
             {archetype && (
-              <p className="mt-1 text-[11px] leading-snug text-muted">{archetype.description}</p>
+              <p className="mt-1 text-body-sm leading-snug text-muted">{archetype.description}</p>
             )}
           </div>
         </div>
@@ -78,7 +78,7 @@ export function EstateCard({
 
         <button
           onClick={() => setOpen(!open)}
-          className="shrink-0 self-start rounded-lg border border-card-border bg-card-muted px-3 py-1.5 text-[12px] font-semibold text-muted hover:text-foreground lg:self-auto"
+          className="shrink-0 self-start rounded-lg border border-card-border bg-card-muted px-3 py-1.5 text-body-sm font-semibold text-muted hover:text-foreground lg:self-auto"
         >
           {open ? "Close" : "Manage"}
         </button>
@@ -97,14 +97,14 @@ export function EstateCard({
                     onClick={() =>
                       onAction("POST", `${basePath}/${estate._id}/fund`, { fundingLevel: f.id })
                     }
-                    className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-[12px] disabled:opacity-50 ${
+                    className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-body-sm disabled:opacity-50 ${
                       estate.fundingLevel === f.id
                         ? "border-[var(--gov)] bg-[color-mix(in_srgb,var(--gov)_10%,transparent)] text-gov-soft"
                         : "border-card-border bg-card text-muted hover:text-foreground"
                     }`}
                   >
                     <span className="font-medium">{f.label}</span>
-                    <span className="text-[10px] opacity-70">{f.upkeepMult}× cost</span>
+                    <span className="text-body-sm opacity-70">{f.upkeepMult}× cost</span>
                   </button>
                 ))}
               </div>
@@ -113,14 +113,14 @@ export function EstateCard({
             <div>
               <div className="dossier-label mb-2 text-muted">Expand</div>
               {estate.tier >= 3 ? (
-                <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-[12px] text-success">
+                <div className="rounded-lg border border-card-border bg-card px-3 py-2 text-body-sm text-success">
                   ✓ Flagship tier
                 </div>
               ) : (
                 <button
                   disabled={!canAct || busy}
                   onClick={() => onAction("POST", `${basePath}/${estate._id}/expand`)}
-                  className="w-full rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-[12px] font-semibold text-success hover:bg-success/20 disabled:opacity-50"
+                  className="w-full rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-body-sm font-semibold text-success hover:bg-success/20 disabled:opacity-50"
                 >
                   Expand → {TIER_LABELS[estate.tier + 1]} · 1 action
                 </button>
@@ -132,7 +132,7 @@ export function EstateCard({
               <button
                 disabled={!canAct || busy}
                 onClick={() => setConfirmClose(true)}
-                className="w-full rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-[12px] font-semibold text-error hover:bg-error/20 disabled:opacity-50"
+                className="w-full rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-body-sm font-semibold text-error hover:bg-error/20 disabled:opacity-50"
               >
                 Close facility
               </button>

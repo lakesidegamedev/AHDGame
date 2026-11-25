@@ -15,13 +15,13 @@ export function ExecutiveStatusBanner({ status }: { status: ExecutiveStatusPaylo
       className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-1"
     >
       {status.succession && (
-        <p className="text-sm text-foreground">
+        <p className="text-body text-foreground">
           <strong>{STAGE_LABEL[status.succession.stage]}:</strong> {status.succession.summary}
         </p>
       )}
-      {status.succession?.note && <p className="text-sm text-muted">{status.succession.note}</p>}
+      {status.succession?.note && <p className="text-body text-muted">{status.succession.note}</p>}
       {status.caretaker && (
-        <p className="text-sm text-foreground">
+        <p className="text-body text-foreground">
           <strong>Caretaker government:</strong> limited powers until a new government forms.
         </p>
       )}

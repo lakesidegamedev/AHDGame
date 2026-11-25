@@ -40,9 +40,9 @@ export function RegionCell({ election }: { election: ElectionDisplay }) {
         </span>
       )}
       {cls != null && (
-        <span className="ml-2 text-xs text-muted">Class {CLASS_ROMAN[cls] ?? cls}</span>
+        <span className="ml-2 text-body-sm text-muted">Class {CLASS_ROMAN[cls] ?? cls}</span>
       )}
-      {seats != null && <span className="ml-2 text-xs text-muted">{seats} seats</span>}
+      {seats != null && <span className="ml-2 text-body-sm text-muted">{seats} seats</span>}
     </div>
   );
 }
@@ -90,7 +90,7 @@ function Chip({
           : "bg-muted/10 border-muted/25 text-muted";
   return (
     <span
-      className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}
+      className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-body-sm font-medium ${cls}`}
     >
       {children}
     </span>
@@ -106,12 +106,12 @@ function Chip({
 export function DeadlineCell({ election }: { election: ElectionDisplay }) {
   const clock = useGameClock();
   const turn = relevantDeadlineTurn(election);
-  if (turn == null) return <span className="text-xs text-muted">No deadline</span>;
+  if (turn == null) return <span className="text-body-sm text-muted">No deadline</span>;
 
   const timer = clock.formatRemainingTurns(turn);
   return (
     <div className="min-w-0">
-      <div className={`text-sm font-medium tabular-nums ${getTimerUrgencyStyle(timer.urgency)}`}>
+      <div className={`text-body font-medium tabular-nums ${getTimerUrgencyStyle(timer.urgency)}`}>
         {timer.text}
       </div>
     </div>
@@ -142,7 +142,7 @@ function IncumbentNote({ election }: { election: ElectionDisplay }) {
   const inc = election.incumbent;
   if (!inc || inc.running !== false || election.status === "completed") return null;
   return (
-    <span className="truncate text-xs text-muted">
+    <span className="truncate text-body-sm text-muted">
       Incumbent {inc.name} not running{inc.notRunningReason ? `: ${inc.notRunningReason}` : ""}
     </span>
   );
@@ -154,7 +154,7 @@ function FieldCellBody({ election }: { election: ElectionDisplay }) {
   const primaryLeaders = polling?.source === "primary" ? (polling.primaryLeaders ?? []) : [];
 
   if (count === 0) {
-    return <span className="text-sm text-muted">Nobody yet</span>;
+    return <span className="text-body text-muted">Nobody yet</span>;
   }
 
   if (primaryLeaders.length > 0) {
@@ -169,18 +169,18 @@ function FieldCellBody({ election }: { election: ElectionDisplay }) {
               style={{ backgroundColor: l.partyColor }}
               aria-hidden
             />
-            <span className="truncate text-sm text-foreground">{l.name}</span>
-            <span className="shrink-0 text-xs text-muted">
+            <span className="truncate text-body text-foreground">{l.name}</span>
+            <span className="shrink-0 text-body-sm text-muted">
               {l.fieldSize === 1 ? "Uncontested" : `${l.sharePct.toFixed(0)}%`} in {l.partyName}{" "}
               primary
             </span>
           </div>
         ))}
-        {hidden > 0 && <span className="text-xs text-muted">+{hidden} more parties</span>}
+        {hidden > 0 && <span className="text-body-sm text-muted">+{hidden} more parties</span>}
         {primaryLeaders.length === 1 && (
           // Without this line a one-party race looked like a row missing its
           // other half.
-          <span className="text-xs text-muted">No other party has filed</span>
+          <span className="text-body-sm text-muted">No other party has filed</span>
         )}
       </div>
     );
@@ -197,16 +197,20 @@ function FieldCellBody({ election }: { election: ElectionDisplay }) {
           style={{ backgroundColor: color }}
           aria-hidden
         />
-        <span className="truncate text-sm text-foreground">{polling?.leaderName ?? "Leading"}</span>
+        <span className="truncate text-body text-foreground">
+          {polling?.leaderName ?? "Leading"}
+        </span>
         {count === 1 ? (
-          <span className="shrink-0 text-xs text-muted">Uncontested</span>
+          <span className="shrink-0 text-body-sm text-muted">Uncontested</span>
         ) : (
           typeof share === "number" && (
-            <span className="shrink-0 text-xs tabular-nums text-muted">{share.toFixed(0)}%</span>
+            <span className="shrink-0 text-body-sm tabular-nums text-muted">
+              {share.toFixed(0)}%
+            </span>
           )
         )}
         {isCompetitiveElection(election) && (
-          <span className="shrink-0 text-xs text-warning" title={CLOSE_RACE_RULE_TEXT}>
+          <span className="shrink-0 text-body-sm text-warning" title={CLOSE_RACE_RULE_TEXT}>
             Close
           </span>
         )}
@@ -215,7 +219,7 @@ function FieldCellBody({ election }: { election: ElectionDisplay }) {
   }
 
   return (
-    <span className="text-sm text-foreground">
+    <span className="text-body text-foreground">
       {count === 1 ? "1 candidate, uncontested" : `${count} candidates`}
     </span>
   );
@@ -241,7 +245,7 @@ export function RaceActions({
     <div className="flex items-center justify-end gap-2">
       <Link
         href={href}
-        className="rounded-lg border border-card-border px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground"
+        className="rounded-lg border border-card-border px-2.5 py-1.5 text-body-sm font-medium text-muted transition-colors hover:text-foreground"
       >
         View
       </Link>
@@ -249,7 +253,7 @@ export function RaceActions({
         <button
           onClick={() => onWithdraw(election.id)}
           disabled={isLoading}
-          className="rounded-lg border border-error/40 bg-error/10 px-2.5 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
+          className="rounded-lg border border-error/40 bg-error/10 px-2.5 py-1.5 text-body-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
         >
           {isLoading ? "Working" : "Withdraw"}
         </button>
@@ -258,14 +262,14 @@ export function RaceActions({
         <button
           onClick={() => onEnter(election.id)}
           disabled={isLoading}
-          className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-40"
+          className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-body-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-40"
         >
           {isLoading ? "Joining" : "Enter race"}
         </button>
       )}
       {action === "blocked" && (
         <span
-          className="text-xs italic text-muted"
+          className="text-body-sm italic text-muted"
           title="Resolution for this race type is still being built, so it resolves vacant for now"
         >
           Filing closed

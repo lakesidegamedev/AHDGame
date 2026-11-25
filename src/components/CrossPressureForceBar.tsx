@@ -101,7 +101,7 @@ export function CrossPressureForceBar({ forces, hideLegend = false }: ForceBarPr
         />
       </div>
       {!hideLegend && (
-        <div className="flex flex-wrap items-center gap-3 text-[10px] text-zinc-400">
+        <div className="flex flex-wrap items-center gap-3 text-body-sm text-zinc-400">
           {FORCE_LABELS.map((f) => (
             <span key={f.key} className="inline-flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-sm" style={{ background: f.color }} />

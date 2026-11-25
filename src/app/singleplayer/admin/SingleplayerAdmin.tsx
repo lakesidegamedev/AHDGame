@@ -125,8 +125,8 @@ export function SingleplayerAdmin({
       <div className="mx-auto max-w-3xl">
         <header className="mb-8">
           <p className="mb-2 text-body-sm font-medium text-primary">Singleplayer controls</p>
-          <h1 className="text-3xl font-bold tracking-tight">Your local world</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted">
+          <h1 className="text-display font-bold tracking-tight">Your local world</h1>
+          <p className="mt-2 max-w-2xl text-body text-muted">
             This panel controls only the world stored on this device. Hosted administration,
             accounts, moderation and server operations are not available here.
           </p>
@@ -136,12 +136,12 @@ export function SingleplayerAdmin({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-body-sm font-medium text-muted">World state</p>
-              <h2 className="mt-1 text-xl font-semibold">
+              <h2 className="mt-1 text-heading font-semibold">
                 {availability === "sealed" ? "Paused and sealed" : "Open for play"}
               </h2>
             </div>
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              className={`rounded-full px-3 py-1 text-body-sm font-semibold ${
                 availability === "sealed"
                   ? "bg-amber-500/15 text-amber-400"
                   : "bg-green-500/15 text-green-400"
@@ -151,7 +151,7 @@ export function SingleplayerAdmin({
             </span>
           </div>
 
-          <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-3">
+          <dl className="mt-6 grid gap-4 text-body sm:grid-cols-3">
             <div>
               <dt className="text-muted">Turn</dt>
               <dd className="font-medium">{turn ?? "Not started"}</dd>
@@ -171,7 +171,7 @@ export function SingleplayerAdmin({
               <button
                 disabled={busy || !status.hasWorld}
                 onClick={() => void changeAvailability("open")}
-                className="rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
+                className="rounded bg-primary px-4 py-2 text-body font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
               >
                 {busy ? "Opening world" : "Start world"}
               </button>
@@ -179,14 +179,14 @@ export function SingleplayerAdmin({
               <button
                 disabled={busy}
                 onClick={() => void changeAvailability("sealed")}
-                className="rounded border border-card-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                className="rounded border border-card-border px-4 py-2 text-body font-semibold disabled:opacity-50"
               >
                 {busy ? "Pausing world" : "Pause world"}
               </button>
             )}
             <button
               onClick={() => router.push("/singleplayer")}
-              className="rounded border border-card-border px-4 py-2 text-sm font-semibold"
+              className="rounded border border-card-border px-4 py-2 text-body font-semibold"
             >
               World setup
             </button>
@@ -194,14 +194,14 @@ export function SingleplayerAdmin({
               <button
                 disabled={busy || availability === "sealed" || status.turnInProgress}
                 onClick={() => void advanceTurn()}
-                className="rounded border border-card-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                className="rounded border border-card-border px-4 py-2 text-body font-semibold disabled:opacity-50"
               >
                 {busy ? "Processing" : "Advance one turn"}
               </button>
             ) : null}
           </div>
           {error ? (
-            <p role="alert" className="mt-4 text-sm text-red-400">
+            <p role="alert" className="mt-4 text-body text-red-400">
               {error}
             </p>
           ) : null}
@@ -209,9 +209,9 @@ export function SingleplayerAdmin({
 
         {status.setup ? (
           <section className="mt-6 rounded border border-card-border bg-card p-5">
-            <h2 className="text-sm font-semibold text-muted">World rules</h2>
+            <h2 className="text-body font-semibold text-muted">World rules</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm">
+              <label className="grid gap-2 text-body">
                 Difficulty
                 <select
                   value={difficulty}
@@ -223,7 +223,7 @@ export function SingleplayerAdmin({
                   <option value="hard">Hard</option>
                 </select>
               </label>
-              <label className="grid gap-2 text-sm">
+              <label className="grid gap-2 text-body">
                 Autonomous politicians
                 <select
                   value={autonomy}
@@ -242,8 +242,8 @@ export function SingleplayerAdmin({
               </label>
             </div>
             <div className="mt-4">
-              <p className="text-sm font-medium">Feature flags</p>
-              <p className="mt-1 text-xs text-muted">
+              <p className="text-body font-medium">Feature flags</p>
+              <p className="mt-1 text-body-sm text-muted">
                 Running-world gates. Saving updates the stored config and the live world together.
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -265,8 +265,8 @@ export function SingleplayerAdmin({
                       className="mt-1"
                     />
                     <span>
-                      <span className="block text-sm font-medium">{flag.label}</span>
-                      <span className="block text-xs text-muted">{flag.description}</span>
+                      <span className="block text-body font-medium">{flag.label}</span>
+                      <span className="block text-body-sm text-muted">{flag.description}</span>
                     </span>
                   </label>
                 ))}
@@ -275,7 +275,7 @@ export function SingleplayerAdmin({
             <button
               disabled={busy}
               onClick={() => void saveRules()}
-              className="mt-4 rounded border border-card-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              className="mt-4 rounded border border-card-border px-4 py-2 text-body font-semibold disabled:opacity-50"
             >
               Save world rules
             </button>
@@ -283,7 +283,7 @@ export function SingleplayerAdmin({
         ) : null}
 
         <section className="mt-6 rounded border border-card-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-muted">Turn briefing</h2>
+          <h2 className="text-body font-semibold text-muted">Turn briefing</h2>
           {briefing.length ? (
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {briefing.map((item) => (
@@ -305,26 +305,26 @@ export function SingleplayerAdmin({
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-muted">
+            <p className="mt-2 text-body text-muted">
               Advance a turn to see its recorded market, corporation and election changes.
             </p>
           )}
         </section>
 
         <section className="mt-6 rounded border border-card-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-muted">Local diagnostics</h2>
-          <p className="mt-2 text-sm text-muted">
+          <h2 className="text-body font-semibold text-muted">Local diagnostics</h2>
+          <p className="mt-2 text-body text-muted">
             Counts and engine health only. No names, messages, credentials or save documents.
           </p>
           <button
             disabled={busy}
             onClick={() => void loadDiagnostics()}
-            className="mt-3 rounded border border-card-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            className="mt-3 rounded border border-card-border px-4 py-2 text-body font-semibold disabled:opacity-50"
           >
             Generate diagnostics
           </button>
           {diagnostics ? (
-            <pre className="mt-3 overflow-auto rounded bg-background p-3 text-xs">
+            <pre className="mt-3 overflow-auto rounded bg-background p-3 text-body-sm">
               {diagnostics}
             </pre>
           ) : null}

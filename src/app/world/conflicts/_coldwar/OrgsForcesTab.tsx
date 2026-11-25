@@ -171,7 +171,7 @@ export function OrgsForcesTab({
                 style={{
                   fontFamily: headingFont,
                   fontWeight: 700,
-                  fontSize: 28,
+                  fontSize: 30,
                   color: "#f3f1ea",
                   lineHeight: 1,
                 }}
@@ -268,7 +268,7 @@ export function OrgsForcesTab({
                   </span>
                   <span style={{ font: `700 14px ${mono}`, color: cohColor(vc.coh) }}>
                     {vc.coh}
-                    <span style={{ fontSize: 9, color: "#6b6b7a" }}>/100</span>
+                    <span style={{ fontSize: 12, color: "#6b6b7a" }}>/100</span>
                   </span>
                 </div>
                 <div
@@ -313,7 +313,7 @@ export function OrgsForcesTab({
                 </span>
                 <span style={{ font: `700 14px ${mono}`, color: "#e8e8ee" }}>
                   {fmtN(cp.effCP)}{" "}
-                  <span style={{ fontSize: 8.5, color: "#8a8a9a" }}>
+                  <span style={{ fontSize: 12, color: "#8a8a9a" }}>
                     ×{cp.cohFactor.toFixed(2)} coh
                   </span>
                 </span>
@@ -358,7 +358,7 @@ export function OrgsForcesTab({
                     POLITICAL CAPITAL
                   </div>
                   <div style={{ font: `700 13px ${mono}`, color: "#d9bd6b", marginTop: 2 }}>
-                    {vc.pc} <span style={{ fontSize: 8, color: "#6f8a5a" }}>+{PC_REGEN}/turn</span>
+                    {vc.pc} <span style={{ fontSize: 12, color: "#6f8a5a" }}>+{PC_REGEN}/turn</span>
                   </div>
                   <div style={{ font: `600 8px ${mono}`, color: "#8a8a9a", marginTop: 2 }}>
                     order cost {pcCostLabel}
@@ -649,7 +649,7 @@ export function OrgsForcesTab({
                 color: "#e8e8ee",
               }}
             >
-              <span style={{ fontSize: 15 }}>{r.flag}</span>
+              <span style={{ fontSize: 14 }}>{r.flag}</span>
               <span>{r.name}</span>
               {r.short === vc.vm.short && (
                 <span style={{ font: `600 8px ${mono}`, color: org.ac, letterSpacing: ".06em" }}>

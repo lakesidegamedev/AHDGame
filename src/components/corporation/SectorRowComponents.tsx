@@ -99,7 +99,7 @@ export function GrowthBar({
         className="flex-1 min-w-0"
       />
       <span
-        className={`w-10 shrink-0 text-right font-mono text-[12px] font-medium tabular-nums ${textColor}`}
+        className={`w-10 shrink-0 text-right font-mono text-body-sm font-medium tabular-nums ${textColor}`}
       >
         {draft}%
       </span>
@@ -111,7 +111,7 @@ export function GrowthBarReadOnly({ rate }: { rate: number }) {
   const textColor = rate < 0 ? "text-error" : "text-foreground";
   return (
     <span
-      className={`font-mono text-[13px] tabular-nums ${textColor}`}
+      className={`font-mono text-body-sm tabular-nums ${textColor}`}
       title={`Growth target: ${rate}%, applied over ${GROWTH_RATE_TURNS_PER_YEAR} turns (one game year)`}
     >
       {rate}%
@@ -133,11 +133,11 @@ export function ActiveRateDisplay({
       className={`inline-flex items-center gap-1 ${align === "left" ? "" : "justify-end"}`}
       title="The growth rate actually applied this turn, per day. It trends toward the target by 0.5pp per turn."
     >
-      <span className="font-mono text-[13px] tabular-nums text-foreground">
+      <span className="font-mono text-body-sm tabular-nums text-foreground">
         {currentRate.toFixed(1)}%
       </span>
       {currentRate !== targetRate && (
-        <span className="text-[10px] text-muted" title="Trending toward target">
+        <span className="text-body-sm text-muted" title="Trending toward target">
           {currentRate < targetRate ? "↑" : "↓"}
         </span>
       )}
@@ -181,7 +181,7 @@ export function StatusBadge({
     return (
       <InfoTooltip
         trigger={
-          <span className="inline-flex max-w-full cursor-help items-center gap-1 text-xs text-error">
+          <span className="inline-flex max-w-full cursor-help items-center gap-1 text-body-sm text-error">
             <span className="truncate">Reverting to {targetName}</span>
             <span className="shrink-0 font-mono tabular-nums">{transitionTurnsRemaining}t</span>
           </span>
@@ -210,7 +210,7 @@ export function StatusBadge({
           trigger={
             // The Strategy column already names the target, so the status says
             // what is happening and for how long instead of "To PropTec… 7t".
-            <span className="inline-flex cursor-help items-center gap-1 whitespace-nowrap text-xs text-warning">
+            <span className="inline-flex cursor-help items-center gap-1 whitespace-nowrap text-body-sm text-warning">
               Switching ·{" "}
               <span className="font-mono tabular-nums">
                 {transitionTurnsRemaining} {transitionTurnsRemaining === 1 ? "turn" : "turns"}
@@ -224,13 +224,13 @@ export function StatusBadge({
             Switching from <strong>{fromName}</strong> to <strong>{toName}</strong>.{" "}
             {transitionTurnsRemaining} turns remaining.
           </p>
-          <p className="text-muted mt-1 text-[10px]">-5% margin penalty during transition.</p>
+          <p className="text-muted mt-1 text-body-sm">-5% margin penalty during transition.</p>
         </InfoTooltip>
         {isCeo && onCancelTransition && !isCancelPending && (
           <button
             type="button"
             onClick={() => onCancelPendingSet(sector._id)}
-            className="shrink-0 text-[11px] text-muted underline decoration-card-border underline-offset-2 hover:text-foreground"
+            className="shrink-0 text-body-sm text-muted underline decoration-card-border underline-offset-2 hover:text-foreground"
             title={`Cancel transition, costs ${fmtMoney(cancelCostDisplay)}`}
             aria-label="Cancel transition"
           >
@@ -243,7 +243,7 @@ export function StatusBadge({
 
   if (!isTransitioning && cooldownRemaining > 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-muted">
+      <span className="inline-flex items-center gap-1 text-body-sm text-muted">
         Cooldown
         <span className="font-mono tabular-nums">{cooldownRemaining}t</span>
       </span>

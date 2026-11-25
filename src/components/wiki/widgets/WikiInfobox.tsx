@@ -18,7 +18,7 @@ export function WikiInfobox({ data }: { data?: string }) {
   return (
     <aside
       aria-label={`${HEADINGS[type]} summary`}
-      className="mb-4 w-full rounded-lg border border-card-border bg-card/60 text-sm sm:float-right sm:clear-right sm:ml-4 sm:w-64"
+      className="mb-4 w-full rounded-lg border border-card-border bg-card/60 text-body sm:float-right sm:clear-right sm:ml-4 sm:w-64"
     >
       <div className="rounded-t-lg border-b border-card-border bg-card-elevated px-3 py-2 text-center font-semibold text-foreground">
         {title ?? HEADINGS[type]}

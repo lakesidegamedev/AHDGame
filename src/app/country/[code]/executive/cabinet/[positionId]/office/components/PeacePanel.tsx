@@ -322,7 +322,7 @@ export function PeacePanel({
   if (wars.length === 0) {
     return (
       <SectionCard title="Peace negotiations" sub="Ending a war your country is fighting">
-        <p className="text-[12px] text-muted">
+        <p className="text-body-sm text-muted">
           {loaded ? "Your country is not at war." : "Loading…"}
         </p>
       </SectionCard>
@@ -369,7 +369,7 @@ export function PeacePanel({
       sub="Ending a war your country is fighting"
       right={!canAct ? <Badge tone="muted">Read-only</Badge> : undefined}
     >
-      <p className="mb-3 text-[12px] text-muted">
+      <p className="mb-3 text-body-sm text-muted">
         A deal is struck between two countries, not two sides: accepting takes{" "}
         <strong>one country</strong> out of the war. An ally pulled in under a treaty leaves with
         the country it came to defend, and if that empties a side, the war ends there and then. An
@@ -385,7 +385,7 @@ export function PeacePanel({
             setWarId(e.target.value);
             chooseEnemy("");
           }}
-          className="mb-3 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+          className="mb-3 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
         >
           {wars.map((w) => (
             <option key={w.conflictId} value={w.conflictId}>
@@ -396,7 +396,7 @@ export function PeacePanel({
       )}
 
       {war && (
-        <p className="mb-3 text-[11px]">
+        <p className="mb-3 text-body-sm">
           <a
             href={`/world/conflicts/${war.conflictNumber}`}
             className="text-muted underline hover:text-foreground"
@@ -410,17 +410,17 @@ export function PeacePanel({
         <div className="mb-4 space-y-2">
           {live.map((o) => (
             <div key={o.id} className="rounded-lg border border-card-border bg-card-elevated p-3">
-              <p className="text-[12px]">
+              <p className="text-body-sm">
                 <strong>{resolveCountryName(o.fromCountry)}</strong>
                 {offerDirectionText(o, resolveCountryName)}
                 {offerTermText(o.term, o.rulingPartyName, resolveCountryName)}.
               </p>
               {o.justification && (
-                <p className="mt-1 border-l-2 border-card-border pl-2 text-[11px] italic text-muted">
+                <p className="mt-1 border-l-2 border-card-border pl-2 text-body-sm italic text-muted">
                   {o.justification}
                 </p>
               )}
-              <p className="mt-1 text-[11px] text-muted">Lapses on turn {o.expiresTurn}.</p>
+              <p className="mt-1 text-body-sm text-muted">Lapses on turn {o.expiresTurn}.</p>
               {canAct && (
                 <div className="mt-2 flex gap-2">
                   {o.incoming ? (
@@ -429,7 +429,7 @@ export function PeacePanel({
                         type="button"
                         disabled={busy}
                         onClick={() => answer(o.id, "accept")}
-                        className="rounded-lg bg-success px-3 py-1.5 text-[11px] font-bold text-[#06210f] disabled:opacity-50"
+                        className="rounded-lg bg-success px-3 py-1.5 text-body-sm font-bold text-[#06210f] disabled:opacity-50"
                       >
                         Accept
                       </button>
@@ -437,7 +437,7 @@ export function PeacePanel({
                         type="button"
                         disabled={busy}
                         onClick={() => answer(o.id, "reject")}
-                        className="rounded-lg border border-card-border px-3 py-1.5 text-[11px] disabled:opacity-50"
+                        className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm disabled:opacity-50"
                       >
                         Reject
                       </button>
@@ -447,7 +447,7 @@ export function PeacePanel({
                       type="button"
                       disabled={busy}
                       onClick={() => answer(o.id, "withdraw")}
-                      className="rounded-lg border border-card-border px-3 py-1.5 text-[11px] disabled:opacity-50"
+                      className="rounded-lg border border-card-border px-3 py-1.5 text-body-sm disabled:opacity-50"
                     >
                       Withdraw
                     </button>
@@ -461,13 +461,13 @@ export function PeacePanel({
 
       {canAct && (
         <div className="space-y-2 border-t border-card-border pt-3">
-          <p className="text-[12px] font-semibold">Offer to leave this war</p>
+          <p className="text-body-sm font-semibold">Offer to leave this war</p>
           <div className="flex flex-wrap gap-2">
             <select
               aria-label="Country to negotiate with"
               value={enemy}
               onChange={(e) => chooseEnemy(e.target.value)}
-              className="min-w-[150px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+              className="min-w-[150px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
             >
               <option value="">Select a country…</option>
               {(war?.enemies ?? []).map((e) => (
@@ -485,7 +485,7 @@ export function PeacePanel({
               value={effectiveLeaver}
               disabled={termKind === "reunification"}
               onChange={(e) => setLeaver(e.target.value as "us" | "them")}
-              className="min-w-[150px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+              className="min-w-[150px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
             >
               <option value="us">We leave the war</option>
               <option value="them">They leave the war</option>
@@ -494,7 +494,7 @@ export function PeacePanel({
               aria-label="Term offered"
               value={termKind}
               onChange={(e) => setTermKind(e.target.value as typeof termKind)}
-              className="min-w-[150px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+              className="min-w-[150px] flex-1 rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
             >
               <option value="white_peace">White peace</option>
               <option value="indemnity">Indemnity</option>
@@ -517,33 +517,33 @@ export function PeacePanel({
                 aria-label="Who pays"
                 value={payer}
                 onChange={(e) => setPayer(e.target.value as CountryId)}
-                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+                className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
               >
                 <option value={countryId}>We pay</option>
                 {enemy && <option value={enemy}>They pay</option>}
               </select>
-              <label className="block text-[11px] text-muted">
+              <label className="block text-body-sm text-muted">
                 Indemnity, in {payerName} currency. Zero is a white peace.
                 <input
                   type="number"
                   min={0}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+                  className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
                 />
               </label>
             </>
           )}
 
           {termKind === "regime_change" && (
-            <label className="block text-[11px] text-muted">
+            <label className="block text-body-sm text-muted">
               System they would adopt. Their legislature is dissolved and fresh elections are
               called.
               <select
                 aria-label="New system"
                 value={targetSystem}
                 onChange={(e) => setTargetSystem(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
               >
                 <option value="parliamentaryRepublic">Parliamentary republic</option>
                 <option value="presidential">Presidential republic</option>
@@ -553,7 +553,7 @@ export function PeacePanel({
           )}
 
           {termKind === "regime_change" && targetSystem === "onePartyState" && (
-            <label className="block text-[11px] text-muted">
+            <label className="block text-body-sm text-muted">
               Ruling party. The party you name rules alone and every other party is banned. Leave
               this on the default and the largest bench takes power, which may be the government you
               are fighting.
@@ -561,7 +561,7 @@ export function PeacePanel({
                 aria-label="Ruling party"
                 value={rulingParty}
                 onChange={(e) => setRulingParty(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
               >
                 <option value="">Let the strongest party take power</option>
                 {(selectedEnemy?.parties ?? []).map((p) => (
@@ -574,7 +574,7 @@ export function PeacePanel({
           )}
 
           {selectedEnemy && war && (
-            <p className="text-[11px] text-muted">
+            <p className="text-body-sm text-muted">
               {effectiveLeaver === "them"
                 ? departureConsequence(
                     resolveCountryName(selectedEnemy.country),
@@ -594,7 +594,7 @@ export function PeacePanel({
           )}
 
           {effectiveLeaver === "them" && !withdrawalBarred && !selectedEnemy?.endsWar && (
-            <p className="text-[11px] text-muted">
+            <p className="text-body-sm text-muted">
               They withdraw and we keep fighting. A withdrawal that would end the war outright needs
               the front well in our favour first, unless it is a white peace.
             </p>
@@ -603,7 +603,7 @@ export function PeacePanel({
           {withdrawalBarred && selectedEnemy && (
             <p
               role="alert"
-              className="rounded-lg border border-warning/40 bg-warning/10 p-2 text-[11px] text-warning"
+              className="rounded-lg border border-warning/40 bg-warning/10 p-2 text-body-sm text-warning"
             >
               {resolveCountryName(selectedEnemy.country)} leaving would end this war outright, so it
               cannot simply be bought. The front is <strong>{selectedEnemy.progressPct}%</strong> of
@@ -614,14 +614,14 @@ export function PeacePanel({
           )}
 
           {termKind === "white_peace" && (
-            <p className="text-[11px] text-muted">
+            <p className="text-body-sm text-muted">
               The war ends where it began. Neither side is recorded as having won, nothing changes
               hands, and anything it was being fought over goes back to being an open question.
             </p>
           )}
 
           {termKind === "demilitarisation" && (
-            <label className="block text-[11px] text-muted">
+            <label className="block text-body-sm text-muted">
               Turns they may award no new defence contracts. Existing orders keep delivering.
               <input
                 type="number"
@@ -629,7 +629,7 @@ export function PeacePanel({
                 aria-label="Demilitarisation turns"
                 value={demilTurns}
                 onChange={(e) => setDemilTurns(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
               />
             </label>
           )}
@@ -641,14 +641,14 @@ export function PeacePanel({
             maxLength={1000}
             rows={2}
             placeholder="Why you are seeking terms (optional, public once accepted)"
-            className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-[12px]"
+            className="w-full rounded-lg border border-card-border bg-card-elevated px-3 py-2 text-body-sm"
           />
 
           <button
             type="button"
             onClick={offer}
             disabled={busy || !enemy || !warId || withdrawalBarred}
-            className="w-full rounded-lg bg-[var(--gov)] py-2.5 text-[12px] font-bold text-[#1a1200] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-[var(--gov)] py-2.5 text-body-sm font-bold text-[#1a1200] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? "Sending…" : "Send peace offer"}
           </button>
@@ -656,24 +656,24 @@ export function PeacePanel({
       )}
 
       {error && (
-        <p role="alert" className="mt-2 text-[11px] text-error">
+        <p role="alert" className="mt-2 text-body-sm text-error">
           {error}
         </p>
       )}
       {note && (
-        <p role="status" className="mt-2 text-[11px] text-success">
+        <p role="status" className="mt-2 text-body-sm text-success">
           {note}
         </p>
       )}
 
       {past.length > 0 && (
         <details className="mt-3">
-          <summary className="cursor-pointer text-[11px] text-muted">
+          <summary className="cursor-pointer text-body-sm text-muted">
             Earlier offers ({past.length})
           </summary>
           <ul className="mt-2 space-y-1">
             {past.map((o) => (
-              <li key={o.id} className="text-[11px] text-muted">
+              <li key={o.id} className="text-body-sm text-muted">
                 {resolveCountryName(o.fromCountry)} → {resolveCountryName(o.toCountry)}: {o.status}{" "}
                 (turn {o.offeredTurn})
               </li>
@@ -683,7 +683,7 @@ export function PeacePanel({
       )}
 
       {currentTurn !== null && (
-        <p className="mt-2 text-[10px] text-muted">Current turn {currentTurn}.</p>
+        <p className="mt-2 text-body-sm text-muted">Current turn {currentTurn}.</p>
       )}
     </SectionCard>
   );

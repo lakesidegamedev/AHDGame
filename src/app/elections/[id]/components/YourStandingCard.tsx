@@ -60,12 +60,12 @@ export function YourStandingCard({ activeParties, advancingCount }: YourStanding
     <Card title="Your standing" className="mb-4">
       <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
         <div>
-          <div className="text-xs text-muted">Share</div>
-          <div className="text-3xl font-bold tabular-nums">{share.toFixed(1)}%</div>
+          <div className="text-body-sm text-muted">Share</div>
+          <div className="text-display font-bold tabular-nums">{share.toFixed(1)}%</div>
         </div>
 
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted">
+          <div className="flex items-center gap-1.5 text-body-sm text-muted">
             <span
               aria-hidden
               className="h-2 w-2 shrink-0 rounded-full"
@@ -73,19 +73,19 @@ export function YourStandingCard({ activeParties, advancingCount }: YourStanding
             />
             Rank in {group.partyName}
           </div>
-          <div className="text-3xl font-bold tabular-nums">
+          <div className="text-display font-bold tabular-nums">
             {rank}
-            <span className="text-base font-medium text-muted"> of {total}</span>
+            <span className="text-body-lg font-medium text-muted"> of {total}</span>
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="text-xs text-muted">Status</div>
-          <div className={`text-lg font-semibold ${statusTone}`}>{statusLabel}</div>
+          <div className="text-body-sm text-muted">Status</div>
+          <div className={`text-heading font-semibold ${statusTone}`}>{statusLabel}</div>
         </div>
       </div>
 
-      <p className="mt-3 border-t border-card-border pt-3 text-xs text-muted">
+      <p className="mt-3 border-t border-card-border pt-3 text-body-sm text-muted">
         {guaranteed ? (
           total === 1 ? (
             <>You are the only candidate filed in this primary. You advance to the general.</>

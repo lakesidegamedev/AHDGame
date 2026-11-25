@@ -39,7 +39,7 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
     <div className="space-y-4">
       <div>
         <h3 className="font-medium">Policy options</h3>
-        <p className="text-xs text-muted mt-1">
+        <p className="text-body-sm text-muted mt-1">
           Define 5-7 policy stances from left to right. At least 3 required (left, center, right).
         </p>
       </div>
@@ -50,25 +50,25 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
           className="rounded-lg border border-card-border bg-background p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">Option #{index + 1}</span>
+            <span className="text-body-sm font-medium text-muted">Option #{index + 1}</span>
             <div className="flex gap-1">
               <button
                 onClick={() => moveOption(index, -1)}
                 disabled={index === 0}
-                className="text-xs text-muted hover:text-foreground disabled:opacity-30"
+                className="text-body-sm text-muted hover:text-foreground disabled:opacity-30"
               >
                 ↑
               </button>
               <button
                 onClick={() => moveOption(index, 1)}
                 disabled={index === options.length - 1}
-                className="text-xs text-muted hover:text-foreground disabled:opacity-30"
+                className="text-body-sm text-muted hover:text-foreground disabled:opacity-30"
               >
                 ↓
               </button>
               <button
                 onClick={() => removeOption(index)}
-                className="text-xs text-red-400 hover:text-red-300 ml-2"
+                className="text-body-sm text-red-400 hover:text-red-300 ml-2"
               >
                 Remove
               </button>
@@ -80,12 +80,12 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
             value={opt.name}
             onChange={(e) => updateOption(index, { name: e.target.value })}
             placeholder="Policy option name"
-            className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+            className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
           />
 
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
-              <label className="block text-xs font-medium mb-1">Stance</label>
+              <label className="block text-body-sm font-medium mb-1">Stance</label>
               <select
                 value={opt.stance}
                 onChange={(e) =>
@@ -93,7 +93,7 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
                     stance: e.target.value as LegislationPolicyOption["stance"],
                   })
                 }
-                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
               >
                 <option value="left">Left</option>
                 <option value="center">Center</option>
@@ -102,7 +102,7 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Effect</label>
+              <label className="block text-body-sm font-medium mb-1">Effect</label>
               <select
                 value={opt.effectDirection}
                 onChange={(e) =>
@@ -112,7 +112,7 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
                     ) as LegislationPolicyOption["effectDirection"],
                   })
                 }
-                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
               >
                 <option value={1}>Positive (+)</option>
                 <option value={0}>Neutral (0)</option>
@@ -121,26 +121,26 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Economic</label>
+              <label className="block text-body-sm font-medium mb-1">Economic</label>
               <input
                 type="number"
                 min={-3}
                 max={3}
                 value={opt.economic}
                 onChange={(e) => updateOption(index, { economic: parseInt(e.target.value) || 0 })}
-                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Social</label>
+              <label className="block text-body-sm font-medium mb-1">Social</label>
               <input
                 type="number"
                 min={-3}
                 max={3}
                 value={opt.social}
                 onChange={(e) => updateOption(index, { social: parseInt(e.target.value) || 0 })}
-                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-sm"
+                className="w-full rounded border border-card-border bg-card px-2 py-1.5 text-body"
               />
             </div>
           </div>
@@ -149,13 +149,15 @@ export function Step4PolicyOptions({ options, typeId, onChange }: Step4PolicyOpt
 
       <button
         onClick={addOption}
-        className="w-full rounded-lg border border-dashed border-card-border py-3 text-sm text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
+        className="w-full rounded-lg border border-dashed border-card-border py-3 text-body text-muted hover:text-foreground hover:border-foreground/30 transition-colors"
       >
         + Add policy option
       </button>
 
       {options.length < 3 && (
-        <p className="text-xs text-yellow-400">At least 3 options required (left, center, right)</p>
+        <p className="text-body-sm text-yellow-400">
+          At least 3 options required (left, center, right)
+        </p>
       )}
     </div>
   );

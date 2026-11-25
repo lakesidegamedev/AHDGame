@@ -346,10 +346,10 @@ export function EconOnlyMapPlaceholder({
         <div className="mb-4 flex items-center gap-3 sm:mb-6">
           <BackButton iconOnly />
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+            <h1 className="truncate text-heading font-bold tracking-tight sm:text-heading">
               {config.name} Map
             </h1>
-            <p className="mt-0.5 text-xs text-muted sm:text-sm">
+            <p className="mt-0.5 text-body-sm text-muted sm:text-body">
               {displayRegions.length} regions{isEnabled ? "" : " · Econ-only nation"}
             </p>
           </div>
@@ -363,7 +363,7 @@ export function EconOnlyMapPlaceholder({
             <button
               key={m.id}
               onClick={() => setMode(m.id as "regions" | "sectorBonuses")}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                 mode === m.id
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-card-border bg-card text-muted hover:border-primary/50 hover:text-foreground"
@@ -378,7 +378,7 @@ export function EconOnlyMapPlaceholder({
           {hasGeoMap && (
             <div className="flex flex-col items-center gap-4 rounded-xl border border-card-border bg-card p-4 sm:p-6">
               <SectionLabel className="mb-4">Interactive map</SectionLabel>
-              <p className="-mt-2 mb-1 text-xs text-muted">
+              <p className="-mt-2 mb-1 text-body-sm text-muted">
                 Click a region to open it. Hover for population &amp; seat detail.
               </p>
               <div className="mx-auto min-h-[260px] w-full max-w-[min(100%,360px)]">
@@ -416,22 +416,22 @@ export function EconOnlyMapPlaceholder({
                       style={{ backgroundColor: d?.color ?? "#334155" }}
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary">
+                      <div className="truncate text-body font-medium text-foreground transition-colors group-hover:text-primary">
                         {region.name}
                       </div>
-                      <div className="text-[10px] text-muted">
+                      <div className="text-body-sm text-muted">
                         {region.population > 0
                           ? `${region.population.toLocaleString("en-US")} population`
                           : "Recently joined"}
                       </div>
                       {containsByRegion?.[region._id]?.length ? (
-                        <div className="truncate text-[10px] text-muted/70">
+                        <div className="truncate text-body-sm text-muted/70">
                           Covers {containsByRegion[region._id].join(", ")}
                         </div>
                       ) : null}
                     </div>
                     {region.houseDistricts > 0 && (
-                      <span className="shrink-0 text-xs text-muted">
+                      <span className="shrink-0 text-body-sm text-muted">
                         {region.houseDistricts} seats
                       </span>
                     )}
@@ -445,7 +445,7 @@ export function EconOnlyMapPlaceholder({
         <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-card-border/40 pt-4">
           <Link
             href={config.overviewPath}
-            className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+            className="rounded-lg border border-card-border bg-card px-4 py-2 text-body font-medium text-muted hover:text-foreground transition-colors"
           >
             ← {config.name} Overview
           </Link>

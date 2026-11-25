@@ -42,13 +42,13 @@ export function UsersToolbar({
           value={searchTerm}
           onChange={(e) => onSearchTermChange(e.target.value)}
           placeholder="Search users by name, email, or character..."
-          className="flex-1 rounded-lg border border-card-border bg-background px-4 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="flex-1 rounded-lg border border-card-border bg-background px-4 py-2.5 text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
         <div className="flex items-center gap-2">
           <button
             onClick={onToggleDuplicatesOnly}
             disabled={loading}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-body font-medium transition-colors disabled:opacity-50 ${
               showDuplicatesOnly
                 ? "bg-amber-500 text-black hover:bg-amber-400"
                 : "border border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
@@ -74,7 +74,7 @@ export function UsersToolbar({
             disabled={loading}
             aria-pressed={appleNoDiscordOnly}
             title="Accounts with no Discord linked but an Apple sign-in, which are exempt from the Discord requirement for new characters"
-            className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+            className={`rounded-lg px-4 py-2.5 text-body font-medium transition-colors disabled:opacity-50 ${
               appleNoDiscordOnly
                 ? "bg-slate-300 text-black hover:bg-slate-200"
                 : "border border-slate-400/50 bg-slate-500/10 text-slate-300 hover:bg-slate-500/20"
@@ -85,7 +85,7 @@ export function UsersToolbar({
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
+            className="rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {loading ? "Loading..." : "Refresh"}
           </button>
@@ -94,7 +94,7 @@ export function UsersToolbar({
 
       {/* Summary bar */}
       {!loading && !error && (
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-card-border bg-card px-4 py-3 text-sm">
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-card-border bg-card px-4 py-3 text-body">
           <div className="flex items-center gap-2">
             <span className="text-muted">Total users:</span>
             <span className="font-semibold tabular-nums">{totalUsers}</span>

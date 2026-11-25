@@ -52,17 +52,17 @@ export function OutlookStrip({ data }: { data: ConsolePayload }) {
       actions={
         <Link
           href="/wiki/private-banking"
-          className="text-xs text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+          className="text-body-sm text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
         >
           How banking works
         </Link>
       }
     >
-      <p className="py-1.5 text-xs text-muted">
+      <p className="py-1.5 text-body-sm text-muted">
         Household deposits are cash in the vault; player savings pointed at the bank are pointers,
         not cash, and only bind the deposit ceiling.
       </p>
-      <p className="pb-2 text-xs text-foreground">
+      <p className="pb-2 text-body-sm text-foreground">
         <span className="font-medium">Recommended action</span>: {outlook.recommendation}
       </p>
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">

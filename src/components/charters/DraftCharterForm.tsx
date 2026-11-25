@@ -191,8 +191,8 @@ export function DraftCharterForm({
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Platform</h3>
-        <p className="mb-4 text-xs text-muted">
+        <h3 className="mb-2 text-body-lg font-semibold">Platform</h3>
+        <p className="mb-4 text-body-sm text-muted">
           Set the founding platform on each axis. Each value runs from -60 to +60. After the party
           is ratified, you can only move an axis by 10 at a time.
         </p>
@@ -200,7 +200,7 @@ export function DraftCharterForm({
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Founding cohort</h3>
+        <h3 className="mb-2 text-body-lg font-semibold">Founding cohort</h3>
         <FoundingCohortPicker
           countryId={countryCode.toUpperCase() as CountryId}
           chairHomeState={proposer.homeState}
@@ -213,16 +213,16 @@ export function DraftCharterForm({
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold">
+        <h3 className="text-body-lg font-semibold">
           {allowSoloCharter ? "Founders (1 to 3, sandbox testing)" : "Founders (3 required)"}
         </h3>
         {allowSoloCharter && (
-          <p className="text-xs text-muted">
+          <p className="text-body-sm text-muted">
             Sandbox testing: leave the co-founder slots empty to found the party alone. It goes live
             as soon as you submit.
           </p>
         )}
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           You&apos;re locked in as <strong>Founder 1</strong> with your active character. Search by
           character name to invite the other two co-founders. They must live in your home state or a
           state next to it. Leadership starts empty: the chair, vice chair, and treasurer are
@@ -232,7 +232,7 @@ export function DraftCharterForm({
         <div>
           <div className="mb-1 text-body-sm font-medium text-muted">Founder 1</div>
           <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
+            <div className="flex-1 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-body">
               <span className="font-medium">{founders[0].name}</span>
               <span className="ml-2 text-body-sm font-medium text-primary">you</span>
             </div>
@@ -258,7 +258,7 @@ export function DraftCharterForm({
       </div>
 
       {error && (
-        <div className="rounded-md border border-error/40 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-md border border-error/40 bg-error/10 p-3 text-body text-error">
           {error}
         </div>
       )}

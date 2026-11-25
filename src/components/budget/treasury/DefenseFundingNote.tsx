@@ -72,14 +72,14 @@ export function DefenseFundingNote({
       aria-label="Defence funding"
       className="rounded-xl border border-card-border bg-card p-4"
     >
-      <div className="text-sm font-semibold text-foreground">Defence funding</div>
+      <div className="text-body font-semibold text-foreground">Defence funding</div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
         <div>
           <div className="text-body-sm font-medium text-muted">Appropriated per turn</div>
           <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
             {money(funding.accrualPerTurn)}
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-muted">
+          <p className="mt-1 text-body-sm leading-snug text-muted">
             This turn&apos;s slice of the enacted line ({money(funding.lineAnnual)}/yr), the figure
             the surplus counts.
           </p>
@@ -89,7 +89,7 @@ export function DefenseFundingNote({
           <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
             {money(funding.upkeepPerTurn)}
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-muted">
+          <p className="mt-1 text-body-sm leading-snug text-muted">
             What {funding.unitCount} standing units (every land, sea, air and space unit, not just
             naval and air formations) cost, whether the line covers it or not.
           </p>
@@ -99,7 +99,7 @@ export function DefenseFundingNote({
           <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
             {money(treasuryDraw)}
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-muted">
+          <p className="mt-1 text-body-sm leading-snug text-muted">
             Defence only: new debt after the appropriation pot applies this turn&apos;s accrual and
             upkeep. Existing appropriation debt is not charged again. It is not the whole budget
             deficit.
@@ -111,7 +111,7 @@ export function DefenseFundingNote({
             <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
               {money(wholeDeficit)}
             </div>
-            <p className="mt-1 text-[11px] leading-snug text-muted">
+            <p className="mt-1 text-body-sm leading-snug text-muted">
               One turn&apos;s share of annual spending above revenue, all lines included. It is
               borrowed through bond sales, separately from the defence draw.
             </p>
@@ -122,7 +122,7 @@ export function DefenseFundingNote({
           <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
             {funding.potBalance == null ? "—" : moneySigned(funding.potBalance)}
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-muted">
+          <p className="mt-1 text-body-sm leading-snug text-muted">
             {overdrawn
               ? funding.potChangePerTurn > 0
                 ? "Overdrawn: running total of past shortfalls already borrowed against the treasury. This turn is paying it down, so that old debt is not charged a second time."
@@ -138,7 +138,7 @@ export function DefenseFundingNote({
             <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
               {money(soeBacking)}
             </div>
-            <p className="mt-1 text-[11px] leading-snug text-muted">
+            <p className="mt-1 text-body-sm leading-snug text-muted">
               Loss-making National Corporations, covered from the treasury. Like the defence draw,
               it never appears in spending.
             </p>
@@ -152,12 +152,12 @@ export function DefenseFundingNote({
             <div className="mt-0.5 font-mono text-body-sm font-semibold text-foreground">
               {money2(organizationBacking)}
             </div>
-            <p className="mt-1 text-[11px] leading-snug text-muted">
+            <p className="mt-1 text-body-sm leading-snug text-muted">
               Dues or tribute for current memberships. Charged directly to the treasury and not
               included in annual spending.
             </p>
             {organizationContributions?.lines.length ? (
-              <ul className="mt-2 space-y-1 text-[11px] leading-snug text-muted">
+              <ul className="mt-2 space-y-1 text-body-sm leading-snug text-muted">
                 {organizationContributions.lines.map((line) => (
                   <li key={`${line.organizationId}:${line.kind}`}>
                     {line.organizationName ?? line.organizationId.replaceAll("_", " ")} {line.kind}:{" "}
@@ -177,7 +177,7 @@ export function DefenseFundingNote({
         ) : null}
       </div>
       {draws.length > 0 ? (
-        <p className="mt-3 border-t border-card-border pt-3 text-[11px] leading-snug text-muted">
+        <p className="mt-3 border-t border-card-border pt-3 text-body-sm leading-snug text-muted">
           Treasury check: each turn the balance moves by roughly this turn&apos;s slice of the
           surplus, minus {draws.join(" plus ")}. These direct draws do not appear in spending, so
           the surplus reads high by {money(treasuryDraw + soeBacking + organizationBacking)}. That
@@ -185,7 +185,7 @@ export function DefenseFundingNote({
           {soeNetPerTurn == null ? " State enterprise backing is not shown here." : null}
         </p>
       ) : (
-        <p className="mt-3 border-t border-card-border pt-3 text-[11px] leading-snug text-muted">
+        <p className="mt-3 border-t border-card-border pt-3 text-body-sm leading-snug text-muted">
           Treasury check: no new defence debt is drawn by the current appropriation settlement.
           International organization contributions are shown separately when applicable.
         </p>

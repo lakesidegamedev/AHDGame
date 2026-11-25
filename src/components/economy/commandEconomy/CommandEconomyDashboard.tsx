@@ -79,11 +79,11 @@ function Driver({
         {label}
         {tip && <Tooltip content={tip} label={`About ${label}`} />}
       </div>
-      <div className={`mt-0.5 text-lg font-bold tabular-nums ${color}`}>
+      <div className={`mt-0.5 text-heading font-bold tabular-nums ${color}`}>
         {value}
-        {scale && <span className="ml-1 text-[10px] font-normal text-muted">{scale}</span>}
+        {scale && <span className="ml-1 text-body-sm font-normal text-muted">{scale}</span>}
       </div>
-      <p className="mt-1 text-[10px] leading-snug text-muted">{hint}</p>
+      <p className="mt-1 text-body-sm leading-snug text-muted">{hint}</p>
     </div>
   );
 }
@@ -136,10 +136,10 @@ function CommandEconomyDashboardView({ countryId }: Props) {
     }
   }
 
-  if (loading) return <div className="text-sm text-muted">Loading command economy...</div>;
+  if (loading) return <div className="text-body text-muted">Loading command economy...</div>;
   if (error && !data) {
     return (
-      <div className="rounded-xl border border-card-border bg-card p-4 text-sm text-muted">
+      <div className="rounded-xl border border-card-border bg-card p-4 text-body text-muted">
         {error}
       </div>
     );
@@ -157,7 +157,7 @@ function CommandEconomyDashboardView({ countryId }: Props) {
       <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-foreground">Command economy</h2>
+            <h2 className="text-body-lg font-bold text-foreground">Command economy</h2>
             <Badge color={data.regime === "command" ? "warning" : "info"} variant="subtle">
               {data.regimeLabel}
             </Badge>
@@ -167,13 +167,13 @@ function CommandEconomyDashboardView({ countryId }: Props) {
               Marketization
               <Tooltip content={CE_TERMS.marketization} label="About marketization" />
             </div>
-            <div className="text-xl font-bold tabular-nums text-foreground">
+            <div className="text-heading font-bold tabular-nums text-foreground">
               {Math.round(data.marketizationLevel)}
-              <span className="text-sm text-muted"> / 100</span>
+              <span className="text-body text-muted"> / 100</span>
             </div>
           </div>
         </div>
-        <p className="mt-2 text-[11px] leading-snug text-muted">
+        <p className="mt-2 text-body-sm leading-snug text-muted">
           Three jobs run this economy: the Gosplan planner sets the quotas, the Gosbank chair
           directs the credit, and each SOE director delivers a plant. Every turn you choose whether
           to reform toward the market, deliver on the plan, or repress the black market to hold the
@@ -223,13 +223,13 @@ function CommandEconomyDashboardView({ countryId }: Props) {
       {/* SOE list with plan-fulfillment bars + seat management */}
       <div className="rounded-xl border border-card-border bg-card p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <h3 className="text-sm font-bold text-foreground">State enterprises</h3>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
+          <h3 className="text-body-lg font-bold text-foreground">State enterprises</h3>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-body-sm text-muted">
             {data.plannerName && <span>Planner: {data.plannerName}</span>}
             {data.bankChairName && <span>Gosbank: {data.bankChairName}</span>}
           </div>
         </div>
-        <p className="mt-1 text-[11px] leading-snug text-muted">
+        <p className="mt-1 text-body-sm leading-snug text-muted">
           Claim a vacant seat to take over an enterprise and unlock its Director panel above, where
           you set its target, labour mix, and investment request.
         </p>
@@ -238,8 +238,8 @@ function CommandEconomyDashboardView({ countryId }: Props) {
             <div key={s.corpId} className="rounded-lg border border-card-border/60 p-3">
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="text-sm font-semibold text-foreground">{s.sectorLabel}</span>
-                  <span className="text-[11px] text-muted">{s.corpName}</span>
+                  <span className="text-body font-semibold text-foreground">{s.sectorLabel}</span>
+                  <span className="text-body-sm text-muted">{s.corpName}</span>
                   {s.viewerIsDirector && (
                     <Badge color="success" variant="subtle">
                       You direct this
@@ -248,7 +248,7 @@ function CommandEconomyDashboardView({ countryId }: Props) {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span
-                    className={`text-xs font-bold tabular-nums ${
+                    className={`text-body-sm font-bold tabular-nums ${
                       s.planFulfillment < 0.9 ? "text-warning" : "text-success"
                     }`}
                   >
@@ -274,7 +274,9 @@ function CommandEconomyDashboardView({ countryId }: Props) {
                     </Button>
                   ) : (
                     !s.vacant && (
-                      <span className="text-[11px] text-muted">{s.directorName ?? "Director"}</span>
+                      <span className="text-body-sm text-muted">
+                        {s.directorName ?? "Director"}
+                      </span>
                     )
                   )}
                 </div>
@@ -282,7 +284,7 @@ function CommandEconomyDashboardView({ countryId }: Props) {
               <div className="mt-2">
                 <FulfillmentBar value={s.planFulfillment} />
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted">
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted">
                 <span>
                   Output{" "}
                   <span className="tabular-nums text-foreground">

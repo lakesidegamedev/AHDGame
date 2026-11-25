@@ -116,7 +116,7 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
           display: "grid",
           gridTemplateColumns: "minmax(0,1fr) auto",
           gap: "4px 12px",
-          fontSize: 13,
+          fontSize: 12,
         }}
       >
         {shown.map((r) => (
@@ -127,7 +127,7 @@ export function RaceSchedule({ election }: { election: ScheduleRace }) {
                 margin: 0,
                 textAlign: "right",
                 fontFamily: FONT.mono,
-                fontSize: 12.5,
+                fontSize: 12,
                 color: r.ended ? BLEND.mutedDim : BLEND.ink,
               }}
             >

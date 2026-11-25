@@ -125,20 +125,20 @@ export default function ImperialProfileClient({ id }: { id: string }) {
             {/* Name + badges */}
             <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl">
+                <h1 className="text-heading font-bold tracking-tight text-foreground sm:text-display md:text-display">
                   {data.fullName}
                 </h1>
                 {/* Admin chip */}
-                <span className="rounded-full border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning sm:px-2 sm:text-[10px]">
+                <span className="rounded-full border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-body-sm font-bold uppercase tracking-wider text-warning sm:px-2 sm:text-body-sm">
                   Admin
                 </span>
                 {/* Imperial chip */}
-                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400 sm:px-2 sm:text-[10px]">
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-body-sm font-bold uppercase tracking-wider text-amber-400 sm:px-2 sm:text-body-sm">
                   {data.title}
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted sm:text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-body-sm text-muted sm:text-body">
                 {flagUrl && (
                   <Image
                     src={flagUrl}
@@ -189,15 +189,15 @@ export default function ImperialProfileClient({ id }: { id: string }) {
         {/* Bio */}
         {data.bio && (
           <div className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
-            <h2 className="mb-2 text-sm font-semibold text-muted">Biography</h2>
-            <p className="text-sm leading-relaxed text-foreground/80">{data.bio}</p>
+            <h2 className="mb-2 text-body font-semibold text-muted">Biography</h2>
+            <p className="text-body leading-relaxed text-foreground/80">{data.bio}</p>
           </div>
         )}
 
         {/* Corporation Holdings */}
         {data.corporations.length > 0 && (
           <div className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
-            <h2 className="mb-3 text-sm font-semibold text-muted">Royal holdings</h2>
+            <h2 className="mb-3 text-body font-semibold text-muted">Royal holdings</h2>
             <div className="space-y-2">
               {data.corporations.map((corp) => (
                 <Link
@@ -206,10 +206,12 @@ export default function ImperialProfileClient({ id }: { id: string }) {
                   className="flex items-center justify-between rounded-xl border border-card-border bg-background/50 px-4 py-3 transition-colors hover:bg-card-hover"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{corp.name}</p>
-                    <p className="text-xs text-muted capitalize">{corp.type.replace(/_/g, " ")}</p>
+                    <p className="text-body font-semibold text-foreground">{corp.name}</p>
+                    <p className="text-body-sm text-muted capitalize">
+                      {corp.type.replace(/_/g, " ")}
+                    </p>
                   </div>
-                  <p className="text-sm font-medium tabular-nums text-foreground">
+                  <p className="text-body font-medium tabular-nums text-foreground">
                     ${corp.sharePrice.toFixed(2)}
                   </p>
                 </Link>

@@ -34,22 +34,22 @@ export function SupplyChainTable({
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="font-semibold">
           {title}{" "}
-          <span className="ml-1 text-xs font-normal text-muted">
+          <span className="ml-1 text-body-sm font-normal text-muted">
             {rows.length} {rows.length === 1 ? "relationship" : "relationships"}
           </span>
         </h3>
-        <span className="text-xs text-muted">
+        <span className="text-body-sm text-muted">
           {direction === "suppliers" ? "Purchases" : "Receipts"} this turn: {formatAmount(total)}
         </span>
       </div>
       {!rows.length ? (
-        <p className="rounded border border-card-border py-6 text-center text-sm text-muted">
+        <p className="rounded border border-card-border py-6 text-center text-body text-muted">
           No {direction} match these filters in this turn.
         </p>
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-xs">
+            <table className="w-full min-w-[760px] text-body-sm">
               <caption className="sr-only">{title} from actual settled deliveries</caption>
               <thead className="bg-card-elevated text-muted">
                 <tr>
@@ -142,7 +142,7 @@ export function SupplyChainTable({
             </table>
           </div>
           {pages > 1 && (
-            <div className="flex items-center justify-end gap-3 text-xs">
+            <div className="flex items-center justify-end gap-3 text-body-sm">
               <button
                 disabled={visiblePage === 0}
                 onClick={() => setPage(visiblePage - 1)}

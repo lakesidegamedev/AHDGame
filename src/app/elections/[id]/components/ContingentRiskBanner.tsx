@@ -65,7 +65,7 @@ export function ContingentRiskBanner({
     : null;
 
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-body">
       <p className="font-semibold text-amber-200">Contingent election risk</p>
       <p className="mt-1 text-muted">
         Current projection: <span className="text-foreground font-medium">{leaderName}</span> leads

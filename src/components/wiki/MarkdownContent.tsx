@@ -70,7 +70,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
         },
         h1: ({ children }) => (
           <h1
-            className="mb-3 mt-8 text-[34px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground first:mt-0"
+            className="mb-3 mt-8 text-display font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground first:mt-0"
             {...noGlossary}
           >
             {children}
@@ -87,7 +87,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           return (
             <h2
               id={id}
-              className="mb-3 mt-8 scroll-mt-24 text-[21px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground"
+              className="mb-3 mt-8 scroll-mt-24 text-heading font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground"
               {...noGlossary}
             >
               {children}
@@ -105,7 +105,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           return (
             <h3
               id={id}
-              className="mb-2 mt-5 scroll-mt-24 text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-foreground"
+              className="mb-2 mt-5 scroll-mt-24 text-body-lg font-bold leading-[1.15] tracking-[-0.01em] text-foreground"
               {...noGlossary}
             >
               {children}
@@ -113,22 +113,22 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           );
         },
         p: ({ children }) => (
-          <p className="mb-3 text-[14px] leading-[1.6] text-foreground/80">{wrap(children)}</p>
+          <p className="mb-3 text-body leading-[1.6] text-foreground/80">{wrap(children)}</p>
         ),
         ul: ({ children }) => (
-          <ul className="mb-3 ml-5 list-disc space-y-1.5 text-[14px] text-foreground/80">
+          <ul className="mb-3 ml-5 list-disc space-y-1.5 text-body text-foreground/80">
             {children}
           </ul>
         ),
         ol: ({ children }) => (
-          <ol className="mb-3 ml-5 list-decimal space-y-1.5 text-[14px] text-foreground/80">
+          <ol className="mb-3 ml-5 list-decimal space-y-1.5 text-body text-foreground/80">
             {children}
           </ol>
         ),
         li: ({ children }) => <li className="leading-[1.6]">{wrap(children)}</li>,
         table: ({ children }) => (
           <div className="mb-5 overflow-x-auto">
-            <table className="w-full min-w-[360px] border-collapse text-[13px]">{children}</table>
+            <table className="w-full min-w-[360px] border-collapse text-body-sm">{children}</table>
           </div>
         ),
         thead: ({ children }) => <thead>{children}</thead>,
@@ -137,7 +137,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
         th: ({ children, style }) => (
           <th
             style={style}
-            className="border-b border-card-border py-1.5 pr-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-muted"
+            className="border-b border-card-border py-1.5 pr-2.5 text-left text-body-sm font-semibold uppercase tracking-[0.06em] text-muted"
           >
             {wrap(children)}
           </th>
@@ -165,7 +165,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           }
           return (
             <pre
-              className="mb-3.5 overflow-x-auto rounded-md px-3.5 py-3 font-mono text-[12.5px] leading-[1.7] text-foreground"
+              className="mb-3.5 overflow-x-auto rounded-md px-3.5 py-3 font-mono text-body-sm leading-[1.7] text-foreground"
               style={{ background: "var(--card-muted)" }}
               {...noGlossary}
             >
@@ -193,7 +193,7 @@ export function MarkdownContent({ content }: { content: string; headings?: TocHe
           }
           return (
             <code
-              className="rounded bg-card px-1 py-0.5 font-mono text-[12.5px] text-foreground"
+              className="rounded bg-card px-1 py-0.5 font-mono text-body-sm text-foreground"
               {...noGlossary}
               {...props}
             >

@@ -156,7 +156,7 @@ export function InterbankPanel({
   };
 
   const inputClass =
-    "h-8 w-full rounded-md border border-card-border bg-background px-2 font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none";
+    "h-8 w-full rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground focus:border-foreground focus:outline-none";
 
   return (
     <BankPanel kind="ceoControl" title="Interbank and central bank credit">
@@ -178,19 +178,21 @@ export function InterbankPanel({
       <div className="grid gap-x-8 gap-y-5 pt-2 lg:grid-cols-2">
         {depositTaking && canMutate && (
           <div className="min-w-0 space-y-2">
-            <h3 className="border-b border-card-border pb-1 text-xs font-medium text-foreground">
+            <h3 className="border-b border-card-border pb-1 text-body-lg font-medium text-foreground">
               Lend interbank
             </h3>
-            <p className="text-xs text-muted">Lend non-reserved deposits to an investment bank.</p>
-            <div className="space-y-1 text-xs text-muted">
+            <p className="text-body-sm text-muted">
+              Lend non-reserved deposits to an investment bank.
+            </p>
+            <div className="space-y-1 text-body-sm text-muted">
               Borrowing bank
               {borrower ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] text-foreground">{borrower.name}</span>
+                  <span className="text-body-sm text-foreground">{borrower.name}</span>
                   <button
                     type="button"
                     onClick={() => updateInterbankState({ borrower: null })}
-                    className="text-xs text-muted underline hover:text-foreground"
+                    className="text-body-sm text-muted underline hover:text-foreground"
                   >
                     change
                   </button>
@@ -205,7 +207,7 @@ export function InterbankPanel({
               )}
             </div>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="flex w-40 flex-col gap-1 text-xs text-muted">
+              <label className="flex w-40 flex-col gap-1 text-body-sm text-muted">
                 Amount
                 <input
                   value={amount}
@@ -215,7 +217,7 @@ export function InterbankPanel({
                   className={inputClass}
                 />
               </label>
-              <label className="flex w-24 flex-col gap-1 text-xs text-muted">
+              <label className="flex w-24 flex-col gap-1 text-body-sm text-muted">
                 Rate %
                 <input
                   value={rate}
@@ -230,7 +232,7 @@ export function InterbankPanel({
               </SmallButton>
             </div>
             {validLend && lendIncomePerTurn != null && (
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 Lending {formatBankMoney(lendAmount, currency)} at {lendRate.toFixed(2)}% earns
                 about {formatBankMoney(lendIncomePerTurn, currency)} each turn, has no fixed
                 maturity (interest-only until the borrower repays), and moves{" "}
@@ -243,17 +245,17 @@ export function InterbankPanel({
 
         {canMutate && (
           <div className="min-w-0 space-y-2">
-            <h3 className="border-b border-card-border pb-1 text-xs font-medium text-foreground">
+            <h3 className="border-b border-card-border pb-1 text-body-lg font-medium text-foreground">
               Central bank credit line
             </h3>
-            <p className="text-xs text-muted">
+            <p className="text-body-sm text-muted">
               It lends against your own investments as collateral: up to half their current value (
               {formatBankMoney(marginCap, currency)} on investments worth{" "}
               {formatBankMoney(Math.max(0, propBookMarkValue), currency)}), priced above prime.
               Arrears here draw supervisory attention.
             </p>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="flex w-40 flex-col gap-1 text-xs text-muted">
+              <label className="flex w-40 flex-col gap-1 text-body-sm text-muted">
                 Amount
                 <input
                   value={marginAmount}
@@ -276,7 +278,7 @@ export function InterbankPanel({
               </SmallButton>
             </div>
             {Number.isFinite(enteredMargin) && enteredMargin > 0 && (
-              <p className="text-[11px] text-muted">
+              <p className="text-body-sm text-muted">
                 {validMarginDraw
                   ? `Drawing ${formatBankMoney(enteredMargin, currency)} leaves ${formatBankMoney(marginHeadroom - enteredMargin, currency)} of collateral room, and adds about ${formatBankMoney(perTurnInterestOn(Math.max(0, cbMarginDebt) + enteredMargin, cbMarginRatePercent(prime)), currency)} next turn. Interest accrues every turn (about every hour) until repaid.`
                   : `That draw exceeds the ${formatBankMoney(marginHeadroom, currency)} of collateral room left.`}

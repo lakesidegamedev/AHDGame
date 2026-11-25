@@ -44,7 +44,7 @@ export function CommitteeProposalsSection({
 
   if (loading) {
     return (
-      <div className="text-sm text-muted py-4 text-center animate-pulse">Loading proposals…</div>
+      <div className="text-body text-muted py-4 text-center animate-pulse">Loading proposals…</div>
     );
   }
 
@@ -55,12 +55,12 @@ export function CommitteeProposalsSection({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6 space-y-5">
       {loadError ? (
-        <div className="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
+        <div className="rounded-lg border border-error/40 bg-error/10 p-3 text-body text-error">
           Could not load committee proposals. Check your connection and refresh.
         </div>
       ) : null}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Committee proposals</h2>
+        <h2 className="text-heading font-semibold">Committee proposals</h2>
         {canPropose && (
           <CreateProposalForm
             country={country}
@@ -78,7 +78,7 @@ export function CommitteeProposalsSection({
       {/* Open proposals from this party */}
       {data && data.openProposals.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted">Open proposals</h3>
+          <h3 className="text-body-lg font-semibold text-muted">Open proposals</h3>
           {data.openProposals.map((p) => (
             <ProposalCard
               key={p.id}
@@ -96,8 +96,8 @@ export function CommitteeProposalsSection({
       {/* Incoming merge proposals targeting this party */}
       {data && data.incomingMergeProposals.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted">Incoming merge proposals</h3>
-          <p className="text-xs text-muted">
+          <h3 className="text-body-lg font-semibold text-muted">Incoming merge proposals</h3>
+          <p className="text-body-sm text-muted">
             Another party has proposed to merge into yours. Your committee can vote to accept or
             decline.
           </p>
@@ -117,7 +117,7 @@ export function CommitteeProposalsSection({
 
       {/* Empty state */}
       {data && data.openProposals.length === 0 && data.incomingMergeProposals.length === 0 && (
-        <p className="text-sm text-muted">No open proposals.</p>
+        <p className="text-body text-muted">No open proposals.</p>
       )}
 
       {/* Past proposals */}
@@ -125,7 +125,7 @@ export function CommitteeProposalsSection({
         <div className="space-y-3">
           <button
             onClick={() => setShowPast((v) => !v)}
-            className="text-xs text-muted hover:text-foreground transition-colors"
+            className="text-body-sm text-muted hover:text-foreground transition-colors"
           >
             {showPast ? "Hide" : "Show"} past proposals ({data.pastProposals.length})
           </button>

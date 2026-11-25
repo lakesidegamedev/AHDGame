@@ -54,16 +54,16 @@ export function Step3Demographics({ targeting, onChange }: Step3DemographicsProp
     <div className="space-y-4">
       <div>
         <h3 className="font-medium">Demographic targeting</h3>
-        <p className="text-xs text-muted mt-1">
+        <p className="text-body-sm text-muted mt-1">
           Select which parts of the electorate care most about this law. This amplifies
           appeal/opposition for matching voters. Buckets are listed for every country, so pick the
           ones that exist in the countries this law is for.
         </p>
       </div>
 
-      {buckets === null && <p className="text-xs text-muted">Loading buckets...</p>}
+      {buckets === null && <p className="text-body-sm text-muted">Loading buckets...</p>}
       {buckets?.length === 0 && (
-        <p className="text-xs text-muted">No demographic buckets could be loaded.</p>
+        <p className="text-body-sm text-muted">No demographic buckets could be loaded.</p>
       )}
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -82,19 +82,19 @@ export function Step3Demographics({ targeting, onChange }: Step3DemographicsProp
                   checked={!!selected}
                   onChange={() => toggleGroup(group.id)}
                 />
-                <span className="text-sm font-medium">{group.label}</span>
-                <span className="text-[10px] text-muted">{group.dim}</span>
+                <span className="text-body font-medium">{group.label}</span>
+                <span className="text-body-sm text-muted">{group.dim}</span>
               </label>
 
               {selected && (
                 <div className="mt-2 ml-6 space-y-2">
                   <div className="flex gap-3">
-                    <span className="text-[10px] text-muted w-14">Stance:</span>
+                    <span className="text-body-sm text-muted w-14">Stance:</span>
                     <div className="flex gap-3">
                       {(["support", "oppose"] as const).map((s) => (
                         <label
                           key={s}
-                          className={`flex items-center gap-1 text-xs cursor-pointer ${
+                          className={`flex items-center gap-1 text-body-sm cursor-pointer ${
                             selected.stance === s
                               ? s === "support"
                                 ? "text-green-400"
@@ -114,10 +114,13 @@ export function Step3Demographics({ targeting, onChange }: Step3DemographicsProp
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <span className="text-[10px] text-muted w-14">Weight:</span>
+                    <span className="text-body-sm text-muted w-14">Weight:</span>
                     <div className="flex gap-3">
                       {(["low", "medium", "high"] as const).map((w) => (
-                        <label key={w} className="flex items-center gap-1 text-xs cursor-pointer">
+                        <label
+                          key={w}
+                          className="flex items-center gap-1 text-body-sm cursor-pointer"
+                        >
                           <input
                             type="radio"
                             name={`weight-${group.id}`}

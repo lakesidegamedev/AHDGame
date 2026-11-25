@@ -50,7 +50,7 @@ export function SovereignBondHoldingsPanel({ characterId }: Props) {
   if (state.kind === "loading") {
     return (
       <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h3 className="text-sm font-semibold">Sovereign bond holdings</h3>
+        <h3 className="text-body-lg font-semibold">Sovereign bond holdings</h3>
         <div className="mt-2 min-h-[96px] space-y-2">
           <Skeleton className="h-3 w-3/4" />
           {[1, 2, 3].map((i) => (
@@ -67,8 +67,8 @@ export function SovereignBondHoldingsPanel({ characterId }: Props) {
   if (state.kind === "error") {
     return (
       <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h3 className="text-sm font-semibold">Sovereign bond holdings</h3>
-        <p className="mt-2 text-sm text-zinc-500">Holdings unavailable</p>
+        <h3 className="text-body-lg font-semibold">Sovereign bond holdings</h3>
+        <p className="mt-2 text-body text-zinc-500">Holdings unavailable</p>
       </div>
     );
   }
@@ -78,8 +78,8 @@ export function SovereignBondHoldingsPanel({ characterId }: Props) {
   if (holdings.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h3 className="text-sm font-semibold">Sovereign bond holdings</h3>
-        <p className="mt-2 text-sm text-zinc-500">No sovereign holdings</p>
+        <h3 className="text-body-lg font-semibold">Sovereign bond holdings</h3>
+        <p className="mt-2 text-body text-zinc-500">No sovereign holdings</p>
       </div>
     );
   }
@@ -93,12 +93,12 @@ export function SovereignBondHoldingsPanel({ characterId }: Props) {
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h3 className="text-sm font-semibold">Sovereign bond holdings</h3>
-      <p className="mt-1 text-xs text-zinc-500">
+      <h3 className="text-body-lg font-semibold">Sovereign bond holdings</h3>
+      <p className="mt-1 text-body-sm text-zinc-500">
         Your contribution to each country&apos;s bond market demand signal.
       </p>
       <AnchorUnitNote className="mt-1" />
-      <table className="mt-3 w-full text-xs">
+      <table className="mt-3 w-full text-body-sm">
         <thead className="text-left text-zinc-500">
           <tr>
             <th className="py-1">Country</th>

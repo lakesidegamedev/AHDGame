@@ -112,7 +112,7 @@ export function VoteSeatingChart({
       </svg>
       <div style={{ textAlign: "center", marginTop: 10 }}>
         {passRule ? (
-          <div className="mx-auto mt-2 max-w-xs space-y-1 text-body-xs text-muted">
+          <div className="mx-auto mt-2 max-w-xs space-y-1 text-body-sm text-muted">
             <p className={passing ? "font-semibold text-success" : "font-semibold text-foreground"}>
               {passing
                 ? "This tally meets the passage rule"

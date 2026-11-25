@@ -97,7 +97,7 @@ export function CrisisBoardMap({
   return (
     <div className="rounded-xl border border-card-border bg-card overflow-hidden">
       {failed ? (
-        <p className="p-6 text-sm text-muted">
+        <p className="p-6 text-body text-muted">
           The map could not be loaded. The list below is complete.
         </p>
       ) : (
@@ -171,7 +171,7 @@ export function CrisisBoardMap({
           })}
         </svg>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-card-border px-3 py-2 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-card-border px-3 py-2 text-body-sm text-muted">
         {(Object.keys(KIND_COLOR) as Array<keyof typeof KIND_COLOR>).map((k) => (
           <span key={k} className="inline-flex items-center gap-1">
             <span className="h-2 w-2 rounded-full" style={{ background: KIND_COLOR[k] }} />

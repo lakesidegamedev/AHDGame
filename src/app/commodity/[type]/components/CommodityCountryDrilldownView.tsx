@@ -89,7 +89,7 @@ export default function CommodityCountryDrilldownView({
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-body text-muted hover:text-foreground transition-colors"
           >
             <svg
               width="16"
@@ -107,8 +107,8 @@ export default function CommodityCountryDrilldownView({
           <div className="flex items-center gap-2">
             <CountryFlag country={countryId} size="md" />
             <div>
-              <h3 className="text-sm font-bold text-foreground">{config.name} National map</h3>
-              <p className="text-[10px] text-muted">
+              <h3 className="text-body-lg font-bold text-foreground">{config.name} National map</h3>
+              <p className="text-body-sm text-muted">
                 {commodityLabel} by {config.regionLabelPlural.toLowerCase()} or regional price
               </p>
             </div>
@@ -126,7 +126,7 @@ export default function CommodityCountryDrilldownView({
       <div className="border-b border-card-border px-4 py-2">
         <Link
           href={`/commodity/shortages?country=${countryId}&view=all`}
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-body font-medium text-primary hover:underline"
         >
           View demand for all commodities
         </Link>
@@ -164,9 +164,9 @@ export default function CommodityCountryDrilldownView({
           <h4 className="text-body-sm font-medium text-muted">{config.regionLabel} Breakdown</h4>
         </div>
         <div className="max-h-64 overflow-y-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead className="sticky top-0 bg-card">
-              <tr className="border-b border-card-border text-sm font-semibold text-foreground">
+              <tr className="border-b border-card-border text-body font-semibold text-foreground">
                 <th className="px-4 py-2 text-left">{config.regionLabel}</th>
                 {capacityByState && <th className="px-4 py-2 text-right">Deposits</th>}
                 <th className="px-4 py-2 text-right">
@@ -203,7 +203,7 @@ export default function CommodityCountryDrilldownView({
                       {getStateDisplayName(countryId, stateId)}
                     </td>
                     {capacityByState && (
-                      <td className="px-4 py-2 text-right tabular-nums text-warning text-xs">
+                      <td className="px-4 py-2 text-right tabular-nums text-warning text-body-sm">
                         {deposits > 0 ? (
                           formatUnits(deposits, unit)
                         ) : (
@@ -227,7 +227,7 @@ export default function CommodityCountryDrilldownView({
                     </td>
                     <td className="px-4 py-2 text-right">
                       <span
-                        className={`tabular-nums text-xs font-medium ${balance > 0 ? "text-success" : balance < 0 ? "text-error" : "text-muted"}`}
+                        className={`tabular-nums text-body-sm font-medium ${balance > 0 ? "text-success" : balance < 0 ? "text-error" : "text-muted"}`}
                       >
                         {balance > 0 ? "+" : ""}
                         {formatUnits(Math.abs(balance), unit)}

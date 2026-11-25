@@ -172,7 +172,7 @@ export function BuildOrgControl({
       <p className="text-body text-muted">{standingLine}</p>
 
       <fieldset disabled={busy} className="flex gap-2">
-        <legend className="text-xs text-muted">Builds per click</legend>
+        <legend className="text-body-sm text-muted">Builds per click</legend>
         {[1, 5, 10].map((value) => (
           <button
             key={value}
@@ -186,7 +186,7 @@ export function BuildOrgControl({
         ))}
       </fieldset>
       {count > 1 && (
-        <p className="text-xs text-muted">
+        <p className="text-body-sm text-muted">
           Prices rise with each build. The batch stops when the next build is blocked. Completed
           builds remain charged.
         </p>

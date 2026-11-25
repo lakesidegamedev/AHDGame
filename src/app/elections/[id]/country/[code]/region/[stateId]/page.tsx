@@ -204,9 +204,9 @@ function VoteDonut({
                     className="inline-block h-2.5 w-2.5 rounded-sm shrink-0"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-sm font-medium truncate">{name}</span>
+                  <span className="text-body font-medium truncate">{name}</span>
                 </div>
-                <span className="text-sm text-muted ml-2 shrink-0">{pct.toFixed(1)}%</span>
+                <span className="text-body text-muted ml-2 shrink-0">{pct.toFixed(1)}%</span>
               </div>
               <div className="h-1.5 bg-card-border rounded-full overflow-hidden">
                 <div
@@ -518,11 +518,11 @@ export default function StateElectionResultsPage({
         <div>
           <Link
             href={`/elections/${id}`}
-            className="text-sm text-primary hover:underline mb-2 inline-block"
+            className="text-body text-primary hover:underline mb-2 inline-block"
           >
             ← Back to election
           </Link>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-display font-bold">
             {electionYear} {electionTypeTitle} in {stateName}
           </h1>
           <p className="text-muted mt-1">
@@ -534,7 +534,7 @@ export default function StateElectionResultsPage({
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           {/* Map */}
           <div className="rounded-lg border border-card-border bg-card p-4">
-            <h2 className="text-base font-semibold mb-3">
+            <h2 className="text-body-lg font-semibold mb-3">
               {countyResults
                 ? "County results"
                 : subdivisionResults
@@ -551,7 +551,7 @@ export default function StateElectionResultsPage({
                       type="button"
                       aria-pressed={canadianLayer === layer}
                       onClick={() => setCanadianLayer(layer)}
-                      className="rounded border border-card-border px-2 py-1 text-sm"
+                      className="rounded border border-card-border px-2 py-1 text-body"
                     >
                       {layer === "ridings" ? "Federal ridings" : "Census divisions"}
                     </button>
@@ -559,7 +559,7 @@ export default function StateElectionResultsPage({
                 </div>
               )}
             {subdivisionResults?.notice && (
-              <p className="mb-3 text-sm text-muted">{subdivisionResults.notice}</p>
+              <p className="mb-3 text-body text-muted">{subdivisionResults.notice}</p>
             )}
             <div
               className={
@@ -588,7 +588,7 @@ export default function StateElectionResultsPage({
                   backgroundStateColors={backgroundStateColors}
                 />
               )}
-              {cdResults?.notice && <p className="mb-3 text-sm text-muted">{cdResults.notice}</p>}
+              {cdResults?.notice && <p className="mb-3 text-body text-muted">{cdResults.notice}</p>}
               {cdResults &&
                 cdResults.geometryAvailable === false &&
                 cdResults.districts.length > 0 && (
@@ -657,7 +657,7 @@ export default function StateElectionResultsPage({
           {/* Vote Summary with donut */}
           {(countyResults || subdivisionResults) && sortedCandidates.length > 0 && (
             <div className="rounded-lg border border-card-border bg-card p-4">
-              <h2 className="text-base font-semibold mb-4">Vote summary</h2>
+              <h2 className="text-body-lg font-semibold mb-4">Vote summary</h2>
               <VoteDonut
                 candidates={sortedCandidates}
                 totalVotes={totalVotes}
@@ -665,7 +665,7 @@ export default function StateElectionResultsPage({
                 candidateNames={(countyResults ?? subdivisionResults)!.candidateNames}
                 partyColors={(countyResults ?? subdivisionResults)!.partyColors}
               />
-              <div className="mt-4 pt-4 border-t border-card-border text-xs text-muted space-y-1">
+              <div className="mt-4 pt-4 border-t border-card-border text-body-sm text-muted space-y-1">
                 <div className="flex justify-between">
                   <span>Total votes cast</span>
                   <span className="font-medium text-foreground">
@@ -682,7 +682,7 @@ export default function StateElectionResultsPage({
                 </div>
                 {subdivisionResults && seatChips.length > 0 && (
                   <div className="pt-2 mt-2 border-t border-card-border space-y-1">
-                    <p className="text-xs text-muted">
+                    <p className="text-body-sm text-muted">
                       {election && ["active", "upcoming"].includes(election.status)
                         ? "Projected seats for this election, from each party's current support in every district. They can differ from the seats parties hold today."
                         : "Seats won in this election."}
@@ -726,7 +726,7 @@ export default function StateElectionResultsPage({
           {/* CD seat distribution */}
           {cdResults && (
             <div className="rounded-lg border border-card-border bg-card p-4">
-              <h2 className="text-base font-semibold mb-3">Seat distribution</h2>
+              <h2 className="text-body-lg font-semibold mb-3">Seat distribution</h2>
               <div className="space-y-2">
                 {Object.entries(
                   cdResults.districts.reduce(
@@ -760,16 +760,16 @@ export default function StateElectionResultsPage({
         {subdivisionResults && subdivisionTableRows.length > 0 && (
           <div className="rounded-lg border border-card-border bg-card overflow-hidden">
             <div className="px-5 py-3 border-b border-card-border">
-              <h2 className="text-base font-semibold">{unitLabel} Breakdown</h2>
-              <p className="text-xs text-muted mt-0.5">
+              <h2 className="text-body-lg font-semibold">{unitLabel} Breakdown</h2>
+              <p className="text-body-sm text-muted mt-0.5">
                 Votes distributed by electorate &amp; local party strength · winners match the seat
                 allocation · sorted by total votes
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
-                  <tr className="border-b border-card-border text-xs text-muted">
+                  <tr className="border-b border-card-border text-body-sm text-muted">
                     <th className="text-left px-5 py-2.5 font-medium">{unitLabel}</th>
                     <th className="text-left px-3 py-2.5 font-medium">Winner</th>
                     <th className="text-right px-3 py-2.5 font-medium">Margin</th>
@@ -804,7 +804,7 @@ export default function StateElectionResultsPage({
                               className="inline-block h-2 w-2 rounded-full shrink-0"
                               style={{ backgroundColor: winnerColor }}
                             />
-                            <span className="text-xs">{winnerName}</span>
+                            <span className="text-body-sm">{winnerName}</span>
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-right">
@@ -829,7 +829,7 @@ export default function StateElectionResultsPage({
                           const color = getColor(party, subdivisionResults.partyColors);
                           return (
                             <td key={cid} className="px-3 py-2.5 text-right">
-                              <span style={{ color }} className="text-xs font-medium">
+                              <span style={{ color }} className="text-body-sm font-medium">
                                 {pct.toFixed(1)}%
                               </span>
                             </td>
@@ -848,15 +848,15 @@ export default function StateElectionResultsPage({
         {countyTableRows.length > 0 && (
           <div className="rounded-lg border border-card-border bg-card overflow-hidden">
             <div className="px-5 py-3 border-b border-card-border">
-              <h2 className="text-base font-semibold">County breakdown</h2>
-              <p className="text-xs text-muted mt-0.5">
+              <h2 className="text-body-lg font-semibold">County breakdown</h2>
+              <p className="text-body-sm text-muted mt-0.5">
                 Votes distributed by county population &amp; Cook PVI lean · sorted by total votes
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
-                  <tr className="border-b border-card-border text-xs text-muted">
+                  <tr className="border-b border-card-border text-body-sm text-muted">
                     <th className="text-left px-5 py-2.5 font-medium">County</th>
                     <th className="text-left px-3 py-2.5 font-medium">Winner</th>
                     <th className="text-right px-3 py-2.5 font-medium">Margin</th>
@@ -888,7 +888,7 @@ export default function StateElectionResultsPage({
                               className="inline-block h-2 w-2 rounded-full shrink-0"
                               style={{ backgroundColor: winnerColor }}
                             />
-                            <span className="text-xs">{winnerName}</span>
+                            <span className="text-body-sm">{winnerName}</span>
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-right">
@@ -907,7 +907,7 @@ export default function StateElectionResultsPage({
                                 style={{ width: `${Math.min(100, county.turnoutPct).toFixed(1)}%` }}
                               />
                             </div>
-                            <span className="text-xs text-muted w-10 text-right">
+                            <span className="text-body-sm text-muted w-10 text-right">
                               {county.turnoutPct.toFixed(1)}%
                             </span>
                           </div>
@@ -921,7 +921,7 @@ export default function StateElectionResultsPage({
                           const color = getColor(party, countyResults!.partyColors);
                           return (
                             <td key={cid} className="px-3 py-2.5 text-right">
-                              <span style={{ color }} className="text-xs font-medium">
+                              <span style={{ color }} className="text-body-sm font-medium">
                                 {pct.toFixed(1)}%
                               </span>
                             </td>
