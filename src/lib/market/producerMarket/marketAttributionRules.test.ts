@@ -172,10 +172,10 @@ describe("market attribution", () => {
 });
 
 describe("old stock per country book", () => {
-  it("is what a plant offered beyond this turn's output less its own sites' share", () => {
+  it("is what a plant offered beyond this turn's output; own-site deliveries do not change it", () => {
     const stock = carriedStockByBook(
       [
-        // Made 100, 20 went to its own sites, offered 130: 50 of the offer is old stock.
+        // Made 100 and offered 130: 30 of the offer is old stock, whatever its own sites took.
         {
           id: "p1",
           products: [
@@ -189,11 +189,24 @@ describe("old stock per country book", () => {
         },
         // Offered only this turn's output: no stock.
         { id: "p2", products: [{ commodity: "steel", producedUnits: 40, offeredUnits: 40 }] },
+        // A service with heavy own use offers what it made: no stock.
+        {
+          id: "p4",
+          products: [
+            {
+              commodity: "advertising",
+              producedUnits: 50,
+              internalDeliveredUnits: 30,
+              offeredUnits: 50,
+            },
+          ],
+        },
         { id: "p3", products: [{ commodity: "steel", producedUnits: 0, offeredUnits: 5 }] },
       ],
       (id) => (id === "p3" ? "CA" : "US")
     );
-    expect(stock.get(JSON.stringify(["US", "steel"]))).toBeCloseTo(50, 9);
+    expect(stock.get(JSON.stringify(["US", "steel"]))).toBeCloseTo(30, 9);
+    expect(stock.has(JSON.stringify(["US", "advertising"]))).toBe(false);
     expect(stock.get(JSON.stringify(["CA", "steel"]))).toBeCloseTo(5, 9);
   });
 });

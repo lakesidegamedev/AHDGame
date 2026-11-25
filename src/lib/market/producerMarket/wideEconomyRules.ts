@@ -418,7 +418,8 @@ export const WIDE_ECONOMY_MAX_BUYER_SHARE = 0.25;
  * took, over what they made. Sales count against new output first, so stock
  * carried from earlier turns never makes a lane read as oversupplied. What the wider economy's own buyer
  * bought counts as unsold here, so a lane it props up still reads as
- * oversupplied until real demand grows.
+ * oversupplied until real demand grows. A lane where real buyers went short
+ * is never oversupplied: its unsold output was priced out, not unwanted.
  */
 export function wideEconomyLaneSurplus(input: {
   products: readonly {
@@ -433,11 +434,13 @@ export function wideEconomyLaneSurplus(input: {
     commodity: string;
     book: string;
     deliveredUnits: number;
+    requestedUnits?: number;
   }[];
   isWideAccount: (accountId: string) => boolean;
   laneKey: (commodity: string, book: string) => string;
 }): Record<string, number> {
   const made = new Map<string, number>();
+  const realShort = new Set<string>();
   const sold = new Map<string, number>();
   for (const p of input.products) {
     const lane = input.laneKey(p.commodity, p.book);
@@ -450,8 +453,12 @@ export function wideEconomyLaneSurplus(input: {
     );
   }
   for (const o of input.outcomes) {
-    if (!input.isWideAccount(o.accountId)) continue;
     const lane = input.laneKey(o.commodity, o.book);
+    if (!input.isWideAccount(o.accountId)) {
+      const asked = finitePositive(o.requestedUnits ?? 0);
+      if (asked - finitePositive(o.deliveredUnits) > 1e-6 * Math.max(1, asked)) realShort.add(lane);
+      continue;
+    }
     sold.set(lane, (sold.get(lane) ?? 0) - finitePositive(o.deliveredUnits));
   }
   const out: Record<string, number> = {};
@@ -459,7 +466,7 @@ export function wideEconomyLaneSurplus(input: {
     const m = made.get(lane)!;
     if (!(m > 0)) continue;
     const realSold = Math.max(0, sold.get(lane) ?? 0);
-    out[lane] = Math.min(1, Math.max(0, (m - realSold) / m));
+    out[lane] = realShort.has(lane) ? 0 : Math.min(1, Math.max(0, (m - realSold) / m));
   }
   return out;
 }
