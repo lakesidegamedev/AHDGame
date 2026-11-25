@@ -8,7 +8,7 @@ import { trackAction } from "@/lib/observability/actionBreadcrumb";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS } from "@/lib/constants/sectorStrategyTypes";
-import { Skeleton } from "@/components/ui";
+import { Button, Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
 import type { CountryId } from "@/lib/constants/countriesCore";
@@ -30,7 +30,12 @@ import { EditorialStancePanel } from "@/components/corporation/EditorialStancePa
 import PlantPanel from "./sections/PlantPanel";
 import MarketMoneyPanel from "./sections/MarketMoneyPanel";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Hammer } from "lucide-react";
+import {
+  capitalizeFacility,
+  facilityPlural,
+  facilityVocabulary,
+} from "@/lib/constants/facilityVocabulary";
 import { apiErrorText } from "@/lib/errors/catalog";
 import SectorWorkspaceTabs, { type WorkspaceTab } from "./components/SectorWorkspaceTabs";
 
@@ -748,16 +753,34 @@ export default function SectorDetailPage() {
             <ArrowLeft className="h-4 w-4 text-primary" />
             All {corporation.name} sectors
           </Link>
-          {corporation.isPrivate ? (
-            <span className="text-xs font-medium text-muted">Private, not listed</span>
-          ) : (
-            <Link
-              href={`/stockmarket/${exchange}?tab=stocks`}
-              className="text-xs font-medium text-muted transition-colors hover:text-foreground"
-            >
-              Listed on {exchangeLabel}
-            </Link>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {corporation.isPrivate ? (
+              <span className="text-xs font-medium text-muted">Private, not listed</span>
+            ) : (
+              <Link
+                href={`/stockmarket/${exchange}?tab=stocks`}
+                className="text-xs font-medium text-muted transition-colors hover:text-foreground"
+              >
+                Listed on {exchangeLabel}
+              </Link>
+            )}
+            {/* The CEO's main action on this page, first in reading order. The
+                plant panel keeps a secondary copy beside the capacity figures. */}
+            {plantsEnabled && plants && isCeo && (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setCapacityMessage("");
+                  setBuildOpen(true);
+                }}
+                disabled={capacityBusy}
+              >
+                <Hammer className="mr-1.5 h-4 w-4" aria-hidden />{" "}
+                {capitalizeFacility(facilityVocabulary(sector.sectorType).buildVerb)} more{" "}
+                {facilityPlural(sector.sectorType)}
+              </Button>
+            )}
+          </div>
         </nav>
 
         {/* Hero card */}
