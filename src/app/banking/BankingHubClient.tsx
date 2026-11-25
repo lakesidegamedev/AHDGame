@@ -311,7 +311,7 @@ function HubTabs({
             onClick={() => onChange(tab.id)}
             className={`flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               active
-                ? "bg-primary text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >

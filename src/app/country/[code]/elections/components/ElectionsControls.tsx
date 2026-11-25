@@ -104,7 +104,9 @@ export function ElectionsControls({
             disabled={!mapAvailable && v === "map"}
             title={!mapAvailable && v === "map" ? "Pick a single office to see the map" : undefined}
             className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
-              view === v ? "bg-primary text-white" : "bg-card text-muted hover:text-foreground"
+              view === v
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted hover:text-foreground"
             } ${!mapAvailable && v === "map" ? "cursor-not-allowed opacity-40 hover:text-muted" : ""}`}
           >
             {v}

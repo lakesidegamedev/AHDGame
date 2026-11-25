@@ -413,7 +413,7 @@ export function ResourceGrantManager({ context = "admin" }: ResourceGrantManager
               !grantPositionUpdateVoucher) ||
             (!grantToAll && selectedIds.size === 0)
           }
-          className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {loading
             ? "Processing..."

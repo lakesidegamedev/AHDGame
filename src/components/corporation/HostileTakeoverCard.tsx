@@ -143,7 +143,7 @@ export function HostileTakeoverCard({
           type="button"
           onClick={() => void handleMerge()}
           disabled={busy || outstandingBonds > 0}
-          className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           title={outstandingBonds > 0 ? "Outstanding bonds must be resolved first" : undefined}
         >
           {busy ? "Working…" : "Merge corporation"}

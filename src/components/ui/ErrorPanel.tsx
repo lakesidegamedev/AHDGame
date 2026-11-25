@@ -160,7 +160,7 @@ export function ErrorPanel({
           <button
             type="button"
             onClick={onRetry}
-            className={`${BUTTON_BASE} bg-primary text-white hover:bg-primary/90`}
+            className={`${BUTTON_BASE} bg-primary text-primary-foreground hover:bg-primary/90`}
           >
             Try again
           </button>

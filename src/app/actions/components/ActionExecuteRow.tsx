@@ -227,7 +227,7 @@ export default function ActionExecuteRow({
   const primary =
     isBusy && executingKey === execKey
       ? "bg-muted cursor-wait text-white"
-      : "bg-primary hover:bg-primary-dark text-white";
+      : "bg-primary hover:bg-primary-dark text-primary-foreground";
 
   const batchIdle =
     "border border-card-border bg-card-elevated text-foreground hover:bg-card-muted";
@@ -355,7 +355,7 @@ export default function ActionExecuteRow({
                     onExecute(actionType, c);
                   }}
                   disabled={isBusy}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-dark transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                 >
                   {actionLabel} {confirmCount} times
                 </button>

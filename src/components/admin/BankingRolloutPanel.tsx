@@ -204,7 +204,7 @@ export function BankingRolloutPanel() {
                 onClick={() => void apply(change)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
                 }`}
               >
@@ -272,7 +272,7 @@ export function BankingRolloutPanel() {
                           onClick={() => void apply(change)}
                           className={`rounded-md border border-card-border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-50 ${
                             inCohort
-                              ? "bg-primary text-white"
+                              ? "bg-primary text-primary-foreground"
                               : "text-muted hover:bg-background hover:text-foreground"
                           }`}
                         >

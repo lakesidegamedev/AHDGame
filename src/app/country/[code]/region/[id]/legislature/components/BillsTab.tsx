@@ -137,7 +137,7 @@ export function BillsTab({
               className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 adminOverride && !canPropose
                   ? "bg-error text-white hover:bg-error/90"
-                  : "bg-primary text-white hover:bg-primary/90"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
               }`}
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -159,7 +159,7 @@ export function BillsTab({
                   setPartyProposal(true);
                   setShowPropose(true);
                 }}
-                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {t("proposeViaPartyNpp")}
               </button>
@@ -208,7 +208,7 @@ export function BillsTab({
               canPropose || adminOverride ? (
                 <button
                   onClick={() => setShowPropose(true)}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   {adminOverride && !canPropose
                     ? "Propose a Bill (Admin override)"

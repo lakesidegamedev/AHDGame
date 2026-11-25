@@ -100,7 +100,7 @@ export default function RussianConstitutionalDecisionPanel() {
               type="button"
               disabled={busy}
               onClick={() => void open(decision.kind)}
-              className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+              className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {t(decision.proposal?.canRevise ? "revise" : "open")}
             </button>

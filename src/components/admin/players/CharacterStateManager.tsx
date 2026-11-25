@@ -351,7 +351,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
           <button
             type="submit"
             disabled={!username.trim() || !homeState || loading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed"
           >
             {loading ? "Updating…" : "Update state"}
           </button>
@@ -450,7 +450,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
               countryRegionsLoading ||
               (countryRegions.length > 0 && !countryHomeState)
             }
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed"
           >
             {countryLoading ? "Updating…" : "Update country"}
           </button>
@@ -513,7 +513,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
           <button
             type="submit"
             disabled={!posCharacter || (economic === null && social === null) || posLoading}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted disabled:cursor-not-allowed"
           >
             {posLoading ? "Updating…" : "Update positions"}
           </button>

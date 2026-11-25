@@ -583,7 +583,7 @@ export function CreateProposalForm({
       <button
         onClick={handleSubmit}
         disabled={submitting}
-        className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+        className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         {submitting ? "Submitting…" : "Submit proposal"}
       </button>

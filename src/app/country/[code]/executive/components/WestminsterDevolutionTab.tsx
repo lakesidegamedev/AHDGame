@@ -222,7 +222,7 @@ export function WestminsterDevolutionTab() {
                       type="button"
                       disabled={!canSave}
                       onClick={save}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       {t(saving ? "saving" : "save")}
                     </button>

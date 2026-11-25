@@ -243,7 +243,7 @@ export function BankFundsPanel({
           <button
             type="submit"
             disabled={busy || !picked.length || totalWeight > 75}
-            className="rounded bg-primary px-3 py-2 text-sm text-white disabled:opacity-50"
+            className="rounded bg-primary px-3 py-2 text-sm text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {busy ? "Creating fund..." : "Create fund"}
           </button>

@@ -350,7 +350,7 @@ export function BlendRaceCard({
             type="button"
             onClick={() => onEnterRace(card.electionId)}
             disabled={entryLoading}
-            className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {entryLoading ? "Joining..." : "Enter race"}
           </button>

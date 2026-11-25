@@ -8,6 +8,7 @@ import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { SECTOR_STRATEGIES, type SectorStrategy } from "@/lib/constants/sectorStrategies";
 import { isDecadeReached } from "@/lib/constants/techTree/decades";
 import { getStrategyAvailability } from "@/lib/constants/techTree/strategyAvailability";
+import type { Corporation } from "@/lib/db/types";
 import type { TechDiffusionSnapshot } from "@/lib/constants/techTree/diffusion";
 import {
   chooseFoundingRecipe,
@@ -16,6 +17,8 @@ import {
 } from "./rules/foundingRecipe";
 import { recipeInputAvailability, type StateInputAvailabilityOf } from "./rules/inputAvailability";
 import { sectorPeakShortageScore, type CommodityPriceRatioFn } from "./marketSignals";
+
+type FoundingCompany = Pick<Corporation, "type" | "ceoType" | "unlockedTechNodeIds">;
 
 export interface FoundingRecipeWorld {
   /** In-game year; 0 or absent when unknown, which admits no era-gated recipe. */
@@ -37,27 +40,32 @@ export interface FoundingRecipeWorld {
  * Whether a newly founded plant of this lane may run the recipe. The era gate
  * applies whether or not tech trees are on: an AI founding never builds a
  * method its era has not reached. With tech trees on, a recipe that needs a
- * tech unlock must be one a new company inherits from past decades.
+ * tech unlock can come from the player company or past-decade grants.
  */
 export function foundingRecipeAvailable(
   lane: OperatingSectorType,
   world: FoundingRecipeWorld,
-  countryId?: string
+  countryId?: string,
+  company?: FoundingCompany
 ): (recipe: SectorStrategy) => boolean {
   const year = world.currentYear ?? 0;
-  const newCompany = {
+  const playerCompany = company && company.ceoType !== "npp" ? company : undefined;
+  const techCompany = playerCompany ?? {
     type: lane as OperatingSectorType,
     unlockedTechNodeIds: [],
   };
   const sectorResearch = world.sectorResearchByLane?.get(lane);
-  // An AI founding adopts at its country's lag: it never licenses early.
   const diffusion =
     world.techDiffusion && countryId
-      ? { snapshot: world.techDiffusion, countryId, adopter: "npp" as const }
+      ? {
+          snapshot: world.techDiffusion,
+          countryId,
+          adopter: playerCompany ? ("player" as const) : ("npp" as const),
+        }
       : undefined;
   return (recipe) => {
     if (recipe.minDecade && !(year > 0 && isDecadeReached(recipe.minDecade, year))) return false;
-    return !getStrategyAvailability(newCompany, recipe, year, world.techTreesEnabled, {
+    return !getStrategyAvailability(techCompany, recipe, year, world.techTreesEnabled, {
       sectorResearch,
       laneResearch: world.sectorResearchByLane,
       diffusion,
@@ -77,7 +85,8 @@ export function foundingRecipeFor(
   countryId: string,
   priceRatioOf: CommodityPriceRatioFn,
   world: FoundingRecipeWorld,
-  site?: FoundingInputSite
+  site?: FoundingInputSite,
+  company?: FoundingCompany
 ): string | undefined {
   // A mine's recipe is bound to the deposits of the state it lands in, which
   // this lane-level choice cannot see; extraction keeps its standard recipe.
@@ -86,7 +95,7 @@ export function foundingRecipeFor(
     recipes: SECTOR_STRATEGIES[lane],
     countryId,
     priceRatioOf,
-    isAvailable: foundingRecipeAvailable(lane, world, countryId),
+    isAvailable: foundingRecipeAvailable(lane, world, countryId, company),
     ...(site
       ? {
           inputAvailabilityOf: (recipe: SectorStrategy) =>

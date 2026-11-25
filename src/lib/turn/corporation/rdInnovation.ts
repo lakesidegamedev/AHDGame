@@ -261,11 +261,14 @@ export function processRdInnovations(
     // convention — transfers update both together).
     if (corp.ceoId && !corp.ceoVacant) {
       const boostDisplayPercent = Math.round(boostPercent * 100);
-      const where = getStateDisplayName(corp.countryId, sector.stateId);
+      const where = getStateDisplayName(sector.countryId ?? corp.countryId, sector.stateId);
       const title = `R&D breakthrough at ${corp.name}`;
+      const improvement = plantsEnabled
+        ? `Research expanded site capacity in ${where} at no building cost. Check the site to see what it can produce.`
+        : `Research raised base revenue in ${where} by about ${boostDisplayPercent}%.`;
       const message = depositGrew
-        ? `Research paid off in ${where}: revenue there is up ${boostDisplayPercent}% and the state's resource capacity grew.`
-        : `Research paid off in ${where}: revenue there is up ${boostDisplayPercent}%.`;
+        ? `${improvement} The local resource deposit also grew.`
+        : improvement;
 
       void createNotifications([
         {

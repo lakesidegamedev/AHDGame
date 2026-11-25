@@ -164,7 +164,7 @@ export function BuildOrgControl({
     : "Spend Political Strength to grow your party's Organization here (needs a party player or official here)";
 
   const buttonClass =
-    "rounded-lg bg-primary px-3.5 py-2 text-body font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50";
+    "rounded-lg bg-primary px-3.5 py-2 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border";
 
   return (
     <div className="mt-4 space-y-3">

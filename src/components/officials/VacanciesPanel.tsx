@@ -62,7 +62,7 @@ export default function VacanciesPanel({
                     {canAppoint && (
                       <button
                         onClick={() => handleAppointClick(vacancy)}
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark transition-colors"
+                        className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary-dark transition-colors"
                       >
                         Appoint replacement
                       </button>

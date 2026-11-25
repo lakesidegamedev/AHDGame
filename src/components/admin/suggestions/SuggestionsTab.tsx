@@ -708,7 +708,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                   type="button"
                   onClick={() => void handleUpdate()}
                   disabled={state.updating}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 >
                   {state.updating ? "Updating…" : "Update"}
                 </button>

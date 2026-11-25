@@ -17,7 +17,7 @@ const HEAT_DOME = modernCrisis({
   name: "Heat Dome Emergency",
   heroImage: HERO.heat,
   description:
-    "A stalled high-pressure system sits over {location} for weeks. Nights never cool, hospitals fill with heat stroke cases, rails buckle and air conditioners push the power grid to its limit. For about 4 turns growth falls from lost working hours, grid reliability drops and approval falls as people judge the response.",
+    "A stalled high-pressure system sits over {location} for weeks. Nights never cool, hospitals fill with heat stroke cases, rails buckle and air conditioners push the power grid to its limit. Growth falls from lost working hours, grid reliability drops and approval falls as people judge the response. These effects taper over the emergency.",
   durationTurns: 4,
   fromYear: 2027,
   untilYear: 2040,

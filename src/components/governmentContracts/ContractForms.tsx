@@ -47,7 +47,7 @@ export interface ContractAccess {
 export const inputClass =
   "w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm";
 export const buttonClass =
-  "rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50";
+  "rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted";
 export async function contractPost(url: string, body: unknown) {
   const res = await fetch(url, {
     method: "POST",

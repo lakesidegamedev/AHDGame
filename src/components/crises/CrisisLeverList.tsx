@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CrisisEffectChip } from "@/components/crises/CrisisRowParts";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { ROLE_LABEL } from "@/lib/crises/v2/ledgerView";
 import type { AidPledgeRange } from "@/lib/crises/levers/queries";
@@ -69,6 +70,19 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
     <ul className="space-y-2" aria-label="Responses you can make">
       {shown.map((lever) => {
         const costs = leverCostLines(lever.cost);
+        const preview = lever.preview;
+        if (preview?.contribution) {
+          costs.push(
+            `${preview.contributionCurrency} ${preview.contribution.toLocaleString("en-US")} from the treasury`
+          );
+        }
+        if (preview?.treasuryCostPctGdp) {
+          const share = new Intl.NumberFormat("en-US", {
+            style: "percent",
+            maximumFractionDigits: 4,
+          }).format(preview.treasuryCostPctGdp);
+          costs.push(`${share} of national GDP from the treasury`);
+        }
         const state = pulled[lever.id];
         const isPending = pending === lever.id;
         const noCompany = lever.needsCorporation && corporations.length === 0;
@@ -100,7 +114,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                     type="button"
                     disabled={isPending}
                     onClick={() => pull(lever)}
-                    className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                   >
                     {isPending ? "Working" : "Confirm"}
                   </button>
@@ -118,16 +132,34 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                   type="button"
                   disabled={noCompany || pending !== null}
                   onClick={() => setConfirming(lever.id)}
-                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                 >
                   {lever.viaBill ? "Raise bill" : "Pull"}
                 </button>
               )}
             </div>
+            {preview && <p className="mt-1 text-xs text-muted">{preview.description}</p>}
             <div className="mt-1 text-xs text-muted">
-              {costs.length > 0 ? `Costs ${costs.join(", ")}.` : "No direct cost."}{" "}
+              {costs.length > 0
+                ? `Costs ${costs.join(", ")}.`
+                : lever.aid
+                  ? "Cost depends on pledge size."
+                  : "No fixed cost."}{" "}
               {leverCooldownText(lever.cooldownTurns)}.
             </div>
+            {!!preview?.durationReductionTurns && (
+              <p className="mt-1 text-xs text-muted">
+                Shortens the crisis by up to {preview.durationReductionTurns}{" "}
+                {preview.durationReductionTurns === 1 ? "turn" : "turns"}.
+              </p>
+            )}
+            {!!preview?.effects.length && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {preview.effects.map((effect, index) => (
+                  <CrisisEffectChip key={index} effect={effect} />
+                ))}
+              </div>
+            )}
             {lever.needsCorporation &&
               (corporations.length === 0 ? (
                 <p className="mt-1 text-xs text-warning">

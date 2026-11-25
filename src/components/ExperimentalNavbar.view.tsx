@@ -519,7 +519,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                       </Link>
                       <Link
                         href="/register"
-                        className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-white transition-all hover:bg-primary/90"
+                        className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground transition-all hover:bg-primary/90"
                       >
                         {t("common.register")}
                       </Link>
@@ -575,7 +575,7 @@ export function renderExperimentalNavbarView(context: ExperimentalNavbarViewCont
                 >
                   <PixelNavIcon name="bell" className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-white">
+                    <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full border-2 border-card bg-primary px-1 text-center text-[10px] font-bold leading-4 text-primary-foreground">
                       {unreadBadgeLabel(unreadCount)}
                     </span>
                   )}

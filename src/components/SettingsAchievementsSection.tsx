@@ -176,7 +176,7 @@ export function SettingsAchievementsSection({ characterId }: SettingsAchievement
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {saving ? t("common.saving") : t("achievements.save")}
           </button>

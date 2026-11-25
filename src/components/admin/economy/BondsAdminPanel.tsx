@@ -222,7 +222,7 @@ export function BondsAdminPanel() {
           <button
             onClick={handleReconcile}
             disabled={reconcileLoading}
-            className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
           >
             {reconcileLoading ? "Reconciling…" : "Reconcile"}
           </button>

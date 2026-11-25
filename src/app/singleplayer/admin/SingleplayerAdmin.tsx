@@ -171,7 +171,7 @@ export function SingleplayerAdmin({
               <button
                 disabled={busy || !status.hasWorld}
                 onClick={() => void changeAvailability("open")}
-                className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
               >
                 {busy ? "Opening world" : "Start world"}
               </button>

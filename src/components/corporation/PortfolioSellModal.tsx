@@ -234,7 +234,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                 onClick={() => setMode("instant")}
                 className={`flex-1 py-2 font-medium transition-colors ${
                   mode === "instant"
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >
@@ -245,7 +245,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
                 onClick={() => setMode("limit")}
                 className={`flex-1 py-2 font-medium transition-colors ${
                   mode === "limit"
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >
@@ -336,7 +336,7 @@ export default function PortfolioSellModal(props: PortfolioSellModalProps) {
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
             >
               {submitting ? "Selling…" : mode === "limit" ? "Place order" : "Sell"}
             </button>

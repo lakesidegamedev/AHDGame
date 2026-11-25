@@ -25,7 +25,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     border: "#2a2a3d",
     fg: "#e8e8ee",
     fg2: "#b8b8c4",
-    primary: "#6d5dfc",
+    primary: "#4f46e5",
     secondary: "#1d4ed8",
     success: "#22c55e",
     warning: "#eab308",

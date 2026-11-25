@@ -110,7 +110,7 @@ function isEasternBloc(governmentType: GovernmentType | undefined): boolean {
 }
 
 const PRIMARY_BUTTON_CLASSES =
-  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4.5 h-11 text-sm font-semibold text-white transition-all duration-150 hover:bg-primary-dark active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4.5 h-11 text-sm font-semibold text-primary-foreground transition-all duration-150 hover:bg-primary-dark active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 const SECONDARY_BUTTON_CLASSES =
   "pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-card-border bg-card px-4.5 h-11 text-sm font-medium text-foreground transition-all duration-150 hover:border-muted/40 active:scale-[0.98]";

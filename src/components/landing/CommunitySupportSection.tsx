@@ -77,7 +77,7 @@ function ExternalCta({
 }) {
   const emphasisClasses =
     emphasis === "primary"
-      ? "bg-primary text-white hover:bg-primary-dark"
+      ? "bg-primary text-primary-foreground hover:bg-primary-dark"
       : "border border-card-border bg-card text-foreground hover:border-muted/40";
 
   return (

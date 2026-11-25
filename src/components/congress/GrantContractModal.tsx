@@ -165,7 +165,7 @@ export function GrantContractModal({
             <button
               type="submit"
               disabled={formState.submitting}
-              className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {formState.submitting ? "Granting..." : "Grant contract"}
             </button>

@@ -141,7 +141,9 @@ export function NationalCorporationView({ corpId }: { corpId: string }) {
               type="button"
               onClick={() => setRole("public")}
               className={`px-3 py-1.5 transition-colors ${
-                !isOfficial ? "bg-primary text-white" : "text-muted hover:text-foreground"
+                !isOfficial
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               Public

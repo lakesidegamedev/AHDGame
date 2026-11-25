@@ -105,7 +105,7 @@ export function CampaignRail(props: Props) {
                 type="button"
                 disabled={busy}
                 onClick={() => post(submitBase, { action: "grant" })}
-                className="rounded-lg bg-primary px-4 py-3 text-[13.5px] font-bold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-3 text-[13.5px] font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {busy ? "Granting…" : "Grant the referendum"}
               </button>

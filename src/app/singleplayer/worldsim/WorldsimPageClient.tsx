@@ -144,7 +144,7 @@ export function WorldsimPageClient() {
               type="button"
               onClick={() => void advance()}
               disabled={busy}
-              className="rounded bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {busy ? "Advancing..." : "Advance"}
             </button>

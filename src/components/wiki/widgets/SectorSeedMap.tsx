@@ -167,7 +167,7 @@ export function SectorSeedMap() {
             onClick={() => setCountry(c.id)}
             className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
               country === c.id
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >

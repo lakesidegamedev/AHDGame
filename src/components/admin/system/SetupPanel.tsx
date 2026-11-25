@@ -250,7 +250,7 @@ export function SetupPanel() {
           <button
             onClick={runSetup}
             disabled={running}
-            className="min-h-[44px] rounded-lg bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            className="min-h-[44px] rounded-lg bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
           >
             {running ? (
               <span className="flex items-center gap-2">

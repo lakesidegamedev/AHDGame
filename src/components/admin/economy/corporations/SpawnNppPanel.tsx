@@ -229,7 +229,7 @@ export function SpawnNppPanel({
           disabled={
             spawnNppLoading || !spawnNppForm.name.trim() || !spawnNppForm.headquartersState.trim()
           }
-          className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40"
+          className="text-xs px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
         >
           {spawnNppLoading ? "Spawning…" : "Spawn corporation"}
         </button>

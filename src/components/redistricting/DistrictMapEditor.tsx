@@ -405,7 +405,7 @@ export function DistrictMapEditor({
             type="button"
             onClick={submit}
             disabled={!canSubmit}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {submitting ? "Submitting…" : "Submit map"}
           </button>

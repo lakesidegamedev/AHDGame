@@ -291,7 +291,7 @@ export function StatePartyHubBody({
             onClick={() => setNppSubtab("recruitment")}
             className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
               nppSubtab === "recruitment"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -302,7 +302,7 @@ export function StatePartyHubBody({
             onClick={() => setNppSubtab("management")}
             className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
               nppSubtab === "management"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "text-muted hover:text-foreground"
             }`}
           >

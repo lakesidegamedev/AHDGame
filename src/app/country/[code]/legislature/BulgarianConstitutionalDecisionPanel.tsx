@@ -163,7 +163,7 @@ export default function BulgarianConstitutionalDecisionPanel() {
             type="button"
             disabled={busy}
             onClick={() => void open()}
-            className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+            className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {t(decision.proposal?.canRevise ? "revise" : "open")}
           </button>
@@ -198,7 +198,7 @@ export default function BulgarianConstitutionalDecisionPanel() {
                 type="button"
                 disabled={busy}
                 onClick={() => void open("introduce", true)}
-                className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
+                className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:bg-card-border disabled:text-muted"
               >
                 {t(
                   decision.dissolution.proposal?.canRevise

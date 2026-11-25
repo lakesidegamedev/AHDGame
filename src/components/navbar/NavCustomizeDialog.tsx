@@ -317,7 +317,7 @@ export function NavCustomizeDialog({ menus, pinLookup, custom, onChange, onClose
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 items-center rounded-lg bg-primary px-4 text-[13px] font-semibold text-white hover:bg-primary/90"
+            className="inline-flex h-8 items-center rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary/90"
           >
             {t("done")}
           </button>

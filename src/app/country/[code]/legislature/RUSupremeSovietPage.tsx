@@ -101,7 +101,7 @@ function BillsTab({
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Propose bill
           </button>
@@ -362,7 +362,9 @@ export function RUSupremeSovietPage({ countryId }: { countryId: CountryId }) {
             key={key}
             onClick={() => setChamberKey(key)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              chamberKey === key ? "bg-primary text-white" : "text-muted hover:text-foreground"
+              chamberKey === key
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:text-foreground"
             }`}
           >
             {label}

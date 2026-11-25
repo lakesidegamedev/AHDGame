@@ -1,3 +1,9 @@
+import { loadMethodOpeningYears } from "@/lib/corporations/techTree/diffusion";
+import {
+  LICENSING_DISCOUNT_YEARS,
+  presetUsesTechDiffusion,
+} from "@/lib/constants/techTree/diffusion";
+import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 /**
  * GET /api/corporation/[id]/tech — read model for the branching Tech tab (v2).
  *
@@ -169,6 +175,23 @@ export async function GET(_request: Request, { params }: RouteParams) {
       (SECTOR_STRATEGIES[operatingSectorType] ?? []).map((s) => [s.id, s.name])
     );
 
+    const hostCountries = redact
+      ? []
+      : await corporateSectorsCollection(db).distinct("countryId", {
+          corporationId: corporation._id,
+        });
+    const adopter = corporation.ceoType === "npp" ? "npp" : "player";
+    const methodOpenings = await loadMethodOpeningYears(
+      db,
+      gameState?.preset,
+      [corporation.countryId, ...hostCountries],
+      adopter
+    );
+    const licensingYears =
+      adopter === "player" && presetUsesTechDiffusion(gameState?.preset)
+        ? LICENSING_DISCOUNT_YEARS
+        : 0;
+
     // Daily gross revenue → per-node cash cost. Null when redacted.
     let dailyGrossRevenue: number | null = null;
     let capacityFloorApplied = false;
@@ -275,6 +298,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
             .map((e) => ({
               category: techEffectCategory(e.kind),
               label: describeTechEffect(e),
+              ...(e.kind === "unlockStrategy"
+                ? {
+                    methodOpenings: [...methodOpenings].flatMap(([countryId, methods]) => {
+                      const year = methods[e.strategyId];
+                      return year == null ? [] : [{ countryId, year, open: currentYear >= year }];
+                    }),
+                    licensingYears,
+                  }
+                : {}),
             })),
           unlocksStrategy: strategyEffect
             ? (strategyNameById.get((strategyEffect as { strategyId: string }).strategyId) ??

@@ -126,7 +126,7 @@ export function SingleplayerHome({ status }: Props) {
             </dl>
             <Link
               href="/"
-              className="mt-5 inline-flex items-center rounded bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+              className="mt-5 inline-flex items-center rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
               {status.hasCharacter ? "Continue" : "Create your character"}
             </Link>
@@ -275,7 +275,7 @@ export function SingleplayerHome({ status }: Props) {
             <button
               type="button"
               onClick={startNewGame}
-              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-wait disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {running ? (
                 <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />

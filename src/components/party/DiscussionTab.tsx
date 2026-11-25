@@ -209,7 +209,7 @@ export function DiscussionTab({ apiBasePath, isModerator }: DiscussionTabProps) 
             <button
               onClick={handleSubmit}
               disabled={!canPost || submitLoading}
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
             >
               {submitLoading ? "Posting…" : "Post"}
             </button>

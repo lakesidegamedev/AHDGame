@@ -177,7 +177,7 @@ export function RecommendationCard({
             <button
               onClick={() => onExecute!(recommendation)}
               disabled={isRunning || !!executing}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed transition-colors"
             >
               {isRunning ? "Executing…" : "Execute"}
             </button>

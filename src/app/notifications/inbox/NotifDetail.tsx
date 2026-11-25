@@ -29,6 +29,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
       : null;
   const category = categoryVisualFor(item);
   const urgency = URGENCY_VISUALS[item.urgency];
+  const showUrgency = item.action || item.urgency !== "update";
 
   return (
     <div className="flex h-full flex-col">
@@ -62,11 +63,13 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
               </div>
             </div>
           </div>
-          <span
-            className={`hidden shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide sm:inline-flex ${urgency.wash} ${urgency.border} ${urgency.text}`}
-          >
-            {item.action ? "Needs your attention" : urgency.label}
-          </span>
+          {showUrgency && (
+            <span
+              className={`hidden shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide sm:inline-flex ${urgency.wash} ${urgency.border} ${urgency.text}`}
+            >
+              {item.action ? "Needs your attention" : urgency.label}
+            </span>
+          )}
         </div>
 
         {/* Headline */}
@@ -78,13 +81,15 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
         </div>
 
         {/* Mobile urgency marker */}
-        <div className="mt-4 sm:hidden">
-          <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${urgency.wash} ${urgency.border} ${urgency.text}`}
-          >
-            {item.action ? "Needs your attention" : urgency.label}
-          </span>
-        </div>
+        {showUrgency && (
+          <div className="mt-4 sm:hidden">
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${urgency.wash} ${urgency.border} ${urgency.text}`}
+            >
+              {item.action ? "Needs your attention" : urgency.label}
+            </span>
+          </div>
+        )}
 
         {/* Context strip */}
         {item.meta && item.meta.length > 0 && (
@@ -112,7 +117,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
             </p>
             <Link
               href={item.source.href}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               {item.source.label}
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

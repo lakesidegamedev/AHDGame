@@ -1,5 +1,7 @@
 "use client";
 
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { WikiHelpLink } from "@/components/wiki/WikiHelpLink";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -26,6 +28,8 @@ type EffectCategory =
   | "method";
 
 interface TechEffectView {
+  methodOpenings?: { countryId: string; year: number; open: boolean }[];
+  licensingYears?: number;
   category: EffectCategory;
   label: string;
 }
@@ -1036,7 +1040,25 @@ function TechNodeCard({
       {node.effects.length > 0 && (
         <ul className="mt-1.5 space-y-1 text-[11px] leading-snug text-muted">
           {node.effects.map((effect, index) => (
-            <li key={`${effect.category}-${index}`}>{effect.label}</li>
+            <li key={`${effect.category}-${index}`}>
+              {effect.label}
+              {!!effect.methodOpenings?.length && (
+                <ul className="mt-0.5">
+                  {effect.methodOpenings.map(({ countryId, year, open }) => (
+                    <li key={countryId}>
+                      {open ? "Open" : "Opens"} in {getCountryDisplayName(countryId as CountryId)}{" "}
+                      {open ? "since" : "in"} {year}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!!effect.methodOpenings?.length && !!effect.licensingYears && (
+                <p>
+                  Licensing can bring this forward by up to {effect.licensingYears} years if a
+                  company abroad already uses the method.
+                </p>
+              )}
+            </li>
           ))}
         </ul>
       )}

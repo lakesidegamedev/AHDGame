@@ -256,7 +256,7 @@ export function PositionMapView() {
                   // Era and country come from picker values (DOM text), so every
                   // part of the URL is encoded rather than trusted.
                   href={`/control/world/position-editor/${encodeURIComponent(country)}/${encodeURIComponent(selected.stateId)}?era=${encodeURIComponent(era)}`}
-                  className="mt-4 block rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+                  className="mt-4 block rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark"
                 >
                   Edit state demographics →
                 </Link>

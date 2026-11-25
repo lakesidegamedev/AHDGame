@@ -103,7 +103,7 @@ export function AdminAppointPmButton({ countryId }: { countryId: string }) {
                 <button
                   onClick={handleAppoint}
                   disabled={submitting}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
                 >
                   {selectedCharId ? "Appoint" : "Vacate"}
                 </button>

@@ -328,7 +328,7 @@ export function CeoCorporationSettingsModal({
           type="button"
           onClick={onSaveSettings}
           disabled={saving}
-          className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
         >
           {saving ? "Saving..." : "Save settings"}
         </button>
@@ -670,7 +670,7 @@ function RenameCorporationSection({
                 type="button"
                 onClick={handleConfirmRename}
                 disabled={renaming}
-                className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {renaming ? "Renaming..." : "Confirm rename"}
               </button>

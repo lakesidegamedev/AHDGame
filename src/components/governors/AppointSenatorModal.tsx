@@ -152,7 +152,7 @@ export default function AppointSenatorModal({
         <button
           onClick={handleAppoint}
           disabled={loading || candidates.length === 0}
-          className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50 transition-colors"
+          className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
         >
           {loading ? "Appointing..." : "Confirm appointment"}
         </button>

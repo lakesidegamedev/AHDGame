@@ -224,7 +224,7 @@ export function DevolutionTab(props: Props) {
                     {getDevolutionPolicyLabel(props.stateId, policy)}
                   </span>
                   {isCurrent && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
                       Current
                     </span>
                   )}
@@ -249,7 +249,7 @@ export function DevolutionTab(props: Props) {
               type="button"
               onClick={() => setModalMode("normal")}
               disabled={!canChange}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               Change policy
             </button>

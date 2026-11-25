@@ -616,7 +616,7 @@ export function GranularPollPanel({ poll, pollData }: { poll: StoredPoll; pollDa
                         aria-pressed={active}
                         className={`rounded-md px-2.5 py-1 text-body-sm transition-colors focus:outline-none focus:ring-1 focus:ring-primary/50 ${
                           active
-                            ? "bg-primary text-white"
+                            ? "bg-primary text-primary-foreground"
                             : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10"
                         }`}
                       >

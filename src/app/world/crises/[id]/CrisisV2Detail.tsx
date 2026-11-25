@@ -1,5 +1,8 @@
 "use client";
 
+import { formatCount } from "@/lib/ui/numbers";
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useRouter } from "next/navigation";
 import { CrisisV2Strip } from "@/components/crises/CrisisV2Strip";
 import type { CrisisV2Detail as Detail, CrisisV2ScarView } from "@/lib/crises/queries/crisisV2View";
@@ -15,7 +18,9 @@ const SCAR_LABEL: Record<CrisisV2ScarView["kind"], string> = {
 };
 
 export function ledgerSentence(row: LedgerRowView): string {
-  return row.action ? `${row.holderName} used "${row.action}"` : `${row.holderName} took no action`;
+  return row.action
+    ? `${row.holderName} used "${row.action}"`
+    : `No response recorded for ${row.holderName}`;
 }
 
 export function WhoDidWhat({ rows }: { rows: LedgerRowView[] }) {
@@ -92,6 +97,27 @@ export default function CrisisV2Detail({ crisisId, detail }: { crisisId: string;
           <p className="mt-2 text-xs text-muted">{noResponseText(detail.responders)}</p>
         )}
       </section>
+      {!!detail.spending?.length && (
+        <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
+          <h2 className="text-sm font-semibold text-foreground">Recorded contributions</h2>
+          <p className="mt-1 text-xs text-muted">
+            Amounts are in each treasury’s local currency. The decision log also includes responses
+            that did not pay into the fund.
+          </p>
+          <ul className="mt-2 space-y-2 text-sm">
+            {detail.spending.map(({ countryId, amounts, total }) => (
+              <li key={countryId}>
+                <p className="font-medium text-foreground">
+                  {getCountryDisplayName(countryId as CountryId)} · {formatCount(total)} total
+                </p>
+                <p className="text-xs text-muted">
+                  {amounts.map((amount) => formatCount(amount)).join(" + ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <WhoDidWhat rows={detail.ledger} />
       <ScarList scars={detail.scars} />
     </div>

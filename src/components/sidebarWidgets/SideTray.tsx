@@ -107,7 +107,7 @@ export function SideTray({
           }`}
         >
           {badge > 0 && (
-            <span className="min-w-[14px] rounded-full bg-primary px-0.5 text-center text-[9px] font-bold leading-[14px] text-white">
+            <span className="min-w-[14px] rounded-full bg-primary px-0.5 text-center text-[9px] font-bold leading-[14px] text-primary-foreground">
               {badge > 9 ? "9+" : badge}
             </span>
           )}

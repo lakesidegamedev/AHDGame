@@ -243,7 +243,7 @@ export default function ShareIssuanceModal({
               className={[
                 "flex-1 border-r border-card-border px-3 py-2.5 text-center transition-colors",
                 mode === "public"
-                  ? "bg-primary text-white font-semibold"
+                  ? "bg-primary text-primary-foreground font-semibold"
                   : "bg-card-elevated text-muted hover:text-foreground",
               ].join(" ")}
             >

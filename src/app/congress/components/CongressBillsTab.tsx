@@ -237,7 +237,7 @@ export function CongressBillsTab({
           {!adminOverride && (canPropose || (hasActiveBill && myChamber)) && (
             <button
               onClick={() => setShowPropose(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -317,7 +317,7 @@ export function CongressBillsTab({
               canPropose ? (
                 <button
                   onClick={() => setShowPropose(true)}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   Propose bill
                 </button>

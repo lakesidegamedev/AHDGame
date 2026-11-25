@@ -150,7 +150,7 @@ export function SectorsPanel() {
                   )}
                   <Link
                     href={href}
-                    className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 font-medium text-white hover:bg-primary/90"
+                    className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 font-medium text-primary-foreground hover:bg-primary/90"
                   >
                     Review and buy
                   </Link>
@@ -194,7 +194,7 @@ export function CurrenciesPanel() {
       </p>
       <Link
         href="/forex/global"
-        className="mt-3 inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-sm font-medium text-white hover:bg-primary/90"
+        className="mt-3 inline-flex h-8 items-center rounded-md border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
       >
         Open the exchange
       </Link>

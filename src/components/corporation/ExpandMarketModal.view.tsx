@@ -180,7 +180,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                     ownershipFilter
                   );
                 }}
-                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed transition-colors"
               >
                 {loadingSuggestions
                   ? "Loading..."
@@ -238,7 +238,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                   disabled={loadingSuggestions}
                   className={`flex-1 px-3 py-1.5 transition-colors ${
                     suggestionMode === "unowned"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated/40 text-muted hover:text-foreground"
                   }`}
                 >
@@ -250,7 +250,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                   disabled={loadingSuggestions}
                   className={`flex-1 px-3 py-1.5 transition-colors border-l border-card-border ${
                     suggestionMode === "playerCorp"
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-card-elevated/40 text-muted hover:text-foreground"
                   }`}
                 >
@@ -586,7 +586,7 @@ export function renderExpandMarketModalView(context: ExpandMarketModalViewContex
                         <button
                           type="button"
                           onClick={() => setConfirming(true)}
-                          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90"
+                          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                         >
                           Review {facilitySingular(selectedType)}
                         </button>

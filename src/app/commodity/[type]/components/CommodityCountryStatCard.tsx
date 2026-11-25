@@ -323,7 +323,7 @@ function CardContent({
             }}
             className={`flex-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
               mode === "price"
-                ? "bg-primary text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >
@@ -337,7 +337,7 @@ function CardContent({
                 e.stopPropagation();
                 onViewCountryMap();
               }}
-              className="w-full px-3 py-2.5 text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors"
+              className="w-full px-3 py-2.5 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               View national map
             </button>

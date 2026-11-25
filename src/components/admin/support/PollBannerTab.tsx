@@ -294,7 +294,7 @@ export function PollBannerTab() {
           type="button"
           onClick={handleSave}
           disabled={saving || loadFailed}
-          className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors disabled:bg-card-border disabled:text-muted"
         >
           {saving && (
             <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />

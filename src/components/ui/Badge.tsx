@@ -152,7 +152,7 @@ export function BadgeCount({ count, color = "primary", className = "" }: BadgeCo
   if (color === "primary") {
     return (
       <span
-        className={`inline-flex items-center justify-content-center min-w-[18px] h-[18px] rounded-full px-1.5 text-[10px] font-bold tabular-nums text-white bg-primary ${className}`}
+        className={`inline-flex items-center justify-content-center min-w-[18px] h-[18px] rounded-full px-1.5 text-[10px] font-bold tabular-nums text-primary-foreground bg-primary ${className}`}
       >
         {count}
       </span>

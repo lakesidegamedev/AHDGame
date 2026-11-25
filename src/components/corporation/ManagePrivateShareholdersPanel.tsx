@@ -245,7 +245,7 @@ export function ManagePrivateShareholdersPanel({
           <button
             type="submit"
             disabled={submitting || seatsRemaining <= 0}
-            className="rounded-md bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-md bg-primary px-3 py-1.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {submitting ? "Sending..." : "Send invitation"}
           </button>
@@ -319,7 +319,7 @@ export function ManagePrivateShareholdersPanel({
                         type="button"
                         onClick={() => inviteAction(inv.id, "accept")}
                         disabled={submitting}
-                        className="rounded-md bg-primary px-3 py-1 text-body-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        className="rounded-md bg-primary px-3 py-1 text-body-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         Accept & pay
                       </button>

@@ -439,7 +439,7 @@ function LegacyJPCabinetProposeBillModal({
             <button
               type="submit"
               disabled={submitDisabled}
-              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {submitting ? "Proposing..." : "Propose bill"}
             </button>

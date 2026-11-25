@@ -65,7 +65,7 @@ export function AdminWorldTab({ activeSub }: AdminWorldTabProps) {
                 </div>
                 <Link
                   href="/control/world/position-editor"
-                  className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+                  className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark"
                 >
                   Open position editor →
                 </Link>

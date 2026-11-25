@@ -179,7 +179,7 @@ export function UnionPoliticalContributionsPanel({
             type="button"
             disabled={saving || suspended || !dirty}
             onClick={handleSave}
-            className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+            className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {saving ? "Saving…" : "Set political contributions"}
           </button>

@@ -74,7 +74,7 @@ export function RaceDetailTabs({
               onClick={() => setActiveId(p.id)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 p.id === active.id
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted hover:bg-background hover:text-foreground"
               }`}
             >

@@ -388,7 +388,7 @@ export function RoadmapManager() {
               <button
                 onClick={addCategory}
                 disabled={!newCatName.trim()}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 Add category
               </button>
@@ -602,7 +602,7 @@ export function RoadmapManager() {
                 <button
                   onClick={() => addItem(phase.id)}
                   disabled={!newTitle[phase.id]?.trim() || saving}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                 >
                   Add
                 </button>

@@ -82,7 +82,7 @@ export function StateDistrictsSection({
         {canRedraw ? (
           <Link
             href={regionRedistrictUrl(countryCode, stateId)}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white"
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
           >
             Redraw this map →
           </Link>

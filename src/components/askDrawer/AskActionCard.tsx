@@ -190,7 +190,7 @@ export function AskActionCard({
           type="button"
           onClick={() => void send()}
           disabled={state === "sending" || stale || !title.trim() || !description.trim()}
-          className="min-h-[44px] rounded-lg bg-primary px-3 text-[13px] font-semibold text-white disabled:bg-card-elevated disabled:text-muted sm:min-h-0 sm:py-1.5"
+          className="min-h-[44px] rounded-lg bg-primary px-3 text-[13px] font-semibold text-primary-foreground disabled:bg-card-elevated disabled:text-muted sm:min-h-0 sm:py-1.5"
         >
           {state === "sending" ? "Sending…" : "Send"}
         </button>

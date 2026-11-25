@@ -397,9 +397,13 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                       {crisis.effects.length} {crisis.effects.length === 1 ? "effect" : "effects"}
                     </span>
                   </h2>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Per-turn effects ease off as the crisis subsides; the bar shows relative impact.
-                  </p>
+                  {crisis.durationTurns &&
+                  crisis.effects.some((effect) => effect.effectType === "tick") ? (
+                    <p className="mt-0.5 text-xs text-muted">
+                      Per-turn effects start at full strength and fall by the same amount each turn,
+                      reaching zero at expiry. Estimated totals assume the full scheduled duration.
+                    </p>
+                  ) : null}
                 </div>
                 <ul className="divide-y divide-card-border/60">
                   {crisis.effects.map((effect, i) => {
@@ -510,10 +514,13 @@ export default async function CrisisDetailPage({ params }: { params: Promise<{ i
                                 negative ? "text-error" : "text-success"
                               }`}
                             >
-                              {display.amount}
+                              {cumulativeTick != null
+                                ? `Starts at ${display.amount}`
+                                : display.amount}
                               {cumulativeTick != null && (
                                 <span className="block text-[11px] font-normal text-muted">
-                                  ≈ {amountAt(cumulativeTick)} over {crisis.durationTurns} turns
+                                  ≈ {amountAt(cumulativeTick)} total over {crisis.durationTurns}{" "}
+                                  turns
                                 </span>
                               )}
                               {!isTick && isActive && fades && strength < 1 && (

@@ -89,7 +89,7 @@ function Chevron({ open }: { open: boolean }) {
 function itemClass(active: boolean): string {
   return `block rounded-md px-2.5 py-[3px] text-[13px] leading-snug ${
     active
-      ? "bg-primary font-semibold text-white"
+      ? "bg-primary font-semibold text-primary-foreground"
       : "text-muted hover:bg-card hover:text-foreground"
   }`;
 }

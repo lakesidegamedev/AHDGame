@@ -311,7 +311,7 @@ export function IndexFundsAdminPanel() {
           type="button"
           disabled={injectAllLoading || loading}
           onClick={() => void injectCapitalAll()}
-          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-40"
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:bg-card-border disabled:text-muted"
         >
           {injectAllLoading ? "Recapitalizing…" : "Inject capital — All Funds to 100%"}
         </button>
@@ -338,7 +338,7 @@ export function IndexFundsAdminPanel() {
           type="button"
           disabled={deployAllLoading || loading}
           onClick={() => void deployCashAll()}
-          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-40"
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:bg-card-border disabled:text-muted"
         >
           {deployAllLoading ? "Deploying…" : "Deploy cash to all funds"}
         </button>
@@ -445,7 +445,7 @@ export function IndexFundsAdminPanel() {
                 type="button"
                 disabled={injectLoading}
                 onClick={() => void injectCapital()}
-                className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-40"
+                className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:bg-card-border disabled:text-muted"
               >
                 {injectLoading ? "Injecting…" : "Inject capital"}
               </button>

@@ -265,9 +265,13 @@ export function EconomyAtAGlance({ countryId }: { countryId: CountryId }) {
           label="Unemployment"
           value={unemployment === null ? "No data" : `${unemployment.toFixed(1)}%`}
           caption={
-            data.realEconomy.unemployment.trend === null
-              ? "State-weighted national average."
-              : `State-weighted national average, trend ${signedPercent(data.realEconomy.unemployment.trend, 2)}.`
+            unemployment === null
+              ? data.realEconomy.unemploymentPublication === "awaiting_turn"
+                ? "The latest turn’s unemployment figure has not been published yet."
+                : "A national unemployment figure is unavailable."
+              : data.realEconomy.unemployment.trend === null
+                ? "National unemployment rate."
+                : `State-weighted national average, trend ${signedPercent(data.realEconomy.unemployment.trend, 2)}.`
           }
           tone={unemploymentTone}
           fill={unemployment === null ? null : position(unemployment, 0, 20)}

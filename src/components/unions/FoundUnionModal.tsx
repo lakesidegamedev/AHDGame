@@ -193,7 +193,7 @@ export function FoundUnionModal({
             type="button"
             onClick={handleFound}
             disabled={disabled}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {founding ? "Founding…" : "Found Union"}
           </button>

@@ -186,7 +186,7 @@ export function ExecutiveCard({
             {isAdmin && officialId && !needsInit && (
               <button
                 onClick={onAppoint}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Appoint
               </button>
@@ -194,7 +194,7 @@ export function ExecutiveCard({
             {onNominateVp && !vpNominationPending && (
               <button
                 onClick={onNominateVp}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Nominate VP
               </button>

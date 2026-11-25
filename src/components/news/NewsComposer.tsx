@@ -220,7 +220,7 @@ export function NewsComposer({
             <button
               type="submit"
               disabled={!content.trim() || submitting}
-              className="flex flex-col items-center rounded-lg bg-primary px-4 py-1.5 text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex flex-col items-center rounded-lg bg-primary px-4 py-1.5 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               <span className="text-sm font-medium">{submitting ? "Posting…" : "Post"}</span>
               <span className="text-[10px] opacity-75">

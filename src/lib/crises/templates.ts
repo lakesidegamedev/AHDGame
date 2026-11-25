@@ -215,7 +215,7 @@ export const RECESSION_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1651341050677-24dba59ce0fd?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Output is shrinking and businesses are cutting back. Households spend less, firms put off investment, and unemployment climbs. Growth, consumer and investor confidence and government approval slip each turn, easing off over about 12 turns.",
+    "Output is shrinking and businesses are cutting back. Households spend less, firms put off investment, and unemployment climbs. Growth, consumer and investor confidence and government approval slip each turn, with the effects easing as the recession runs its course.",
   scope: "country",
   countryIds: [],
   regionIds: [],
@@ -2353,7 +2353,7 @@ export const TECH_BUBBLE_BURST_TEMPLATE: CrisisTemplate = {
   heroImage:
     "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=70",
   description:
-    "Technology company valuations have collapsed. Funding for startups dries up, firms lay off staff, and investors who lost money spend less. Growth takes a large one-off hit, then unemployment rises while investor and consumer confidence fall for about 8 turns.",
+    "Technology company valuations have collapsed. Funding for startups dries up, firms lay off staff, and investors who lost money spend less. Growth takes a large one-off hit, then unemployment rises while investor and consumer confidence fall, with those effects tapering over the crisis.",
   scope: "country",
   countryIds: [],
   regionIds: [],
