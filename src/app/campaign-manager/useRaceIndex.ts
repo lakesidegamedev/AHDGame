@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useGameEvents } from "@/hooks/useGameEvents";
 import { fetchAllElections } from "@/lib/elections/fetchAllElections";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import type { ElectionResponse } from "@/lib/elections/electionResponseTypes";
+import type { RaceIndexElection } from "@/lib/campaignManager/raceIndexResponse";
 import { buildRaceIndex, type CmRace } from "@/lib/campaignManager/rules";
 
 /**
@@ -22,7 +22,7 @@ export function useRaceIndex(
   error: string | null;
   reload: () => void;
 } {
-  const [elections, setElections] = useState<ElectionResponse[]>([]);
+  const [elections, setElections] = useState<RaceIndexElection[]>([]);
   const [currentTurn, setCurrentTurn] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function useRaceIndex(
     const controller = new AbortController();
     void (async () => {
       const [result, turn] = await Promise.all([
-        fetchAllElections(countryId, { signal: controller.signal }),
+        fetchAllElections(countryId, { view: "campaign", signal: controller.signal }),
         // Turns left falls back to "unknown" when the turn read fails; the races still list.
         fetchJson<{ currentTurn?: number }>("/api/game/turn/status", {
           signal: controller.signal,
