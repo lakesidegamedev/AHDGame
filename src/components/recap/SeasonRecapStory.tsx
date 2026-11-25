@@ -181,13 +181,13 @@ export function SeasonRecapStory({ recap, onClose }: SeasonRecapStoryProps) {
               type="button"
               aria-label="Previous"
               onClick={prev}
-              className="absolute bottom-0 left-0 top-16 z-10 w-1/3 cursor-default focus:outline-none"
+              className="absolute bottom-0 left-0 top-16 z-10 w-1/3 cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
             />
             <button
               type="button"
               aria-label="Next"
               onClick={next}
-              className="absolute bottom-0 right-0 top-16 z-10 w-2/3 cursor-default focus:outline-none"
+              className="absolute bottom-0 right-0 top-16 z-10 w-2/3 cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
             />
           </>
         )}

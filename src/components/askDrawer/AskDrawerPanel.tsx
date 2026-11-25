@@ -832,7 +832,7 @@ export function AskDrawerPanel({
                             }
                           }}
                           onBlur={() => finishRename(true)}
-                          className="my-1 min-w-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-base text-foreground focus:outline-none sm:text-[13px]"
+                          className="my-1 min-w-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-[13px]"
                         />
                       ) : (
                         <button
@@ -968,7 +968,7 @@ export function AskDrawerPanel({
           void submit();
         }}
       >
-        <div className="rounded-xl border border-card-border bg-background shadow-sm focus-within:border-foreground/30">
+        <div className="rounded-xl border border-card-border bg-background shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
           <div className="flex items-end gap-2 px-3 pt-2.5">
             <textarea
               ref={inputRef}
@@ -1040,7 +1040,7 @@ export function AskDrawerPanel({
                 onChange={(e) => setMode(e.target.value as ModeId)}
                 aria-label="Answer mode"
                 title={MODES.find((m) => m.id === mode)?.hint}
-                className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
+                className="rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-[11px]"
               >
                 {MODES.map((m) => (
                   <option key={m.id} value={m.id}>

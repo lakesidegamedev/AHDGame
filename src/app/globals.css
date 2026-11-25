@@ -13,6 +13,7 @@
   --foreground: #e8e8ee;
   --primary: #6d5dfc; /* Violet: actions, tabs and links only; red is reserved for loss */
   --primary-dark: #5b4bdb;
+  --primary-ink: #8d80fd; /* Primary as text (links, ghost buttons, tabs): #6d5dfc measured 4.03:1 on the page */
   --secondary: #1d4ed8;
   --secondary-dark: #1e3a8a;
   --accent: #e8e8ee;
@@ -82,6 +83,7 @@
 }
 
 [data-theme] {
+  --primary-ink: var(--primary);
   --blend-page: var(--background);
   --blend-rail: var(--card-muted);
   --blend-inset: var(--card-muted);
@@ -104,6 +106,7 @@
 }
 
 [data-theme="default"] {
+  --primary-ink: #8d80fd;
   --blend-page: #0c0c12;
   --blend-rail: #101018;
   --blend-inset: #11111a;
@@ -181,7 +184,7 @@
   --secondary: #4d8cff;
   --secondary-dark: #2d6fd6;
   --accent: #ffffff;
-  --muted: #7a7a8a;
+  --muted: #7e7e8e; /* #7a7a8a measured below 4.5:1 on the elevated card */
   --card: #070710;
   --card-border: #242436;
   --card-default: #070710;
@@ -211,6 +214,7 @@
   --foreground: #fffbeb; /* Amber 50 - Warm parchment white */
   --primary: #6d5dfc; /* Violet: actions, tabs and links only; red is reserved for loss */
   --primary-dark: #5b4bdb;
+  --primary-ink: #b3abfd; /* Primary as text (links, ghost buttons, tabs): 4.5:1 or better on every surface */
   --secondary: #3b82f6; /* Blue 500 */
   --secondary-dark: #1d4ed8; /* Blue 700 */
   /* Red 500 and Blue 500 are too dark to read as TEXT on this navy — 3.1:1 on
@@ -239,6 +243,7 @@
   --foreground: #4a044e; /* Fuchsia 950 - Deep purple text */
   --primary: #d946ef; /* Fuchsia 500 - Playful but readable */
   --primary-dark: #c026d3; /* Fuchsia 600 */
+  --primary-ink: #b412cd; /* Primary as text (links, ghost buttons, tabs): 4.5:1 or better on every surface */
   --secondary: #8b5cf6; /* Violet 500 */
   --secondary-dark: #7c3aed; /* Violet 600 */
   --accent: #4a044e;
@@ -278,7 +283,7 @@
   --secondary: #67e8f9;
   --secondary-dark: #22d3ee;
   --accent: #ede0ff;
-  --muted: #877ba8; /* was #7c6fa0 — 3.7:1 on this theme's card */
+  --muted: #8d81ac; /* #877ba8 measured below 4.5:1 on the elevated card */
   --card: #16112a;
   --card-border: #2a1f4a;
   --card-default: #16112a;
@@ -301,7 +306,7 @@
   --secondary: #26f6ce;
   --secondary-dark: #1ac4a4;
   --accent: #b8e6b8;
-  --muted: #5a8a5a;
+  --muted: #609360; /* #5a8a5a measured below 4.5:1 on the elevated card */
   --card: #0e160e;
   --card-border: #1a2e1a;
   --card-default: #0e160e;
@@ -331,10 +336,11 @@
   --foreground: #eee8d5;
   --primary: #d65d0e;
   --primary-dark: #af4a08;
+  --primary-ink: #f6a570; /* Primary as text (links, ghost buttons, tabs): 4.5:1 or better on every surface */
   --secondary: #b58900;
   --secondary-dark: #946f00;
   --accent: #fdf6e3;
-  --muted: #8e9e9f; /* was #839496 — 4.1:1 on base03 */
+  --muted: #afbabb; /* #8e9e9f measured below 4.5:1 on the elevated card */
   --card: #073642;
   --card-border: #2a4a40;
   --card-default: #073642;
@@ -365,10 +371,11 @@
   --foreground: #f5ecd8;
   --primary: #9b2a2a;
   --primary-dark: #6e1e1e;
+  --primary-ink: #d66767; /* Primary as text (links, ghost buttons, tabs): 4.5:1 or better on every surface */
   --secondary: #c99a3d;
   --secondary-dark: #a17a28;
   --accent: #f5ecd8;
-  --muted: #8d826f; /* was #8a7f6d — 4.45:1 */
+  --muted: #938876; /* #8d826f measured below 4.5:1 on the elevated card */
   --card: #1c1915;
   --card-border: #2a2620;
   --card-default: #1c1915;
@@ -545,6 +552,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --text-color-primary: var(--primary-ink);
+  --ring-color-primary: var(--primary-ink);
+  --outline-color-primary: var(--primary-ink);
   --color-primary-dark: var(--primary-dark);
   --color-secondary: var(--secondary);
   --color-secondary-dark: var(--secondary-dark);
@@ -581,6 +591,18 @@
   --shadow-modal: var(--shadow-lg);
   /* Animation utilities */
   --animate-fade-in: fadeIn 0.3s ease forwards;
+}
+
+/* Every focusable element shows a focus ring on every theme. Components that
+   draw their own ring (focus-visible:ring-*) still remove this outline with
+   outline-none; anything that does not gets this instead of the browser
+   default, which can vanish against a dark or tinted theme. --primary-ink
+   clears 4.5:1 on every surface (globals.themeContrast.test.ts). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--primary-ink);
+    outline-offset: 2px;
+  }
 }
 
 html {
@@ -963,7 +985,7 @@ html[data-high-contrast="true"] {
 }
 
 html[data-high-contrast="true"] :focus-visible {
-  outline: 3px solid var(--primary) !important;
+  outline: 3px solid var(--primary-ink) !important;
   outline-offset: 3px !important;
 }
 

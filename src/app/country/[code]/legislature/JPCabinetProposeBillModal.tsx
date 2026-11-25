@@ -309,7 +309,7 @@ function LegacyJPCabinetProposeBillModal({
               <select
                 disabled
                 value="cabinet"
-                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground/80 focus:outline-none"
+                className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground/80"
               >
                 <option value="cabinet">Cabinet</option>
               </select>
