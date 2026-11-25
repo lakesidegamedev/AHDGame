@@ -28,7 +28,8 @@ const stored = (n: number | undefined, toAnchor: (n: number) => number) =>
 
 export function fundedCostParts(
   receipt: FundedCostPartsInput,
-  pnl: { managementOverhead?: number; dominanceCost?: number; growthCost?: number } | null | undefined,
+  pnl:
+    { managementOverhead?: number; dominanceCost?: number; growthCost?: number } | null | undefined,
   turnsPerDay: number,
   toAnchor: (storedDaily: number) => number
 ): FundedCostParts {

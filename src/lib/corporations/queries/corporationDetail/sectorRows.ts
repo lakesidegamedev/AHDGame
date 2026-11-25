@@ -741,8 +741,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
         line.amount += sectorFieldToCorpCcy(effect.amount, sector);
         revenueEffectsByKey.set(effect.key, line);
       }
-    }
-    else totalSubsidyBenefit += financialRevenue * (subsidyMod / 100);
+    } else totalSubsidyBenefit += financialRevenue * (subsidyMod / 100);
 
     // ── Plants-tier physicals ────────────────────────────────────────────
     // `capitalStock`, `producedUnits` and `soldUnits` share one basis: output

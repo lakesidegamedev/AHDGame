@@ -791,7 +791,8 @@ export function settleSectorAccounts(context: ProcessSectorStageContext): Sector
       context.lookups.revenueEffects?.monopolyCharge === true)
       ? {
           fundedRevenueLegs: context.revenueEffectLegs,
-          fundedSubsidyPp: context.lookups.revenueEffects?.enabled === true ? context.subsidyMod : 0,
+          fundedSubsidyPp:
+            context.lookups.revenueEffects?.enabled === true ? context.subsidyMod : 0,
         }
       : {}),
     ...(!context.embargoLegacyMothball && context.dominanceCostPct > 0

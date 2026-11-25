@@ -55,7 +55,14 @@ const finite = (x: number | null | undefined): number =>
   typeof x === "number" && Number.isFinite(x) ? x : 0;
 
 export function emptySiteCostParts(): SiteCostParts {
-  return { wages: 0, inputs: 0, maintenance: 0, managementOverhead: 0, dominanceCost: 0, freight: 0 };
+  return {
+    wages: 0,
+    inputs: 0,
+    maintenance: 0,
+    managementOverhead: 0,
+    dominanceCost: 0,
+    freight: 0,
+  };
 }
 
 export function addSiteCostParts(into: SiteCostParts, part: Partial<SiteCostParts>): void {
