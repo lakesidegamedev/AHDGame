@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  boundSession: () => undefined,
+  withSessionDb: async (
+    db: import("mongodb").Db,
+    work: (tx: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -281,7 +288,7 @@ describe("buildCapacity — build", () => {
       expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
     }
   );
-  it("refunds a cash build when a reservation wins after the quote was loaded", async () => {
+  it("aborts a cash build when a reservation wins after the quote was loaded", async () => {
     await wireMocks(sectorDoc());
     db.collectionMocks.corporateSectors.updateOne.mockResolvedValueOnce({
       matchedCount: 0,
@@ -297,8 +304,8 @@ describe("buildCapacity — build", () => {
       "constructionFinancing.status": { $nin: ["awaiting_approval", "funding"] },
     });
     const writes = db.collectionMocks.corporations.updateOne.mock.calls;
-    expect(writes).toHaveLength(2);
-    expect(writes[0][1].$inc.liquidCapital + writes[1][1].$inc.liquidCapital).toBe(0);
+    expect(writes).toHaveLength(1);
+    expect(writes[0][1].$inc.liquidCapital).toBeLessThan(0);
     expect(db.collectionMocks.unownedSectors).toBeUndefined();
   });
   it("withdraws only the borrower's exact noncash request, including recovery while new finance is disabled", async () => {
@@ -793,7 +800,11 @@ describe("buildCapacity — cancel", () => {
     await wireMocks(sectorDoc({ buildQueue: [{ ...outstanding, costPaidAnchor: 0 }] }));
     const res = await buildCapacity(request({ action: "cancel", orderIndex: 0 }), { params });
     expect(res.status).toBe(200);
-    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(
+      db.collectionMocks.corporations.updateOne.mock.calls.every(
+        (call) => call[1].$inc.liquidCapital === 0
+      )
+    ).toBe(true);
   });
 });
 

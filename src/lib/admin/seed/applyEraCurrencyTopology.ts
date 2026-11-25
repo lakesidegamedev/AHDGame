@@ -135,7 +135,7 @@ export async function applyEraCurrencyTopology(
         new Date(),
         true
       );
-      if (!result.ok)
+      if (!result.ok && !result.debtCurrencyRetained)
         throw new Error(`Cannot redenominate ${countryId} corporation: ${result.error}`);
     }
 

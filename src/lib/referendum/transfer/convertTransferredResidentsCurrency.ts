@@ -19,9 +19,9 @@ import { redenominateTransferredSavings } from "@/lib/savings/redenominateTransf
  * missing (refuse rather than persist order-of-magnitude-wrong balances).
  */
 import { retainsCompletedSecuredCurrency } from "./rules/securedCurrency";
-import type { Db, Filter } from "mongodb";
+import type { Db, Filter, AnyBulkWriteOperation } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Character } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import { type CurrencyCode } from "@/lib/constants/currencies";
 import { type FxScalePair, loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { convertCorpCurrency } from "@/lib/corporations/convertCorpCurrency";
@@ -76,6 +76,7 @@ export async function convertTransferredResidentsCurrency(
         )
         .toArray()
     : [];
+  const retainedCurrencies: AnyBulkWriteOperation<Corporation>[] = [];
   for (const corp of corps) {
     // Country ownership changes, but a fully built pledged plant and its debt are not cancelled.
     // Keeping the native corporate ledger preserves the lender's original currency and security.
@@ -89,8 +90,19 @@ export async function convertTransferredResidentsCurrency(
     // Forex is enabled by construction here — a "convert" pair only exists
     // with the feature on.
     const result = await convertCorpCurrency(db, corp, newCurrency, fxByCurrency, now, true);
-    if (strict && result && !result.ok) throw new Error(result.error);
+    if (result && !result.ok && result.debtCurrencyRetained && result.retainedCurrency) {
+      retainedCurrencies.push({
+        updateOne: {
+          filter: { _id: corp._id },
+          update: { $set: { liquidCurrencyCode: result.retainedCurrency } },
+        },
+      });
+    }
+    if (strict && result && !result.ok && !result.debtCurrencyRetained)
+      throw new Error(result.error);
   }
+
+  if (retainedCurrencies.length) await corporationsCollection(db).bulkWrite(retainedCurrencies);
 
   // Region party organisations that CARRIED with a dissolving source (the
   // evacuate path deletes them, so this matches nothing on a referendum

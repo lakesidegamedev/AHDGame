@@ -33,6 +33,7 @@ interface HistoryProjection {
   bondCouponFxFees?: number;
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
+  settledBankLoanInterestPaid?: number;
   perTurnBondCouponIncome?: number;
   perTurnBondDragOnNetIncome?: number;
   dividendReceivedTax?: number;
@@ -64,6 +65,7 @@ const HISTORY_PROJECTION = {
   bondCouponFxFees: 1,
   settledBondCouponIncome: 1,
   settledBondInterestPaid: 1,
+  settledBankLoanInterestPaid: 1,
   perTurnBondCouponIncome: 1,
   perTurnBondDragOnNetIncome: 1,
   dividendReceivedTax: 1,
@@ -113,6 +115,47 @@ export async function loadLastTurnReconciliation(
     .aggregate<CashMovementGroup>(
       [
         { $match: { subjectId: corporation._id, subjectType: "corporation", ...evidence.filter } },
+        ...(latest.settledBankLoanInterestPaid != null
+          ? [
+              {
+                $set: {
+                  amount: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$type", "bank_loan_repayment"] },
+                          { $eq: ["$turn", latest.turn] },
+                          { $isNumber: "$meta.interestPaid" },
+                        ],
+                      },
+                      { $add: ["$amount", "$meta.interestPaid"] },
+                      "$amount",
+                    ],
+                  },
+                  anchorAmount: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$type", "bank_loan_repayment"] },
+                          { $eq: ["$turn", latest.turn] },
+                          { $isNumber: "$meta.interestPaid" },
+                          { $isNumber: "$anchorAmount" },
+                          { $ne: ["$amount", 0] },
+                        ],
+                      },
+                      {
+                        $multiply: [
+                          "$anchorAmount",
+                          { $divide: [{ $add: ["$amount", "$meta.interestPaid"] }, "$amount"] },
+                        ],
+                      },
+                      "$anchorAmount",
+                    ],
+                  },
+                },
+              },
+            ]
+          : []),
         {
           $group: {
             _id: {
@@ -156,6 +199,7 @@ export async function loadLastTurnReconciliation(
         latest.settledBondCouponIncome ??
         (latest.perTurnBondCouponIncome ?? 0) - (latest.bondCouponFxFees ?? 0),
       bondInterestPaid: latest.settledBondInterestPaid ?? latest.perTurnBondDragOnNetIncome,
+      bankLoanInterestPaid: latest.settledBankLoanInterestPaid,
       dividendIncomeReceived: latest.dividendIncomeReceived,
       dividendReceivedTax: latest.dividendReceivedTax ?? null,
       sectorFxSpread: latest.sectorFxSpread ?? null,

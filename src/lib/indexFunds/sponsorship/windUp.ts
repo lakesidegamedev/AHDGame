@@ -150,6 +150,7 @@ export async function advanceWindDowns(
 
       await sellFundBondHoldingsForCash(db, fund, Number.POSITIVE_INFINITY, new Date(), {
         turn: currentTurn,
+        operationKey: `wind-up:${currentTurn}`,
       });
       bondPhase.push(fund);
     } catch (err) {

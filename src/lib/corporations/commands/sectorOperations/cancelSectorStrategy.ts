@@ -1,4 +1,4 @@
-import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
+import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -9,7 +9,7 @@ import {
   resolveCorporation,
   requireCeoOrDirectingParent,
 } from "@/lib/api/corporations/resolveQuery";
-import type { CorporateSector, GameState, SectorBuildOrder } from "@/lib/db/types";
+import type { SectorBuildOrder } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import {
   capacityRescaleRatio,
@@ -33,7 +33,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import { emitSectorRetoolTx } from "@/lib/corporations/sectorRetoolTxLog";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
+
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 
@@ -208,37 +208,48 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
       ? rescaleOtherOpexAnchorForRetool(sector.otherOpexPerUnitAnchor, cancelRescaleRatio)
       : null;
 
-    const debit = await corporationsCollection(db).updateOne(
-      {
-        _id: corporation._id,
-        liquidCapital: { $gte: cancelCostInCorpCapital },
-        ...corporateDiscretionaryCashGuard(),
+    const changed = await commitSiteCashMutation(db, {
+      corporation,
+      chargeLocal: cancelCostInCorpCapital,
+      now: new Date(),
+      record: async (tx) => {
+        await emitSectorRetoolTx(
+          tx,
+          {
+            corporationId: corporation._id,
+            corporationName: corporation.name ?? "Corporation",
+            corporationSequentialId: corporation.sequentialId,
+            amountLocal: cancelCostInCorpCapital,
+            currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
+            turn: currentTurn,
+            createdAt: new Date(),
+            action: "cancel_retool",
+            sectorId: sector._id,
+            sectorType: sector.sectorType,
+            fromStrategyId: sector.strategyId,
+            toStrategyId: newStrategyId,
+          },
+          { atomic: true }
+        );
       },
-      { $inc: { liquidCapital: -cancelCostInCorpCapital }, $set: { updatedAt: new Date() } }
-    );
-    if (debit.matchedCount !== 1)
-      return errorResponse(
-        409,
-        "Insufficient spendable corporate funds, or outstanding taxes and payables."
-      );
-    await emitSectorRetoolTx(db, {
-      corporationId: corporation._id,
-      corporationName: corporation.name ?? "Corporation",
-      corporationSequentialId: corporation.sequentialId,
-      amountLocal: cancelCostInCorpCapital,
-      currencyCode: resolveCorpLiquidCurrencyCode(corporation) ?? "USD",
-      turn: currentTurn,
-      createdAt: new Date(),
-      action: "cancel_retool",
-      sectorId: sector._id,
-      sectorType: sector.sectorType,
-      fromStrategyId: sector.strategyId,
-      toStrategyId: newStrategyId,
-    });
-    await Promise.all([
-      corporateSectorsCollection(db).updateOne(
-        { _id: sector._id },
-        {
+      site: {
+        filter: {
+          _id: sector._id,
+          corporationId: sector.corporationId,
+          strategyId: Object.hasOwn(sector, "strategyId") ? sector.strategyId : { $exists: false },
+          transitionFromStrategyId: Object.hasOwn(sector, "transitionFromStrategyId")
+            ? sector.transitionFromStrategyId
+            : { $exists: false },
+          capitalStock: Object.hasOwn(sector, "capitalStock")
+            ? sector.capitalStock
+            : { $exists: false },
+          buildQueue: Object.hasOwn(sector, "buildQueue") ? sector.buildQueue : { $exists: false },
+          constructionPropertyTransition: { $exists: false },
+          producerCapacity: Object.hasOwn(sector, "producerCapacity")
+            ? sector.producerCapacity
+            : { $exists: false },
+        },
+        update: {
           $set: {
             strategyId: newStrategyId,
             transitionFromStrategyId: newTransitionFromStrategyId,
@@ -254,9 +265,10 @@ export async function cancelSectorStrategy(request: Request, { params }: RoutePa
               : {}),
             updatedAt: new Date(),
           },
-        }
-      ),
-    ]);
+        },
+      },
+    });
+    if (!changed) return errorResponse(409, "The sector or treasury changed. Get a new quote.");
 
     return NextResponse.json({
       success: true,

@@ -24,7 +24,7 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
-import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
+import { emitTxStrict, emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 
 /** Which direction of the capex flow this row records. */
 export type BuildCapexDirection =
@@ -109,8 +109,13 @@ export function buildCapexTxEntry(
  * Emit one capex row. Convenience wrapper over {@link buildCapexTxEntry} for
  * single-shot callers (a player build/cancel command).
  */
-export async function emitBuildCapexTx(db: Db, input: BuildCapexTxInput): Promise<void> {
-  await emitTx(db, buildCapexTxEntry(input));
+export async function emitBuildCapexTx(
+  db: Db,
+  input: BuildCapexTxInput,
+  options?: { atomic?: boolean }
+): Promise<void> {
+  if (options?.atomic) await emitTxStrict(db, buildCapexTxEntry(input), { maxAttempts: 1 });
+  else await emitTx(db, buildCapexTxEntry(input));
 }
 
 /**

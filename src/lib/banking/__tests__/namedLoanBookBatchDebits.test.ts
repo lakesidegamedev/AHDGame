@@ -45,4 +45,27 @@ describe("batchedLoanServiceMove", () => {
     expect(byBorrower).toEqual({ [a]: 110, [b]: 40 });
     expect(legs.find((leg) => leg.kind === "credit")?.amount).toBe(150);
   });
+  it("sums actual interest evidence on the same atomic borrower debit", () => {
+    const id = "6ac5202ca08893ef7ac1d8ac";
+    const rows = [decision(id, 100), decision(id, 50)];
+    for (const row of rows)
+      Object.assign(row.transition.legs[0], {
+        inc: { "bankLoanInterestPaidByTurn.12": 5 },
+        set: { "bankLoanInterestCurrencyByTurn.12": "CAD" },
+      });
+    const result = batchedLoanServiceMove(
+      rows as unknown as Decisions,
+      {
+        collection: "corporations",
+        filter: { _id: oid("6acba7267f0eaca56be74741") },
+        path: "cash",
+      } as never,
+      { totalLoansFilter: {} }
+    );
+    expect(result.legs[0]).toMatchObject({
+      amount: 150,
+      inc: { "bankLoanInterestPaidByTurn.12": 10 },
+      set: { "bankLoanInterestCurrencyByTurn.12": "CAD" },
+    });
+  });
 });

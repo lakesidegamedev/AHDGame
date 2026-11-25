@@ -1,3 +1,10 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  boundSession: () => undefined,
+  withSessionDb: async (
+    db: import("mongodb").Db,
+    work: (tx: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MongoServerError, ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -164,13 +171,14 @@ describe("POST /api/corporations/[id]/sectors", () => {
     });
 
     const response = await POST(request, { params: Promise.resolve({ id: "1" }) });
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     await expect(response.json()).resolves.toMatchObject({
-      error: "You already operate in this state. Open that sector and order more capacity there.",
-      code: "BAD_REQUEST",
+      error: "You already operate here. Open that sector to order capacity.",
+      code: "CONFLICT",
       ref: expect.any(String),
     });
-    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.financialTxLog?.insertOne.mock.calls ?? []).toHaveLength(0);
   });
 
   // ticket-1022: expand body used to reject every non-US id at the Zod layer

@@ -1,3 +1,4 @@
+import type { SectorCrisisEffects } from "@/lib/crises/rules/sectorCrisisEffects";
 import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { SettledProductSales } from "@/lib/corporations/rules/settledProductSales";
 import type { UnsoldReading } from "@/lib/corporations/rules/unsoldReason";
@@ -440,6 +441,7 @@ export interface Margins {
   /** Active-crisis margin penalty (decaying disaster/infrastructure effects on
    *  sectors in this state). Negative pp; matches the turn-engine blend. */
   crisisMarginPenalty?: number;
+  crisisEffects?: SectorCrisisEffects;
   /** Active crises driving `crisisMarginPenalty`, for linking to the crisis page. */
   activeCrises?: { id: string; name: string }[];
   /** Strategy-aware state metric total. */

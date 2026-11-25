@@ -1,3 +1,4 @@
+import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 /**
  * Named loan servicing: the per-loan path and the bank-level batch.
  *
@@ -80,7 +81,7 @@ export async function servicePlayerLoan(
    * caller keeps the running balance between that borrower's loans, which is
    * exactly what the per-loan read saw after each settled debit.
    */
-  preloadedBorrower?: { available: number; name: string }
+  preloadedBorrower?: { available: number; name: string; currencyMatches?: boolean }
 ): Promise<LoanServiceResult> {
   const empty: LoanServiceResult = {
     interestCollected: 0,
@@ -137,8 +138,12 @@ export async function servicePlayerLoan(
   // The journal lands all of it exactly once under the per-loan-per-turn key,
   // so a retried turn can neither charge the borrower twice nor advance the
   // loan twice, and a crash between money and record is a visible partial.
-  const { available, name: borrowerName } =
-    preloadedBorrower ?? (await readBorrowerAvailable(db, loan, currency));
+  const borrower = preloadedBorrower ?? (await readBorrowerAvailable(db, loan, currency));
+  if (borrower.currencyMatches === false) {
+    await releaseService();
+    return empty;
+  }
+  const { available, name: borrowerName } = borrower;
   const { decision, transition } = loanServiceTransition({
     loan,
     borrowerAvailable: available,
@@ -180,6 +185,8 @@ export async function servicePlayerLoan(
       bankName,
       borrowerName,
       payment: decision.payment,
+      interestPaid: decision.interestPaid,
+      principalPaid: decision.principalPaid,
       settlementId: transition.key,
     });
     if (txEntries) txEntries.push(entry);
@@ -218,7 +225,7 @@ async function readBorrowerAvailable(
   db: Db,
   loan: BankLoan,
   currency: CurrencyCode
-): Promise<{ available: number; name: string }> {
+): Promise<{ available: number; name: string; currencyMatches?: boolean }> {
   if (!loan.borrowerId) return { available: 0, name: "Borrower" };
   if (loan.borrowerType === "character") {
     const ch = await charactersCollection(db).findOne(
@@ -234,11 +241,15 @@ async function readBorrowerAvailable(
   }
   const corp = await corporationsCollection(db).findOne(
     { _id: loan.borrowerId },
-    { projection: { name: 1, liquidCapital: 1 } }
+    { projection: { name: 1, liquidCapital: 1, liquidCurrencyCode: 1, countryId: 1 } }
   );
   return {
     available: Math.max(0, corp?.liquidCapital ?? 0),
     name: corp?.name ?? "Borrower",
+    currencyMatches:
+      !corp ||
+      !resolveCorpLiquidCurrencyCode(corp) ||
+      resolveCorpLiquidCurrencyCode(corp) === currency,
   };
 }
 
@@ -305,14 +316,17 @@ export async function serviceNamedLoanBook(
       ? corporationsCollection(db)
           .find(
             { _id: { $in: [...corporationIds.values()] } },
-            { projection: { name: 1, liquidCapital: 1 } }
+            { projection: { name: 1, liquidCapital: 1, liquidCurrencyCode: 1, countryId: 1 } }
           )
           .toArray()
       : Promise.resolve([]),
   ]);
   const charById = new Map(preloadChars.map((row) => [String(row._id), row]));
   const corpById = new Map(preloadCorps.map((row) => [String(row._id), row]));
-  const borrowerState = new Map<string, { available: number; name: string }>();
+  const borrowerState = new Map<
+    string,
+    { available: number; name: string; currencyMatches?: boolean }
+  >();
   for (const loan of loans) {
     if (!loan.borrowerId) continue;
     const key = borrowerKeyOf(loan);
@@ -333,6 +347,9 @@ export async function serviceNamedLoanBook(
       borrowerState.set(key, {
         available: Math.max(0, corporation.liquidCapital ?? 0),
         name: corporation.name ?? "Borrower",
+        currencyMatches:
+          !resolveCorpLiquidCurrencyCode(corporation) ||
+          resolveCorpLiquidCurrencyCode(corporation) === currency,
       });
     }
   }
@@ -393,8 +410,9 @@ export async function serviceNamedLoanBook(
     for (const loan of batchLoans) {
       const key = borrowerKeyOf(loan);
       const preloaded = borrowerState.get(key);
-      const available =
-        preloaded?.available ?? (await readBorrowerAvailable(db, loan, currency)).available;
+      const borrower = preloaded ?? (await readBorrowerAvailable(db, loan, currency));
+      if (borrower.currencyMatches === false) continue;
+      const available = borrower.available;
       const { decision, transition } = loanServiceTransition({
         loan,
         borrowerAvailable: available,

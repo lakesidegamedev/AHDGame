@@ -1,6 +1,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { emitTx } from "@/lib/financialTxLog/emit";
+import { emitTxStrict, emitTx } from "@/lib/financialTxLog/emit";
 
 /**
  * Finance-history row for a sector strategy change fee.
@@ -28,9 +28,13 @@ export interface SectorRetoolTxInput {
   toStrategyId?: string | null;
 }
 
-export async function emitSectorRetoolTx(db: Db, input: SectorRetoolTxInput): Promise<void> {
+export async function emitSectorRetoolTx(
+  db: Db,
+  input: SectorRetoolTxInput,
+  options?: { atomic?: boolean }
+): Promise<void> {
   if (!Number.isFinite(input.amountLocal) || input.amountLocal <= 0) return;
-  await emitTx(db, {
+  const entry: import("@/lib/financialTxLog/emit").TxInput = {
     type: "corp_sector_retool",
     turn: input.turn,
     createdAt: input.createdAt,
@@ -49,5 +53,7 @@ export async function emitSectorRetoolTx(db: Db, input: SectorRetoolTxInput): Pr
       ...(input.fromStrategyId ? { fromStrategyId: input.fromStrategyId } : {}),
       ...(input.toStrategyId ? { toStrategyId: input.toStrategyId } : {}),
     },
-  });
+  };
+  if (options?.atomic) await emitTxStrict(db, entry, { maxAttempts: 1 });
+  else await emitTx(db, entry);
 }

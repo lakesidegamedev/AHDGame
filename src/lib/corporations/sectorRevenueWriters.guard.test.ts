@@ -202,12 +202,11 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   },
 
   // ─── Reviewed by the concurrent plants sweeps (already plants-aware) ─────
-  "src/lib/corporations/commands/sectorOperations/expandSector.ts": {
+  "src/lib/corporations/siteCashMutation.ts": {
     writeSites: 1,
     status: "plants-gated",
     reason:
-      "Founding build; creates capacity under plants. The single write is the " +
-      "new sector's own doc (nameplate, restated from capacity next tick).",
+      "Atomic insertion of the existing plants-aware founding image from expandSector or strategyBuildSite. Capacity and construction queues determine plants revenue on the next turn; this boundary changes no nameplate arithmetic.",
   },
   "src/lib/admin/spawnNppCorporation.ts": {
     writeSites: 1,

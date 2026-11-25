@@ -408,7 +408,7 @@ export default function LoginPageClient({
                   <button
                     type="button"
                     onClick={beginLakesideLogin}
-                    className="store-app-hidden flex min-h-12 basis-full items-center justify-center gap-2.5 rounded-lg border border-white bg-[#f4f4f7] px-4 py-3 text-body font-semibold text-[#14141c] transition-colors hover:bg-white"
+                    className={`store-app-hidden ${secondaryButton} basis-full`}
                   >
                     <Image
                       src="/lakeside-mark.svg"

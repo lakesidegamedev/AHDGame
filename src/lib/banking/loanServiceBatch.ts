@@ -135,8 +135,12 @@ export function batchedLoanServiceMove(
       if (leg.kind !== "debit") continue;
       const key = legTargetKey(leg);
       const existing = debitByTarget.get(key);
-      if (existing) existing.amount += leg.amount;
-      else debitByTarget.set(key, { ...leg });
+      if (existing) {
+        existing.amount += leg.amount;
+        if (leg.set) existing.set = { ...existing.set, ...leg.set };
+        for (const [path, value] of Object.entries(leg.inc ?? {}))
+          existing.inc = { ...existing.inc, [path]: (existing.inc?.[path] ?? 0) + value };
+      } else debitByTarget.set(key, { ...leg, ...(leg.inc ? { inc: { ...leg.inc } } : {}) });
     }
   }
   const legs: TransitionLeg[] = [...debitByTarget.values()];
@@ -190,6 +194,8 @@ export function loanRepaymentTxEntry(args: {
   bankName: string;
   borrowerName: string;
   payment: number;
+  interestPaid?: number;
+  principalPaid?: number;
   settlementId: string;
 }): TxInput {
   return {
@@ -204,7 +210,12 @@ export function loanRepaymentTxEntry(args: {
     counterpartyType: "corporation",
     counterpartyId: args.bankCorporationId,
     counterpartyName: args.bankName,
-    meta: { loanId: args.loan._id.toString(), settlementId: args.settlementId },
+    meta: {
+      loanId: args.loan._id.toString(),
+      settlementId: args.settlementId,
+      interestPaid: args.interestPaid,
+      principalPaid: args.principalPaid,
+    },
   };
 }
 
@@ -246,6 +257,8 @@ export function recordLoanServiceBatch(args: {
           bankName: args.bankName,
           borrowerName: args.borrowerName(row),
           payment: row.decision.payment,
+          interestPaid: row.decision.interestPaid,
+          principalPaid: row.decision.principalPaid,
           settlementId: args.settlementId,
         })
       );

@@ -170,3 +170,25 @@ describe("wind-up holder book settlement", () => {
     expect(largeTrips.total(), largeTrips.summary()).toBeLessThan(12);
   });
 });
+
+it("refuses unavailable FX without treating existing holders as missing", async () => {
+  const book = world("GBP");
+  book.memory.collection("exchangeRates").docs.splice(0);
+
+  await expect(payFundHoldersCash(book.db, book.fund, book.payouts, TURN, T0)).rejects.toThrow(
+    "exchange rate unavailable"
+  );
+});
+
+it("pays anchor-denominated holders without requiring an unrelated fund FX quote", async () => {
+  const book = world("GBP");
+  book.memory.collection("exchangeRates").docs.splice(0);
+  const payouts = book.payouts.filter(({ position }) =>
+    ["npp", "pension_scheme"].includes(position.holderKind)
+  );
+  const result = await payFundHoldersCash(book.db, book.fund, payouts, TURN, T0);
+  expect(result.paid).toHaveLength(2);
+  expect(result.distributedAnchor).toBe(
+    payouts.reduce((sum, payout) => sum + payout.payoutAnchor, 0)
+  );
+});
