@@ -95,22 +95,24 @@ export const PLANTS_HOUSEHOLD_SUPPLY_CAP = 1.5;
  * Consumer basket weights over the commodities households actually buy (finished
  * goods + consumer services + the abstract `retail` bucket for general
  * merchandise). Raw extractables and pure-B2B inputs (ordnance, fertilizers) are
- * excluded, including advertising inventory, which is a business input rather
- * than a household purchase. Weights are relative and are renormalised per
+ * excluded. Weights are relative and are renormalised per
  * state after the wealth-tier (Engel) shift, so they need not sum to exactly 1.
  */
 export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> = {
-  food: 0.2,
-  energy: 0.08,
-  retail: 0.1,
+  food: 0.14,
+  natural_gas: 0.02,
+  real_estate_services: 0.13,
+  healthcare_services: 0.07,
+  pharmaceuticals: 0.04,
+  energy: 0.06,
   vehicles: 0.06,
   electronics: 0.05,
-  pharmaceuticals: 0.03,
-  healthcare_services: 0.09,
-  real_estate_services: 0.1,
-  financial_services: 0.05,
+  retail: 0.11,
+  advertising: 0.04,
   network_services: 0.05,
+  financial_services: 0.05,
   software: 0.03,
+  construction_services: 0.02,
   freight: 0.03,
   consulting_services: 0.02,
   building_materials: 0.02,
@@ -126,6 +128,7 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
  */
 const HOUSEHOLD_BASKET_TIER_SLOPE: Partial<Record<CommodityType, number>> = {
   food: -0.35,
+  natural_gas: -0.2,
   energy: -0.2,
   retail: -0.1,
   vehicles: 0.2,
@@ -134,6 +137,8 @@ const HOUSEHOLD_BASKET_TIER_SLOPE: Partial<Record<CommodityType, number>> = {
   real_estate_services: 0.2,
   healthcare_services: 0.15,
   software: 0.25,
+  advertising: 0.2,
+  construction_services: 0.1,
 };
 
 /**
@@ -153,6 +158,9 @@ const HOUSEHOLD_PRICE_ELASTICITY: Partial<Record<CommodityType, number>> = {
   financial_services: 0.4,
   real_estate_services: 0.4,
   software: 0.5,
+  natural_gas: 0.15,
+  advertising: 0.5,
+  construction_services: 0.4,
 };
 const DEFAULT_PRICE_ELASTICITY = 0.35;
 const ELASTICITY_CLAMP: readonly [number, number] = [0.6, 1.3];

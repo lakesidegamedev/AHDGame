@@ -188,6 +188,8 @@ export async function loadCorporationLookupInputs({
           projection: {
             countryId: 1,
             "economicFactors.inflationRate": 1,
+            // Annual real growth sizes new household income (newHouseholdIncomeRules).
+            "economicFactors.gdpGrowth": 1,
             debtToGdpRatio: 1,
             surplus: 1,
             gdp: 1,

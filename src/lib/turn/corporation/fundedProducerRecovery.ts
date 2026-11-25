@@ -1,3 +1,4 @@
+import type { NewHouseholdIncomeRow } from "@/lib/market/producerMarket/newHouseholdIncomeRules";
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { resumeProducerTurn } from "@/lib/market/producerMarket/settlement";
@@ -57,6 +58,9 @@ export function snapshotFundedHost(context: P) {
       backgroundOffers: context.demand.backgroundOffers,
       backgroundOrders: context.demand.backgroundOrders,
       householdSource: context.demand.householdSource,
+      // Absent on older snapshots and on legacy recovery: the audit then skips.
+      newHouseholdIncome: (context.demand.newHouseholdIncome ?? []) as
+        readonly NewHouseholdIncomeRow[] | undefined,
       funding: context.demand.funding.map((f) => ({ countryId: f.countryId })),
       investmentFunding: context.demand.investmentFunding.map((f) => ({ countryId: f.countryId })),
     },
@@ -261,6 +265,7 @@ async function legacySnapshot(db: Db, input: Input, resumed: Resumed): Promise<S
         (o) => scopes.get(o.accountId)?.kind === "backgroundEconomy"
       ),
       householdSource: null,
+      newHouseholdIncome: undefined,
       funding: fund("publicBuyer"),
       investmentFunding: fund("investmentBuyer"),
     },

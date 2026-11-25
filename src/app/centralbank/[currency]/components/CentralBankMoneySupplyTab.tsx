@@ -204,6 +204,30 @@ export function CentralBankMoneySupplyTab({
             <Row label="Central-bank bond holdings" value={fmt(data.centralBankBondHoldings)} />
             <Row label="Lending reserves" value={fmt(data.bankReserves)} />
             <Row label="Net explicit money creation" value={fmt(data.netMoneyCreatedLifetime)} />
+            {data.newHouseholdIncomeLifetime != null && (
+              <>
+                <Row
+                  label="New household income, last turn"
+                  value={fmt(data.newHouseholdIncomeTurn ?? 0)}
+                />
+                <Row
+                  label="New household income, since the world began"
+                  value={fmt(data.newHouseholdIncomeLifetime)}
+                />
+              </>
+            )}
+            {data.householdSpendingPowerLifetime != null && (
+              <>
+                <Row
+                  label="Household spending power top-up, last turn"
+                  value={fmt(data.householdSpendingPowerTurn ?? 0)}
+                />
+                <Row
+                  label="Household spending power top-up, since the world began"
+                  value={fmt(data.householdSpendingPowerLifetime)}
+                />
+              </>
+            )}
           </div>
           <p className="mt-4 text-body-sm text-muted">
             Lending reserves are what commercial banks hold to back their loans; the FX tab&apos;s
@@ -213,6 +237,23 @@ export function CentralBankMoneySupplyTab({
             savings interest. It does not include money the wider economy creates through lending,
             so it can be tiny beside the monetary stock.
           </p>
+          {data.newHouseholdIncomeLifetime != null && (
+            <p className="mt-2 text-body-sm text-muted">
+              New household income is new money paid to households each turn while the economy
+              grows: twice the annual real growth rate as a share of their income, at most 3%, and
+              nothing while the economy shrinks. Households spend it like the rest of their money.
+              It is part of household cash above.
+            </p>
+          )}
+          {data.householdSpendingPowerLifetime != null && (
+            <p className="mt-2 text-body-sm text-muted">
+              The spending power top-up is new money paid to households in every populated state, so
+              what people can spend follows how many they are and what they earn. It tops up what
+              wages, benefits and growth income already pay toward a target of population times the
+              average wage, phased in over several days. Households spend it like the rest of their
+              money.
+            </p>
+          )}
           <p className="mt-2 text-body-sm text-muted">{t("money.transmission")}</p>
           <p className="mt-2 text-body-sm text-muted">
             {data.lastOperationTurn == null

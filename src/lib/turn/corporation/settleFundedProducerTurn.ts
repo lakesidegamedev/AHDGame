@@ -1,5 +1,14 @@
 import { logger } from "@/lib/observability/logger";
 import {
+  householdSpendingPowerMinted,
+  newHouseholdIncomeMinted,
+} from "@/lib/moneySupply/newHouseholdIncomeMinted";
+import {
+  newHouseholdIncomeAuditWarning,
+  newHouseholdIncomeRecord,
+  type NewHouseholdIncomeRow,
+} from "@/lib/market/producerMarket/newHouseholdIncomeRules";
+import {
   wideEconomyLaneShortage,
   wideEconomyLaneSurplus,
 } from "@/lib/market/producerMarket/wideEconomyRules";
@@ -287,7 +296,12 @@ export type FundedPublicationContext = Pick<
     | "firstWalletByCorp"
     | "planSector"
     | "householdSource"
-  > & { funding: { countryId: string }[]; investmentFunding: { countryId: string }[] };
+  > & {
+    funding: { countryId: string }[];
+    investmentFunding: { countryId: string }[];
+    /** New household income paid this turn (absent on older recovery snapshots). */
+    newHouseholdIncome?: readonly NewHouseholdIncomeRow[];
+  };
 };
 
 export async function publishFundedProducerTurn(
@@ -544,6 +558,26 @@ export async function publishFundedProducerTurn(
     laneClearingPrices[laneKeyOf(row.commodity, row.book)] = row.value / row.units;
     if (row.book === "world") clearingPrices[row.commodity] = row.value / row.units;
   }
+  // Money-created audit: what this turn paid as new household income against
+  // what the ledger minted for it. Read back from the ledger, so a lost or
+  // doubled move shows. Recovery snapshots without the plan skip it.
+  const plannedNewIncome = context.demand.newHouseholdIncome;
+  const newIncomeRecords = {
+    growth: newHouseholdIncomeRecord(plannedNewIncome ?? [], "growth"),
+    spendingPower: newHouseholdIncomeRecord(plannedNewIncome ?? [], "spendingPower"),
+  };
+  const newIncomeRecord = (source: "growth" | "spendingPower") =>
+    newIncomeRecords[source].totalAnchor > 0 ? newIncomeRecords[source] : null;
+  let newIncomeAudit: string | null = null;
+  if (plannedNewIncome) {
+    const minted = await newHouseholdIncomeMinted(context.db, context.turn);
+    const mintedPower = await householdSpendingPowerMinted(context.db, context.turn);
+    newIncomeAudit = newHouseholdIncomeAuditWarning(
+      plannedNewIncome.reduce((sum, r) => sum + r.amount, 0),
+      [...minted.values(), ...mintedPower.values()].reduce((sum, m) => sum + m.turnAnchor, 0)
+    );
+    if (newIncomeAudit) logger.error("corporationTurn", newIncomeAudit);
+  }
   // Every unit of the country books must have a named source and destination,
   // so screens can show rows that add up to their totals. A gap means some
   // volume was counted without an attributed account: say so loudly.
@@ -668,6 +702,12 @@ export async function publishFundedProducerTurn(
       // Real shortage per lane, read by the next turns to size the wider
       // economy's seller on persistently short lanes (wideEconomyShortageBoost).
       ...(wideShortage ? { wideShortage } : {}),
+      // New money paid to households this turn, by country (newHouseholdIncomeRules).
+      ...(newIncomeRecord("growth") ? { newHouseholdIncome: newIncomeRecord("growth") } : {}),
+      // The population-times-wage top-up, recorded as its own source.
+      ...(newIncomeRecord("spendingPower")
+        ? { householdSpendingPower: newIncomeRecord("spendingPower") }
+        : {}),
       // Unsold share of new plant output per lane, read by the next turns to
       // size the wider economy's buyer on oversupplied lanes (wideEconomySurplusBoost).
       ...(wideSurplus ? { wideSurplus } : {}),
@@ -1031,6 +1071,7 @@ export async function publishFundedProducerTurn(
     turnWarnings: [
       ...(settled.result.turnWarnings ?? []),
       ...context.background.warnings,
+      ...(newIncomeAudit ? [newIncomeAudit] : []),
       ...(attributionGaps.length > 0
         ? [
             `Market attribution gap: ${attributionGaps.length} market totals include volume no screen row accounts for`,

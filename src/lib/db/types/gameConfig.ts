@@ -297,6 +297,28 @@ export interface GameConfig extends ProducerGameConfig {
   wideEconomySurplusStage?: number;
 
   /**
+   * >= 1: each turn households in a growing economy get new money as income:
+   * twice the country's annual real GDP growth rate as a share of their
+   * income (wages plus transfers), at most 3%, nothing while it shrinks.
+   * Spent by the normal household rules. Absent = 1 (on); 0 = off.
+   */
+  newHouseholdIncomeStage?: number;
+
+  /**
+   * >= 1: each turn households in every populated state are topped up toward
+   * population times the average wage (householdSpendingPowerRules), as new
+   * money, phased in over `householdSpendingPowerRampTurns`. Absent = 1
+   * (on); 0 = off.
+   */
+  householdSpendingPowerStage?: number;
+  /** Per-year share of population times median income households can spend. Absent = rules default. */
+  householdSpendingPowerShare?: number;
+  /** Turns the top-up takes to reach full size. Absent = 72. */
+  householdSpendingPowerRampTurns?: number;
+  /** Turn the top-up began; stamped by the first live funded turn after it shipped. */
+  householdSpendingPowerStartTurn?: number;
+
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.
