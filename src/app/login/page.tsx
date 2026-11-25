@@ -8,6 +8,7 @@ import { normalizeMaintenanceMode } from "@/lib/maintenanceStatus";
 import { isMarginOfVictoryLogin } from "@/lib/auth/lakesideLoginReturn";
 import { computeIntakeStatus } from "@/lib/auth/intakeStatus";
 import { getEraConfig } from "@/components/landing/eraThemes";
+import { getCachedLandingData } from "@/lib/landing/cachedLandingData";
 import { getLoginImage } from "@/lib/images/staticCdnAssets";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 
@@ -52,6 +53,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     wireframeColor = eraConfig.wireframeColor ?? undefined;
     eraLabel = eraConfig.label;
     eraTagline = eraConfig.loginTagline;
+    // The landing page counts up to the current in-game year, so the plain
+    // "set in YEAR" tagline names the same year instead of the era's start.
+    const landing = await getCachedLandingData().catch(() => null);
+    if (landing && landing.currentYear > eraConfig.year && /set in \d{4}\.$/.test(eraTagline)) {
+      eraTagline = eraTagline.replace(/\d{4}\.$/, `${landing.currentYear}.`);
+    }
     // Pass image only when an era-specific file is on the CDN (wireframe eras render it ghosted behind scanlines)
     // Fallback to Lincoln memorial for unknown/missing seedYear so production worlds seeded before
     // the era system don't get a broken CRT wireframe login.

@@ -71,7 +71,7 @@ export function NotifDetail({ item, onArchive, onSnooze }: NotifDetailProps) {
 
         {/* Headline */}
         <div className="mt-7">
-          <h2 className="text-2xl font-semibold leading-tight text-foreground">{item.title}</h2>
+          <h3 className="text-2xl font-semibold leading-tight text-foreground">{item.title}</h3>
           <p className="mt-4 whitespace-pre-wrap text-[15px] leading-7 text-foreground/85">
             {item.body}
           </p>

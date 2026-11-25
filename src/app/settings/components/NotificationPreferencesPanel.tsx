@@ -93,6 +93,33 @@ export function NotificationPreferencesPanel() {
     }
   };
 
+  // Mute or unmute a whole group at once, so the switches are not the only lever.
+  const updateMany = async (types: NotificationType[], action: "mute" | "unmute") => {
+    if (!preferences || saving || types.length === 0) return;
+    const previous = preferences;
+    setSaving(true);
+    setMessage("saving");
+    try {
+      let latest: Preferences = preferences;
+      for (const type of types) {
+        const response = await fetch("/api/notifications/preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, action }),
+        });
+        if (!response.ok) throw new Error("preference rejected");
+        latest = await response.json();
+      }
+      setPreferences(latest);
+      setMessage("saved");
+    } catch {
+      setPreferences(previous);
+      setMessage("saveError");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const updateMail = async (enabled: boolean) => {
     if (!preferences || saving) return;
     const previous = preferences;
@@ -189,51 +216,81 @@ export function NotificationPreferencesPanel() {
                       </button>
                     </h4>
                     {open && (
-                      <div className="grid gap-x-6 md:grid-cols-2">
-                        {rows.map((type) => {
-                          const snooze = preferences.snoozedTypes.find(
-                            (entry) => entry.type === type && Date.parse(entry.until) > Date.now()
-                          );
-                          return (
-                            <div
-                              key={type}
-                              className="flex items-center justify-between gap-3 border-b border-card-border py-2"
-                            >
-                              <div>
-                                <p className="text-sm">{t(`types.${type}`)}</p>
-                                {deliveryOf(type) === "push" && (
-                                  <p className="text-xs text-primary">{t("pushTag")}</p>
-                                )}
-                                {snooze && (
-                                  <>
-                                    <p className="text-xs text-muted">
-                                      {t.rich("snoozed", {
-                                        time: () => <LocalTime value={snooze.until} />,
-                                      })}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      disabled={saving}
-                                      className="text-xs text-primary"
-                                      onClick={() => void update(type, "unsnooze")}
-                                    >
-                                      {t("resume", { name: t(`types.${type}`) })}
-                                    </button>
-                                  </>
-                                )}
+                      <>
+                        <div className="flex justify-end gap-2 py-2 text-xs">
+                          <button
+                            type="button"
+                            disabled={saving || onCount === rows.length}
+                            onClick={() =>
+                              void updateMany(
+                                rows.filter((type) => preferences.mutedTypes.includes(type)),
+                                "unmute"
+                              )
+                            }
+                            className="rounded-md border border-card-border px-2 py-1 text-muted hover:text-foreground disabled:opacity-40"
+                          >
+                            {t("groupAllOn")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={saving || onCount === 0}
+                            onClick={() =>
+                              void updateMany(
+                                rows.filter((type) => !preferences.mutedTypes.includes(type)),
+                                "mute"
+                              )
+                            }
+                            className="rounded-md border border-card-border px-2 py-1 text-muted hover:text-foreground disabled:opacity-40"
+                          >
+                            {t("groupAllOff")}
+                          </button>
+                        </div>
+                        <div className="grid gap-x-6 md:grid-cols-2">
+                          {rows.map((type) => {
+                            const snooze = preferences.snoozedTypes.find(
+                              (entry) => entry.type === type && Date.parse(entry.until) > Date.now()
+                            );
+                            return (
+                              <div
+                                key={type}
+                                className="flex items-center justify-between gap-3 border-b border-card-border py-2"
+                              >
+                                <div>
+                                  <p className="text-sm">{t(`types.${type}`)}</p>
+                                  {deliveryOf(type) === "push" && (
+                                    <p className="text-xs text-primary">{t("pushTag")}</p>
+                                  )}
+                                  {snooze && (
+                                    <>
+                                      <p className="text-xs text-muted">
+                                        {t.rich("snoozed", {
+                                          time: () => <LocalTime value={snooze.until} />,
+                                        })}
+                                      </p>
+                                      <button
+                                        type="button"
+                                        disabled={saving}
+                                        className="text-xs text-primary"
+                                        onClick={() => void update(type, "unsnooze")}
+                                      >
+                                        {t("resume", { name: t(`types.${type}`) })}
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                                <SettingsSwitch
+                                  label={t(`types.${type}`)}
+                                  checked={!preferences.mutedTypes.includes(type)}
+                                  disabled={saving}
+                                  onChange={(enabled) =>
+                                    void update(type, enabled ? "unmute" : "mute")
+                                  }
+                                />
                               </div>
-                              <SettingsSwitch
-                                label={t(`types.${type}`)}
-                                checked={!preferences.mutedTypes.includes(type)}
-                                disabled={saving}
-                                onChange={(enabled) =>
-                                  void update(type, enabled ? "unmute" : "mute")
-                                }
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </section>
                 );
