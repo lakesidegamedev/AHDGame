@@ -776,8 +776,7 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
         // sectors to the parent, so dent its brand for the loss before the sectors
         // are reassigned (the aggregate still includes them). No-op when the target
         // has no loyalty. Best-effort — loyalty recomputes each turn.
-        const targetSectorRevenue = targetSectors.reduce((sum, s) => sum + (s.revenue ?? 0), 0);
-        await applyBrandFacilityLoss(db, target._id, targetSectorRevenue);
+        await applyBrandFacilityLoss(db, target._id, targetSectors);
 
         const parentSectors = await corporateSectorsCollection(db)
           .find({ corporationId: parent._id })
