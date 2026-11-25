@@ -87,6 +87,7 @@ export function producerStageEnv(
         wideEconomyStage?: number;
         wideEconomyPricingStage?: number;
         wideEconomySurplusStage?: number;
+        newHouseholdIncomeStage?: number;
         fiscalScaleStage?: number;
       } & LabourWageConfig)
     | null
@@ -131,6 +132,8 @@ export function producerStageEnv(
     wideEconomyPricingStage: config?.wideEconomyPricingStage ?? 1,
     // And the buyer's oversupplied-lane boost.
     wideEconomySurplusStage: config?.wideEconomySurplusStage ?? 1,
+    // New household income by real GDP growth ships on too.
+    newHouseholdIncomeStage: config?.newHouseholdIncomeStage ?? 1,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)

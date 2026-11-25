@@ -45,6 +45,7 @@ import {
   backgroundFundingMoves,
   householdOpeningMoves,
   householdTransferMoves,
+  newHouseholdIncomeMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   batchProducerMoves,
@@ -746,6 +747,27 @@ async function prepareRunFundedProducerTurn(
         worldEpoch,
         turn,
         demand.householdTransfers.map((t) => {
+          const scope = scopeById.get(t.walletId);
+          const rate = rateOf(scope?.currency);
+          return {
+            walletId: t.walletId,
+            amountLocal: t.amount * rate,
+            currencyCode: scope!.currency,
+            localPerAnchor: rate,
+          };
+        })
+      )
+    )
+  );
+
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      newHouseholdIncomeMoves(
+        worldEpoch,
+        turn,
+        (demand.newHouseholdIncome ?? []).map((t) => {
           const scope = scopeById.get(t.walletId);
           const rate = rateOf(scope?.currency);
           return {

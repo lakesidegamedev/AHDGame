@@ -77,6 +77,10 @@ import {
   backgroundTradeLines,
   type BackgroundEconomy,
 } from "@/lib/market/producerMarket/backgroundTradeRules";
+import {
+  newHouseholdIncome,
+  newHouseholdIncomeOn,
+} from "@/lib/market/producerMarket/newHouseholdIncomeRules";
 import { laneKeyOf } from "@/lib/market/producerMarket/laneKey";
 import { statesCollection } from "@/lib/db/repositories/states";
 import {
@@ -533,6 +537,27 @@ export async function buildProducerTurnDemand(
   const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
   for (const t of householdTransfers)
     householdOpening.set(t.walletId, (householdOpening.get(t.walletId) ?? 0) + t.amount);
+  // New household income (gameConfig.newHouseholdIncomeStage, absent = on): new
+  // money, the same share of every wallet's income in a country, by its growth.
+  const householdIncome = new Map(wageBillByWallet);
+  for (const t of householdTransfers)
+    householdIncome.set(t.walletId, (householdIncome.get(t.walletId) ?? 0) + t.amount);
+  const newHouseholdIncomeRows = newHouseholdIncomeOn(input.env)
+    ? newHouseholdIncome({
+        wallets: [...householdWallets.values()],
+        incomeByWallet: householdIncome,
+        realGdpGrowthByCountry: new Map(
+          lookups.federalBudgets.flatMap((b) => {
+            const g = (b as { economicFactors?: { gdpGrowth?: number } }).economicFactors
+              ?.gdpGrowth;
+            return typeof g === "number" ? [[String(b.countryId), g] as const] : [];
+          })
+        ),
+      })
+    : [];
+  const newHouseholdIncomeTotal = newHouseholdIncomeRows.reduce((sum, r) => sum + r.amount, 0);
+  for (const r of newHouseholdIncomeRows)
+    householdOpening.set(r.walletId, (householdOpening.get(r.walletId) ?? 0) + r.amount);
   const budgetCountries = new Set(lookups.federalBudgets.map((b) => String(b.countryId)));
   // Construction work on outstanding build orders, bought from producers. The
   // builds were paid when placed; this gives that cash its destination.
@@ -948,6 +973,8 @@ export async function buildProducerTurnDemand(
     householdSeed,
     householdTransfers,
     householdTransferTotal,
+    newHouseholdIncome: newHouseholdIncomeRows,
+    newHouseholdIncomeTotal,
     householdSource,
     householdWallets,
     households,

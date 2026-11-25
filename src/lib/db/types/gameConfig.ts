@@ -297,6 +297,14 @@ export interface GameConfig extends ProducerGameConfig {
   wideEconomySurplusStage?: number;
 
   /**
+   * >= 1: each turn households in a growing economy get new money as income:
+   * twice the country's annual real GDP growth rate as a share of their
+   * income (wages plus transfers), at most 3%, nothing while it shrinks.
+   * Spent by the normal household rules. Absent = 1 (on); 0 = off.
+   */
+  newHouseholdIncomeStage?: number;
+
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.

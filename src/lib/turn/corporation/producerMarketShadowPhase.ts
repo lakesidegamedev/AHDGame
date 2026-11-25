@@ -102,6 +102,7 @@ export async function runProducerMarketShadowPhase(
         householdForPayee,
         householdSeed,
         householdTransferTotal,
+        newHouseholdIncomeTotal,
         householdWallets,
         households,
         investmentBuyerOrders,
@@ -230,6 +231,7 @@ export async function runProducerMarketShadowPhase(
         sources: {
           householdSeed,
           householdTransfer: householdTransferTotal,
+          ...(newHouseholdIncomeTotal > 0 ? { newHouseholdIncome: newHouseholdIncomeTotal } : {}),
           newCompanyCash: newCompanyCash.total,
           publicFunding,
           investmentFunding: investmentFundingTotal,
@@ -252,6 +254,7 @@ export async function runProducerMarketShadowPhase(
           sources: {
             householdSeed,
             householdTransfer: householdTransferTotal,
+            ...(newHouseholdIncomeTotal > 0 ? { newHouseholdIncome: newHouseholdIncomeTotal } : {}),
             newCompanyCash: newCompanyCash.total,
             publicFunding,
             investmentFunding: investmentFundingTotal,
@@ -444,6 +447,7 @@ const SHADOW_DEMAND_FIELDS = [
   "householdForPayee",
   "householdSeed",
   "householdTransferTotal",
+  "newHouseholdIncomeTotal",
   "householdWallets",
   "households",
   "investmentBuyerOrders",

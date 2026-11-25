@@ -615,4 +615,29 @@ describe("wider-economy funding", () => {
       expect(share).toBeLessThanOrEqual(1);
     }
   });
+
+  it("mints new household income into the wallet, records it, and the money-created audit agrees", async () => {
+    const walletId = producerWalletId("world", {
+      kind: "households",
+      countryId: "US",
+      stateId: "US_CA",
+      currency: "USD",
+    });
+    const r = await runWith(0, () => ({
+      newHouseholdIncome: [{ walletId, countryId: "US", amount: 40, share: 0.022 }],
+    }));
+    const moves = r.memory
+      .collection("bankMoneyMoves")
+      .docs.filter((m) => m.kind === "producer_household_new_income");
+    expect(moves).toHaveLength(1);
+    const legs = moves[0]!.legs as { kind: string; amount: number; filter?: { _id: string } }[];
+    expect(legs.filter((l) => l.kind === "mint").reduce((n, l) => n + l.amount, 0)).toBeCloseTo(
+      40 * RATE,
+      6
+    );
+    expect(legs.find((l) => l.kind === "credit")?.filter?._id).toBe(walletId);
+    const [outcome] = r.memory.collection("producerMarketOutcomes").docs;
+    expect((outcome.newHouseholdIncome as { totalAnchor: number }).totalAnchor).toBeCloseTo(40, 6);
+    expect(r.turnWarnings.join(" ")).not.toContain("New household income audit");
+  });
 });

@@ -101,6 +101,44 @@ export function householdTransferMoves(
     }));
 }
 
+/**
+ * Mints each household wallet's new household income (newHouseholdIncomeRules):
+ * new money, not a budget line, so it has its own kind for the money-created audit.
+ */
+export function newHouseholdIncomeMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly WalletAmount[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-household-new-income:${worldEpoch}:${turn}:${r.walletId}`,
+      kind: NEW_HOUSEHOLD_INCOME_KIND,
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "new household income, sized by real GDP growth",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "new household income",
+        },
+      ],
+    }));
+}
+
+/** Money-move kind of new household income: every unit of it is newly created money. */
+export const NEW_HOUSEHOLD_INCOME_KIND = "producer_household_new_income";
+
 /** Burns what a public buyer did not spend. */
 export function publicReturnMoves(
   worldEpoch: string,

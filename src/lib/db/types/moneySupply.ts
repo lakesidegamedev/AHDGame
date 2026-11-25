@@ -19,6 +19,12 @@ export interface MoneySupplySnapshot extends MoneyAggregates {
   /** Null when the observation window is shorter than a game-quarter. */
   annualizedM2GrowthPct: number | null;
   netMoneyCreatedLifetime: number;
+  /**
+   * New household income minted in this currency (newHouseholdIncomeRules):
+   * on the snapshot's turn and since the world began. Absent on older rows.
+   */
+  newHouseholdIncomeTurn?: number;
+  newHouseholdIncomeLifetime?: number;
   createdAt: Date;
 }
 

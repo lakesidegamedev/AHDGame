@@ -204,6 +204,18 @@ export function CentralBankMoneySupplyTab({
             <Row label="Central-bank bond holdings" value={fmt(data.centralBankBondHoldings)} />
             <Row label="Lending reserves" value={fmt(data.bankReserves)} />
             <Row label="Net explicit money creation" value={fmt(data.netMoneyCreatedLifetime)} />
+            {data.newHouseholdIncomeLifetime != null && (
+              <>
+                <Row
+                  label="New household income, last turn"
+                  value={fmt(data.newHouseholdIncomeTurn ?? 0)}
+                />
+                <Row
+                  label="New household income, since the world began"
+                  value={fmt(data.newHouseholdIncomeLifetime)}
+                />
+              </>
+            )}
           </div>
           <p className="mt-4 text-body-sm text-muted">
             Lending reserves are what commercial banks hold to back their loans; the FX tab&apos;s
@@ -213,6 +225,14 @@ export function CentralBankMoneySupplyTab({
             savings interest. It does not include money the wider economy creates through lending,
             so it can be tiny beside the monetary stock.
           </p>
+          {data.newHouseholdIncomeLifetime != null && (
+            <p className="mt-2 text-body-sm text-muted">
+              New household income is new money paid to households each turn while the economy
+              grows: twice the annual real growth rate as a share of their income, at most 3%, and
+              nothing while the economy shrinks. Households spend it like the rest of their money.
+              It is part of household cash above.
+            </p>
+          )}
           <p className="mt-2 text-body-sm text-muted">{t("money.transmission")}</p>
           <p className="mt-2 text-body-sm text-muted">
             {data.lastOperationTurn == null

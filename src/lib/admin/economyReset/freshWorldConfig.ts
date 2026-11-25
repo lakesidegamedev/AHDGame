@@ -114,6 +114,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   wideEconomyStage: "",
   wideEconomyPricingStage: "",
   wideEconomySurplusStage: "",
+  newHouseholdIncomeStage: "",
 });
 
 /**
