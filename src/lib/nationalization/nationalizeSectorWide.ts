@@ -499,7 +499,9 @@ export async function nationalizeSectorWide(
       // but loses the carved slice to the state, so dent its brand proportional to
       // the lost slice's share of its revenue. Called before the donor row is
       // shrunk/removed (the aggregate still includes it). No-op with no loyalty.
-      await applyBrandFacilityLoss(db, donor._id, Math.round((sec.revenue ?? 0) * f));
+      await applyBrandFacilityLoss(db, donor._id, [
+        { countryId: sec.countryId, revenue: Math.round((sec.revenue ?? 0) * f) },
+      ]);
 
       const carvedWorkers = Math.round((sec.workers ?? 0) * f);
       const carvedGrowthAnchor = readCorpEconomicAnchor(

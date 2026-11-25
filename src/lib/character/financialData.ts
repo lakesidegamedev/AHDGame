@@ -15,6 +15,7 @@ import {
   fxRateForCorpFromMap,
 } from "@/lib/currency/corporationCapital";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
+import { sectorMoneyInCorpCurrency } from "@/lib/corporations/sectorRevenueScale";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
@@ -130,15 +131,28 @@ export async function getFinancialData(characterId: ObjectId) {
 
   let corporateSectorSummary: { sectorCount: number; totalRevenuePerTurn: number } | null = null;
   if (corporation) {
+    // Revenue is stored per host currency; add it up in the corp's own.
     const sectorAgg = await corporateSectorsCollection(db)
-      .aggregate<{ total: number; n: number }>([
+      .aggregate<{ _id: string | null; total: number; n: number }>([
         { $match: { corporationId: corporation._id } },
-        { $group: { _id: null, total: { $sum: "$revenue" }, n: { $sum: 1 } } },
+        { $group: { _id: "$countryId", total: { $sum: "$revenue" }, n: { $sum: 1 } } },
       ])
       .toArray();
     corporateSectorSummary = {
-      sectorCount: sectorAgg[0]?.n ?? 0,
-      totalRevenuePerTurn: Math.round(sectorAgg[0]?.total ?? 0),
+      sectorCount: sectorAgg.reduce((sum, row) => sum + row.n, 0),
+      totalRevenuePerTurn: Math.round(
+        sectorAgg.reduce(
+          (sum, row) =>
+            sum +
+            sectorMoneyInCorpCurrency(
+              row.total,
+              { countryId: row._id },
+              corporation,
+              fxByCurrencyProfile
+            ),
+          0
+        )
+      ),
     };
   }
 
