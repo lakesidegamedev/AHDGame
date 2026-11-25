@@ -394,7 +394,7 @@ export function FeatureGatesPanel() {
                     }
                     className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                       selection === choice
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "text-muted hover:bg-background hover:text-foreground"
                     }`}
                   >
@@ -441,7 +441,7 @@ export function FeatureGatesPanel() {
                 onClick={() => void post({ kind: "level", value: lvl.value }, "level")}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
                 }`}
               >
@@ -498,7 +498,7 @@ export function FeatureGatesPanel() {
                 }
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
                 }`}
               >
@@ -541,7 +541,7 @@ export function FeatureGatesPanel() {
                   }
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                     active
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "text-muted hover:bg-background hover:text-foreground"
                   }`}
                 >
@@ -593,7 +593,7 @@ export function FeatureGatesPanel() {
                 }
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-background hover:text-foreground"
                 }`}
               >

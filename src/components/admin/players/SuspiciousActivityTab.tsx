@@ -197,7 +197,7 @@ function DismissModal({ entry, onClose, onDismissed, apiBase, isMod = false }: D
           <button
             onClick={submit}
             disabled={loading}
-            className="min-h-[40px] rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="min-h-[40px] rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {loading ? "Working…" : permanent ? "Resolve permanently" : "Dismiss (30 days)"}
           </button>

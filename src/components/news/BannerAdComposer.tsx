@@ -249,7 +249,7 @@ export function BannerAdComposer({ onClose }: BannerAdComposerProps) {
       <button
         type="submit"
         disabled={!file || !agreed || !info?.canSubmit || submitting}
-        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         {submitting
           ? "Uploading…"

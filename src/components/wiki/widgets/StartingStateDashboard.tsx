@@ -631,7 +631,9 @@ function ScenarioToggle({
                 aria-selected={active}
                 onClick={() => onChange(option.value)}
                 className={`rounded px-3 py-1.5 text-sm font-semibold transition-colors ${
-                  active ? "bg-primary text-white shadow-sm" : "text-muted hover:text-foreground"
+                  active
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 {option.label}

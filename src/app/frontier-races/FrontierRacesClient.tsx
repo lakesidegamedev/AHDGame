@@ -132,7 +132,7 @@ function RaceCard({
                 type="button"
                 disabled={pending}
                 onClick={() => fund("country")}
-                className="rounded bg-primary px-3 py-1.5 text-primary-foreground disabled:opacity-50"
+                className="rounded bg-primary px-3 py-1.5 text-primary-foreground disabled:bg-card-border disabled:text-muted"
               >
                 Fund for {options.country.name} (treasury cost{" "}
                 {(points * options.country.costPerPointLocal).toLocaleString()}{" "}
@@ -156,7 +156,7 @@ function RaceCard({
                   type="button"
                   disabled={pending || !corporationId}
                   onClick={() => fund("corporation")}
-                  className="rounded bg-primary px-3 py-1.5 text-primary-foreground disabled:opacity-50"
+                  className="rounded bg-primary px-3 py-1.5 text-primary-foreground disabled:bg-card-border disabled:text-muted"
                 >
                   Fund from R&amp;D ({(points * CORPORATION_RD_PER_POINT).toLocaleString()} points)
                 </button>

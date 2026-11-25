@@ -289,7 +289,7 @@ export function AppearanceSection({
                     aria-hidden
                     className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
                       selected
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-card-border text-transparent"
                     }`}
                   >
@@ -340,7 +340,7 @@ export function AppearanceSection({
                     aria-hidden
                     className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
                       selected
-                        ? "border-primary bg-primary text-white"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-card-border text-transparent"
                     }`}
                   >

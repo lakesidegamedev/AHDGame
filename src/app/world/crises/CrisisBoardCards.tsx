@@ -147,7 +147,7 @@ export function BoardCard({
               href={crisis.href}
               className={`ml-auto rounded-md px-2.5 py-1 font-medium ${
                 crisis.viewerCanAct
-                  ? "bg-primary text-white hover:opacity-90"
+                  ? "bg-primary text-primary-foreground hover:opacity-90"
                   : "border border-card-border text-foreground hover:border-foreground/30"
               }`}
             >

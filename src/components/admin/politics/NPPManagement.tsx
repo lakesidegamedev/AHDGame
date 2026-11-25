@@ -545,7 +545,7 @@ export function NPPManagement() {
       <button
         onClick={handleGenerateNPPs}
         disabled={loading || selectedParties.length === 0}
-        className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+        className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
       >
         {loading ? "Generating..." : "Generate NPPs for elections"}
       </button>
@@ -607,7 +607,7 @@ export function NPPManagement() {
         <button
           onClick={handleSpawnNPPs}
           disabled={loading || !spawnParty}
-          className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
         >
           {loading ? "Spawning…" : `Spawn ${spawnCount} NPP${spawnCount !== 1 ? "s" : ""}`}
         </button>

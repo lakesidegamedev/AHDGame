@@ -69,7 +69,7 @@ export function TreasuryRegistrationControl({
           <button
             onClick={onSave}
             disabled={registrationForm.saving}
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {registrationForm.saving ? "Saving…" : "Save"}
           </button>

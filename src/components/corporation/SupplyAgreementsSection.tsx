@@ -930,7 +930,7 @@ export default function SupplyAgreementsSection({
               <button
                 type="submit"
                 disabled={busyId === a._id}
-                className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {busyId === a._id
                   ? t("negotiation.sending")
@@ -955,7 +955,7 @@ export default function SupplyAgreementsSection({
           onClick={() => setShowForm((v) => !v)}
           aria-expanded={showForm}
           aria-controls={`supply-proposal-${corpId}`}
-          className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white transition-colors hover:bg-primary/90"
+          className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           {showForm ? t("negotiation.close") : t("negotiation.proposeButton")}
         </button>
@@ -1253,7 +1253,7 @@ export default function SupplyAgreementsSection({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {submitting ? t("negotiation.sending") : t("negotiation.sendOpening")}
             </button>

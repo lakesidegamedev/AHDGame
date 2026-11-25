@@ -158,7 +158,7 @@ export default function WageLevelPanel({
             <button
               onClick={onSave}
               disabled={wageSaving}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {wageSaving ? "Saving..." : "Set wage"}
             </button>

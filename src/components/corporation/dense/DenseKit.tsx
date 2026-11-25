@@ -410,7 +410,7 @@ export function SmallButton({
   const ledger = useCorpLedger();
   const toneClass =
     tone === "primary"
-      ? "border-primary bg-primary text-white hover:bg-primary/90"
+      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
       : tone === "danger"
         ? "border-error/50 text-error hover:bg-error/10"
         : "border-card-border text-foreground hover:bg-card-elevated";

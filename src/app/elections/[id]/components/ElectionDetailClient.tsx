@@ -449,7 +449,7 @@ export function ElectionDetailClient({ id, initialElection }: ElectionDetailClie
           <button
             onClick={handleEnter}
             disabled={actionLoading}
-            className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {actionLoading ? "…" : "Enter race"}
           </button>

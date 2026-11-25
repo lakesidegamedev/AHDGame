@@ -310,7 +310,7 @@ export function MigrationsTab() {
                   className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     migration.status === "completed"
                       ? "bg-muted/20 text-muted cursor-not-allowed"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   }`}
                 >
                   {loading === migration.id

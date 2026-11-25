@@ -23,7 +23,7 @@ export function StageTrack({ stage }: { stage: CrisisStage }) {
           aria-current={s === stage ? "step" : undefined}
           className={`flex-1 rounded px-1 py-0.5 text-center text-xs ${
             s === stage
-              ? "bg-primary font-medium text-white"
+              ? "bg-primary font-medium text-primary-foreground"
               : stage === "resolved" || i < current
                 ? "bg-card-elevated text-foreground"
                 : "border border-card-border text-muted"

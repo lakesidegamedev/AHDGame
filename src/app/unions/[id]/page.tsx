@@ -581,7 +581,7 @@ function UnionDashboard({ id }: { id: string }) {
                 type="button"
                 disabled={actionPending || suspended}
                 onClick={() => runAction("leader/accept")}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 Accept presidency
               </button>
@@ -687,7 +687,7 @@ function UnionDashboard({ id }: { id: string }) {
                     type="button"
                     disabled={actionPending || suspended || cannotAffordOrganize}
                     onClick={() => runAction("organize")}
-                    className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                    className="w-fit rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   >
                     Run organize drive
                   </button>
@@ -773,7 +773,7 @@ function UnionDashboard({ id }: { id: string }) {
                       onClick={() =>
                         runAction("demand-wage", { demandedWageLevel: Number(wageDemandDraft) })
                       }
-                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                      className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       Set demand
                     </button>
@@ -985,7 +985,7 @@ function UnionDashboard({ id }: { id: string }) {
                       onClick={() =>
                         runAction("leader/vote", { candidateCharacterId: candidateDraft })
                       }
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-95 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       Cast vote
                     </button>

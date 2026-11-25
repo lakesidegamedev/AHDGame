@@ -411,7 +411,7 @@ export default function PollPage() {
                   : canCommission
                     ? selectedTier === "large"
                       ? "bg-secondary text-white hover:opacity-90"
-                      : "bg-primary text-white hover:opacity-90"
+                      : "bg-primary text-primary-foreground hover:opacity-90"
                     : "cursor-not-allowed bg-foreground/10 text-muted"
               }`}
             >

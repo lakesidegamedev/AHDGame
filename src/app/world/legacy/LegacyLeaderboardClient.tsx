@@ -433,7 +433,7 @@ export default function LegacyLeaderboardClient({
                 onClick={() => changeRankBy(opt.value)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
                   rankBy === opt.value
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-card-elevated hover:text-foreground"
                 }`}
               >
@@ -462,7 +462,7 @@ export default function LegacyLeaderboardClient({
                 onClick={() => changeScope(opt.value)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
                   scope === opt.value
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted hover:bg-card-elevated hover:text-foreground"
                 }`}
               >
@@ -525,7 +525,7 @@ export default function LegacyLeaderboardClient({
                       type="button"
                       onClick={saveDisplayName}
                       disabled={saving}
-                      className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                     >
                       {saving ? "Saving…" : "Save"}
                     </button>

@@ -85,7 +85,7 @@ export default function MapControls({
           onClick={onCompareToggle}
           className={`w-8 h-8 flex items-center justify-center rounded-lg border border-card-border shadow-sm transition-colors ${
             compareMode
-              ? "bg-primary text-white"
+              ? "bg-primary text-primary-foreground"
               : "bg-card text-muted hover:text-foreground hover:bg-card-elevated"
           }`}
           title={compareMode ? "Stop comparing" : "Compare two nations"}
@@ -185,7 +185,7 @@ export default function MapControls({
               disabled={isAnimating}
               className={`rounded-md px-3 py-1 text-body-sm font-medium transition-colors ${
                 viewMode === "map"
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground hover:bg-card-elevated"
               }`}
             >
@@ -196,7 +196,7 @@ export default function MapControls({
               disabled={isAnimating}
               className={`rounded-md px-3 py-1 text-body-sm font-medium transition-colors ${
                 viewMode === "globe"
-                  ? "bg-primary text-white shadow-sm"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted hover:text-foreground hover:bg-card-elevated"
               }`}
             >

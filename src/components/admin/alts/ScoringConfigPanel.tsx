@@ -256,7 +256,7 @@ export function ScoringConfigPanel({ config, cluster, onSaved, notify }: Scoring
         <button
           onClick={save}
           disabled={saving || !dirty}
-          className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50 motion-reduce:transition-none"
+          className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border motion-reduce:transition-none"
         >
           {saving ? "Saving…" : "Save config"}
         </button>

@@ -100,7 +100,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                     type="button"
                     disabled={isPending}
                     onClick={() => pull(lever)}
-                    className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                    className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                   >
                     {isPending ? "Working" : "Confirm"}
                   </button>
@@ -118,7 +118,7 @@ export function CrisisLeverList({ crisisId, levers, corporations, onPulled }: Pr
                   type="button"
                   disabled={noCompany || pending !== null}
                   onClick={() => setConfirming(lever.id)}
-                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted"
                 >
                   {lever.viaBill ? "Raise bill" : "Pull"}
                 </button>

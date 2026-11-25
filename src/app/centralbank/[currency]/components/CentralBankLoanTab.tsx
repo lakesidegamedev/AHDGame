@@ -730,7 +730,9 @@ function AdminFundingPicker({
             disabled={busy || disabled}
             onClick={() => void setSource(opt)}
             className={`rounded px-2 py-0.5 transition-colors ${
-              value === opt ? "bg-primary text-white" : "text-muted hover:text-foreground"
+              value === opt
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:text-foreground"
             } ${busy || disabled ? "opacity-50" : ""}`}
           >
             {opt === "both" ? "50/50" : opt === "deposits" ? "Deposits" : "Reserves"}
@@ -842,7 +844,9 @@ function PaymentModePicker({
             disabled={disabled}
             onClick={() => void submit("pi")}
             className={`rounded px-2 py-0.5 transition-colors ${
-              mode === "pi" ? "bg-primary text-white" : "text-muted hover:text-foreground"
+              mode === "pi"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:text-foreground"
             } ${disabled ? "opacity-50" : ""}`}
           >
             Pay down the loan
@@ -855,7 +859,9 @@ function PaymentModePicker({
               setConfirming(true);
             }}
             className={`rounded px-2 py-0.5 transition-colors ${
-              mode === "io" ? "bg-primary text-white" : "text-muted hover:text-foreground"
+              mode === "io"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:text-foreground"
             } ${disabled ? "opacity-50" : ""}`}
           >
             Pay interest only (+{LOC_IO_SURCHARGE_PERCENT_POINTS.toFixed(2)}%)

@@ -132,7 +132,7 @@ export function SingleplayerEndTurnButton() {
             type="button"
             disabled={!canAdvance && !timerRunning}
             onClick={() => setTimerRunning((running) => !running)}
-            className="mt-3 w-full rounded bg-primary px-2 py-1.5 font-semibold text-white"
+            className="mt-3 w-full rounded bg-primary px-2 py-1.5 font-semibold text-primary-foreground"
           >
             {timerRunning ? t("stopTimer") : t("startTimer")}
           </button>

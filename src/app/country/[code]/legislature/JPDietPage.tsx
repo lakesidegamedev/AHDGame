@@ -487,7 +487,7 @@ export function JPDietPage({ countryId }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowProposeModal(true)}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Propose bill
                   </button>
@@ -499,7 +499,7 @@ export function JPDietPage({ countryId }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowProposeModal(true)}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Propose bill
                   </button>
@@ -553,7 +553,7 @@ export function JPDietPage({ countryId }: Props) {
                     type="button"
                     onClick={() => setShowCabinetProposeModal(true)}
                     disabled={!canBrowseCabinetBill}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   >
                     Propose bill
                   </button>
@@ -583,7 +583,7 @@ export function JPDietPage({ countryId }: Props) {
                   </div>
                   <button
                     onClick={() => setAppointModalOpen(true)}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
                     Appoint prime minister
                   </button>

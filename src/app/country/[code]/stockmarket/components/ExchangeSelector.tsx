@@ -75,7 +75,7 @@ export function ExchangeSelector({
                 onClick={() => onSelect(key)}
                 className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${
                   exchangeFilter === key
-                    ? "bg-primary text-white shadow-sm"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-white/70 hover:text-white"
                 }`}
               >

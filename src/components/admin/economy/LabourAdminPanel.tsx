@@ -118,7 +118,7 @@ export function LabourAdminPanel() {
             type="button"
             onClick={() => void handleSetMinWage()}
             disabled={mwSaving || !country.trim()}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {mwSaving ? "Saving…" : "Set"}
           </button>

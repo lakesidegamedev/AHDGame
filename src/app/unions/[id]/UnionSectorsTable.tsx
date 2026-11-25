@@ -331,7 +331,7 @@ export function UnionSectorsTable({
               type="button"
               disabled={actionPending || quote.blocker != null}
               onClick={runBatch}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               Run {quote.count} {quote.count === 1 ? "drive" : "drives"}
             </button>
@@ -540,7 +540,7 @@ export function UnionSectorsTable({
                           type="button"
                           disabled={actionPending || cannotAfford}
                           onClick={() => onOrganize(s.sectorId)}
-                          className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                          className="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                         >
                           {rival ? "Raid" : "Organize"}
                         </button>

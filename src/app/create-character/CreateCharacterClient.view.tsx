@@ -581,7 +581,7 @@ export function renderCreateCharacterClientView(
                 attempt: prev.attempt + 1,
               }));
             }}
-            className="mt-5 inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-primary px-5 text-body-sm font-semibold text-white hover:bg-primary-dark"
+            className="mt-5 inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-primary px-5 text-body-sm font-semibold text-primary-foreground hover:bg-primary-dark"
           >
             Try again
           </button>

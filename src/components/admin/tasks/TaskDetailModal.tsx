@@ -219,7 +219,7 @@ export function TaskDetailModal({ task, onClose, onStatusChange, onDelete }: Tas
               <button
                 type="submit"
                 disabled={submitting || !commentBody.trim()}
-                className="ml-auto px-3 py-1.5 rounded text-xs bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="ml-auto px-3 py-1.5 rounded text-xs bg-primary text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
               >
                 {submitting ? "Posting..." : "Post"}
               </button>

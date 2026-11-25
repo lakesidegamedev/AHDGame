@@ -323,7 +323,7 @@ export default function SponsoredFundPanel({
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {busy ? "Chartering…" : `Charter for ${fmt(totalCost)}`}
             </button>

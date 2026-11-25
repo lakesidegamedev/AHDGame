@@ -462,7 +462,7 @@ export function GeneralElectionPanel({
               <button
                 onClick={handleSupportConfirm}
                 disabled={supporting || !supportPreview?.affordable}
-                className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {supporting
                   ? "Contributing..."

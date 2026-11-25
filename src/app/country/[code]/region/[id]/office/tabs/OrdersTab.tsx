@@ -123,7 +123,7 @@ export function OrdersTab(props: Props) {
         <button
           onClick={() => setModalMode("normal")}
           disabled={!canIssue}
-          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/80 disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/80 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           title={issueDisabledReason}
         >
           + Issue order

@@ -114,7 +114,7 @@ function PlayerName({ name, sequentialId }: { name: string; sequentialId?: numbe
 const inputClass =
   "h-7 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none";
 const primaryButton =
-  "inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border";
 
 export default function NegotiatedSalePanel({
   corpId,
@@ -551,7 +551,7 @@ export default function NegotiatedSalePanel({
                   void (confirming.kind === "pay" ? pay(confirming.listing) : propose())
                 }
                 disabled={busy}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {busy ? "Working" : confirming.kind === "pay" ? "Pay now" : "Offer sale"}
               </button>

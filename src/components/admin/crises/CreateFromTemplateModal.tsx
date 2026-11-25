@@ -203,7 +203,7 @@ export function CreateFromTemplateModal({
           <button
             onClick={onSubmit}
             disabled={templateSubmitting || !selectedTemplate}
-            className="rounded border border-primary bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="rounded border border-primary bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:opacity-90 disabled:bg-card-border disabled:text-muted transition-opacity"
           >
             {templateSubmitting ? "Creating..." : "Create from template"}
           </button>

@@ -610,7 +610,7 @@ export function TreasuryPanel({
               <button
                 onClick={handleDonate}
                 disabled={donateForm.donating}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
               >
                 {donateForm.donating ? "Donating…" : "Donate"}
               </button>
@@ -762,7 +762,7 @@ export function TreasuryPanel({
                   <button
                     onClick={handleSaveTax}
                     disabled={taxForm.saving}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                   >
                     {taxForm.saving ? "Saving…" : "Save"}
                   </button>

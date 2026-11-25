@@ -376,7 +376,7 @@ export function OwnerToggle({ options, active, onChange }: OwnerToggleProps) {
             onClick={() => onChange(opt.key)}
             className={`relative flex min-w-0 flex-col items-start rounded-md px-3 py-1.5 text-left transition-all ${
               isActive
-                ? "bg-primary text-white shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >
@@ -413,7 +413,7 @@ export function ChartPill({
   children: ReactNode;
 }) {
   const toneClass = {
-    primary: "bg-primary text-white",
+    primary: "bg-primary text-primary-foreground",
     success: "bg-success text-white",
     warning: "bg-warning text-white",
     info: "bg-info text-white",

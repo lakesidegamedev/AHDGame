@@ -296,7 +296,7 @@ export function renderGuidedLegislationModalView(
                       />
                       <button
                         type="button"
-                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
                         onClick={() => {
                           const error = validateEmbargoRows(embargoRows);
                           if (error) {
@@ -552,7 +552,7 @@ export function renderGuidedLegislationModalView(
                       type="button"
                       disabled={!taxRateValid || taxRate === taxEstimate.currentRate}
                       onClick={() => setStep("review")}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       Review
                     </button>
@@ -625,7 +625,7 @@ export function renderGuidedLegislationModalView(
                       type="button"
                       disabled={!subsidyValid}
                       onClick={() => setStep("review")}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       Review
                     </button>
@@ -758,7 +758,7 @@ export function renderGuidedLegislationModalView(
                             ? addSubsidyToDraft
                             : addTaxToDraft
                       }
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
                     >
                       Add to draft bill
                     </button>
@@ -921,7 +921,7 @@ export function renderGuidedLegislationModalView(
                         !summary.trim()
                       }
                       onClick={submit}
-                      className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
                     >
                       {queue
                         ? submitting

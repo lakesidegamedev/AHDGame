@@ -429,7 +429,7 @@ export default function MetricsPage() {
             <p className="text-red-400">{error}</p>
             <button
               onClick={fetchMetrics}
-              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Try again
             </button>
@@ -472,7 +472,7 @@ export default function MetricsPage() {
                     onClick={() => setActiveCategory(tab.id)}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
                       activeCategory === tab.id
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-card-muted text-muted hover:bg-card-elevated hover:text-foreground"
                     }`}
                   >

@@ -63,7 +63,7 @@ export function AssignLeaderModal({
             type="button"
             onClick={onSubmit}
             disabled={assignLoading || !assignCharacterId}
-            className="flex-1 rounded-lg bg-primary py-2 text-sm text-white disabled:opacity-50"
+            className="flex-1 rounded-lg bg-primary py-2 text-sm text-primary-foreground disabled:bg-card-border disabled:text-muted"
           >
             {assignLoading ? "Saving…" : "Assign"}
           </button>

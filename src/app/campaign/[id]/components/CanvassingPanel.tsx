@@ -577,7 +577,7 @@ export function CanvassingPanel({
                 disabled={n > maxCanvasses}
                 className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   count === n
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : n > maxCanvasses
                       ? "bg-muted/20 text-muted cursor-not-allowed"
                       : "bg-card-muted text-foreground hover:bg-primary/20"
@@ -591,7 +591,7 @@ export function CanvassingPanel({
               disabled={maxCanvasses < 1}
               className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                 count === maxCanvasses && !QUANTITY_OPTIONS.includes(maxCanvasses)
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : maxCanvasses < 1
                     ? "bg-muted/20 text-muted cursor-not-allowed"
                     : "bg-card-muted text-foreground hover:bg-primary/20"
@@ -607,7 +607,7 @@ export function CanvassingPanel({
         <button
           onClick={handleCanvass}
           disabled={!selectedGroup || loading || !canAfford}
-          className="w-full bg-primary hover:bg-primary-dark disabled:bg-muted/50 text-white font-medium py-3 px-4 rounded-md transition-colors disabled:cursor-not-allowed"
+          className="w-full bg-primary hover:bg-primary-dark disabled:bg-muted/50 text-primary-foreground font-medium py-3 px-4 rounded-md transition-colors disabled:cursor-not-allowed"
         >
           {loading
             ? "Canvassing..."

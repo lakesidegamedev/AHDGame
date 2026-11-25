@@ -813,7 +813,7 @@ function useSettingsPageContentContext() {
                 dangerous
                   ? "bg-error/10 text-error"
                   : activeSection === section.id
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-primary/10 text-primary"
               }`}
             >

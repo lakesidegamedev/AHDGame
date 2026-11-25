@@ -538,7 +538,7 @@ const ActionCard = memo(function ActionCard(props: ActionCardProps | LoadingActi
                         <button
                           onClick={() => setConvertConfirming(true)}
                           disabled={!!executing}
-                          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
+                          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-dark disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                         >
                           {executing === "convertCash" ? "Converting..." : "Confirm donation"}
                         </button>

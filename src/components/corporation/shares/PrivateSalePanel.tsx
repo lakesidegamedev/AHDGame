@@ -347,7 +347,7 @@ export default function PrivateSalePanel({
             <button
               onClick={() => void handleCreateListing()}
               disabled={loading || listingShares <= 0 || listingShares > availableShares}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {loading ? "Listing" : "Create listing"}
             </button>
@@ -420,7 +420,7 @@ export default function PrivateSalePanel({
                 corporationListingShares <= 0 ||
                 corporationListingShares > corporationShares
               }
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {loading ? "Listing" : "List company shares"}
             </button>
@@ -551,7 +551,7 @@ export default function PrivateSalePanel({
                               <button
                                 onClick={() => handleAcceptOffer(listing._id, offer._id, maxAccept)}
                                 disabled={loading}
-                                className="inline-flex h-6 items-center rounded border border-primary bg-primary px-2 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex h-6 items-center rounded border border-primary bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                               >
                                 Accept
                               </button>
@@ -693,7 +693,7 @@ export default function PrivateSalePanel({
                       <button
                         onClick={() => handleSubmitOffer(listing._id)}
                         disabled={loading || !offerShares[listing._id] || !offerPrice[listing._id]}
-                        className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         {loading ? "Submitting" : "Make offer"}
                       </button>

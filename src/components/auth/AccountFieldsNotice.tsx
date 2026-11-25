@@ -35,7 +35,7 @@ export function AccountFieldsNotice({ kind, mode }: NoticeProps) {
       {kind !== "email" && <p className="text-body text-muted">{PASSWORD_EVERYWHERE_NOTE}</p>}
       <a
         href={ACCOUNT_URL}
-        className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-primary/90"
+        className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         {centralActionLabel(kind)}
       </a>

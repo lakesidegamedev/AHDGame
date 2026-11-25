@@ -343,7 +343,7 @@ export function PrimeRateCard({
               pendingRate === null ||
               pendingRate === primeRate
             }
-            className="w-full rounded-md bg-primary px-4 py-2 text-body font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="w-full rounded-md bg-primary px-4 py-2 text-body font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:bg-card-border disabled:text-muted"
           >
             {submitting ? "Updating..." : "Confirm rate change"}
           </button>

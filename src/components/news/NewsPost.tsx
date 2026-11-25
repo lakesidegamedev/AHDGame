@@ -441,7 +441,7 @@ export function NewsPost({
             <button
               type="submit"
               disabled={!editContent.trim() || editSubmitting || editImageUploading}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
             >
               {editSubmitting ? "Saving…" : "Save changes"}
             </button>
@@ -613,7 +613,7 @@ export function NewsPost({
               <button
                 type="submit"
                 disabled={!replyContent.trim() || replySubmitting}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border disabled:cursor-not-allowed"
               >
                 Reply
               </button>

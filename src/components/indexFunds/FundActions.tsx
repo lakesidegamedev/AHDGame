@@ -30,7 +30,7 @@ export function FundActions({ corporations = [], ...props }: Props) {
         <button
           type="button"
           onClick={() => setMode("subscribe")}
-          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:bg-card-border disabled:text-muted"
         >
           Buy fund units
         </button>

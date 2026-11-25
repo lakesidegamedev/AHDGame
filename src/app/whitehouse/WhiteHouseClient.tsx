@@ -979,7 +979,7 @@ export default function WhiteHouseClient({
               <button
                 onClick={handleNominateVp}
                 disabled={submitting || !vpNomineeCharId}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {submitting ? "Nominating…" : "Send to Senate"}
               </button>
@@ -1028,7 +1028,7 @@ export default function WhiteHouseClient({
               <button
                 onClick={handleAppoint}
                 disabled={submitting}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
               >
                 {selectedCharId ? "Appoint" : "Vacate"}
               </button>

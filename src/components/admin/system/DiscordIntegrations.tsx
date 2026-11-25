@@ -462,7 +462,7 @@ export function DiscordIntegrations() {
         <button
           onClick={() => handleSave()}
           disabled={saving || !loaded}
-          className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border transition-colors"
         >
           {saving ? "Saving…" : "Save webhooks"}
         </button>

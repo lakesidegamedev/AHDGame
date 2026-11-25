@@ -469,7 +469,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
           </p>
           <Link
             href={`/elections/${election._id.toString()}`}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Open the race page to enter →
           </Link>
@@ -497,7 +497,7 @@ export default async function PartyPrimaryPage({ params, searchParams }: PagePro
             </div>
             <Link
               href={`/elections/${election._id.toString()}#state-org`}
-              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Open builder
             </Link>

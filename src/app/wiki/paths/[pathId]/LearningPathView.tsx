@@ -115,7 +115,9 @@ export default function LearningPathView({ path, pathId }: LearningPathViewProps
               >
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full tabular-nums text-sm font-bold ${
-                    isCompleted ? "bg-primary text-white" : "bg-card-elevated text-muted"
+                    isCompleted
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card-elevated text-muted"
                   }`}
                 >
                   {isCompleted ? (

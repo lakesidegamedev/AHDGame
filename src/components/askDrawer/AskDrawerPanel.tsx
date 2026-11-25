@@ -1005,7 +1005,7 @@ export function AskDrawerPanel({
               <button
                 type="submit"
                 disabled={question.trim().length < 5 || !!unavailable}
-                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-opacity disabled:bg-card-elevated disabled:text-muted sm:h-8 sm:w-8"
+                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:bg-card-elevated disabled:text-muted sm:h-8 sm:w-8"
                 aria-label="Ask"
                 title="Ask"
               >
