@@ -3,7 +3,7 @@
  * then only depreciates here; build orders arrive in P3. Paid basis tracks
  * (book + landed cash) scaled by the same factor, so per-unit basis stays
  * flat. Pure: no reads or writes. */
-import { governorAnchorTurn, type GovernorGlide } from "@/lib/market/capital";
+import { plantsRampShare, type GovernorGlide } from "@/lib/market/capital";
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { seedCapitalStock } from "@/lib/market/capital";
@@ -330,15 +330,12 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   // The stamp above is persisted as-is (it also marks the flip turn); the ramp
   // itself runs from the earlier of it and the world's flip, so a sector born
   // after the flip joins the world's ramp instead of restarting it.
-  const rampAnchorTurn = governorAnchorTurn(
-    plantsStartTurn,
+  const plantsRampLambda = plantsRampShare(plantsStartTurn, currentTurn, {
+    plantsEnabled,
+    governorRampTurns,
     worldGovernorAnchorTurn,
-    governorGlide
-  );
-  const plantsRampLambda =
-    !plantsEnabled || rampAnchorTurn == null || governorRampTurns <= 0
-      ? 1
-      : Math.max(0, Math.min(1, (currentTurn - rampAnchorTurn) / governorRampTurns));
+    governorGlide,
+  });
   return {
     mothballed,
     activeFraction,

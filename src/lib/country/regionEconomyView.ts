@@ -1,3 +1,4 @@
+import { loadSectorCrisisEffects } from "@/lib/crises/queries/sectorCrisisEffects";
 import { fullMixBuildRoom } from "@/lib/corporations/rules/buildDemandCapacity";
 import { getEffectiveStrategyRates, getStrategy } from "@/lib/constants/sectorStrategies";
 import { weightedRecipeMix } from "@/lib/country/rules/plantInputMix";
@@ -357,6 +358,7 @@ export async function buildRegionEconomyResponse({
       ),
     };
   };
+  const crisisEffectsFor = await loadSectorCrisisEffects(db, growthGameState?.currentTurn ?? 0);
   const economySectors = OPERATING_SECTOR_TYPES.map((sectorType) => {
     const typeSectors = sectorsByType.get(sectorType) ?? [];
     const ownedRevenue = typeSectors.reduce(
@@ -428,6 +430,7 @@ export async function buildRegionEconomyResponse({
         targetGrowthRate: s.targetGrowthRate ?? s.currentGrowthRate ?? s.growthRate ?? 0,
         currentGrowthRate: s.currentGrowthRate ?? s.growthRate ?? 0,
         productionLevel: s.productionPolicyLevel ?? 0,
+        crisisEffects: crisisEffectsFor(s, countryId),
         defenderMarketingStrength: roundMarketingStrength(corp?.marketingStrength ?? 0),
         isNatcorp,
         isNpp: corp?.ceoType === "npp",

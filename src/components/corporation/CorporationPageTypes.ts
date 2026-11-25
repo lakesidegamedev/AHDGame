@@ -1,3 +1,4 @@
+import type { SectorCrisisEffects } from "@/lib/crises/rules/sectorCrisisEffects";
 import type { LastTurnReconciliation } from "@/lib/corporations/rules/lastTurnReconciliation";
 import type { SiteStatement } from "@/lib/corporations/rules/siteStatement";
 import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
@@ -688,6 +689,7 @@ export interface CommoditySupplyDemandBlendPct {
 }
 
 export interface SectorDetail {
+  crisisEffects?: SectorCrisisEffects;
   _id: string;
   /** Funded-market transition package while its window is open for this sector. */
   cutoverTransition?: {
