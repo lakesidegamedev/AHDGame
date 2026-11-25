@@ -10,7 +10,7 @@
  * this is the pair's real trade, whatever made the market match it.
  */
 
-import { producerTrades, type ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
+import { producerTradeFlows, type ProducerTradeReceipt } from "@/lib/market/producerMarket/rules";
 
 /** One settled supplier-level trade, as replayed from the funded receipt. */
 export interface FundedContractTrade {
@@ -45,7 +45,7 @@ export function* fundedContractTradesOf(
   receipt: ProducerTradeReceipt
 ): Generator<FundedContractTrade> {
   const stateByOffer = new Map(receipt.offers.map((o) => [o.id, o.stateId]));
-  for (const t of producerTrades(receipt)) {
+  for (const t of producerTradeFlows(receipt)) {
     yield {
       kind: t.kind,
       sellerAccountId: t.sellerAccountId,

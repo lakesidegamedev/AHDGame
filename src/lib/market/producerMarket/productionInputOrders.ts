@@ -196,21 +196,36 @@ export function buildProducerInputOrders({
       .filter((p) => p.internalTransferPricing && p.internalTransferPricing.mode !== "free")
       .map((p) => p.accountId)
   );
-  const inputOrders = (): PurchaseOrder[] =>
-    plans.flatMap((p) =>
-      p.inputs.flatMap((recipe) => {
-        const stock = p.inputStock
+  // Everything about a plant's input orders except the units is fixed for the
+  // turn; only the units follow the plan, so the rest is worked out once.
+  const inputOrderTemplates = plans.flatMap((p) =>
+    p.inputs.map((recipe) => {
+      const id = JSON.stringify([p.id, "input", recipe.commodity]);
+      const country = countryOfProducer?.(p.id);
+      return {
+        p,
+        recipe,
+        id,
+        stock: p.inputStock
           .filter((s) => s.commodity === recipe.commodity)
-          .reduce((n, s) => n + s.units, 0);
-        const id = JSON.stringify([p.id, "input", recipe.commodity]);
+          .reduce((n, s) => n + s.units, 0),
+        reserved: (reservations.get(id) ?? []).map((reservation) => ({
+          reservation,
+          reservedId: JSON.stringify([id, "reservation", reservation.id]),
+        })),
+        internalAccounting: internalAccountingAccounts.has(p.accountId),
+        country,
+      };
+    })
+  );
+  const inputOrders = (): PurchaseOrder[] =>
+    inputOrderTemplates.flatMap(
+      ({ p, recipe, id, stock, reserved, internalAccounting, country }) => {
         const units = Math.max(0, plannedById.get(p.id)! * recipe.unitsPerOutput - stock);
-        const reserved = reservations.get(id) ?? [];
         const quantityGroup = reserved.length ? { id, maximumUnits: units } : undefined;
         const publicOrder: PurchaseOrder = {
           id,
-          ...(internalAccountingAccounts.has(p.accountId)
-            ? { internalAccountingSiteId: p.id }
-            : {}),
+          ...(internalAccounting ? { internalAccountingSiteId: p.id } : {}),
           accountId: p.accountId,
           commodity: recipe.commodity,
           book: recipe.book,
@@ -219,27 +234,24 @@ export function buildProducerInputOrders({
           priority: 1,
           fairShare: true,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
-          ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
+          ...(country ? { countryId: country } : {}),
           ...(p.stateId ? { stateId: p.stateId } : {}),
           ...(quantityGroup ? { quantityGroup } : {}),
         };
         return [
           publicOrder,
-          ...reserved.map((reservation): PurchaseOrder => {
-            const reservedId = JSON.stringify([id, "reservation", reservation.id]);
-            return {
-              ...publicOrder,
-              id: reservedId,
-              units: Math.min(units, reservation.units),
-              maximumUnitPrice: reservation.unitPrice,
-              contractUnitPrice: reservation.unitPrice,
-              supplierOfferId: reservation.supplierOfferId,
-              eligibleOfferIds:
-                input.eligibleOffersByOrder?.[reservedId] ?? publicOrder.eligibleOfferIds,
-            };
-          }),
+          ...reserved.map(({ reservation, reservedId }): PurchaseOrder => ({
+            ...publicOrder,
+            id: reservedId,
+            units: Math.min(units, reservation.units),
+            maximumUnitPrice: reservation.unitPrice,
+            contractUnitPrice: reservation.unitPrice,
+            supplierOfferId: reservation.supplierOfferId,
+            eligibleOfferIds:
+              input.eligibleOffersByOrder?.[reservedId] ?? publicOrder.eligibleOfferIds,
+          })),
         ];
-      })
+      }
     );
   orders.push(...inputOrders());
   const pendingQuotes: Array<{

@@ -10,7 +10,7 @@ import {
   type OfferMissReason,
   type UnfilledDemand,
 } from "./rules/unfilledReasons";
-import { eligibleSetOf, producerTrades } from "./producerQuotes";
+import { eligibleSetOf, producerTradeFlows } from "./producerQuotes";
 import { fundedBuyerKind } from "./fundedBuyerDemandRules";
 import { type ProducerPayable, accrueProducerPayable } from "./payablesRules";
 import { captiveMarketValue, laneClearingPrices, ownSiteCredit } from "./captiveMarketValueRules";
@@ -200,9 +200,14 @@ export function buildProducerOperatingResults({
   const soldToOf = (offerId: string): { soldTo?: Record<string, number> } => {
     if (!soldToByOffer) {
       soldToByOffer = new Map();
-      for (const trade of producerTrades(market.tradeReceipt)) {
+      const kindOf = new Map<string, string>();
+      for (const trade of producerTradeFlows(market.tradeReceipt)) {
         if (trade.kind !== "sale" || !(trade.units > 0)) continue;
-        const kind = fundedBuyerKind(trade.buyerAccountId) ?? "companies";
+        let kind = kindOf.get(trade.buyerAccountId);
+        if (kind === undefined) {
+          kind = fundedBuyerKind(trade.buyerAccountId) ?? "companies";
+          kindOf.set(trade.buyerAccountId, kind);
+        }
         const row = soldToByOffer.get(trade.offerId) ?? {};
         row[kind] = (row[kind] ?? 0) + trade.units;
         soldToByOffer.set(trade.offerId, row);

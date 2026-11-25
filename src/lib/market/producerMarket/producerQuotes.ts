@@ -189,6 +189,38 @@ export function* producerTrades(
   receipt: ProducerTradeReceipt,
   accountId?: string
 ): Generator<ProducerTrade> {
+  yield* replayTrades(receipt, accountId, true);
+}
+
+/** A settled trade without its id. */
+export type ProducerTradeFlow = Omit<ProducerTrade, "id">;
+
+/**
+ * The same trades as `producerTrades`, without the id string, for turn steps
+ * that only total them: building one id per trade was most of the replay's cost.
+ */
+export function producerTradeFlows(
+  receipt: ProducerTradeReceipt,
+  accountId?: string
+): Generator<ProducerTradeFlow> {
+  return replayTrades(receipt, accountId, false);
+}
+
+function replayTrades(
+  receipt: ProducerTradeReceipt,
+  accountId: string | undefined,
+  withIds: true
+): Generator<ProducerTrade>;
+function replayTrades(
+  receipt: ProducerTradeReceipt,
+  accountId: string | undefined,
+  withIds: false
+): Generator<ProducerTradeFlow>;
+function* replayTrades(
+  receipt: ProducerTradeReceipt,
+  accountId: string | undefined,
+  withIds: boolean
+): Generator<ProducerTrade | ProducerTradeFlow> {
   const orders = new Map(receipt.orders.map((order) => [order.id, order]));
   const poolByOffer = new Map<string, ProducerSupplyPool>();
   const pools = new Map<string, ProducerSupplyPool>();
@@ -226,6 +258,29 @@ export function* producerTrades(
     priceBuckets.set(key, byPrice);
   }
   const offersById = new Map(receipt.offers.map((o) => [o.id, o]));
+  // A fill naming its suppliers draws only on them, so it is replayed from
+  // those offers in book order instead of filtering the whole price level.
+  const bookRank = new Map<ProducerOffer, number>();
+  const bookOf = new Map<ProducerOffer, string>();
+  for (const [key, rows] of books)
+    rows.forEach((offer, rank) => {
+      bookRank.set(offer, rank);
+      bookOf.set(offer, key);
+    });
+  const namedSuppliers = (
+    ids: readonly string[],
+    book: string,
+    unitPrice: number | null
+  ): ProducerOffer[] => {
+    const named: ProducerOffer[] = [];
+    for (const id of new Set(ids)) {
+      const offer = offersById.get(id);
+      if (!offer || bookOf.get(offer) !== book) continue;
+      if (unitPrice != null && !sameValueZero(offer.unitPrice, unitPrice)) continue;
+      named.push(offer);
+    }
+    return named.sort((a, b) => bookRank.get(a)! - bookRank.get(b)!);
+  };
   let fillIndex = 0;
   for (const fill of receipt.fills) {
     const index = fillIndex++;
@@ -255,9 +310,8 @@ export function* producerTrades(
       if (fill.grid.dispatchedUnits > available + Math.max(1e-8, available * 1e-10))
         throw Error("Electricity receipt exceeds supply");
       remaining.set(offer.id, Math.max(0, available - fill.grid.dispatchedUnits));
-      if (!accountId || order.accountId === accountId || offer.accountId === accountId)
-        yield {
-          id: JSON.stringify([receipt.turn, order.id, offer.id, "grid", index]),
+      if (!accountId || order.accountId === accountId || offer.accountId === accountId) {
+        const trade: ProducerTradeFlow = {
           kind: fill.kind,
           offerId: offer.id,
           orderId: order.id,
@@ -273,6 +327,10 @@ export function* producerTrades(
           dispatchedUnits: fill.grid.dispatchedUnits,
           gridPath: fill.grid.path,
         };
+        yield withIds
+          ? { id: JSON.stringify([receipt.turn, order.id, offer.id, "grid", index]), ...trade }
+          : trade;
+      }
       continue;
     }
     const order = orders.get(fill.orderId);
@@ -296,17 +354,21 @@ export function* producerTrades(
     // Internal transfers and contract/supplier orders ignore the posted price
     // and keep the full-book scan. An ordinary public order takes exactly the
     // offers posted at the fill's price, which the bucket already holds.
-    const group =
+    const atPostedPrice =
       !internal &&
       !fill.spillBook &&
       order.supplierOfferId == null &&
-      order.contractUnitPrice == null
-        ? (priceBuckets.get(book)?.get(fill.unitPrice) ?? []).filter(matchesOrder)
-        : (books.get(book) ?? []).filter(
-            (offer) =>
-              matchesOrder(offer) &&
-              (internal || (order.contractUnitPrice ?? offer.unitPrice) === fill.unitPrice)
-          );
+      order.contractUnitPrice == null;
+    const named = fill.supplierOfferIds
+      ? namedSuppliers(fill.supplierOfferIds, book, atPostedPrice ? fill.unitPrice : null)
+      : null;
+    const group = atPostedPrice
+      ? (named ?? priceBuckets.get(book)?.get(fill.unitPrice) ?? []).filter(matchesOrder)
+      : (named ?? books.get(book) ?? []).filter(
+          (offer) =>
+            matchesOrder(offer) &&
+            (internal || (order.contractUnitPrice ?? offer.unitPrice) === fill.unitPrice)
+        );
     // A state-first fill draws on one state's offers individually, never on
     // the shared price pool, so its sellers are replayed one by one.
     const pooled =
@@ -334,8 +396,7 @@ export function* producerTrades(
       if (!(units > 0)) continue;
       if (!pooled) remaining.set(offer.id, Math.max(0, available - units));
       if (accountId && order.accountId !== accountId && offer.accountId !== accountId) continue;
-      yield {
-        id: JSON.stringify([receipt.turn, order.id, offer.id]),
+      const trade: ProducerTradeFlow = {
         kind: fill.kind,
         offerId: offer.id,
         orderId: order.id,
@@ -349,10 +410,14 @@ export function* producerTrades(
         sellerCountry: offer.countryId,
         buyerCountry: order.countryId,
       };
+      yield withIds ? { id: JSON.stringify([receipt.turn, order.id, offer.id]), ...trade } : trade;
     }
     if (pooled) pooled.take(fillUnits);
   }
 }
+
+/** Map key equality, which the price buckets use. */
+const sameValueZero = (a: number, b: number) => a === b || (a !== a && b !== b);
 
 export function nonNegative(value: number, label: string): number {
   if (!Number.isFinite(value) || value < 0) throw new Error(`Invalid ${label}`);

@@ -186,13 +186,21 @@ export function settleProducerOrders(
           segmentLimit?.left ?? Infinity
         );
       for (let round = 0; round <= members.length + cohorts.size; round++) {
+        // Nothing is bought until the proposals are set, so each member's cap
+        // is read once per round; purchases below read it afresh.
+        const openingCap = new Map<Member, number>();
+        const capAtOpen = (m: Member): number => {
+          let cap = openingCap.get(m);
+          if (cap === undefined) openingCap.set(m, (cap = capOf(m)));
+          return cap;
+        };
         const proposals = levels.flatMap(({ suppliers, live: candidates }) => {
           const supply = supplyOf(suppliers);
           if (!(supply > 0)) return [];
-          const live = candidates.filter((m) => capOf(m) > 0);
+          const live = candidates.filter((m) => capAtOpen(m) > 0);
           const shares = proRataShares(
             supply,
-            live.map((m) => ({ weight: m.wanted, cap: capOf(m) }))
+            live.map((m) => ({ weight: m.wanted, cap: capAtOpen(m) }))
           );
           return live.map((m, i) => ({ m, suppliers, units: shares[i] }));
         });
@@ -200,7 +208,7 @@ export function settleProducerOrders(
         const shares = capSharedShares(
           proposals.map((p) => p.units),
           proposals.map(({ m }) => [
-            { id: m.orderLimitId, units: capOf(m) },
+            { id: m.orderLimitId, units: capAtOpen(m) },
             {
               id: m.accountLimitId,
               units: price > 0 ? context.budgets.get(m.order.accountId)! / price : Infinity,
