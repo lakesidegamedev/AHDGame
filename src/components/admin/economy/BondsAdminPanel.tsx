@@ -359,7 +359,7 @@ export function BondsAdminPanel() {
                         <span
                           className={`text-body-sm font-semibold px-2 py-0.5 rounded ${
                             row.issuerType === "sovereign"
-                              ? "bg-primary text-primary-foreground border-transparent"
+                              ? "bg-primary/20 text-primary"
                               : "bg-muted/20 text-muted"
                           }`}
                         >

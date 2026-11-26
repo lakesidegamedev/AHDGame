@@ -433,7 +433,7 @@ function BillDetailContent({ initialBill }: { initialBill: BillDetail | null }) 
                       </div>
                     )}
                   <div
-                    className={`grid min-w-0 gap-4 ${showSeatingHero ? "xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] xl:items-center" : ""}`}
+                    className={`grid min-w-0 grid-cols-1 gap-4 ${showSeatingHero ? "xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] xl:items-center" : ""}`}
                   >
                     {showSeatingHero && (
                       <VoteSeatingChart

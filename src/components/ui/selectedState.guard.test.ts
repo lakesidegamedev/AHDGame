@@ -147,6 +147,13 @@ const TINT_EXEMPT: Record<string, string> = {
   "app/world/components/CountryComparePanel.tsx": "country choice list",
   "components/economy/EconomicModelCard.tsx": "model choice cards",
   "components/GameResetControls.tsx": "admin reset option cards",
+  "app/country/[code]/executive/cabinet/[positionId]/office/components/MinisterialOrderPanel.tsx":
+    "regional status label, not a control",
+  "components/admin/economy/BondsAdminPanel.tsx": "issuer type label, not a control",
+  "components/admin/heal/HealPartyMembership.tsx": "membership status label, not a control",
+  "components/sidebarWidgets/SidebarWidget.tsx": "staff count badge, not a control",
+  "components/corporation/dense/DenseKit.tsx": "section heading rule in ledger mode, not a tab",
+  "components/unions/UnionServicesPanel.tsx": "service on/off status label, not a control",
 };
 
 /** Tab-like toggles that carry no selection attribute still must not use a tint or underline. */

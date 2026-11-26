@@ -620,7 +620,7 @@ function UnionDashboard({ id }: { id: string }) {
                   <span
                     className={`ml-2 rounded-full px-2 py-0.5 text-body-sm ${
                       tab === t.key
-                        ? "bg-primary text-primary-foreground border-transparent"
+                        ? "bg-primary-foreground/20 text-primary-foreground"
                         : "bg-card-elevated text-muted"
                     }`}
                   >
