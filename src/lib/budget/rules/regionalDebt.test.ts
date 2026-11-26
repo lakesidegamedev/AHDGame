@@ -91,6 +91,30 @@ describe("regional debt accounting", () => {
   });
   it("rejects invalid money and unsafe balances", () => {
     expect(() => settleRegionalDebt({ ...input, annualRevenue: NaN })).toThrow();
-    expect(() => settleRegionalDebt({ ...input, openingCash: Number.MAX_SAFE_INTEGER })).toThrow();
+    expect(() => settleRegionalDebt({ ...input, openingCash: 1e17 })).toThrow();
+  });
+
+  it("settles a very rich region in whole units instead of failing", () => {
+    // A regional treasury holding about 89.6 trillion in local currency is too large for exact cents.
+    const result = settleRegionalDebt({
+      previous: {
+        principal: 0,
+        cash: 89_607_752_880_306.78,
+        annualInterest: 0,
+        interestRate: 0.05,
+        lastSettledTurn: 234,
+        borrowed: 0,
+        repaid: 0,
+        interestPaid: 0,
+      },
+      openingCash: 89_607_752_880_306.78,
+      annualRevenue: 29_500_794_905_856,
+      annualPrimarySpending: 0,
+      turn: 235,
+      turnsPerYear: 48,
+    });
+    expect(result.lastSettledTurn).toBe(235);
+    expect(result.principal).toBe(0);
+    expect(result.cash).toBeCloseTo(89_607_752_880_307 + 614_599_893_872, -1);
   });
 });
