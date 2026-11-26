@@ -23,6 +23,8 @@ const ledger = storeLedgerView({
     labourPaid: 60,
     otherOperatingPaid: 40,
     inputsConsumed: 20,
+    producedUnits: 25,
+    offeredUnits: 100,
   },
 });
 
@@ -30,7 +32,9 @@ describe("StoreLedgerPanel", () => {
   it("shows each row on its own line, and the rows add up", () => {
     render(<StoreLedgerPanel ledger={ledger} />);
     expect(screen.getByText("Goods bought wholesale").nextSibling?.textContent).toBe("M1000");
-    expect(screen.getByText("Markup earned").nextSibling?.textContent).toBe("+ M150");
+    expect(screen.getByText("Markup earned (15% of wholesale)").nextSibling?.textContent).toBe(
+      "+ M150"
+    );
     expect(screen.getByText("Sold to households").nextSibling?.textContent).toBe("M1150");
     expect(screen.getByText("Running costs").nextSibling?.textContent).toBe("- M120");
     expect(screen.getByText("Margin (markup minus running costs)").nextSibling?.textContent).toBe(
@@ -41,6 +45,11 @@ describe("StoreLedgerPanel", () => {
     expect(ledger.runningCostRows.reduce((n, r) => n + r.value, 0)).toBeCloseTo(
       ledger.runningCosts
     );
+  });
+
+  it("says how much of the store's capacity its sales used", () => {
+    render(<StoreLedgerPanel ledger={ledger} />);
+    expect(screen.getByText(/Capacity used: 25%/)).toBeTruthy();
   });
 
   it("breaks the wholesale goods out by commodity", () => {
