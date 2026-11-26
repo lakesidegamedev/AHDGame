@@ -51,7 +51,7 @@ import { quoteLoanOrigination } from "@/lib/banking/rules/loanFees";
 import { computeDepositCeiling } from "@/lib/banking/rules/capacity";
 import { MODERN_DEPOSIT_CORRIDOR, MODERN_LENDING_CORRIDOR } from "@/lib/banking/regulationQ";
 import { computeConfidence } from "@/lib/banking/rules/confidence";
-import { depositFlight, depositTakerFails } from "@/lib/banking/rules/solvency";
+import { depositFlight, depositTakerVerdict } from "@/lib/banking/rules/solvency";
 import { savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { quoteBondPrices } from "@/lib/bonds/marketPoolQuotes";
 import {
@@ -1071,12 +1071,15 @@ function simulate(scenario: Scenario) {
       }
     }
     assertCashConservation();
-    const failed = depositTakerFails({
-      priorBand,
-      cashReserves: cash,
-      requiredLiquidity: RESERVE_RATIO * deposits,
-      netAssets,
-    });
+    // No `owed`: the calibration keeps the strict rule, so any hole fails at once.
+    const failed =
+      depositTakerVerdict({
+        turn,
+        priorBand,
+        cashReserves: cash,
+        requiredLiquidity: RESERVE_RATIO * deposits,
+        netAssets,
+      }).outcome === "fail";
     warningBand = confidence.band;
     if (failed) {
       failureTurn = turn;

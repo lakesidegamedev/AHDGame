@@ -2,7 +2,10 @@
 import type { BankTreasuryTradeReceipt, BankCharter } from "@/lib/db/types/bank";
 import { type Bond, type BondHolder, BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { type BankingTransition, oid } from "@/lib/banking/rules/boundary";
-import { BANK_TREASURY_MAX_REMAINING_TURNS } from "@/lib/banking/rules/bankTreasury";
+import {
+  BANK_TREASURY_MAX_REMAINING_TURNS,
+  bankLotRedeemedAtMaturity,
+} from "@/lib/banking/rules/bankTreasury";
 import { sovereignPrimaryTransition } from "@/lib/bonds/rules/sovereignPrimary";
 import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { primaryDocumentId } from "@/lib/bonds/sovereignPrimarySettlement";
@@ -682,7 +685,8 @@ export async function markBankTreasury(
   db: Db,
   bankId: ObjectId,
   charter: BankCharter,
-  turn: number
+  turn: number,
+  options: { redeemedBondIds?: ReadonlySet<string> } = {}
 ): Promise<number> {
   const bonds = await bondsCollection(db)
     .find({
@@ -703,6 +707,10 @@ export async function markBankTreasury(
   let mark = 0;
   for (const bond of bonds) {
     if (bondPoolCurrency(bond) !== charter.currency) continue;
+    // Redeemed lots are cash in the vault already. Counting them here as well
+    // inflated equity by their full value until the bond was retired.
+    if (options.redeemedBondIds?.has(bond._id.toHexString())) continue;
+    if (bankLotRedeemedAtMaturity(bond, bankId.toHexString(), charter.charteredTurn)) continue;
     const quote = await loadBondQuote(db, bond, {
       pools: new Map([[charter.currency, poolSnapshot(pools.get(charter.currency))]]),
     });
