@@ -712,8 +712,6 @@ export interface PlantsData {
     unsold: number;
   };
 
-  /** A store's settled turn: goods bought, sold to households, markup, running costs. */
-  storeLedger?: import("@/lib/stores/rules/storeLedgerView").StoreLedgerView;
   /** Units handed free to the company's own sites; not sales and not unsold. */
   ownSiteUnits?: number | null;
   unsoldUnits: number | null;

@@ -30,14 +30,15 @@ export const TIER_2039_STRATEGIES: Record<string, SectorStrategy[]> = {
       minDecade: "2039",
       name: "Agentic Storefronts",
       description:
-        "Shoppers' agents order straight from the store's agents. Higher store throughput that leans on freight and software.",
+        "Shoppers' agents order straight from the store's agents. High retail output that leans on freight, software and electronics.",
       buildTurns: 72,
       downside:
         "Stores run on software and data feeds, and shoppers drift away when a platform goes down.",
-      supply: {},
+      supply: { retail: 0.6 },
       demand: {
         freight: 0.14,
         software: 0.1,
+        electronics: 0.06,
         energy: 0.05,
         advertising: 0.03,
       },

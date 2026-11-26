@@ -10,7 +10,7 @@ import { computeInputsCost } from "@/lib/corporations/physicalPnl";
 describe("1991 input rails agree while legacy presets retain their original values", () => {
   it.each([
     ["1953-default", 0.15, 0.18],
-    ["1991-default", 0.112, 0.112],
+    ["1991-default", 0.16, 0.16],
     ["2019-default", 0.15, 0.18],
   ] as const)(
     "uses the qualified %s input basket on all rails",
@@ -39,6 +39,7 @@ describe("1991 input rails agree while legacy presets retain their original valu
         true,
         1,
         undefined,
+        0,
         COMMODITY_BASE_PRICES,
         undefined,
         preset
@@ -89,6 +90,7 @@ describe("phased hardware demand reaches all physical input rails", () => {
         true,
         1,
         undefined,
+        0,
         COMMODITY_BASE_PRICES,
         undefined,
         "1991-default",
