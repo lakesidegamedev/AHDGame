@@ -219,6 +219,21 @@ describe("frozen producer turn settlement", () => {
         countryInventory
       )
     ).toBe("different");
+    expect(
+      compareProducerInventory(
+        {
+          inputStock: [{ commodity: "software", units: 0, value: 0 }],
+          outputStock: [{ commodity: "software", book: "world", units: 0 }],
+        },
+        { inputStock: [], outputStock: [] }
+      )
+    ).toBe("equivalent");
+    expect(
+      compareProducerInventory(
+        { inputStock: [{ commodity: "software", units: 0, value: 4 }], outputStock: [] },
+        { inputStock: [], outputStock: [] }
+      )
+    ).toBe("different");
   });
 
   it("resumes a frozen receipt without a cash-change witness", async () => {
@@ -547,6 +562,42 @@ describe("frozen producer turn settlement", () => {
     const { memory, input, db } = fixture();
     memory.collection("corporateSectors").docs[0].capitalStock = openingDailyUnits + 1;
     await expect(settleProducerTurn(db, input)).rejects.toThrow("physical opening");
+    expect(memory.collection("producerEconomyTurns").docs).toHaveLength(0);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1000);
+  });
+
+  it("settles when the stored opening still lists empty rows the plan dropped", async () => {
+    // A store plans with no output stock while its stored image still lists a
+    // zero-unit row. Retrying cannot clear that, so it must not stop the turn.
+    const { memory, input, db } = fixture();
+    memory.collection("corporateSectors").docs[0].producerInventory = {
+      worldEpoch: "example",
+      turn: 0,
+      inputStock: [{ commodity: "software", units: 0, value: 0 }],
+      outputStock: [{ commodity: "software", book: "world", units: 0 }],
+    };
+    const result = await settleProducerTurn(db, input);
+    expect(result.producers[0]).toMatchObject({ producedUnits: 10, revenue: 30 });
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1030);
+    expect(memory.collection("corporateSectors").docs[0]).toMatchObject({
+      producerCapacity: { worldEpoch: "example", turn: 1 },
+      producerSettlement: { worldEpoch: "example", turn: 1, revenue: 30 },
+      producerInventory: { worldEpoch: "example", turn: 1, inputStock: [] },
+    });
+    expect(memory.collection("producerEconomyTurns").docs[0].status).toBe("settled");
+  });
+
+  it("still refuses a dropped stored row that holds stock, naming the sector", async () => {
+    const { memory, input, db } = fixture();
+    memory.collection("corporateSectors").docs[0].producerInventory = {
+      worldEpoch: "example",
+      turn: 0,
+      inputStock: [],
+      outputStock: [{ commodity: "software", book: "world", units: 2 }],
+    };
+    await expect(settleProducerTurn(db, input)).rejects.toThrow(
+      `Producer inventory opening changed or was not reconciled: sector ${sectorId}`
+    );
     expect(memory.collection("producerEconomyTurns").docs).toHaveLength(0);
     expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1000);
   });

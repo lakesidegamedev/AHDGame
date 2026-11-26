@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -51,6 +52,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
+    // A split moves plants to a new company. The turn settles every plant against the image it read when the
+    // corporation phase started, so this waits until the turn finishes.
+    const turnBusy = await rejectDuringTurn(db);
+    if (turnBusy) return turnBusy;
 
     const authorized = await assertTreasuryAuthority(db, countryId, auth.user.character._id);
     if (!authorized) {

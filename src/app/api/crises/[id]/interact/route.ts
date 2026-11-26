@@ -3,6 +3,7 @@ import { crisisDecisionRegion } from "@/lib/crises/rules/authorization";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -120,6 +121,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     // Standard decision node: optionId is required.
     if (!optionId) {
       return errorResponse(400, "optionId required");
+    }
+
+    // An emergency taking moves plants right away. The turn settles every
+    // plant against the image it read when the corporation phase started, so
+    // that choice waits until the turn finishes. Other choices go through.
+    const chosen = currentNode?.options?.find((option) => option.optionId === optionId);
+    if (chosen?.action?.kind === "executiveNationalize") {
+      const turnBusy = await rejectDuringTurn(db);
+      if (turnBusy) return turnBusy;
     }
 
     const result = await submitCrisisDecision(

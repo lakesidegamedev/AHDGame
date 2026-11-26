@@ -4,6 +4,7 @@ import { randomInt } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { requireHumanSession } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -60,6 +61,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (gameState?.corporationActionsPaused) {
       return errorResponse(403, "Corporation actions are currently paused");
     }
+    // A split moves whole plants between sectors. The turn settles every plant
+    // against the image it read at the start of the corporation phase, so a
+    // split landing mid-turn stops the turn. Wait for the turn to finish.
+    const turnBusy = await rejectDuringTurn(db);
+    if (turnBusy) return turnBusy;
 
     if (!marketAtLeast(await getMarketSystemModeForDb(db), "plants")) {
       return errorResponse(409, "Sector splits require the plants economy.");
