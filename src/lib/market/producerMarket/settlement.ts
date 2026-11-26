@@ -263,9 +263,9 @@ function isEmptyStockRow(row: unknown): boolean {
 /**
  * An inventory image as JSON, with country-scoped books made comparable
  * (scopeNeutralBook) and empty stock rows left out. A plan drops a zero-unit
- * row for a good the plant no longer handles (stores carry no output stock
- * since #7598), so the stored image may still list it. Leaving it out changes
- * no units and no value; any row that holds stock still has to match.
+ * row for a good the plant no longer handles (a store carries no output
+ * stock), so the stored image may still list it. Leaving it out changes no
+ * units and no value; any row that holds stock still has to match.
  */
 function comparableInventory(image: unknown): string {
   return JSON.stringify(image, (key, value) =>

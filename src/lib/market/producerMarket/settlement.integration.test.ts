@@ -567,9 +567,8 @@ describe("frozen producer turn settlement", () => {
   });
 
   it("settles when the stored opening still lists empty rows the plan dropped", async () => {
-    // Turn 234: stores stopped carrying output stock, but their stored image
-    // still listed a zero-unit row from before. Every retry failed until the
-    // rows were cleared by hand.
+    // A store plans with no output stock while its stored image still lists a
+    // zero-unit row. Retrying cannot clear that, so it must not stop the turn.
     const { memory, input, db } = fixture();
     memory.collection("corporateSectors").docs[0].producerInventory = {
       worldEpoch: "example",

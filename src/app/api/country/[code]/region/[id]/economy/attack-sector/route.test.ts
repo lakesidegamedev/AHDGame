@@ -85,8 +85,8 @@ beforeEach(async () => {
 
 describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
   it("refuses a split while a turn is processing and changes no plant or cash", async () => {
-    // Turn 231: a split landed 27 seconds into the corporation phase and moved a
-    // plant the turn had already planned with, so the turn stopped and retried.
+    // A split landing mid-turn moves a plant the turn already planned with,
+    // which stops the turn.
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
       currentYear: 2027,
