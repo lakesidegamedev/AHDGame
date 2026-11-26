@@ -195,7 +195,7 @@ export function MinisterialOrderPanel({
                         className={[
                           "rounded border px-1.5 py-0.5 text-body-sm font-semibold uppercase tracking-wide",
                           isRegional
-                            ? "bg-primary text-primary-foreground border-transparent"
+                            ? "border-primary/40 bg-primary/10 text-primary"
                             : "border-card-border bg-card-muted text-muted",
                         ].join(" ")}
                         title={
