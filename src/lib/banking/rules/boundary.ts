@@ -48,6 +48,7 @@ export type BankCharterSnapshot = Pick<
   | "capitalStanding"
   | "warningBand"
   | "undercapitalizedSinceTurn"
+  | "insolventSinceTurn"
   | "failedTurn"
   | "revokedTurn"
   | "resolutionClaimedTurn"

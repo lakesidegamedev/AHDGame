@@ -11,9 +11,12 @@ import { resolveBankingPolicy } from "@/lib/banking/rules/policy";
 import {
   getBankTreasuryOverview,
   recoverBankTreasuryTrades,
+  refreshBankTreasuryMark,
+  remarkBankTreasuryAfterMaturity,
   sweepBankTreasury,
   tradeBankTreasuryBill,
 } from "../bankTreasury";
+import { bankSovereignMaturityClaimId } from "../rules/bankTreasury";
 import { returnDepositBook } from "../depositBookReturn";
 import { InjectedCrash, withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "../rules/sovereignClaims";
@@ -1039,6 +1042,61 @@ function primaryState(db: InMemoryDb) {
     pool: db.collection("bondMarketPools").docs[0].cashLocal,
   };
 }
+
+describe("bank treasury mark after a maturity pays out (ticket 1910)", () => {
+  // Turn 228: two bills paid their face into the vault, but each bond was still
+  // listed with the bank as a holder when the bank was re-marked, so the mark
+  // kept CA$439M of bills whose cash was already in the vault.
+  function heldAtMaturity(): InMemoryDb {
+    const db = world();
+    const bond = db.collection("bonds").docs[0] as Record<string, unknown>;
+    bond.maturityTurn = TURN;
+    bond.holders = [{ bankId: BANK, charteredTurn: 20, units: 50, avgCostPerUnit: 980 }];
+    return db;
+  }
+
+  it("still marks a held lot before it is redeemed", async () => {
+    const db = heldAtMaturity();
+    expect(await refreshBankTreasuryMark(db as unknown as Db, BANK, POLICY, TURN)).toBeGreaterThan(
+      0
+    );
+  });
+
+  it("stops marking a lot once the bank's maturity claim is paid, before the bond retires", async () => {
+    const db = heldAtMaturity();
+    const bond = db.collection("bonds").docs[0] as Record<string, unknown>;
+    bond.sovereignMaturityClaim = {
+      id: `sovereign-maturity:${BOND.toHexString()}:${TURN}`,
+      paidBankClaimIds: [bankSovereignMaturityClaimId(BOND.toHexString(), BANK.toHexString(), 20)],
+    };
+    expect(await refreshBankTreasuryMark(db as unknown as Db, BANK, POLICY, TURN)).toBe(0);
+    expect(balance(db).mark).toBe(0);
+  });
+
+  it("leaves out the bonds the maturity pass names even without the paid witness", async () => {
+    const db = heldAtMaturity();
+    expect(
+      await remarkBankTreasuryAfterMaturity(
+        db as unknown as Db,
+        BANK,
+        TURN,
+        new Set([BOND.toHexString()])
+      )
+    ).toBe(0);
+  });
+
+  it("does not drop another charter epoch's lot", async () => {
+    const db = heldAtMaturity();
+    const bond = db.collection("bonds").docs[0] as Record<string, unknown>;
+    bond.sovereignMaturityClaim = {
+      id: `sovereign-maturity:${BOND.toHexString()}:${TURN}`,
+      paidBankClaimIds: [bankSovereignMaturityClaimId(BOND.toHexString(), BANK.toHexString(), 7)],
+    };
+    expect(await refreshBankTreasuryMark(db as unknown as Db, BANK, POLICY, TURN)).toBeGreaterThan(
+      0
+    );
+  });
+});
 
 describe("investment-bank sovereign primary subscriptions", () => {
   it("does not treat posted capital or borrowed vault cash as additional equity", () => {

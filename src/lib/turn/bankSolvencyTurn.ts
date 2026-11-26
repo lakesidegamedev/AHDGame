@@ -31,14 +31,21 @@ import { getReserveRequirement } from "@/lib/banking/reserves";
 import { discountWindowStigma } from "@/lib/banking/discountWindow";
 import { isDepositTakingCharter } from "@/lib/banking/charterKinds";
 import { charterMay } from "@/lib/banking/rules/capabilities";
-import { bankEquity, RUN_FAILURE_COVER_FRACTION } from "@/lib/banking/rules/balanceSheet";
+import {
+  bankEquity,
+  borrowingsFromCharter,
+  cashBackedDeposits,
+  RUN_FAILURE_COVER_FRACTION,
+  totalBorrowings,
+} from "@/lib/banking/rules/balanceSheet";
 import {
   CONTAGION_PANIC_TURNS,
   FLIGHT_RATE_BY_BAND,
   depositFlight,
-  depositTakerFails,
+  depositTakerVerdict,
   propBankFails,
 } from "@/lib/banking/rules/solvency";
+import { notifyBankInsolvencyCure } from "@/lib/banking/insolvencyNotice";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
@@ -91,6 +98,8 @@ type EvalResult = {
   failed: boolean;
   fled: number;
   isDepositTaking: boolean;
+  /** Open cure window stamp, or null when the bank's equity is not negative. */
+  insolventSinceTurn: number | null;
 };
 
 /**
@@ -226,8 +235,14 @@ export async function processBankSolvencyTurn(
             "bankCharter.totalDeposits": row.totalDeposits,
             "bankCharter.panicTurns": panicTurns,
             "bankCharter.lastSolvencyTurn": turn,
+            ...(row.insolventSinceTurn !== null
+              ? { "bankCharter.insolventSinceTurn": row.insolventSinceTurn }
+              : {}),
             updatedAt: new Date(),
           },
+          ...(row.insolventSinceTurn === null
+            ? { $unset: { "bankCharter.insolventSinceTurn": "" } }
+            : {}),
         }
       );
     }
@@ -287,6 +302,8 @@ async function evaluateOneBank(
     { _id: corp._id },
     {
       projection: {
+        name: 1,
+        userId: 1,
         countryId: 1,
         liquidCapital: 1,
         bankCharter: 1,
@@ -495,31 +512,50 @@ async function evaluateOneBank(
   });
 
   let fails = false;
+  let insolventSinceTurn: number | null = null;
   if (depositTaking) {
+    const playerDepositsAreLiabilities = savingsReadsAuthoritative(policy, currency);
+    const liveSheet = { ...charter, cashReserves, npcDeposits };
     // Cash-backed base only, matching bankingTurn's reserve requirement. Not
     // `+ postedCapital`: posted capital is a memo of cash already inside the
     // reserve balance, so adding it counted the same money twice.
-    fails = depositTakerFails({
+    const verdict = depositTakerVerdict({
+      turn,
       // Realized credit losses can exhaust equity before a cash run. Include
       // marked securities here: the conservative distribution-capital measure
       // deliberately excludes them, but purchased assets still back the estate.
       netAssets:
-        bankEquity(
-          { ...charter, cashReserves, npcDeposits },
-          {
-            playerDepositsAreLiabilities: savingsReadsAuthoritative(policy, currency),
-          }
-        ) + Math.max(0, charter.propBookMarkValue ?? 0),
+        bankEquity(liveSheet, { playerDepositsAreLiabilities }) +
+        Math.max(0, charter.propBookMarkValue ?? 0),
+      owed:
+        cashBackedDeposits(liveSheet, { playerDepositsAreLiabilities }) +
+        totalBorrowings(borrowingsFromCharter(charter)),
+      insolventSinceTurn: charter.insolventSinceTurn,
       priorBand,
       cashReserves,
       liquidSecurities: Math.max(0, charter.sovereignTreasuryMarkValue ?? 0),
       requiredLiquidity:
         reserveRatioRequired *
         (npcDeposits +
-          (savingsReadsAuthoritative(policy, currency)
-            ? Math.max(0, charter.playerDeposits ?? 0)
-            : 0)),
+          (playerDepositsAreLiabilities ? Math.max(0, charter.playerDeposits ?? 0) : 0)),
     });
+    fails = verdict.outcome === "fail";
+    if (verdict.outcome === "cure") {
+      insolventSinceTurn = verdict.insolventSinceTurn;
+      // A healthy-looking bank must never be closed without notice: the owner
+      // hears the size of the hole and the deadline the turn it opens.
+      if (typeof charter.insolventSinceTurn !== "number") {
+        await notifyBankInsolvencyCure(db, {
+          corporationId: corp._id,
+          bankName: live.name ?? corp.name,
+          userId: live.userId,
+          currency,
+          deficit: verdict.deficit,
+          openedTurn: verdict.insolventSinceTurn,
+          deadlineTurn: verdict.deadlineTurn,
+        });
+      }
+    }
   } else if (propRunning) {
     // Investment banks: red band + insolvent equity base.
     fails = propBankFails({ band, equityBase });
@@ -621,6 +657,7 @@ async function evaluateOneBank(
       failed: fails,
       fled,
       isDepositTaking: depositTaking,
+      insolventSinceTurn,
     },
     forcedLiquidation,
   };

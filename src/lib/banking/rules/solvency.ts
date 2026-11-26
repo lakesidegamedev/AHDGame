@@ -19,12 +19,46 @@ export const FLIGHT_RATE_BY_BAND: Readonly<Record<"amber" | "red", number>> = {
 export const CONTAGION_PANIC_TURNS = 4;
 
 /**
- * A deposit taker fails when marked liabilities exceed its assets, or when
- * it is already published red AND its cash plus sovereign treasuries have
- * fallen below the run line, which is {@link RUN_FAILURE_COVER_FRACTION} of
- * the reserves it must hold against the cash-backed deposit base.
+ * Turns a liquid deposit taker gets to close a balance-sheet hole before it is
+ * resolved. The owner is told the deficit and the deadline the turn it opens.
  */
-export function depositTakerFails(input: {
+export const INSOLVENCY_CURE_TURNS = 3;
+
+/**
+ * A hole deeper than this share of everything the bank owes is resolved at
+ * once: depositors are better served by the estate now than by a bank that
+ * cannot plausibly be recapitalized in the cure window.
+ */
+export const INSOLVENCY_IMMEDIATE_DEFICIT_SHARE = 0.05;
+
+export type DepositTakerVerdict =
+  | { outcome: "sound" }
+  | {
+      outcome: "cure";
+      /** Turn the current hole opened; kept across turns, cleared once equity is back. */
+      insolventSinceTurn: number;
+      /** The bank is resolved on this turn if equity is still negative. */
+      deadlineTurn: number;
+      deficit: number;
+    }
+  | { outcome: "fail"; reason: "run" | "insolvent" };
+
+/**
+ * Whether a deposit taker is resolved this turn.
+ *
+ * Two failure paths:
+ * - a run: it is already published red AND its cash plus sovereign treasuries
+ *   have fallen below the run line, {@link RUN_FAILURE_COVER_FRACTION} of the
+ *   reserves it must hold against the cash-backed deposit base. Red is the
+ *   warning, so this is immediate.
+ * - insolvency: marked liabilities exceed its assets. A shallow hole in a bank
+ *   that can still meet its reserve requirement gets
+ *   {@link INSOLVENCY_CURE_TURNS} turns to recapitalize; a deep hole, a bank
+ *   that cannot meet its reserves, or a caller that does not say what the bank
+ *   owes is resolved at once.
+ */
+export function depositTakerVerdict(input: {
+  turn: number;
   priorBand: ConfidenceBand | undefined;
   cashReserves: number;
   /** Marked sovereign treasuries: sellable the same turn, so they meet a run too. */
@@ -32,13 +66,31 @@ export function depositTakerFails(input: {
   requiredLiquidity: number;
   /** Freshly marked assets less all cash-backed claims; absent for legacy callers. */
   netAssets?: number;
-}): boolean {
-  return (
-    (input.netAssets !== undefined && input.netAssets < -0.01) ||
-    (input.priorBand === "red" &&
-      input.cashReserves + Math.max(0, input.liquidSecurities ?? 0) <
-        RUN_FAILURE_COVER_FRACTION * Math.max(0, input.requiredLiquidity))
-  );
+  /** Everything owed to non-shareholders: cash-backed deposits plus borrowings. */
+  owed?: number;
+  /** Stamp from an earlier turn of the same hole. */
+  insolventSinceTurn?: number;
+}): DepositTakerVerdict {
+  const liquid = input.cashReserves + Math.max(0, input.liquidSecurities ?? 0);
+  const required = Math.max(0, input.requiredLiquidity);
+  if (input.priorBand === "red" && liquid < RUN_FAILURE_COVER_FRACTION * required) {
+    return { outcome: "fail", reason: "run" };
+  }
+  if (input.netAssets === undefined || input.netAssets >= -0.01) return { outcome: "sound" };
+
+  const deficit = -input.netAssets;
+  const deep =
+    input.owed === undefined ||
+    deficit > INSOLVENCY_IMMEDIATE_DEFICIT_SHARE * Math.max(0, input.owed);
+  if (deep || liquid < required) return { outcome: "fail", reason: "insolvent" };
+
+  const since =
+    typeof input.insolventSinceTurn === "number" && input.insolventSinceTurn <= input.turn
+      ? input.insolventSinceTurn
+      : input.turn;
+  const deadlineTurn = since + INSOLVENCY_CURE_TURNS;
+  if (input.turn >= deadlineTurn) return { outcome: "fail", reason: "insolvent" };
+  return { outcome: "cure", insolventSinceTurn: since, deadlineTurn, deficit };
 }
 
 /** An investment bank fails when red with no equity left behind its book. */

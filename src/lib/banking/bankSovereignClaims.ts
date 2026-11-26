@@ -16,6 +16,7 @@ import {
 import { settleAtomicDocumentTransition } from "@/lib/banking/atomicDocumentSettlement";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { bankSovereignMaturityCostBasis } from "@/lib/banking/rules/sovereignClaims";
+import { bankSovereignMaturityClaimId } from "@/lib/banking/rules/bankTreasury";
 import { remarkBankTreasuryAfterMaturity } from "@/lib/banking/bankTreasury";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
@@ -165,7 +166,11 @@ export async function addBankMaturityClaims(
       input.currencyCode
     );
     built.push({
-      id: `bank-sovereign-maturity:${input.bond._id.toHexString()}:${holder.bankId.toHexString()}:${holder.charteredTurn}`,
+      id: bankSovereignMaturityClaimId(
+        input.bond._id.toHexString(),
+        holder.bankId.toHexString(),
+        holder.charteredTurn
+      ),
       kind: "maturity",
       bankId: holder.bankId.toHexString(),
       charteredTurn: holder.charteredTurn,
@@ -909,7 +914,14 @@ export async function settleBankSovereignClaims(
     ? budget.treasuryBalance
     : undefined;
 
-  const maturedBankIds = new Set<string>();
+  // Bank -> bonds whose lots this pass redeemed for cash.
+  const maturedBankIds = new Map<string, Set<string>>();
+  const noteMatured = (claim: BankSovereignClaim) => {
+    if (claim.kind !== "maturity" || !claim.bondId) return;
+    const bonds = maturedBankIds.get(claim.bankId) ?? new Set<string>();
+    bonds.add(claim.bondId);
+    maturedBankIds.set(claim.bankId, bonds);
+  };
   for (const claim of claims) {
     if (!ObjectId.isValid(claim.bankId)) continue;
     const receipts = receiptsByClaim.get(claim.id) ?? [];
@@ -919,7 +931,7 @@ export async function settleBankSovereignClaims(
     if (await recoverCompletedClaim(db, claim, budgetId, receipts)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
-      if (claim.kind === "maturity") maturedBankIds.add(claim.bankId);
+      noteMatured(claim);
       continue;
     }
     if (receipts.some((record) => record.status === "partial")) continue;
@@ -947,14 +959,16 @@ export async function settleBankSovereignClaims(
     if (settled?.status === "applied" || (settled?.status === "replayed" && !settled.error)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
-      if (claim.kind === "maturity") maturedBankIds.add(claim.bankId);
+      noteMatured(claim);
     }
   }
   // Redemption cash is now in the vault; take the matured lots out of the mark
   // in the same pass, or the bank reads the same money twice until its next
   // banking phase.
-  for (const bankId of maturedBankIds) {
-    await remarkBankTreasuryAfterMaturity(db, new ObjectId(bankId), attemptTurn);
+  // The bond's own retirement (matured, holders cleared) can land later than
+  // this, so the redeemed bonds are named rather than left for the mark to infer.
+  for (const [bankId, bondIds] of maturedBankIds) {
+    await remarkBankTreasuryAfterMaturity(db, new ObjectId(bankId), attemptTurn, bondIds);
   }
   return { paidClaimIds };
 }

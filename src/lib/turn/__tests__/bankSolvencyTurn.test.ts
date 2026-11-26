@@ -454,6 +454,70 @@ describe("processBankSolvencyTurn", () => {
     expect(ensureBankFailureResponseWindow).not.toHaveBeenCalled();
   });
 
+  it("warns a liquid green bank with a shallow hole and closes it only at the deadline (ticket 1910)", async () => {
+    db.collection("notifications");
+    const notices = persisted.collection("notifications");
+    for (const method of ["find", "findOne", "insertOne", "updateOne"] as const)
+      db.collectionMocks.notifications![method].mockImplementation(
+        notices[method].bind(notices) as never
+      );
+    // Assets 1,300,000 against 1,320,000 owed: a 20,000 hole, 1.5% of the book,
+    // with ten times the required reserves in the vault.
+    const corp = makeBankCorp(
+      makeCharter({
+        postedCapital: 0,
+        cashReserves: 1_000_000,
+        totalLoans: 300_000,
+        npcDeposits: 1_320_000,
+        totalDeposits: 1_320_000,
+        warningBand: "green",
+      })
+    );
+    seedBanks([corp]);
+    persisted.collection("centralBanks").docs[0].bankReserveRequirement = 0.1;
+
+    const first = await processBankSolvencyTurn(db as unknown as Db, TURN);
+    const live = liveCorps.get(corp._id.toString())!;
+    expect(first.failures).toBe(0);
+    expect(live.bankCharter!.status).toBe("active");
+    expect(live.bankCharter!.insolventSinceTurn).toBe(TURN);
+    expect(notices.docs).toHaveLength(1);
+    expect(notices.docs[0]).toMatchObject({ type: "bank_supervision_breach", read: false });
+    expect(notices.docs[0].message).toContain(`turn ${TURN + 3}`);
+    expect(notices.docs[0].message).not.toMatch(/[\u2013\u2014]/);
+
+    // Still short on the next turn: same clock, no second notice.
+    await processBankSolvencyTurn(db as unknown as Db, TURN + 1);
+    expect(live.bankCharter!.status).toBe("active");
+    expect(live.bankCharter!.insolventSinceTurn).toBe(TURN);
+    expect(notices.docs).toHaveLength(1);
+
+    const deadline = await processBankSolvencyTurn(db as unknown as Db, TURN + 3);
+    expect(deadline.failures).toBe(1);
+    expect(live.bankCharter!.status).toBe("failed");
+  });
+
+  it("clears the cure window once the owner closes the gap", async () => {
+    const corp = makeBankCorp(
+      makeCharter({
+        postedCapital: 0,
+        cashReserves: 1_100_000,
+        totalLoans: 300_000,
+        npcDeposits: 1_320_000,
+        totalDeposits: 1_320_000,
+        warningBand: "green",
+        insolventSinceTurn: TURN - 1,
+      })
+    );
+    seedBanks([corp]);
+    persisted.collection("centralBanks").docs[0].bankReserveRequirement = 0.1;
+
+    const summary = await processBankSolvencyTurn(db as unknown as Db, TURN);
+    const live = liveCorps.get(corp._id.toString())!;
+    expect(summary.failures).toBe(0);
+    expect(live.bankCharter!.insolventSinceTurn).toBeUndefined();
+  });
+
   it("opens a country response window for new red stress that has not failed", async () => {
     const corp = makeBankCorp(
       makeCharter({

@@ -13,6 +13,35 @@ import { perTurnCouponPayment } from "@/lib/constants/bonds";
 
 export const BANK_TREASURY_MAX_REMAINING_TURNS = 48;
 
+/** Stable id of one bank charter epoch's principal claim on a maturing sovereign bond. */
+export function bankSovereignMaturityClaimId(
+  bondId: string,
+  bankId: string,
+  charteredTurn: number
+): string {
+  return `bank-sovereign-maturity:${bondId}:${bankId}:${charteredTurn}`;
+}
+
+/**
+ * True once this bank epoch's lots in the bond have been redeemed for cash.
+ *
+ * The bond itself is retired (matured, holders cleared) by the last projection
+ * of its payout, which can land after the bank's claim is paid, or not at all
+ * that turn when another holder's leg is still pending. Until then the bank's
+ * lot is still listed among the holders while its face value already sits in
+ * the vault. The paid claim id on the bond's frozen quote is the durable
+ * witness, so the mark must stop valuing the lot the moment it appears.
+ */
+export function bankLotRedeemedAtMaturity(
+  bond: Pick<Bond, "_id" | "sovereignMaturityClaim">,
+  bankId: string,
+  charteredTurn: number
+): boolean {
+  const paid = bond.sovereignMaturityClaim?.paidBankClaimIds;
+  if (!paid || paid.length === 0) return false;
+  return paid.includes(bankSovereignMaturityClaimId(String(bond._id), bankId, charteredTurn));
+}
+
 export interface BankTreasuryHolderLot {
   bankId?: string;
   charteredTurn?: number;

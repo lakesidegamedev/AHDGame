@@ -59,6 +59,7 @@ export function charterSnapshotFrom(
     capitalStanding: charter.capitalStanding,
     warningBand: charter.warningBand,
     undercapitalizedSinceTurn: charter.undercapitalizedSinceTurn,
+    insolventSinceTurn: charter.insolventSinceTurn,
     failedTurn: charter.failedTurn,
     revokedTurn: charter.revokedTurn,
     resolutionClaimedTurn: charter.resolutionClaimedTurn,
