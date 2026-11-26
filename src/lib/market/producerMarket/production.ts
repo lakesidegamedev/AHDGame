@@ -505,10 +505,18 @@ export function advanceProducerEconomy(
       if (!household.stateId) continue;
       const total = household.products.reduce((n, pr) => n + Math.max(0, pr.weight), 0);
       if (!(total > 0)) continue;
-      const routedWeight = household.products.reduce(
-        (n, pr) => n + Math.max(0, pr.weight) * storeRoutedShare(pr.commodity),
-        0
-      );
+      // What the routed share will actually spend: an order buys at the clearing
+      // price, under its ceiling, so the last clearing over the ceiling is the
+      // share of its budget it spends. Coverage on the raw budget would leave a
+      // full store's capacity unused.
+      const routedWeight = household.products.reduce((n, pr) => {
+        const clearing = input.clearingPriceByLane?.[laneKeyOf(pr.commodity, pr.book)];
+        const spent =
+          clearing != null && clearing > 0 && pr.maximumUnitPrice > 0
+            ? Math.min(1, clearing / pr.maximumUnitPrice)
+            : 1;
+        return n + Math.max(0, pr.weight) * storeRoutedShare(pr.commodity) * spent;
+      }, 0);
       routedDemand.set(
         household.stateId,
         (routedDemand.get(household.stateId) ?? 0) +
@@ -736,11 +744,39 @@ export function advanceProducerEconomy(
   for (const p of plans)
     if (!(plannedById.get(p.id)! > 0)) plannedById.set(p.id, physicalMaximum.get(p.id)!);
   clock.lap("economySetupMs");
+  // A store runs, staffs and buys running supplies only for the goods its
+  // households bought through it. Store-routed orders are fixed from the
+  // opening budgets, so the store's run never changes what it resells.
+  const storeSiteById = new Map(storeSites.map((s) => [s.storeId, s]));
+  const storeResaleRunUnits = (
+    settled: ReturnType<typeof settleProducerMarket>
+  ): Map<string, number> => {
+    const out = new Map<string, number>();
+    if (storeSiteById.size === 0) return out;
+    const spent = new Map(settled.orders.map((o) => [o.id, o.cost]));
+    const routedByState = new Map<string, number>();
+    for (const order of consumerOrders)
+      if (order.storeRouted && order.stateId)
+        routedByState.set(
+          order.stateId,
+          (routedByState.get(order.stateId) ?? 0) + Math.max(0, spent.get(order.id) ?? 0)
+        );
+    for (const p of plans) {
+      const site = storeSiteById.get(p.id);
+      const stateCapacity = site ? (storeCapacityByState.get(site.stateId) ?? 0) : 0;
+      if (!site || !p.store || !(p.store.resaleValuePerRunUnit > 0) || !(stateCapacity > 0))
+        continue;
+      const resold = ((routedByState.get(site.stateId) ?? 0) * site.capacityValue) / stateCapacity;
+      out.set(p.id, resold / p.store.resaleValuePerRunUnit);
+    }
+    return out;
+  };
   for (let pass = 0; pass < passes; pass++) {
     const passStarted = performance.now();
     market = trial();
     clock.lap("planningTrialMs");
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
+    const storeResale = storeResaleRunUnits(market);
     let changed = cutShortCredit(market);
     planning.siteChanges = [];
     for (const p of plans) {
@@ -763,7 +799,9 @@ export function advanceProducerEconomy(
           fill: need > 0 ? Math.min(1, have / need) : previous > 0 ? 1 : 0,
         };
       });
-      const target = makeDoOutput(originalPlan.get(p.id)!, fills);
+      const madeDo = makeDoOutput(originalPlan.get(p.id)!, fills);
+      const resale = storeResale.get(p.id);
+      const target = resale == null ? madeDo : Math.min(madeDo, resale);
       // Falls apply at once; rises are damped so the cycle settles.
       const damped = target <= previous ? target : (previous + target) / 2;
       // A plan that has decayed to a negligible share of the original is zero.

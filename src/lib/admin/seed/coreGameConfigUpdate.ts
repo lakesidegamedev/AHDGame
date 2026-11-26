@@ -59,6 +59,8 @@ export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = O
   // Household spending power phase-in start, stamped by the corporation turn.
   // A new world restamps it on its first economy turn.
   householdSpendingPowerStartTurn: "",
+  // Stores changeover start, stamped by the corporation turn; a new world restamps it.
+  storeTransition: "",
   marketGuardReferenceFundamentalMcap: "",
   marketGuardReferenceTurn: "",
   marketGuardTrippedAt: "",

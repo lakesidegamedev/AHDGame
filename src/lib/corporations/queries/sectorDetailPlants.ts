@@ -214,6 +214,8 @@ export function buildSectorPlantsSection(args: {
           labourPaid: storeReceipt.labourPaid,
           otherOperatingPaid: storeReceipt.otherOperatingPaid,
           inputsConsumed: storeReceipt.inputsConsumed,
+          producedUnits: storeReceipt.producedUnits,
+          offeredUnits: storeReceipt.offeredUnits,
         },
       })
     : null;

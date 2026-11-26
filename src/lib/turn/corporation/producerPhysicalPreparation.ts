@@ -1,5 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
-import { STORE_THROUGHPUT_BASIS } from "@/lib/stores/rules/storeRules";
+import { STORE_THROUGHPUT_BASIS, type StoreTransition } from "@/lib/stores/rules/storeRules";
 import { costPlusUnitCosts } from "@/lib/market/costPlusPricing/rules";
 import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
@@ -144,8 +144,10 @@ export type ProducerPhysicalEnv = Pick<
   householdSpendingPowerShare?: number;
   householdSpendingPowerRampTurns?: number;
   householdSpendingPowerStartTurn?: number;
-  /** gameConfig.storeMarkup, already kept inside its allowed band. */
+  /** gameConfig.storeMarkup, already kept inside its allowed band: the standing markup. */
   storeMarkup?: number;
+  /** gameConfig.storeTransition: the changeover markup schedule, read with the turn. */
+  storeTransition?: StoreTransition;
   /** gameConfig.wideEconomyPricingStage: >= 1 (absent = 1) the price counts wider-economy sales as supply. */
   wideEconomyPricingStage?: number;
   /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */

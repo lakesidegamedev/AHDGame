@@ -18,6 +18,14 @@ export interface StoreLedgerView {
   runningCostRows: { key: "wages" | "site" | "inputs" | "other"; value: number }[];
   /** Markup earned minus running costs. */
   margin: number;
+  /** Markup as a share of the wholesale value, the rate charged that turn; null with no sales. */
+  markupRate: number | null;
+  /**
+   * Share of the store's capacity its sales needed. A store runs, staffs and
+   * buys running supplies only for that share; the rest stands idle on its
+   * upkeep. Null when the receipt does not say.
+   */
+  capacityUsedShare: number | null;
 }
 
 /** Per-turn receipt figures in, daily-rate view out. */
@@ -34,6 +42,9 @@ export function storeLedgerView(input: {
     labourPaid: number;
     otherOperatingPaid: number;
     inputsConsumed: number;
+    /** Capacity units the store ran, and could have run, that turn. */
+    producedUnits?: number;
+    offeredUnits?: number;
   };
 }): StoreLedgerView {
   const { receipt, turnsPerDay } = input;
@@ -67,5 +78,11 @@ export function storeLedgerView(input: {
       { key: "other", value: daily(other) },
     ],
     margin: daily(ledger.margin),
+    markupRate:
+      ledger.goodsBoughtWholesale > 0 ? ledger.markupEarned / ledger.goodsBoughtWholesale : null,
+    capacityUsedShare:
+      receipt.offeredUnits != null && receipt.offeredUnits > 0 && receipt.producedUnits != null
+        ? Math.min(1, Math.max(0, receipt.producedUnits / receipt.offeredUnits))
+        : null,
   };
 }

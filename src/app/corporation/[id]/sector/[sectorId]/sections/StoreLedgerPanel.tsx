@@ -54,7 +54,14 @@ export default function StoreLedgerPanel({
             value={money(row.value)}
           />
         ))}
-        <Row label="Markup earned" value={`+ ${money(ledger.markupEarned)}`} />
+        <Row
+          label={
+            ledger.markupRate != null
+              ? `Markup earned (${percent(ledger.markupRate)} of wholesale)`
+              : "Markup earned"
+          }
+          value={`+ ${money(ledger.markupEarned)}`}
+        />
         <Row strong label="Sold to households" value={money(ledger.soldToHouseholds)} />
         <Row label="Running costs" value={`- ${money(ledger.runningCosts)}`} />
         {ledger.runningCostRows
@@ -64,6 +71,13 @@ export default function StoreLedgerPanel({
           ))}
         <Row strong label="Margin (markup minus running costs)" value={money(ledger.margin)} />
       </dl>
+      {ledger.capacityUsedShare != null && (
+        <p className="mt-3 text-body-sm text-muted">
+          Capacity used: {percent(ledger.capacityUsedShare)}. A store pays wages, site bills and
+          running supplies only for the capacity its sales need; the rest stands idle and pays only
+          its upkeep.
+        </p>
+      )}
       {noSales && (
         <p className="mt-3 text-body-sm text-muted">
           No household bought through this store last turn. Other stores in the state, or households
@@ -72,6 +86,10 @@ export default function StoreLedgerPanel({
       )}
     </section>
   );
+}
+
+function percent(share: number): string {
+  return `${Math.round(share * 100)}%`;
 }
 
 function Row({

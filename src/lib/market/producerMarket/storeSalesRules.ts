@@ -32,7 +32,10 @@ export interface StoreCoverageRow {
   capacityValue: number;
   /** Full-run capacity units behind `capacityValue`. */
   runUnits: number;
-  /** Household spending asked to go through stores. */
+  /**
+   * Household spending expected to go through stores: the routed budget at
+   * the last clearing price, which is what the orders will actually spend.
+   */
   routedDemandValue: number;
   coverage: number;
 }

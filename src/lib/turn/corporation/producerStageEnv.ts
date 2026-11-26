@@ -1,5 +1,5 @@
 import { electricityMode, type ElectricityNetworkMode } from "@/lib/electricityNetwork/rules/types";
-import { clampStoreMarkup } from "@/lib/stores/rules/storeRules";
+import { clampStoreMarkup, type StoreTransition } from "@/lib/stores/rules/storeRules";
 import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { PUBLIC_CARRY_DEFAULT_SHARE } from "@/lib/market/producerMarket/publicCarryRules";
 import { PROCUREMENT_SPILL_DEFAULT_SHARE } from "@/lib/market/producerMarket/procurementSpillRules";
@@ -94,6 +94,7 @@ export function producerStageEnv(
         householdSpendingPowerRampTurns?: number;
         householdSpendingPowerStartTurn?: number;
         storeMarkup?: number;
+        storeTransition?: StoreTransition;
         fiscalScaleStage?: number;
       } & LabourWageConfig)
     | null
@@ -146,6 +147,7 @@ export function producerStageEnv(
     householdSpendingPowerRampTurns: config?.householdSpendingPowerRampTurns,
     householdSpendingPowerStartTurn: config?.householdSpendingPowerStartTurn,
     storeMarkup: clampStoreMarkup(config?.storeMarkup),
+    storeTransition: config?.storeTransition,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)

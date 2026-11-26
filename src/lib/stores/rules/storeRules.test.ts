@@ -18,6 +18,10 @@ import {
   storeMarkupOn,
   storeUnmetRunUnits,
   wholesaleBudget,
+  storeMarkupForTurn,
+  STORE_TRANSITION_DEFAULT_START_MARKUP,
+  STORE_TRANSITION_DEFAULT_TURNS,
+  STORE_TYPICAL_RUNNING_COST_SHARE,
 } from "./storeRules";
 
 describe("store rules", () => {
@@ -36,12 +40,38 @@ describe("store rules", () => {
       expect(COMMODITY_TYPES).toContain(commodity);
   });
 
-  it("keeps the markup between 10% and 15%", () => {
+  it("keeps the markup between 10% and 40%", () => {
     expect(clampStoreMarkup(undefined)).toBe(STORE_MARKUP_DEFAULT);
     expect(clampStoreMarkup(Number.NaN)).toBe(STORE_MARKUP_DEFAULT);
     expect(clampStoreMarkup(0.01)).toBe(0.1);
     expect(clampStoreMarkup(0.12)).toBe(0.12);
-    expect(clampStoreMarkup(0.9)).toBe(0.15);
+    expect(clampStoreMarkup(0.35)).toBe(0.35);
+    expect(clampStoreMarkup(0.9)).toBe(0.4);
+  });
+
+  it("steps the changeover markup down to the standing markup", () => {
+    const at = (turn: number, transition: Parameters<typeof storeMarkupForTurn>[0]["transition"]) =>
+      storeMarkupForTurn({ standingMarkup: 0.15, transition, turn });
+    const schedule = { startTurn: 247, turns: 12, startMarkup: 0.4 };
+    expect(at(240, undefined)).toBe(0.15);
+    expect(at(240, schedule)).toBe(0.4);
+    expect(at(247, schedule)).toBeCloseTo(0.4, 12);
+    expect(at(259, schedule)).toBe(0.15);
+    expect(at(300, schedule)).toBe(0.15);
+    // Defaults: 12 turns from 40%.
+    expect(at(247, { startTurn: 247 })).toBeCloseTo(STORE_TRANSITION_DEFAULT_START_MARKUP, 12);
+    expect(at(247 + STORE_TRANSITION_DEFAULT_TURNS, { startTurn: 247 })).toBe(0.15);
+    // Start equal to standing: no changeover.
+    expect(at(250, { startTurn: 247, startMarkup: 0.15 })).toBe(0.15);
+    // Every turn the margin over a typical store's running costs falls by the
+    // same fraction, and by less than a fifth.
+    const margins = Array.from({ length: 13 }, (_, i) => at(247 + i, schedule)).map(
+      (m) => (m - STORE_TYPICAL_RUNNING_COST_SHARE) / (1 + m)
+    );
+    for (let i = 1; i < margins.length; i++) {
+      expect(margins[i]).toBeLessThan(margins[i - 1]);
+      expect(margins[i] / margins[i - 1]).toBeGreaterThan(0.8);
+    }
   });
 
   it("covers the routed demand the stores can carry and no more", () => {

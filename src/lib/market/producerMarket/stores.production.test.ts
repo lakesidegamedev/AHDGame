@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
+import { laneKeyOf } from "./laneKey";
+import {
+  STORE_TRANSITION_DEFAULT_START_MARKUP,
+  STORE_TRANSITION_DEFAULT_TURNS,
+  STORE_TYPICAL_RUNNING_COST_SHARE,
+  storeMarkupForTurn,
+} from "@/lib/stores/rules/storeRules";
 
 const farm = (): ProductionPlan => ({
   id: "farm",
@@ -172,5 +179,114 @@ describe("stores resell household purchases at wholesale plus a markup", () => {
     });
     expect(result.storeSales!.channels).toEqual([]);
     expect(result.storeSales!.transfers).toEqual([]);
+  });
+});
+
+describe("stores pay only for the capacity their sales need", () => {
+  it("runs, staffs and bills a store for the goods it resold, and idles the rest", () => {
+    const big: ProductionPlan = {
+      ...store(100),
+      capacityUnits: 1000,
+      labourCost: 400,
+      otherOperatingCost: 300,
+      idleOperatingCost: 20,
+    };
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts: accounts.map((a) => (a.id === "storeCorp" ? { ...a, cash: 10_000 } : a)),
+      producers: [farm(), big],
+      households: [household],
+      storeMarkup: 0.15,
+    });
+    const row = result.storeSales!.stores[0];
+    const s = result.producers.find((p) => p.id === "store")!;
+    // 100 000 of resale capacity against about 600 of routed food: the store
+    // needs a small share of its run, and runs only that.
+    const usedShare = row.goodsBoughtWholesale / (1000 * 100);
+    expect(usedShare).toBeGreaterThan(0);
+    expect(usedShare).toBeLessThan(0.01);
+    expect(s.producedUnits).toBeCloseTo(row.goodsBoughtWholesale / 100, 6);
+    // Wages follow the run; idle capacity keeps only its upkeep.
+    expect(s.labourPaid).toBeCloseTo(400 * usedShare, 6);
+    expect(s.otherOperatingPaid).toBeCloseTo(20 + (300 - 20) * usedShare, 6);
+    expect(cashOf(result, "storeWages")).toBeCloseTo(400 * usedShare, 6);
+    // What it did not need it kept: the markup less the share of its bills.
+    expect(s.profit).toBeCloseTo(row.markupEarned - s.labourPaid - s.otherOperatingPaid, 6);
+    // Throttles still see an oversized store: it offered its full run.
+    expect(s.offeredUnits).toBeCloseTo(1000, 6);
+  });
+});
+
+describe("a typical player retail company crosses over without a cliff", () => {
+  // Walmart-like company, from live turns 228 to 235. Its stores could resell
+  // about 3.45M of goods a turn at the 4.5 throughput multiple and spend about
+  // 12.5% of what they resell on running costs (wages 4/11, site and supplies
+  // 7/11; supplies are folded into site bills here, the fixture has no
+  // supplier). Its last pre-switch profit was 418 643 a turn; household money
+  // doubles by the planned switch at turn 247, and basket revenue scaled with
+  // it, so the turn before the switch it would have made about 837 000.
+  const V = 880;
+  const capacityUnits = 3920;
+  const capacityValue = V * capacityUnits;
+  const runningAtFullRun = STORE_TYPICAL_RUNNING_COST_SHARE * capacityValue;
+  const profitBeforeSwitch = 2 * 418_643;
+  const retailer: ProductionPlan = {
+    ...store(V),
+    capacityUnits,
+    labourCost: (runningAtFullRun * 4) / 11,
+    otherOperatingCost: (runningAtFullRun * 7) / 11,
+    idleOperatingCost: 0,
+  };
+  const bigFarm: ProductionPlan = { ...farm(), capacityUnits: 10_000_000 };
+  // Households in the store's state, with more routed food demand than the
+  // stores can carry at any markup in the changeover.
+  const hh = { ...household, accountId: "hh" };
+  const turnProfit = (markup: number) => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts: accounts.map((a) =>
+        a.id === "storeCorp"
+          ? { ...a, cash: 2_000_000 }
+          : a.id === "hh"
+            ? { ...a, cash: 12_000_000 }
+            : a
+      ),
+      producers: [bigFarm, retailer],
+      households: [hh],
+      storeMarkup: markup,
+      // Food last cleared at the farm's price: households spend half their ceiling.
+      clearingPriceByLane: { [laneKeyOf("food", "world")]: 2 },
+    });
+    return result.producers.find((p) => p.id === "store")!.profit;
+  };
+  const schedule = { startTurn: 247 };
+  const markups = Array.from({ length: STORE_TRANSITION_DEFAULT_TURNS + 1 }, (_, i) =>
+    storeMarkupForTurn({ standingMarkup: 0.15, transition: schedule, turn: 247 + i })
+  );
+  const profits = markups.map(turnProfit);
+
+  it("stays within about 20% of its pre-switch profit on the first stores turn", () => {
+    expect(markups[0]).toBeCloseTo(STORE_TRANSITION_DEFAULT_START_MARKUP, 12);
+    expect(Math.abs(profits[0] / profitBeforeSwitch - 1)).toBeLessThan(0.2);
+  });
+
+  it("moves by less than a fifth each turn of the changeover", () => {
+    for (let i = 1; i < profits.length; i++) {
+      expect(profits[i]).toBeLessThan(profits[i - 1]);
+      expect(profits[i] / profits[i - 1]).toBeGreaterThan(0.8);
+    }
+  });
+
+  it("ends on the standing markup with a store earning a normal margin on its value added", () => {
+    expect(markups.at(-1)).toBe(0.15);
+    // Capacity-bound: it resells capacity / (1 + markup) wholesale and keeps
+    // the markup less its running costs on that.
+    const wholesale = capacityValue / 1.15;
+    expect(profits.at(-1)!).toBeCloseTo(wholesale * (0.15 - STORE_TYPICAL_RUNNING_COST_SHARE), 0);
+    // Supplies are about 70 of the 110 a capacity unit costs (8% of goods resold).
+    const valueAdded = wholesale * (0.15 - (STORE_TYPICAL_RUNNING_COST_SHARE * 70) / 110);
+    const share = profits.at(-1)! / valueAdded;
+    expect(share).toBeGreaterThan(0.3);
+    expect(share).toBeLessThan(0.4);
   });
 });
