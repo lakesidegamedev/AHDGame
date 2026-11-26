@@ -410,3 +410,49 @@ describe("fundedReceiptOf", () => {
     ).toMatchObject({ inputsConsumed: 4, labour: 4, siteOperating: 3 });
   });
 });
+
+describe("store with leftover output stock", () => {
+  it("settles the turn and clears the leftover instead of stopping", async () => {
+    const { memory, corp, scopes, household, operating, db } = world();
+    const doc = memory.collection("corporateSectors").docs[0];
+    doc.sectorType = "retail";
+    doc.producerQuotes = {};
+    doc.producerInventory = {
+      worldEpoch: "world",
+      turn: 0,
+      inputStock: [],
+      // Leftover software from the e-commerce recipe a site ran before it became a store.
+      outputStock: [{ commodity: "software", book: "world", units: 0.0268, quoteUnitCost: 641.96 }],
+    };
+    const store = { ...(doc as unknown as Parameters<typeof prepareProducerSector>[0]["sector"]) };
+    await runCorporationProducerMarket(db, {
+      worldEpoch: "world",
+      turn: 1,
+      corporations: [corp],
+      walletScopes: scopes,
+      rates: new Map([["USD", RATE]]),
+      prepare: () => [
+        prepareProducerSector({
+          worldEpoch: "world",
+          turn: 1,
+          sector: store,
+          recipe: { supply: { advertising: 1 }, demand: {}, eraUnitScale: 1 },
+          markets: new Map([
+            ["advertising", { book: "world", referenceUnitPrice: 3, maximumInputUnitPrice: 4 }],
+          ]),
+          outputMultiplier: 1,
+          operatingRecipeRatio: 1,
+          recessionCapacityFactor: 1,
+          labourCost: 10,
+          otherOperatingCost: 5,
+          labourRecipientAccountId: household,
+          operatingRecipientAccountId: operating,
+        }),
+      ],
+      demand: { households: [] },
+    });
+    const after = memory.collection("corporateSectors").docs[0];
+    expect((after.producerInventory as { outputStock: unknown[] }).outputStock).toEqual([]);
+    expect((after.producerSettlement as { turn: number }).turn).toBe(1);
+  });
+});

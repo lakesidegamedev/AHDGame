@@ -380,16 +380,23 @@ async function verifyPhysicalTargets(
       throw new Error(
         `Producer physical opening changed or was not reconciled: sector ${target.sectorId} (capacity ${sector.producerCapacity?.worldEpoch === frozen.worldEpoch ? `turn ${sector.producerCapacity?.turn} vs ${state.completedTurn}` : "other world"}, stock ${sector.capitalStock} vs ${state.ownedDailyUnits}, queue ${(sector.buildQueue ?? []).length} vs ${(state.buildQueue ?? []).length})`
       );
+    // A store plans with no output stock (it sells nothing of its own), so a
+    // leftover output row on a store must not stop the turn. The check ignores
+    // it; the receipt write still matches the stored image and then clears it.
     const storedInventory = sector.producerInventory;
+    const storeLeftover =
+      target.plantType.sectorType === "retail" && (storedInventory?.outputStock?.length ?? 0) > 0;
+    const comparableInventory =
+      storeLeftover && storedInventory ? { ...storedInventory, outputStock: [] } : storedInventory;
     const expectedInventory = (prior?.turn === turn ? closingInventories : openingInventories).get(
       target.producerId
     );
-    const inventoryMatch = compareProducerInventory(storedInventory, expectedInventory);
+    const inventoryMatch = compareProducerInventory(comparableInventory, expectedInventory);
     if (inventoryMatch === "different")
       throw new Error(
         `Producer inventory opening changed or was not reconciled: sector ${target.sectorId}`
       );
-    if (inventoryMatch === "equivalent" && prior?.turn !== turn)
+    if ((inventoryMatch === "equivalent" || storeLeftover) && prior?.turn !== turn)
       storedOpeningInventory.set(target.producerId, storedInventory);
     if (sector.sectorType !== target.plantType.sectorType)
       throw new Error("Producer physical plant type changed");
