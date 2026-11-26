@@ -46,16 +46,11 @@ export type DepositTakerVerdict =
 /**
  * Whether a deposit taker is resolved this turn.
  *
- * Two failure paths:
- * - a run: it is already published red AND its cash plus sovereign treasuries
- *   have fallen below the run line, {@link RUN_FAILURE_COVER_FRACTION} of the
- *   reserves it must hold against the cash-backed deposit base. Red is the
- *   warning, so this is immediate.
- * - insolvency: marked liabilities exceed its assets. A shallow hole in a bank
- *   that can still meet its reserve requirement gets
- *   {@link INSOLVENCY_CURE_TURNS} turns to recapitalize; a deep hole, a bank
- *   that cannot meet its reserves, or a caller that does not say what the bank
- *   owes is resolved at once.
+ * A run (published red and below the run line, {@link RUN_FAILURE_COVER_FRACTION}
+ * of required reserves) fails at once: red was the warning. A balance-sheet hole
+ * in a bank that still meets its reserve requirement gets
+ * {@link INSOLVENCY_CURE_TURNS} turns to recapitalize; a deep hole, an illiquid
+ * bank, or a caller that does not say what is owed is resolved at once.
  */
 export function depositTakerVerdict(input: {
   turn: number;

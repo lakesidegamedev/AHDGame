@@ -306,6 +306,7 @@ describe("processBankSolvencyTurn", () => {
         "insertOne",
         "updateOne",
         "findOneAndUpdate",
+        "bulkWrite",
       ] as const)
         db.collectionMocks[name]![method].mockImplementation(
           backing[method].bind(backing) as never

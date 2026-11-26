@@ -100,6 +100,8 @@ type EvalResult = {
   isDepositTaking: boolean;
   /** Open cure window stamp, or null when the bank's equity is not negative. */
   insolventSinceTurn: number | null;
+  /** The stamp the charter carried before this pass. */
+  insolventSinceBefore: number | null;
 };
 
 /**
@@ -235,16 +237,27 @@ export async function processBankSolvencyTurn(
             "bankCharter.totalDeposits": row.totalDeposits,
             "bankCharter.panicTurns": panicTurns,
             "bankCharter.lastSolvencyTurn": turn,
-            ...(row.insolventSinceTurn !== null
-              ? { "bankCharter.insolventSinceTurn": row.insolventSinceTurn }
-              : {}),
             updatedAt: new Date(),
           },
-          ...(row.insolventSinceTurn === null
-            ? { $unset: { "bankCharter.insolventSinceTurn": "" } }
-            : {}),
         }
       );
+    }
+
+    // Cure-window stamps change rarely, so only the banks whose stamp moved are
+    // written, in one round trip.
+    const cureWrites = evals
+      .filter((row) => !row.failed && row.insolventSinceTurn !== row.insolventSinceBefore)
+      .map((row) => ({
+        updateOne: {
+          filter: { _id: row.corpId, "bankCharter.status": "active" as const },
+          update:
+            row.insolventSinceTurn === null
+              ? { $unset: { "bankCharter.insolventSinceTurn": "" as const } }
+              : { $set: { "bankCharter.insolventSinceTurn": row.insolventSinceTurn } },
+        },
+      }));
+    if (cureWrites.length > 0) {
+      await corporationsCollection(db).bulkWrite(cureWrites, { ordered: false });
     }
 
     for (const [hex, panicTurns] of newlyPanicked) {
@@ -658,6 +671,8 @@ async function evaluateOneBank(
       fled,
       isDepositTaking: depositTaking,
       insolventSinceTurn,
+      insolventSinceBefore:
+        typeof charter.insolventSinceTurn === "number" ? charter.insolventSinceTurn : null,
     },
     forcedLiquidation,
   };
