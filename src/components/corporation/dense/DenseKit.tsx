@@ -42,10 +42,8 @@ export function DenseSection({
   return (
     <section id={id} className={`min-w-0 scroll-mt-24 ${className}`}>
       <div
-        className={`rounded-full transition-colors flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 ${
-          ledger
-            ? "bg-primary text-primary-foreground pb-2"
-            : "border-b border-card-border pb-1.5 hover:bg-card-elevated"
+        className={`flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 ${
+          ledger ? "border-b-2 border-foreground pb-2" : "border-b border-card-border pb-1.5"
         }`}
       >
         {/* The meta sits beside the heading, not inside it, so the heading's
