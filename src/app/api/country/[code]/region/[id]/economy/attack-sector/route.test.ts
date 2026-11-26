@@ -84,6 +84,30 @@ beforeEach(async () => {
 });
 
 describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
+  it("refuses a split while a turn is processing and changes no plant or cash", async () => {
+    // Turn 231: a split landed 27 seconds into the corporation phase and moved a
+    // plant the turn had already planned with, so the turn stopped and retried.
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentYear: 2027,
+      isProcessing: true,
+      processingKind: "turn",
+      processingHeartbeatAt: new Date(),
+    });
+
+    const { POST } = await import("./route");
+    const response = await POST(makeRequest({ sectorId: new ObjectId().toHexString() }), ctx());
+    const data = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(data).toMatchObject({ code: "turn_processing" });
+    expect(withTransaction).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.findOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+  });
+
   it("blocks private attacks in an eastern-bloc command economy", async () => {
     const sectorId = new ObjectId();
     db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentYear: 1970 });

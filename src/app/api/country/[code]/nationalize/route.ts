@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { requireHumanSession } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -59,6 +60,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { corporationId, sectorId, tier } = parsed.data;
 
     const db = await getDb();
+    // A taking moves and resizes plants. The turn settles every plant against the image it read when the
+    // corporation phase started, so this waits until the turn finishes.
+    const turnBusy = await rejectDuringTurn(db);
+    if (turnBusy) return turnBusy;
 
     // Authority: only the sitting head of government may order an executive taking.
     const character = await getCharacterByUserId(db, auth.user.userId);

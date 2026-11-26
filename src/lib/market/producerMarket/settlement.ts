@@ -253,14 +253,29 @@ function inventoryImages(frozen: FrozenProducerTurn, closing: boolean) {
   );
 }
 
-/** An inventory image as JSON, with country-scoped books made comparable (scopeNeutralBook). */
+/** A stock row that holds no units and no value: nothing to carry or settle. */
+function isEmptyStockRow(row: unknown): boolean {
+  if (!row || typeof row !== "object") return false;
+  const { units, value } = row as { units?: unknown; value?: unknown };
+  return units === 0 && (value === undefined || value === 0);
+}
+
+/**
+ * An inventory image as JSON, with country-scoped books made comparable
+ * (scopeNeutralBook) and empty stock rows left out. A plan drops a zero-unit
+ * row for a good the plant no longer handles (stores carry no output stock
+ * since #7598), so the stored image may still list it. Leaving it out changes
+ * no units and no value; any row that holds stock still has to match.
+ */
 function comparableInventory(image: unknown): string {
   return JSON.stringify(image, (key, value) =>
-    key === "book" || !value || typeof value !== "object" || Array.isArray(value)
-      ? value
-      : typeof value.book === "string" && typeof value.commodity === "string"
-        ? { ...value, book: scopeNeutralBook(value.book, value.commodity) }
-        : value
+    (key === "inputStock" || key === "outputStock") && Array.isArray(value)
+      ? value.filter((row) => !isEmptyStockRow(row))
+      : key === "book" || !value || typeof value !== "object" || Array.isArray(value)
+        ? value
+        : typeof value.book === "string" && typeof value.commodity === "string"
+          ? { ...value, book: scopeNeutralBook(value.book, value.commodity) }
+          : value
   );
 }
 
@@ -371,7 +386,9 @@ async function verifyPhysicalTargets(
     );
     const inventoryMatch = compareProducerInventory(storedInventory, expectedInventory);
     if (inventoryMatch === "different")
-      throw new Error("Producer inventory opening changed or was not reconciled");
+      throw new Error(
+        `Producer inventory opening changed or was not reconciled: sector ${target.sectorId}`
+      );
     if (inventoryMatch === "equivalent" && prior?.turn !== turn)
       storedOpeningInventory.set(target.producerId, storedInventory);
     if (sector.sectorType !== target.plantType.sectorType)
