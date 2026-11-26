@@ -56,7 +56,7 @@ export const MANUFACTURING_STRATEGIES: SectorStrategy[] = [
     // shortages (iron D/S ~3.4×, coal ~2.1×) without removing the heavy-metals flavor.
     supply: { steel: 0.55 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
-    demand: { iron: 0.19, coal: 0.123, energy: 0.189, freight: 0.082, plastics: 0.03 },
+    demand: { iron: 0.221, coal: 0.149, energy: 0.132, freight: 0.082, plastics: 0.03 },
   },
   {
     id: "electronics_manufacturing",
@@ -66,7 +66,31 @@ export const MANUFACTURING_STRATEGIES: SectorStrategy[] = [
       "Circuit boards, components, and consumer electronics. Produces electronics alongside steel, demands rare earth.",
     supply: { electronics: 0.3, steel: 0.2 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
-    demand: { rare_earth: 0.138, iron: 0.1, energy: 0.184, chemicals: 0.092, plastics: 0.1 },
+    demand: {
+      rare_earth: 0.138,
+      iron: 0.125,
+      energy: 0.129,
+      chemicals: 0.092,
+      plastics: 0.1,
+      natural_gas: 0.03,
+    },
+  },
+  {
+    id: "consumer_goods",
+    name: "Consumer Goods",
+    description:
+      "Retool the plant to make furniture, appliances and household items from plastics, timber, chemicals, electronics, steel and power.",
+    supply: { consumer_goods: 0.5 },
+    // Input value split: plastics 25%, timber 25%, chemicals 15%, electronics 15%, steel 10%,
+    // energy 10%, on the same 0.6 material budget as the other finished-goods methods.
+    demand: {
+      plastics: 0.15,
+      timber: 0.15,
+      chemicals: 0.09,
+      electronics: 0.09,
+      steel: 0.06,
+      energy: 0.06,
+    },
   },
   {
     id: "building_materials",
@@ -74,7 +98,14 @@ export const MANUFACTURING_STRATEGIES: SectorStrategy[] = [
     description:
       "Retool the plant to make cement and prefabricated components from timber, iron and chemicals.",
     supply: { building_materials: 0.5 },
-    demand: { energy: 0.13, timber: 0.09, iron: 0.07, chemicals: 0.05, freight: 0.06 },
+    demand: {
+      energy: 0.091,
+      timber: 0.113,
+      iron: 0.07,
+      chemicals: 0.05,
+      freight: 0.06,
+      natural_gas: 0.016,
+    },
   },
   // Vehicle lines for manufacturing plants retooled to build cars and trucks.
   {
@@ -86,12 +117,13 @@ export const MANUFACTURING_STRATEGIES: SectorStrategy[] = [
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
       steel: 0.177,
-      iron: 0.08,
+      iron: 0.095,
       electronics: 0.11,
-      energy: 0.084,
+      energy: 0.059,
       freight: 0.067,
       real_estate_services: 0.017,
       plastics: 0.08,
+      coal: 0.01,
     },
   },
   {
@@ -103,11 +135,12 @@ export const MANUFACTURING_STRATEGIES: SectorStrategy[] = [
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
       steel: 0.22,
-      iron: 0.12,
-      energy: 0.099,
+      iron: 0.138,
+      energy: 0.069,
       freight: 0.076,
       plastics: 0.05,
       advertising: 0.05,
+      coal: 0.012,
     },
   },
 ];

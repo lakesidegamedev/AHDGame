@@ -34,7 +34,6 @@ import {
   RETAIL_GDP_DEMAND_SCALE,
   RETAIL_GDP_MULTIPLIER_MAX,
 } from "@/lib/constants/commodities";
-import { retailLegacyDemandFactor } from "@/lib/market/retailDemandTransition";
 import {
   loadActiveSectorDemandModifierPctMap,
   loadActiveSectorOutputDemandModifierPctMap,
@@ -173,8 +172,6 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
           marketSystemMode: 1,
           productLinesV2Enabled: 1,
           commandEconomyEnabled: 1,
-          retailDemandTransitionStartTurn: 1,
-          retailDemandTransitionTurns: 1,
           commodityNominalPriceIndex: 1,
           commodityNominalPriceIndexTurn: 1,
           stateGdpAnchorPhaseStartTurn: 1,
@@ -509,10 +506,6 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
     commodityFixStage,
     GOVERNMENT_DEMAND_SUPPLY_CAP
   );
-  const retailSelfLoopFactor =
-    plantsLedgerEnabled && householdConsumptionEnabled
-      ? retailLegacyDemandFactor(ledgerConfig, turn)
-      : 1;
 
   // Pre-compute extraction capacity multipliers
   const extractionSectors = sectorData.filter((s) => s.sectorType === "extraction");
@@ -600,7 +593,6 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
       // plants, and on modern worlds (eraUnitScale 1), this is a pure no-op.
       plantsLedgerEnabled ? ledgerEraUnitScale : 1,
       sectorOutputDemandModifierPct,
-      retailSelfLoopFactor,
       // Issue #2054: the same era table the clearing offer splits on, so the
       // measured-production mix split is weight-identical on both sides.
       LEDGER_BASE_PRICES,
