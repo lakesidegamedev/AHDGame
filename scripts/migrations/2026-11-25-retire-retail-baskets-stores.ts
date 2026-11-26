@@ -1,25 +1,11 @@
 /**
- * Retail baskets are gone and retail sectors are stores. This clears every
- * trace of the basket good from a live world and leaves each retail site as it
- * was: same owner, capacity and location. Stores read their recipe from the
- * sector type, so no sector field changes except the basket leftovers.
- *
- * Clears:
- *   - basket stock held by any site (producerInventory.outputStock)
- *   - basket quotes posted by retail sites (producerQuotes.retail)
- *   - open basket listings and agreements (supplyListings, supplyAgreements)
- *   - basket price rows, price history and flow rows (commodityPrices,
- *     commodityPriceHistory, commodityFlows)
- *   - basket trade embargoes (tradeEmbargoes)
- *
- * Usage:
- *   npx tsx scripts/migrations/2026-11-25-retire-retail-baskets-stores.ts            (read-only report)
- *   npx tsx scripts/migrations/2026-11-25-retire-retail-baskets-stores.ts --dry-run  (same)
- *   npx tsx scripts/migrations/2026-11-25-retire-retail-baskets-stores.ts --apply
- *
- * Idempotent: a second run finds nothing left to clear. `--apply` refuses to
- * run while a turn is in flight. Startup migrations do not run on hosted
- * production, so this is run by hand once after the deploy.
+ * Clears the retired basket good from a live world: site stock, quotes,
+ * listings, agreements, price rows, price history, flows and embargoes. Retail
+ * sites keep their owner, capacity and location; they read the store recipe
+ * from their sector type. Idempotent; `--apply` refuses while a turn runs.
+ * Hosted production runs no startup migrations, so run it once by hand:
+ *   npx tsx <this script> --dry-run
+ *   npx tsx <this script> --apply
  */
 import type { Db } from "mongodb";
 import { connectDb, closeDb } from "../utils/db";
