@@ -4,7 +4,6 @@
  * `constants/capacityEconomyTables`.
  */
 
-import { sizingSupply } from "@/lib/stores/rules/storeRules";
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import {
   constructionPriceForDailyRevenue,
@@ -55,7 +54,7 @@ export function defaultSupplyRates(
     strategies.find((s) => s.id === DEFAULT_STRATEGY_ID) ??
     strategies.find((s) => !s.requiresTechUnlock && !s.minDecade) ??
     strategies[0];
-  return chosen ? sizingSupply(chosen.supply) : {};
+  return chosen?.supply ?? {};
 }
 
 /**
@@ -110,9 +109,8 @@ export function unitYieldForSupply(
   unitScale: number
 ): number {
   let k = 0;
-  const sized = sizingSupply(supply);
-  for (const commodity of Object.keys(sized) as CommodityType[]) {
-    const rate = sized[commodity] ?? 0;
+  for (const commodity of Object.keys(supply ?? {}) as CommodityType[]) {
+    const rate = supply[commodity] ?? 0;
     const base = COMMODITY_BASE_PRICES[commodity];
     if (rate > 0 && base > 0) k += rate / base;
   }

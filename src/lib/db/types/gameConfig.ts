@@ -319,12 +319,6 @@ export interface GameConfig extends ProducerGameConfig {
   householdSpendingPowerStartTurn?: number;
 
   /**
-   * Markup stores add to goods households buy through them, as a fraction of
-   * the wholesale price. Kept between 0.10 and 0.15; absent = 0.15.
-   */
-  storeMarkup?: number;
-
-  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.

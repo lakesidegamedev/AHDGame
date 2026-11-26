@@ -20,7 +20,7 @@ describe("existing autonomous plant top-ups", () => {
     (blocked) => {
       const modifiers = ceoArchetypeModifiers("cautious");
       const quote = computeBuildCost({
-        sectorType: "agriculture",
+        sectorType: "retail",
         units: 1,
         strategyId: null,
         year: CAPACITY_ANCHOR_YEAR,
@@ -36,7 +36,7 @@ describe("existing autonomous plant top-ups", () => {
       const floor = getNppCashFloorAnchor("2019-default", modifiers.cashFloorMult);
       const corp = {
         _id: new ObjectId(),
-        type: "agriculture",
+        type: "retail",
         countryId: "US",
         headquartersState: "NY",
         liquidCurrencyCode: "USD",
@@ -48,7 +48,7 @@ describe("existing autonomous plant top-ups", () => {
       const sector = {
         _id: new ObjectId(),
         corporationId: corp._id,
-        sectorType: "agriculture",
+        sectorType: "retail",
         countryId: "US",
         stateId: "NY",
         revenue: 100000,
@@ -60,7 +60,7 @@ describe("existing autonomous plant top-ups", () => {
         soldUnits: 80,
         buildQueue: [],
       } as unknown as CorporateSector;
-      const pool = candidate({ stateId: "NY", sectorType: "agriculture" });
+      const pool = candidate({ stateId: "NY", sectorType: "retail" });
       const direction: GroupDirection = {
         revision: "test",
         rootId: "root",
@@ -110,7 +110,7 @@ describe("existing autonomous plant top-ups", () => {
   it("prices commodity dominance into NPP top-ups like a player build", () => {
     const modifiers = ceoArchetypeModifiers("cautious");
     const quote = computeBuildCost({
-      sectorType: "agriculture",
+      sectorType: "retail",
       units: 1,
       strategyId: null,
       year: CAPACITY_ANCHOR_YEAR,
@@ -125,7 +125,7 @@ describe("existing autonomous plant top-ups", () => {
     const floor = getNppCashFloorAnchor("2019-default", modifiers.cashFloorMult);
     const corp = {
       _id: new ObjectId(),
-      type: "agriculture",
+      type: "retail",
       countryId: "US",
       headquartersState: "NY",
       liquidCurrencyCode: "USD",
@@ -137,7 +137,7 @@ describe("existing autonomous plant top-ups", () => {
     const sector = {
       _id: new ObjectId(),
       corporationId: corp._id,
-      sectorType: "agriculture",
+      sectorType: "retail",
       countryId: "US",
       stateId: "NY",
       revenue: 100000,
@@ -149,7 +149,7 @@ describe("existing autonomous plant top-ups", () => {
       soldUnits: 80,
       buildQueue: [],
     } as unknown as CorporateSector;
-    const pool = candidate({ stateId: "NY", sectorType: "agriculture" });
+    const pool = candidate({ stateId: "NY", sectorType: "retail" });
     const decide = (commodityDemandOf?: () => number) =>
       makeNppCorpDecision(
         {
@@ -192,7 +192,7 @@ describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => 
     const floor = getNppCashFloorAnchor("2019-default", modifiers.cashFloorMult);
     const corp = {
       _id: new ObjectId(),
-      type: "agriculture",
+      type: "retail",
       countryId: "US",
       headquartersState: "NY",
       liquidCurrencyCode: "USD",
@@ -204,7 +204,7 @@ describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => 
     const sector = {
       _id: new ObjectId(),
       corporationId: corp._id,
-      sectorType: "agriculture",
+      sectorType: "retail",
       countryId: "US",
       stateId: "NY",
       revenue: 100000,
@@ -216,7 +216,7 @@ describe("expansion hold at the cash floor (nppDividendAfterTaxStage 2)", () => 
       soldUnits: 80,
       buildQueue: [],
     } as unknown as CorporateSector;
-    const pool = candidate({ stateId: "NY", sectorType: "agriculture" });
+    const pool = candidate({ stateId: "NY", sectorType: "retail" });
     const decision = makeNppCorpDecision(
       {
         corp,

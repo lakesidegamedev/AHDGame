@@ -38,7 +38,7 @@ export const AGRICULTURE_STRATEGIES: SectorStrategy[] = [
     // Reduced food output 0.55→0.50: food moved to oversupply (D/S ~0.85×) after the
     // prior supply boost. Lower rate rebalances toward target D/S.
     supply: { food: 0.5 },
-    demand: { fertilizers: 0.18, vehicles: 0.1, energy: 0.07, freight: 0.08, plastics: 0.05 },
+    demand: { fertilizers: 0.15, vehicles: 0.1, energy: 0.1, freight: 0.08, plastics: 0.05 },
   },
   {
     id: "industrial",
@@ -49,7 +49,7 @@ export const AGRICULTURE_STRATEGIES: SectorStrategy[] = [
     // Reduced food output 0.60→0.54 proportionally.
     supply: { food: 0.54 },
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
-    demand: { fertilizers: 0.245, energy: 0.092, oil: 0.099, vehicles: 0.087, plastics: 0.09 },
+    demand: { fertilizers: 0.218, energy: 0.131, oil: 0.087, vehicles: 0.087, plastics: 0.09 },
   },
   {
     id: "sustainable",

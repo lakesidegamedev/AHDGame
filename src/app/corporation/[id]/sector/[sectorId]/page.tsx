@@ -30,7 +30,6 @@ import AttackPanel from "./sections/AttackPanel";
 import { EditorialStancePanel } from "@/components/corporation/EditorialStancePanel";
 import PlantPanel from "./sections/PlantPanel";
 import MarketMoneyPanel from "./sections/MarketMoneyPanel";
-import StoreLedgerPanel from "./sections/StoreLedgerPanel";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { ArrowLeft, Hammer } from "lucide-react";
 import {
@@ -869,12 +868,6 @@ export default function SectorDetailPage() {
                       runCapacityAction({ action: "resize", activePercent })
                     }
                   />
-                  {sector.sectorType === "retail" && plants.storeLedger && (
-                    <StoreLedgerPanel
-                      ledger={plants.storeLedger}
-                      liquidCurrencyCode={corporation.liquidCurrencyCode}
-                    />
-                  )}
                   <MarketMoneyPanel
                     plants={plants}
                     sectorType={sector.sectorType}

@@ -25,7 +25,7 @@ export const CHEMICAL_INDUSTRIES_STRATEGIES: SectorStrategy[] = [
     description:
       "High-value fine and specialty chemicals plus drug ingredients: richer output mix for more electronics and energy.",
     supply: { chemicals: 0.42, pharmaceuticals: 0.12 },
-    demand: { chemicals: 0.12, energy: 0.084, electronics: 0.08, oil: 0.114, natural_gas: 0.022 },
+    demand: { chemicals: 0.12, energy: 0.12, electronics: 0.08, oil: 0.1 },
   },
   {
     id: "standard",
@@ -34,12 +34,11 @@ export const CHEMICAL_INDUSTRIES_STRATEGIES: SectorStrategy[] = [
     // Added plastics co-production 0.15. Polymer synthesis is integral to large chemical plants.
     supply: { chemicals: 0.5, plastics: 0.15 },
     demand: {
-      energy: 0.126,
-      oil: 0.163,
+      energy: 0.18,
+      oil: 0.15,
       freight: 0.08,
       real_estate_services: 0.02,
       vehicles: 0.1,
-      natural_gas: 0.041,
     },
   },
   {
@@ -48,14 +47,7 @@ export const CHEMICAL_INDUSTRIES_STRATEGIES: SectorStrategy[] = [
     description:
       "Nitrogen, phosphate, and potash processing tuned for agricultural demand with some chemical byproducts.",
     supply: { fertilizers: 0.5, chemicals: 0.1 },
-    demand: {
-      chemicals: 0.1,
-      energy: 0.105,
-      oil: 0.089,
-      freight: 0.08,
-      vehicles: 0.1,
-      natural_gas: 0.036,
-    },
+    demand: { chemicals: 0.1, energy: 0.15, oil: 0.08, freight: 0.08, vehicles: 0.1 },
   },
   {
     id: "pharmaceuticals",
@@ -81,13 +73,6 @@ export const CHEMICAL_INDUSTRIES_STRATEGIES: SectorStrategy[] = [
     description:
       "Petroleum-derived resin and polymer production for automotive, packaging, and construction industries. Heavy oil feedstock consumption.",
     supply: { plastics: 0.45, chemicals: 0.1 },
-    demand: {
-      oil: 0.228,
-      energy: 0.086,
-      chemicals: 0.066,
-      freight: 0.066,
-      vehicles: 0.041,
-      natural_gas: 0.015,
-    },
+    demand: { oil: 0.206, energy: 0.123, chemicals: 0.066, freight: 0.066, vehicles: 0.041 },
   },
 ];

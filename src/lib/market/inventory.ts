@@ -26,6 +26,7 @@ export const COMMODITY_SPOILAGE_PER_TURN: Record<CommodityType, number> = {
   network_services: 1,
   advertising: 1,
   freight: 1,
+  retail: 1,
   software: 0, // infinitely copyable once built; stock is licenses, not crates
   // Perishable goods.
   food: 0.04,
@@ -45,7 +46,6 @@ export const COMMODITY_SPOILAGE_PER_TURN: Record<CommodityType, number> = {
   natural_gas: 0.01, // storage boil-off/leakage
   ordnance: 0.002,
   plastics: 0.002,
-  consumer_goods: 0.003, // furniture and appliances: slow obsolescence
 };
 
 /**

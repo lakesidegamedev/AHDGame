@@ -42,8 +42,7 @@ export function buildCommodityBalanceLookups({
     | "natural_gas"
     | "ordnance"
     | "plastics"
-    | "network_services"
-    | "consumer_goods",
+    | "network_services",
     { supply: number; demand: number }
   >;
   stateCountryMap: Map<string, CountryId>;
