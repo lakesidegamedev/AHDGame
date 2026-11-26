@@ -180,10 +180,10 @@ export function StateEditor({
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-2 text-body transition-colors ${
+                className={`rounded-full px-3 py-2 text-body transition-colors ${
                   tab === t
-                    ? "border-b-2 border-primary text-foreground"
-                    : "text-muted hover:text-foreground"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted hover:text-foreground hover:bg-card-elevated"
                 }`}
               >
                 {t}

@@ -318,12 +318,12 @@ export default function CharacterPortfolioPage() {
             <nav className="-mb-px flex gap-6 overflow-x-auto" aria-label="Tabs">
               <button
                 onClick={() => setActiveTab("stocks")}
-                className={`
-                  shrink-0 whitespace-nowrap border-b-2 py-4 px-1 text-body font-medium transition-colors
+                className={`rounded-full transition-colors 
+                  shrink-0 whitespace-nowrap py-1.5 px-3 text-body font-medium transition-colors
                   ${
                     activeTab === "stocks"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted hover:border-card-border hover:text-foreground"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted hover:text-foreground hover:bg-card-elevated"
                   }
                 `}
               >
@@ -334,12 +334,12 @@ export default function CharacterPortfolioPage() {
               </button>
               <button
                 onClick={() => setActiveTab("bonds")}
-                className={`
-                  shrink-0 whitespace-nowrap border-b-2 py-4 px-1 text-body font-medium transition-colors
+                className={`rounded-full transition-colors 
+                  shrink-0 whitespace-nowrap py-1.5 px-3 text-body font-medium transition-colors
                   ${
                     activeTab === "bonds"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted hover:border-card-border hover:text-foreground"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted hover:text-foreground hover:bg-card-elevated"
                   }
                 `}
               >

@@ -225,7 +225,7 @@ function FundDetailPageInner({ params }: { params: Promise<{ code: string; slug:
                     onClick={() => setTimeframe(tf)}
                     className={`rounded-md border px-2 py-1 font-mono text-body-sm font-bold transition-all ${
                       timeframe === tf
-                        ? "border-primary/45 bg-primary/14 text-primary"
+                        ? "bg-primary text-primary-foreground border-transparent"
                         : "border-transparent text-muted hover:text-foreground"
                     }`}
                   >

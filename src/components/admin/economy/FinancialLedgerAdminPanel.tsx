@@ -834,10 +834,10 @@ export function FinancialLedgerAdminPanel({
               setInnerTab(tab);
               if (tab !== "timeline") clearDrill();
             }}
-            className={`px-4 py-2 text-body font-medium transition-colors ${
+            className={`rounded-full px-4 py-2 text-body font-medium transition-colors ${
               innerTab === tab
-                ? "border-b-2 border-primary text-primary"
-                : "text-muted hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:text-foreground hover:bg-card-elevated"
             }`}
           >
             {tab === "timeline" ? "Transaction timeline" : "Suspect alerts"}

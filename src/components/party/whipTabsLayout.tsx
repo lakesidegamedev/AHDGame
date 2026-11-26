@@ -109,7 +109,7 @@ export function WhipTabsLayout({
                 onClick={() => setUserSelectedChamberKey(c.key)}
                 className={`px-3 py-1 rounded-full text-body-sm font-medium border transition-colors ${
                   chamberKey === c.key
-                    ? "bg-primary/20 border-primary text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "bg-card border-card-border text-muted hover:text-foreground"
                 }`}
               >

@@ -38,7 +38,7 @@ export function BillListControls({
                 onClick={() => onStatusFilterChange(filter.value)}
                 className={`rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-all ${
                   statusFilter === filter.value
-                    ? "bg-primary/20 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "bg-card text-muted hover:text-foreground"
                 }`}
               >
@@ -56,7 +56,7 @@ export function BillListControls({
                 onClick={() => onVoteFilterChange(f.value)}
                 className={`rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-all ${
                   voteFilter === f.value
-                    ? "bg-primary/20 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "bg-card text-muted hover:text-foreground"
                 }`}
               >

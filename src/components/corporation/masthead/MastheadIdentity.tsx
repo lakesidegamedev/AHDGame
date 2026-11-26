@@ -101,7 +101,7 @@ export function MastheadIdentity({
           <span
             aria-hidden
             data-logo-tile
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-[calc(var(--corp-rad,6px)+2px)] bg-primary text-body font-bold text-background lg:h-16 lg:w-16 lg:text-heading"
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-[calc(var(--corp-rad,6px)+2px)] bg-primary text-body font-bold text-primary-foreground lg:h-16 lg:w-16 lg:text-heading"
           >
             {ticker.slice(0, 4)}
           </span>

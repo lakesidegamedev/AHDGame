@@ -82,7 +82,7 @@ export function PlayerReportsTab() {
             onClick={() => setStatusFilter(s)}
             className={`rounded-lg px-3 py-1 text-body-sm font-medium transition-colors ${
               statusFilter === s
-                ? "border border-primary/30 bg-primary/20 text-primary"
+                ? "border bg-primary text-primary-foreground border-transparent"
                 : "text-muted hover:text-foreground"
             }`}
           >

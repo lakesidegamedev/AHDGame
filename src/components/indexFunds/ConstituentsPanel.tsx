@@ -129,7 +129,7 @@ export function ConstituentsPanel({
               }}
               className={`rounded-md border px-2.5 py-1 text-body-sm font-semibold transition-all ${
                 view === v.key
-                  ? "border-primary/45 bg-primary/14 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "border-transparent text-muted hover:text-foreground"
               }`}
             >

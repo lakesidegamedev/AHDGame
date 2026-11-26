@@ -619,7 +619,9 @@ function UnionDashboard({ id }: { id: string }) {
                 {t.count != null && (
                   <span
                     className={`ml-2 rounded-full px-2 py-0.5 text-body-sm ${
-                      tab === t.key ? "bg-primary/10 text-primary" : "bg-card-elevated text-muted"
+                      tab === t.key
+                        ? "bg-primary text-primary-foreground border-transparent"
+                        : "bg-card-elevated text-muted"
                     }`}
                   >
                     {t.count}

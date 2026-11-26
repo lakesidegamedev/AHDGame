@@ -109,7 +109,7 @@ export function MailReportsTab({ backHref }: { backHref?: string }) {
             onClick={() => dispatch({ type: "SET_STATUS_FILTER", filter: s })}
             className={`px-3 py-1 rounded-lg text-body-sm font-medium transition-colors ${
               statusFilter === s
-                ? "bg-primary/20 text-primary border border-primary/30"
+                ? "border bg-primary text-primary-foreground border-transparent"
                 : "text-muted hover:text-foreground"
             }`}
           >

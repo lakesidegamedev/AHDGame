@@ -181,7 +181,7 @@ export default function SectorsPage() {
               onClick={() => handleViewChange(tab.key)}
               className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-body font-medium transition-colors ${
                 isActive
-                  ? "border-primary/40 bg-primary/10 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "border-card-border bg-card text-muted hover:bg-card/80 hover:text-foreground"
               }`}
             >

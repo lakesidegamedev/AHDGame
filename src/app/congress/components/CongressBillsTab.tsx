@@ -271,7 +271,7 @@ export function CongressBillsTab({
                 onClick={() => setStatusFilter(key)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 font-medium transition-colors whitespace-nowrap ${
                   statusFilter === key
-                    ? "bg-primary/20 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "bg-card text-muted hover:text-foreground"
                 }`}
               >

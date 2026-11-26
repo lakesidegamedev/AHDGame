@@ -134,7 +134,7 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
               onClick={() => setStatusFilter(s)}
               className={`px-3 py-1.5 font-medium transition-colors capitalize ${
                 statusFilter === s
-                  ? "bg-primary/20 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "bg-card text-muted hover:text-foreground"
               }`}
             >

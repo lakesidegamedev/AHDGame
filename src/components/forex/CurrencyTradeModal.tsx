@@ -207,10 +207,10 @@ export function CurrencyTradeModal({
             <button
               key={m}
               onClick={() => setMethod(m)}
-              className={`flex-1 py-2.5 text-body-sm font-medium transition-colors ${
+              className={`rounded-full flex-1 py-1.5 text-body-sm font-medium transition-colors ${
                 method === m
-                  ? "border-b-2 border-primary text-primary"
-                  : "text-muted hover:text-foreground"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted hover:text-foreground hover:bg-card-elevated"
               }`}
             >
               {METHOD_LABEL[m]}
