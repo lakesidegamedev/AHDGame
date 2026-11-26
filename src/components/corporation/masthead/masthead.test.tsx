@@ -234,8 +234,9 @@ describe("CorporationMasthead ledger", () => {
   it("falls back to ticker initials when there is no logo", () => {
     renderPrivateOutsider();
     const tile = screen.getByText("KSTN", { selector: "[data-logo-tile]" });
-    // Primary is neon green in some themes, so the initials use the page colour, not white.
-    expect(tile.className).toContain("text-background");
+    // Primary is neon green in some themes, so the initials use the per-theme text-on-primary
+    // colour (dark where white would not read), never a fixed white or the page colour.
+    expect(tile.className).toContain("text-primary-foreground");
     expect(tile.className).not.toContain("text-white");
   });
 });

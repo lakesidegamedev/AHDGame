@@ -114,7 +114,7 @@ export function BondTable({
             }}
             className={`px-3 py-1.5 text-body-sm font-semibold rounded-md transition-colors ${
               typeFilter === "corporate"
-                ? "bg-primary/15 text-primary border border-primary/30"
+                ? "border bg-primary text-primary-foreground border-transparent"
                 : "text-muted hover:text-foreground border border-transparent"
             }`}
           >
@@ -144,7 +144,7 @@ export function BondTable({
             title="Show only bonds with units currently available to buy"
             className={`shrink-0 px-3 py-1.5 text-body-sm font-semibold rounded-md border transition-colors ${
               availableOnly
-                ? "bg-primary/15 text-primary border-primary/30"
+                ? "bg-primary text-primary-foreground border-transparent"
                 : "text-muted hover:text-foreground border-card-border"
             }`}
           >
@@ -194,7 +194,7 @@ export function BondTable({
               onClick={() => handleSort(opt.field)}
               className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                 sortField === opt.field
-                  ? "bg-primary/10 text-primary border border-primary/20"
+                  ? "border bg-primary text-primary-foreground border-transparent"
                   : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
               }`}
             >

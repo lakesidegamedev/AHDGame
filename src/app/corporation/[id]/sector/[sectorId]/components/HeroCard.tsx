@@ -147,8 +147,10 @@ export default function HeroCard({
       </div>
 
       {/* Stats strip, scrollable on mobile */}
-      <div className="flex divide-x divide-card-border overflow-x-auto border-t border-card-border">
-        <div className="min-w-[90px] shrink-0 px-4 py-3">
+      {/* Phones: a two-column grid so every figure is readable without sideways
+          scrolling; wider screens keep the single scrolling row. */}
+      <div className="grid grid-cols-2 gap-px border-t border-card-border bg-card-border sm:flex sm:gap-0 sm:divide-x sm:divide-card-border sm:overflow-x-auto sm:bg-transparent">
+        <div className="min-w-0 bg-card px-4 py-3 sm:min-w-[90px] sm:shrink-0">
           <span className="block text-body-sm font-medium text-muted">Actual revenue</span>
           <span className="text-body font-bold tabular-nums text-success">
             {financials ? (
@@ -161,7 +163,7 @@ export default function HeroCard({
             )}
           </span>
         </div>
-        <div className="min-w-[90px] shrink-0 px-4 py-3">
+        <div className="min-w-0 bg-card px-4 py-3 sm:min-w-[90px] sm:shrink-0">
           <span className="block text-body-sm font-medium text-muted">Net profit</span>
           <span
             className={`text-body font-bold tabular-nums ${financials ? ((financials.siteStatement?.profit ?? financials.profit) >= 0 ? "text-success" : "text-error") : ""}`}
@@ -176,7 +178,7 @@ export default function HeroCard({
             )}
           </span>
         </div>
-        <div className="min-w-[90px] shrink-0 px-4 py-3">
+        <div className="min-w-0 bg-card px-4 py-3 sm:min-w-[90px] sm:shrink-0">
           <span className="block text-body-sm font-medium text-muted">
             {financials?.siteStatement ? "Pre-tax margin, this sector" : "Eff. Margin"}
           </span>
@@ -192,13 +194,13 @@ export default function HeroCard({
                 : hiddenMarker}
           </span>
         </div>
-        <div className="min-w-[90px] shrink-0 px-4 py-3">
+        <div className="min-w-0 bg-card px-4 py-3 sm:min-w-[90px] sm:shrink-0">
           <span className="block text-body-sm font-medium text-muted">Market share</span>
           <span className="text-body font-bold tabular-nums text-primary">
             {market.marketShare}%
           </span>
         </div>
-        <div className="min-w-[90px] shrink-0 px-4 py-3">
+        <div className="min-w-0 bg-card px-4 py-3 sm:min-w-[90px] sm:shrink-0">
           <span className="block text-body-sm font-medium text-muted">Workers</span>
           <span className="text-body font-bold tabular-nums text-foreground">
             {sector.workers != null ? sector.workers.toLocaleString("en-US") : hiddenMarker}

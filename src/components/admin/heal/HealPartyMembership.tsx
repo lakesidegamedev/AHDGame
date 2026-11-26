@@ -75,7 +75,7 @@ export function HealPartyMembership() {
                           <td className="py-1 font-medium">{r.name}</td>
                           <td className="py-1">
                             <span
-                              className={`text-body-sm px-1.5 py-0.5 rounded ${r.type === "character" ? "bg-primary/20 text-primary" : "bg-muted/30 text-muted"}`}
+                              className={`text-body-sm px-1.5 py-0.5 rounded ${r.type === "character" ? "bg-primary text-primary-foreground border-transparent" : "bg-muted/30 text-muted"}`}
                             >
                               {r.type === "character" ? "Player" : "NPP"}
                             </span>

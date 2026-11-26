@@ -690,7 +690,7 @@ export function ChairSubtab({
                   onClick={() => dispatch({ type: "SET_NEW_WEIGHT", value: weight })}
                   className={`rounded-md border px-3 py-1.5 text-body-sm font-semibold transition-colors ${
                     newWeight === weight
-                      ? "border-primary bg-primary/15 text-primary"
+                      ? "bg-primary text-primary-foreground border-transparent"
                       : "border-card-border text-muted hover:text-foreground"
                   }`}
                 >

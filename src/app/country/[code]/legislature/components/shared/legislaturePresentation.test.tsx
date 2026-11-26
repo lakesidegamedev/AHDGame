@@ -158,7 +158,7 @@ describe("legislature shells", () => {
       "Members",
       "Election action",
     ]);
-    expect(screen.getByText("Members").className).toContain("border-primary");
+    expect(screen.getByText("Members").className).toContain("bg-primary");
     fireEvent.click(screen.getByText("Bills"));
     expect(select).toHaveBeenCalledWith("bills");
   });

@@ -205,10 +205,10 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-3 text-body font-medium transition-colors ${
+              className={`rounded-full flex-1 px-4 py-1.5 text-body font-medium transition-colors ${
                 activeTab === tab.id
-                  ? "border-b-2 border-primary bg-card text-foreground"
-                  : "text-muted hover:text-foreground"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted hover:text-foreground hover:bg-card-elevated"
               }`}
             >
               {tab.label}

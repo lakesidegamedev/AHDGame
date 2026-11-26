@@ -68,7 +68,7 @@ export function OrderBook({ orders, onFilled }: Props) {
               onClick={() => setPairFilter("all")}
               className={`rounded-full px-2.5 py-1 text-body-sm font-medium transition-colors ${
                 pairFilter === "all"
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "bg-card-elevated text-muted hover:text-foreground"
               }`}
             >
@@ -81,7 +81,7 @@ export function OrderBook({ orders, onFilled }: Props) {
                 onClick={() => setPairFilter(pair)}
                 className={`rounded-full px-2.5 py-1 text-body-sm font-mono font-medium transition-colors ${
                   pairFilter === pair
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >

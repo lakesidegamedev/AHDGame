@@ -58,6 +58,7 @@ ${theme}
 html{overflow-x:clip}
 body{overflow-x:clip;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);background:var(--background);color:var(--foreground);font-family:var(--font-sans),system-ui,sans-serif}
 html[data-cookie-consent] [data-cookie-consent-banner]{display:none}
+@layer base{:focus-visible{outline:2px solid var(--primary-ink);outline-offset:2px}}
 .roster:has(.roster-group:hover) .roster-group:not(:hover){opacity:.4}
 `;
   const result = await postcss([tailwind()]).process(input, {

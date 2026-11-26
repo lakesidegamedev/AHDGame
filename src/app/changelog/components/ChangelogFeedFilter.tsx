@@ -52,7 +52,7 @@ function FilterPills({
           onClick={() => onChange(opt.value)}
           className={`rounded-full border px-3 py-1 text-body-sm font-medium transition-colors ${
             value === opt.value
-              ? "border-primary/40 bg-primary/15 text-primary"
+              ? "bg-primary text-primary-foreground border-transparent"
               : "border-card-border bg-background text-muted hover:text-foreground"
           }`}
         >

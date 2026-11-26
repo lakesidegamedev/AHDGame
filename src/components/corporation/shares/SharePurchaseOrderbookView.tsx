@@ -154,13 +154,13 @@ export function SharePurchaseOrderbookView({
                       onClick={() => setFillOrderbookAsCorp(false)}
                       className={`flex-1 border-r border-card-border px-3 py-2.5 text-left transition-colors ${
                         !fillOrderbookAsCorp
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-primary text-primary-foreground border-transparent"
                           : "bg-card-elevated text-muted hover:text-foreground"
                       }`}
                     >
                       <div className="font-semibold">Personally</div>
                       <div
-                        className={`mt-0.5 tabular-nums ${!fillOrderbookAsCorp ? "text-primary/70" : "text-muted/60"}`}
+                        className={`mt-0.5 tabular-nums ${!fillOrderbookAsCorp ? "text-primary-foreground" : "text-muted/60"}`}
                       >
                         {formatAmount(personalCashAnchor)}
                       </div>
@@ -170,13 +170,13 @@ export function SharePurchaseOrderbookView({
                       onClick={() => setFillOrderbookAsCorp(true)}
                       className={`flex-1 px-3 py-2.5 text-left transition-colors ${
                         fillOrderbookAsCorp
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-primary text-primary-foreground border-transparent"
                           : "bg-card-elevated text-muted hover:text-foreground"
                       }`}
                     >
                       <div className="font-semibold">{myCorporation.name}</div>
                       <div
-                        className={`mt-0.5 tabular-nums ${fillOrderbookAsCorp ? "text-primary/70" : "text-muted/60"}`}
+                        className={`mt-0.5 tabular-nums ${fillOrderbookAsCorp ? "text-primary-foreground" : "text-muted/60"}`}
                       >
                         {formatAmount(myCorpLiquidInternal, myCorpLiquidCurrency)}
                       </div>
