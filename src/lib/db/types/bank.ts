@@ -273,6 +273,13 @@ export interface BankCharter {
    * grace period rather than inheriting a stale clock.
    */
   undercapitalizedSinceTurn?: number;
+  /**
+   * Turn the bank's marked assets first fell short of what it owes, while it
+   * was still liquid enough for a cure window. Cleared once equity is back;
+   * the solvency pass resolves the bank if the hole is still open at the
+   * deadline.
+   */
+  insolventSinceTurn?: number;
   /** Idempotency key for the supervisory pass. */
   lastSupervisionTurn?: number;
 }

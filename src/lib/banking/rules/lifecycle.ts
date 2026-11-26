@@ -90,6 +90,7 @@ export type LifecycleCharter = Pick<
   | "warningBand"
   | "capitalStanding"
   | "undercapitalizedSinceTurn"
+  | "insolventSinceTurn"
   | "depositorsResolvedTurn"
   | "resolutionClaimedTurn"
   | "failedTurn"
@@ -122,6 +123,7 @@ export function lifecycleStage(charter: LifecycleCharter | null | undefined): Ba
   if (charter.warningBand === "red") return "impaired";
   if (charter.capitalStanding && BREACHING.includes(charter.capitalStanding)) return "impaired";
   if (typeof charter.undercapitalizedSinceTurn === "number") return "impaired";
+  if (typeof charter.insolventSinceTurn === "number") return "impaired";
   if (charter.warningBand === "amber") return "watch";
   if (charter.capitalStanding && STRESSED.includes(charter.capitalStanding)) return "watch";
   return "operating";
