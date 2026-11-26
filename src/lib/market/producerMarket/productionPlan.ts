@@ -61,6 +61,12 @@ export interface ProductionPlan {
     /** Required for cost-plus sales of stock no longer made by this recipe. */
     retainedUnitCost?: number;
   }[];
+  /**
+   * Set for a store. A store makes nothing and has no outputs: households buy
+   * goods through it at the producer's price and it keeps a markup. This is the
+   * value of goods it can resell per unit of full run.
+   */
+  store?: { resaleValuePerRunUnit: number };
   /** Cash payment for the active workforce, independent of realized sales. */
   labourCost: number;
   /** Explicit site, cold-capacity and regulatory costs, independent of product prices. */
@@ -211,6 +217,16 @@ export interface ProducerOperatingResult {
   offeredUnits: number;
   soldUnits: number;
   deliveredUnits: number;
+  /**
+   * Set for a store. Goods and markup in the same money as the rest of the
+   * result; `offeredUnits` and `soldUnits` count full-run capacity units the
+   * store could resell and did resell, so throttles and streaks read it like any plant.
+   */
+  store?: {
+    goodsBoughtWholesale: number;
+    markupEarned: number;
+    wholesaleByCommodity: Record<string, number>;
+  };
   revenue: number;
   purchases: number;
   inputsConsumed: number;

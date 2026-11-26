@@ -59,7 +59,7 @@ describe("computeRawSupplyDemand input demand under the phase", () => {
   const demandFor = (phase: number, priceLeg: number | null) => {
     const args = [
       [{ sectorType: "manufacturing", revenue: 1_000_000, stateId: "S1", priceLeg }],
-      ...Array.from({ length: 17 }, () => undefined),
+      ...Array.from({ length: 16 }, () => undefined),
       phase,
     ] as unknown as Parameters<typeof computeRawSupplyDemand>;
     const inputs = computeRawSupplyDemand(...args).productionInputDemandByState.get("S1");
@@ -135,7 +135,7 @@ describe("plants ledger input demand equals the billed input units", () => {
       ...Array.from({ length: 8 }, () => undefined),
       true, // plantsEnabled
       1, // ledgerUnitScale
-      ...Array.from({ length: 5 }, () => undefined),
+      ...Array.from({ length: 4 }, () => undefined),
       sectorUnitsOut,
       undefined, // retailGdpParams
       phase,

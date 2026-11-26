@@ -159,6 +159,7 @@ export async function settleFundedProducerTurn(
       eligibleOffersByOrder: context.demand.eligibleOffersByOrder,
       ...(context.demand.importTariffs ? { importTariffs: context.demand.importTariffs } : {}),
       spilloverShare: context.input.env.spilloverShare,
+      storeMarkup: context.input.env.storeMarkup,
       ownSitesFirst: context.input.env.ownSitesFirst,
       // An explicit "market first" supply priority is honoured (issue 5505): own
       // sites get no head start for these companies. Unset keeps own sites first.
@@ -749,6 +750,7 @@ export async function publishFundedProducerTurn(
       ...(context.demand.householdSource
         ? { householdSource: context.demand.householdSource }
         : {}),
+      ...(settled.result.storeSales ? { storeSales: settled.result.storeSales } : {}),
       ...(backgroundTrade ? { backgroundTrade: Object.fromEntries(backgroundTrade) } : {}),
       at: new Date(),
     } as never,

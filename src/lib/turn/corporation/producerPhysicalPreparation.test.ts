@@ -194,8 +194,9 @@ describe("physical producer preparation", () => {
 
     expect(billedInputBudget(plan)).toBeGreaterThan(0);
     expect(billedInputBudget(plan)).toBeCloseTo(billedInputBudget(before) * 1.26, 8);
-    expect(plan.outputs).toHaveLength(1);
-    expect(plan.outputs[0]).toMatchObject({ commodity: "retail", unitsPerOutput: 1 });
+    // A store makes and offers nothing; households buy through it.
+    expect(plan.outputs).toHaveLength(0);
+    expect(plan.store?.resaleValuePerRunUnit).toBeGreaterThan(0);
     expect(target.capacity.ownedDailyUnits).toBe(sector.capitalStock);
     expect(target.capacity.paidBookAnchor).toBe(sector.capacityBookAnchor);
   });

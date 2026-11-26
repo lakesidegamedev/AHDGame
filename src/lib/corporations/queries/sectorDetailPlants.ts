@@ -1,4 +1,5 @@
 /** The plants section of the sector detail view. */
+import { storeLedgerView } from "@/lib/stores/rules/storeLedgerView";
 import type { PlantIdleCause, SectorPlantsSection, PlantBuildOrderView } from "./sectorPlantsTypes";
 import type { CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
@@ -202,6 +203,20 @@ export function buildSectorPlantsSection(args: {
             nonNeg(settledOfferedPerTurn - settledSoldPerTurn - settledOwnPerTurn) * TURNS_PER_DAY,
         }
       : undefined;
+  const storeReceipt = sector.producerSettlement?.store ? sector.producerSettlement : null;
+  const storeView = storeReceipt?.store
+    ? storeLedgerView({
+        turn: storeReceipt.turn,
+        turnsPerDay: TURNS_PER_DAY,
+        receipt: {
+          store: storeReceipt.store,
+          profit: storeReceipt.profit,
+          labourPaid: storeReceipt.labourPaid,
+          otherOperatingPaid: storeReceipt.otherOperatingPaid,
+          inputsConsumed: storeReceipt.inputsConsumed,
+        },
+      })
+    : null;
   const ownSiteShare = ownSite?.share ?? 0;
   const ownSiteUnits = producedUnits != null ? nonNeg(producedUnits * ownSiteShare) : null;
   const unsoldUnits =
@@ -654,6 +669,7 @@ export function buildSectorPlantsSection(args: {
     producedUnits,
     soldUnits,
     ...(settledOffer ? { settledOffer } : {}),
+    ...(storeView ? { storeLedger: storeView } : {}),
     ownSiteUnits,
     unsoldUnits,
     idleUnits,

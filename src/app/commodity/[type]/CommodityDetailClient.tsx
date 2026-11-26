@@ -12,6 +12,7 @@ import type { MapMode } from "./components/CommodityMapModeToggle";
 import HeroPanel from "./components/HeroPanel";
 import PriceBreakdownPanel from "./components/PriceBreakdownPanel";
 import DemandDriverBanner from "./components/DemandDriverBanner";
+import HouseholdChannelPanel from "./components/HouseholdChannelPanel";
 import FreightMarketExplainer from "./components/FreightMarketExplainer";
 import SupplyDemandBar from "./components/SupplyDemandBar";
 import FlowLedgerStrip from "./components/FlowLedgerStrip";
@@ -238,6 +239,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
           </div>
         )}
         <DemandDriverBanner demandDriver={data.demandDriver} unit={data.unit} />
+        <HouseholdChannelPanel channel={data.householdChannel} unit={data.unit} />
         {data.commodity === "freight" && <FreightMarketExplainer />}
         {data.commodity === "freight" && heavyLoaded && <FreightNetworkPanel data={data} />}
         <div className="grid gap-x-6 lg:grid-cols-3">

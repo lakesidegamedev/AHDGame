@@ -52,14 +52,6 @@ function addFlows(
 export const PLANNED_MARKET_LEAKAGE = 0.55;
 
 /**
- * Background countries produce several times the retail goods that real buyers
- * (player households, plants, government) order. Their retail supply is scaled
- * down to about 90% of that funded demand. Background demand is never added to
- * close the gap, because background wallets are topped up to their orders.
- */
-export const MACRO_RETAIL_OUTPUT_SCALE = 0.2;
-
-/**
  * Background advertising supply is halved (rate 0.5 to 0.25). Player media
  * plants read their own strategy rates, so this scale is macro-only.
  */
@@ -83,7 +75,6 @@ export const MACRO_RESOURCE_ENDOWMENT_SCALE: Partial<Record<ExtractableResource,
 
 /** Output scale applied only to a sector's supply flows in the macro market. */
 const MACRO_SUPPLY_SCALE: Partial<Record<OperatingSectorType, number>> = {
-  retail: MACRO_RETAIL_OUTPUT_SCALE,
   media: MACRO_MEDIA_OUTPUT_SCALE,
 };
 
