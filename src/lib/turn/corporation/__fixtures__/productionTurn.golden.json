@@ -12,11 +12,11 @@
     "prices": 15,
     "nextPrices": 27,
     "householdSpend": 1048114.5476404934,
-    "publicSpend": 405.0589824514545,
+    "publicSpend": 420.1251948122535,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "a36a84e3ee1b87a64d8856f266051a2f72b52828e55a8199fd33a29e500a3623"
+    "sha256": "9ebadc0be3c5a4c1c6b0736b7bbf666090c60872f317a62b2443ed20bf478b07"
   },
   "clearing": {
     "sectorsWithClearing": 382,
@@ -44,10 +44,10 @@
     "prices": 15,
     "nextPrices": 27,
     "householdSpend": 1048114.5476404929,
-    "publicSpend": 405.0589824514545,
+    "publicSpend": 420.1251948122535,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "a14d7c68c14b2be964005f5c7ad73ae03abf9312637576edd06ed9a7475ec049"
+    "sha256": "ead6d147b5dd0b29a110f060fcf7114ea286e089a64bad20f5ab29b1a9b11f80"
   }
 }

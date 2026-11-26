@@ -17,7 +17,7 @@ describe("government goods mixes", () => {
 
   it("names the budget lines that buy a good", () => {
     expect(governmentBudgetLinesText("electronics")).toContain("Healthcare 10%");
-    expect(governmentBudgetLinesText("electronics")).toContain("Defense 7%");
+    expect(governmentBudgetLinesText("electronics")).toContain("Defense 3%");
     expect(governmentBuysCommodity("steel")).toBe(true);
   });
 });
