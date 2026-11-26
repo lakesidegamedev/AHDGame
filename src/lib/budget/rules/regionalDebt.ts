@@ -12,10 +12,17 @@ export interface RegionalDebtLedger {
 
 export const REGIONAL_DEBT_INTEREST_RATE = 0.05;
 
-function cents(value: number): number {
-  if (!Number.isFinite(value) || !Number.isSafeInteger(Math.round(value * 100)))
-    throw new Error("Regional financing amount is invalid");
-  return Math.round(value * 100);
+/**
+ * Settlement runs in integer minor units: cents normally, whole units when a
+ * region's balances are too large for cents to stay exact (a very rich region
+ * can hold more than 90 trillion in local currency). An out-of-range value is a
+ * RangeError so the caller can retry in whole units; a non-number is not.
+ */
+function minorUnits(value: number, scale: number): number {
+  if (!Number.isFinite(value)) throw new Error("Regional financing amount is invalid");
+  if (!Number.isSafeInteger(Math.round(value * scale)))
+    throw new RangeError("Regional financing amount is outside the exact range");
+  return Math.round(value * scale);
 }
 
 export function regionalDebtApprovalPenalty(principal: number, gdp: number): number {
@@ -39,10 +46,25 @@ export function settleRegionalDebt(input: {
   )
     throw new Error("Regional financing turn is invalid");
   if (input.previous && input.previous.lastSettledTurn >= input.turn) return input.previous;
+  try {
+    return settleAtScale(input, 100);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    // Too large for exact cents: settle in whole units instead.
+    return settleAtScale(input, 1);
+  }
+}
+
+function settleAtScale(
+  input: Parameters<typeof settleRegionalDebt>[0],
+  scale: number
+): RegionalDebtLedger {
+  const cents = (value: number) => minorUnits(value, scale);
   const openingCash = cents(input.openingCash);
   const principal = cents(input.previous?.principal ?? 0) + Math.max(0, -openingCash);
-  if (!Number.isSafeInteger(principal) || principal < 0)
-    throw new Error("Regional debt principal is invalid");
+  if (!Number.isSafeInteger(principal))
+    throw new RangeError("Regional debt principal is outside the exact range");
+  if (principal < 0) throw new Error("Regional debt principal is invalid");
   const cash = Math.max(0, openingCash);
   const annualInterest = Math.round(principal * REGIONAL_DEBT_INTEREST_RATE);
   const interestPaid = Math.round(annualInterest / input.turnsPerYear);
@@ -51,21 +73,21 @@ export function settleRegionalDebt(input: {
   const operatingChange = revenue - spending - interestPaid;
   const available = cash + operatingChange;
   if (!Number.isSafeInteger(operatingChange) || !Number.isSafeInteger(available))
-    throw new Error("Regional cash settlement exceeds the supported range");
+    throw new RangeError("Regional cash settlement exceeds the supported range");
   const borrowed = Math.max(0, -available);
   const repaid = Math.min(principal, Math.max(0, available));
   const closingPrincipal = principal + borrowed - repaid;
   const closingCash = Math.max(0, available - repaid);
-  cents(closingPrincipal / 100);
-  cents(closingCash / 100);
+  cents(closingPrincipal / scale);
+  cents(closingCash / scale);
   return {
-    principal: closingPrincipal / 100,
-    cash: closingCash / 100,
-    annualInterest: annualInterest / 100,
+    principal: closingPrincipal / scale,
+    cash: closingCash / scale,
+    annualInterest: annualInterest / scale,
     interestRate: REGIONAL_DEBT_INTEREST_RATE,
     lastSettledTurn: input.turn,
-    borrowed: borrowed / 100,
-    repaid: repaid / 100,
-    interestPaid: interestPaid / 100,
+    borrowed: borrowed / scale,
+    repaid: repaid / scale,
+    interestPaid: interestPaid / scale,
   };
 }
