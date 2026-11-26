@@ -932,8 +932,9 @@ export function computeRawSupplyDemand(
    * retail's SECTOR_DEMAND inputs (food, electronics, …) are skipped — the
    * household basket owns those final-demand legs and would double-count them.
    *
-   * This flag only prevents the household basket and Retail's old input proxy
-   * from double-counting the same purchases.
+   * Retail's legacy supply-derived output demand is controlled separately by
+   * `retailLegacyDemandFactor` below. This flag only prevents the household
+   * basket and Retail's old input proxy from double-counting the same purchases.
    */
   suppressRetailConsumerDemand = false,
   /**
@@ -963,6 +964,13 @@ export function computeRawSupplyDemand(
    * what it sells and negative values lower it without changing input costs.
    */
   sectorOutputDemandModifierPct?: Map<string, number>,
+  /**
+   * Remaining share of Retail's legacy `demand = supply × GDP multiplier`
+   * feedback loop. Defaults to 1 for worlds that have not started the bounded
+   * transition. Production passes a factor that reaches exactly 0, after which
+   * adding Retail supply can never create Retail demand.
+   */
+  retailLegacyDemandFactor = 1,
   /**
    * Base-price table for the plants measured-production mix split (issue
    * #2054). This is the ONE canonical basis the clearing offer splits on as
@@ -1352,6 +1360,34 @@ export function computeRawSupplyDemand(
         stateInput.set(commodity, (stateInput.get(commodity) ?? 0) + units);
         recordSectorUnits(inputDemandBySector, sector.sectorId, commodity, units);
       }
+    }
+  }
+
+  // ── Temporary Retail legacy-demand unwind ──────────────────────────────────
+  // This is intentionally the only supply-derived demand leg in the ledger and
+  // it is temporary. Production fades it to zero through
+  // `retailDemandTransition`; independent household demand remains downstream.
+  // Clamp here as a final defence against a corrupt config amplifying the loop.
+  const retailLegacyFactor = Number.isFinite(retailLegacyDemandFactor)
+    ? Math.max(0, Math.min(1, retailLegacyDemandFactor))
+    : 1;
+  if (gdpGrowthData && retailLegacyFactor > 0) {
+    for (const [stateId, stateMap] of byState) {
+      const retailBal = stateMap.get("retail");
+      if (!retailBal || retailBal.supply <= 0) continue;
+      const stateGdp = gdpGrowthData.byState.get(stateId) ?? 0;
+      const multiplier = computeRetailDemandMultiplier(
+        gdpGrowthData.nationalAverage,
+        stateGdp,
+        retailGdpParams
+      );
+      const consumerDemand = retailBal.supply * multiplier * retailLegacyFactor;
+      retailBal.demand += consumerDemand;
+      const g = global.get("retail")!;
+      g.demand += consumerDemand;
+      // Supply-derived, already in the plants unit basis - not era-rescaled,
+      // so its unscaled tally is the same value.
+      addUnscaledDemand("retail", consumerDemand);
     }
   }
 

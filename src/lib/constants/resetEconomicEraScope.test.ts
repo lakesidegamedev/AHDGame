@@ -9,7 +9,7 @@ import { getStrategy, getEffectiveStrategyRates, getSectorStrategies } from "./s
 import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { getEraNominalAmount } from "./sectorSeedEra";
 
-// Pre-1991-calibration recipe values (retail and defense standard carry the current shared trims, and stores buy no resale goods). These fixtures
+// Pre-1991-calibration recipe values (retail and defense standard carry the current shared trims). These fixtures
 // deliberately do not derive their expectations from the current recipe table.
 const LEGACY_INPUTS = {
   manufacturing: {
@@ -53,7 +53,10 @@ const LEGACY_INPUTS = {
     plastics: 0.06,
   },
   retail: {
+    food: 0.081,
+    electronics: 0.049,
     energy: 0.041,
+    vehicles: 0.033,
     freight: 0.049,
     advertising: 0.065,
     software: 0.041,
@@ -107,7 +110,7 @@ describe("1991 reset calibration does not change other era presets", () => {
   );
 
   it("keeps 1991 recipes and entry fees scoped to the originating preset", () => {
-    expect(getStrategy("manufacturing", "standard", "1991-default").demand.energy).toBe(0.112);
+    expect(getStrategy("manufacturing", "standard", "1991-default").demand.energy).toBe(0.16);
     expect(getStrategy("manufacturing", "standard").demand.energy).toBe(0.18);
     expect(sectorEntryFeeAnchor("1991-default")).toBe(2_500);
   });

@@ -200,7 +200,7 @@ export interface HouseholdDemandInputs {
  * Income-driven final consumer demand: turns per-state household signals
  * into consumer-basket demand with a bounded price-elasticity response.
  * When on, retail's SECTOR_DEMAND input proxy is suppressed upstream (the
- * basket owns those legs). Supersedes the
+ * basket owns those legs); the retail OUTPUT self-loop stays. Supersedes the
  * demographics uplift — do not run both.
  */
 export function applyHouseholdDemand(

@@ -272,20 +272,7 @@ export function SectorStrategyPanel({
 
             <div className="grid grid-cols-2 items-start gap-x-6">
               <CommodityChain title="Consumes" rates={active.demand} limit={MAX_DEMAND_ROWS} />
-              {Object.keys(active.supply).length > 0 ? (
-                <CommodityChain title="Produces" rates={active.supply} />
-              ) : (
-                <div>
-                  <p className="m-0 border-b border-card-border py-1 text-body-sm font-medium text-muted">
-                    Resells
-                  </p>
-                  <p className="m-0 py-1 text-body-sm text-muted">
-                    Makes nothing. Buys groceries, consumer goods and electronics from producers at
-                    the market price and sells them to households in its state at cost plus a
-                    markup.
-                  </p>
-                </div>
-              )}
+              <CommodityChain title="Produces" rates={active.supply} />
             </div>
           </div>
         </>

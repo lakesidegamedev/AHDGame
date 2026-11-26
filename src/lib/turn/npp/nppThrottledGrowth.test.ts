@@ -31,7 +31,7 @@ interface FundedRun {
 function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: FundedRun) {
   const modifiers = ceoArchetypeModifiers("cautious");
   const quote = computeBuildCost({
-    sectorType: "agriculture",
+    sectorType: "retail",
     units: 1,
     strategyId: null,
     year: CAPACITY_ANCHOR_YEAR,
@@ -47,7 +47,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: F
   const floor = getNppCashFloorAnchor("2019-default", modifiers.cashFloorMult);
   const corp = {
     _id: new ObjectId(),
-    type: "agriculture",
+    type: "retail",
     countryId: "US",
     headquartersState: "NY",
     liquidCurrencyCode: "USD",
@@ -59,7 +59,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: F
   const sector = {
     _id: new ObjectId(),
     corporationId: corp._id,
-    sectorType: "agriculture",
+    sectorType: "retail",
     countryId: "US",
     stateId: "NY",
     revenue: 100000,
@@ -73,7 +73,7 @@ function decide(demandThrottleFactor: number | null, plantUnits = 80, funded?: F
     ...(demandThrottleFactor === null ? {} : { demandThrottleFactor }),
     ...(funded ? fundedFields(plantUnits, funded) : {}),
   } as unknown as CorporateSector;
-  const pool = candidate({ stateId: "NY", sectorType: "agriculture" });
+  const pool = candidate({ stateId: "NY", sectorType: "retail" });
   return makeNppCorpDecision(
     {
       corp,

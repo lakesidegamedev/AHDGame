@@ -112,7 +112,6 @@ export async function runCorporationProducerMarket(
       | "inputReservations"
       | "eligibleOffersByOrder"
       | "spilloverShare"
-      | "storeMarkup"
       | "ownSitesFirst"
       | "demandCurve"
       | "marketFirstAccounts"

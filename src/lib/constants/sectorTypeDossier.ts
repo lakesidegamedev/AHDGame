@@ -21,7 +21,7 @@ export const SECTOR_TYPE_BRIEFING: Record<OperatingSectorType, string> = {
   extraction:
     "Pulls raw commodities out of a finite state deposit. Output depends on what is actually in the ground; deposits deplete, royalties are negotiated with the state.",
   retail:
-    "Runs stores. A store buys groceries, consumer goods and electronics from producers at the market price and resells them to households in its state at cost plus a markup. It makes nothing and sells to no one else. Margin is the markup minus wages, site bills and running supplies, and a store's capacity limits how much it can resell each turn.",
+    "Sells finished goods to households. The most demand sensitive type: consumer confidence, brand loyalty and advertising move revenue more than any input price.",
   financial:
     "Lends, underwrites and trades. Earns on the spread between deposits and the central bank rate, so rate decisions and credit conditions matter more than commodities.",
   media:

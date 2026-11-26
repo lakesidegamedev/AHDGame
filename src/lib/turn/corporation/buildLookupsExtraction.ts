@@ -154,8 +154,7 @@ export async function buildExtractionAndPortfolioLookups({
     | "natural_gas"
     | "ordnance"
     | "plastics"
-    | "network_services"
-    | "consumer_goods",
+    | "network_services",
     { supply: number; demand: number }
   >;
   corporations: WithId<Corporation>[];
