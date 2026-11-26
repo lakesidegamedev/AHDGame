@@ -681,19 +681,22 @@ export async function refreshBankTreasuryMark(
  * until the next banking phase the vault holds the redemption cash AND the
  * mark still values the matured lots: the same money counted twice, inflating
  * equity, the withdrawable figure, and the supervisor's rating for that
- * window. The mark skips matured bonds, so re-marking removes them.
+ * window. The bond is flagged matured only by the last projection of its own
+ * payout, which can land after this runs, so the caller names the bonds it
+ * just redeemed and the mark leaves them out whatever their flag says.
  */
 export async function remarkBankTreasuryAfterMaturity(
   db: Db,
   bankId: ObjectId,
-  turn: number
+  turn: number,
+  redeemedBondIds: ReadonlySet<string> = new Set()
 ): Promise<number | null> {
   const bank = await corporationsCollection<BankState>(db).findOne(
     { _id: bankId, "bankCharter.status": { $in: ["active", "failed"] } },
     { projection: { bankCharter: 1 } }
   );
   if (!bank?.bankCharter) return null;
-  return markBankTreasury(db, bankId, bank.bankCharter, turn);
+  return markBankTreasury(db, bankId, bank.bankCharter, turn, { redeemedBondIds });
 }
 
 /** Automatic cash sweep. Trade IDs are stable across a turn replay. */

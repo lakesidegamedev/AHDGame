@@ -30,7 +30,7 @@ import { computeDepositCeiling } from "./capacity";
 import { computeConfidence } from "./confidence";
 import { assessCapital } from "./capitalAdequacy";
 import { discountWindowStigma, quoteDiscountWindow } from "./discountWindow";
-import { depositFlight, depositTakerFails, propBankFails } from "./solvency";
+import { depositFlight, depositTakerVerdict, propBankFails } from "./solvency";
 
 const HEALTHY = {
   type: "retail",
@@ -418,14 +418,29 @@ describe("confidence, capital, window, solvency", () => {
 
   it("solvency tests match the turn's inline rules", () => {
     expect(
-      depositTakerFails({ priorBand: "red", cashReserves: 199_999, requiredLiquidity: 400_000 })
-    ).toBe(true);
+      depositTakerVerdict({
+        turn: 1,
+        priorBand: "red",
+        cashReserves: 199_999,
+        requiredLiquidity: 400_000,
+      }).outcome
+    ).toBe("fail");
     expect(
-      depositTakerFails({ priorBand: "red", cashReserves: 200_000, requiredLiquidity: 400_000 })
-    ).toBe(false);
+      depositTakerVerdict({
+        turn: 1,
+        priorBand: "red",
+        cashReserves: 200_000,
+        requiredLiquidity: 400_000,
+      }).outcome
+    ).toBe("sound");
     expect(
-      depositTakerFails({ priorBand: "amber", cashReserves: 0, requiredLiquidity: 400_000 })
-    ).toBe(false);
+      depositTakerVerdict({
+        turn: 1,
+        priorBand: "amber",
+        cashReserves: 0,
+        requiredLiquidity: 400_000,
+      }).outcome
+    ).toBe("sound");
     expect(propBankFails({ band: "red", equityBase: 0 })).toBe(true);
     expect(propBankFails({ band: "red", equityBase: 1 })).toBe(false);
     expect(propBankFails({ band: "amber", equityBase: -5 })).toBe(false);
