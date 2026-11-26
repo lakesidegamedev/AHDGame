@@ -39,7 +39,7 @@ export interface UnitRow {
   path: string;
   fill: string;
   ink: string;
-  tier: MarginTier;
+  tier: MarginTier | null;
   leaderPartyId: string;
   /** Party abbreviation that led the sub-unit's baseline result, when known. */
   baselineLeader?: string;
@@ -93,7 +93,7 @@ export function unitRowsFrom(
       path: s.path,
       fill,
       ink: readableInk(fill),
-      tier: placed ? "safe" : tier,
+      tier: placed ? (s.winner ? "safe" : null) : shares.length ? tier : null,
       leaderPartyId: placed
         ? (parties[s.winner] ?? "")
         : (shares[0]?.partyId ?? parties[s.winner] ?? ""),
