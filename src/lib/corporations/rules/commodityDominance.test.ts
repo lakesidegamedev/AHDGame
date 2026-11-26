@@ -105,8 +105,8 @@ describe("computeBuildCost with the commodity toll", () => {
   it("prices an order by the ratio after it lands", () => {
     const models = [
       {
-        commodity: "retail",
-        label: "Retail",
+        commodity: "food",
+        label: "Food",
         demandUnits: 1000,
         potentialUnits: 400,
         yieldPerUnit: 1,
@@ -123,10 +123,10 @@ describe("computeBuildCost with the commodity toll", () => {
 });
 
 describe("commodityDominanceRatio", () => {
-  const commodity = SECTOR_SUPPLY.retail?.[0]?.commodity ?? "retail";
+  const commodity = SECTOR_SUPPLY.agriculture![0].commodity;
   const sector = (id: string, capitalStock: number, queuedUnits = 0): CommodityDominanceSector => ({
     _id: id,
-    sectorType: "retail",
+    sectorType: "agriculture",
     capitalStock,
     queuedUnits,
     strategyId: null,
