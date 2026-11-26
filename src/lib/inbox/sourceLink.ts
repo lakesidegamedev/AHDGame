@@ -56,7 +56,7 @@ export function resolveSourceLink(
     const country = asString(m.countryId);
     const state = asString(m.stateId);
     if (country && state) {
-      return { label: "View regional economy", href: `${regionUrl(country, state)}/economy` };
+      return { label: "View regional economy", href: `${regionUrl(country, state)}?tab=economy` };
     }
   }
 
