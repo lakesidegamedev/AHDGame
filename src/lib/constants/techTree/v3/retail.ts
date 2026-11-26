@@ -50,7 +50,7 @@ export const RETAIL_V3: V3LaneContent = {
       description: "Converting counters to self-service floors serves more shoppers per clerk.",
       effects: [
         { kind: "laborCostReduction", pct: 0.05 },
-        { kind: "outputRate", commodity: "retail", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
       ],
     },
     {
@@ -95,9 +95,9 @@ export const RETAIL_V3: V3LaneContent = {
   "1960": [
     {
       name: "Central Meat and Produce Prep",
-      description: "Central prep rooms cut in-store butchering labor and shrink losses.",
+      description: "Central prep rooms cut in-store butchering labor and refrigeration load.",
       effects: [
-        { kind: "inputCost", commodity: "food", pct: 0.06 },
+        { kind: "inputCost", commodity: "energy", pct: 0.06 },
         { kind: "laborCostReduction", pct: 0.03 },
       ],
     },
@@ -305,7 +305,7 @@ export const RETAIL_V3: V3LaneContent = {
         "Direct factory buying worldwide strips importers and brokers from the cost stack.",
       effects: [
         { kind: "inputCost", commodity: "plastics", pct: 0.1 },
-        { kind: "inputCost", commodity: "electronics", pct: 0.1 },
+        { kind: "inputCost", commodity: "freight", pct: 0.1 },
       ],
     },
     {

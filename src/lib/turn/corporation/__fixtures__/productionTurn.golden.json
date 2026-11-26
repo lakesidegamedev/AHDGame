@@ -3,32 +3,32 @@
   "sectorOps": 420,
   "corpOps": 60,
   "totalRevenueGenerated": 6460696.071294792,
-  "totalIncomeGenerated": 1524974.966037701,
+  "totalIncomeGenerated": 1622455.7820524913,
   "sectorsProcessed": 420,
-  "sha256": "fa3365a86d37cd480acc1de511d78858d6603528630c581ffa1fa6cb3299db9c",
+  "sha256": "2c2c757f93e0650f2514c019bf181bfb77c1c5d387021ea4c88b343c1027bd37",
   "shadow": {
     "plants": 420,
     "skipped": 0,
-    "prices": 16,
+    "prices": 15,
     "nextPrices": 27,
-    "householdSpend": 1341014.0698038917,
-    "publicSpend": 420.12519481233323,
+    "householdSpend": 1048114.5476404934,
+    "publicSpend": 420.1251948122535,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "d8a27095a29f6be4637e73618c55810ec664d656577949dc5c0edcf92e96c8ca"
+    "sha256": "9ebadc0be3c5a4c1c6b0736b7bbf666090c60872f317a62b2443ed20bf478b07"
   },
   "clearing": {
-    "sectorsWithClearing": 420,
+    "sectorsWithClearing": 382,
     "internalSupplyTrades": 26,
     "internalSupplyReceipts": 420,
-    "internalInputAvailability": 383,
+    "internalInputAvailability": 345,
     "discountCostSectors": 13,
     "advertisingSellers": 0,
     "contractTargets": 0,
-    "brandLoyaltyUpdates": 60,
+    "brandLoyaltyUpdates": 58,
     "invariantBreaches": 0,
-    "sha256": "d440a9c5194058ec1c037bcf02416b90d18dc20fcf4ce6468ca92b18330f52df"
+    "sha256": "6d730d03f01386ec9b9794759a90f104d0ab465faa0bbca8a15480bfd1521dc8"
   },
   "lookups": {
     "corporations": 60,
@@ -36,18 +36,18 @@
     "sectorPresenceKeys": 0,
     "marketShareBySectorId": 420,
     "nationalDominanceShareBySectorId": 420,
-    "sha256": "600671bdb682f185f2feb3c646d729fd2eea3d67fac9c715045cd54ebd32d249"
+    "sha256": "c2dc1201e4b4482f7392a811f0f066d526a9ca7bd72fc4cccc22f426e7c97591"
   },
   "historicalShadow": {
     "plants": 420,
     "skipped": 0,
-    "prices": 16,
+    "prices": 15,
     "nextPrices": 27,
-    "householdSpend": 1341014.069803892,
+    "householdSpend": 1048114.5476404929,
     "publicSpend": 420.1251948122535,
     "accounts": 70,
     "carriedPlants": 420,
     "payables": 0,
-    "sha256": "68047c22ce5d191fc7f0749ffd2e7f8ea6163450ffcc726949de435c0a614d9f"
+    "sha256": "ead6d147b5dd0b29a110f060fcf7114ea286e089a64bad20f5ab29b1a9b11f80"
   }
 }

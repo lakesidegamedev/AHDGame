@@ -24,7 +24,7 @@ export const COMMODITY_TYPES = [
   "financial_services",
   "advertising",
   "vehicles",
-  "retail",
+  "consumer_goods",
   "freight",
   "consulting_services",
   "iron",
@@ -67,7 +67,6 @@ export const COMMODITY_LABELS: Record<CommodityType, string> = {
   financial_services: "Financial Services",
   advertising: "Advertising & media",
   vehicles: "Vehicles & Machinery",
-  retail: "Consumer Goods",
   freight: "Freight & Transportation",
   consulting_services: "Consulting Services",
   iron: "Iron Ore",
@@ -79,6 +78,7 @@ export const COMMODITY_LABELS: Record<CommodityType, string> = {
   ordnance: "Ordnance & Weapons Systems",
   plastics: "Plastics & Polymers",
   network_services: "Network Services",
+  consumer_goods: "Consumer Goods",
 };
 
 // ── Price math used by client-side market views ─────────────────────────
@@ -213,7 +213,6 @@ export const COMMODITY_HERO_SLUGS: Record<CommodityType, string> = {
   financial_services: "commodity-financial-services",
   advertising: "commodity-advertising",
   vehicles: "commodity-vehicles",
-  retail: "commodity-retail",
   freight: "commodity-freight",
   consulting_services: "commodity-consulting-services",
   iron: "commodity-iron",
@@ -225,6 +224,7 @@ export const COMMODITY_HERO_SLUGS: Record<CommodityType, string> = {
   ordnance: "commodity-ordnance",
   plastics: "commodity-plastics",
   network_services: "commodity-network-services",
+  consumer_goods: "commodity-consumer-goods",
 };
 
 /** Alt text for commodity hero images */
@@ -244,7 +244,6 @@ export const COMMODITY_HERO_ALTS: Record<CommodityType, string> = {
   financial_services: "New York Stock Exchange building on Wall Street",
   advertising: "Broadway and Times Square lit up at night",
   vehicles: "Hyundai car assembly line",
-  retail: "Macy's department store at Herald Square",
   freight: "Sovereign Maersk container ship at sea",
   consulting_services: "Booz Allen Hamilton office in Washington D.C.",
   iron: "Iron ore factory in Karnataka, India",
@@ -257,6 +256,7 @@ export const COMMODITY_HERO_ALTS: Record<CommodityType, string> = {
   ordnance: "Ordnance assembly line at a weapons manufacturing facility",
   plastics: "Industrial polymer extrusion and plastics manufacturing plant",
   network_services: "Fiber optic data center network infrastructure",
+  consumer_goods: "Furniture and household appliances on a factory assembly line",
 };
 
 export const COMMODITY_ICONS: Record<CommodityType, string> = {
@@ -275,7 +275,6 @@ export const COMMODITY_ICONS: Record<CommodityType, string> = {
   financial_services: "Fi",
   advertising: "Ad",
   vehicles: "Ve",
-  retail: "CG",
   freight: "Fr",
   consulting_services: "Cs",
   iron: "Fe",
@@ -287,4 +286,5 @@ export const COMMODITY_ICONS: Record<CommodityType, string> = {
   ordnance: "Ord",
   plastics: "Pl",
   network_services: "NS",
+  consumer_goods: "CG",
 };

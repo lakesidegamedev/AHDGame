@@ -86,7 +86,7 @@ describe("value added versus gross output", () => {
     for (const sectorType of LANES) {
       const s = { sectorType, producedUnits: unitsFor(sectorType, 100) };
       const share = intermediateShare(s, 48);
-      expect(share).toBeGreaterThan(0.3);
+      expect(share).toBeGreaterThan(0.25);
       expect(share).toBeLessThan(0.8);
       expect(valueAddedOutput(s, 48)!).toBeCloseTo(100 * (1 - share), 6);
     }
@@ -120,15 +120,15 @@ describe("value added versus gross output", () => {
   it("weights lanes by what they add, not what they churn", () => {
     const before = region({});
     const techUp = region({ technology: 110 });
-    const retailUp = region({ retail: 110 });
+    const factoryUp = region({ manufacturing: 110 });
     const gross = (a: Sector[]) => growthPct(before, a, constantPriceOutput);
     const added = (a: Sector[]) => growthPct(before, a, valueAddedOutput);
-    // Same gross lift, but technology keeps more of its output than retail.
-    expect(gross(techUp)).toBeCloseTo(gross(retailUp), 6);
-    expect(added(techUp)).toBeGreaterThan(added(retailUp));
+    // Same gross lift, but technology keeps more of its output than manufacturing.
+    expect(gross(techUp)).toBeCloseTo(gross(factoryUp), 6);
+    expect(added(techUp)).toBeGreaterThan(added(factoryUp));
     // Recorded comparison (percent growth, current -> corrected).
-    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.29]);
-    expect([gross(retailUp), added(retailUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.07]);
+    expect([gross(techUp), added(techUp)].map((x) => +x.toFixed(2))).toEqual([2, 2.16]);
+    expect([gross(factoryUp), added(factoryUp)].map((x) => +x.toFixed(2))).toEqual([2, 1.17]);
   });
 
   it("counts unsold output as production and ignores price-only changes", () => {

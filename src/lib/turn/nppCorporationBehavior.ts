@@ -1,3 +1,5 @@
+import { loadLatestStoreSales } from "@/lib/stores/loadStoreSales";
+import { storeUnmetRunUnits } from "@/lib/stores/rules/storeRules";
 import { logger } from "@/lib/observability/logger";
 import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
@@ -422,6 +424,9 @@ export async function processNppCorporationDecisions(
   const demandClaims = await loadInFlightDemandClaims(db, countryOfState);
   // The measured gap and the claim key depend only on the bucket, the recipe and
   // the price books, none of which move during the pass; claims are read live.
+  const storeSalesLast = strategyGate?.worldEpochId
+    ? await loadLatestStoreSales(db, strategyGate.worldEpochId, turn)
+    : null;
   const gapMemo = new Map<string, { unmet: number | null; claimKey: string }>();
   const readGap = (
     cell: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[0],
@@ -443,19 +448,25 @@ export async function processNppCorporationDecisions(
     const value = {
       unmet: noDepositLeft
         ? 0
-        : cellUnmetDemandUnits({
-            supplyMix,
-            aggregate: options?.aggregate,
-            gapFor: (commodity) => {
-              const doc = priceByCommodity.get(commodity);
-              if (!doc) return null;
-              const [supply, demand] = isStateScopedCommodity(commodity)
-                ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
-                : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
-              if (typeof supply !== "number" || typeof demand !== "number") return null;
-              return Math.max(0, demand - supply);
-            },
-          }),
+        : cell.sectorType === "retail"
+          ? // Stores make nothing: their gap is household demand routed to stores
+            // that the state's stores could not serve last turn.
+            storeSalesLast
+            ? storeUnmetRunUnits(storeSalesLast.sales.coverageByState, cell.stateId)
+            : null
+          : cellUnmetDemandUnits({
+              supplyMix,
+              aggregate: options?.aggregate,
+              gapFor: (commodity) => {
+                const doc = priceByCommodity.get(commodity);
+                if (!doc) return null;
+                const [supply, demand] = isStateScopedCommodity(commodity)
+                  ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
+                  : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
+                if (typeof supply !== "number" || typeof demand !== "number") return null;
+                return Math.max(0, demand - supply);
+              },
+            }),
       claimKey: demandClaimKeyOf(cell),
     };
     gapMemo.set(memoKey, value);

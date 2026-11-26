@@ -19,8 +19,7 @@ import { eraForPreset, type EraId } from "@/lib/seeds/presetSelector";
  * Gated behind `householdConsumptionEnabled` (default off; uncalibrated). When
  * enabled it also supersedes retail's SECTOR_DEMAND input proxy (see
  * `suppressRetailConsumerDemand` in `computeRawSupplyDemand`) so consumers buy
- * those basket commodities directly. The retail-commodity output self-loop
- * stays.
+ * those basket commodities directly.
  *
  * Budget base: POPULATION, not GDP. Seed GDP (and medianIncome) is unit-
  * inconsistent across countries, several inflated 10 to 1000x (local-currency-
@@ -93,7 +92,7 @@ export const PLANTS_HOUSEHOLD_SUPPLY_CAP = 1.5;
 
 /**
  * Consumer basket weights over the commodities households actually buy (finished
- * goods + consumer services + the abstract `retail` bucket for general
+ * goods + consumer services + the consumer goods product for general
  * merchandise). Raw extractables and pure-B2B inputs (ordnance, fertilizers) are
  * excluded. Weights are relative and are renormalised per
  * state after the wealth-tier (Engel) shift, so they need not sum to exactly 1.
@@ -107,7 +106,7 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
   energy: 0.06,
   vehicles: 0.06,
   electronics: 0.05,
-  retail: 0.11,
+  consumer_goods: 0.11,
   advertising: 0.04,
   network_services: 0.05,
   financial_services: 0.05,
@@ -130,7 +129,7 @@ const HOUSEHOLD_BASKET_TIER_SLOPE: Partial<Record<CommodityType, number>> = {
   food: -0.35,
   natural_gas: -0.2,
   energy: -0.2,
-  retail: -0.1,
+  consumer_goods: -0.1,
   vehicles: 0.2,
   electronics: 0.25,
   financial_services: 0.3,
@@ -152,7 +151,7 @@ const HOUSEHOLD_PRICE_ELASTICITY: Partial<Record<CommodityType, number>> = {
   energy: 0.15,
   healthcare_services: 0.1,
   pharmaceuticals: 0.1,
-  retail: 0.3,
+  consumer_goods: 0.3,
   vehicles: 0.6,
   electronics: 0.6,
   financial_services: 0.4,
