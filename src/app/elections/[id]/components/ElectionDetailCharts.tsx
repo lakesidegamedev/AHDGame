@@ -840,7 +840,7 @@ export function GeneralVoteCharts({
               onClick={() => setActiveChart("ev")}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
                 chartToShow === "ev"
-                  ? "bg-primary/20 border-primary/50 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "bg-card border-card-border text-muted hover:text-foreground"
               }`}
             >
@@ -854,7 +854,7 @@ export function GeneralVoteCharts({
             onClick={() => hasSnapshotsChart && setActiveChart("share")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
               chartToShow === "share"
-                ? "bg-primary/20 border-primary/50 text-primary"
+                ? "bg-primary text-primary-foreground border-transparent"
                 : "bg-card border-card-border text-muted hover:text-foreground"
             } ${!hasSnapshotsChart ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
           >
@@ -867,7 +867,7 @@ export function GeneralVoteCharts({
             onClick={() => hasSnapshotsChart && setActiveChart("votes")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
               chartToShow === "votes"
-                ? "bg-primary/20 border-primary/50 text-primary"
+                ? "bg-primary text-primary-foreground border-transparent"
                 : "bg-card border-card-border text-muted hover:text-foreground"
             } ${!hasSnapshotsChart ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
           >
@@ -880,7 +880,7 @@ export function GeneralVoteCharts({
               onClick={() => setActiveChart("seats")}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-medium transition-colors border ${
                 chartToShow === "seats"
-                  ? "bg-primary/20 border-primary/50 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "bg-card border-card-border text-muted hover:text-foreground"
               }`}
             >

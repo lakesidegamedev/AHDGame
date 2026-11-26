@@ -178,7 +178,7 @@ export function UnionServicesPanel({
               ) : (
                 <span
                   className={`shrink-0 rounded-full px-3 py-1 text-body-sm font-semibold ${
-                    on ? "bg-primary/15 text-primary" : "text-muted"
+                    on ? "bg-primary text-primary-foreground border-transparent" : "text-muted"
                   }`}
                 >
                   {on ? "Selected" : "Off"}

@@ -123,7 +123,7 @@ function StaffBody({ data, onNavigate }: { data: StaffQueuesWidgetData; onNaviga
           >
             <span className="text-foreground">{row.label}</span>
             <span
-              className={`min-w-6 rounded-full px-1.5 text-center font-semibold tabular-nums ${row.count > 0 ? "bg-primary/15 text-primary" : "text-muted"}`}
+              className={`min-w-6 rounded-full px-1.5 text-center font-semibold tabular-nums ${row.count > 0 ? "bg-primary text-primary-foreground border-transparent" : "text-muted"}`}
             >
               {row.count}
             </span>

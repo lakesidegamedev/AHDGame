@@ -128,7 +128,7 @@ export function FundNavChart({ history }: { history: Point[] }) {
               }}
               className={`rounded-md border px-2.5 py-1 font-mono text-body-sm font-bold transition-all ${
                 range === r
-                  ? "border-primary/45 bg-primary/14 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "border-transparent text-muted hover:text-foreground"
               }`}
             >

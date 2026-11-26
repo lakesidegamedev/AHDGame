@@ -420,12 +420,12 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`
-                    whitespace-nowrap border-b-2 py-4 px-1 text-body font-medium transition-colors
+                  className={`rounded-full transition-colors 
+                    whitespace-nowrap py-1.5 px-3 text-body font-medium transition-colors
                     ${
                       activeTab === tab.key
-                        ? "border-primary text-primary"
-                        : "border-transparent text-muted hover:border-card-border hover:text-foreground"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted hover:text-foreground hover:bg-card-elevated"
                     }
                   `}
                 >
@@ -434,7 +434,7 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
                     <span
                       className={`ml-2 rounded-full px-2 py-0.5 text-body-sm ${
                         activeTab === tab.key
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-primary-foreground/20 text-primary-foreground"
                           : "bg-card-elevated text-muted"
                       }`}
                     >

@@ -576,7 +576,7 @@ export function FundTradePanel({
             disabled={!!pendingOrder}
             className={`px-3 py-1.5 rounded-md text-body-sm font-semibold transition-colors ${
               mode === "subscribe"
-                ? "bg-primary/15 text-primary border border-primary/30"
+                ? "border bg-primary text-primary-foreground border-transparent"
                 : "text-muted hover:text-foreground border border-transparent"
             }`}
           >

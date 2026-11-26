@@ -34,6 +34,7 @@ import type {
 } from "lightweight-charts";
 import { formatPercentDelta } from "@/lib/ui/numbers";
 import { toneForDelta, toneText } from "@/lib/ui/tone";
+import { pillClass } from "@/components/ui/selectedState";
 
 /* ------------------------------------------------------------------ */
 /* Range model: turns on the wire, labels in the UI.                   */
@@ -708,11 +709,10 @@ export function MarketOverview({
                     ? "Full recorded history"
                     : `Last ${r.turns} turns in the game calendar (48 turns per year)`
                 }
-                className={`px-2.5 py-1 rounded-md text-body-sm font-medium border transition-colors whitespace-nowrap ${
+                aria-pressed={range === r.key}
+                className={`whitespace-nowrap px-2.5 py-1 text-body-sm font-medium ${pillClass(
                   range === r.key
-                    ? "bg-primary/10 text-primary border-primary/20"
-                    : "bg-card-elevated border-card-border text-muted hover:text-foreground hover:bg-card-elevated/80"
-                }`}
+                )}`}
               >
                 {r.label}
               </button>
@@ -722,7 +722,7 @@ export function MarketOverview({
               disabled={!canUseLogScale}
               aria-pressed={effectiveLogScale}
               title="Logarithmic price scale keeps large historical spikes visible"
-              className="px-2.5 py-1 rounded-md text-body-sm font-medium border border-card-border text-muted"
+              className={`whitespace-nowrap px-2.5 py-1 text-body-sm font-medium ${pillClass(effectiveLogScale)} disabled:opacity-50`}
             >
               {effectiveLogScale ? "Log scale" : "Linear scale"}
             </button>
@@ -731,11 +731,7 @@ export function MarketOverview({
               onClick={() => setShowMa20((v) => !v)}
               aria-pressed={showMa20}
               title="20-candle moving average of closes"
-              className={`px-2.5 py-1 rounded-md text-body-sm font-medium border transition-colors whitespace-nowrap ${
-                showMa20
-                  ? "bg-primary/10 text-primary border-primary/20"
-                  : "bg-card-elevated border-card-border text-muted hover:text-foreground"
-              }`}
+              className={`whitespace-nowrap px-2.5 py-1 text-body-sm font-medium ${pillClass(showMa20)}`}
             >
               MA-20
             </button>
@@ -743,11 +739,7 @@ export function MarketOverview({
               onClick={() => setShowMa50((v) => !v)}
               aria-pressed={showMa50}
               title="50-candle moving average of closes"
-              className={`px-2.5 py-1 rounded-md text-body-sm font-medium border transition-colors whitespace-nowrap ${
-                showMa50
-                  ? "bg-primary/10 text-primary border-primary/20"
-                  : "bg-card-elevated border-card-border text-muted hover:text-foreground"
-              }`}
+              className={`whitespace-nowrap px-2.5 py-1 text-body-sm font-medium ${pillClass(showMa50)}`}
             >
               MA-50
             </button>

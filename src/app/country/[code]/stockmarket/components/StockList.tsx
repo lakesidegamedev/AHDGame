@@ -662,7 +662,7 @@ export function StockList({
               onClick={() => handleSort(opt.field)}
               className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                 sortField === opt.field
-                  ? "bg-primary/10 text-primary border border-primary/20"
+                  ? "border bg-primary text-primary-foreground border-transparent"
                   : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
               }`}
             >

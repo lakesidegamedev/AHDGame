@@ -408,7 +408,7 @@ export function GeneralElectionPanel({
                       title={opt.enabled ? undefined : "You cannot afford this many"}
                       className={`rounded-lg border px-3 py-1.5 text-body-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                         isActive
-                          ? "border-primary/60 bg-primary/15 text-primary"
+                          ? "bg-primary text-primary-foreground border-transparent"
                           : "border-card-border text-muted hover:text-foreground"
                       }`}
                     >

@@ -308,7 +308,7 @@ export function ElectionsManageTab() {
               onClick={() => dispatch({ type: "SET_SELECTED_COUNTRY", value: tab.id })}
               className={`rounded-lg border px-3 py-1.5 text-body-sm transition-colors ${
                 selectedCountry === tab.id
-                  ? "border-primary/50 bg-primary/20 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "border-card-border text-muted hover:border-card-border/80 hover:text-foreground"
               }`}
             >

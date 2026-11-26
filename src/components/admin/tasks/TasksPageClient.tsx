@@ -127,10 +127,10 @@ export function TasksPageClient() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-body font-medium border-b-2 -mb-px transition-colors ${
+            className={`rounded-full px-4 py-2 text-body font-medium transition-colors ${
               activeTab === tab
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted hover:text-foreground hover:bg-card-elevated"
             }`}
           >
             {tab === "tasks" ? "Tasks" : "Lessons learned"}
