@@ -195,6 +195,7 @@ describe("computeRawSupplyDemand - ledgerUnitScale (ticket #1027 phase 2)", () =
         true,
         SCALE,
         undefined,
+        1,
         COMMODITY_BASE_PRICES,
         calibration
       );

@@ -1,4 +1,3 @@
-import { storeRoutedShare } from "@/lib/stores/rules/storeRules";
 import type { WikiSeedPage } from "../types";
 import {
   COMMODITY_TYPES,
@@ -51,6 +50,8 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
     "campaign-unit media capacity: supplied by media, pulled hard by corporate marketing budgets.",
   vehicles:
     "finished vehicles and heavy machinery: supplied by manufacturing (vehicle lines) and defense, demanded by logistics, energy, agriculture, and households.",
+  retail:
+    "the consumer-goods basket: households buy it directly, alongside a legacy demand leg that mirrors local retail output scaled by GDP growth (half national, half state) and is being phased out.",
   freight:
     "container-equivalent transportation capacity: produced by logistics, demanded by anyone moving physical goods.",
   consulting_services:
@@ -69,8 +70,6 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
     "polymer and extrusion output: feedstock for manufacturing, healthcare packaging, vehicles, and construction.",
   network_services:
     "subscription-equivalent broadband and connectivity capacity: unique output of telecom sectors, with macro demand scaling with state GDP.",
-  consumer_goods:
-    "furniture, appliances and household items: made by manufacturing plants on the Consumer Goods recipe from plastics, timber, chemicals, electronics, steel and power. Households buy all of it through stores.",
 };
 
 const pct = (rate: number): string => `${(rate * 100).toFixed(0)}%`;
@@ -78,7 +77,8 @@ const pct = (rate: number): string => `${(rate * 100).toFixed(0)}%`;
 /**
  * One line per sector whose operating recipes (strategies) produce or consume
  * the commodity. The standard recipe's rate leads; other recipes that carry
- * the commodity are named after it.
+ * the commodity are named after it. Retail's input recipe is skipped on the
+ * demand side because the household ledger books consumer purchases instead.
  */
 function formatSectorList(side: "supply" | "demand", commodity: CommodityType): string[] {
   const rows: { label: string; lead: number; text: string }[] = [];
@@ -86,6 +86,7 @@ function formatSectorList(side: "supply" | "demand", commodity: CommodityType): 
     OperatingSectorType,
     (typeof SECTOR_STRATEGIES)[OperatingSectorType],
   ][]) {
+    if (side === "demand" && sector === "retail") continue;
     const carrying = strategies.filter((strategy) => (strategy[side][commodity] ?? 0) > 0);
     if (carrying.length === 0) continue;
     const label = OPERATING_SECTOR_TYPE_LABELS[sector] ?? sector;
@@ -109,12 +110,7 @@ function formatFinalDemand(commodity: CommodityType): string[] {
   const lines: string[] = [];
   const householdShare = HOUSEHOLD_CONSUMER_BASKET[commodity];
   if (householdShare) {
-    const viaStores = storeRoutedShare(commodity);
-    lines.push(
-      viaStores > 0
-        ? `- **Households**: about ${pct(householdShare)} of the consumer budget, ${pct(viaStores)} of it bought through stores at cost plus a markup and the rest bought direct from producers`
-        : `- **Households**: about ${pct(householdShare)} of the consumer budget`
-    );
+    lines.push(`- **Households**: about ${pct(householdShare)} of the consumer budget`);
   }
   for (const entry of GOVERNMENT_COMMODITY_DEMAND) {
     if (entry.commodity !== commodity) continue;

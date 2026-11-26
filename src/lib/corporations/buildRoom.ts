@@ -23,9 +23,6 @@ import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBo
 import { loadFundedBuildDemand } from "./loadFundedBuildDemand";
 import { isCountryBookCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { statesCollection } from "@/lib/db/repositories/states";
-import { getGameStateCollection } from "@/lib/db/collections/gameState";
-import { loadLatestStoreSales } from "@/lib/stores/loadStoreSales";
-import { storeUnmetRunUnits } from "@/lib/stores/rules/storeRules";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
@@ -70,15 +67,6 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
     loadFundedBuildDemand(db, undefined, true),
   ]);
   const capacity = funded ? await loadBuildDemandProducers(db) : null;
-  // A store lists no output mix. Its room is household demand routed to stores
-  // that the state's stores could not serve in the last settled turn.
-  const world = await (
-    await getGameStateCollection(db)
-  ).findOne({ _id: "current" }, { projection: { currentTurn: 1, worldEpochId: 1 } });
-  const storeSales =
-    world?.worldEpochId && typeof world.currentTurn === "number"
-      ? await loadLatestStoreSales(db, world.worldEpochId, world.currentTurn)
-      : null;
   const demandRows = (
     supply: Partial<Record<CommodityType, number>>,
     stateId: string,
@@ -119,10 +107,6 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
     demandRows,
     demandTurn: funded?.turn,
     demandGapUnits(supplyMix, stateId, countryId) {
-      if (Object.keys(supplyMix).length === 0)
-        return storeSales
-          ? (storeUnmetRunUnits(storeSales.sales.coverageByState, stateId) ?? 0)
-          : 0;
       if (funded) {
         // This API is a raw gap; older callers subtract queues themselves.
         // demandRows supplies the fully reserved candidate-specific estimate.

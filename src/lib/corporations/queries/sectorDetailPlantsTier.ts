@@ -194,8 +194,7 @@ export async function buildSectorDetailPlantsTier({
       | "natural_gas"
       | "ordnance"
       | "plastics"
-      | "network_services"
-      | "consumer_goods";
+      | "network_services";
     label: string;
     icon: string;
     colors: string;
@@ -273,8 +272,7 @@ export async function buildSectorDetailPlantsTier({
       | "natural_gas"
       | "ordnance"
       | "plastics"
-      | "network_services"
-      | "consumer_goods",
+      | "network_services",
       number
     >
   >;
@@ -305,8 +303,7 @@ export async function buildSectorDetailPlantsTier({
     | "natural_gas"
     | "ordnance"
     | "plastics"
-    | "network_services"
-    | "consumer_goods",
+    | "network_services",
     { supply: number; demand: number }
   >;
   globalBalances: Map<
@@ -336,8 +333,7 @@ export async function buildSectorDetailPlantsTier({
     | "natural_gas"
     | "ordnance"
     | "plastics"
-    | "network_services"
-    | "consumer_goods",
+    | "network_services",
     { supply: number; demand: number }
   >;
   corpByIdForLookup: Map<string, WithId<Corporation>>;

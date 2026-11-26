@@ -21,16 +21,16 @@ describe("input-heavy strategy fairness", () => {
     ["logistics", "standard", 0.468],
     ["construction", "standard", 0.5],
     ["construction", "infrastructure", 0.526],
-    ["retail", "standard", 0.29],
+    ["retail", "standard", 0.58],
   ] as const)("keeps %s/%s input rates at the audited ceiling", (sector, strategy, expected) => {
     expect(demandRate(sector, strategy)).toBeCloseTo(expected, 10);
   });
 
   it.each([
-    ["standard", 0.2009],
-    ["brick_mortar", 0.329],
-    ["ecommerce", 0.279],
-    ["ecommerce_fulfillment", 0.33],
+    ["standard", 0.315],
+    ["brick_mortar", 0.4],
+    ["ecommerce", 0.35],
+    ["ecommerce_fulfillment", 0.38],
   ] as const)("keeps modern retail/%s input rates at the audited ceiling", (strategy, expected) => {
     const sum = Object.values(getStrategy("retail", strategy, "2027-default").demand).reduce(
       (total, rate) => total + (rate ?? 0),

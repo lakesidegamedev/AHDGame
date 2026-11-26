@@ -44,7 +44,7 @@ describe("computeHouseholdConsumption — basket coverage", () => {
     expect(gd(r, "food")).toBeGreaterThan(0);
     expect(gd(r, "vehicles")).toBeGreaterThan(0);
     expect(gd(r, "healthcare_services")).toBeGreaterThan(0);
-    expect(gd(r, "consumer_goods")).toBeGreaterThan(0);
+    expect(gd(r, "retail")).toBeGreaterThan(0);
     // Raw extractables + pure-B2B goods are NOT bought by households
     for (const c of [
       "oil",

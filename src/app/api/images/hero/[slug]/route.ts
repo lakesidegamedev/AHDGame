@@ -134,7 +134,7 @@ const HERO_URLS: Record<string, string> = {
     "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Broadway_and_Times_Square_by_night.jpg/1280px-Broadway_and_Times_Square_by_night.jpg",
   "commodity-vehicles":
     "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Hyundai_car_assembly_line.jpg/1280px-Hyundai_car_assembly_line.jpg",
-  "commodity-consumer-goods":
+  "commodity-retail":
     "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Macys_dep_store.JPG/1280px-Macys_dep_store.JPG",
   "commodity-freight":
     "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Maersk_container_ship_002.JPG/1280px-Maersk_container_ship_002.JPG",

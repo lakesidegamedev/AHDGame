@@ -41,11 +41,6 @@ export interface PurchaseOrder {
   supplierOfferId?: string;
   /** A validated supplier contract fixes the price while sharing the public offer's stock. */
   contractUnitPrice?: number;
-  /**
-   * A household order for a good bought through a store: it buys at the
-   * producer's price and the store's markup is charged on top after clearing.
-   */
-  storeRouted?: true;
   /** Optional eligible suppliers implement embargoes, routes and local-service scope. */
   eligibleOfferIds?: readonly string[];
   /** Reserved orders precede public orders. Equal priority uses id order unless fairShare is set. */

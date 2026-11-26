@@ -10,6 +10,7 @@ import {
   MACRO_COUNTRY_SIZE_SCALE,
   MACRO_ENERGY_DEMAND_SCALE,
   MACRO_MEDIA_OUTPUT_SCALE,
+  MACRO_RETAIL_OUTPUT_SCALE,
 } from "./kernel";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import {
@@ -795,9 +796,25 @@ describe("background retail and media balance", () => {
     economicSystem: "market" as const,
   };
 
-  it("makes no retail supply, since stores resell goods rather than make them, and scales media supply down", () => {
+  it("scales retail and media supply down without adding retail demand", () => {
     const result = computeMacroContribution(state, 1);
-    expect(Object.keys(result.byCommodity)).not.toContain("retail");
+    // Only the canonical SECTOR_DEMAND rows feed retail demand: sector demand
+    // plus the population basket, with no extra consumer-goods line.
+    const rate = (type: "retail" | "media") =>
+      (SECTOR_DEMAND[type] ?? []).find((flow) => flow.commodity === "retail")?.rate ?? 0;
+    const basketDollars = state.population * (2_000_000 / state.population) * 0.08 * 1;
+    const expectedDollars =
+      (sector.domesticDemand * rate("retail") + sector.domesticDemand * rate("media")) * 1 +
+      basketDollars * rate("retail");
+    expect(result.byCommodity.retail?.demand ?? 0).toBeCloseTo(
+      dollarsToUnits(expectedDollars, COMMODITY_BASE_PRICES.retail),
+      0
+    );
+    const unscaledRetail = dollarsToUnits(sector.capacity * 0.5, COMMODITY_BASE_PRICES.retail);
+    expect(result.byCommodity.retail?.supply).toBeCloseTo(
+      unscaledRetail * MACRO_RETAIL_OUTPUT_SCALE,
+      0
+    );
     const unscaledAds = dollarsToUnits(sector.capacity * 0.5, COMMODITY_BASE_PRICES.advertising);
     expect(result.byCommodity.advertising?.supply).toBeCloseTo(
       unscaledAds * MACRO_MEDIA_OUTPUT_SCALE,
