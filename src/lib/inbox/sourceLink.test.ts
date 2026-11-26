@@ -9,7 +9,7 @@ describe("resolveSourceLink", () => {
     ).toBe("/corporation/corp/sector/site");
     expect(
       resolveSourceLink("corp_sector_attacked", { countryId: "US", stateId: "GA" })?.href
-    ).toBe("/country/us/region/GA/economy");
+    ).toBe("/country/us/region/GA?tab=economy");
   });
 
   it("links party election notices to their ballot pages", () => {
