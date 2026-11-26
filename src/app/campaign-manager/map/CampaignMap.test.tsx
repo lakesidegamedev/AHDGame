@@ -103,7 +103,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderMap(filter: Partial<RaceFilter> = {}, selectedKey: string | null = null) {
+function renderMap(
+  filter: Partial<RaceFilter> = {},
+  selectedKey: string | null = null,
+  turn?: number
+) {
   const onSelectRegion = vi.fn();
   const onCanvass = vi.fn();
   const f: RaceFilter = {
@@ -117,6 +121,7 @@ function renderMap(filter: Partial<RaceFilter> = {}, selectedKey: string | null 
   renderWithElectionsMessages(
     <CampaignMap
       countryId="UK"
+      turn={turn}
       countryName="United Kingdom"
       regionNoun="Region"
       races={races}
@@ -219,6 +224,29 @@ describe("CampaignMap", () => {
     fireEvent.click(screen.getByRole("button", { name: /Barking/ }));
     expect(screen.getByText(/^P1 gain from P2 · Likely$/)).toBeTruthy();
     expect(screen.getByText("2 Constituencies")).toBeTruthy();
+  });
+
+  it("shows no result for an outline without an assigned House seat", async () => {
+    const projection = {
+      ...results,
+      mode: "seatOrdered",
+      subdivisions: [
+        { id: "u1", winner: "a", margin: 0 },
+        { id: "u2", winner: "", margin: 0 },
+      ],
+    };
+    vi.mocked(fetch).mockImplementation(async (url) =>
+      String(url).includes("/lon/state/LON/")
+        ? new Response(JSON.stringify(projection))
+        : new Response("{}", { status: 404 })
+    );
+
+    renderMap({ regionId: "LON" }, "lon", 217);
+    fireEvent.click(await screen.findByRole("button", { name: /Battersea.*Safe/ }));
+    expect(screen.getByText("P1 · Safe")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Barking/ }));
+    expect(screen.getByText("No results for this area yet.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Barking" })).toBeTruthy();
   });
 
   it("offers canvassing only in the player's own race", async () => {

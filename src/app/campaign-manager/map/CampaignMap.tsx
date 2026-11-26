@@ -474,7 +474,7 @@ export function CampaignMap(props: CampaignMapProps) {
                     >
                       {unitsOf(region).map((u) => {
                         const on = own && picked?.id === u.id;
-                        const label = u.row
+                        const label = u.row?.tier
                           ? t("map.unitTitle", { name: u.name, tier: t(`tier.${u.row.tier}`) })
                           : u.name;
                         return (
@@ -739,14 +739,15 @@ function CountyCard({
   const t = useTranslations("elections.campaignManager");
   const abbrOf = new Map((race ? partyLines(race) : []).map((l) => [l.partyId, l.partyAbbr]));
   const leader = row ? (abbrOf.get(row.leaderPartyId) ?? row.shares[0]?.name ?? "") : "";
-  const tier = row ? t(`tier.${row.tier}`) : "";
-  const call = !row
-    ? null
-    : row.baselineLeader
-      ? row.baselineLeader.toUpperCase() === leader.toUpperCase()
-        ? t("map.callHold", { leader, tier })
-        : t("map.callGain", { leader, holder: row.baselineLeader.toUpperCase(), tier })
-      : t("map.call", { leader, tier });
+  const tier = row?.tier ? t(`tier.${row.tier}`) : null;
+  const call =
+    !row || !tier
+      ? null
+      : row.baselineLeader
+        ? row.baselineLeader.toUpperCase() === leader.toUpperCase()
+          ? t("map.callHold", { leader, tier })
+          : t("map.callGain", { leader, holder: row.baselineLeader.toUpperCase(), tier })
+        : t("map.call", { leader, tier });
   return (
     <div
       role="dialog"
