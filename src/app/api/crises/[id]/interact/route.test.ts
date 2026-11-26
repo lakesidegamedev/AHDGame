@@ -341,3 +341,40 @@ it("returns only the responder's visible commitments after a submission", async 
   });
   expect(JSON.stringify(body)).not.toContain("private_choice");
 });
+
+describe("emergency taking while a turn is processing", () => {
+  const takingNode = {
+    ...NODE,
+    options: [
+      {
+        optionId: "seize",
+        label: "Seize the plants",
+        description: "Take the struck sector by executive order.",
+        nextNodeId: null,
+        effects: [],
+        action: { kind: "executiveNationalize", sectorType: "manufacturing" },
+      },
+    ],
+  };
+
+  it("waits for the turn instead of moving plants mid-turn", async () => {
+    db.collection("gameState");
+    db.collectionMocks["gameState"]!.findOne.mockResolvedValue({
+      _id: "current",
+      isProcessing: true,
+      processingKind: "turn",
+      processingHeartbeatAt: new Date(),
+    });
+    db.collectionMocks["crisisInteractions"]!.findOne.mockResolvedValue(
+      makeInteraction({ decisionTree: [takingNode] })
+    );
+
+    const res = await post({ optionId: "seize" });
+
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toMatchObject({ code: "turn_processing" });
+    const { runCrisisOptionAction } = await import("@/lib/crises/optionActions");
+    expect(runCrisisOptionAction).not.toHaveBeenCalled();
+    expect(db.collectionMocks["crisisInteractions"]!.updateOne).not.toHaveBeenCalled();
+  });
+});

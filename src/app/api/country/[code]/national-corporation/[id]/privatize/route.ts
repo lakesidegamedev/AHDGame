@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, isUnexpectedError, errorResponse } from "@/lib/api/errors";
@@ -61,6 +62,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
+    // A sale moves plants to a new owner. The turn settles every plant against the image it read when the
+    // corporation phase started, so this waits until the turn finishes.
+    const turnBusy = await rejectDuringTurn(db);
+    if (turnBusy) return turnBusy;
 
     // Refuse before the authority check: a player in a command economy should be
     // told the mechanic does not exist there, not that they hold the wrong
