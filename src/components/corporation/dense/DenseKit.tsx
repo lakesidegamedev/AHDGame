@@ -111,9 +111,11 @@ export function KVRow({
     >
       <dt
         // Labels wrap onto a second line rather than truncating; the figure
-        // beside them never shrinks.
-        className={`break-words text-body-sm leading-tight ${lead ? "text-foreground/80" : "text-muted"} ${
-          ledger ? "min-w-0 shrink" : "min-w-0"
+        // beside them never shrinks. The label keeps a minimum width so a long
+        // note beside the figure wraps instead of squeezing the label to one
+        // letter per line.
+        className={`min-w-[6.5rem] break-words text-body-sm leading-tight ${lead ? "text-foreground/80" : "text-muted"} ${
+          ledger ? "shrink" : ""
         }`}
       >
         {label}
@@ -130,8 +132,10 @@ export function KVRow({
           ellipsis in narrow columns. */}
       <dd
         className={`flex min-w-0 justify-end text-right ${
-          lead && hint != null ? "flex-col items-end gap-0" : "items-center gap-2"
-        } shrink-0`}
+          lead && hint != null
+            ? "flex-col items-end gap-0 shrink-0"
+            : "flex-wrap items-center gap-x-2"
+        }`}
       >
         {mark}
         <span
@@ -144,7 +148,7 @@ export function KVRow({
           {value}
         </span>
         {hint != null && (
-          <span className="shrink-0 font-mono text-body-sm tabular-nums text-muted">{hint}</span>
+          <span className="min-w-0 font-mono text-body-sm tabular-nums text-muted">{hint}</span>
         )}
         {action}
       </dd>
