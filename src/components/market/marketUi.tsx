@@ -64,7 +64,7 @@ export function PreviewCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-card-border bg-card p-4 shadow-card">
+    <section className="min-w-0 rounded-xl border border-card-border bg-card p-4 shadow-card">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-heading font-bold text-foreground">{title}</h2>
         <Link href={href} className="text-body-sm font-medium text-primary hover:underline">

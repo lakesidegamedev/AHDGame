@@ -491,7 +491,7 @@ function ElectorateBucketsSection({ profile }: { profile: BucketProfileSection[]
                 onClick={() => setDim(sec.dim)}
                 className={`rounded-lg px-2.5 py-1 text-body-sm font-semibold transition-colors ${
                   sec.dim === section.dim
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -712,7 +712,7 @@ export function DemographicsAndTurnoutTab({
               onClick={() => setViewMode("chart")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "chart"
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
               }`}
             >
@@ -732,7 +732,7 @@ export function DemographicsAndTurnoutTab({
               onClick={() => setViewMode("table")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "table"
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
               }`}
             >
@@ -752,7 +752,7 @@ export function DemographicsAndTurnoutTab({
               onClick={() => setViewMode("combined")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "combined"
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
               }`}
             >
@@ -912,7 +912,7 @@ export function DemographicsAndTurnoutTab({
               onClick={() => setViewMode("chart")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "chart"
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
               }`}
             >
@@ -932,7 +932,7 @@ export function DemographicsAndTurnoutTab({
               onClick={() => setViewMode("table")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "table"
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
               }`}
             >
@@ -952,7 +952,7 @@ export function DemographicsAndTurnoutTab({
               onClick={() => setViewMode("combined")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-body-sm font-medium transition-colors ${
                 viewMode === "combined"
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "text-muted hover:text-foreground hover:bg-card-border/30"
               }`}
             >

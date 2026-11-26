@@ -384,10 +384,10 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`whitespace-nowrap border-b-2 px-1 py-3 text-body font-medium transition-colors ${
+                className={`rounded-full whitespace-nowrap px-3 py-1.5 text-body font-medium transition-colors ${
                   activeTab === t.key
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:border-card-border hover:text-foreground"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted hover:text-foreground hover:bg-card-elevated"
                 }`}
               >
                 {t.label}

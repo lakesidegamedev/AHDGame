@@ -167,13 +167,13 @@ export function SharePurchaseLimitView({
             }}
             className={`flex-1 border-r border-card-border px-3 py-2.5 text-left transition-colors ${
               !limitAsCorp
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary text-primary-foreground border-transparent"
                 : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >
             <div className="font-semibold">Personally</div>
             <div
-              className={`mt-0.5 tabular-nums ${!limitAsCorp ? "text-primary/70" : "text-muted/60"}`}
+              className={`mt-0.5 tabular-nums ${!limitAsCorp ? "text-primary-foreground" : "text-muted/60"}`}
             >
               {orderSide === "buy"
                 ? `${formatAmount(personalCashAnchor)} cash`
@@ -197,13 +197,13 @@ export function SharePurchaseLimitView({
               orderSide === "sell" && myCorporationShares === 0
                 ? "opacity-40 cursor-not-allowed bg-card-elevated text-muted"
                 : limitAsCorp
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "bg-card-elevated text-muted hover:text-foreground"
             }`}
           >
             <div className="font-semibold">{myCorporation.name}</div>
             <div
-              className={`mt-0.5 tabular-nums ${limitAsCorp ? "text-primary/70" : "text-muted/60"}`}
+              className={`mt-0.5 tabular-nums ${limitAsCorp ? "text-primary-foreground" : "text-muted/60"}`}
             >
               {orderSide === "buy"
                 ? `${formatAmount(myCorpLiquidInternal, myCorpLiquidCurrency)} liquid`

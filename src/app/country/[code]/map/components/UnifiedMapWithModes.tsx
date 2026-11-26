@@ -151,7 +151,7 @@ export function UnifiedMapWithModes({
                 }}
                 className={`shrink-0 rounded-lg border px-3 py-1.5 sm:px-4 sm:py-2 text-body-sm sm:text-body font-medium transition-colors ${
                   mode === m.id
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "border-card-border bg-card text-muted hover:border-primary/50 hover:text-foreground"
                 }`}
               >
@@ -214,7 +214,7 @@ export function UnifiedMapWithModes({
                 onClick={() => setLeanAxis(ax)}
                 className={`rounded border px-2 py-1 text-body-sm font-medium transition-colors ${
                   leanAxis === ax
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "border-card-border bg-card text-muted hover:text-foreground"
                 }`}
               >

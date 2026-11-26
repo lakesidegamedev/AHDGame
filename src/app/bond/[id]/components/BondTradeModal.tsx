@@ -644,13 +644,13 @@ export function BondTradeModal({
                 }}
                 className={`flex-1 border-r border-card-border px-3 py-2.5 text-left transition-colors ${
                   account === "character"
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >
                 <div className="font-semibold">Personally</div>
                 <div
-                  className={`mt-0.5 tabular-nums ${account === "character" ? "text-primary/70" : "text-muted/60"}`}
+                  className={`mt-0.5 tabular-nums ${account === "character" ? "text-primary-foreground" : "text-muted/60"}`}
                 >
                   {side === "buy"
                     ? `${formatFull(personalCashAnchor)} cash`
@@ -674,13 +674,13 @@ export function BondTradeModal({
                   !hasCorp || (side === "sell" && (userContext.myCorporation?.bondUnits ?? 0) === 0)
                     ? "opacity-40 cursor-not-allowed bg-card-elevated text-muted"
                     : account === "corporation"
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground border-transparent"
                       : "bg-card-elevated text-muted hover:text-foreground"
                 }`}
               >
                 <div className="font-semibold">As corporation</div>
                 <div
-                  className={`mt-0.5 tabular-nums ${account === "corporation" ? "text-primary/70" : "text-muted/60"}`}
+                  className={`mt-0.5 tabular-nums ${account === "corporation" ? "text-primary-foreground" : "text-muted/60"}`}
                 >
                   {!hasCorp
                     ? "No corporation"
@@ -706,13 +706,13 @@ export function BondTradeModal({
                     side === "sell" && investmentBank.bondUnits === 0
                       ? "opacity-40 cursor-not-allowed bg-card-elevated text-muted"
                       : account === "investmentBank"
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary text-primary-foreground border-transparent"
                         : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
                   <div className="font-semibold">Investment bank</div>
                   <div
-                    className={`mt-0.5 tabular-nums ${account === "investmentBank" ? "text-primary/70" : "text-muted/60"}`}
+                    className={`mt-0.5 tabular-nums ${account === "investmentBank" ? "text-primary-foreground" : "text-muted/60"}`}
                   >
                     {side === "buy"
                       ? `${formatFull(investmentBank.liquidCapital)} liquid`

@@ -223,7 +223,7 @@ export function ElectorateDossier({
                     ? "bg-red-500/20 text-red-400"
                     : "bg-red-500/5 text-red-400 hover:bg-red-500/10"
                   : activeView === v
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-primary text-primary-foreground border-transparent"
                     : "text-muted hover:text-foreground"
               }`}
             >
@@ -244,7 +244,7 @@ export function ElectorateDossier({
             }}
             className={`rounded-lg px-3 py-1 text-body-sm font-semibold transition-colors ${
               s.dim === section.dim
-                ? "bg-primary/15 text-primary"
+                ? "bg-primary text-primary-foreground border-transparent"
                 : "text-muted hover:text-foreground"
             }`}
           >

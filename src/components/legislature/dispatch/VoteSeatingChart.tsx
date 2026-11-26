@@ -88,7 +88,8 @@ export function VoteSeatingChart({
   if (eligible <= 0 || pts.length === 0) return null;
 
   return (
-    <div style={{ width, maxWidth: "100%", margin: "0 auto" }}>
+    // minWidth 0 lets a grid or flex parent shrink the chart below its preferred width.
+    <div style={{ width, maxWidth: "100%", minWidth: 0, margin: "0 auto" }}>
       <svg
         viewBox={`${vx} ${vy} ${vw} ${vh}`}
         width="100%"

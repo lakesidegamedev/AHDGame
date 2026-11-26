@@ -365,7 +365,7 @@ export function EconOnlyMapPlaceholder({
               onClick={() => setMode(m.id as "regions" | "sectorBonuses")}
               className={`rounded-lg border px-3 py-1.5 text-body-sm font-medium transition-colors ${
                 mode === m.id
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "border-card-border bg-card text-muted hover:border-primary/50 hover:text-foreground"
               }`}
             >

@@ -33,7 +33,7 @@ export function RosterSubtab({
               onClick={() => setFilter(id)}
               className={`rounded border px-2.5 py-1 text-body-sm transition-colors ${
                 filter === id
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "bg-primary text-primary-foreground border-transparent"
                   : "border-card-border text-muted hover:text-foreground"
               }`}
             >

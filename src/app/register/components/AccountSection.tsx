@@ -159,7 +159,7 @@ export function AccountSection({
                 type="text"
                 value={formData.referralCode}
                 onChange={(e) => onChange({ referralCode: e.target.value })}
-                className="bg-card font-mono text-body tracking-wider"
+                className="bg-card font-mono text-body tracking-wider placeholder:font-sans placeholder:tracking-normal"
                 placeholder={t("referralPlaceholder")}
                 maxLength={36}
                 autoComplete="off"

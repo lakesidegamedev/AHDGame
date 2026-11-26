@@ -118,7 +118,9 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
               <button
                 onClick={() => setShowNet(true)}
                 className={`px-2.5 py-1 text-body-sm font-semibold rounded-md transition-colors ${
-                  showNet ? "bg-primary/15 text-primary" : "text-muted hover:text-foreground"
+                  showNet
+                    ? "bg-primary text-primary-foreground border-transparent"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 Net
@@ -126,7 +128,9 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
               <button
                 onClick={() => setShowNet(false)}
                 className={`px-2.5 py-1 text-body-sm font-semibold rounded-md transition-colors ${
-                  !showNet ? "bg-primary/15 text-primary" : "text-muted hover:text-foreground"
+                  !showNet
+                    ? "bg-primary text-primary-foreground border-transparent"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 Gross
@@ -140,7 +144,7 @@ export function WealthList({ entries }: { entries: WealthEntry[] }) {
                 onClick={() => handleSort(opt.field)}
                 className={`px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors whitespace-nowrap ${
                   sortField === opt.field
-                    ? "bg-primary/10 text-primary border border-primary/20"
+                    ? "border bg-primary text-primary-foreground border-transparent"
                     : "bg-card border border-card-border text-muted hover:text-foreground hover:bg-card-elevated"
                 }`}
               >

@@ -50,10 +50,10 @@ export function LegislaturePageTabs<Tab extends string>({
         <button
           key={id}
           onClick={() => onTabChange(id)}
-          className={`px-4 py-2.5 text-body font-medium transition-colors border-b-2 -mb-px ${
+          className={`rounded-full px-4 py-1.5 text-body font-medium transition-colors ${
             activeTab === id
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted hover:text-foreground"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted hover:text-foreground hover:bg-card-elevated"
           }`}
         >
           {label}

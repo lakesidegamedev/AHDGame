@@ -270,13 +270,13 @@ export function SharePurchaseAtMarketView({
                   }}
                   className={`flex-1 border-r border-card-border px-3 py-2.5 text-left transition-colors ${
                     !buyAsCorp && !buyAsInvestmentBank
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground border-transparent"
                       : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
                   <div className="font-semibold">Personally</div>
                   <div
-                    className={`mt-0.5 tabular-nums ${!buyAsCorp && !buyAsInvestmentBank ? "text-primary/70" : "text-muted/60"}`}
+                    className={`mt-0.5 tabular-nums ${!buyAsCorp && !buyAsInvestmentBank ? "text-primary-foreground" : "text-muted/60"}`}
                   >
                     {formatAmount(personalCashAnchor)}
                   </div>
@@ -289,13 +289,13 @@ export function SharePurchaseAtMarketView({
                   }}
                   className={`flex-1 px-3 py-2.5 text-left transition-colors ${
                     buyAsCorp
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground border-transparent"
                       : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
                   <div className="font-semibold">{myCorporation.name}</div>
                   <div
-                    className={`mt-0.5 tabular-nums ${buyAsCorp ? "text-primary/70" : "text-muted/60"}`}
+                    className={`mt-0.5 tabular-nums ${buyAsCorp ? "text-primary-foreground" : "text-muted/60"}`}
                   >
                     {formatAmount(myCorpLiquidInternal, myCorpLiquidCurrency)}
                   </div>
@@ -306,13 +306,13 @@ export function SharePurchaseAtMarketView({
                     onClick={() => setBuyAsInvestmentBank(true)}
                     className={`flex-1 border-l border-card-border px-3 py-2.5 text-left transition-colors ${
                       buyAsInvestmentBank
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary text-primary-foreground border-transparent"
                         : "bg-card-elevated text-muted hover:text-foreground"
                     }`}
                   >
                     <div className="font-semibold">Investment bank</div>
                     <div
-                      className={`mt-0.5 tabular-nums ${buyAsInvestmentBank ? "text-primary/70" : "text-muted/60"}`}
+                      className={`mt-0.5 tabular-nums ${buyAsInvestmentBank ? "text-primary-foreground" : "text-muted/60"}`}
                     >
                       {formatAmount(myCorpLiquidInternal, myCorpLiquidCurrency)}
                     </div>
@@ -529,13 +529,13 @@ export function SharePurchaseAtMarketView({
                   }}
                   className={`flex-1 border-r border-card-border px-3 py-2.5 text-left transition-colors ${
                     !sellAsCorp && !sellAsInvestmentBank
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary text-primary-foreground border-transparent"
                       : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
                   <div className="font-semibold">Personally</div>
                   <div
-                    className={`mt-0.5 tabular-nums ${!sellAsCorp && !sellAsInvestmentBank ? "text-primary/70" : "text-muted/60"}`}
+                    className={`mt-0.5 tabular-nums ${!sellAsCorp && !sellAsInvestmentBank ? "text-primary-foreground" : "text-muted/60"}`}
                   >
                     {totalPersonalShares.toLocaleString("en-US")} shares
                   </div>
@@ -557,7 +557,7 @@ export function SharePurchaseAtMarketView({
                     myCorporationShares === 0
                       ? "opacity-40 cursor-not-allowed bg-card-elevated text-muted"
                       : sellAsCorp
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary text-primary-foreground border-transparent"
                         : "bg-card-elevated text-muted hover:text-foreground"
                   }`}
                 >
@@ -578,7 +578,7 @@ export function SharePurchaseAtMarketView({
                     }}
                     className={`flex-1 border-l border-card-border px-3 py-2.5 text-left transition-colors ${
                       sellAsInvestmentBank
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary text-primary-foreground border-transparent"
                         : "bg-card-elevated text-muted hover:text-foreground"
                     }`}
                   >

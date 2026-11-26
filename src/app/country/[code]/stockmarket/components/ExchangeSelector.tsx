@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { ExchangeFilter } from "../types";
 import type { ExchangeMetaEntry } from "../stockMarketRouting";
+import { PILL_TRACK, pillClass } from "@/components/ui/selectedState";
 
 export interface ExchangeCompareRow {
   listings: number;
@@ -55,8 +56,8 @@ export function ExchangeSelector({
             title="Compare exchanges by listings and market cap"
             className={`rounded-lg px-3 py-1.5 border text-body-sm font-bold uppercase tracking-wider transition-colors ${
               compareOpen
-                ? "bg-primary/20 border-primary/40 text-white"
-                : "bg-black border-white/10 text-white/70 hover:text-white"
+                ? "border-card-border bg-card-elevated text-foreground"
+                : "border-card-border bg-card text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >
             Compare
@@ -68,16 +69,15 @@ export function ExchangeSelector({
           aria-label="Stock exchange"
           className="hidden max-w-full overflow-x-auto rounded-lg sm:block"
         >
-          <div className="flex w-max bg-black rounded-lg p-1 border border-white/10">
+          <div className={`${PILL_TRACK} w-max border border-card-border`}>
             {entries.map(([key, val]) => (
               <button
                 key={key}
                 onClick={() => onSelect(key)}
-                className={`px-3 py-1 rounded-md text-body-sm font-bold uppercase tracking-wider transition-colors ${
+                aria-pressed={exchangeFilter === key}
+                className={`px-3 py-1 text-body-sm font-bold uppercase tracking-wider ${pillClass(
                   exchangeFilter === key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-white/70 hover:text-white"
-                }`}
+                )}`}
               >
                 {key === "global" ? "Global" : val.title}
               </button>
@@ -95,9 +95,9 @@ export function ExchangeSelector({
       </div>
 
       {compareOpen && (
-        <div className="w-full min-w-64 rounded-lg border border-white/15 bg-black shadow-xl py-1">
+        <div className="w-full min-w-64 rounded-lg border border-card-border bg-card shadow-xl py-1">
           {compareLoading && (
-            <p className="px-3 py-2 text-body-sm text-white/60">Loading exchange sizes…</p>
+            <p className="px-3 py-2 text-body-sm text-muted">Loading exchange sizes…</p>
           )}
           {!compareLoading &&
             entries.map(([key, val]) => {
@@ -110,11 +110,13 @@ export function ExchangeSelector({
                   type="button"
                   onClick={() => onSelect(key)}
                   className={`w-full flex items-center justify-between gap-4 px-3 py-2 text-body-sm transition-colors ${
-                    active ? "bg-primary/30 text-white" : "text-white/80 hover:bg-white/10"
+                    active
+                      ? "bg-card-elevated text-foreground"
+                      : "text-muted hover:bg-card-elevated hover:text-foreground"
                   }`}
                 >
                   <span className="font-bold uppercase tracking-wider">{label}</span>
-                  <span className="tabular-nums text-white/60">
+                  <span className="tabular-nums text-muted">
                     {row
                       ? `${row.listings.toLocaleString("en-US")} · ${formatAmount(row.marketCap)}`
                       : "—"}
@@ -232,7 +234,7 @@ function MobileExchangeDropdown({
         right: position.right,
         maxHeight: position.maxHeight,
       }}
-      className="z-[60] min-w-[10rem] overflow-y-auto rounded-lg border border-white/15 bg-black shadow-xl py-1"
+      className="z-[60] min-w-[10rem] overflow-y-auto rounded-lg border border-card-border bg-card shadow-xl py-1"
     >
       {entries.map(([key, val]) => {
         const label = key === "global" ? "Global" : val.title;
@@ -248,7 +250,9 @@ function MobileExchangeDropdown({
               setOpen(false);
             }}
             className={`w-full text-left px-3 py-2 text-body-sm font-bold uppercase tracking-wider transition-colors ${
-              active ? "bg-primary/30 text-white" : "text-white/80 hover:bg-white/10"
+              active
+                ? "bg-card-elevated text-foreground"
+                : "text-muted hover:bg-card-elevated hover:text-foreground"
             }`}
           >
             {label}
@@ -267,11 +271,11 @@ function MobileExchangeDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`Exchange filter, currently ${currentLabel}`}
-        className="flex items-center gap-1.5 bg-black rounded-lg px-3 py-1.5 border border-white/10 text-body-sm font-bold uppercase tracking-wider text-white"
+        className="flex items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 py-1.5 text-body-sm font-bold uppercase tracking-wider text-foreground"
       >
         <span>{currentLabel}</span>
         <svg
-          className={`h-3 w-3 text-white/70 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-3 w-3 text-muted transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

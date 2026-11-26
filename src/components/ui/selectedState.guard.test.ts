@@ -32,7 +32,6 @@ export const EXEMPT: Record<string, string> = {
   "app/country/[code]/stockmarket/components/BondTable.tsx": "single on/off toggle",
   "app/country/[code]/stockmarket/components/ExchangeSelector.tsx":
     "option rows in a dropdown list",
-  "app/country/[code]/stockmarket/components/MarketOverview.tsx": "chart overlay on/off toggles",
   "app/create-character/ConversationShell.tsx": "progress stepper, not a control",
   "app/create-character/CreateCharacterClient.view.tsx": "choice cards in the character form",
   "app/create-character/HomeStatePicker.tsx": "selectable list rows in the character form",
@@ -124,8 +123,60 @@ export function offendingSelectionControls(): string[] {
   return offenders;
 }
 
+/**
+ * Choice cards and row pickers that use a light primary tint for the chosen
+ * option. They are not tabs, segmented controls or filter pills.
+ */
+const TINT_EXEMPT: Record<string, string> = {
+  "app/country/[code]/executive/supreme-court/components/ScotusNominateModal.tsx":
+    "nominee choice cards",
+  "app/country/[code]/parties/[id]/components/CreateProposalForm.tsx": "proposal choice cards",
+  "app/country/[code]/parties/[id]/components/PriorityRegionCard.tsx": "region choice cards",
+  "app/country/[code]/region/[id]/office/tabs/orders/IssueOrderModal.tsx": "order choice cards",
+  "app/whitehouse/cabinet/components/CabinetNominateModal.tsx": "nominee choice cards",
+  "app/elections/[id]/components/RunningMateSelector.tsx": "running mate choice cards",
+  "components/corporation/ExpandMarketModal.view.tsx": "market choice cards",
+  "components/SubscribeButton.tsx": "single subscribe toggle",
+  "components/admin/system/SetupPanel.tsx": "setup choice cards",
+  "components/influence/NppRosterPanel.tsx": "roster row selection",
+  "components/influence/NppSlotTierTable.tsx": "table row selection",
+  "app/notifications/inbox/InboxClient.tsx": "notifications: owned by another fixer",
+  "app/create-imperial-character/page.tsx": "character choice cards",
+  "app/feedback/page.tsx": "feedback category choice cards",
+  "app/country/[code]/parties/[id]/components/caucus/SelectedCaucus.tsx": "caucus member selection",
+  "app/world/components/CountryComparePanel.tsx": "country choice list",
+  "components/economy/EconomicModelCard.tsx": "model choice cards",
+  "components/GameResetControls.tsx": "admin reset option cards",
+};
+
+/** Tab-like toggles that carry no selection attribute still must not use a tint or underline. */
+export function offendingUnmarkedToggles(): string[] {
+  const offenders: string[] = [];
+  const tinted =
+    /\?\s*(["'`])[^"'`]*\bbg-primary\/[\d[\].]+[^"'`]*\btext-primary\b[^"'`]*\1\s*:\s*(["'`])[^"'`]*\btext-muted\b/;
+  for (const file of files(SRC)) {
+    const path = relative(SRC, file);
+    if (EXEMPT[path] || TINT_EXEMPT[path]) continue;
+    const source = readFileSync(file, "utf8");
+    for (const match of source.matchAll(/<(button|a|Link|span|div|li)\b/g)) {
+      const tag = source.slice(match.index, tagEnd(source, match.index + match[0].length));
+      if (/pillClass\(|PILL_SELECTED/.test(tag)) continue;
+      const underline =
+        /border-b-2/.test(tag) && /\?\s*["'`][^"'`]*border-(primary|foreground|white)/.test(tag);
+      if (underline || tinted.test(tag)) {
+        offenders.push(`${path}:${source.slice(0, match.index).split("\n").length}`);
+      }
+    }
+  }
+  return offenders;
+}
+
 describe("selected state", () => {
   it("uses the filled primary pill for every tab, segmented control and filter pill", () => {
     expect(offendingSelectionControls()).toEqual([]);
+  }, 60_000);
+
+  it("keeps unmarked tab-like toggles off tints and underlines", () => {
+    expect(offendingUnmarkedToggles()).toEqual([]);
   }, 60_000);
 });
