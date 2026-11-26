@@ -832,6 +832,7 @@ export default function OverviewTab({
                 <KVRow
                   label="Marketing strength"
                   value={formatMarketingStrength(corporation.marketingStrength)}
+                  hintBelow
                   hint={perTurnChangeHint(
                     corporation.marketingStrengthGrowth,
                     corporation.lastTurnStrengthChange?.marketing
@@ -840,6 +841,7 @@ export default function OverviewTab({
                 <KVRow
                   label="Logistics"
                   value={formatMarketingStrength(corporation.logisticsStrength)}
+                  hintBelow
                   hint={perTurnChangeHint(
                     corporation.logisticsStrengthNetChange,
                     corporation.lastTurnStrengthChange?.logistics
@@ -848,6 +850,7 @@ export default function OverviewTab({
                 <KVRow
                   label="R&D score"
                   value={formatMarketingStrength(corporation.rdScore)}
+                  hintBelow
                   hint={perTurnChangeHint(
                     corporation.rdScoreNetChange,
                     corporation.lastTurnStrengthChange?.rd
@@ -874,6 +877,7 @@ export default function OverviewTab({
                     }
                     mark={<Meter pct={corporation.averageQuality} className="w-10" />}
                     value={`${Math.round(corporation.averageQuality)} / 100`}
+                    hintBelow
                     hint={
                       <>
                         {qualityChangeHint(corporation.averageQualityChange)}

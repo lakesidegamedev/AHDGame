@@ -25,6 +25,27 @@ describe("DenseKit ledger variants", () => {
     expect(ledger.container.querySelector("[data-ledger-leader]")).not.toBeNull();
   });
 
+  it("gives an operations forecast its own line outside the figure group", () => {
+    const { getByText } = render(
+      <CorpLedgerProvider>
+        <KVList>
+          <KVRow
+            label="Marketing strength"
+            value="17.12"
+            hint="-0.26 forecast next turn, last turn -0.27"
+            hintBelow
+          />
+        </KVList>
+      </CorpLedgerProvider>
+    );
+
+    const figure = getByText("17.12").closest("dd");
+    const forecast = getByText("-0.26 forecast next turn, last turn -0.27");
+    expect(figure?.nextElementSibling).toBe(forecast);
+    expect(forecast.classList.contains("basis-full")).toBe(true);
+    expect(forecast.parentElement?.classList.contains("flex-wrap")).toBe(true);
+  });
+
   it("DenseSection drops the accent pip in the ledger", () => {
     const section = (
       <DenseSection title="Key statistics">

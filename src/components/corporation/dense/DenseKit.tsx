@@ -76,6 +76,7 @@ export function KVRow({
   label,
   value,
   hint,
+  hintBelow = false,
   action,
   title,
   mono = true,
@@ -87,6 +88,7 @@ export function KVRow({
   value: ReactNode;
   /** Small muted text under or beside the value (change, unit, basis). */
   hint?: ReactNode;
+  hintBelow?: boolean;
   /** Inline control (link or small button) at the end of the row. */
   action?: ReactNode;
   title?: string;
@@ -100,9 +102,10 @@ export function KVRow({
   mark?: ReactNode;
 }) {
   const ledger = useCorpLedger();
+  const hasBelowHint = hintBelow && hint != null;
   return (
     <div
-      className={`flex items-center justify-between gap-3 ${
+      className={`flex items-center justify-between gap-x-3 ${hasBelowHint ? "flex-wrap gap-y-0.5" : ""} ${
         ledger ? "" : "border-b border-card-border/60 last:border-b-0"
       } ${lead ? "min-h-10 py-1.5" : "min-h-8 py-1"} ${
         accent ? `-ml-2 border-l-2 pl-2 ${ROW_ACCENT[accent]}` : ""
@@ -130,7 +133,7 @@ export function KVRow({
           ellipsis in narrow columns. */}
       <dd
         className={`flex min-w-0 justify-end text-right ${
-          lead && hint != null ? "flex-col items-end gap-0" : "items-center gap-2"
+          lead && hint != null && !hasBelowHint ? "flex-col items-end gap-0" : "items-center gap-2"
         } shrink-0`}
       >
         {mark}
@@ -143,11 +146,16 @@ export function KVRow({
         >
           {value}
         </span>
-        {hint != null && (
+        {hint != null && !hasBelowHint && (
           <span className="shrink-0 font-mono text-body-sm tabular-nums text-muted">{hint}</span>
         )}
         {action}
       </dd>
+      {hasBelowHint && (
+        <dd className="basis-full break-words text-right font-mono text-body-sm tabular-nums text-muted">
+          {hint}
+        </dd>
+      )}
     </div>
   );
 }
