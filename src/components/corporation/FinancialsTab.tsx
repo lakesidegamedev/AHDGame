@@ -143,7 +143,8 @@ export default function FinancialsTab({
     financials.maintenanceCosts -
     financials.laborCosts -
     financials.growthCosts -
-    (financials.freightCosts ?? 0);
+    (financials.freightCosts ?? 0) -
+    (financials.storeGoodsCost ?? 0);
   const basis = corpIncomeBasis(financials);
   const settlement = financials.supplyAgreementSettlementDaily ?? 0;
   const unpaidSettlement = financials.supplyAgreementUnpaidAnchor ?? 0;
@@ -418,6 +419,15 @@ export default function FinancialsTab({
                       amount={cost(financials.laborCosts)}
                       pct={pctOf(financials.laborCosts)}
                       title="Pay for workers in every sector. Moves with headcount, local pay and union demands."
+                    />
+                  )}
+                  {(financials.storeGoodsCost ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Cost of goods resold"
+                      amount={cost(financials.storeGoodsCost ?? 0)}
+                      pct={pctOf(financials.storeGoodsCost ?? 0)}
+                      title="What the company's stores paid producers for the goods they sold to households. Revenue includes the full value of those goods; the store keeps the markup."
                     />
                   )}
                   {(financials.freightCosts ?? 0) > 0 && (

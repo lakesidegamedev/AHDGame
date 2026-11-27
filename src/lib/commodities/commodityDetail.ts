@@ -1,3 +1,4 @@
+import { loadHouseholdChannel } from "@/lib/stores/loadStoreSales";
 import { commodityDetailPerTurn } from "./perTurnUnits";
 import { settledCompanyVolumes } from "./settledCompanyVolumes";
 import { worldFundedMarket } from "@/lib/market/producerMarket/fundedCountryViewRules";
@@ -776,13 +777,6 @@ export async function getCommodityDetailData(
             }
           : {}),
       };
-    } else if (commodity === "retail") {
-      demandDriver = {
-        type: "consumer",
-        label: "Baseline Consumer Demand",
-        description:
-          "Driven by GDP growth. Consumer demand scales with a blend of 50% national and 50% regional GDP growth, ranging from 0.5x to 2.0x the baseline.",
-      };
     }
 
     // A funded turn names its real non-company buyers; formula rows are not buyers there.
@@ -791,6 +785,14 @@ export async function getCommodityDetailData(
       commodity,
       currentPrice?.turn,
       gameState?.worldEpochId
+    );
+
+    // Households buy some goods through stores and the rest direct; the page shows the split.
+    const householdChannel = await loadHouseholdChannel(
+      db,
+      gameState?.worldEpochId,
+      currentPrice?.turn,
+      commodity
     );
 
     // ── Synthetic demand sources for display ──────────────────────────────────
@@ -1096,6 +1098,7 @@ export async function getCommodityDetailData(
       },
       demandDriver,
       syntheticDemandSources: fundedBuyerSources ?? syntheticDemandSources,
+      ...(householdChannel ? { householdChannel } : {}),
       capacityByState,
       totalCapacity,
     };

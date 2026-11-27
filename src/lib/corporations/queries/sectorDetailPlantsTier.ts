@@ -194,7 +194,8 @@ export async function buildSectorDetailPlantsTier({
       | "natural_gas"
       | "ordnance"
       | "plastics"
-      | "network_services";
+      | "network_services"
+      | "consumer_goods";
     label: string;
     icon: string;
     colors: string;
@@ -272,7 +273,8 @@ export async function buildSectorDetailPlantsTier({
       | "natural_gas"
       | "ordnance"
       | "plastics"
-      | "network_services",
+      | "network_services"
+      | "consumer_goods",
       number
     >
   >;
@@ -303,7 +305,8 @@ export async function buildSectorDetailPlantsTier({
     | "natural_gas"
     | "ordnance"
     | "plastics"
-    | "network_services",
+    | "network_services"
+    | "consumer_goods",
     { supply: number; demand: number }
   >;
   globalBalances: Map<
@@ -333,7 +336,8 @@ export async function buildSectorDetailPlantsTier({
     | "natural_gas"
     | "ordnance"
     | "plastics"
-    | "network_services",
+    | "network_services"
+    | "consumer_goods",
     { supply: number; demand: number }
   >;
   corpByIdForLookup: Map<string, WithId<Corporation>>;
@@ -795,6 +799,7 @@ export async function buildSectorDetailPlantsTier({
           .attackerSharePercent
       : marketShare;
     plants = buildSectorPlantsSection({
+      localPerAnchor: 1 / sectorAmountAnchor(1),
       sector,
       sectorType,
       worldBuildSettledTurn: gameState?.buildDeliverySettledTurn,

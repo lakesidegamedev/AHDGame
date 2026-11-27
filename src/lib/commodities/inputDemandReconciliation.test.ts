@@ -75,7 +75,6 @@ function ledgerGlobalDemand(
     plants, // plantsEnabled
     1, // ledgerUnitScale
     undefined, // sectorOutputDemandModifierPct
-    1, // retailLegacyDemandFactor
     undefined, // ledgerBasePrices
     undefined, // demandCalibration
     PRESET, // preset

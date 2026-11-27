@@ -578,6 +578,8 @@ export interface Financials {
   freightCosts?: number;
   /** Recorded haul revenue, already included in totalRevenue. */
   freightIncome?: number;
+  /** Stores: what they paid producers for the goods inside totalRevenue, daily, corporation currency. */
+  storeGoodsCost?: number;
   growthCosts: number;
   marketingCosts: number;
   logisticsCosts: number;

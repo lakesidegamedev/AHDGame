@@ -29,6 +29,8 @@ export type ProducerEconomyInput = {
   externalOrders?: readonly PurchaseOrder[];
   inputReservations?: readonly ProducerInputReservation[];
   households?: readonly Omit<Parameters<typeof householdPurchaseOrders>[0], "cash">[];
+  /** Markup stores add to goods households buy through them (storeRules). Absent = no stores. */
+  storeMarkup?: number;
   /** Explicit route/scope eligibility; missing entries allow only the offer's own book. */
   eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
   maximumPlanningPasses?: number;
@@ -181,6 +183,8 @@ export type ProducerEconomyResult = {
      */
     spilloverRequestedUnits?: number;
   }>;
+  /** What households bought through stores and direct this turn, and what each store earned. */
+  storeSales?: import("./storeSalesRules").StoreSales;
   /** Household spend stranded in sold-out lanes and how much the extra clearing placed. */
   spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
   /** Per-country funded book from the settled clearing, when `trackCountryBooks` is on. */
