@@ -78,7 +78,10 @@ export interface CorporationHistory {
    * Market-making buyback escrow balance at snapshot time, in liquidCurrencyCode units. May be negative (tracked buyback debt). Snapshotted so net cash (`liquidCapital + shareEscrowBalance`) is visible per turn and escrow drift inflating gross liquidCapital is caught. Omitted on entries written before this field existed.
    */
   shareEscrowBalance?: number;
+  /** Includes stores' goods resold at full value (see `storeGoodsCost`). */
   revenue: number;
+  /** Stores' goods resold, inside `revenue` and `totalCosts` as cost of goods. */
+  storeGoodsCost?: number;
   totalCosts: number;
   /**
    * Where `totalCosts` went this turn, in `currencyCode`. Each part is rounded on

@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { laneKeyOf } from "./laneKey";
-import {
-  STORE_MARKUP_DEFAULT,
-  STORE_TRANSITION_DEFAULT_START_MARKUP,
-  STORE_TRANSITION_DEFAULT_TURNS,
-  STORE_TYPICAL_RUNNING_COST_SHARE,
-  storeMarkupForTurn,
-} from "@/lib/stores/rules/storeRules";
+import { STORE_MARKUP_DEFAULT } from "@/lib/stores/rules/storeRules";
 
 const farm = (): ProductionPlan => ({
   id: "farm",
@@ -218,32 +212,29 @@ describe("stores pay only for the capacity their sales need", () => {
   });
 });
 
-describe("a typical player retail company crosses over without a cliff", () => {
-  // Walmart-like company, from live turns 228 to 235. Its stores could resell
-  // about 3.45M of goods a turn at the 4.5 throughput multiple and spend about
-  // 12.5% of what they resell on running costs (wages 4/11, site and supplies
-  // 7/11; supplies are folded into site bills here, the fixture has no
-  // supplier). Its last pre-switch profit was 418 643 a turn; household money
-  // doubles by the planned switch at turn 247, and basket revenue scaled with
-  // it, so the turn before the switch it would have made about 837 000.
+describe("a typical player retail company at the 40% markup", () => {
+  // Walmart from live turns 228 to 250 (anchor money). Its profit averaged
+  // 349 000 a turn on t228-233 (340 870 USD). Outside its stores it earns about
+  // 27 700. Its stores spend 12.9 cents of running costs per dollar of goods
+  // resold. With their capacity no longer cut by sell-through, its stores reach
+  // about 1.57M of household spending a turn at today's demand (each state's
+  // shoppers shared pro rata to capacity).
+  const profitBeforeStores = 349_100;
+  const outsideStores = 27_700;
+  const costPerResold = 0.129;
   const V = 880;
-  const capacityUnits = 3920;
-  const capacityValue = V * capacityUnits;
-  const runningAtFullRun = STORE_TYPICAL_RUNNING_COST_SHARE * capacityValue;
-  const profitBeforeSwitch = 2 * 418_643;
+  const capacityValue = 1_572_000;
+  const capacityUnits = capacityValue / V;
   const retailer: ProductionPlan = {
     ...store(V),
     capacityUnits,
-    labourCost: (runningAtFullRun * 4) / 11,
-    otherOperatingCost: (runningAtFullRun * 7) / 11,
+    labourCost: costPerResold * capacityValue * 0.4,
+    otherOperatingCost: costPerResold * capacityValue * 0.6,
     idleOperatingCost: 0,
   };
   const bigFarm: ProductionPlan = { ...farm(), capacityUnits: 10_000_000 };
-  // Households in the store's state, with more routed food demand than the
-  // stores can carry at any markup in the changeover.
-  const hh = { ...household, accountId: "hh" };
-  const turnProfit = (markup: number) => {
-    const result = advanceProducerEconomy({
+  const storeProfit = (markup: number) =>
+    advanceProducerEconomy({
       turn: 1,
       accounts: accounts.map((a) =>
         a.id === "storeCorp"
@@ -253,53 +244,22 @@ describe("a typical player retail company crosses over without a cliff", () => {
             : a
       ),
       producers: [bigFarm, retailer],
-      households: [hh],
+      households: [household],
       storeMarkup: markup,
       // Food last cleared at the farm's price: households spend half their ceiling.
       clearingPriceByLane: { [laneKeyOf("food", "world")]: 2 },
-    });
-    return result.producers.find((p) => p.id === "store")!.profit;
-  };
-  const schedule = { startTurn: 247 };
-  const markups = Array.from({ length: STORE_TRANSITION_DEFAULT_TURNS + 1 }, (_, i) =>
-    storeMarkupForTurn({ standingMarkup: undefined, transition: schedule, turn: 247 + i })
-  );
-  const profits = markups.map(turnProfit);
-  // Capacity-bound: it resells capacity / (1 + markup) wholesale and keeps the
-  // markup less its running costs on that.
-  const capacityBound = (markup: number) =>
-    (capacityValue / (1 + markup)) * (markup - STORE_TYPICAL_RUNNING_COST_SHARE);
+    }).producers.find((p) => p.id === "store")!.profit;
 
-  it("stays within about 20% of its pre-switch profit on the first stores turn", () => {
-    expect(markups[0]).toBeCloseTo(STORE_TRANSITION_DEFAULT_START_MARKUP, 12);
-    expect(Math.abs(profits[0] / profitBeforeSwitch - 1)).toBeLessThan(0.2);
+  it("earns about its pre-stores profit at the standing markup", () => {
+    expect(STORE_MARKUP_DEFAULT).toBe(0.4);
+    const profit = storeProfit(STORE_MARKUP_DEFAULT) + outsideStores;
+    // Capacity-bound: it resells capacity / 1.4 and keeps the markup less running costs.
+    expect(storeProfit(0.4)).toBeCloseTo((capacityValue / 1.4) * (0.4 - costPerResold), -2);
+    expect(Math.abs(profit / profitBeforeStores - 1)).toBeLessThan(0.2);
   });
 
-  it("moves by less than a fifth each turn of the changeover", () => {
-    for (let i = 1; i < profits.length; i++) {
-      expect(profits[i]).toBeLessThan(profits[i - 1]);
-      expect(profits[i] / profits[i - 1]).toBeGreaterThan(0.8);
-    }
-  });
-
-  it("settles on the standing 35% markup at about a third under its basket-era profit", () => {
-    expect(markups.at(-1)).toBe(STORE_MARKUP_DEFAULT);
-    expect(STORE_MARKUP_DEFAULT).toBe(0.35);
-    expect(profits.at(-1)!).toBeCloseTo(capacityBound(0.35), 0);
-    // 3.45M / 1.35 x 0.225 = about 575 000 against about 837 000 before.
-    const change = profits.at(-1)! / profitBeforeSwitch - 1;
-    expect(change).toBeGreaterThan(-0.35);
-    expect(change).toBeLessThan(-0.25);
-  });
-
-  it("would keep 30% to 40% of its value added at a 15% markup (throughput calibration)", () => {
-    const profit = turnProfit(0.15);
-    expect(profit).toBeCloseTo(capacityBound(0.15), 0);
-    // Supplies are about 70 of the 110 a capacity unit costs (8% of goods resold).
-    const valueAdded =
-      (capacityValue / 1.15) * (0.15 - (STORE_TYPICAL_RUNNING_COST_SHARE * 70) / 110);
-    const share = profit / valueAdded;
-    expect(share).toBeGreaterThan(0.3);
-    expect(share).toBeLessThan(0.4);
+  it("would fall well short at the old 35% markup", () => {
+    const at35 = storeProfit(0.35) + outsideStores;
+    expect(at35 / profitBeforeStores).toBeLessThan(0.85);
   });
 });

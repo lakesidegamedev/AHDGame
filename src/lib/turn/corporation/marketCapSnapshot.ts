@@ -12,7 +12,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { computeMarketIndex } from "./marketIndex";
-import { mapCostBreakdown } from "@/lib/corporations/rules/costBreakdown";
+import { mapCostBreakdown, type CostBreakdown } from "@/lib/corporations/rules/costBreakdown";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
 import { bankBranchSnapshot } from "@/lib/banking/rules/branchSnapshot";
 import type { Document } from "mongodb";
@@ -27,6 +27,36 @@ import { marketCapHistoryCollection } from "@/lib/db/repositories/marketCapHisto
  * `currencyCode`, and readers (ChartsTab) then divide by the live rate and
  * under-report by the full FX factor. When we can't convert, we must not label.
  */
+/**
+ * The revenue and costs a turn records. Revenue is the full value of goods
+ * sold: stores' goods resold are added to revenue and, as cost of goods, to
+ * costs, so recorded income is unchanged. `convert` is the currency write.
+ */
+export function recordedRevenueAndCosts(
+  s: Pick<CorpSnapshot, "revenue" | "totalCosts" | "storeGoods" | "costBreakdown">,
+  convert: (anchor: number) => number
+): {
+  revenue: number;
+  totalCosts: number;
+  storeGoodsCost?: number;
+  costBreakdown?: CostBreakdown;
+} {
+  const goods = s.storeGoods != null && s.storeGoods > 0 ? s.storeGoods : 0;
+  return {
+    revenue: convert(s.revenue + goods),
+    totalCosts: convert(s.totalCosts + goods),
+    ...(goods > 0 ? { storeGoodsCost: convert(goods) } : {}),
+    ...(s.costBreakdown
+      ? {
+          costBreakdown: mapCostBreakdown(
+            goods > 0 ? { ...s.costBreakdown, goodsResold: goods } : s.costBreakdown,
+            convert
+          ),
+        }
+      : {}),
+  };
+}
+
 export function resolveSnapshotDenomination(
   corp: CorpCapitalCurrencyInfo,
   fxByCurrency: ReadonlyMap<CurrencyCode, number>
@@ -460,15 +490,9 @@ export async function snapshotMarketCap(
         // detect escrow going negative — the driver behind "the merger only gave me a
         // fraction of the target's cash" reports (takeover transfers the net, not gross).
         shareEscrowBalance: Math.round(s.escrowBalanceAfter),
-        revenue: Math.round(writeCorpEconomicLocal(s.revenue, code, rate)),
-        totalCosts: Math.round(writeCorpEconomicLocal(s.totalCosts, code, rate)),
-        ...(s.costBreakdown
-          ? {
-              costBreakdown: mapCostBreakdown(s.costBreakdown, (anchor) =>
-                Math.round(writeCorpEconomicLocal(anchor, code, rate))
-              ),
-            }
-          : {}),
+        ...recordedRevenueAndCosts(s, (anchor) =>
+          Math.round(writeCorpEconomicLocal(anchor, code, rate))
+        ),
         ...(s.headcount != null ? { headcount: Math.round(s.headcount) } : {}),
         income: Math.round(writeCorpEconomicLocal(s.income, code, rate)),
         dividendPaidPerTurn: Math.round(writeCorpEconomicLocal(s.dividendPaidPerTurn, code, rate)),

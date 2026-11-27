@@ -17,10 +17,12 @@ export const STORE_ROUTED_SHARE: Readonly<Partial<Record<CommodityType, number>>
 };
 
 /**
- * Standing markup: high enough that retail companies keep
- * most of the value the old basket gave them; stores keep the endpoint rules.
+ * Markup stores charge. Sized so a typical player retail company earns about
+ * what it did from the old retail basket: stores resell far more household
+ * spending than the basket ever carried, and 40% of it covers their running
+ * costs and leaves the old profit.
  */
-export const STORE_MARKUP_DEFAULT = 0.35;
+export const STORE_MARKUP_DEFAULT = 0.4;
 export const STORE_MARKUP_MIN = 0.1;
 /** Highest markup the operator may set, including the start of the changeover. */
 export const STORE_MARKUP_MAX = 0.4;
@@ -30,16 +32,9 @@ export const STORE_MARKUP_MAX = 0.4;
  * of what the old basket recipe produced per unit. Sets how many stores a state
  * needs, and a store's running costs per unit of goods resold. A busy store
  * costs about 110 per unit a turn and resells about 880 here, so at a 15% markup
- * it keeps about 35% of its value added; at the 35% standing markup, more.
+ * it keeps about 35% of its value added; at the 40% markup, more.
  */
 export const STORE_THROUGHPUT_MULTIPLE = 4.5;
-
-/**
- * Turns the changeover markup takes to step down to the standing markup, and
- * the markup it starts from, when gameConfig.storeTransition leaves them out.
- */
-export const STORE_TRANSITION_DEFAULT_TURNS = 4;
-export const STORE_TRANSITION_DEFAULT_START_MARKUP = 0.4;
 
 /**
  * Yardstick for store capacity, not an output: a store makes nothing, so its
@@ -83,57 +78,6 @@ export function storeCoverage(capacityValue: number, routedDemandValue: number):
   if (!(routedDemandValue > 0)) return capacityValue > 0 ? 1 : 0;
   if (!(capacityValue > 0) || !Number.isFinite(capacityValue)) return 0;
   return Math.min(1, capacityValue / routedDemandValue);
-}
-
-/**
- * A busy store's running costs as a share of the wholesale value it resells,
- * at STORE_THROUGHPUT_MULTIPLE: about 110 per capacity unit against about 880
- * of goods (live turns 232 to 235). The changeover steps the markup down so
- * that what it leaves above this share shrinks by the same fraction each turn.
- */
-export const STORE_TYPICAL_RUNNING_COST_SHARE = 0.125;
-
-/**
- * The changeover from retail baskets to stores. A store's markup starts at
- * `startMarkup` on `startTurn` and comes down to the standing markup over
- * `turns` turns, so a retail company's profit moves a little each turn
- * instead of all at once.
- */
-export interface StoreTransition {
-  startTurn?: number;
-  turns?: number;
-  startMarkup?: number;
-}
-
-/**
- * Markup stores charge on `turn`. Without a changeover (or once it is over)
- * this is the standing markup. Before the start it is the start markup.
- * In between, the markup's margin over a typical store's running costs falls
- * by the same fraction every turn, so a typical store's profit does too
- * (equal steps in the markup would make the last steps the steepest).
- */
-export function storeMarkupForTurn(input: {
-  standingMarkup: number | null | undefined;
-  transition: StoreTransition | null | undefined;
-  turn: number;
-}): number {
-  const standing = clampStoreMarkup(input.standingMarkup);
-  const t = input.transition;
-  if (!t || typeof t.startTurn !== "number" || !Number.isFinite(t.startTurn)) return standing;
-  const turns =
-    typeof t.turns === "number" && Number.isFinite(t.turns) && t.turns >= 1
-      ? Math.round(t.turns)
-      : STORE_TRANSITION_DEFAULT_TURNS;
-  const start = clampStoreMarkup(t.startMarkup ?? STORE_TRANSITION_DEFAULT_START_MARKUP);
-  const step = input.turn - t.startTurn;
-  if (step < 0) return start;
-  if (step >= turns || start === standing) return standing;
-  const cost = STORE_TYPICAL_RUNNING_COST_SHARE;
-  // Geometric in the margin over running costs when both ends clear them; a
-  // straight line otherwise (a standing markup at or under the cost share).
-  if (start > cost && standing > cost)
-    return cost + (start - cost) * Math.pow((standing - cost) / (start - cost), step / turns);
-  return start + ((standing - start) * step) / turns;
 }
 
 /** Markup a household pays on top of the wholesale price it paid through a store. */
