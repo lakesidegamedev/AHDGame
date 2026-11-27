@@ -12,6 +12,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { caucusesCollection } from "@/lib/db/repositories/caucuses";
+import { caucusMembershipsCollection } from "@/lib/db/repositories/caucusMemberships";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -56,7 +57,8 @@ export function computeInfamyPenalty(infamy: number, maxPenalty: number): number
  * National Chair +5, Vice Chair +2, Treasurer +2, National Committee +1.
  * State Chair +2, State Vice Chair +1 (passed via options — state roles live
  * on `statePartyOrg`, not the national party doc).
- * Caucus Chair +2, Caucus Vice Chair +1 (passed via options — caucus roles
+ * Caucus Chair +2, Caucus Vice Chair +1, only for a caucus with at least
+ * CAUCUS_BONUS_MIN_MEMBERS active members (passed via options — caucus roles
  * live on the `caucuses` collection, mirroring the state-org shape/magnitude).
  *
  * Chair bonuses are sized so party leadership accumulates partyInfluence
@@ -91,6 +93,30 @@ export function computeLeadershipBonus(
 }
 
 /**
+ * A caucus pays its chair and vice chair a party influence bonus only while it
+ * has at least this many active members, so a caucus founded alone just for the
+ * bonus earns nothing.
+ */
+export const CAUCUS_BONUS_MIN_MEMBERS = 5;
+
+/** Ids of the given caucuses that have enough active members to pay leadership bonuses. */
+export async function loadBonusQualifiedCaucusIds(
+  db: Awaited<ReturnType<typeof getDb>>,
+  caucusIds: ObjectId[]
+): Promise<Set<string>> {
+  if (caucusIds.length === 0) return new Set();
+  const counts = await caucusMembershipsCollection(db)
+    .aggregate<{ _id: ObjectId; members: number }>([
+      { $match: { caucusId: { $in: caucusIds }, status: "active" } },
+      { $group: { _id: "$caucusId", members: { $sum: 1 } } },
+    ])
+    .toArray();
+  return new Set(
+    counts.filter((c) => c.members >= CAUCUS_BONUS_MIN_MEMBERS).map((c) => String(c._id))
+  );
+}
+
+/**
  * State-party and caucus roles one character holds, read the same way the
  * turn reads them, so screens that preview the per-turn gain show the same
  * leadership bonus the turn pays.
@@ -113,12 +139,17 @@ export async function loadLeadershipBonusOptions(
       )
       .toArray(),
   ]);
+  const qualified = await loadBonusQualifiedCaucusIds(
+    db,
+    caucuses.map((c) => c._id)
+  );
+  const bonusCaucuses = caucuses.filter((c) => qualified.has(String(c._id)));
   const holds = (id: unknown) => id != null && String(id) === characterId.toString();
   return {
     isStateChair: stateOrgs.some((o) => holds(o.chairId)),
     isStateViceChair: stateOrgs.some((o) => holds(o.viceChairId)),
-    isCaucusChair: caucuses.some((c) => holds(c.chairId)),
-    isCaucusViceChair: caucuses.some((c) => holds(c.viceChairId)),
+    isCaucusChair: bonusCaucuses.some((c) => holds(c.chairId)),
+    isCaucusViceChair: bonusCaucuses.some((c) => holds(c.viceChairId)),
   };
 }
 
@@ -228,9 +259,14 @@ export async function processPartyInfluenceTurn(
       { projection: { chairId: 1, viceChairId: 1 } }
     )
     .toArray();
+  const qualifiedCaucusIds = await loadBonusQualifiedCaucusIds(
+    db,
+    caucuses.map((c) => c._id)
+  );
   const caucusChairIds = new Set<string>();
   const caucusViceChairIds = new Set<string>();
   for (const caucus of caucuses) {
+    if (!qualifiedCaucusIds.has(String(caucus._id))) continue;
     if (caucus.chairId) caucusChairIds.add(caucus.chairId.toString());
     if (caucus.viceChairId) caucusViceChairIds.add(caucus.viceChairId.toString());
   }
