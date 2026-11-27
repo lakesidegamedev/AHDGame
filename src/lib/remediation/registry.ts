@@ -26,6 +26,7 @@ import { defect as vfBankRestitution } from "./defects/AHD-1267-vf-bank-restitut
 import { defect as injectedBankRestoration } from "./defects/AHD-1694-injected-bank-restoration";
 import { defect as greenbaumRestoration } from "./defects/AHD-1694-greenbaum-restoration";
 import { defect as monroeBankRestoration } from "./defects/AHD-1749-monroe-bank-restoration";
+import { defect as greenbaumBankRestoration1910 } from "./defects/AHD-1910-greenbaum-bank-restoration";
 import { defect as mergedStateExtraction } from "./defects/AHD-1271-merged-state-extraction";
 import { defect as natCorpSplitSectorType } from "./defects/AHD-1271-natcorp-split-sector-type";
 import { defect as mergedPartyOrg } from "./defects/AHD-1372-merged-party-org";
@@ -76,6 +77,10 @@ export const DEFECTS: Defect[] = [
   // The turn-601 frozen deposit resolution left Monroe Indrustry's
   // universal bank closed with its household book moved to the central bank.
   monroeBankRestoration,
+  // Matured bills were marked twice, the owner withdrew against the inflated
+  // equity and the instant net-asset rule closed the bank. Reverse the
+  // resolution and mint the owner-approved gap.
+  greenbaumBankRestoration1910,
   // Extraction is the one SOE sector gated on a per-state
   // `country:state` capacity key, so a country merge strands every state it
   // absorbs. Reunification left the eleven western Laender with no extraction
