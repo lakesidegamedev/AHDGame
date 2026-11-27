@@ -479,6 +479,37 @@ describe("physical producer preparation", () => {
     expect(plan.expectedUnitRevenue).toBeCloseTo(made.unitsPerOutput * 40, 12);
   });
 
+  it("plans a store's full run whatever share of it last turn's sales used", () => {
+    const { input, env, sector } = fixture();
+    sector.sectorType = "retail";
+    env.currentYear = 2027;
+    env.lookups.preset = "2027-default";
+    env.demandPlanStage = 1;
+    env.runPlanStage = 3;
+    env.lowUseCostStage = 1;
+    env.runPaceDrop = 0.25;
+    const full = prepareProducerPhysicalSector(input).prepared.plan;
+    // Last turn the store resold a twentieth of its run: the read that, fed to
+    // the plant run planner, shrank every store's capacity turn after turn.
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      turn: env.currentTurn - 1,
+      activeUnits: 240,
+      plannedRunShare: 1,
+      producedUnits: 12,
+      offeredUnits: 240,
+      soldUnits: 12,
+      revenue: 400,
+      inputsConsumed: 100,
+      store: { goodsBoughtWholesale: 1000, markupEarned: 400, wholesaleByCommodity: {} },
+    };
+    const after = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(after.plannedRunShare).toBe(1);
+    expect(after.outputMultiplier).toBeCloseTo(full.outputMultiplier, 12);
+    // A plant with the same read cuts its run.
+    sector.sectorType = "financial";
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeLessThan(1);
+  });
+
   it("plans from last turn's plan under the run plan stage, and changes nothing while it is off", () => {
     const { input, env, sector } = fixture();
     env.demandPlanStage = 1;

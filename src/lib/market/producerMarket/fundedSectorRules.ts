@@ -70,10 +70,14 @@ export interface FundedReceipt {
   inputsConsumed?: number;
   labour?: number;
   siteOperating?: number;
+  /** Anchor per turn, stores only: wholesale value of the goods the store resold. Not revenue. */
+  storeGoodsResold?: number;
 }
 
 export interface LegacySectorResultLike {
   hourlyRevenue: number;
+  /** Stores only, anchor per turn: goods resold, reported beside revenue, never inside it. */
+  storeGoodsResold?: number;
   effectiveMargin: number;
   costs: number;
   hourlyGrowthCost: number;
@@ -160,6 +164,9 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
       freight: 0,
     },
     hourlyRevenue: totalRevenue,
+    ...(r.storeGoodsResold != null && r.storeGoodsResold > 0
+      ? { storeGoodsResold: r.storeGoodsResold }
+      : {}),
     hourlyGrowthCost: growthCost,
     ...(legacy.growthInvestmentAnchor !== undefined
       ? { growthInvestmentAnchor: legacy.growthInvestmentAnchor > 0 ? growthCost : 0 }

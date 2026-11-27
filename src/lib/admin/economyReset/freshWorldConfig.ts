@@ -119,6 +119,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   householdSpendingPowerShare: "",
   householdSpendingPowerRampTurns: "",
   householdSpendingPowerStartTurn: "",
+  // Retired store changeover schedule; a reset clears any value left from it.
   storeTransition: "",
 });
 

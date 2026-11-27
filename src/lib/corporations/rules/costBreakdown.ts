@@ -25,6 +25,8 @@ export interface CostBreakdown extends SiteCostParts {
   budgets: number;
   /** Growth spend, compliance, carrying costs and anything else, so the parts sum to the total. */
   other: number;
+  /** Stores: what they paid producers for the goods they resold. */
+  goodsResold?: number;
 }
 
 export type CostCategory = keyof CostBreakdown;
@@ -38,6 +40,7 @@ export const COST_CATEGORIES: readonly CostCategory[] = [
   "freight",
   "budgets",
   "other",
+  "goodsResold",
 ];
 
 export const COST_CATEGORY_LABELS: Record<CostCategory, string> = {
@@ -49,6 +52,7 @@ export const COST_CATEGORY_LABELS: Record<CostCategory, string> = {
   freight: "Freight",
   budgets: "Marketing, logistics, R&D and CEO pay",
   other: "Other costs",
+  goodsResold: "Cost of goods resold",
 };
 
 const finite = (x: number | null | undefined): number =>
@@ -105,6 +109,7 @@ export function mapCostBreakdown(
     freight: convert(breakdown.freight),
     budgets: convert(breakdown.budgets),
     other: convert(breakdown.other),
+    ...(breakdown.goodsResold != null ? { goodsResold: convert(breakdown.goodsResold) } : {}),
   };
 }
 

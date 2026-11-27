@@ -27,9 +27,12 @@ export async function computeRevenueRealizationRatio(
   sectors: readonly CorporateSector[],
   toCorpCurrency: (amount: number, sector: Pick<CorporateSector, "countryId">) => number
 ): Promise<number> {
-  const latest = await corporationHistoryCollection<{ revenue?: number }>(db).findOne(
+  const latest = await corporationHistoryCollection<{
+    revenue?: number;
+    storeGoodsCost?: number;
+  }>(db).findOne(
     { corporationId: corporation._id },
-    { sort: { turn: -1 }, projection: { revenue: 1 } }
+    { sort: { turn: -1 }, projection: { revenue: 1, storeGoodsCost: 1 } }
   );
 
   const nameplateHourly = sectors.reduce((sum, sector) => {
@@ -37,7 +40,10 @@ export async function computeRevenueRealizationRatio(
     return sum + (toCorpCurrency(sector.revenue, sector) * multiplier) / TURNS_PER_DAY;
   }, 0);
 
-  const latestRevenue = latest?.revenue;
+  // Stores' goods resold are inside recorded revenue at full value; the
+  // nameplate is economic revenue, so leave them out of the ratio.
+  const latestRevenue =
+    typeof latest?.revenue === "number" ? latest.revenue - (latest.storeGoodsCost ?? 0) : undefined;
   const realizedHourly =
     typeof latestRevenue === "number" && Number.isFinite(latestRevenue) ? latestRevenue : null;
 
