@@ -275,12 +275,14 @@ describe("processPartyInfluenceTurn", () => {
   const mockPartiesFind = vi.fn();
   const mockStatePartyOrgFind = vi.fn();
   const mockCaucusesFind = vi.fn();
+  const mockMembershipAggregate = vi.fn();
 
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockStatePartyOrgFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
     mockCaucusesFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
+    mockMembershipAggregate.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({
       collection: vi.fn().mockImplementation((name: string) => {
@@ -289,6 +291,9 @@ describe("processPartyInfluenceTurn", () => {
         }
         if (name === "caucuses") {
           return { find: mockCaucusesFind, bulkWrite: mockBulkWrite };
+        }
+        if (name === "caucusMemberships") {
+          return { aggregate: mockMembershipAggregate };
         }
         if (name === "gameState") {
           return { findOne: vi.fn().mockResolvedValue({ currentTurn: 77 }) };
@@ -544,8 +549,12 @@ describe("processPartyInfluenceTurn", () => {
     const charId = new ObjectId();
     const party = makeParty({ sequentialId: 1, countryId: "US", chairId: null });
     mockPartiesFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([party]) });
+    const caucusId = new ObjectId();
     mockCaucusesFind.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([{ chairId: charId, viceChairId: null }]),
+      toArray: vi.fn().mockResolvedValue([{ _id: caucusId, chairId: charId, viceChairId: null }]),
+    });
+    mockMembershipAggregate.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: caucusId, members: 5 }]),
     });
 
     const char = makeChar({
@@ -577,13 +586,16 @@ describe("loadLeadershipBonusOptions", () => {
     const { loadLeadershipBonusOptions, computeLeadershipBonus } =
       await import("./partyInfluenceTurn");
     const me = new ObjectId();
+    const caucusId = new ObjectId();
     const rows: Record<string, unknown[]> = {
       statePartyOrg: [{ chairId: me, viceChairId: null }],
-      caucuses: [{ chairId: new ObjectId(), viceChairId: me }],
+      caucuses: [{ _id: caucusId, chairId: new ObjectId(), viceChairId: me }],
+      caucusMemberships: [{ _id: caucusId, members: 5 }],
     };
     const db = {
       collection: (name: string) => ({
         find: () => ({ toArray: async () => rows[name] ?? [] }),
+        aggregate: () => ({ toArray: async () => rows[name] ?? [] }),
       }),
     } as never;
     const options = await loadLeadershipBonusOptions(db, me);
@@ -596,5 +608,26 @@ describe("loadLeadershipBonusOptions", () => {
     const party = { chairId: null, viceChairId: me, treasurerId: null, committeeIds: [] };
     // National vice chair +2, state chair +2, caucus vice chair +1.
     expect(computeLeadershipBonus(me, party, options)).toBe(5);
+  });
+});
+
+describe("caucus leadership bonus minimum size", () => {
+  it("pays no caucus bonus while the caucus has fewer than 5 active members", async () => {
+    const { loadLeadershipBonusOptions } = await import("./partyInfluenceTurn");
+    const me = new ObjectId();
+    const caucusId = new ObjectId();
+    const rows: Record<string, unknown[]> = {
+      statePartyOrg: [],
+      caucuses: [{ _id: caucusId, chairId: me, viceChairId: null }],
+      caucusMemberships: [{ _id: caucusId, members: 1 }],
+    };
+    const db = {
+      collection: (name: string) => ({
+        find: () => ({ toArray: async () => rows[name] ?? [] }),
+        aggregate: () => ({ toArray: async () => rows[name] ?? [] }),
+      }),
+    } as never;
+    const options = await loadLeadershipBonusOptions(db, me);
+    expect(options.isCaucusChair).toBe(false);
   });
 });

@@ -77,7 +77,7 @@ donor-base-costs
 
 ## Party Influence
 
-Party Influence applies only to party members and has no fixed cap. Each turn it decays 4% and gains up to 3 scaled by how close your positions are to the party platform, plus a flat bonus for leadership roles (party chair +5, vice chair or treasurer +2, state party or caucus chair +2, committee member, state vice chair or caucus vice chair +1), minus an Infamy penalty of up to 4. Leaving and rejoining resets it to 0. It sets your share of the party's bonus action pool each turn (3 actions per member, at most 6 for you), scaled by the same closeness. You can see it in your profile's Political standing section.
+Party Influence applies only to party members and has no fixed cap. Each turn it decays 4% and gains up to 3 scaled by how close your positions are to the party platform, plus a flat bonus for leadership roles (party chair +5, vice chair or treasurer +2, state party or caucus chair +2, committee member, state vice chair or caucus vice chair +1; caucus roles count only while the caucus has at least 5 active members), minus an Infamy penalty of up to 4. Leaving and rejoining resets it to 0. It sets your share of the party's bonus action pool each turn (3 actions per member, at most 6 for you), scaled by the same closeness. You can see it in your profile's Political standing section.
 
 ## What each action costs
 
