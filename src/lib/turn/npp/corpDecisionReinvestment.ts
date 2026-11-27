@@ -726,6 +726,7 @@ export function decideNppCapacityReinvestment({
           countryId: sector.countryId ?? corp.countryId,
           sectorType: sector.sectorType,
           units: candidate.growthUnits,
+          ...(sector.sectorType === "extraction" ? { strategyId: sector.strategyId ?? null } : {}),
         });
       }
       cashLocal -= costLocal;

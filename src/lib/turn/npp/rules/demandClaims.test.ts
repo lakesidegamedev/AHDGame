@@ -1,18 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { addDemandClaim, isStateServiceSupplyMix, netUnmetDemandUnits } from "./demandClaims";
+import { addDemandClaim, isRegionalBookSupplyMix, netUnmetDemandUnits } from "./demandClaims";
 
-describe("isStateServiceSupplyMix", () => {
-  it("accepts a mix of state-scoped services only", () => {
-    expect(isStateServiceSupplyMix({ healthcare_services: 0.5 })).toBe(true);
-    expect(isStateServiceSupplyMix({ construction_services: 0.45 })).toBe(true);
+describe("isRegionalBookSupplyMix", () => {
+  it("accepts a mix of regional-book services only", () => {
+    expect(isRegionalBookSupplyMix({ healthcare_services: 0.5 })).toBe(true);
+    expect(isRegionalBookSupplyMix({ real_estate_services: 0.5 })).toBe(true);
+  });
+  it("rejects services sold anywhere in their country, whose gap is national", () => {
+    expect(isRegionalBookSupplyMix({ construction_services: 0.45 })).toBe(false);
+    expect(isRegionalBookSupplyMix({ freight: 0.45 })).toBe(false);
   });
   it("rejects a mix with a reachable leg", () => {
-    expect(isStateServiceSupplyMix({ freight: 0.45, consulting_services: 0.25 })).toBe(false);
-    expect(isStateServiceSupplyMix({ steel: 0.3 })).toBe(false);
+    expect(isRegionalBookSupplyMix({ freight: 0.45, consulting_services: 0.25 })).toBe(false);
+    expect(isRegionalBookSupplyMix({ steel: 0.3 })).toBe(false);
   });
   it("rejects an empty mix", () => {
-    expect(isStateServiceSupplyMix({})).toBe(false);
-    expect(isStateServiceSupplyMix({ healthcare_services: 0 })).toBe(false);
+    expect(isRegionalBookSupplyMix({})).toBe(false);
+    expect(isRegionalBookSupplyMix({ healthcare_services: 0 })).toBe(false);
   });
 });
 

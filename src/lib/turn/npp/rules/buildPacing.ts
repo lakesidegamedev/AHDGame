@@ -4,50 +4,52 @@
  *
  * Plain data in, plain data out. The measured gap only moves when plants come
  * online, so every corporation reading it in the same turn sees the same
- * shortage. Netting queued and claimed capacity (rules/demandClaims) keeps the
- * total inside the gap; this adds a per-turn ceiling, so the gap is closed in
- * steps and the next turn's reading corrects the next step.
+ * shortage. The turn's budget is a share of the gap left once capacity already
+ * under construction is netted out (rules/demandClaims), so a big shortage gets
+ * a big step and a gap the queues already cover gets none. Each turn's reading
+ * corrects the next step.
  */
 import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
 import {
-  NPP_PACE_MAX_PLANTS_PER_LANE,
   NPP_PACE_UNMET_SHARE,
+  NPP_PACE_UNREADABLE_GAP_PLANTS,
 } from "@/lib/turn/npp/nppCorporationTuning";
 
 export interface PaceRoomInput {
-  /** Measured unmet demand of the cell, before queued and claimed capacity. Null when unreadable. */
-  grossUnmetUnits: number | null;
+  /**
+   * Measured unmet demand of the cell at the start of the pass, net of capacity
+   * already under construction for it. Null when unreadable.
+   */
+  netUnmetUnits: number | null;
   /** New capacity already granted this turn against the same gap (claim key). */
   grantedAgainstGapUnits: number;
-  /** New capacity already granted this turn in the same country and lane. */
-  grantedInLaneUnits: number;
-  /** One plant of this lane; zero or less disables the plant-count ceiling. */
+  /** One plant of this lane; zero or less disables the plant floor and the unreadable ceiling. */
   plantUnits: number;
 }
 
 /**
- * Units of new capacity still allowed this turn in a cell: the smaller of a
- * share of the measured gap (at least one plant) and a plant-count ceiling for the country and
- * lane, less what was already granted. An unreadable gap never caps, the same
- * stance as foundingUnmetSizing.
+ * Units of new capacity still allowed this turn in a cell: a share of the gap
+ * left after queued capacity (at least one plant while any gap is left), less
+ * what was already granted. No gap left means no room. A gap that cannot be
+ * read is held to a few plants a turn, so a missing measurement never opens a
+ * lane wide.
  */
 export function paceRoomUnits(input: PaceRoomInput): number {
-  const gross =
-    input.grossUnmetUnits == null || !Number.isFinite(input.grossUnmetUnits)
+  const plant = Math.max(0, input.plantUnits);
+  const granted = Math.max(0, input.grantedAgainstGapUnits);
+  const net =
+    input.netUnmetUnits == null || !Number.isFinite(input.netUnmetUnits)
       ? null
-      : Math.max(0, input.grossUnmetUnits);
-  // A share smaller than one plant would never let the tail of a gap close, so
-  // a measured gap always admits one plant a turn.
-  const shareRoom =
-    gross == null
-      ? Number.POSITIVE_INFINITY
-      : (gross > 0 ? Math.max(gross * NPP_PACE_UNMET_SHARE, Math.max(0, input.plantUnits)) : 0) -
-        input.grantedAgainstGapUnits;
-  const laneRoom =
-    input.plantUnits > 0
-      ? NPP_PACE_MAX_PLANTS_PER_LANE * input.plantUnits - input.grantedInLaneUnits
+      : Math.max(0, input.netUnmetUnits);
+  if (net == null) {
+    return plant > 0
+      ? Math.max(0, NPP_PACE_UNREADABLE_GAP_PLANTS * plant - granted)
       : Number.POSITIVE_INFINITY;
-  return Math.max(0, Math.min(shareRoom, laneRoom));
+  }
+  if (!(net > 0)) return 0;
+  // A share smaller than one plant would never let the tail of a gap close, so
+  // a gap still open after the queues always admits one plant a turn.
+  return Math.max(0, Math.max(net * NPP_PACE_UNMET_SHARE, plant) - granted);
 }
 
 /**
