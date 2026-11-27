@@ -27,11 +27,12 @@ export const LOGISTICS_STRATEGIES: SectorStrategy[] = [
     description: "Traditional freight and consulting logistics services.",
     supply: { freight: 0.45, consulting_services: 0.25 },
     demand: {
-      energy: 0.159,
+      energy: 0.111,
       vehicles: 0.158,
       software: 0.079,
       food: 0.048,
       real_estate_services: 0.024,
+      oil: 0.048,
     },
   },
   {
@@ -41,11 +42,12 @@ export const LOGISTICS_STRATEGIES: SectorStrategy[] = [
       "Pure haulage with no consulting arm: all output is freight, with the same fleet and running costs as Standard.",
     supply: { freight: 0.7 },
     demand: {
-      energy: 0.159,
+      energy: 0.111,
       vehicles: 0.158,
       software: 0.079,
       food: 0.048,
       real_estate_services: 0.024,
+      oil: 0.048,
     },
   },
   {
@@ -66,10 +68,11 @@ export const LOGISTICS_STRATEGIES: SectorStrategy[] = [
     // Market recovery phase 1 (2026-10-18): inputs trimmed to reach the 15-25% base margin band.
     demand: {
       vehicles: 0.166,
-      energy: 0.134,
+      energy: 0.094,
       software: 0.101,
       food: 0.047,
       real_estate_services: 0.02,
+      oil: 0.04,
     },
   },
 ];

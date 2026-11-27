@@ -1,3 +1,4 @@
+import { sizingSupply } from "@/lib/stores/rules/storeRules";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { safeUnitScale } from "@/lib/constants/capacityEconomy";
 
@@ -332,8 +333,9 @@ export function impliedOutputUnits(
 ): number {
   if (!Number.isFinite(revenue) || revenue <= 0 || !supplyRates) return 0;
   let units = 0;
-  for (const commodity of Object.keys(supplyRates) as CommodityType[]) {
-    const rate = supplyRates[commodity] ?? 0;
+  const rates = sizingSupply(supplyRates);
+  for (const commodity of Object.keys(rates) as CommodityType[]) {
+    const rate = rates[commodity] ?? 0;
     const base = basePrices[commodity];
     if (rate <= 0 || !(base > 0)) continue;
     units += (revenue * rate) / base;

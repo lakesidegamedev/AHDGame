@@ -4,7 +4,7 @@ Your retail sector has capacity and still sells poorly. Before blaming your pric
 
 ## What sets the size of the basket
 
-Each turn every state generates demand for a basket that includes food, energy, retail goods, vehicles, electronics, medicine, housing, finance, networks, software, freight and professional services. The size of the budget is tied to **population**, not to GDP, so countries with very different currencies stay comparable. Three state signals then adjust it, and all three are on the [National Metrics](/wiki/national-metrics) page:
+Each turn every state generates demand for a basket that includes food, energy, consumer goods, vehicles, electronics, medicine, housing, finance, networks, software, freight and professional services. The size of the budget is tied to **population**, not to GDP, so countries with very different currencies stay comparable. Three state signals then adjust it, and all three are on the [National Metrics](/wiki/national-metrics) page:
 
 - **Unemployment:** lower unemployment raises demand and high unemployment cuts it.
 - **Consumer confidence:** moves demand within a bounded range.

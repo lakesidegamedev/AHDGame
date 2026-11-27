@@ -78,6 +78,8 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   householdSpendingPowerShare: 1,
   householdSpendingPowerRampTurns: 1,
   householdSpendingPowerStartTurn: 1,
+  storeMarkup: 1,
+  storeTransition: 1,
   producerTransitionPackageEnabled: 1,
   producerShortageBuildFactor: 1,
   producerWageShareStage: 1,

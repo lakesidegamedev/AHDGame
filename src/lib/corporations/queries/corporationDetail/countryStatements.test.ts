@@ -22,6 +22,17 @@ describe("buildCountryStatements", () => {
     expect(rows.map((r) => r.countryId)).toEqual(["UK", "JP", "US"]);
   });
 
+  it("charges a store's cost of goods resold against revenue that includes those goods", () => {
+    // A store sold 1 150 of goods: 1 000 paid to producers, 150 markup, 120 running costs.
+    const [row] = buildCountryStatements(
+      { US: ops({ revenue: 1_150, storeGoodsCost: 1_000, maintenance: 120 }) },
+      {}
+    );
+    expect(row.storeGoodsCost).toBe(1_000);
+    // The result is the store's profit, the markup less running costs.
+    expect(row.result).toBe(30);
+  });
+
   it("shows maintenance net of wages, as the main statement does", () => {
     const [row] = buildCountryStatements({ US: ops({ maintenance: 500, labor: 200 }) }, {});
     expect(row.maintenanceCosts).toBe(300);

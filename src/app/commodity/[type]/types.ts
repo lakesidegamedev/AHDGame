@@ -173,6 +173,10 @@ export interface CommodityDetail {
   };
   demandDriver: DemandDriver | null;
   syntheticDemandSources: SyntheticDemandSource[];
+  /** Household purchases of this good through stores and direct, from the latest settled turn. */
+  householdChannel?: import("@/lib/stores/rules/storeRules").HouseholdChannelTotals & {
+    turn: number;
+  };
 }
 
 export type ChartView = "price" | "supply_demand";

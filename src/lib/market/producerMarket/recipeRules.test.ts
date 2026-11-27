@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sizingSupply } from "@/lib/stores/rules/storeRules";
 import { producerRecipe } from "./recipeRules";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 import { getEffectiveStrategyRates, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
@@ -11,7 +12,7 @@ describe("physical producer recipes", () => {
         for (const strategy of SECTOR_STRATEGIES[lane]) {
           if (strategy.minDecade != null && Number(strategy.minDecade) > Number(preset.slice(0, 4)))
             continue;
-          const rates = getEffectiveStrategyRates(
+          const effective = getEffectiveStrategyRates(
             lane,
             strategy.id,
             undefined,
@@ -19,6 +20,8 @@ describe("physical producer recipes", () => {
             0,
             preset
           );
+          // A store lists no supply; its capacity is measured against a yardstick mix.
+          const rates = { ...effective, supply: sizingSupply(effective.supply) };
           for (const eraUnitScale of [1, 3.75]) {
             const recipe = producerRecipe({ ...rates, eraUnitScale });
             const outputValueBasis = Object.values(rates.supply).reduce<number>(

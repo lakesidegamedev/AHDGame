@@ -133,12 +133,12 @@ describe("computeMarketFormationSnapshot", () => {
     const snapshot = computeMarketFormationSnapshot({
       sectors: [],
       states: [region("AR"), region("WY"), region("AK")],
-      lanes: lanes("manufacturing", "media", "retail"),
+      lanes: lanes("manufacturing", "media", "agriculture"),
       prices: [
         steel,
         materials,
         price("advertising", "AR", BIG, 0, 0),
-        price("retail", "AR", BIG, 0, 0),
+        price("food", "AR", BIG, 0, 0),
       ],
       eraUnitScale: 1,
     });
@@ -147,7 +147,7 @@ describe("computeMarketFormationSnapshot", () => {
     expect(snapshot.classificationCounts.coordination_gap).toBe(3);
     // WY manufacturing: demand exists but is smaller than one founding facility.
     expect(snapshot.classificationCounts.fundamental_zero).toBe(1);
-    // WY media and retail plus all three AK cells have no demand observation.
+    // WY media and agriculture plus all three AK cells have no demand observation.
     expect(snapshot.classificationCounts.data_zero).toBe(5);
   });
 });
