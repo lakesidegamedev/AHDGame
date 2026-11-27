@@ -43,14 +43,17 @@ export const migration: Migration = {
       ? await charactersCollection(db)
           .find(
             { _id: { $in: confirmed.map((n) => n.nomineeCharacterId as ObjectId) } },
-            { projection: { userId: 1, careerHistory: 1 } }
+            { projection: { userId: 1, name: 1, careerHistory: 1 } }
           )
           .toArray()
       : [];
     const byId = new Map(characters.map((c) => [c._id.toString(), c]));
 
     const historyWrites: AnyBulkWriteOperation<Character>[] = [];
-    const awardUserIds = new Map<string, { userId: ObjectId; characterId: ObjectId }>();
+    const awardUserIds = new Map<
+      string,
+      { userId: ObjectId; characterId: ObjectId; characterName?: string }
+    >();
     for (const nom of confirmed) {
       const character = byId.get((nom.nomineeCharacterId as ObjectId).toString());
       if (!character) continue;
@@ -75,6 +78,7 @@ export const migration: Migration = {
         awardUserIds.set(character.userId.toString(), {
           userId: character.userId,
           characterId: character._id,
+          ...(character.name ? { characterName: character.name } : {}),
         });
       }
     }
@@ -97,7 +101,7 @@ export const migration: Migration = {
       );
       if (definition && awardUserIds.size) {
         await characterAchievementsCollection<Document>(db).bulkWrite(
-          [...awardUserIds.values()].map(({ userId, characterId }) => ({
+          [...awardUserIds.values()].map(({ userId, characterId, characterName }) => ({
             updateOne: {
               filter: { userId, achievementId: definition._id },
               update: {
@@ -107,6 +111,7 @@ export const migration: Migration = {
                   characterId,
                   achievementId: definition._id,
                   earnedAt: now,
+                  ...(characterName ? { characterName } : {}),
                 },
               },
               upsert: true,

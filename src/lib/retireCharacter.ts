@@ -103,6 +103,19 @@ export async function retireCharacter(
   const achievementCount = await characterAchievementsCollection<Document>(db).countDocuments({
     characterId,
   });
+  // Awards keep the name they were earned under after this character is gone.
+  // Rows written before awards stored a name get it now, while it still exists.
+  if (character.name) {
+    try {
+      // `null` in $in also matches rows with no name field at all.
+      await characterAchievementsCollection<Document>(db).updateMany(
+        { characterId, characterName: { $in: [null, ""] } },
+        { $set: { characterName: character.name } }
+      );
+    } catch (error) {
+      console.error("[retireCharacter] achievement name stamp failed:", error);
+    }
+  }
 
   const highestOffice = deriveHighestOffice(character);
   const [careerLegislation, careerRates, careerLoans] = await Promise.all([

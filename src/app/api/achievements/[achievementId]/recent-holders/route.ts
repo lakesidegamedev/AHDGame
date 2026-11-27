@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { normalizeEarnedAsName } from "@/lib/achievements/earnedAs";
 
 interface RouteParams {
   params: Promise<{ achievementId: string }>;
@@ -44,7 +45,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     return NextResponse.json({
       holders: awards.map((award) => ({
+        // The name the award was earned under comes first, so awards from
+        // retired or replaced characters keep that character's name.
         name:
+          normalizeEarnedAsName(award.characterName) ??
           (award.characterId ? characterNames.get(award.characterId.toString()) : undefined) ??
           (award.userId ? userNames.get(award.userId.toString()) : undefined) ??
           "Player",

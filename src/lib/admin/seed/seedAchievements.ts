@@ -83,6 +83,7 @@ export async function seedAchievements(db: Db, reset: boolean, log: (msg: string
             characterId: char._id,
             achievementId: a._id,
             earnedAt: new Date(),
+            ...(char.name ? { characterName: char.name } : {}),
           });
           adminGrants++;
         } catch {
