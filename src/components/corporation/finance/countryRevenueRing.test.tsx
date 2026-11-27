@@ -13,6 +13,7 @@ const row = (countryId: string, revenue: number) => ({
   maintenanceCosts: 0,
   laborCosts: 0,
   freightCosts: 0,
+  storeGoodsCost: 0,
   growthCosts: 0,
   regulatoryBurden: 0,
   federalTax: 0,

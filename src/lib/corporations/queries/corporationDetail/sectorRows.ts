@@ -534,7 +534,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const freightIncome = revenueBasis.freightIncomeLocal;
     const financialRevenue = revenueBasis.financialRevenueLocal;
     // A store's revenue is shown at the full value of the goods it sold to
-    // households (owner decision 2026-11-27), with what it paid producers as
+    // households, with what it paid producers as
     // its own cost line, so profit is still the markup less running costs.
     // The engine's economic revenue stays the markup: compliance, overhead and
     // revenue effects are charged on it, and nothing here changes them.

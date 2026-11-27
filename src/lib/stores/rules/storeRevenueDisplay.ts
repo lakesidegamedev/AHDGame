@@ -1,5 +1,5 @@
 /**
- * How a store's money is shown (owner decision 2026-11-27): revenue is the full
+ * How a store's money is shown: revenue is the full
  * value of the goods it sold to households, what it paid producers for them is
  * its own cost line, and profit is the markup less running costs.
  *

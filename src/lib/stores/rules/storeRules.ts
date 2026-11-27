@@ -17,7 +17,7 @@ export const STORE_ROUTED_SHARE: Readonly<Partial<Record<CommodityType, number>>
 };
 
 /**
- * Standing markup (owner, 2026-11-27): high enough that retail companies keep
+ * Standing markup: high enough that retail companies keep
  * most of the value the old basket gave them; stores keep the endpoint rules.
  */
 export const STORE_MARKUP_DEFAULT = 0.35;
@@ -27,17 +27,10 @@ export const STORE_MARKUP_MAX = 0.4;
 
 /**
  * Value of goods one unit of store capacity can resell per turn, as a multiple
- * of the value the old basket recipe produced per unit. Sets how many stores a
- * state needs for its household demand, and how much a store's running costs
- * are per unit of goods resold.
- *
- * 4.5 is sized on live turns 232 to 235: a busy store spends about 110 per
- * capacity unit a turn (70 running inputs, 40 wages and site bills) and,
- * with consumer goods on sale, resells about 590 of goods per unit at the old
- * multiple of 3. At 4.5 that is about 880 resold per unit, so at a 15%
- * markup the store earns about 132 of markup, adds about 62 of value over its
- * running inputs and keeps about 22: roughly 35% of its value added. At the
- * 35% standing markup it keeps about 198 of about 238 added.
+ * of what the old basket recipe produced per unit. Sets how many stores a state
+ * needs, and a store's running costs per unit of goods resold. A busy store
+ * costs about 110 per unit a turn and resells about 880 here, so at a 15% markup
+ * it keeps about 35% of its value added; at the 35% standing markup, more.
  */
 export const STORE_THROUGHPUT_MULTIPLE = 4.5;
 
