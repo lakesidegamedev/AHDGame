@@ -397,7 +397,9 @@ export function decideNppCapacityReinvestment({
             computeBuildCost({
               sectorType: sector.sectorType,
               units: 1,
-              strategyId: sector.strategyId ?? null,
+              ...(sector.sectorType === "extraction"
+                ? { strategyId: sector.strategyId ?? null }
+                : {}),
               year: plants.year,
               preset: plants.preset,
               eraUnitScale: plants.eraUnitScale,
@@ -726,6 +728,7 @@ export function decideNppCapacityReinvestment({
           countryId: sector.countryId ?? corp.countryId,
           sectorType: sector.sectorType,
           units: candidate.growthUnits,
+          strategyId: sector.strategyId ?? null,
         });
       }
       cashLocal -= costLocal;

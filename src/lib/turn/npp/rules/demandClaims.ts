@@ -4,25 +4,31 @@
  * The measured gap (demand less supply) only moves when plants come online, so
  * capacity that is ordered but not yet running, or founded earlier in the same
  * pass, would otherwise be built into again. Claims are keyed per bucket for
- * local service lanes, whose gap is a per-region figure, and per country and
+ * regional service lanes, whose gap is a per-region figure, and per country and
  * lane for every other lane, whose gap is national and would be counted again
- * in every region.
+ * in every region. Extraction lanes are also keyed by recipe, because a gas
+ * well's queue does not answer a timber gap.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
-import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import {
+  isCountryBookCommodity,
+  isStateScopedCommodity,
+} from "@/lib/market/rules/commodityMarketScope";
 
 /**
- * Whether every output a sector sells is a state-scoped service. A mixed
- * sector (logistics sells freight and consulting) has a national leg, so its
- * claims are shared across the country.
+ * Whether every output a sector sells is a regional-book service, whose gap is
+ * measured per region (healthcare, real estate). A mixed sector (logistics
+ * sells freight and consulting) has a national leg, and freight and
+ * construction services sell anywhere in their own country, so their gap and
+ * their claims are national.
  */
-export function isStateServiceSupplyMix(
+export function isRegionalBookSupplyMix(
   supplyMix: Partial<Record<CommodityType, number>>
 ): boolean {
   let legs = 0;
   for (const [commodity, rate] of Object.entries(supplyMix) as [CommodityType, number][]) {
     if (!(rate > 0)) continue;
-    if (!isStateScopedCommodity(commodity)) return false;
+    if (!isStateScopedCommodity(commodity) || isCountryBookCommodity(commodity)) return false;
     legs += 1;
   }
   return legs > 0;
