@@ -590,40 +590,44 @@ describe.skipIf(!uri)("federation settlement on an isolated Mongo replica set", 
     });
   });
 
-  it("keeps activation below 150 commands with one hundred protected residents", async () => {
-    const db = client.db(databaseName);
-    await db.collection("characters").insertMany(
-      Array.from({ length: 99 }, () => ({
-        _id: new ObjectId(),
-        countryId: "CS",
-        homeState: "CS_SVK",
-        cash: 50,
-        currentOffice: null,
-      }))
-    );
-    commands = 0;
-    expect(
-      await processRatifiedFederationSettlements(db, "1991-default", 181, 1992, new Date(2))
-    ).toBe(1);
-    const activationCommands = commands;
-    // Measured 146 commands after fixed-cost retirement of dissolved institutions.
-    expect(activationCommands).toBeLessThanOrEqual(150);
-    expect(
-      await db.collection("characters").countDocuments({
-        cash: 50,
-        federationPendingResidenceId: "1991-default:cs-1991-default:1",
-      })
-    ).toBe(100);
-    expect(await db.collection("federationResidentHolds").countDocuments({})).toBe(100);
-    expect(
-      await db
-        .collection("federationRelocations")
-        .countDocuments({ kind: "resident", status: "pending-choice" })
-    ).toBe(100);
-    console.info(
-      `Federation replica-set qualification: 100-resident activation=${activationCommands} commands`
-    );
-  });
+  it.each([1, 100])(
+    "keeps activation below 155 commands with %i protected residents",
+    async (residents) => {
+      const db = client.db(databaseName);
+      if (residents > 1)
+        await db.collection("characters").insertMany(
+          Array.from({ length: residents - 1 }, () => ({
+            _id: new ObjectId(),
+            countryId: "CS",
+            homeState: "CS_SVK",
+            cash: 50,
+            currentOffice: null,
+          }))
+        );
+      commands = 0;
+      expect(
+        await processRatifiedFederationSettlements(db, "1991-default", 181, 1992, new Date(2))
+      ).toBe(1);
+      const activationCommands = commands;
+      // Atomic retirement and its replay witnesses add fixed work, not a read per resident.
+      expect(activationCommands).toBeLessThanOrEqual(155);
+      expect(
+        await db.collection("characters").countDocuments({
+          cash: 50,
+          federationPendingResidenceId: "1991-default:cs-1991-default:1",
+        })
+      ).toBe(residents);
+      expect(await db.collection("federationResidentHolds").countDocuments({})).toBe(residents);
+      expect(
+        await db
+          .collection("federationRelocations")
+          .countDocuments({ kind: "resident", status: "pending-choice" })
+      ).toBe(residents);
+      console.info(
+        `Federation replica-set qualification: ${residents}-resident activation=${activationCommands} commands`
+      );
+    }
+  );
 
   it("continues an ordinary cursor under the transaction deadline without illegal maxTimeMS", async () => {
     const db = client.db(databaseName);

@@ -385,17 +385,16 @@ describe("treasury budgets substep equivalence", () => {
     expect(trips.count("sovereignCouponClaims", "deleteMany")).toBe(1);
     expect(trips.count("sovereignCouponClaims", "bulkWrite")).toBe(1);
     expect(trips.count("bondMarketPools", "bulkWrite")).toBe(1);
-    expect(trips.count("characters", "find")).toBe(1);
+    // The shared payee preload plus one precision check per funded cash book.
+    expect(trips.count("characters", "find")).toBe(50);
     expect(trips.count("ledgerEntries", "bulkWrite")).toBe(1);
     expect(trips.count("federalBudget", "bulkWrite")).toBe(1);
     // Grouped by budget for the payee locks, the oldest-open facts and the
     // pool currencies; none of them reads a claim document per budget.
     expect(trips.count("sovereignCouponClaims", "aggregate")).toBe(3);
-    // The prior cohort used 1059 commands. Payee cash witnesses add fifty-one
-    // guarded publication commands and two shared metadata reads. The cash and
-    // queue assertions above remain unchanged; each paid receipt now owns both
-    // its Treasury and payee ledger entries across retries.
-    expect(trips.total()).toBe(1112);
+    // The 1,112-command receipt protocol adds three projected precision reads
+    // for each of its 49 funded books; it never reads each of the 7,200 claims.
+    expect(trips.total()).toBe(1259);
   }, 300_000);
 
   it("resumes every journal write to the state the crash-free turn reaches", async () => {

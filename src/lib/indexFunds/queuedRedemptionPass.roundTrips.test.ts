@@ -122,10 +122,10 @@ describe("queued redemption pass context", () => {
 
     // One queue read for the whole pass, not one per fund.
     expect(trips.count("indexFundRedemptionQueue", "find")).toBe(1);
-    // One projected read per holder collection.
-    expect(trips.count("npps", "find")).toBe(1);
-    expect(trips.count("characters", "find")).toBe(1);
-    expect(trips.count("imperialCharacters", "find")).toBe(1);
+    // One pass preload and one cash-precision cohort read per holder collection.
+    expect(trips.count("npps", "find")).toBe(2);
+    expect(trips.count("characters", "find")).toBe(2);
+    expect(trips.count("imperialCharacters", "find")).toBe(2);
     // One audit context (thresholds) and one rate read for the pass.
     expect(trips.count("systemSettings", "findOne")).toBe(1);
     expect(trips.count("exchangeRates", "find")).toBe(1);

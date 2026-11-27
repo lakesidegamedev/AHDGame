@@ -4,6 +4,18 @@ import { ObjectId, type Db } from "mongodb";
 // The waiver and the candidate pool now read the VOTING roll, so these cases
 // need an access table. Every country here is player-enabled, which keeps the
 // rolls these tests were written against unchanged.
+// Route policy fixtures; atomic command rollback and races have dedicated suites.
+vi.mock("@/lib/api/withRecordedEconomicCommand", () => ({
+  withRecordedEconomicCommand: async (
+    db: unknown,
+    _kind: unknown,
+    _actor: unknown,
+    _key: unknown,
+    _request: unknown,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+  economicRequestId: () => "synthetic",
+}));
 vi.mock("@/lib/countryAccess", () => ({
   getAllCountryAccess: vi.fn().mockResolvedValue(
     new Proxy({} as Record<string, { enabledForPlayers: boolean }>, {
@@ -33,7 +45,7 @@ vi.mock("@/lib/internationalOrganizations/founding", () => ({
 vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn() }));
 vi.mock("@/lib/internationalOrganizations/diplomaticActions", () => ({
   getDiplomaticActionsRemaining: vi.fn().mockResolvedValue(4),
-  spendDiplomaticAction: vi.fn().mockResolvedValue(undefined),
+  spendDiplomaticAction: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("@/lib/internationalOrganizations/commands/buildMembershipBill", () => ({
   buildMembershipBill: vi.fn().mockResolvedValue(new ObjectId()),

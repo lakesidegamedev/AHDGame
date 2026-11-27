@@ -925,13 +925,14 @@ describe("issueScheduledSovereignBondSeries", () => {
       "bondMarketPools",
       [...new Set([...Object.values(COUNTRY_CURRENCY_MAP), "EUR"])].map((_id) => ({
         _id,
-        cashLocal: 1e18,
+        cashLocal: 1e15,
       }))
     );
     for (const name of ["bankMoneyMoves", "federalBudget", "bondMarketPools"]) {
       const state = memory.collection(name);
       const mock = db.collection(name);
       mock.findOne.mockImplementation(state.findOne.bind(state));
+      mock.find.mockImplementation(state.find.bind(state));
       mock.insertOne.mockImplementation(state.insertOne.bind(state));
       mock.updateOne.mockImplementation(state.updateOne.bind(state));
     }

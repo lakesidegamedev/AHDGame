@@ -178,6 +178,6 @@ describe.skipIf(!uri)("Discord casino routes on isolated Mongo", () => {
     expect(await cash()).toBe(10_002_850);
     expect(
       (await resolveHand(post({ discordId: "p1", gameId: "bj_1", result: "loss" }))).status
-    ).toBe(404);
+    ).toBe(409);
   });
 });

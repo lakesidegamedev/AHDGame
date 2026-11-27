@@ -725,10 +725,10 @@ export const SESSION_COLLECTION_FORWARDERS: readonly LegacyDynamicCollectionSite
  */
 export const MONEY_MOVE_COHORT_READS: readonly LegacyDynamicCollectionSite[] = [
   {
-    file: "src/lib/banking/preflightCashPrecision.ts",
-    owner: "checkCollectionCash",
+    file: "src/lib/db/repositories/moneyMoveTargets.ts",
+    owner: "moneyMoveTargetsCollection",
     argument: "name",
-    scopeHash: "992eff15948614b8566e77b33cc426f73b55a007fe184e27742a7d708365a07e",
+    scopeHash: "500f4a5d6e57694e7f403202ae3f892dc44416871e628935ac0662d6a966eb2f",
     count: 1,
     reason:
       "Reads only the identity and balance paths of existing MoneyMoveLeg targets, grouped by collection with $in. No target is written here. Tests pin one query for both 20 and 2,000 recipients and native profiling measures one additional command per cohort; target guards remain authoritative.",

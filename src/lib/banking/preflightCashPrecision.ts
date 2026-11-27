@@ -1,3 +1,4 @@
+import { moneyMoveTargetsCollection } from "@/lib/db/repositories/moneyMoveTargets";
 import { ObjectId, type Db, type Document } from "mongodb";
 import type { MoneyMoveLeg } from "./moneyMove";
 import { cashDeltaIsRepresented } from "./rules/representedCashDelta";
@@ -58,8 +59,7 @@ async function checkCollectionCash(db: Db, name: string, group: CashGroup): Prom
   const paths = [...group.paths].filter(
     (path) => ![...group.paths].some((parent) => path.startsWith(`${parent}.`))
   );
-  const rows = await db
-    .collection<CashTarget>(name)
+  const rows = await moneyMoveTargetsCollection<CashTarget>(db, name)
     .find(
       { _id: { $in: [...group.ids.values()] } },
       { projection: Object.fromEntries(["_id", ...paths].map((path) => [path, 1])) }
