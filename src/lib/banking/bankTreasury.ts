@@ -4,6 +4,7 @@ import type { Bond } from "@/lib/db/types/bond";
 import type { BankCharter, BankTreasuryTradeReceipt } from "@/lib/db/types/bank";
 import type { BankingPolicySnapshot } from "@/lib/banking/rules/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
+import { bankEquity } from "@/lib/banking/rules/balanceSheet";
 import {
   planBankTreasurySweep,
   allocateBankTreasuryHolderLots,
@@ -716,19 +717,27 @@ export async function sweepBankTreasury(
   );
   if (!bank?.bankCharter || bank.bankCharter.lastTreasurySweepTurn === turn)
     return { trades: 0, completed: 0, pending: 0 };
+  // Net assets as the solvency pass reads them, on the mark this turn just
+  // refreshed. The plan may spend at most this on the ask-to-bid loss.
+  const netAssets =
+    bankEquity(bank.bankCharter, {
+      playerDepositsAreLiabilities: savingsReadsAuthoritative(policy, bank.bankCharter.currency),
+    }) + Math.max(0, bank.bankCharter.propBookMarkValue ?? 0);
   const plannedTrades = planBankTreasurySweep(
     overview.positions.map((position): BankTreasurySweepCandidate => ({
       bondId: position.bondId,
       remainingTurns: position.remainingTurns,
       publicFloatUnits: position.publicFloatUnits ?? 0,
       askPerUnitLocal: position.askPerUnitLocal,
+      bidPerUnitLocal: position.bidPerUnitLocal,
       annualizedContractYieldPercent:
         position.annualizedContractYieldPercent ?? Number.NEGATIVE_INFINITY,
       eligible: position.eligibleToBuy,
     })),
     overview.cashReserves,
     overview.cashFloor.floorLocal,
-    overview.fundingRatePercent
+    overview.fundingRatePercent,
+    Math.max(0, netAssets)
   );
   let trades = 0;
   let completed = 0;
