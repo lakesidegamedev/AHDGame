@@ -182,6 +182,8 @@ export interface NppCorpDecision {
     sectorType: CorporationType;
     units: number;
     countryId: string;
+    /** Extraction recipe, so the claim nets the gap of the resource it mines. */
+    strategyId?: string | null;
   }>;
   strategy?: NppStrategyState;
   reinvestments?: Array<{

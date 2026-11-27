@@ -7,7 +7,7 @@ import { ceoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
 import { makeNppCorpDecision } from "@/lib/turn/nppCorporationBehavior";
 import type { PlacementSignals } from "./marketSignals";
 import { createPaceLedger } from "./buildPacingShell";
-import { NPP_PACE_MAX_PLANTS_PER_LANE, NPP_PACE_UNMET_SHARE } from "./nppCorporationTuning";
+import { NPP_PACE_UNMET_SHARE, NPP_PACE_UNREADABLE_GAP_PLANTS } from "./nppCorporationTuning";
 import { pacedGrowthUnits, paceRoomUnits, priceSignalPersisted } from "./rules/buildPacing";
 import { pacedCandidate } from "./reinvestCandidatePool";
 import { candidate, candidatesByCountry } from "./__fixtures__/marketCandidates";
@@ -62,6 +62,7 @@ function turnSignals(args: {
   const ledger = createPaceLedger({
     gapKeyOf: key,
     grossUnmetOf: () => args.gross,
+    inFlightOf: () => args.inFlight ?? 0,
   });
   return {
     unmetDemandUnitsOf: () => Math.max(0, args.gross - claimed),
@@ -103,52 +104,51 @@ function runPass(signals: PlacementSignals, corps: number) {
 }
 
 describe("buildPacing rules", () => {
-  it("allows the smaller of a share of the gap and the plant ceiling", () => {
+  it("allows a share of the gap left after queued capacity, sized by the gap", () => {
     const plantUnits = 10;
-    expect(
-      paceRoomUnits({
-        grossUnmetUnits: 1000,
-        grantedAgainstGapUnits: 0,
-        grantedInLaneUnits: 0,
-        plantUnits,
-      })
-    ).toBe(NPP_PACE_MAX_PLANTS_PER_LANE * plantUnits);
-    expect(
-      paceRoomUnits({
-        grossUnmetUnits: 60,
-        grantedAgainstGapUnits: 0,
-        grantedInLaneUnits: 0,
-        plantUnits,
-      })
-    ).toBeCloseTo(60 * NPP_PACE_UNMET_SHARE);
+    const base = { grantedAgainstGapUnits: 0, plantUnits };
+    // A gap a hundred plants wide is no longer held to a fixed plant count.
+    expect(paceRoomUnits({ ...base, netUnmetUnits: 1000 })).toBe(1000 * NPP_PACE_UNMET_SHARE);
+    expect(paceRoomUnits({ ...base, netUnmetUnits: 60 })).toBeCloseTo(60 * NPP_PACE_UNMET_SHARE);
   });
 
   it("subtracts what was already granted and never goes negative", () => {
-    expect(
-      paceRoomUnits({
-        grossUnmetUnits: 60,
-        grantedAgainstGapUnits: 100,
-        grantedInLaneUnits: 0,
-        plantUnits: 10,
-      })
-    ).toBe(0);
+    expect(paceRoomUnits({ netUnmetUnits: 60, grantedAgainstGapUnits: 100, plantUnits: 10 })).toBe(
+      0
+    );
+    expect(paceRoomUnits({ netUnmetUnits: 60, grantedAgainstGapUnits: 10, plantUnits: 10 })).toBe(
+      20
+    );
   });
 
-  it("always admits one plant against a small measured gap, and none against none", () => {
-    const base = { grantedAgainstGapUnits: 0, grantedInLaneUnits: 0, plantUnits: 10 };
-    expect(paceRoomUnits({ ...base, grossUnmetUnits: 12 })).toBe(10);
-    expect(paceRoomUnits({ ...base, grossUnmetUnits: 0 })).toBe(0);
+  it("always admits one plant against a small open gap, and none against none", () => {
+    const base = { grantedAgainstGapUnits: 0, plantUnits: 10 };
+    expect(paceRoomUnits({ ...base, netUnmetUnits: 12 })).toBe(10);
+    expect(paceRoomUnits({ ...base, netUnmetUnits: 0 })).toBe(0);
   });
 
-  it("does not cap an unreadable gap by share", () => {
-    expect(
-      paceRoomUnits({
-        grossUnmetUnits: null,
-        grantedAgainstGapUnits: 0,
-        grantedInLaneUnits: 0,
-        plantUnits: 10,
-      })
-    ).toBe(NPP_PACE_MAX_PLANTS_PER_LANE * 10);
+  it("holds an unreadable gap to a few plants", () => {
+    expect(paceRoomUnits({ netUnmetUnits: null, grantedAgainstGapUnits: 0, plantUnits: 10 })).toBe(
+      NPP_PACE_UNREADABLE_GAP_PLANTS * 10
+    );
+  });
+
+  it("nets capacity under construction out of the gap", () => {
+    const ledger = createPaceLedger({
+      gapKeyOf: (cell) => `${cell.countryId}|${cell.sectorType}`,
+      grossUnmetOf: () => STARTER * 10,
+      inFlightOf: () => STARTER * 6,
+    });
+    const cell = { stateId: "NY", countryId: "US", sectorType: LANE };
+    expect(ledger.roomOf(cell, [])).toBe(STARTER * 4 * NPP_PACE_UNMET_SHARE);
+    ledger.grant(cell, STARTER);
+    expect(ledger.roomOf(cell, [])).toBe(STARTER * 4 * NPP_PACE_UNMET_SHARE - STARTER);
+    const covered = createPaceLedger({
+      gapKeyOf: (c) => `${c.countryId}|${c.sectorType}`,
+      grossUnmetOf: () => STARTER * 10,
+      inFlightOf: () => STARTER * 10,
+    });
+    expect(covered.roomOf(cell, [])).toBe(0);
   });
 
   it("cuts growth to whole plants and to nothing below one plant", () => {
@@ -194,16 +194,36 @@ describe("NPP build pacing", () => {
     const signals = turnSignals({ gross, persisted: true });
     const founded = runPass(signals, 12);
     const total = founded.reduce((sum, units) => sum + units, 0);
-    expect(founded.length).toBeLessThanOrEqual(NPP_PACE_MAX_PLANTS_PER_LANE);
-    expect(total).toBeLessThanOrEqual(NPP_PACE_MAX_PLANTS_PER_LANE * STARTER);
     expect(total).toBeLessThanOrEqual(gross * NPP_PACE_UNMET_SHARE);
     expect(total).toBeGreaterThan(0);
+  });
+
+  it("a gap far wider than six plants is no longer held to six plants a turn", () => {
+    const ledger = createPaceLedger({
+      gapKeyOf: (cell) => `${cell.countryId}|${cell.sectorType}`,
+      grossUnmetOf: () => STARTER * 40,
+    });
+    const cell = { stateId: "NY", countryId: "US", sectorType: LANE };
+    expect(ledger.roomOf(cell, [])).toBe(STARTER * 20);
+    expect(ledger.roomOf(cell, [])).toBeGreaterThan(STARTER * 6);
+  });
+
+  it("a balanced market gets no new NPP builds", () => {
+    expect(runPass(turnSignals({ gross: 0, persisted: true }), 12)).toEqual([]);
   });
 
   it("capacity already queued counts against the gap, so a full queue admits nothing", () => {
     const gross = STARTER * 6;
     const signals = turnSignals({ gross, inFlight: gross, persisted: true });
     expect(runPass(signals, 12)).toEqual([]);
+  });
+
+  it("capacity already queued shrinks the turn's budget to the gap it leaves", () => {
+    const gross = STARTER * 20;
+    const inFlight = STARTER * 16;
+    const founded = runPass(turnSignals({ gross, inFlight, persisted: true }), 12);
+    const total = founded.reduce((sum, units) => sum + units, 0);
+    expect(total).toBeLessThanOrEqual((gross - inFlight) * NPP_PACE_UNMET_SHARE);
   });
 
   it("a one-turn price spike founds nothing, and a held signal does", () => {
@@ -227,7 +247,7 @@ describe("NPP build pacing", () => {
       perTurn.push(arriving);
     }
     online += arriving;
-    expect(Math.max(...perTurn)).toBeLessThanOrEqual(NPP_PACE_MAX_PLANTS_PER_LANE * STARTER);
+    expect(perTurn[0]).toBeLessThanOrEqual(demand * NPP_PACE_UNMET_SHARE);
     expect(online).toBeLessThanOrEqual(demand);
     expect(online).toBeGreaterThanOrEqual(demand * 0.9);
     expect(perTurn.filter((units) => units > 0).length).toBeGreaterThan(3);

@@ -32,6 +32,8 @@ import {
   loadPriorPriceSnapshots,
 } from "@/lib/turn/npp/buildPacingShell";
 import { demandClaimKeyOf, loadInFlightDemandClaims } from "@/lib/turn/npp/demandClaimsShell";
+import { createLegGapReader } from "@/lib/turn/npp/rules/fundedCellGap";
+import { loadFundedBuildDemand } from "@/lib/corporations/loadFundedBuildDemand";
 import { strategyStateNeedsPersist } from "@/lib/turn/npp/rules/strategyCadence";
 export { makeNppCorpDecision } from "@/lib/turn/npp/makeCorpDecision";
 import {
@@ -421,7 +423,24 @@ export async function processNppCorporationDecisions(
   // Capacity already ordered (build queues) or claimed earlier in this pass. The
   // measured gap only moves when plants come online, so unmet demand is read net
   // of it; otherwise two corporations would found into a gap that fits one plant.
-  const demandClaims = await loadInFlightDemandClaims(db, countryOfState);
+  const demandClaims = await loadInFlightDemandClaims(db, countryOfState, turn);
+  // Queued capacity as the pass found it; the pace ledger counts this pass's
+  // grants itself.
+  const inFlightAtStart = new Map(demandClaims);
+  // The funded order book the player build dialog reads (corporations/buildRoom):
+  // every buyer, government and company building included. The price documents
+  // stay the reading only on a world that has not published one.
+  const fundedBook = await loadFundedBuildDemand(
+    db,
+    strategyGate?.worldEpochId
+      ? { currentTurn: turn, worldEpochId: strategyGate.worldEpochId }
+      : null
+  );
+  const legGap = createLegGapReader({
+    fundedRows: fundedBook?.rows ?? null,
+    priceDocOf: (commodity) => priceByCommodity.get(commodity),
+    isStateScoped: isStateScopedCommodity,
+  });
   // The measured gap and the claim key depend only on the bucket, the recipe and
   // the price books, none of which move during the pass; claims are read live.
   const storeSalesLast = strategyGate?.worldEpochId
@@ -432,12 +451,13 @@ export async function processNppCorporationDecisions(
     cell: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[0],
     options: Parameters<NonNullable<PlacementSignals["unmetDemandUnitsOf"]>>[1]
   ) => {
-    const memoKey = `${cell.countryId}|${cell.stateId}|${cell.sectorType}|${options?.strategyId ?? ""}|${options?.aggregate ?? "mean"}`;
+    const strategyId = options?.strategyId ?? null;
+    const memoKey = `${cell.countryId}|${cell.stateId}|${cell.sectorType}|${strategyId ?? ""}|${options?.aggregate ?? "mean"}`;
     const cached = gapMemo.get(memoKey);
     if (cached) return cached;
     // The mix the new plant would actually run: its founding strategy, else the
     // sector default (getStrategy falls back to it).
-    const fullMix = getStrategy(cell.sectorType, options?.strategyId ?? "").supply;
+    const fullMix = getStrategy(cell.sectorType, strategyId ?? "").supply;
     const supplyMix = depositBoundSupplyMix(
       fullMix,
       cell,
@@ -457,17 +477,9 @@ export async function processNppCorporationDecisions(
           : cellUnmetDemandUnits({
               supplyMix,
               aggregate: options?.aggregate,
-              gapFor: (commodity) => {
-                const doc = priceByCommodity.get(commodity);
-                if (!doc) return null;
-                const [supply, demand] = isStateScopedCommodity(commodity)
-                  ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
-                  : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
-                if (typeof supply !== "number" || typeof demand !== "number") return null;
-                return Math.max(0, demand - supply);
-              },
+              gapFor: (commodity) => legGap(commodity, cell),
             }),
-      claimKey: demandClaimKeyOf(cell),
+      claimKey: demandClaimKeyOf({ ...cell, strategyId }),
     };
     gapMemo.set(memoKey, value);
     return value;
@@ -477,13 +489,14 @@ export async function processNppCorporationDecisions(
   const paceLedger = createPaceLedger({
     gapKeyOf: demandClaimKeyOf,
     grossUnmetOf: (cell, options) => readGap(cell, options).unmet,
+    inFlightOf: (gapKey) => inFlightAtStart.get(gapKey) ?? 0,
   });
   const priorPrices = await loadPriorPriceSnapshots(db, commodityPriceDocs);
   placementSignals.priceSignalPersistedOf = createPricePersistence(priceByCommodity, priorPrices);
   placementSignals.paceRoomUnitsOf = (cell, pending, options) =>
     paceLedger.roomOf(cell, pending, options);
   placementSignals.claimDemandUnits = (cell, units) => {
-    addDemandClaim(demandClaims, readGap(cell, undefined).claimKey, units);
+    addDemandClaim(demandClaims, demandClaimKeyOf(cell), units);
     paceLedger.grant(cell, units);
   };
   placementSignals.unmetDemandUnitsOf = (cell, options) => {
