@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AchievementIcon } from "@/lib/utils/achievementIcons";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { fetchAdminDirectoryUsers } from "../userDirectory";
+import { EARNED_AS_NAME_MAX_LENGTH } from "@/lib/achievements/earnedAs";
 
 interface AchievementRow {
   id: string;
@@ -37,6 +38,7 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
   const [activeTab, setActiveTab] = useState<ActionTab>("grant");
   const [grantCharacterId, setGrantCharacterId] = useState("");
   const [grantSlug, setGrantSlug] = useState("");
+  const [grantEarnedAs, setGrantEarnedAs] = useState("");
   const [revokeCharacterId, setRevokeCharacterId] = useState("");
   const [revokeSlug, setRevokeSlug] = useState("");
   const [bulkSlug, setBulkSlug] = useState("alpha_tester");
@@ -97,7 +99,12 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
   const handleGrant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!grantCharacterId || !grantSlug) return;
-    await postAchievement("grant", { characterId: grantCharacterId, achievementSlug: grantSlug });
+    const earnedAs = grantEarnedAs.trim();
+    await postAchievement("grant", {
+      characterId: grantCharacterId,
+      achievementSlug: grantSlug,
+      ...(earnedAs ? { earnedAs } : {}),
+    });
   };
 
   const handleRevoke = async (e: React.FormEvent) => {
@@ -249,6 +256,24 @@ export function AchievementsTab({ context = "admin" }: AchievementsTabProps) {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label htmlFor="grant-earned-as" className="mb-2 block text-body font-medium">
+                  Earned as (optional)
+                </label>
+                <input
+                  id="grant-earned-as"
+                  type="text"
+                  value={grantEarnedAs}
+                  maxLength={EARNED_AS_NAME_MAX_LENGTH}
+                  onChange={(e) => setGrantEarnedAs(e.target.value)}
+                  placeholder="Character name from an earlier iteration"
+                  className="w-full rounded-lg border border-card-border bg-background px-3 py-2.5 text-body focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <p className="mt-1 text-body-sm text-muted">
+                  Leave blank to record the selected character. Fill in to show the award as earned
+                  by an earlier character.
+                </p>
               </div>
               <button
                 type="submit"

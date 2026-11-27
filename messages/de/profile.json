@@ -305,6 +305,7 @@
       "viewAll": "Alle Erfolge ansehen",
       "quickPeek": "Kurzer Blick",
       "showLess": "Weniger anzeigen",
+      "earnedAs": "Errungen als {name}",
       "scopeNote": "von diesem Charakter errungen; {account} über alle Charaktere dieses Spielers, das zählt die Bestenliste"
     },
     "lightbox": {

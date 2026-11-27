@@ -308,6 +308,7 @@
       "viewAll": "View all achievements",
       "quickPeek": "Quick peek",
       "showLess": "Show less",
+      "earnedAs": "Earned as {name}",
       "scopeNote": "earned by this character; {account} across all of this player's characters, which is what the leaderboard counts"
     },
     "lightbox": {

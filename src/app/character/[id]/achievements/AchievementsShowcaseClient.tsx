@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 import { AchievementIcon } from "@/lib/utils/achievementIcons";
 import { getRarityStyle, type RarityTier } from "@/lib/utils/achievementRarity";
@@ -21,6 +22,8 @@ interface AchievementItem {
   icon: string;
   category: string;
   earnedAt: string | null;
+  /** Earlier character's name when the award was earned under another name. */
+  earnedAs?: string | null;
   rarity: number;
   earned: boolean;
   isHidden: boolean;
@@ -31,6 +34,12 @@ interface AchievementItem {
 interface RecentHolder {
   name: string;
   earnedAt: string;
+}
+
+function EarnedAsNote({ name, className }: { name?: string | null; className: string }) {
+  const t = useTranslations("profile.achievements");
+  if (!name) return null;
+  return <p className={className}>{t("earnedAs", { name })}</p>;
 }
 
 const CATEGORIES = ["special", "election", "legislation", "action", "social", "milestone"];
@@ -217,6 +226,12 @@ export function AchievementsShowcaseClient({
                         <p className="mt-1 text-body-sm text-muted">
                           {hidden ? "Hidden achievement" : item.description}
                         </p>
+                        {item.earned && (
+                          <EarnedAsNote
+                            name={item.earnedAs}
+                            className="mt-1 text-body-sm font-medium text-foreground"
+                          />
+                        )}
                         <p
                           className="mt-3 text-body-sm font-semibold"
                           style={{ color: rarity.borderColor }}
@@ -241,6 +256,12 @@ export function AchievementsShowcaseClient({
         {selected && (
           <div>
             <p className="text-body text-muted">{selected.description}</p>
+            {selected.earned && (
+              <EarnedAsNote
+                name={selected.earnedAs}
+                className="mt-2 text-body font-medium text-foreground"
+              />
+            )}
             <h3 className="mt-5 font-semibold text-foreground">Recently unlocked by</h3>
             {holdersLoading ? (
               <p className="mt-2 text-body-sm text-muted">Loading...</p>

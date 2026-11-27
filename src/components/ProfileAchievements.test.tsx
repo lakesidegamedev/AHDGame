@@ -123,6 +123,31 @@ describe("ProfileAchievements", () => {
     expect(screen.getByText("No achievements earned yet.")).toBeTruthy();
   });
 
+  it("names the earlier character on an award earned under another name", async () => {
+    fetchJson.mockResolvedValue({
+      highlighted: [],
+      allAchievements: [{ ...earned, earnedAs: "Ronald Reagan" }],
+      totalEarned: 1,
+      totalAchievements: 67,
+    });
+    renderAchievements();
+
+    await waitFor(() => expect(screen.getAllByText("Earned as Ronald Reagan").length).toBe(1));
+  });
+
+  it("adds no earned-as line when the award was earned under this name", async () => {
+    fetchJson.mockResolvedValue({
+      highlighted: [],
+      allAchievements: [{ ...earned, earnedAs: null }],
+      totalEarned: 1,
+      totalAchievements: 67,
+    });
+    renderAchievements();
+
+    await waitFor(() => expect(screen.getByText("1/67")).toBeTruthy());
+    expect(screen.queryByText(/Earned as/)).toBeNull();
+  });
+
   it("counts the earned badges it lists", async () => {
     fetchJson.mockResolvedValue({
       highlighted: [],

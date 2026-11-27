@@ -20,6 +20,30 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
+import { loadCharacterNames } from "./characterNames";
+import { normalizeEarnedAsName } from "./earnedAs";
+
+/** Extra details stored on a new award row. */
+export interface AwardOptions {
+  /**
+   * The name to store as the earning character. Defaults to the character's
+   * current name; staff set it for hand grants that stand in for an award
+   * earned by an earlier character.
+   */
+  characterName?: string;
+}
+
+/** The stored character name for a new award: the override, else the live name. */
+async function resolveAwardCharacterName(
+  db: Db,
+  characterId: ObjectId | undefined,
+  options: AwardOptions
+): Promise<string | undefined> {
+  const override = normalizeEarnedAsName(options.characterName);
+  if (override) return override;
+  if (!characterId) return undefined;
+  return (await loadCharacterNames(db, [characterId])).get(characterId.toString());
+}
 
 /**
  * Whether a character already shows an achievement, judged by the same rule the
@@ -120,13 +144,15 @@ export async function getAllAchievements(): Promise<Achievement[]> {
  * @param achievementSlug - slug of the achievement definition
  * @param characterId - optional: which character earned it (historical context)
  * @param grantedBy - optional: admin who granted it
+ * @param options - optional: stored character name override
  * @returns true if newly awarded, false if already had it or error
  */
 export async function awardAchievement(
   userId: ObjectId,
   achievementSlug: string,
   characterId?: ObjectId,
-  grantedBy?: ObjectId
+  grantedBy?: ObjectId,
+  options: AwardOptions = {}
 ): Promise<boolean> {
   try {
     const achievement = await getAchievementBySlug(achievementSlug);
@@ -142,6 +168,7 @@ export async function awardAchievement(
       .toArray();
     if (await rowsCoverCharacter(db, userId, characterId, existingRows)) return false;
 
+    const characterName = await resolveAwardCharacterName(db, characterId, options);
     try {
       await characterAchievementsCollection(db).insertOne({
         _id: new ObjectId(),
@@ -150,6 +177,7 @@ export async function awardAchievement(
         achievementId: achievement._id,
         earnedAt: new Date(),
         grantedBy,
+        ...(characterName ? { characterName } : {}),
       });
     } catch (insertError: unknown) {
       // Race condition: a concurrent call passed the findOne check and inserted first.
@@ -179,17 +207,21 @@ export async function awardAchievement(
  * @param achievementSlugs - slugs to award
  * @param characterId - optional: which character earned them
  * @param grantedBy - optional: admin who granted them
+ * @param options - optional: stored character name override
  * @returns number of newly awarded achievements
  */
 export async function awardAchievements(
   userId: ObjectId,
   achievementSlugs: string[],
   characterId?: ObjectId,
-  grantedBy?: ObjectId
+  grantedBy?: ObjectId,
+  options: AwardOptions = {}
 ): Promise<number> {
   if (achievementSlugs.length === 0) return 0;
   if (achievementSlugs.length === 1) {
-    return (await awardAchievement(userId, achievementSlugs[0], characterId, grantedBy)) ? 1 : 0;
+    return (await awardAchievement(userId, achievementSlugs[0], characterId, grantedBy, options))
+      ? 1
+      : 0;
   }
 
   try {
@@ -226,17 +258,18 @@ export async function awardAchievements(
     }
 
     // 3. Insert only new ones in a single batch
-    const toInsert: CharacterAchievement[] = achievements
-      .filter((a) => !existingIds.has(a._id.toString()))
-      .map((a) => ({
-        _id: new ObjectId(),
-        userId,
-        characterId,
-        achievementId: a._id,
-        earnedAt: new Date(),
-        grantedBy,
-      }));
-    if (toInsert.length === 0) return 0;
+    const pending = achievements.filter((a) => !existingIds.has(a._id.toString()));
+    if (pending.length === 0) return 0;
+    const characterName = await resolveAwardCharacterName(db, characterId, options);
+    const toInsert: CharacterAchievement[] = pending.map((a) => ({
+      _id: new ObjectId(),
+      userId,
+      characterId,
+      achievementId: a._id,
+      earnedAt: new Date(),
+      grantedBy,
+      ...(characterName ? { characterName } : {}),
+    }));
 
     // ordered: false so duplicate-key races (concurrent award of same achievement)
     // insert the non-duplicate documents instead of aborting the entire batch.
@@ -310,6 +343,7 @@ export async function getAccountAchievements(
   Array<{
     achievement: Achievement;
     earnedAt: Date;
+    characterName?: string;
   }>
 > {
   try {
@@ -353,9 +387,13 @@ export async function loadAccountAchievements(
     .map((ca) => {
       const a = aMap.get(ca.achievementId.toString());
       if (!a) return null;
-      return { achievement: a, earnedAt: ca.earnedAt };
+      const characterName = normalizeEarnedAsName(ca.characterName) ?? undefined;
+      return { achievement: a, earnedAt: ca.earnedAt, characterName };
     })
-    .filter((x): x is { achievement: Achievement; earnedAt: Date } => x !== null)
+    .filter(
+      (x): x is { achievement: Achievement; earnedAt: Date; characterName: string | undefined } =>
+        x !== null
+    )
     .sort((x, y) => x.achievement.order - y.achievement.order);
 }
 

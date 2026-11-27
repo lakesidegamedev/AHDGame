@@ -28,6 +28,7 @@ import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficia
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 import { invalidateDefinitionsCache, invalidateRarityCache } from "@/lib/achievements/cache";
+import { normalizeEarnedAsName } from "@/lib/achievements/earnedAs";
 import {
   INTERNATIONAL_LEADER_ACHIEVEMENT,
   INTERNATIONAL_LEADER_SLUG,
@@ -289,7 +290,14 @@ export async function syncCareerPosts(db: Db, now: Date = new Date()): Promise<C
         ],
       },
       {
-        projection: { userId: 1, countryId: 1, currentOffice: 1, careerPosts: 1, careerHistory: 1 },
+        projection: {
+          name: 1,
+          userId: 1,
+          countryId: 1,
+          currentOffice: 1,
+          careerPosts: 1,
+          careerHistory: 1,
+        },
       }
     )
     .toArray();
@@ -317,7 +325,11 @@ export async function syncCareerPosts(db: Db, now: Date = new Date()): Promise<C
   }
 
   const writes: AnyBulkWriteOperation<Character>[] = [];
-  const newInternationalLeaders: { userId: ObjectId; characterId: ObjectId }[] = [];
+  const newInternationalLeaders: {
+    userId: ObjectId;
+    characterId: ObjectId;
+    characterName: string | null;
+  }[] = [];
   let eventsWritten = 0;
 
   for (const character of characters) {
@@ -360,6 +372,7 @@ export async function syncCareerPosts(db: Db, now: Date = new Date()): Promise<C
       newInternationalLeaders.push({
         userId: character.userId as ObjectId,
         characterId: character._id as ObjectId,
+        characterName: normalizeEarnedAsName(character.name),
       });
     }
   }
@@ -373,7 +386,7 @@ export async function syncCareerPosts(db: Db, now: Date = new Date()): Promise<C
     const achievementId = await ensureInternationalLeaderAchievement(db);
     if (achievementId) {
       const result = await characterAchievementsCollection<Document>(db).bulkWrite(
-        newInternationalLeaders.map(({ userId, characterId }) => ({
+        newInternationalLeaders.map(({ userId, characterId, characterName }) => ({
           updateOne: {
             filter: { userId, achievementId },
             update: {
@@ -383,6 +396,7 @@ export async function syncCareerPosts(db: Db, now: Date = new Date()): Promise<C
                 characterId,
                 achievementId,
                 earnedAt: now,
+                ...(characterName ? { characterName } : {}),
               },
             },
             upsert: true,
