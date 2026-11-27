@@ -64,6 +64,7 @@ import {
   computeInfamyPenalty,
   computeTurnGain,
   computeBonusActions,
+  loadLeadershipBonusOptions,
 } from "@/lib/parties/influenceQueries";
 import { PolicyDemographicsCard } from "./components/PolicyDemographicsCard";
 import { CharacterStatsPanel } from "./components/CharacterStatsPanel";
@@ -726,7 +727,11 @@ export default async function ProfilePage({
       party.economicPosition,
       party.socialPosition
     );
-    const lBonus = computeLeadershipBonus(character._id, party);
+    const lBonus = computeLeadershipBonus(
+      character._id,
+      party,
+      await loadLeadershipBonusOptions(await getDb(), character._id)
+    );
     const piMaxPenalty = gameConfig?.partyInfluenceMaxPenalty ?? 4;
     const piPenalty = computeInfamyPenalty(infamy, piMaxPenalty);
     const piBaseRate = gameConfig?.partyInfluenceBaseRate ?? 3;

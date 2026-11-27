@@ -571,3 +571,30 @@ describe("processPartyInfluenceTurn", () => {
     expect(mockBulkWrite).not.toHaveBeenCalled();
   });
 });
+
+describe("loadLeadershipBonusOptions", () => {
+  it("reads state and caucus roles so previews match the turn's bonus", async () => {
+    const { loadLeadershipBonusOptions, computeLeadershipBonus } =
+      await import("./partyInfluenceTurn");
+    const me = new ObjectId();
+    const rows: Record<string, unknown[]> = {
+      statePartyOrg: [{ chairId: me, viceChairId: null }],
+      caucuses: [{ chairId: new ObjectId(), viceChairId: me }],
+    };
+    const db = {
+      collection: (name: string) => ({
+        find: () => ({ toArray: async () => rows[name] ?? [] }),
+      }),
+    } as never;
+    const options = await loadLeadershipBonusOptions(db, me);
+    expect(options).toEqual({
+      isStateChair: true,
+      isStateViceChair: false,
+      isCaucusChair: false,
+      isCaucusViceChair: true,
+    });
+    const party = { chairId: null, viceChairId: me, treasurerId: null, committeeIds: [] };
+    // National vice chair +2, state chair +2, caucus vice chair +1.
+    expect(computeLeadershipBonus(me, party, options)).toBe(5);
+  });
+});
