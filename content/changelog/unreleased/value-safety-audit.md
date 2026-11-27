@@ -30,6 +30,7 @@ areas: [fullstack, engine]
   until their obligations can be resolved.
 - Financial dialogs validate quantities and current quotes before spending.
   Forecasts, historical figures and incomplete records have clearer labels.
+- CEO attrition preserves plant wear and facility counts when a turn resumes.
 - Turn settlement and recovery paths retain completion proofs and pending
   obligations so interruptions cannot silently erase a claim or repeat a
   completed charge.

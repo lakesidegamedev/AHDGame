@@ -227,6 +227,7 @@ async function applySectorShed(
               plantWearUnits: wholeShed.plantWearUnits,
             }
           : seedPlantLedger(s, s.capitalStock);
+        Object.assign(s, plantLedger);
         s.workers = workers - shedWorkers;
         if (nextBook != null) s.capacityBookAnchor = nextBook;
         s.updatedAt = now;
