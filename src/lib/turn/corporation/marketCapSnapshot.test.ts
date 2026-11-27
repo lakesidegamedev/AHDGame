@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import {
   loadPriorCreditRatings,
+  recordedRevenueAndCosts,
   resolveSnapshotDenomination,
   foldDividendTaxIntoTaxMaps,
   isStockMarketCorporation,
@@ -158,5 +159,38 @@ describe("loadPriorCreditRatings", () => {
       [rated.toString()]: "AA",
       [unratedLatest.toString()]: "BBB",
     });
+  });
+});
+
+describe("recordedRevenueAndCosts", () => {
+  const costBreakdown = {
+    wages: 30,
+    inputs: 20,
+    maintenance: 10,
+    managementOverhead: 0,
+    dominanceCost: 0,
+    freight: 0,
+    budgets: 5,
+    other: 5,
+  };
+  it("records a store company's revenue at the full value of goods sold, income unchanged", () => {
+    // Markup 120 (economic revenue), costs 70, goods resold 300.
+    const r = recordedRevenueAndCosts(
+      { revenue: 120, totalCosts: 70, storeGoods: 300, costBreakdown },
+      (x) => x * 2
+    );
+    expect(r.revenue).toBe(840);
+    expect(r.totalCosts).toBe(740);
+    expect(r.revenue - r.totalCosts).toBe((120 - 70) * 2);
+    expect(r.storeGoodsCost).toBe(600);
+    expect(r.costBreakdown?.goodsResold).toBe(600);
+    // The cost parts still add up to the recorded total.
+    const parts = Object.values(r.costBreakdown!).reduce((n, v) => n + (v ?? 0), 0);
+    expect(parts).toBe(r.totalCosts);
+  });
+
+  it("changes nothing for a company without stores", () => {
+    const r = recordedRevenueAndCosts({ revenue: 120, totalCosts: 70, costBreakdown }, (x) => x);
+    expect(r).toEqual({ revenue: 120, totalCosts: 70, costBreakdown });
   });
 });

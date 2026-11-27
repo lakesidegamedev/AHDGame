@@ -351,6 +351,31 @@ describe("funded producer turn after a missed economy step", () => {
 });
 
 describe("fundedReceiptOf", () => {
+  it("carries a store's goods resold beside revenue, never inside it", async () => {
+    const { fundedSectorResult } = await import("@/lib/market/producerMarket/fundedSectorRules");
+    const { fundedReceiptOf } = await import("./fundedProducerTurn");
+    const receipt = fundedReceiptOf(
+      {
+        revenue: 40,
+        profit: 25,
+        producedUnits: 3,
+        soldUnits: 3,
+        store: { goodsBoughtWholesale: 100, markupEarned: 40, wholesaleByCommodity: {} },
+      },
+      0
+    );
+    expect(receipt.storeGoodsResold).toBe(100);
+    const result = fundedSectorResult(
+      { hourlyRevenue: 0, costs: 0, effectiveMargin: 0, hourlyGrowthCost: 0 } as Parameters<
+        typeof fundedSectorResult
+      >[0],
+      receipt
+    );
+    // Economic revenue stays the markup; the goods ride beside it.
+    expect(result.hourlyRevenue).toBe(40);
+    expect(result.storeGoodsResold).toBe(100);
+  });
+
   it("carries priced own-site charges and income into the sector accounts", async () => {
     const { fundedSectorOpsAll } = await import("@/lib/market/producerMarket/fundedSectorRules");
     const { fundedReceiptOf } = await import("./fundedProducerTurn");

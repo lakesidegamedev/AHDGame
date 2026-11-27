@@ -320,18 +320,9 @@ export interface GameConfig extends ProducerGameConfig {
 
   /**
    * Standing markup stores add to goods households buy through them, as a
-   * fraction of the wholesale price. Kept between 0.10 and 0.40; absent = 0.35.
+   * fraction of the wholesale price. Kept between 0.10 and 0.40; absent = 0.40.
    */
   storeMarkup?: number;
-
-  /**
-   * Changeover from retail baskets to stores: the markup starts at
-   * `startMarkup` (absent = 0.40) on `startTurn` and steps down to
-   * `storeMarkup` over `turns` turns (absent = 4). The first live turn
-   * with stores stamps an absent `startTurn`. For no changeover, set
-   * `startMarkup` equal to `storeMarkup`.
-   */
-  storeTransition?: { startTurn?: number; turns?: number; startMarkup?: number };
 
   /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired

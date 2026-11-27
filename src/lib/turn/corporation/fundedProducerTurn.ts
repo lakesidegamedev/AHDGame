@@ -175,6 +175,7 @@ export function fundedReceiptOf(
         | "labourArrears"
         | "otherOperatingPaid"
         | "otherOperatingArrears"
+        | "store"
       >
     > & { turn?: number },
   transitionSupport: number
@@ -190,6 +191,9 @@ export function fundedReceiptOf(
     inputsConsumed: r.inputsConsumed ?? 0,
     labour: (r.labourPaid ?? 0) + (r.labourArrears ?? 0),
     siteOperating: (r.otherOperatingPaid ?? 0) + (r.otherOperatingArrears ?? 0),
+    ...(r.store && r.store.goodsBoughtWholesale > 0
+      ? { storeGoodsResold: r.store.goodsBoughtWholesale }
+      : {}),
     // Priced own-site deliveries: without these the sector accounts show no charge or income.
     ...(r.internalSupplyIncome ? { internalSupplyIncome: r.internalSupplyIncome } : {}),
     ...(r.internalSupplyCharge ? { internalSupplyCharge: r.internalSupplyCharge } : {}),
@@ -796,14 +800,6 @@ async function prepareRunFundedProducerTurn(
     await gameConfigCollection(db).updateOne(
       { _id: "default", householdSpendingPowerStartTurn: { $exists: false } },
       { $set: { householdSpendingPowerStartTurn: demand.householdSpendingPowerStartTurnToStamp } }
-    );
-
-  // First live funded turn with stores: stamp the start of the markup
-  // changeover, which this turn's settlement already read as starting now.
-  if (input.env.storeMarkup != null && input.env.storeTransition?.startTurn == null)
-    await gameConfigCollection(db).updateOne(
-      { _id: "default", "storeTransition.startTurn": { $exists: false } },
-      { $set: { "storeTransition.startTurn": turn } }
     );
 
   if (input.seedHouseholds) {
