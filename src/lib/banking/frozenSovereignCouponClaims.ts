@@ -152,6 +152,10 @@ export function groupedRecords(
       claim: row.claim,
       createdAt: new Date(),
       bondIds: row.bondIds,
+      bondAmountsAnchor: (parts.get(row.claim.id) ?? []).map((part) => ({
+        bondId: part.bondId,
+        amountAnchor: part.amountLocal / part.anchorRate,
+      })),
     };
   });
   return { records, parts };

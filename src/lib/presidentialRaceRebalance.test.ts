@@ -632,6 +632,7 @@ describe("Presidential general election — full path (accumulatePresidentVoteTu
         return {
           findOne: vi.fn().mockResolvedValue({
             electionId,
+            turnSnapshots: [],
             totalVotes: tally.totalVotes,
             totalVotesByUnit: tally.totalVotesByUnit,
             unitTurnSnapshots: {},

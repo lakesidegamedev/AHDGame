@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
@@ -6,7 +8,7 @@ import { reinforceUnit, manpowerCeiling } from "@/lib/military/manpower";
 import { resolveConscriptionStanceFor } from "@/lib/military/conscriptionLaw";
 import { ATTRITION } from "@/lib/military/config";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { boundSession } from "@/lib/db/sessionDb";
 import { allocateReinforcements } from "@/lib/military/rules/reinforcementAllocation";
 import { statesCollection } from "@/lib/db/repositories/states";
 
@@ -21,15 +23,32 @@ import { statesCollection } from "@/lib/db/repositories/states";
 export async function applyReinforcement(
   db: Db,
   countryId: string,
-  knownUnits?: MilitaryUnit[]
+  _knownUnits?: MilitaryUnit[],
+  currentTurn?: number
+): Promise<{ regenerated: number; reinforced: number; drawn: number }> {
+  const turn =
+    currentTurn ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ??
+    0;
+  return withTurnValueSettlement(
+    db,
+    "military-reinforcement",
+    turn,
+    (db) => reinforceInTransaction(db, countryId),
+    { sourceKey: `${countryId}:${turn}` }
+  );
+}
+
+async function reinforceInTransaction(
+  db: Db,
+  countryId: string
 ): Promise<{ regenerated: number; reinforced: number; drawn: number }> {
   const stance = await resolveConscriptionStanceFor(db, countryId);
 
-  // Population and the optional tick-wide unit snapshot are stable inputs. The live
-  // manpower row is read inside the transaction below so another writer cannot slip
-  // between replacement planning and the debit that pays for it.
+  // The roster and pool share one snapshot, so delivery cannot overwrite newer losses.
   const states = await statesCollection<{ population?: number }>(db)
-    .find({ countryId: countryId as CountryId })
+    .find({ countryId: countryId as CountryId }, { projection: { population: 1 } })
     .toArray();
   const population = states.reduce((a, s) => a + (s.population ?? 0), 0);
   const cap = manpowerCeiling(population, stance.poolMult);
@@ -50,12 +69,10 @@ export async function applyReinforcement(
     // A nation whose stance forbids conscription reinforces with trained men instead.
     const effectiveMode = mode === "conscript" && !stance.conscriptAllowed ? "trained" : mode;
     const unitsCol = getMilitaryUnitsCollection(db);
-    const units =
-      knownUnits ??
-      (await unitsCol
-        .find({ countryId: countryId as CountryId }, { session })
-        .sort({ _id: 1 })
-        .toArray());
+    const units = await unitsCol
+      .find({ countryId: countryId as CountryId }, { session })
+      .sort({ _id: 1 })
+      .toArray();
     const demands = units.map((unit) => ({
       id: String(unit._id),
       desired: reinforceUnit(unit, effectiveMode, Number.MAX_SAFE_INTEGER).drawn,
@@ -79,8 +96,5 @@ export async function applyReinforcement(
     await setNationalManpower(db, countryId, { pool: available }, session);
     return { regenerated, reinforced: ops.length, drawn };
   };
-  return runWithOptionalTransaction(
-    (session) => apply(session),
-    () => apply()
-  );
+  return apply(boundSession(db));
 }

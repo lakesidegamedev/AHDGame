@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { applyStateArmsProduction } from "./stateArmsTurn";
 
@@ -121,3 +121,17 @@ describe("state arms production", () => {
     expect(w.deposits).toEqual([]);
   });
 });
+
+// Production/floor formula fixture; atomic tests cover turn identity.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);

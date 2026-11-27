@@ -1,3 +1,5 @@
+import { getGameState } from "@/lib/gameState";
+import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
@@ -7,13 +9,13 @@ import { moderatorResourcesGrantSchema } from "@/lib/api/schemas/admin";
 import { withAuditedGrant } from "@/lib/audit/grants/recordGrant";
 import { resourceGrantInputs } from "@/lib/audit/grants/rules";
 import { createModAuditLog } from "@/lib/modAuditLog";
-import type { ExchangeRate } from "@/lib/db/types";
+
 import { ObjectId } from "mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   buildHomeCurrencyCashGrantSetStage,
   buildCampaignFundsGrantExpression,
-} from "@/lib/currency/grantCashBuilder";
+} from "@/lib/currency/rules/grantCashBuilder";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
@@ -34,6 +36,8 @@ export async function POST(request: Request) {
 
     const db = await getDb();
     const forexEnabled = await isForexEnabled();
+    const preset = (await getGameState(db))?.preset;
+    const campaignRates = forexEnabled && funds ? await loadCampaignCurrencyRates(db) : {};
 
     const setStage: Record<string, unknown> = {
       updatedAt: new Date(),
@@ -45,13 +49,10 @@ export async function POST(request: Request) {
     if (funds !== undefined && funds !== 0) {
       if (forexEnabled) {
         setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
-        const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
-        const rateByCountry = new Map<string, number>(
-          rateDocs.map((r) => [r._id as string, r.rate])
-        );
         setStage["currencyBalances.campaign"] = buildCampaignFundsGrantExpression(
           funds,
-          rateByCountry
+          campaignRates,
+          preset
         );
       } else {
         setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
@@ -74,7 +75,10 @@ export async function POST(request: Request) {
           const rateByCountry = new Map<string, number>(
             rateDocs.map((r) => [r._id as string, r.rate])
           );
-          Object.assign(setStage, buildHomeCurrencyCashGrantSetStage(cashOnHand, rateByCountry));
+          Object.assign(
+            setStage,
+            buildHomeCurrencyCashGrantSetStage(cashOnHand, rateByCountry, preset)
+          );
         }
       } else {
         setStage.cashOnHand = { $add: [{ $ifNull: ["$cashOnHand", 0] }, cashOnHand] };

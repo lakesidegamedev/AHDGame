@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach } from "vitest";
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { processGeneralTenure } from "./generalTenure";
@@ -18,7 +26,10 @@ describe("processGeneralTenure", () => {
   beforeEach(() => {
     db = createMockDb();
     db.collection("characterGenerals");
-    db.collectionMocks.characterGenerals.bulkWrite.mockResolvedValue({ modifiedCount: 1 });
+    db.collectionMocks.characterGenerals.bulkWrite.mockResolvedValue({
+      modifiedCount: 1,
+      matchedCount: 1,
+    });
   });
 
   const seed = (docs: unknown[]) =>
@@ -29,8 +40,8 @@ describe("processGeneralTenure", () => {
     const out = await processGeneralTenure(db as unknown as Db, TENURE_POINT_TURNS * 2);
     expect(out).toEqual({ updated: 1, pointsGranted: 2 });
     const op = db.collectionMocks.characterGenerals.bulkWrite.mock.calls[0][0][0];
-    expect(op.updateOne.update.$set.general.pts).toBe(2);
-    expect(op.updateOne.update.$set.general.lastTenurePointTurn).toBe(TENURE_POINT_TURNS * 2);
+    expect(op.updateOne.update.$inc["general.pts"]).toBe(2);
+    expect(op.updateOne.update.$set["general.lastTenurePointTurn"]).toBe(TENURE_POINT_TURNS * 2);
   });
 
   // A dismissed officer keeps their record for re-appointment but is not serving,
@@ -56,8 +67,8 @@ describe("processGeneralTenure", () => {
     const out = await processGeneralTenure(db as unknown as Db, 400);
     expect(out).toEqual({ updated: 1, pointsGranted: 0 });
     const op = db.collectionMocks.characterGenerals.bulkWrite.mock.calls[0][0][0];
-    expect(op.updateOne.update.$set.general.pts).toBe(0);
-    expect(op.updateOne.update.$set.general.lastTenurePointTurn).toBe(400);
+    expect(op.updateOne.update.$inc["general.pts"]).toBe(0);
+    expect(op.updateOne.update.$set["general.lastTenurePointTurn"]).toBe(400);
   });
 
   it("skips a commission record that carries no general profile", async () => {

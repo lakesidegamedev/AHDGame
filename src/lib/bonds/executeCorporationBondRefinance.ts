@@ -1,5 +1,6 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
-import type { Bond, BondMaturityTurns, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Bond, BondMaturityTurns, Corporation } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE, BOND_MATURITY_LABELS } from "@/lib/db/types/bond";
 import {
   buildPrimeRateMap,
@@ -66,6 +67,16 @@ export interface CorporationRefinanceInfeasible {
  * settlement lock.
  */
 export async function executeCorporationBondRefinance(
+  db: Db,
+  corporation: Corporation,
+  options: { now: Date; currentTurn: number; maturityTurns: BondMaturityTurns }
+): Promise<CorporationRefinanceResult | CorporationRefinanceInfeasible> {
+  return withSessionDb(db, (transactionDb) =>
+    settleInTransaction(transactionDb, corporation, options)
+  );
+}
+
+async function settleInTransaction(
   db: Db,
   corporation: Corporation,
   options: { now: Date; currentTurn: number; maturityTurns: BondMaturityTurns }
@@ -254,10 +265,12 @@ export async function executeCorporationBondRefinance(
   );
 
   const matLabel = BOND_MATURITY_LABELS[maturityTurns] ?? `${maturityTurns}T`;
-  logWireEvent(
-    "bond_issued",
-    wireHeadlineBond(corporation.name, actualFaceAnchor, matLabel, couponRate.toFixed(1)),
-    { href: `/corporation/${corporation.sequentialId ?? corporation._id}` }
+  await afterCommit(db, () =>
+    logWireEvent(
+      "bond_issued",
+      wireHeadlineBond(corporation.name, actualFaceAnchor, matLabel, couponRate.toFixed(1)),
+      { href: `/corporation/${corporation.sequentialId ?? corporation._id}` }
+    )
   );
 
   // Cashless bond_issuance row so the new refinance bond shows up in ledger
@@ -265,7 +278,7 @@ export async function executeCorporationBondRefinance(
   // investors paid in), so `amount` is 0; principal magnitude lives in
   // `meta.faceValue`. Without this row, "all bond_issuance events on turn N"
   // silently misses every refinance.
-  void emitTx(db, {
+  await emitTx(db, {
     type: "bond_issuance",
     turn: currentTurn,
     createdAt: now,

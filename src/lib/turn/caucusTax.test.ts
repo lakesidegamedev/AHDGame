@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -35,6 +39,11 @@ describe("processCaucusTax", () => {
 
   function setupCollection<T>(name: string, data: T[]) {
     db.collection(name);
+    if (name === "caucuses")
+      db.collectionMocks[name]!.findOne.mockImplementation(
+        async (filter: { _id?: ObjectId }) =>
+          data.find((row) => String((row as { _id: ObjectId })._id) === String(filter._id)) ?? null
+      );
     db.collectionMocks[name]!.find = vi.fn().mockReturnValue({
       toArray: vi.fn().mockResolvedValue(data),
     });
@@ -267,7 +276,9 @@ describe("processCaucusTax", () => {
     expect(result.membersTaxed).toBe(0);
     expect(result.totalTaxed).toBe(0);
     // No treasury credit and no debit tx entry for the failed debit.
-    expect(db.collectionMocks["caucuses"]!.updateOne).not.toHaveBeenCalled();
+    expect(
+      db.collectionMocks["caucuses"]!.updateOne.mock.calls.map((call) => call[1])
+    ).not.toContainEqual(expect.objectContaining({ $inc: { treasury: expect.any(Number) } }));
     expect(vi.mocked(emitTreasuryTransaction)).not.toHaveBeenCalled();
     expect(vi.mocked(emitTxBulk)).not.toHaveBeenCalled();
   });
@@ -320,7 +331,9 @@ describe("processCaucusTax", () => {
     expect(result.membersTaxed).toBe(0);
     expect(result.totalTaxed).toBe(0);
     expect(db.collectionMocks["characters"]!.updateOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks["caucuses"]!.updateOne).not.toHaveBeenCalled();
+    expect(
+      db.collectionMocks["caucuses"]!.updateOne.mock.calls.map((call) => call[1])
+    ).not.toContainEqual(expect.objectContaining({ $inc: { treasury: expect.any(Number) } }));
   });
 
   it("debits `funds` when forex is off and credits the caucus by the debited amount", async () => {
@@ -375,8 +388,9 @@ describe("processCaucusTax", () => {
     expect(filter).toMatchObject({ funds: { $gte: 1_000 } });
     expect(update.$inc).toEqual({ funds: -1_000 });
 
-    const [caucusFilter, caucusUpdate] = db.collectionMocks["caucuses"]!.updateOne.mock
-      .calls[0] as [Record<string, unknown>, { $inc: Record<string, number> }];
+    const [caucusFilter, caucusUpdate] = db.collectionMocks["caucuses"]!.updateOne.mock.calls.find(
+      (call) => call[1]?.$inc?.treasury
+    )! as [Record<string, unknown>, { $inc: Record<string, number> }];
     expect(caucusFilter).toMatchObject({ _id: caucusId });
     expect(caucusUpdate.$inc).toEqual({ treasury: 1_000 });
   });
@@ -432,7 +446,7 @@ describe("processCaucusTax", () => {
     expect(update.$inc).toEqual({ funds: -100 });
   });
 
-  it("refunds landed debits when the caucus credit fails", async () => {
+  it("leaves member money unchanged when the tax claim fails", async () => {
     const charId = new ObjectId();
     const caucusId = new ObjectId();
     setupCollection("caucuses", [
@@ -477,16 +491,8 @@ describe("processCaucusTax", () => {
     const result = await processCaucusTax(true, 100);
 
     expect(result).toMatchObject({ membersTaxed: 0, totalTaxed: 0 });
-    const debit = db.collectionMocks.characters!.updateOne.mock.calls[0] as [
-      Record<string, unknown>,
-      { $inc: Record<string, number> },
-    ];
-    expect(debit[1].$inc).toEqual({ "currencyBalances.campaign": -1_000 });
-    const refund = db.collectionMocks.characters!.bulkWrite.mock.calls[0]![0] as {
-      updateOne: { update: { $inc: Record<string, number> } };
-    }[];
-    expect(refund).toHaveLength(1);
-    expect(refund[0].updateOne.update.$inc).toEqual({ "currencyBalances.campaign": 1_000 });
+    expect(db.collectionMocks.characters!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.characters!.bulkWrite).not.toHaveBeenCalled();
     expect(emitTxBulk).not.toHaveBeenCalled();
   });
 });

@@ -154,11 +154,17 @@ describe("processPartyTierTurn", () => {
     expect(r.psClampedDown).toBe(1);
 
     const call = db.collectionMocks["politicalParties"]!.bulkWrite.mock.calls[0]![0] as Array<{
-      updateOne: { update: { $set?: Record<string, unknown>; $unset?: Record<string, unknown> } };
+      updateOne: {
+        update: {
+          $set?: Record<string, unknown>;
+          $unset?: Record<string, unknown>;
+          $min?: Record<string, number>;
+        };
+      };
     }>;
     expect(call[0].updateOne.update.$set?.tier).toBe("minor");
     // 1 earned region → cap 100 + 10 = 110; PS 128 clamps to 110.
-    expect(call[0].updateOne.update.$set?.politicalStrength).toBe(110);
+    expect(call[0].updateOne.update.$min?.politicalStrength).toBe(110);
     expect(call[0].updateOne.update.$unset?.majorDemotionWarning).toBeDefined();
   });
 

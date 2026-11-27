@@ -30,6 +30,8 @@ export type UKElectionType =
 export type ElectionStatus = "upcoming" | "active" | "completed" | "resolved" | "cancelled";
 
 export interface Election {
+  /** Serializes overlapping primary snapshot and ballot publications. */
+  primarySnapshotRevision?: number;
   brazilPresidentialRound?: 1 | 2;
   brazilPresidentialMode?: "plurality" | "indirect" | "majority";
   brazilPresidentialPredecessorId?: ObjectId;
@@ -148,6 +150,8 @@ export interface Election {
   };
   /** Campaign Here boosts: districtIndex → partySeqId → active boost % (0..7.5). */
   districtCampaignBoosts?: Record<string, Record<string, number>>;
+  /** Last completed decay, committed with the boost map. */
+  districtCampaignBoostLastDecayTurn?: number;
   /**
    * True when this snap was IMPOSED by a peace settlement's regime change rather
    * than called from inside the country.

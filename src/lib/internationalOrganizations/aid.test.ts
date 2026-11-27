@@ -1,4 +1,15 @@
-import { describe, it, expect } from "vitest";
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: async (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
+import { describe, it, expect, vi } from "vitest";
 import { aidGrowthBoost } from "./aid";
 import { payOrganizationAid } from "./aid";
 import { createMockDb } from "@/lib/test-utils/mockDb";

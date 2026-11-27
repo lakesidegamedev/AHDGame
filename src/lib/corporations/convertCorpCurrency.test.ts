@@ -22,25 +22,7 @@ vi.mock("@/lib/corporations/cancelShareListing", () => ({
     sharesReturned: 0,
   })),
 }));
-// Transaction path: mock getMongoClient so session.withTransaction runs our
-// callback inline. The first branch throws a "transactions not supported"
-// error (code 20) to simulate standalone mongod; the helper's catch block
-// falls back to sequential writes, which is what these unit tests exercise.
-vi.mock("@/lib/mongodb", () => ({
-  getMongoClient: vi.fn(async () => ({
-    startSession: () => ({
-      withTransaction: vi.fn(async () => {
-        const err = new Error("transactions not supported on standalone") as Error & {
-          code?: number;
-        };
-        err.code = 20;
-        throw err;
-      }),
-      endSession: vi.fn(async () => {}),
-    }),
-  })),
-  getDb: vi.fn(),
-}));
+vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 describe("convertCorpCurrency", () => {
   let db: MockDb;
@@ -48,10 +30,19 @@ describe("convertCorpCurrency", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
+    Object.assign(db, {
+      client: {
+        writeConcern: { w: "majority" },
+        startSession: () => ({
+          withTransaction: async (work: (session: object) => Promise<unknown>) => work({}),
+          endSession: async () => {},
+        }),
+      },
+    });
   });
 
   function makeCorp(overrides: Partial<Corporation> = {}): Corporation {
-    return {
+    const corporation = {
       _id: new ObjectId(),
       name: "TestCo",
       liquidCurrencyCode: "JPY",
@@ -64,6 +55,8 @@ describe("convertCorpCurrency", () => {
       totalShares: 10_000_000,
       ...overrides,
     } as Corporation;
+    db.collection("corporations").findOne.mockResolvedValue(corporation);
+    return corporation;
   }
 
   function fxMap(entries: [CurrencyCode, number][]): ReadonlyMap<CurrencyCode, number> {
@@ -86,7 +79,7 @@ describe("convertCorpCurrency", () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.converted).toBe(false);
-    expect(db.collectionMocks.corporations).toBeUndefined();
+    expect(db.collectionMocks.corporations?.updateOne).not.toHaveBeenCalled();
   });
 
   it("refuses denomination changes while funded underwriting proceeds are settling", async () => {
@@ -118,7 +111,7 @@ describe("convertCorpCurrency", () => {
       ok: false,
       error: expect.stringContaining("Primary underwriting proceeds are settling"),
     });
-    expect(db.collectionMocks.corporations).toBeUndefined();
+    expect(db.collectionMocks.corporations?.updateOne).not.toHaveBeenCalled();
   });
 
   it("holds a bank's denomination while its charter-epoch underwriting lease is active", async () => {
@@ -143,7 +136,7 @@ describe("convertCorpCurrency", () => {
       ok: false,
       error: expect.stringContaining("Primary underwriting proceeds are settling"),
     });
-    expect(db.collectionMocks.corporations).toBeUndefined();
+    expect(db.collectionMocks.corporations?.updateOne).not.toHaveBeenCalled();
   });
 
   it("refuses a currency change before share escrow work when a sector has a secured construction claim", async () => {
@@ -190,7 +183,7 @@ describe("convertCorpCurrency", () => {
     });
     expect(db.collectionMocks.shareOrders).toBeUndefined();
     expect(db.collectionMocks.shareListings).toBeUndefined();
-    expect(db.collectionMocks.corporations).toBeUndefined();
+    expect(db.collectionMocks.corporations?.updateOne).not.toHaveBeenCalled();
   });
 
   it("scales every corp money field by toRate / fromRate (JPY → GBP)", async () => {
@@ -211,8 +204,8 @@ describe("convertCorpCurrency", () => {
     expect(result.scale).toBeCloseTo(0.8 / 130, 6);
 
     const corpsUpdateOne = db.collectionMocks.corporations!.updateOne;
-    expect(corpsUpdateOne).toHaveBeenCalledTimes(1);
-    const setPayload = corpsUpdateOne.mock.calls[0]![1].$set as Record<string, unknown>;
+    expect(corpsUpdateOne).toHaveBeenCalledTimes(2);
+    const setPayload = corpsUpdateOne.mock.calls[1]![1].$set as Record<string, unknown>;
     expect(setPayload.liquidCurrencyCode).toBe("GBP");
     // 10M JPY × (0.8/130) = 61,538.46 GBP
     expect(setPayload.liquidCapital).toBeCloseTo(61_538.46, 1);
@@ -365,7 +358,7 @@ describe("convertCorpCurrency", () => {
     expect(result.ordersCancelled).toBe(1);
     expect(result.listingsCancelled).toBe(1);
     // Ensure the corporations $set came AFTER the cancel calls (order integrity).
-    const corpsUpdateOrder = db.collectionMocks.corporations!.updateOne.mock.invocationCallOrder[0];
+    const corpsUpdateOrder = db.collectionMocks.corporations!.updateOne.mock.invocationCallOrder[1];
     const cancelOrderOrder = (cancelShareOrderAndRefund as ReturnType<typeof vi.fn>).mock
       .invocationCallOrder[0];
     expect(cancelOrderOrder).toBeLessThan(corpsUpdateOrder!);
@@ -392,7 +385,7 @@ describe("convertCorpCurrency", () => {
     expect(result.fromCurrency).toBeUndefined();
     expect(result.toCurrency).toBe("GBP");
     expect(result.scale).toBeCloseTo(0.8, 6);
-    const setPayload = db.collectionMocks.corporations!.updateOne.mock.calls[0]![1].$set as Record<
+    const setPayload = db.collectionMocks.corporations!.updateOne.mock.calls[1]![1].$set as Record<
       string,
       unknown
     >;
@@ -423,7 +416,7 @@ describe("convertCorpCurrency", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
     expect(result.scale).toBeCloseTo(125, 4);
-    const setPayload = db.collectionMocks.corporations!.updateOne.mock.calls[0]![1].$set as Record<
+    const setPayload = db.collectionMocks.corporations!.updateOne.mock.calls[1]![1].$set as Record<
       string,
       unknown
     >;
@@ -448,7 +441,7 @@ describe("convertCorpCurrency", () => {
     expect(result.rateUnavailable).toBe(true);
     expect(result.error).toContain("EUR");
     // Crucially: no corp write happened.
-    expect(db.collectionMocks.corporations).toBeUndefined();
+    expect(db.collectionMocks.corporations?.updateOne).not.toHaveBeenCalled();
   });
 
   it("order cancel failure aborts conversion (no corp or sector writes)", async () => {
@@ -486,42 +479,9 @@ describe("convertCorpCurrency", () => {
     // The sector snapshot is read before share-market cleanup so secured
     // property can refuse a currency flip before unrelated escrow mutations.
     // The failure still aborts before any corp or sector writes.
-    expect(db.collectionMocks.corporations).toBeUndefined();
+    expect(db.collectionMocks.corporations?.updateOne).toHaveBeenCalledTimes(1);
     expect(db.collectionMocks.corporateSectors!.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporateSectors!.bulkWrite).not.toHaveBeenCalled();
-  });
-
-  it("transaction success path: corp + sectors commit via withTransaction", async () => {
-    // Override the default mock (which throws code=20) with one that actually
-    // runs the callback — simulating a replica-set deployment.
-    const { getMongoClient } = await import("@/lib/mongodb");
-    const withTransactionSpy = vi.fn(async (cb: (...args: unknown[]) => Promise<unknown>) => cb());
-    const endSessionSpy = vi.fn(async () => {});
-    vi.mocked(getMongoClient).mockResolvedValueOnce({
-      startSession: () => ({
-        withTransaction: withTransactionSpy,
-        endSession: endSessionSpy,
-      }),
-    } as any);
-
-    const corp = makeCorp();
-    const rates = fxMap([
-      ["JPY", 130],
-      ["GBP", 0.8],
-    ]);
-    const result = await convertCorpCurrency(
-      db as unknown as Db,
-      corp,
-      "GBP",
-      rates,
-      new Date(),
-      true
-    );
-    expect(result.ok).toBe(true);
-    expect(withTransactionSpy).toHaveBeenCalledTimes(1);
-    expect(endSessionSpy).toHaveBeenCalledTimes(1);
-    // Writes happened inside the transaction callback.
-    expect(db.collectionMocks.corporations!.updateOne).toHaveBeenCalledTimes(1);
   });
 
   it("omits ceoSalary $set when corp had no ceoSalary field", async () => {
@@ -539,7 +499,7 @@ describe("convertCorpCurrency", () => {
       true
     );
     expect(result.ok).toBe(true);
-    const setPayload = db.collectionMocks.corporations!.updateOne.mock.calls[0]![1].$set as Record<
+    const setPayload = db.collectionMocks.corporations!.updateOne.mock.calls[1]![1].$set as Record<
       string,
       unknown
     >;
@@ -559,45 +519,7 @@ describe("convertCorpCurrency", () => {
     });
   }
 
-  it("reverts the corp document when the sector bulkWrite throws on standalone", async () => {
-    const corp = makeCorp(); // JPY-denominated
-    primeSectors([
-      {
-        _id: new ObjectId(),
-        corporationId: corp._id,
-        revenue: 1_000_000,
-        currentGrowthCost: 50_000,
-      } as CorporateSector,
-    ]);
-    db.collectionMocks
-      .corporateSectors!.bulkWrite.mockRejectedValueOnce(new Error("bulk boom"))
-      .mockResolvedValueOnce({ matchedCount: 1 });
-    const rates = fxMap([
-      ["JPY", 130],
-      ["GBP", 0.8],
-    ]);
-
-    await expect(
-      convertCorpCurrency(db as unknown as Db, corp, "GBP", rates, new Date(), true)
-    ).rejects.toThrow(/bulk boom/);
-
-    const corpsUpdateOne = db.collectionMocks.corporations!.updateOne;
-    // First write flips the corp; the second reverts it after the sector failure.
-    expect(corpsUpdateOne).toHaveBeenCalledTimes(2);
-    const revertSet = corpsUpdateOne.mock.calls[1]![1].$set as Record<string, unknown>;
-    expect(revertSet.liquidCurrencyCode).toBe("JPY");
-    expect(revertSet.liquidCapital).toBe(10_000_000);
-    expect(revertSet.sharePrice).toBe(500);
-    expect(revertSet.marketingBudget).toBe(500_000);
-    expect(revertSet.logisticsBudget).toBe(250_000);
-    expect(revertSet.ceoSalary).toBe(100_000);
-    expect(db.collectionMocks.corporateSectors!.bulkWrite).toHaveBeenCalledTimes(2);
-    const restoreOp = db.collectionMocks.corporateSectors!.bulkWrite.mock.calls[1]![0][0].updateOne
-      .update.$set as Record<string, unknown>;
-    expect(restoreOp).toMatchObject({ revenue: 1_000_000, currentGrowthCost: 50_000 });
-  });
-
-  it("reports an uncertain state when the revert itself also fails", async () => {
+  it("propagates a partial bulk failure for the required transaction to abort", async () => {
     const corp = makeCorp();
     primeSectors([
       {
@@ -607,24 +529,22 @@ describe("convertCorpCurrency", () => {
         currentGrowthCost: 50_000,
       } as CorporateSector,
     ]);
-    db.collectionMocks
-      .corporateSectors!.bulkWrite.mockRejectedValueOnce(new Error("bulk boom"))
-      .mockResolvedValueOnce({ matchedCount: 1 });
-
-    db.collection("corporations");
-    db.collectionMocks
-      .corporations!.updateOne.mockResolvedValueOnce({ matchedCount: 1, modifiedCount: 1 })
-      .mockRejectedValueOnce(new Error("revert boom"));
-
-    const rates = fxMap([
-      ["JPY", 130],
-      ["GBP", 0.8],
-    ]);
-
+    db.collectionMocks.corporateSectors!.bulkWrite.mockRejectedValueOnce(new Error("bulk boom"));
     await expect(
-      convertCorpCurrency(db as unknown as Db, corp, "GBP", rates, new Date(), true)
-    ).rejects.toMatchObject({ corpCurrencyStateUncertain: true });
+      convertCorpCurrency(
+        db as unknown as Db,
+        corp,
+        "GBP",
+        fxMap([
+          ["JPY", 130],
+          ["GBP", 0.8],
+        ]),
+        new Date(),
+        true
+      )
+    ).rejects.toThrow("bulk boom");
     expect(db.collectionMocks.corporations!.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks.corporateSectors!.bulkWrite).toHaveBeenCalledTimes(1);
   });
   it("refuses denomination changes with outstanding bank debt before reserving any assets", async () => {
     const corp = makeCorp();

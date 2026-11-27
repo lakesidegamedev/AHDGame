@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
-import type { GovernorAddress } from "@/lib/db/types";
-import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
+import { withSessionDb } from "@/lib/db/sessionDb";
+
 import { readTurnoutModifier, turnoutModifierPath } from "@/lib/demographics/turnoutTarget";
 import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
@@ -35,81 +35,101 @@ export async function processGovernorAddressExpiry(
   let demographicExpired = 0;
   let turnoutReverted = 0;
   for (const a of candidates) {
-    const setOps: Record<string, true> = {};
-    if (!a.approvalEffect.expired && a.approvalEffect.expiresAtTurn <= currentTurn) {
-      setOps["approvalEffect.expired"] = true;
-      approvalExpired++;
-    }
-    if (!a.demographicEffect.expired && a.demographicEffect.expiresAtTurn <= currentTurn) {
-      setOps["demographicEffect.expired"] = true;
-      demographicExpired++;
-      // Subtract the snapshotted turnout boost back out of the
-      // stateDemographicTurnout modifier, clamped to the -20..+20 range used
-      // elsewhere. National-scope addresses snapshot a per-state delta map
-      // (revert each state precisely); state-scope addresses use the scalar.
-      // If neither was recorded (legacy v1 row), skip — there's nothing to
-      // subtract reliably.
-      const groupId = a.targetDemographicGroupId;
-      const deltasByState = a.demographicEffect.turnoutDeltasByState;
-      if (groupId && deltasByState && Object.keys(deltasByState).length > 0) {
-        const stateIds = Object.keys(deltasByState);
-        const turnoutDocs = await stateDemographicTurnoutCollection(db)
-          .find({ _id: { $in: stateIds } })
-          .toArray();
-        const currentByState = new Map(
-          turnoutDocs.map((d) => [d._id, readTurnoutModifier(d.modifiers, groupId)])
-        );
-        const modifierPath = turnoutModifierPath(groupId);
-        const ops: Array<{
-          updateOne: {
-            filter: { _id: string };
-            update: { $set: Record<string, unknown> };
-          };
-        }> = [];
-        for (const sId of stateIds) {
-          const current = currentByState.get(sId) ?? 0;
-          const delta = deltasByState[sId];
-          const next = Math.max(-20, Math.min(20, current - delta));
-          ops.push({
+    const applied = await withSessionDb(db, async (db) => {
+      let approvalExpired = 0,
+        demographicExpired = 0,
+        turnoutReverted = 0;
+      const setOps: Record<string, true> = {};
+      if (!a.approvalEffect.expired && a.approvalEffect.expiresAtTurn <= currentTurn) {
+        setOps["approvalEffect.expired"] = true;
+        approvalExpired++;
+      }
+      if (!a.demographicEffect.expired && a.demographicEffect.expiresAtTurn <= currentTurn) {
+        setOps["demographicEffect.expired"] = true;
+        demographicExpired++;
+      }
+      if (Object.keys(setOps).length === 0)
+        return { approvalExpired, demographicExpired, turnoutReverted };
+      const claimed = await governorAddressesCollection(db).updateOne(
+        {
+          _id: a._id,
+          approvalEffect: a.approvalEffect,
+          demographicEffect: a.demographicEffect,
+        },
+        { $set: setOps }
+      );
+      if (claimed.matchedCount !== 1)
+        return { approvalExpired: 0, demographicExpired: 0, turnoutReverted: 0 };
+      if (setOps["demographicEffect.expired"]) {
+        // Subtract the snapshotted turnout boost back out of the
+        // stateDemographicTurnout modifier, clamped to the -20..+20 range used
+        // elsewhere. National-scope addresses snapshot a per-state delta map
+        // (revert each state precisely); state-scope addresses use the scalar.
+        // If neither was recorded (legacy v1 row), skip — there's nothing to
+        // subtract reliably.
+        const groupId = a.targetDemographicGroupId;
+        const deltasByState = a.demographicEffect.turnoutDeltasByState;
+        if (groupId && deltasByState && Object.keys(deltasByState).length > 0) {
+          const stateIds = Object.keys(deltasByState);
+          const turnoutDocs = await stateDemographicTurnoutCollection(db)
+            .find({ _id: { $in: stateIds } })
+            .toArray();
+          const currentByState = new Map(
+            turnoutDocs.map((d) => [d._id, readTurnoutModifier(d.modifiers, groupId)])
+          );
+          const modifierPath = turnoutModifierPath(groupId);
+          const ops: Array<{
             updateOne: {
-              filter: { _id: sId },
-              update: {
-                $set: {
-                  [modifierPath]: next,
-                  lastUpdated: new Date(),
+              filter: { _id: string };
+              update: { $set: Record<string, unknown> };
+            };
+          }> = [];
+          for (const sId of stateIds) {
+            const current = currentByState.get(sId) ?? 0;
+            const delta = deltasByState[sId];
+            const next = Math.max(-20, Math.min(20, current - delta));
+            ops.push({
+              updateOne: {
+                filter: { _id: sId },
+                update: {
+                  $set: {
+                    [modifierPath]: next,
+                    lastUpdated: new Date(),
+                  },
                 },
               },
-            },
-          });
-        }
-        if (ops.length > 0) {
-          await stateDemographicTurnoutCollection(db).bulkWrite(ops);
-          turnoutReverted += ops.length;
-        }
-      } else {
-        const delta = a.demographicEffect.turnoutDelta ?? 0;
-        if (delta > 0 && groupId) {
-          const turnoutDoc = await stateDemographicTurnoutCollection(db).findOne({
-            _id: a.stateId,
-          });
-          const currentModifier = readTurnoutModifier(turnoutDoc?.modifiers, groupId);
-          const newModifier = Math.max(-20, Math.min(20, currentModifier - delta));
-          await stateDemographicTurnoutCollection(db).updateOne(
-            { _id: a.stateId },
-            {
-              $set: {
-                [turnoutModifierPath(groupId)]: newModifier,
-                lastUpdated: new Date(),
-              },
-            }
-          );
-          turnoutReverted++;
+            });
+          }
+          if (ops.length > 0) {
+            await stateDemographicTurnoutCollection(db).bulkWrite(ops);
+            turnoutReverted += ops.length;
+          }
+        } else {
+          const delta = a.demographicEffect.turnoutDelta ?? 0;
+          if (delta > 0 && groupId) {
+            const turnoutDoc = await stateDemographicTurnoutCollection(db).findOne({
+              _id: a.stateId,
+            });
+            const currentModifier = readTurnoutModifier(turnoutDoc?.modifiers, groupId);
+            const newModifier = Math.max(-20, Math.min(20, currentModifier - delta));
+            await stateDemographicTurnoutCollection(db).updateOne(
+              { _id: a.stateId },
+              {
+                $set: {
+                  [turnoutModifierPath(groupId)]: newModifier,
+                  lastUpdated: new Date(),
+                },
+              }
+            );
+            turnoutReverted++;
+          }
         }
       }
-    }
-    if (Object.keys(setOps).length > 0) {
-      await governorAddressesCollection(db).updateOne({ _id: a._id }, { $set: setOps });
-    }
+      return { approvalExpired, demographicExpired, turnoutReverted };
+    });
+    approvalExpired += applied.approvalExpired;
+    demographicExpired += applied.demographicExpired;
+    turnoutReverted += applied.turnoutReverted;
   }
   return { approvalExpired, demographicExpired, turnoutReverted };
 }

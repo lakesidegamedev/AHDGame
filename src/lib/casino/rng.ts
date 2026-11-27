@@ -24,3 +24,15 @@ export function pickWeighted<T>(rng: Rng, items: readonly { value: T; weight: nu
   }
   return items[items.length - 1].value;
 }
+
+/** Replay accepted random draws when Mongo retries the same action. */
+export function replayRng(source: Rng): () => Rng {
+  const draws: number[] = [];
+  return () => {
+    let index = 0;
+    return () => {
+      if (index === draws.length) draws.push(source());
+      return draws[index++];
+    };
+  };
+}

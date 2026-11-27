@@ -87,14 +87,16 @@ describe("announceConvention", () => {
   });
 
   it("self-heals the escalation doc when missing (fresh game with no driver ticks yet)", async () => {
-    db.collectionMocks.regimeEscalation.findOne.mockResolvedValue(null);
+    db.collectionMocks.regimeEscalation.findOne
+      .mockResolvedValue(makeEscalation())
+      .mockResolvedValueOnce(null);
     // Should not throw — the helper seeds an initial stable escalation
     // state via insertOne, then proceeds with the announce.
     await expect(
       announceConvention(db as unknown as Db, "CN", leaderId, 200)
     ).resolves.toBeUndefined();
     // The seed insert was attempted.
-    expect(db.collectionMocks.regimeEscalation.insertOne).toHaveBeenCalled();
+    expect(db.collectionMocks.regimeEscalation.updateOne).toHaveBeenCalled();
     // And the convention setup write fired.
     const writes = db.collectionMocks.regimeEscalation.findOneAndUpdate.mock.calls;
     const setupCall = writes.find((c) => {

@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { isDuplicateKeyError } from "@/lib/api/errors";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { getColdWarTension } from "@/lib/coldwar/tension";
 import { getAllCountryAccess } from "@/lib/countryAccess";
@@ -46,7 +48,7 @@ export interface IntelligenceTurnResult {
  * switch decides whether an NPP country ACTS, never whether it RESISTS.
  * Otherwise most of the world would defend at a constant default forever.
  */
-export async function processIntelligenceTurn(
+async function processIntelligenceTurnInTransaction(
   db: Db,
   turn: number
 ): Promise<IntelligenceTurnResult> {
@@ -199,22 +201,7 @@ export async function processIntelligenceTurn(
   }
 
   if (networkOps.length > 0) await networksCollection.bulkWrite(networkOps, { ordered: false });
-  if (agencyOps.length > 0) {
-    // A console GET can create the same agency row at the same moment, and an
-    // upsert racing an insert on the unique countryId index throws E11000. That
-    // is a benign collision here: the row the other writer inserted is the row
-    // this pass wanted, and the next turn re-applies the posture. Anything else
-    // is a real fault and must not be swallowed.
-    try {
-      await agenciesCollection.bulkWrite(agencyOps, { ordered: false });
-    } catch (error) {
-      const codes = [
-        (error as { code?: number }).code,
-        ...((error as { writeErrors?: { code?: number }[] }).writeErrors ?? []).map((w) => w.code),
-      ];
-      if (!codes.every((code) => code === 11000)) throw error;
-    }
-  }
+  if (agencyOps.length > 0) await agenciesCollection.bulkWrite(agencyOps, { ordered: false });
 
   return {
     networksStepped: networkOps.length,
@@ -222,4 +209,22 @@ export async function processIntelligenceTurn(
     countriesAccrued,
     networksStalled,
   };
+}
+
+/** Money, funded progress and the phase proof commit together. */
+export async function processIntelligenceTurn(
+  db: Db,
+  turn: number
+): Promise<IntelligenceTurnResult> {
+  // bounded-cas-retry(maxAttempts=3): A concurrent console GET may create the same unique agency row.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await withTurnValueSettlement(db, "intelligence-upkeep", turn, (db) =>
+        processIntelligenceTurnInTransaction(db, turn)
+      );
+    } catch (error) {
+      if (!isDuplicateKeyError(error) || attempt === 2) throw error;
+    }
+  }
+  throw new Error("Intelligence settlement could not be retried");
 }

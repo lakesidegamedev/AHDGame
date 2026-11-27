@@ -33,7 +33,9 @@ export function getDemographicsAndPartySetupPhases(): TurnPhaseAdapter[] {
       key: "demographicsAndPartySetup",
       async execute(context, runtime) {
         const { stateMap, newTurn, gameNow, phaseResults, realNow, db } = context;
-        const decayedStates = await runtime.runPhase("turnoutDecay", () => applyDecayToAllStates());
+        const decayedStates = await runtime.runPhase("turnoutDecay", () =>
+          applyDecayToAllStates(undefined, newTurn, db)
+        );
         const gotvResults = await runtime.runPhase("partyGOTV", () =>
           processPartyGOTV(
             undefined,
@@ -43,7 +45,8 @@ export function getDemographicsAndPartySetupPhases(): TurnPhaseAdapter[] {
             stateMap,
             undefined,
             undefined,
-            newTurn
+            newTurn,
+            db
           )
         );
         await runtime.runPhase("partyOrgTurn", () => processPartyOrgTurn(newTurn, realNow));

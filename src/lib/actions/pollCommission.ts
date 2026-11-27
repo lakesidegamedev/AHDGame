@@ -1,3 +1,5 @@
+import { currentPollSnapshot, type StoredPollSnapshot } from "./currentPollSnapshot";
+import { getCampaignCurrency } from "@/lib/campaigns/rules/currency";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { turnoutForElection } from "@/lib/campaignTargeting/rules";
@@ -25,13 +27,7 @@ import { computeInRaceVotes, computePollHeadline } from "@/lib/actions/granularP
 import { eraForPreset } from "@/lib/seeds/presetSelector";
 import { clampPercentStat } from "@/lib/numeric/rules";
 import { eraYearContextFromGameState } from "@/lib/era/context";
-import type {
-  State,
-  StatePartyOrg,
-  StateDemographicTurnout,
-  ActionLog,
-  User,
-} from "@/lib/db/types";
+import type { ActionLog } from "@/lib/db/types";
 import { computeStateDemographicTurnout } from "@/lib/seeds/stateDemographics";
 import { getElectionOpponents } from "@/lib/actions/electionOpponents";
 import { loadPollPartyColors } from "@/lib/actions/pollPartyColors";
@@ -127,26 +123,13 @@ export async function buildPollOverview({
 
   // Retrieve the stored poll (if any) so the UI can display it without re-commissioning
   const storedPollKey = pollType === "large" ? "lastPollLarge" : "lastPoll";
-  let storedPoll = (character as Record<string, unknown>)[storedPollKey] as
-    | {
-        takenAt: Date;
-        overallAppeal: number;
-        totalEstimatedVoters: number;
-        totalPotentialVoters: number;
-        granular?: unknown;
-      }
-    | undefined;
-
-  // The granular electorate is the only poll shape. A stored snapshot without
-  // it predates the bucket model and cannot be displayed.
-  if (storedPoll && !storedPoll.granular) {
-    await charactersCollection(db).updateOne(
-      { _id: character._id },
-      { $unset: { [storedPollKey]: 1 } }
-    );
-    storedPoll = undefined;
-  }
-
+  const storedPoll = await currentPollSnapshot(
+    db,
+    character._id,
+    storedPollKey,
+    (character as Record<string, unknown>)[storedPollKey] as StoredPollSnapshot | undefined
+  );
+  const worldState = await getGameState(db);
   const electionContext = await getElectionOpponents(character);
   const demographicTurnout = computeStateDemographicTurnout(
     character.homeState,
@@ -160,7 +143,7 @@ export async function buildPollOverview({
   // Campaign funds are decoupled from live forex: poll costs (anchor
   // constants) convert to local at the frozen world-seeded currency basis.
   const campaignRate = forexEnabled
-    ? campaignLocalRate(character.countryId ?? "US", campaignRates)
+    ? campaignLocalRate(character.countryId ?? "US", campaignRates, worldState?.preset)
     : 1;
 
   const toLocal = (anchor: number) => anchor * campaignRate;
@@ -254,11 +237,11 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
   const fundCost = quote.fundCostAnchor;
   const actionCost = quote.apCost;
 
-  const gameState = await getGameState();
+  const gameState = await getGameState(db);
   // Campaign funds are decoupled from live forex: poll costs convert at the
   // frozen world-seeded currency basis, never the live exchangeRates.
   const campaignRate = forexEnabled
-    ? campaignLocalRate(character.countryId ?? "US", campaignRates)
+    ? campaignLocalRate(character.countryId ?? "US", campaignRates, gameState?.preset)
     : 1;
 
   const validation = canPerformAction(character, actionKey, undefined, {
@@ -408,6 +391,10 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
 
   // fundCost is ANCHOR; convert to LOCAL (frozen rate) for filter + $inc.
   const fundCostLocal = forexEnabled ? fundCost * campaignRate : fundCost;
+  const paidCurrencyCode = forexEnabled
+    ? getCampaignCurrency(character.countryId ?? "US", gameState?.preset)
+    : undefined;
+  const paidDescription = `${fundCostLocal.toLocaleString()} ${paidCurrencyCode ?? "₳"}`;
   const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
   const spendFilter = {
     _id: character._id,
@@ -441,8 +428,8 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
       fundsChange: -fundCost,
       message:
         pollType === "large"
-          ? `Commissioned a full demographic poll for $${fundCost.toLocaleString()}.`
-          : `Commissioned a quick poll for $${fundCost.toLocaleString()}.`,
+          ? `Commissioned a full demographic poll for ${paidDescription}.`
+          : `Commissioned a quick poll for ${paidDescription}.`,
     },
     turn: gameState?.currentTurn || 0,
     createdAt: new Date(),
@@ -467,8 +454,9 @@ export async function commissionPoll({ userId, pollType }: { userId: string; pol
     success: true,
     message:
       pollType === "large"
-        ? `Full poll commissioned for $${fundCost.toLocaleString()}.`
-        : `Quick poll commissioned for $${fundCost.toLocaleString()}.`,
+        ? `Full poll commissioned for ${paidDescription}.`
+        : `Quick poll commissioned for ${paidDescription}.`,
+    cost: { anchorAmount: fundCost, amount: fundCostLocal, currencyCode: paidCurrencyCode ?? null },
     character: updatedCharacter,
     pollSnapshot,
   });

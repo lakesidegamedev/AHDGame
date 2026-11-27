@@ -25,6 +25,17 @@ vi.setConfig({ testTimeout: 60_000 });
 
 const CONSOLE_TEST_TIMEOUT_MS = 120_000;
 
+// Shape tests isolate the transaction boundary; interruption tests exercise the real wrapper.
+vi.mock("@/lib/api/withRecordedEconomicCommand", () => ({
+  withRecordedEconomicCommand: async (
+    db: Db,
+    _phase: string,
+    _actor: string,
+    _id: string | undefined,
+    _input: unknown,
+    work: (db: Db) => Promise<Response>
+  ) => work(db),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({
   requireAuth: vi.fn(),

@@ -567,11 +567,11 @@ export default function CeoBudgetPanel({
             amount={money.fmt(scale(financials.governmentBondSubsidy))}
           />
         )}
-        {financials.imfFacilityPaymentDaily > 0 && (
+        {financials.imfFacilityInterestPaidDaily > 0 && (
           <StatementLine
             indent
-            label="IMF facility payment"
-            amount={cost(financials.imfFacilityPaymentDaily)}
+            label="IMF facility interest"
+            amount={cost(financials.imfFacilityInterestPaidDaily)}
           />
         )}
         {financials.bondCouponIncome > 0 && (
@@ -581,11 +581,11 @@ export default function CeoBudgetPanel({
             amount={money.fmt(scale(financials.bondCouponIncome))}
           />
         )}
-        {financials.imfFacilityReceiptsDaily > 0 && (
+        {financials.imfFacilityInterestReceivedDaily > 0 && (
           <StatementLine
             indent
-            label="IMF facility receipts"
-            amount={money.fmt(scale(financials.imfFacilityReceiptsDaily))}
+            label="IMF interest income"
+            amount={money.fmt(scale(financials.imfFacilityInterestReceivedDaily))}
           />
         )}
         {financials.dividendIncomeReceived > 0 && (

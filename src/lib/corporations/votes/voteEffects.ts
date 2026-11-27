@@ -1,8 +1,6 @@
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
-import { getDefaultLegalStructureId } from "@/lib/corporations/legalStructure";
-import { commandEconomyRelocationBlock } from "@/lib/corporations/relocationCommandEconomyGate";
 import { executeCorporationBondDefaultDissolution } from "@/lib/bonds/executeCorporationBondDefaultDissolution";
 import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock";
 import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
@@ -16,8 +14,6 @@ import {
 } from "@/lib/equities/primaryMarket";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
-import type { Document } from "mongodb";
 
 export async function applyPassedVoteEffects(opts: {
   db: Db;
@@ -47,40 +43,7 @@ export async function applyPassedVoteEffects(opts: {
     }
 
     case "relocation": {
-      const { destinationCountryId, destinationStateCode } = vote.payload;
-      if (!destinationCountryId || !destinationStateCode) return;
-      // A vote opened before the destination became a command economy (or
-      // around the proposal gate) must not carry a private corporation in.
-      if (
-        await commandEconomyRelocationBlock(
-          db,
-          corporation,
-          corporation.countryId,
-          destinationCountryId
-        )
-      ) {
-        return;
-      }
-      const newDefault = getDefaultLegalStructureId(destinationCountryId, {
-        isPrivate: corporation.isPrivate === true,
-      });
-      // Cancel all other open votes — they are invalidated by the country change
-      await corporationVotesCollection<Document>(db).updateMany(
-        { corporationId: corporation._id, status: "open", _id: { $ne: vote._id } },
-        { $set: { status: "cancelled", resolvedAt: now, updatedAt: now } }
-      );
-      await corporationsCollection(db).updateOne(
-        { _id: corporation._id },
-        {
-          $set: {
-            countryId: destinationCountryId,
-            headquartersState: destinationStateCode,
-            legalStructure: newDefault,
-            legalStructureChangeCooldownUntilTurn: currentTurn + 48,
-            updatedAt: now,
-          },
-        }
-      );
+      // The passed vote authorizes the CEO's separately quoted and funded move.
       break;
     }
 
@@ -169,7 +132,7 @@ export async function applyPassedVoteEffects(opts: {
       }
       await recordCappedPrimaryPlacement(db, corporation._id, placement);
       if (placedShares > 0) {
-        void recordShareTrade(db, {
+        await recordShareTrade(db, {
           corporationId: corporation._id,
           kind: "issuance",
           turn: currentTurn,
@@ -182,7 +145,7 @@ export async function applyPassedVoteEffects(opts: {
         });
       }
       if (placement.poolActive && placement.paidLocal > 0) {
-        void emitTx(db, {
+        await emitTx(db, {
           type: "ipo_proceeds",
           turn: currentTurn,
           createdAt: now,
@@ -268,13 +231,19 @@ export async function applyPassedVoteEffects(opts: {
     }
 
     case "dissolution": {
-      await withCorporationSettlementLock(db, corporation._id, "dissolutionInProgressAt", now, () =>
-        executeCorporationBondDefaultDissolution(db, corporation, {
-          requireDefaultedBonds: false,
-          exitReason: "shareholder_vote",
-          turn: currentTurn,
-        })
+      const dissolved = await withCorporationSettlementLock(
+        db,
+        corporation._id,
+        "dissolutionInProgressAt",
+        now,
+        (db) =>
+          executeCorporationBondDefaultDissolution(db, corporation, {
+            requireDefaultedBonds: false,
+            exitReason: "shareholder_vote",
+            turn: currentTurn,
+          })
       );
+      if (!dissolved) throw new Error("Corporation settlement is busy; retry the same vote");
       break;
     }
   }

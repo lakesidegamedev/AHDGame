@@ -43,6 +43,7 @@ vi.mock("@/lib/corporations/mergerReview/lifecycle", () => ({
 
 import { executeAgreedAcquisition } from "./executeAgreedAcquisition";
 import {
+  listDealsForCorp,
   acceptAcquisitionOffer,
   resolveAcquisitionOfferStatus,
   resumeStrandedAcceptedOffers,
@@ -447,3 +448,30 @@ vi.mock("./referenceValuation", () => ({
   }),
   referenceValuationAnchor: vi.fn().mockResolvedValue(0),
 }));
+
+describe("expired offers retain a recovery executor", () => {
+  it("rolls back an interrupted expiry refund and concurrent listings compensate once", async () => {
+    const w = await crashMidPayout();
+    w.memory.seed("gameState", [{ _id: "current", currentTurn: 1000 }]);
+    const before = await readBalances(w);
+    const fault = withInjectedCrash(w.memory, {
+      collection: "corporations",
+      op: "updateOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    await expect(listDealsForCorp(fault.db, w.acq)).rejects.toThrow();
+    expect(fault.crashed).toBe(true);
+    expect(await offerStatus(w)).toBe("pending");
+    expect(await readBalances(w)).toEqual(before);
+    await Promise.all([listDealsForCorp(w.db, w.acq), listDealsForCorp(w.db, w.acq)]);
+    expect(await offerStatus(w)).toBe("expired");
+    const settlement = await loadAcquisitionSettlement(w.db, w.offerId);
+    expect(settlement?.status).toBe("compensated");
+    const delivered = defaultSlices(w.price).charA + defaultSlices(w.price).charB;
+    expect((await readBalances(w)).acquirer).toBe(ACQUIRER_CASH - delivered);
+    const balances = await readBalances(w);
+    await listDealsForCorp(w.db, w.acq);
+    expect(await readBalances(w)).toEqual(balances);
+  });
+});

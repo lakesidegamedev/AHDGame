@@ -1,5 +1,11 @@
+vi.mock("../funding", () => ({ fundSovereignResolution: vi.fn().mockResolvedValue(true) }));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  afterCommit: (_db: unknown, effect: () => unknown) => effect(),
+  unboundDb: (db: unknown) => db,
+}));
 import type { Db } from "mongodb";
 
 vi.mock("@/lib/bonds/sovereign", async (importActual) => {

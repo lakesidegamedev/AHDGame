@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
+}));
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
@@ -172,7 +175,7 @@ describe("POST /api/corporations/[id]/shares/self-issue", () => {
     );
   });
 
-  it("still succeeds if ledger emission fails after a successful issuance", async () => {
+  it("refuses success when its required financial receipt fails", async () => {
     const userId = new ObjectId();
     const characterId = new ObjectId();
     const corporationId = new ObjectId();
@@ -263,7 +266,7 @@ describe("POST /api/corporations/[id]/shares/self-issue", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(500);
     expect(Sentry.captureMessage).not.toHaveBeenCalledWith(
       "self-issue share invariant drift",
       expect.anything()

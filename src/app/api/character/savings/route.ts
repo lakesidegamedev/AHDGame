@@ -5,7 +5,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { loadSavingsApyForCharacter } from "@/lib/api/savings/savingsApy";
-import { turnsUntilSavingsCredit } from "@/lib/currency/savingsInterest";
+import { turnsUntilSavingsCredit } from "@/lib/currency/rules/savingsInterest";
 import { getGameState } from "@/lib/gameState";
 
 // GET /api/character/savings — APY map (what each balance earns at its holder) and savings account flags for the active character

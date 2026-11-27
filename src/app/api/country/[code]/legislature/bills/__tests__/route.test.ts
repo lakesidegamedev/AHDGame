@@ -1,8 +1,20 @@
+// Spy-only fixtures bypass transport; transactional fixtures retain real rollback semantics.
+vi.mock("@/lib/db/sessionDb", async (original) => {
+  const actual = await original<typeof import("@/lib/db/sessionDb")>();
+  return {
+    ...actual,
+    withSessionDb: (
+      db: import("mongodb").Db,
+      work: (db: import("mongodb").Db) => Promise<unknown>
+    ) => ("client" in db && db.client ? actual.withSessionDb(db, work) : work(db)),
+  };
+});
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { NextResponse } from "next/server";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuthUser: vi.fn() }));

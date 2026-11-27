@@ -44,7 +44,8 @@ function sovereignFace(rows: Document[]) {
 }
 
 beforeAll(async () => {
-  const { createInMemoryDb } = await import("@/lib/test-utils/inMemoryDb");
+  const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
+  const createInMemoryDb = () => createTransactionalMemoryDb().memory;
   db = createInMemoryDb() as unknown as Db;
   const { bootstrapGameWorld } = await import("@/lib/admin/bootstrapGameWorld");
   await bootstrapGameWorld({ db, preset: "1991-default", resetReference: true, log: () => {} });

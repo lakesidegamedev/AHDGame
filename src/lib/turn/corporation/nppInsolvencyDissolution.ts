@@ -1,7 +1,5 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { GameState } from "@/lib/db/types/gameState";
 import { isCommandEconomy, isSoeSpared } from "@/lib/constants/commandEconomy";
 import {
   corpLiquidCapitalToAnchor,
@@ -215,7 +213,7 @@ export async function processNppInsolventCorpDissolution(
         corp._id,
         "bondSettlementInProgressAt",
         now,
-        () =>
+        (db) =>
           executeCorporationBondDefaultDissolution(db, corp, {
             requireDefaultedBonds: false,
             exitReason: "npp_insolvency",

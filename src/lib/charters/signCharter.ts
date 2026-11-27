@@ -1,5 +1,6 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import type { Db, ObjectId } from "mongodb";
-import type { PartyCharter } from "@/lib/db/types";
+
 import { ratifyCharter } from "./ratifyCharter";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
@@ -42,6 +43,18 @@ export type SignCharterResult =
     };
 
 export async function signCharter(
+  charterId: ObjectId,
+  signerCharacterId: ObjectId,
+  signerUserId: ObjectId,
+  db: Db,
+  now: Date = new Date()
+): Promise<SignCharterResult> {
+  return withAtomicResult(db, (db) =>
+    signCharterInTransaction(charterId, signerCharacterId, signerUserId, db, now)
+  );
+}
+
+async function signCharterInTransaction(
   charterId: ObjectId,
   signerCharacterId: ObjectId,
   signerUserId: ObjectId,

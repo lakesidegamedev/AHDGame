@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import { loadConstructionLoanDebtAnchorByCorpId, valuationCashAnchor } from "./honestBalanceSheets";
+import { loadCorporateLoanDebtAnchorByCorpId, valuationCashAnchor } from "./honestBalanceSheets";
 
 describe("valuationCashAnchor", () => {
   it("floors overdrawn cash at zero while the stage is off", () => {
@@ -14,8 +14,8 @@ describe("valuationCashAnchor", () => {
   });
 });
 
-describe("loadConstructionLoanDebtAnchorByCorpId", () => {
-  it("sums live construction loan principal per borrower in anchor units", async () => {
+describe("loadCorporateLoanDebtAnchorByCorpId", () => {
+  it("sums live bank loan principal per borrower in anchor units", async () => {
     const a = new ObjectId();
     const b = new ObjectId();
     const find = vi.fn().mockReturnValue({
@@ -27,10 +27,11 @@ describe("loadConstructionLoanDebtAnchorByCorpId", () => {
       ]),
     });
     const db = { collection: vi.fn().mockReturnValue({ find }) } as unknown as Db;
-    const out = await loadConstructionLoanDebtAnchorByCorpId(db, new Map([["USD", 1]]));
+    const out = await loadCorporateLoanDebtAnchorByCorpId(db, new Map([["USD", 1]]));
     expect(out.get(a.toString())).toBeCloseTo(150, 6);
     expect(out.has(b.toString())).toBe(false);
     const filter = find.mock.calls[0][0];
+    expect(filter).not.toHaveProperty("constructionCollateral");
     expect(filter.borrowerType).toBe("corporation");
     expect(filter.status.$in).toEqual(["current", "arrears", "defaulted"]);
   });

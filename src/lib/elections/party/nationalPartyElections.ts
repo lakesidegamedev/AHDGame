@@ -82,9 +82,10 @@ export async function createMissingNationalElections(
   currentTurn: number,
   durationTurns = NATIONAL_ELECTION_DURATION_TURNS,
   effectiveNow = new Date(),
-  countryId?: CountryId
+  countryId?: CountryId,
+  providedDb?: Db
 ): Promise<number> {
-  const db = await getDb();
+  const db = providedDb ?? (await getDb());
   const now = new Date(effectiveNow);
 
   // Founding branch: while the pre-iteration founding phase is active, parties

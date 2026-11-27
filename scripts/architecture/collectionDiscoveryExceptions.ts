@@ -140,7 +140,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/admin/seed/runCoreSeed.ts",
     owner: "runSeed",
     argument: "entry.name",
-    scopeHash: "01208b9ac2326e37ea678b1367a05616f3ef81c102be6cd553d5c4db871c2eda",
+    scopeHash: "29c541cd8ca28064f303d1a3582086b760d7dbba6bb709f580780e9bac492b89",
     count: 1,
     reason:
       "Reviewed county reseed compatibility: only the literal states update now preserves live population, and the US census lean seeding no longer stores group rows. The reset filter no longer special-cases the retired voter-group category collection. Reviewed rebase and minor-party additions: preset forwarding and preset-filtered party seeding changed; the existing reset entry.name selector, registry, filters and dynamic call count are unchanged. Minor chapters use the existing statePartyOrg getter and lifecycle; no new dynamic collection scope is permitted.",
@@ -240,7 +240,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "applyLeg",
     argument: "leg.collection",
-    scopeHash: "d685431760a4f6678153bbc55674370127b9af3cb0d0e0d60c4c6e3b99bcb5c1",
+    scopeHash: "e6ea85bac6113945164435b7441058425290bb1d74da581caf645b580dd5c653",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -248,7 +248,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "applyMoneyMove",
     argument: "leg.collection!",
-    scopeHash: "af446333d75b07ba36f26bf60e70b1bbdb0721a55518880a07a45c9cdcbe114e",
+    scopeHash: "47ef4cb6742516f0e0fd971847813a1a42d727bd3380f9927eaabea3cd59dd31",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -256,7 +256,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "deliverCashLegsInBatch",
     argument: "collection",
-    scopeHash: "4eb839cee5e0b189df3cb6f5b4ae234394bb60e49bf90c0b47eb2e8433727c30",
+    scopeHash: "9881de4b74281f23433283837c3919123372613a5a1782f5bf585b03d25ccb7c",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -296,10 +296,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts",
     owner: "applyAcquisitionLeg",
     argument: "leg.collection",
-    scopeHash: "0ca6c157583b0846a2da2d02e66888e50bcd2f89bf106105a92083ad54c2bfa8",
+    scopeHash: "def0889ffde1d1f9fdd6ab9b18a438149ffb6ca5e1ed09efe246e70acda3800a",
     count: 1,
     reason:
-      "Reviewed corporate-tax priority guard: fresh acquirer debits reject pending withholding and existing payables; persisted acquisition legs still target only characters, imperialCharacters or corporations, retain their keyed wallet recovery, and inherit actor reset coverage.",
+      "Reviewed acquisition legs pin the saved wallet currency and reject pending withholding and payables. The selector still targets only characters, imperialCharacters or corporations and inherits actor reset coverage.",
   },
   {
     file: "src/lib/corporations/commands/acquisitions/acquisitionSettlement.ts",
@@ -339,9 +339,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/country/mergePartiesIntoCountry.ts",
     owner: "mergePartiesIntoCountry",
     argument: "ref.collection",
-    scopeHash: "dc0d36f13be1f05b222c0d06851ee793c60a27db569e8d0f0fc54b181fdbace3",
+    scopeHash: "30c17afe3b7b3b185923080f9887baa0fa21b53301c9e4293f8d2b119b87153b",
     count: 5,
-    reason: "The world-transition operation iterates its explicit collection descriptors.",
+    reason:
+      "Reviewed the same five selectors over explicit world-transition collection descriptors. Scalar remaps and keyed-map updates are collection batches; document-key transplants use two atomic bulk phases.",
   },
 
   {
@@ -579,7 +580,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/retention/archive.ts",
     owner: "archiveDocs",
     argument: "collection",
-    scopeHash: "92a893eebee640d355d36f5e7ab78075c068d455dcd6a92a9beda790b83a1e56",
+    scopeHash: "73404f0741756d79c14e6d3d1b3025b01e7ecf5c4b8f278b92dde8de002655fa",
     count: 1,
     reason:
       "The named persistence operation receives its collection from a repository-owned caller.",
@@ -597,7 +598,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/retention/retention.ts",
     owner: "runRetention",
     argument: "policy.collection",
-    scopeHash: "27838f533a59b4f516142164f646b33a4d848443c380663c15f316bf4fdbffd3",
+    scopeHash: "ebd1bc40db1ac24a3806ab8df9dbe3b77915020ef3462e4f334644befee599aa",
     count: 1,
     reason:
       "The named persistence operation receives its collection from a repository-owned caller.",
@@ -715,5 +716,21 @@ export const SESSION_COLLECTION_FORWARDERS: readonly LegacyDynamicCollectionSite
     count: 1,
     reason:
       "Transparent session binding; names are supplied by already-scanned domain collection callsites, never generated here. No new collection, index or reset policy is introduced.",
+  },
+];
+
+/** Reviewed read-only cohorts over the existing money-move destination protocol.
+ * These selectors introduce no collection, writer, index or reset lifecycle.
+ * Keep them separate from legacy debt and session transport; an edit forces review.
+ */
+export const MONEY_MOVE_COHORT_READS: readonly LegacyDynamicCollectionSite[] = [
+  {
+    file: "src/lib/db/repositories/moneyMoveTargets.ts",
+    owner: "moneyMoveTargetsCollection",
+    argument: "name",
+    scopeHash: "500f4a5d6e57694e7f403202ae3f892dc44416871e628935ac0662d6a966eb2f",
+    count: 1,
+    reason:
+      "Reads only the identity and balance paths of existing MoneyMoveLeg targets, grouped by collection with $in. No target is written here. Tests pin one query for both 20 and 2,000 recipients and native profiling measures one additional command per cohort; target guards remain authoritative.",
   },
 ];

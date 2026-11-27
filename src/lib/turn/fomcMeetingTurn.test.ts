@@ -903,3 +903,13 @@ describe("current policy at committee execution", () => {
     }
   );
 });
+
+// Formula/transport fixture; atomic monetary tests exercise the real settlement.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

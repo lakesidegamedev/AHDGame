@@ -1,3 +1,16 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  afterCommit: async (_db: unknown, work: () => unknown) => work(),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type Db, ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -32,6 +45,28 @@ function cursorOf<T>(docs: T[]) {
 
 describe("mergePartiesIntoCountry", () => {
   let db: MockDb;
+  type RecordedUpdate = readonly [Record<string, unknown>, Record<string, Record<string, unknown>>];
+  const bulkUpdateCalls = (collection: string): RecordedUpdate[] => {
+    const calls = db.collection(collection).bulkWrite.mock.calls as unknown[][];
+    return calls.flatMap((call) =>
+      (
+        call[0] as Array<{
+          updateOne?: {
+            filter: Record<string, unknown>;
+            update: Record<string, Record<string, unknown>>;
+          };
+        }>
+      ).flatMap((op) => (op.updateOne ? [[op.updateOne.filter, op.updateOne.update] as const] : []))
+    );
+  };
+  const bulkInsertDocs = (collection: string): Record<string, unknown>[] => {
+    const calls = db.collection(collection).bulkWrite.mock.calls as unknown[][];
+    return calls.flatMap((call) =>
+      (call[0] as Array<{ insertOne?: { document: Record<string, unknown> } }>).flatMap((op) =>
+        op.insertOne ? [op.insertOne.document] : []
+      )
+    );
+  };
   beforeEach(() => {
     vi.clearAllMocks();
     reserveSequentialIds.mockResolvedValue([7, 8]);
@@ -77,7 +112,7 @@ describe("mergePartiesIntoCountry", () => {
 
     await run();
 
-    const inserts = db.collectionMocks["statePartyOrg"].insertOne.mock.calls.map((c) => c[0]);
+    const inserts = bulkInsertDocs("statePartyOrg");
     // Parked under a temporary id first: SN_1 must become SN_7 while SN_2
     // becomes SN_8, and a direct pass would collide on a key still occupied.
     expect(inserts.filter((d) => String(d._id).startsWith("__rekey__"))).toHaveLength(2);
@@ -97,7 +132,7 @@ describe("mergePartiesIntoCountry", () => {
 
     await run();
 
-    expect(db.collectionMocks["statePartyOrg"].insertOne).not.toHaveBeenCalled();
+    expect(bulkInsertDocs("statePartyOrg")).toHaveLength(0);
   });
 
   it("does NOT overwrite a key held by a row that is staying put", async () => {
@@ -113,14 +148,12 @@ describe("mergePartiesIntoCountry", () => {
     await run();
 
     expect(db.collectionMocks["statePartyOrg"].deleteOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks["statePartyOrg"].insertOne).not.toHaveBeenCalled();
+    expect(bulkInsertDocs("statePartyOrg")).toHaveLength(0);
   });
 
   it("stamps mergedFrom so a re-run is idempotent", async () => {
     await run();
-    const call = db.collectionMocks["politicalParties"].updateOne.mock.calls.find(
-      (c) => String(c[0]._id) === String(SED)
-    );
+    const call = bulkUpdateCalls("politicalParties").find((c) => String(c[0]._id) === String(SED));
     expect(call?.[1].$set.countryId).toBe("DE");
     expect(call?.[1].$set.sequentialId).toBe(7);
     expect(call?.[1].$set.mergedFrom).toEqual({ countryId: "DD", sequentialId: 1, turn: 470 });
@@ -201,11 +234,11 @@ describe("mergePartiesIntoCountry", () => {
 
   it("remaps a sequentialId reference in the source country only", async () => {
     await run();
-    const call = db.collectionMocks["electedOfficials"].updateMany.mock.calls.find(
-      (c) => c[0].party === "1"
+    const call = db.collectionMocks["electedOfficials"].updateMany.mock.calls.find((c) =>
+      c[0].party?.$in?.includes("1")
     );
-    expect(call?.[0]).toEqual({ countryId: "DD", party: "1" });
-    expect(call?.[1].$set.party).toBe("7");
+    expect(call?.[0]).toEqual({ countryId: "DD", party: { $in: ["1", "2"] } });
+    expect(call?.[1][0].$set.party.$cond.slice(0, 2)).toEqual([{ $eq: ["$party", "1"] }, "7"]);
   });
 
   it("never remaps the orgRegLedger pool sentinel", async () => {
@@ -271,7 +304,7 @@ describe("mergePartiesIntoCountry", () => {
       currentTurn: 470,
     });
 
-    const call = db.collectionMocks["governmentFormations"].updateOne.mock.calls.find(
+    const call = bulkUpdateCalls("governmentFormations").find(
       (c) => c[1]?.$set?.seatsByParty !== undefined
     );
     // 1 -> 7 and 2 -> 8, the ids reserved for the moved parties.
@@ -293,7 +326,7 @@ describe("mergePartiesIntoCountry", () => {
       currentTurn: 470,
     });
 
-    const call = db.collectionMocks["governmentFormations"].updateOne.mock.calls.find(
+    const call = bulkUpdateCalls("governmentFormations").find(
       (c) => c[1]?.$set?.seatsByParty !== undefined
     );
     expect(call?.[1].$set.seatsByParty).toEqual({ "7": 119 });
@@ -311,7 +344,7 @@ describe("mergePartiesIntoCountry", () => {
       currentTurn: 470,
     });
 
-    const call = db.collectionMocks["governmentFormations"].updateOne.mock.calls.find(
+    const call = bulkUpdateCalls("governmentFormations").find(
       (c) => c[1]?.$set?.seatsByParty !== undefined
     );
     expect(call).toBeUndefined();

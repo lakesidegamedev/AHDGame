@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Restructuring as an outcome of an interest spiral.
  *
@@ -73,7 +74,7 @@ export async function restructureForInterestSpiral(
   if (fired.matchedCount !== 1) return { ok: false, reason: "state-changed" };
 
   const decision = await insertSovereignCrisisDecision(db, countryCode, currentTurn, realtimeMs);
-  await emitInterestSpiralCrisisNews(countryCode, currentTurn, spiralYears);
+  await afterCommit(db, () => emitInterestSpiralCrisisNews(countryCode, currentTurn, spiralYears));
   const result = await applyRestructureResolution(db, {
     countryCode,
     currentTurn,

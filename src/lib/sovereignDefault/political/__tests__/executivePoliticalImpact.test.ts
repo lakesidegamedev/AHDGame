@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ObjectId } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import {
   applyExecutivePoliticalImpact,
   computeExecutivePoliticalImpact,
@@ -53,15 +54,14 @@ describe("applyExecutivePoliticalImpact", () => {
     expect(r.applied).toBe(false);
   });
 
-  it("applies $inc with the path's deltas when characterId is present", async () => {
+  it("applies the path's deltas without leaving percentage bounds", async () => {
+    const f = createTransactionalMemoryDb();
     const charId = new ObjectId();
-    const updateOne = vi.fn().mockResolvedValue({ modifiedCount: 1 });
-    const db = { collection: vi.fn(() => ({ updateOne })) } as never;
-    const r = await applyExecutivePoliticalImpact(db, charId, "monetize");
-    expect(r.applied).toBe(true);
-    expect(updateOne).toHaveBeenCalledTimes(1);
-    expect(updateOne.mock.calls[0][1]).toEqual({
-      $inc: { favorability: -15, infamy: 10 },
+    f.memory.seed("characters", [{ _id: charId, favorability: 5, infamy: 95 }]);
+    expect((await applyExecutivePoliticalImpact(f.db, charId, "repudiate")).applied).toBe(true);
+    expect(f.memory.collection("characters").docs[0]).toMatchObject({
+      favorability: 0,
+      infamy: 100,
     });
   });
 });

@@ -1,3 +1,13 @@
+// Collection-only route behavior; paid rollback is checked with transactional fixtures.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  runWithDbSession: (
+    _db: import("mongodb").Db,
+    work: (session: import("mongodb").ClientSession) => Promise<unknown>
+  ) => work({} as import("mongodb").ClientSession),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId, type Db } from "mongodb";
@@ -254,8 +264,7 @@ describe("targeted ad route and command integration", () => {
     const calls = db.collection("characters").updateOne.mock.calls;
     expect(calls[0][0]._id).toEqual(manager._id);
     expect(calls[1][0]._id).toEqual(character._id);
-    expect(calls[2][0]._id).toEqual(manager._id);
-    expect(calls[2][1]).toEqual({ $inc: { actions: 3, funds: 300 } });
+    expect(calls).toHaveLength(2); // The transaction rolls back the manager debit.
   });
 
   it("rejects an expired quote or a changed price before spending", async () => {

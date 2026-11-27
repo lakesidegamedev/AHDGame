@@ -862,7 +862,11 @@ describe("accumulateVoteTurn — vote accumulation", () => {
 
     expect(db.collectionMocks.electionVoteTallies.updateOne).not.toHaveBeenCalled();
     expect(tallyWrites).toHaveLength(1);
-    expect(tallyWrites[0].updateOne.filter).toEqual({ electionId });
+    expect(tallyWrites[0].updateOne.filter).toMatchObject({
+      electionId,
+      finalized: false,
+      turnSnapshots: { $size: 0, $not: { $elemMatch: { turn: 7 } } },
+    });
     const update = tallyWrites[0].updateOne.update as {
       $push: { turnSnapshots: { turn: number; recordedAt: Date } };
     };
@@ -1225,7 +1229,7 @@ describe("accumulateVoteTurn — vote accumulation", () => {
     expect(snapshot.cumulativeVotes[candidateId]).toBe(10_000);
   });
 
-  it("passes sharesPct from vote distribution into the snapshot", async () => {
+  it("publishes shares from settled cumulative votes rather than the distributor preview", async () => {
     const electionId = new ObjectId();
     const candidate = makeCandidate({ electionId });
     const candidateId = candidate._id.toString();
@@ -1243,7 +1247,7 @@ describe("accumulateVoteTurn — vote accumulation", () => {
     const [, update] = db.collectionMocks.electionVoteTallies.updateOne.mock.calls[0];
     const snapshot = (update as { $push: { turnSnapshots: { sharesPct: Record<string, number> } } })
       .$push.turnSnapshots;
-    expect(snapshot.sharesPct[candidateId]).toBe(73.5);
+    expect(snapshot.sharesPct[candidateId]).toBe(100);
   });
 
   it("coattail gate uses parties in the race, not StatePartyOrg rows (2026-07-09 fix)", async () => {

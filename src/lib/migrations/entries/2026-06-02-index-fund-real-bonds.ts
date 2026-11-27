@@ -1,5 +1,5 @@
 import type { Db } from "mongodb";
-import type { IndexFund } from "@/lib/db/types";
+
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import type { Document } from "mongodb";
@@ -32,23 +32,23 @@ async function migrateIndexFundsToRealBonds(
       0
     );
     if (syntheticPrincipal <= 0) {
-      await indexFundsCollection<Document>(db).updateOne(
-        { _id: fund._id },
+      const changed = await indexFundsCollection<Document>(db).updateOne(
+        { _id: fund._id, bondAllocations: { $exists: true, $eq: fund.bondAllocations ?? null } },
         { $unset: { bondAllocations: "" }, $set: { updatedAt: new Date() } }
       );
-      updated++;
+      updated += changed.matchedCount;
       continue;
     }
 
-    await indexFundsCollection<Document>(db).updateOne(
-      { _id: fund._id },
+    const changed = await indexFundsCollection<Document>(db).updateOne(
+      { _id: fund._id, bondAllocations: { $exists: true, $eq: fund.bondAllocations ?? null } },
       {
         $inc: { cashAnchor: syntheticPrincipal },
         $unset: { bondAllocations: "" },
         $set: { updatedAt: new Date() },
       }
     );
-    updated++;
+    updated += changed.matchedCount;
   }
 
   return {

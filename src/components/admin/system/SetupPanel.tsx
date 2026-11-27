@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
+import { INITIAL_SETUP_SCOPES } from "@/lib/admin/rules/setupScopes";
 import { ImfInstitutionSeedForm } from "@/components/admin/economy/ImfInstitutionSeedForm";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -41,7 +41,6 @@ interface ImfSeedStatus {
 }
 
 export function SetupPanel() {
-  const registered = useRegisteredCountries();
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -77,7 +76,7 @@ export function SetupPanel() {
   const runSetup = async () => {
     if (
       !confirm(
-        "This will seed all reference data, initialize game state, and create elected officials.\n\nExisting data is preserved (idempotent). Continue?"
+        "This will create initial baseline data and a paused world. Existing baseline records may be replaced. Setup is unavailable after world initialization. Continue?"
       )
     )
       return;
@@ -225,13 +224,14 @@ export function SetupPanel() {
           <h3 className="mb-1 font-semibold">Run setup</h3>
           <p className="mb-4 text-body text-muted">
             Seeds all reference data, initializes game state (paused), creates elected officials and
-            cycle-1 elections, and ensures database indexes. Safe to run multiple times.
+            cycle-1 elections, and ensures database indexes. Available only before world
+            initialization; use targeted seeders or the world reset workflow for an existing world.
           </p>
 
           <div className="mb-4">
             <label className="block text-body-sm text-muted mb-1.5">Scope</label>
             <div className="flex gap-2">
-              {[...registered, "all" as const].map((s) => (
+              {INITIAL_SETUP_SCOPES.map((s) => (
                 <button
                   key={s}
                   onClick={() => setScope(s)}
@@ -241,7 +241,7 @@ export function SetupPanel() {
                       : "border-card-border bg-card text-muted hover:text-foreground"
                   }`}
                 >
-                  {COUNTRY_CLIENT_CONFIGS[s as CountryId]?.name ?? "All countries"}
+                  {COUNTRY_CLIENT_CONFIGS[s as CountryId]?.name ?? "US, UK and Japan"}
                 </button>
               ))}
             </div>

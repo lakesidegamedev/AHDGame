@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, Document, ObjectId } from "mongodb";
 import {
   COUNTRY_CURRENCY_MAP,
@@ -64,125 +65,127 @@ export async function applyEraCurrencyTopology(
     }
     const scale = currencyConversionScale(legacyRate, eurRate);
 
-    const budget = (await federalBudgetCollection(db).findOne({ countryId })) as AnyDoc | null;
-    const needsFiscalConversion = budget?.currencyCode !== "EUR";
-    if (budget && needsFiscalConversion) {
-      await federalBudgetCollection<AnyDoc>(db).updateOne(
-        { _id: budget._id },
+    await withSessionDb(db, async (db) => {
+      const budget = (await federalBudgetCollection(db).findOne({ countryId })) as AnyDoc | null;
+      const needsFiscalConversion = budget?.currencyCode !== "EUR";
+      if (budget && needsFiscalConversion) {
+        await federalBudgetCollection<AnyDoc>(db).updateOne(
+          { _id: budget._id },
+          {
+            $set: {
+              ...redenominateFederalBudget(budget as never, scale),
+              currencyCode: "EUR",
+              updatedAt: new Date(),
+            },
+          }
+        );
+      }
+
+      const stateBudgets = (await stateBudgetsCollection<Document>(db)
+        .find({ countryId })
+        .toArray()) as AnyDoc[];
+      if (stateBudgets.length > 0 && needsFiscalConversion) {
+        await stateBudgetsCollection<AnyDoc>(db).bulkWrite(
+          stateBudgets.map((doc) => ({
+            updateOne: {
+              filter: { _id: doc._id },
+              update: {
+                $set: { ...redenominateStateBudget(doc as never, scale), updatedAt: new Date() },
+              },
+            },
+          }))
+        );
+        await statesCollection<Document>(db).updateMany({ countryId }, { $mul: { gdp: scale } });
+      }
+
+      if (needsFiscalConversion) {
+        for (const collection of ["politicalParties", "statePartyOrg"] as const) {
+          await db.collection(collection).updateMany({ countryId }, { $mul: { treasury: scale } });
+        }
+      }
+
+      const npps = (await nppsCollection<Document>(db)
+        .find({ countryId, [`currencyBalances.personal.${legacyCurrency}`]: { $exists: true } })
+        .project({ currencyBalances: 1 })
+        .toArray()) as Document[];
+      if (npps.length > 0) {
+        await nppsCollection<Document>(db).bulkWrite(
+          npps.map((npp) => ({
+            updateOne: {
+              filter: { _id: npp._id },
+              update: {
+                $set: {
+                  "currencyBalances.personal.EUR":
+                    Number(npp.currencyBalances?.personal?.[legacyCurrency] ?? 0) * scale,
+                  updatedAt: new Date(),
+                },
+                $unset: { [`currencyBalances.personal.${legacyCurrency}`]: "" },
+              },
+            },
+          }))
+        );
+      }
+
+      const corporations = await corporationsCollection(db).find({ countryId }).toArray();
+      for (const corporation of corporations) {
+        if (corporation.liquidCurrencyCode === "EUR") continue;
+        const result = await convertCorpCurrency(
+          db,
+          corporation,
+          "EUR",
+          fxByCurrency,
+          new Date(),
+          true
+        );
+        if (!result.ok && !result.debtCurrencyRetained)
+          throw new Error(`Cannot redenominate ${countryId} corporation: ${result.error}`);
+      }
+
+      const bonds = (await bondsCollection<Document>(db)
+        .find({ countryId, currencyCode: { $ne: "EUR" } })
+        .toArray()) as Document[];
+      if (bonds.length > 0) {
+        await bondsCollection<Document>(db).bulkWrite(
+          bonds.map((bond) => ({
+            updateOne: {
+              filter: { _id: bond._id },
+              update: {
+                $set: {
+                  currencyCode: "EUR",
+                  faceValue: Number(bond.faceValue ?? 0) * scale,
+                  totalIssued: Number(bond.totalIssued ?? 0) * scale,
+                  ...(bond.originalTotalIssued == null
+                    ? {}
+                    : { originalTotalIssued: Number(bond.originalTotalIssued) * scale }),
+                  holders: Array.isArray(bond.holders)
+                    ? bond.holders.map((holder: Document) => ({
+                        ...holder,
+                        ...(holder.avgCostPerUnit == null
+                          ? {}
+                          : { avgCostPerUnit: Number(holder.avgCostPerUnit) * scale }),
+                      }))
+                    : [],
+                  updatedAt: new Date(),
+                },
+              },
+            },
+          }))
+        );
+      }
+
+      await exchangeRatesCollection<Document & { _id: string }>(db).updateOne(
+        { _id: countryId },
         {
           $set: {
-            ...redenominateFederalBudget(budget as never, scale),
             currencyCode: "EUR",
+            rate: eurRate,
+            baseRate: eurRate,
+            macroTarget: eurRate,
             updatedAt: new Date(),
           },
         }
       );
-    }
-
-    const stateBudgets = (await stateBudgetsCollection<Document>(db)
-      .find({ countryId })
-      .toArray()) as AnyDoc[];
-    if (stateBudgets.length > 0 && needsFiscalConversion) {
-      await stateBudgetsCollection<AnyDoc>(db).bulkWrite(
-        stateBudgets.map((doc) => ({
-          updateOne: {
-            filter: { _id: doc._id },
-            update: {
-              $set: { ...redenominateStateBudget(doc as never, scale), updatedAt: new Date() },
-            },
-          },
-        }))
-      );
-      await statesCollection<Document>(db).updateMany({ countryId }, { $mul: { gdp: scale } });
-    }
-
-    if (needsFiscalConversion) {
-      for (const collection of ["politicalParties", "statePartyOrg"] as const) {
-        await db.collection(collection).updateMany({ countryId }, { $mul: { treasury: scale } });
-      }
-    }
-
-    const npps = (await nppsCollection<Document>(db)
-      .find({ countryId, [`currencyBalances.personal.${legacyCurrency}`]: { $exists: true } })
-      .project({ currencyBalances: 1 })
-      .toArray()) as Document[];
-    if (npps.length > 0) {
-      await nppsCollection<Document>(db).bulkWrite(
-        npps.map((npp) => ({
-          updateOne: {
-            filter: { _id: npp._id },
-            update: {
-              $set: {
-                "currencyBalances.personal.EUR":
-                  Number(npp.currencyBalances?.personal?.[legacyCurrency] ?? 0) * scale,
-                updatedAt: new Date(),
-              },
-              $unset: { [`currencyBalances.personal.${legacyCurrency}`]: "" },
-            },
-          },
-        }))
-      );
-    }
-
-    const corporations = await corporationsCollection(db).find({ countryId }).toArray();
-    for (const corporation of corporations) {
-      if (corporation.liquidCurrencyCode === "EUR") continue;
-      const result = await convertCorpCurrency(
-        db,
-        corporation,
-        "EUR",
-        fxByCurrency,
-        new Date(),
-        true
-      );
-      if (!result.ok && !result.debtCurrencyRetained)
-        throw new Error(`Cannot redenominate ${countryId} corporation: ${result.error}`);
-    }
-
-    const bonds = (await bondsCollection<Document>(db)
-      .find({ countryId, currencyCode: { $ne: "EUR" } })
-      .toArray()) as Document[];
-    if (bonds.length > 0) {
-      await bondsCollection<Document>(db).bulkWrite(
-        bonds.map((bond) => ({
-          updateOne: {
-            filter: { _id: bond._id },
-            update: {
-              $set: {
-                currencyCode: "EUR",
-                faceValue: Number(bond.faceValue ?? 0) * scale,
-                totalIssued: Number(bond.totalIssued ?? 0) * scale,
-                ...(bond.originalTotalIssued == null
-                  ? {}
-                  : { originalTotalIssued: Number(bond.originalTotalIssued) * scale }),
-                holders: Array.isArray(bond.holders)
-                  ? bond.holders.map((holder: Document) => ({
-                      ...holder,
-                      ...(holder.avgCostPerUnit == null
-                        ? {}
-                        : { avgCostPerUnit: Number(holder.avgCostPerUnit) * scale }),
-                    }))
-                  : [],
-                updatedAt: new Date(),
-              },
-            },
-          },
-        }))
-      );
-    }
-
-    await exchangeRatesCollection<Document & { _id: string }>(db).updateOne(
-      { _id: countryId },
-      {
-        $set: {
-          currencyCode: "EUR",
-          rate: eurRate,
-          baseRate: eurRate,
-          macroTarget: eurRate,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    });
     convertedCountries++;
   }
 

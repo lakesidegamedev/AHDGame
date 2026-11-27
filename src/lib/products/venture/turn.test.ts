@@ -55,6 +55,26 @@ function setup(cash = 1_000_000, ventures: ProductVenture[] = []) {
         find: () => ({ toArray: async () => [{ ...corpRow }] }),
         findOne: async () => ({ ...corpRow }),
         updateOne: async (filter: Record<string, unknown>, update: Record<string, any>) => {
+          if (Array.isArray(update)) {
+            const amountKey = Object.keys(filter).find((k) => k.endsWith(".localAmount"))!;
+            const id = amountKey.split(".")[1];
+            const receipt = (
+              corpRow.productVentureDebitsV1 as Record<
+                string,
+                { turn: number; localAmount?: number }
+              >
+            )[id];
+            if (
+              !receipt ||
+              !(receipt.localAmount! > 0) ||
+              (filter[`productVentureDebitsV1.${id}.turn`] !== undefined &&
+                receipt.turn !== filter[`productVentureDebitsV1.${id}.turn`])
+            )
+              return { matchedCount: 0 };
+            corpRow.liquidCapital = Number(corpRow.liquidCapital) + receipt.localAmount!;
+            delete (corpRow.productVentureDebitsV1 as Record<string, unknown>)[id];
+            return { matchedCount: 1 };
+          }
           corpUpdates.push(update);
           const receipts = (corpRow.productVentureDebitsV1 ?? {}) as Record<string, any>;
           const key = Object.keys(filter).find((k) => k.endsWith(".turn"));

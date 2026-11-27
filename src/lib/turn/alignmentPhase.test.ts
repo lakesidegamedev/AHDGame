@@ -1,3 +1,8 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -37,10 +42,24 @@ describe("processAlignmentTurn", () => {
 
   const gameState = (doc: object | null) =>
     db.collection("gameState").findOne.mockResolvedValue(doc);
-  const alignments = (rows: object[]) =>
+  const alignments = (input: object[]) => {
+    const rows = [...input];
+    db.collection("countryAlignments").insertOne.mockImplementation(async (row: object) => {
+      rows.push(row);
+      return { insertedId: (row as { _id: unknown })._id };
+    });
     db.collection("countryAlignments").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue(rows),
     });
+    db.collection("countryAlignments").findOne.mockImplementation(
+      async (filter: { entityId: string }) =>
+        rows.find((row) => (row as { entityId: string }).entityId === filter.entityId) ?? null
+    );
+    db.collection("alignmentPlays").updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
+  };
   const memberships = (rows: object[]) =>
     db.collection("organizationMemberships").find.mockReturnValue({
       project: vi.fn().mockReturnThis(),

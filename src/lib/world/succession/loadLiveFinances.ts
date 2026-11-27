@@ -1,3 +1,4 @@
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Bond } from "@/lib/db/types/bond";
@@ -20,6 +21,8 @@ export interface LiveSuccessionFinances {
   budgetId: string;
   /** Cash stays separate from bond debt and remains in its stored currency. */
   treasuryBalanceLocal: number;
+  spendableCashLocal?: number;
+  cashSource?: "funded";
   budgetCurrencyCode: FederalBudget["currencyCode"] | null;
   reportedDebtPrincipalLocal: number;
   activeBondPrincipalByCurrency: Record<string, number>;
@@ -40,6 +43,16 @@ export async function loadLiveSuccessionFinances(
   if (budgets.length !== 1)
     throw new Error("Federation settlement requires exactly one source budget");
   const budget = budgets[0];
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { session, projection: { treasuryCashLedgerEnabled: 1 } }
+  );
+  const funded = config?.treasuryCashLedgerEnabled === true;
+  if (
+    funded &&
+    (!Number.isFinite(budget.treasuryCashLocal) || (budget.treasuryCashLocal ?? -1) < 0)
+  )
+    throw new Error("Federation source has invalid spendable Treasury cash");
   if (
     !Number.isFinite(budget.treasuryBalance) ||
     !Number.isFinite(budget.debt?.principal) ||
@@ -82,6 +95,9 @@ export async function loadLiveSuccessionFinances(
   return {
     budgetId: String(budget._id),
     treasuryBalanceLocal: budget.treasuryBalance,
+    ...(funded
+      ? { spendableCashLocal: budget.treasuryCashLocal, cashSource: "funded" as const }
+      : {}),
     budgetCurrencyCode: budget.currencyCode ?? null,
     reportedDebtPrincipalLocal: budget.debt.principal,
     activeBondPrincipalByCurrency,

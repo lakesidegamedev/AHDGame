@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -9,7 +10,10 @@ import {
   rescaleBuildQueueForStrategyChange,
 } from "@/lib/constants/capacityEconomy";
 import type { SectorBuildOrder } from "@/lib/db/types";
-import { mergeSectorPlantFields } from "@/lib/corporations/sectorTransferCapex";
+import {
+  mergeSectorPlantFields,
+  readSectorPlantFields,
+} from "@/lib/corporations/sectorTransferCapex";
 import {
   hasProtectedConstructionProperty,
   unprotectedConstructionPropertyFilter,
@@ -35,6 +39,37 @@ import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSecto
  * A financed site never merges into another row.
  */
 export async function moveSectorToCorp(
+  db: Db,
+  sector: CorporateSector,
+  destCorpId: ObjectId,
+  srcCurrency: CurrencyCode | string | undefined,
+  srcFxRate: number,
+  destCurrency: CurrencyCode | string | undefined,
+  destFxRate: number,
+  now: Date,
+  constructionTransfers?: ConstructionBorrowerTransferPlan
+): Promise<void> {
+  return withSessionDb(db, async (db) => {
+    const fresh = await corporateSectorsCollection(db).findOne({ _id: sector._id });
+    if (!fresh) throw new Error("The source sector no longer exists");
+    if (fresh.corporationId.equals(destCorpId)) return;
+    if (!fresh.corporationId.equals(sector.corporationId))
+      throw new Error("The source sector changed owner");
+    await moveSectorInTransaction(
+      db,
+      fresh,
+      destCorpId,
+      srcCurrency,
+      srcFxRate,
+      destCurrency,
+      destFxRate,
+      now,
+      constructionTransfers
+    );
+  });
+}
+
+async function moveSectorInTransaction(
   db: Db,
   sector: CorporateSector,
   destCorpId: ObjectId,
@@ -107,31 +142,14 @@ export async function moveSectorToCorp(
       // `costPaidAnchor` is cash ALREADY SPENT and is deliberately not rescaled by the
       // strategy ratio (same rule as the retool path); CIP and cancellation refund
       // must report what was actually paid.
-      const merged = mergeSectorPlantFields(
-        {
-          sectorType: existing.sectorType,
-          capitalStock: existing.capitalStock,
-          buildQueue: existing.buildQueue,
-          mothballed: existing.mothballed,
-          activeCapacityPercent: existing.activeCapacityPercent,
-          plantsStartTurn: existing.plantsStartTurn,
-          legacyRevenueShadow: existing.legacyRevenueShadow,
-          inventoryUnits: existing.inventoryUnits,
-          inventoryValueAnchor: existing.inventoryValueAnchor,
-        },
-        {
-          sectorType: sector.sectorType,
-          capitalStock: Math.round(donorStock * ratio * 100) / 100,
-          buildQueue: donorQueue,
-          mothballed: sector.mothballed,
-          activeCapacityPercent: sector.activeCapacityPercent,
-          plantsStartTurn: sector.plantsStartTurn,
-          legacyRevenueShadow: sector.legacyRevenueShadow,
-          // Goods, not capacity: the strategy ratio does not rescale a pile.
-          inventoryUnits: sector.inventoryUnits,
-          inventoryValueAnchor: sector.inventoryValueAnchor,
-        }
-      );
+      const merged = mergeSectorPlantFields(readSectorPlantFields(existing), {
+        ...readSectorPlantFields(sector),
+        capitalStock: Math.round(donorStock * ratio * 100) / 100,
+        ...(sector.operatingCapacityUnits != null
+          ? { operatingCapacityUnits: sector.operatingCapacityUnits * ratio }
+          : {}),
+        buildQueue: donorQueue,
+      });
       const mergedSurvivor = await sectors.updateOne(
         { _id: existing._id, ...survivorFilter },
         {

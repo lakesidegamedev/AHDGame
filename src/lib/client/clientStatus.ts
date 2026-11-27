@@ -1,3 +1,4 @@
+import { recordedHistoryWindow } from "@/lib/corporations/rules/historyCurrency";
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
@@ -13,7 +14,10 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getTotalPersonalLiquidWealth, getHomeCurrency } from "@/lib/currency/characterFunds";
-import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
+import {
+  loadFxRatesRecord,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
 import { perTurnCouponPayment, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -35,19 +39,7 @@ import {
   resolveOfficeActionBonus,
 } from "@/lib/actions/officeActionBonus";
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  CorporationHistory,
-  Election,
-  ElectionCandidate,
-  ElectedOfficial,
-  ElectionVoteTally,
-  PoliticalParty,
-  State,
-  StatePartyOrg,
-  StockExchangeSnapshot,
-  User,
-} from "@/lib/db/types";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+
 import { buildTurnBriefing } from "@/lib/client/turnBriefing";
 import { loadWidgetExtras } from "@/lib/client/widgetExtras";
 import { buildWidgetPerTurn, type WidgetPerTurn } from "@/lib/client/widgetFigures";
@@ -279,7 +271,7 @@ export async function handleClientStatus(request: Request) {
       } | null = null;
 
       if (ceoCorp?.sequentialId != null) {
-        const [historyDocs] = includeCorpMarket
+        const [rawHistoryDocs] = includeCorpMarket
           ? await Promise.all([
               corporationHistoryCollection(db)
                 .find({ corporationId: ceoCorp._id })
@@ -291,8 +283,12 @@ export async function handleClientStatus(request: Request) {
                   marketingStrength: number;
                   liquidCapital: number;
                   marketCap?: number;
+                  currencyCode?: string;
+                  fxRateAtWrite?: number;
                 }>({
                   turn: 1,
+                  currencyCode: 1,
+                  fxRateAtWrite: 1,
                   sharePrice: 1,
                   marketingStrength: 1,
                   liquidCapital: 1,
@@ -302,6 +298,13 @@ export async function handleClientStatus(request: Request) {
                 .toArray(),
             ])
           : [[]];
+        const code = resolveCorpLiquidCurrencyCode(ceoCorp);
+        const historyDocs = recordedHistoryWindow(
+          rawHistoryDocs,
+          code,
+          code ? (forexRates?.[code] ?? Number.NaN) : Number.NaN,
+          ["sharePrice", "liquidCapital", "marketCap"]
+        );
         historyDocs.reverse();
         corpNav = {
           sequentialId: ceoCorp.sequentialId,
@@ -669,7 +672,7 @@ export async function handleClientStatus(request: Request) {
     } | null = null;
 
     if (ceoCorp?.sequentialId != null) {
-      const [historyDocs] = includeCorpMarket
+      const [rawHistoryDocs] = includeCorpMarket
         ? await Promise.all([
             corporationHistoryCollection(db)
               .find({ corporationId: ceoCorp._id })
@@ -681,8 +684,12 @@ export async function handleClientStatus(request: Request) {
                 marketingStrength: number;
                 liquidCapital: number;
                 marketCap?: number;
+                currencyCode?: string;
+                fxRateAtWrite?: number;
               }>({
                 turn: 1,
+                currencyCode: 1,
+                fxRateAtWrite: 1,
                 sharePrice: 1,
                 marketingStrength: 1,
                 liquidCapital: 1,
@@ -692,6 +699,13 @@ export async function handleClientStatus(request: Request) {
               .toArray(),
           ])
         : [[]];
+      const code = resolveCorpLiquidCurrencyCode(ceoCorp);
+      const historyDocs = recordedHistoryWindow(
+        rawHistoryDocs,
+        code,
+        code ? (forexRates?.[code] ?? Number.NaN) : Number.NaN,
+        ["sharePrice", "liquidCapital", "marketCap"]
+      );
       historyDocs.reverse();
       corpNav = {
         sequentialId: ceoCorp.sequentialId,

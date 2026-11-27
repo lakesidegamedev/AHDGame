@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -33,44 +34,54 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const { id } = await params;
     const db = await getDb();
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    // Only the current CEO can resign
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      // Only the current CEO can resign
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    if (corporation.ceoVacant) {
-      return errorResponse(400, "CEO position is already vacant");
-    }
-
-    const now = new Date();
-
-    await corporationsCollection(db).updateOne(
-      { _id: corporation._id },
-      {
-        $set: {
-          ceoVacant: true,
-          updatedAt: now,
-        },
-        $unset: { pendingCeoCharacterId: "" },
+      if (corporation.ceoVacant) {
+        return errorResponse(400, "CEO position is already vacant");
       }
-    );
 
-    // Clear all CEO votes so the election starts fresh
-    await corporationCeoVotesCollection<Document>(db).deleteMany({
-      corporationId: corporation._id,
-    });
+      const now = new Date();
 
-    if (corporation.ceoId) {
-      await closeCeoTenure(db, corporation._id, {
-        holderId: corporation.ceoId,
-        turn: await getCurrentTurn(db),
+      const vacated = await corporationsCollection(db).updateOne(
+        {
+          _id: corporation._id,
+          ceoId: corporation.ceoId,
+          userId: corporation.userId,
+          ceoVacant: { $ne: true },
+        },
+        {
+          $set: {
+            ceoVacant: true,
+            updatedAt: now,
+          },
+          $unset: { pendingCeoCharacterId: "" },
+        }
+      );
+
+      if (vacated.matchedCount !== 1)
+        return errorResponse(409, "CEO holder changed. Refresh and try again.");
+
+      // Clear all CEO votes so the election starts fresh
+      await corporationCeoVotesCollection<Document>(db).deleteMany({
+        corporationId: corporation._id,
       });
-    }
 
-    return NextResponse.json({ success: true });
+      if (corporation.ceoId) {
+        await closeCeoTenure(db, corporation._id, {
+          holderId: corporation.ceoId,
+          turn: await getCurrentTurn(db),
+        });
+      }
+
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

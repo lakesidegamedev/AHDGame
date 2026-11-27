@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -276,8 +279,8 @@ describe("POST military/recruit", () => {
     expect(db.collectionMocks.militaryUnits.insertOne).not.toHaveBeenCalled();
     // Manpower returned and the ministerial action refunded — nothing left spent.
     expect(db.collectionMocks.nationalManpower.updateOne).toHaveBeenCalledWith(
-      { countryId: "US", pool: { $lte: expect.any(Number) } },
-      { $inc: { pool: 12000 } }
+      { countryId: "US", pool: { $lt: expect.any(Number) } },
+      [{ $set: { pool: { $min: [expect.any(Number), { $add: ["$pool", 12000] }] } } }]
     );
     expect(db.collectionMocks.cabinetMembers.updateOne).toHaveBeenCalledWith(
       { _id: "member_1" },
@@ -419,8 +422,8 @@ describe("POST military/recruit", () => {
     expect(potMoves).toEqual([-4_160_000_000, 4_160_000_000]);
     // Manpower returned (guarded $inc, not a read-modify-write).
     expect(db.collectionMocks.nationalManpower.updateOne).toHaveBeenCalledWith(
-      { countryId: "US", pool: { $lte: expect.any(Number) } },
-      { $inc: { pool: 12000 } }
+      { countryId: "US", pool: { $lt: expect.any(Number) } },
+      [{ $set: { pool: { $min: [expect.any(Number), { $add: ["$pool", 12000] }] } } }]
     );
     // Ministerial action refunded.
     expect(db.collectionMocks.cabinetMembers.updateOne).toHaveBeenCalledWith(

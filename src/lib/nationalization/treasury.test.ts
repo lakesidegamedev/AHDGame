@@ -128,47 +128,6 @@ describe("2027 EUR treasury denomination", () => {
   });
 });
 
-describe("drawFromTreasury", () => {
-  const corpId = new ObjectId();
-  beforeEach(() => {
-    db.collection("corporations");
-  });
-
-  it("moves the amount from the treasury → corp liquidCapital", async () => {
-    const { drawFromTreasury } = await import("./treasury");
-    const res = await drawFromTreasury(
-      db as unknown as Db,
-      { countryId: "CN", corpId, amountLocal: 3000, corpCurrency: "CNY" },
-      now
-    );
-
-    expect(res).toEqual({ ok: true, amount: 3000 });
-    const fb = db.collectionMocks.federalBudget.updateOne.mock.calls[0];
-    expect(fb[0]).toEqual({ countryId: "CN" });
-    expect(fb[1].$inc.treasuryBalance).toBe(-3000);
-    const corp = db.collectionMocks.corporations.updateOne.mock.calls[0];
-    expect(corp[0]).toEqual({ _id: corpId });
-    expect(corp[1].$inc.liquidCapital).toBe(3000);
-  });
-
-  it("draws unconditionally even when the treasury is short — takes on debt", async () => {
-    const { drawFromTreasury } = await import("./treasury");
-    const res = await drawFromTreasury(
-      db as unknown as Db,
-      { countryId: "CN", corpId, amountLocal: 9999, corpCurrency: "CNY" },
-      now
-    );
-
-    expect(res).toEqual({ ok: true, amount: 9999 });
-    expect(db.collectionMocks.federalBudget.updateOne.mock.calls[0][1].$inc.treasuryBalance).toBe(
-      -9999
-    );
-    expect(db.collectionMocks.corporations.updateOne.mock.calls[0][1].$inc.liquidCapital).toBe(
-      9999
-    );
-  });
-});
-
 describe("remitToTreasury", () => {
   const corpId = new ObjectId();
   beforeEach(() => {

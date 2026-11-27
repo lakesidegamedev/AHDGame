@@ -33,6 +33,7 @@ export type ShareFillCashCollection =
 
 export interface ShareFillCashLeg {
   stockTaxReceipt?: PendingStockTaxReceipt;
+  currencyCode?: string;
   collection: ShareFillCashCollection;
   idHex: string;
   /** Dotted balance field pinned at claim time (e.g. `currencyBalances.personal.USD`). */
@@ -129,7 +130,7 @@ export function buildShareFillMoneyFingerprint(plan: ShareFillMoneyPlan): string
   const cents = (n: number): string => String(Math.round(n * 100) / 100);
   const cash = (leg: ShareFillCashLeg | null): string =>
     leg
-      ? `${leg.collection}:${leg.idHex}:${leg.field}:${cents(leg.amount)}${leg.stockTaxReceipt ? ":stockTax:" + JSON.stringify({ ...leg.stockTaxReceipt, withholding: undefined }) : ""}`
+      ? `${leg.collection}:${leg.idHex}:${leg.field}:${cents(leg.amount)}${leg.currencyCode ? ":currency:" + leg.currencyCode : ""}${leg.stockTaxReceipt ? ":stockTax:" + JSON.stringify({ ...leg.stockTaxReceipt, withholding: undefined }) : ""}`
       : "none";
   const cap = (leg: ShareFillCapLeg | null): string =>
     leg
@@ -783,6 +784,9 @@ export function makeCashStep(
     field: leg.field,
     delta: debit ? -leg.amount : leg.amount,
     ...(debit ? { minBalance: leg.amount } : {}),
+    ...(leg.collection === "corporations" && leg.currencyCode
+      ? { extraFilter: { liquidCurrencyCode: leg.currencyCode } }
+      : {}),
     set: { updatedAt: now },
   };
   return {
@@ -795,7 +799,7 @@ export function makeCashStep(
           ...moneyLeg,
           delta: debit ? leg.amount : -leg.amount,
           minBalance: undefined,
-          extraFilter: undefined,
+          extraFilter: moneyLeg.extraFilter,
         },
         options ?? {}
       ),

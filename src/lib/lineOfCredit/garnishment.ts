@@ -7,7 +7,7 @@ import type { LocGarnishmentSource } from "@/lib/db/types/locLedger";
 import { isLineOfCreditEnabled } from "./featureFlag";
 import { allocateInternalPaymentToLoc, toInternalUnits } from "./locMath";
 import { loadExchangeRatesMap } from "./netWorth";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import {
   loadLocSettlements,

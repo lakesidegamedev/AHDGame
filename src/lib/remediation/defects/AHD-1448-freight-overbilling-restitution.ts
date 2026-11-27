@@ -1,7 +1,8 @@
-import { ObjectId, type Db } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
-import type { ExchangeRate } from "@/lib/db/types";
+
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type {
   Defect,
@@ -168,6 +169,10 @@ async function plan(db: Db): Promise<HealPlan> {
 }
 
 async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
+  return withSessionDb(db, (db) => applyRestitution(db, healPlan, ctx));
+}
+
+async function applyRestitution(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
   const payload = healPlan.payload as Payload | undefined;
   const credits = payload?.credits ?? [];
   if (credits.length === 0) {
@@ -175,30 +180,53 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   const applied: PlannedCredit[] = [];
-  for (const credit of credits) {
+  const ops: AnyBulkWriteOperation<CorporationDoc>[] = [];
+  const [currentDocs, currentRates] = await Promise.all([
+    loadCorporations(db),
+    loadRatesByCurrency(db),
+  ]);
+  for (const original of credits) {
+    const credit = planCorporationCredit(
+      { corporationId: original.corporationId, overchargeAnchor: original.creditAnchor },
+      currentDocs.get(original.corporationId),
+      currentRates
+    );
+    if (!credit) {
+      const current = currentDocs.get(original.corporationId);
+      if (current && !hasMarker(current))
+        throw new Error("Restitution currency quote is unavailable");
+      continue;
+    }
     // Marker and increment in ONE update, under a filter that demands the
     // marker's absence, so a concurrent or repeated run credits nobody twice.
-    const res = await corporationsCollection(db).updateOne(
-      { _id: new ObjectId(credit.corporationId), [MARKER_PATH]: { $exists: false } },
-      {
-        $inc: { liquidCapital: credit.creditLocal },
-        $set: {
-          [MARKER_PATH]: {
-            ticket: 1448,
-            creditedAt: ctx.now,
-            creditAnchor: credit.creditAnchor,
-            creditLocal: credit.creditLocal,
-            currencyCode: credit.currencyCode,
-            fxRate: credit.fxRate,
-            window: FREIGHT_OVERBILLING_WINDOW,
-            runId: ctx.runId ?? null,
+    ops.push({
+      updateOne: {
+        filter: { _id: new ObjectId(credit.corporationId), [MARKER_PATH]: { $exists: false } },
+        update: {
+          $inc: { liquidCapital: credit.creditLocal },
+          $set: {
+            [MARKER_PATH]: {
+              ticket: 1448,
+              creditedAt: ctx.now,
+              creditAnchor: credit.creditAnchor,
+              creditLocal: credit.creditLocal,
+              currencyCode: credit.currencyCode,
+              fxRate: credit.fxRate,
+              window: FREIGHT_OVERBILLING_WINDOW,
+              runId: ctx.runId ?? null,
+            },
+            updatedAt: ctx.now,
           },
-          updatedAt: ctx.now,
         },
-      }
-    );
-    if (res.modifiedCount === 1) applied.push(credit);
+      },
+    });
+    applied.push(credit);
   }
+  if (
+    ops.length &&
+    (await corporationsCollection<CorporationDoc>(db).bulkWrite(ops)).modifiedCount !== ops.length
+  )
+    throw new Error("Restitution recipient changed before credit");
 
   if (applied.length > 0) {
     const thresholds = await loadTxThresholds(db);

@@ -1,3 +1,25 @@
+import type { SupplyAgreementSettlements } from "./settleSupplyAgreementsAllocation";
+import type { SupplyPlanPart } from "./supplyAgreementPlan";
+vi.mock("./supplyAgreementPlan", () => ({
+  prepareSupplyCashPlan: async (
+    db: Db,
+    turn: number,
+    _now: Date,
+    prepare: (db: Db) => Promise<SupplyAgreementSettlements>
+  ) => {
+    const plan = await prepare(db);
+    return { ...plan, turn, parts: [plan] };
+  },
+  pendingSupplyCashPlans: async () => [],
+  replaySupplyPlan: async (
+    db: Db,
+    manifest: { parts: SupplyPlanPart[] },
+    apply: (db: Db, part: SupplyPlanPart) => Promise<void>
+  ) => {
+    for (const part of manifest.parts) await apply(db, part);
+    return manifest.parts;
+  },
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -156,14 +178,14 @@ describe("computeSupplyAgreementSettlements", () => {
         // charge for, and no ceiling is known ⇒ `achievableUnits` stays absent.
         shortfallUnits: 0,
         penaltyAnchor: 0,
-        supplierCashDeltaLocal: Math.round(30 * base * 0.2),
+        supplierCashDeltaLocal: 30 * base * 0.2,
         supplierCurrencyCode: "USD",
-        buyerCashDeltaLocal: -Math.round(30 * base * 0.2),
+        buyerCashDeltaLocal: -(30 * base * 0.2),
         buyerCurrencyCode: "USD",
       },
     ]);
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(30 * base * 0.2));
-    expect(r.deltaByCorp.get(B)).toBe(-Math.round(30 * base * 0.2));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(30 * base * 0.2);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-(30 * base * 0.2));
   });
 
   it("routes available contract supply across buyers without stranding deliverable units", () => {
@@ -337,10 +359,10 @@ describe("computeSupplyAgreementSettlements", () => {
       turn: 5,
       now,
     });
-    const expected = Math.round(100 * base * 0.2);
-    expect(r.deltaByCorp.get(S)).toBe(expected);
-    expect(r.deltaByCorp.get(B)).toBe(-expected);
-    expect(r.deltaByCorp.get(S)! + r.deltaByCorp.get(B)!).toBe(0); // conserved (same fx)
+    const expected = 100 * base * 0.2;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(expected);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-expected);
+    expect(r.deltaByCorp.get(S)! + r.deltaByCorp.get(B)!).toBeCloseTo(0); // conserved (same fx)
     expect(r.settledCount).toBe(1);
     expect(r.txEntries).toHaveLength(2);
     expect(r.txEntries[0]!.type).toBe("corp_supply_agreement");
@@ -358,9 +380,9 @@ describe("computeSupplyAgreementSettlements", () => {
       turn: 5,
       now,
     });
-    const expected = Math.round(100 * base * -0.1);
-    expect(r.deltaByCorp.get(S)).toBe(expected); // negative → supplier loses
-    expect(r.deltaByCorp.get(B)).toBe(-expected); // buyer gains
+    const expected = 100 * base * -0.1;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(expected); // negative → supplier loses
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-expected); // buyer gains
   });
 
   it("splits a supplier's cleared units across its agreements pro-rata by cap", () => {
@@ -392,11 +414,11 @@ describe("computeSupplyAgreementSettlements", () => {
       turn: 5,
       now,
     });
-    const p1 = Math.round(50 * base * 0.1); // 200 × 100/400 = 50 units
-    const p2 = Math.round(150 * base * 0.1); // 200 × 300/400 = 150 units
-    expect(r.deltaByCorp.get(B)).toBe(-p1);
-    expect(r.deltaByCorp.get(B2.toString())).toBe(-p2);
-    expect(r.deltaByCorp.get(S)).toBe(p1 + p2); // supplier accrues both legs
+    const p1 = 50 * base * 0.1; // 200 × 100/400 = 50 units
+    const p2 = 150 * base * 0.1; // 200 × 300/400 = 150 units
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-p1);
+    expect(r.deltaByCorp.get(B2.toString())).toBeCloseTo(-p2);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(p1 + p2); // supplier accrues both legs
   });
 
   it("settles nothing when no contracted units cleared", () => {
@@ -412,7 +434,7 @@ describe("computeSupplyAgreementSettlements", () => {
       now,
     });
     expect(r.settledCount).toBe(0);
-    expect(r.deltaByCorp.size).toBe(0);
+    expect(r.deltaByCorp.size).toBeCloseTo(0);
     expect(r.txEntries).toHaveLength(0);
   });
 
@@ -452,8 +474,8 @@ describe("computeSupplyAgreementSettlements", () => {
       now,
     });
     const premiumAnchor = 100 * base * 0.2;
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(premiumAnchor * 100)); // supplier ccy
-    expect(r.deltaByCorp.get(B)).toBe(-Math.round(premiumAnchor * 1)); // buyer ccy
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(premiumAnchor * 100); // supplier ccy
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-(premiumAnchor * 1)); // buyer ccy
     // Convert each leg back to ₳ → equal and opposite.
     const supAnchor = r.deltaByCorp.get(S)! / 100;
     const buyAnchor = r.deltaByCorp.get(B)! / 1;
@@ -465,6 +487,9 @@ describe("settleSupplyAgreements delivery persistence", () => {
   it("records every agreement's delivered units even when its price is exactly at market", async () => {
     const db = createMockDb();
     db.collection("corporations");
+    db.collectionMocks.corporations.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+    }));
     db.collection("supplyAgreements");
     const agreementId = new ObjectId();
 
@@ -499,7 +524,10 @@ describe("settleSupplyAgreements delivery persistence", () => {
     expect(db.collectionMocks.supplyAgreements.bulkWrite).toHaveBeenCalledWith([
       {
         updateOne: {
-          filter: { _id: agreementId },
+          filter: {
+            _id: agreementId,
+            $or: [{ lastDeliveryTurn: { $exists: false } }, { lastDeliveryTurn: { $lte: 5 } }],
+          },
           update: {
             $set: {
               lastDeliveryTurn: 5,
@@ -532,6 +560,9 @@ describe("settleSupplyAgreements delivery persistence", () => {
   it("uses the current database balance for the solvency floor", async () => {
     const db = createMockDb();
     db.collection("corporations");
+    db.collectionMocks.corporations.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+    }));
     db.collection("supplyAgreements");
     const supplier = {
       _id: supId,
@@ -586,7 +617,7 @@ describe("settleSupplyAgreements delivery persistence", () => {
       expect.arrayContaining([
         expect.objectContaining({
           updateOne: expect.objectContaining({
-            filter: { _id: supId },
+            filter: expect.objectContaining({ _id: supId }),
             update: expect.objectContaining({ $inc: { liquidCapital: -500 } }),
           }),
         }),
@@ -619,9 +650,9 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
       now,
     });
 
-    const penalty = Math.round(30 * base * CONTRACT_SHORTFALL_PENALTY);
-    expect(r.deltaByCorp.get(S)).toBe(-penalty);
-    expect(r.deltaByCorp.get(B)).toBe(penalty);
+    const penalty = 30 * base * CONTRACT_SHORTFALL_PENALTY;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-penalty);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(penalty);
   });
 
   it("charges the supplier when it produced less than it contracted", () => {
@@ -639,10 +670,10 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
       turn: 5,
       now,
     });
-    const penalty = Math.round(40 * base * CONTRACT_SHORTFALL_PENALTY);
-    expect(r.deltaByCorp.get(S)).toBe(-penalty);
-    expect(r.deltaByCorp.get(B)).toBe(penalty);
-    expect(r.deltaByCorp.get(S)! + r.deltaByCorp.get(B)!).toBe(0); // conserved
+    const penalty = 40 * base * CONTRACT_SHORTFALL_PENALTY;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-penalty);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(penalty);
+    expect(r.deltaByCorp.get(S)! + r.deltaByCorp.get(B)!).toBeCloseTo(0); // conserved
   });
 
   it("charges nothing when production met the contract but the market did not take it", () => {
@@ -661,7 +692,7 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
       now,
     });
     expect(r.settledCount).toBe(0);
-    expect(r.deltaByCorp.size).toBe(0);
+    expect(r.deltaByCorp.size).toBeCloseTo(0);
   });
 
   it("nets damages against the premium on the same agreement", () => {
@@ -680,8 +711,8 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
     });
     const premium = 50 * base * 0.2;
     const penalty = 50 * base * CONTRACT_SHORTFALL_PENALTY;
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(premium - penalty));
-    expect(r.deltaByCorp.get(B)).toBe(-Math.round(premium - penalty));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(premium - penalty);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-(premium - penalty));
   });
 
   it("splits a shortfall across the supplier's agreements pro-rata by cap", () => {
@@ -720,10 +751,8 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
     // it settles AT the cap; the 25-cap leg (15 x 0.5 = 7.5 vs 6.25) is capped
     // too. Both stay pro-rata in the sense that matters: each contract's damages
     // are bounded by its own contracted size.
-    expect(r.deltaByCorp.get(B)).toBe(Math.round(75 * base * CONTRACT_DAMAGES_CAP_FRACTION));
-    expect(r.deltaByCorp.get(B2.toString())).toBe(
-      Math.round(25 * base * CONTRACT_DAMAGES_CAP_FRACTION)
-    );
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(75 * base * CONTRACT_DAMAGES_CAP_FRACTION);
+    expect(r.deltaByCorp.get(B2.toString())).toBeCloseTo(25 * base * CONTRACT_DAMAGES_CAP_FRACTION);
   });
 
   it("penalizes the AGGREGATE shortfall when each contract alone is covered (H1)", () => {
@@ -762,11 +791,11 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
       turn: 5,
       now,
     });
-    const perBuyer = Math.round(30 * base * CONTRACT_SHORTFALL_PENALTY);
-    expect(r.deltaByCorp.get(B)).toBe(perBuyer);
-    expect(r.deltaByCorp.get(B2.toString())).toBe(perBuyer);
+    const perBuyer = 30 * base * CONTRACT_SHORTFALL_PENALTY;
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(perBuyer);
+    expect(r.deltaByCorp.get(B2.toString())).toBeCloseTo(perBuyer);
     // Equal and opposite: the seller pays exactly the sum of both buyers' credits.
-    expect(r.deltaByCorp.get(S)).toBe(-2 * perBuyer);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-2 * perBuyer);
   });
 
   it("assesses no damages at all when no production map is supplied (non-plants)", () => {
@@ -804,9 +833,9 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
     });
     // Full 100-unit shortfall: raw damages are 100 x 0.5, above the C6 ceiling
     // of 0.25 x notional, so a total non-delivery settles at the cap.
-    const penalty = Math.round(100 * base * CONTRACT_DAMAGES_CAP_FRACTION);
-    expect(r.deltaByCorp.get(S)).toBe(-penalty);
-    expect(r.deltaByCorp.get(B)).toBe(penalty);
+    const penalty = 100 * base * CONTRACT_DAMAGES_CAP_FRACTION;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-penalty);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(penalty);
   });
 
   // ...and mothballing must never beat producing a single unit.
@@ -868,17 +897,17 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
     // Contracted 100 against nameplate, but inputs/utilization capped the plant
     // at 30 this turn and it made all 30. No breach: the gap was not its doing.
     const r = withAchievable({ produced: 30, achievable: 30 });
-    expect(r.deltaByCorp.get(S) ?? 0).toBe(0);
-    expect(r.deltaByCorp.get(B) ?? 0).toBe(0);
+    expect(r.deltaByCorp.get(S) ?? 0).toBeCloseTo(0);
+    expect(r.deltaByCorp.get(B) ?? 0).toBeCloseTo(0);
   });
 
   it("charges only the gap below the achievable ceiling, not below the contract", () => {
     // Could have made 60, made 40. Liable for 20, not for the 60 vs the cap.
     const r = withAchievable({ produced: 40, achievable: 60 });
-    const penalty = Math.round(20 * base * CONTRACT_SHORTFALL_PENALTY);
-    expect(r.deltaByCorp.get(S)).toBe(-penalty);
-    expect(r.deltaByCorp.get(B)).toBe(penalty);
-    expect(r.deltaByCorp.get(S)! + r.deltaByCorp.get(B)!).toBe(0);
+    const penalty = 20 * base * CONTRACT_SHORTFALL_PENALTY;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-penalty);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(penalty);
+    expect(r.deltaByCorp.get(S)! + r.deltaByCorp.get(B)!).toBeCloseTo(0);
   });
 
   it("computes one aggregate gap before splitting damages across agreements", () => {
@@ -912,7 +941,7 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
       now,
     });
 
-    const expected = Math.round(20 * base * CONTRACT_SHORTFALL_PENALTY);
+    const expected = 20 * base * CONTRACT_SHORTFALL_PENALTY;
     expect(Math.abs((r.deltaByCorp.get(S) ?? 0) + expected)).toBeLessThanOrEqual(1);
     // Each buyer leg rounds on its own, so legs may differ from the exact figure by 1.
     expect(
@@ -922,8 +951,8 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
 
   it("treats an explicit zero ceiling as known rather than unclamped", () => {
     const r = withAchievable({ produced: 0, achievable: 0 });
-    expect(r.deltaByCorp.get(S) ?? 0).toBe(0);
-    expect(r.deltaByCorp.get(B) ?? 0).toBe(0);
+    expect(r.deltaByCorp.get(S) ?? 0).toBeCloseTo(0);
+    expect(r.deltaByCorp.get(B) ?? 0).toBeCloseTo(0);
   });
 
   it("never lets the ceiling raise damages above the contracted volume", () => {
@@ -938,8 +967,8 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
   // FULL capacity as achievable and still owes the whole contracted volume.
   it("still charges a mothballed seller in full when its ceiling stays at capacity", () => {
     const r = withAchievable({ achievable: 100 });
-    const penalty = Math.round(100 * base * CONTRACT_DAMAGES_CAP_FRACTION);
-    expect(r.deltaByCorp.get(S)).toBe(-penalty);
+    const penalty = 100 * base * CONTRACT_DAMAGES_CAP_FRACTION;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-penalty);
   });
 
   it("keeps mothballing no cheaper than producing one unit, with the clamp on", () => {
@@ -953,8 +982,8 @@ describe("computeSupplyAgreementSettlements — shortfall damages (P3b)", () => 
   // contract in the world is silently forgiven for a turn.
   it("leaves damages unclamped when no ceiling is known for the supplier", () => {
     const r = withAchievable({ produced: 60 });
-    const penalty = Math.round(40 * base * CONTRACT_SHORTFALL_PENALTY);
-    expect(r.deltaByCorp.get(S)).toBe(-penalty);
+    const penalty = 40 * base * CONTRACT_SHORTFALL_PENALTY;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-penalty);
   });
 
   // The production sink is only meaningful under plants: outside it, clearing's
@@ -1027,10 +1056,10 @@ describe("C6 — damages are bounded and solvency-floored", () => {
     const wired = r.deltaByCorp.get(B) ?? 0;
     const uncapped = absurdCap * base * CONTRACT_SHORTFALL_PENALTY;
     const ceiling = absurdCap * base * CONTRACT_DAMAGES_CAP_FRACTION;
-    expect(wired).toBeLessThanOrEqual(Math.round(ceiling));
+    expect(wired).toBeLessThanOrEqual(ceiling);
     expect(wired).toBeLessThan(uncapped);
     // Still equal-and-opposite: the cap is a bound, not a leak.
-    expect(r.deltaByCorp.get(S)).toBe(-wired);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-wired);
   });
 
   it("never wires more than the payer actually has", () => {
@@ -1048,8 +1077,8 @@ describe("C6 — damages are bounded and solvency-floored", () => {
       turn: 5,
       now,
     });
-    expect(r.deltaByCorp.get(S)).toBe(-broke);
-    expect(r.deltaByCorp.get(B)).toBe(broke);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-broke);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(broke);
   });
 
   describe("NPP buyer premium reserve", () => {
@@ -1081,8 +1110,8 @@ describe("C6 — damages are bounded and solvency-floored", () => {
 
     it("pays nothing while the buyer sits under its reserve", () => {
       const r = run(premium * 10, premium * 10);
-      expect(r.deltaByCorp.get(B) ?? 0).toBe(0);
-      expect(r.deltaByCorp.get(S) ?? 0).toBe(0);
+      expect(r.deltaByCorp.get(B) ?? 0).toBeCloseTo(0);
+      expect(r.deltaByCorp.get(S) ?? 0).toBeCloseTo(0);
     });
 
     it("pays only half of the cash above the reserve and conserves money", () => {
@@ -1090,18 +1119,18 @@ describe("C6 — damages are bounded and solvency-floored", () => {
       const excess = premium; // half of this is below the premium owed
       const r = run(reserve + excess, reserve);
       const paid = -(r.deltaByCorp.get(B) ?? 0);
-      expect(paid).toBe(Math.round(excess * 0.5));
-      expect(r.deltaByCorp.get(S)).toBe(paid);
+      expect(paid).toBeCloseTo(excess * 0.5);
+      expect(r.deltaByCorp.get(S)).toBeCloseTo(paid);
     });
 
     it("pays the full premium once the buyer holds ample cash above the reserve", () => {
       const r = run(1e12, 1_000_000);
-      expect(-(r.deltaByCorp.get(B) ?? 0)).toBe(Math.round(premium));
+      expect(-(r.deltaByCorp.get(B) ?? 0)).toBeCloseTo(premium);
     });
 
     it("leaves a buyer without a reserve (player) paying from all its cash", () => {
       const r = run(premium * 2, undefined);
-      expect(-(r.deltaByCorp.get(B) ?? 0)).toBe(Math.round(premium));
+      expect(-(r.deltaByCorp.get(B) ?? 0)).toBeCloseTo(premium);
     });
   });
 
@@ -1142,7 +1171,7 @@ describe("C6 — damages are bounded and solvency-floored", () => {
       turn: 5,
       now,
     });
-    expect(r.deltaByCorp.get(S)).toBe(-broke);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-broke);
     const paidOut = (r.deltaByCorp.get(B) ?? 0) + (r.deltaByCorp.get(B2.toString()) ?? 0);
     expect(paidOut).toBe(broke);
   });
@@ -1163,7 +1192,7 @@ describe("C6 — damages are bounded and solvency-floored", () => {
       turn: 5,
       now,
     });
-    expect(r.deltaByCorp.get(B)).toBe(Math.round(100 * base * CONTRACT_DAMAGES_CAP_FRACTION));
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(100 * base * CONTRACT_DAMAGES_CAP_FRACTION);
   });
 });
 
@@ -1200,7 +1229,13 @@ describe("ticket #1147 — shortfall damage visibility", () => {
   ) {
     const db = createMockDb();
     db.collection("corporations");
+    db.collectionMocks.corporations.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+    }));
     db.collection("supplyAgreements");
+    db.collectionMocks.corporations.find.mockReturnValue(
+      createAsyncIterableCursor([...lookups.corpById.values()])
+    );
     return settleSupplyAgreements({
       db: db as unknown as Db,
       lookups,
@@ -1390,9 +1425,9 @@ describe("computeSupplyAgreementSettlements — state-scoped agreements", () => 
       turn: 5,
       now,
     });
-    const expected = Math.round(100 * (COMMODITY_BASE_PRICES.freight / TURNS_PER_DAY) * 0.2);
+    const expected = 100 * (COMMODITY_BASE_PRICES.freight / TURNS_PER_DAY) * 0.2;
     expect(inState.settledCount).toBe(1);
-    expect(inState.deltaByCorp.get(S)).toBe(expected);
+    expect(inState.deltaByCorp.get(S)).toBeCloseTo(expected);
     expect(inState.deliveries[0]?.deliveredUnits).toBeCloseTo(100, 6);
   });
 
@@ -1456,7 +1491,7 @@ describe("computeSupplyAgreementSettlements: premium sizing", () => {
   it("settles one turn of the daily-basis volume, not the whole day", () => {
     const r = settle(1, 200);
     // 200 units/day consumed => 200 / 24 units' worth this turn at a 10% premium.
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(200 * base * 0.1));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(200 * base * 0.1);
     expect(r.deltaByCorp.get(S)).toBeLessThan(COMMODITY_BASE_PRICES[commodity] * 200 * 0.1);
   });
 
@@ -1503,9 +1538,9 @@ describe("computeSupplyAgreementSettlements: funded deliveries", () => {
   it("prices the premium on the pair's real funded trade, not the clearing pass", () => {
     // 1 unit a turn is 24 on the daily basis the contract is written in.
     const r = computeSupplyAgreementSettlements({ ...legacy, fundedPairFlows: pairFlow(1) });
-    const expected = Math.round(24 * base * 0.2);
-    expect(r.deltaByCorp.get(S)).toBe(expected);
-    expect(r.deltaByCorp.get(B)).toBe(-expected);
+    const expected = 24 * base * 0.2;
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(expected);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-expected);
     expect(r.deliveries[0]).toMatchObject({ deliveredUnits: 24, deliveryBasis: "funded" });
     expect(r.txEntries[0]!.meta).toMatchObject({ unitsSettled: 24 });
   });
@@ -1513,7 +1548,7 @@ describe("computeSupplyAgreementSettlements: funded deliveries", () => {
   it("caps the credited delivery at the contracted volume", () => {
     const r = computeSupplyAgreementSettlements({ ...legacy, fundedPairFlows: pairFlow(50) });
     expect(r.deliveries[0]!.deliveredUnits).toBe(100);
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(100 * base * 0.2));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(100 * base * 0.2);
   });
 
   it("settles no premium or discount when the pair never traded directly", () => {
@@ -1524,7 +1559,7 @@ describe("computeSupplyAgreementSettlements: funded deliveries", () => {
         fundedPairFlows: new Map([[fundedPairFlowKey(S, "someone-else", commodity), 40]]),
       });
       expect(r.settledCount).toBe(0);
-      expect(r.deltaByCorp.size).toBe(0);
+      expect(r.deltaByCorp.size).toBeCloseTo(0);
       expect(r.txEntries).toHaveLength(0);
       expect(r.settledPremiums).toHaveLength(0);
       expect(r.deliveries[0]).toMatchObject({ deliveredUnits: 0, deliveryBasis: "funded" });
@@ -1543,10 +1578,10 @@ describe("computeSupplyAgreementSettlements: funded deliveries", () => {
       ...damagesOnly,
       fundedPairFlows: pairFlow(0),
     });
-    const penalty = Math.round(40 * base * CONTRACT_SHORTFALL_PENALTY);
-    expect(before.deltaByCorp.get(S)).toBe(-penalty);
-    expect(after.deltaByCorp.get(S)).toBe(-penalty);
-    expect(after.deltaByCorp.get(B)).toBe(penalty);
+    const penalty = 40 * base * CONTRACT_SHORTFALL_PENALTY;
+    expect(before.deltaByCorp.get(S)).toBeCloseTo(-penalty);
+    expect(after.deltaByCorp.get(S)).toBeCloseTo(-penalty);
+    expect(after.deltaByCorp.get(B)).toBeCloseTo(penalty);
     expect(after.damages).toEqual(before.damages);
     expect(after.deliveries[0]!.shortfallUnits).toBe(before.deliveries[0]!.shortfallUnits);
     expect(after.deliveries[0]!.penaltyAnchor).toBe(before.deliveries[0]!.penaltyAnchor);
@@ -1570,8 +1605,8 @@ describe("computeSupplyAgreementSettlements: funded deliveries", () => {
       corpInfo: poorBuyer,
       fundedPairFlows: pairFlow(1),
     });
-    expect(r.deltaByCorp.get(S)).toBe(3);
-    expect(r.deltaByCorp.get(B)).toBe(-3);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(3);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-3);
     expect(r.deliveries[0]!.unpaidSettlementAnchor).toBeCloseTo(24 * base * 0.2 - 3);
   });
 
@@ -1584,6 +1619,6 @@ describe("computeSupplyAgreementSettlements: funded deliveries", () => {
     expect(withUndefined).toEqual(withoutKey);
     expect(withoutKey.deliveries[0]).not.toHaveProperty("deliveryBasis");
     expect(withoutKey.deliveries[0]!.deliveredUnits).toBe(100);
-    expect(withoutKey.deltaByCorp.get(S)).toBe(Math.round(100 * base * 0.2));
+    expect(withoutKey.deltaByCorp.get(S)).toBeCloseTo(100 * base * 0.2);
   });
 });

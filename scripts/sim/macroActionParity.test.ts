@@ -1,3 +1,17 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { applyDirectedCreditToSoe, makeSeedSoeState } from "@/lib/economy/soe";
 import { processCommandEconomyTurn } from "@/lib/turn/commandEconomyTurn";
@@ -109,6 +123,12 @@ describe("macro player/NPP action parity fixture", () => {
           if (name === "federalBudget")
             return {
               find: () => ({ toArray: async () => [budget] }),
+              bulkWrite: async (
+                ops: Array<{ updateOne: { update: { $set: Record<string, unknown> } } }>
+              ) => {
+                for (const op of ops) sets.push(op.updateOne.update.$set);
+                return { matchedCount: ops.length };
+              },
               updateOne: async (_filter: unknown, update: { $set: Record<string, unknown> }) => {
                 sets.push(update.$set);
                 return { matchedCount: 1 };

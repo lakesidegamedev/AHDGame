@@ -6,11 +6,16 @@ import { applyReinforcement } from "./reinforcement";
 const transactionSpy = vi.fn(async (body: (session: object) => Promise<unknown>) => body({}));
 let transactionsAvailable = true;
 
-vi.mock("@/lib/db/runWithOptionalTransaction", () => ({
-  runWithOptionalTransaction: (
-    runInTransaction: (session: object) => Promise<unknown>,
-    runWithoutTransaction: () => Promise<unknown>
-  ) => (transactionsAvailable ? transactionSpy(runInTransaction) : runWithoutTransaction()),
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => {
+    if (!transactionsAvailable) throw new Error("Required transaction unavailable");
+    return transactionSpy(() => work(db));
+  },
 }));
 
 function unit(over: Record<string, unknown> = {}) {
@@ -58,13 +63,12 @@ describe("applyReinforcement", () => {
     expect(transactionSpy).toHaveBeenCalledOnce();
   });
 
-  it("continues on standalone Mongo without a transaction session", async () => {
+  it("refuses unsupported transactions before applying replacements", async () => {
     transactionsAvailable = false;
-    const out = await applyReinforcement(db as unknown as Db, "US");
-
-    expect(out.reinforced).toBe(1);
-    expect(transactionSpy).not.toHaveBeenCalled();
-    expect(db.collectionMocks.militaryUnits.bulkWrite.mock.calls[0][1]).toBeUndefined();
+    await expect(applyReinforcement(db as unknown as Db, "US")).rejects.toThrow(
+      "Required transaction unavailable"
+    );
+    expect(db.collectionMocks.militaryUnits.bulkWrite).not.toHaveBeenCalled();
   });
 
   it("does nothing when the mode is off", async () => {

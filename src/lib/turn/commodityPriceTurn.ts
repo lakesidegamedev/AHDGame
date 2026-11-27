@@ -70,7 +70,7 @@ import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
 
 import { applySphereRoutedMacroContributions } from "@/lib/world/spheres";
 
-import { depletedCapacityDoc } from "@/lib/extraction/depletion";
+import { depletedCapacityDoc, extractionOpeningDoc } from "@/lib/extraction/depletion";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import { resolveCommodityNominalIndices } from "@/lib/market/commodityNominalIndex";
@@ -323,7 +323,7 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
         projection: { commodity: 1, nudgePrice: 1 },
       })
       .toArray(),
-    readPreviousCommodityPrices(db),
+    readPreviousCommodityPrices(db, turn),
     stateBudgetsCollection(db)
       .find({}, { projection: { stateId: 1, stateGdp: 1 } })
       .toArray(),
@@ -538,7 +538,9 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
     // instead of re-reading gameConfig — same value, one fewer round trip, and
     // no way for the two reads to disagree mid-turn.
     const plantsEnabled = plantsLedgerEnabled;
-    const rationingDocs = plantsEnabled ? capacityDocs.map(depletedCapacityDoc) : capacityDocs;
+    const rationingDocs = plantsEnabled
+      ? capacityDocs.map((doc) => depletedCapacityDoc(extractionOpeningDoc(doc, turn)))
+      : capacityDocs;
     extractionMultipliers = computeExtractionCapacityMultipliers(
       plantsEnabled
         ? withRealizedOutputCaps(extractionInputs, realizedFractionBySectorId)
@@ -552,6 +554,7 @@ async function prepareProcessCommodityPriceTurn(turn: number) {
         extractionInputs,
         extractionMultipliers,
         now,
+        turn,
         realizedFractionBySectorId
       );
     }

@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * nppCorporateAttacks, autonomous NPP corporate aggression.
  *
@@ -394,108 +395,116 @@ export async function executeNppPlantSplit(
     now: Date;
   }
 ): Promise<NppAttackResult | null> {
-  const { attacker, targetSector, defender, currentTurn, now } = args;
-  const attempt = await attemptPlantSectorSplit(db, {
-    attacker,
-    defender,
-    targetSector,
-    targetSectorId: targetSector._id,
-    stateId: targetSector.stateId,
-    countryId: targetSector.countryId as CountryId,
-    currentTurn,
-    attackerFxRate: await getCorpFxRate(db, attacker),
-    attackerCurrencyCode: resolveCorpLiquidCurrencyCode(attacker),
-    randomRoll: randomInt(0, 1_000_000_000) / 1_000_000_000,
-  });
-  if (!attempt.ok) return null;
-  const result = attempt.resolution;
-
-  // Same ledger row the player route books: the attacker's cash left with no
-  // other counterparty.
-  await emitTx(db, {
-    type: "corp_sector_split_cost",
-    turn: currentTurn,
-    createdAt: now,
-    subjectType: "corporation",
-    subjectId: attacker._id,
-    subjectName: attacker.name,
-    countryId: targetSector.countryId,
-    amount: -Math.abs(result.attackCostLocal),
-    anchorAmount: -Math.abs(result.quote.cashCostAnchor),
-    currencyCode: resolveCorpLiquidCurrencyCode(attacker) ?? "USD",
-    counterpartyType: "system",
-    counterpartyName: "Sector split campaign",
-    meta: {
-      targetSectorId: targetSector._id.toString(),
-      defenderCorporationId: defender._id.toString(),
-      plantsAtRisk: result.quote.plantsAtRisk,
-      plantsTransferred: result.plantsTransferred,
-      successProbability: result.quote.successProbability,
-      randomRoll: result.randomRoll,
-      succeeded: result.succeeded,
+  return withSessionDb(db, async (db) => {
+    const { attacker, targetSector, defender, currentTurn, now } = args;
+    const attempt = await attemptPlantSectorSplit(db, {
+      attacker,
+      defender,
+      targetSector,
+      targetSectorId: targetSector._id,
+      stateId: targetSector.stateId,
+      countryId: targetSector.countryId as CountryId,
+      currentTurn,
       autonomous: true,
-    },
-  }).catch(() => {});
+      attackerFxRate: await getCorpFxRate(db, attacker),
+      attackerCurrencyCode: resolveCorpLiquidCurrencyCode(attacker),
+      randomRoll: randomInt(0, 1_000_000_000) / 1_000_000_000,
+    });
+    if (!attempt.ok) return null;
+    const result = attempt.resolution;
 
-  await (
-    await getCorporationsCollection(db)
-  ).updateOne({ _id: attacker._id }, { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } });
-  await (
-    await getCorporationsCollection(db)
-  ).updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
-
-  const sectorLabel =
-    OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
-    targetSector.sectorType;
-  const stateName =
-    (
-      await (
-        await getStatesCollection(db)
-      ).findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
-    )?.name ?? targetSector.stateId;
-  const plantsWord = result.plantsTransferred === 1 ? "plant" : "plants";
-  const outcomeText = result.succeeded
-    ? `${attacker.name} seized ${result.plantsTransferred.toLocaleString("en-US")} whole ${plantsWord} (~$${Math.round(result.bookValueTransferredAnchor).toLocaleString("en-US")} book value) from ${defender.name}'s ${sectorLabel} sector in ${stateName}.`
-    : `${attacker.name} failed to split ${defender.name}'s ${sectorLabel} sector in ${stateName}.`;
-  logWireEvent("sector_attack", outcomeText, {});
-
-  const notificationsSent = defender.userId
-    ? await countRecentNppNotifications(
-        db,
-        defender.userId,
-        ["corp_sector_attacked"],
-        new Date(now.getTime() - NPP_NOTIFICATION_WINDOW_TURNS * 60 * 60 * 1000)
-      )
-    : 0;
-  if (defender.userId && !defender.ceoVacant && canNotifyPlayer(notificationsSent)) {
-    await createNotification({
-      userId: defender.userId,
-      type: "corp_sector_attacked",
-      title: result.succeeded ? "Plants Seized" : "Sector Split Repelled",
-      message: outcomeText,
-      metadata: {
-        attackerCorporationName: attacker.name,
-        attackerCorporationId: attacker._id.toString(),
+    // Same ledger row the player route books: the attacker's cash left with no
+    // other counterparty.
+    await emitTx(db, {
+      type: "corp_sector_split_cost",
+      turn: currentTurn,
+      createdAt: now,
+      subjectType: "corporation",
+      subjectId: attacker._id,
+      subjectName: attacker.name,
+      countryId: targetSector.countryId,
+      amount: -Math.abs(result.attackCostLocal),
+      anchorAmount: -Math.abs(result.quote.cashCostAnchor),
+      currencyCode: resolveCorpLiquidCurrencyCode(attacker) ?? "USD",
+      counterpartyType: "system",
+      counterpartyName: "Sector split campaign",
+      meta: {
+        targetSectorId: targetSector._id.toString(),
         defenderCorporationId: defender._id.toString(),
-        sectorId: targetSector._id.toString(),
-        sectorType: targetSector.sectorType,
-        sectorLabel,
-        stateId: targetSector.stateId,
-        stateName,
-        countryId: targetSector.countryId,
-        plantsLost: result.plantsTransferred,
-        bookValueTransferredAnchor: result.bookValueTransferredAnchor,
-        captureKind: "capacity",
-        splitSucceeded: result.succeeded,
+        plantsAtRisk: result.quote.plantsAtRisk,
+        plantsTransferred: result.plantsTransferred,
+        successProbability: result.quote.successProbability,
+        randomRoll: result.randomRoll,
+        succeeded: result.succeeded,
+        autonomous: true,
       },
     });
-  }
 
-  return {
-    capturedAnchor: Math.round(result.bookValueTransferredAnchor),
-    defenderName: defender.name,
-    sectorType: sectorLabel,
-  };
+    await (
+      await getCorporationsCollection(db)
+    ).updateOne(
+      { _id: attacker._id },
+      { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } }
+    );
+    await (
+      await getCorporationsCollection(db)
+    ).updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
+
+    const sectorLabel =
+      OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
+      targetSector.sectorType;
+    const stateName =
+      (
+        await (
+          await getStatesCollection(db)
+        ).findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
+      )?.name ?? targetSector.stateId;
+    const plantsWord = result.plantsTransferred === 1 ? "plant" : "plants";
+    const outcomeText = result.succeeded
+      ? `${attacker.name} seized ${result.plantsTransferred.toLocaleString("en-US")} whole ${plantsWord} (~$${Math.round(result.bookValueTransferredAnchor).toLocaleString("en-US")} book value) from ${defender.name}'s ${sectorLabel} sector in ${stateName}.`
+      : `${attacker.name} failed to split ${defender.name}'s ${sectorLabel} sector in ${stateName}.`;
+    await afterCommit(db, () => logWireEvent("sector_attack", outcomeText, {}));
+
+    const notificationsSent = defender.userId
+      ? await countRecentNppNotifications(
+          db,
+          defender.userId,
+          ["corp_sector_attacked"],
+          new Date(now.getTime() - NPP_NOTIFICATION_WINDOW_TURNS * 60 * 60 * 1000)
+        )
+      : 0;
+    if (defender.userId && !defender.ceoVacant && canNotifyPlayer(notificationsSent)) {
+      await afterCommit(db, () =>
+        createNotification({
+          userId: defender.userId,
+          type: "corp_sector_attacked",
+          title: result.succeeded ? "Plants Seized" : "Sector Split Repelled",
+          message: outcomeText,
+          metadata: {
+            attackerCorporationName: attacker.name,
+            attackerCorporationId: attacker._id.toString(),
+            defenderCorporationId: defender._id.toString(),
+            sectorId: targetSector._id.toString(),
+            sectorType: targetSector.sectorType,
+            sectorLabel,
+            stateId: targetSector.stateId,
+            stateName,
+            countryId: targetSector.countryId,
+            plantsLost: result.plantsTransferred,
+            bookValueTransferredAnchor: result.bookValueTransferredAnchor,
+            captureKind: "capacity",
+            splitSucceeded: result.succeeded,
+          },
+        })
+      );
+    }
+
+    return {
+      capturedAnchor: Math.round(result.bookValueTransferredAnchor),
+      defenderName: defender.name,
+      sectorType: sectorLabel,
+    };
+  });
 }
 
 /**

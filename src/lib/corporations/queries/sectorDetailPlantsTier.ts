@@ -7,7 +7,6 @@ import type {
   CommodityPrice,
   Character,
   GameState,
-  BankLoan,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
@@ -633,6 +632,7 @@ export async function buildSectorDetailPlantsTier({
       ),
     ]);
     const unsettled =
+      (corporation.producerPayables?.claims ?? []).some((claim) => claim.amount > 0) ||
       !!activeLoan ||
       !!activeBond ||
       corporation.imfBailoutActive === true ||

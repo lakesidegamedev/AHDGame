@@ -1,3 +1,4 @@
+import { recordedCasinoResponse } from "@/lib/casino/recordedResponse";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -32,39 +33,47 @@ export async function POST(request: Request) {
 
     const db = await getDb();
     maybeSweepCasino(db);
-    const resolved = await resolveCasinoPlayer(db, play.discordId);
-    if (!resolved.ok) return casinoFailure(resolved);
-    const { player } = resolved;
+    const playId = parsed.data.requestId ?? new ObjectId().toString();
+    const draw = drawInstantGame(play, cryptoRng);
+    return recordedCasinoResponse(
+      db,
+      `instant:${play.discordId}:${playId}`,
+      parsed.data,
+      async (db) => {
+        const resolved = await resolveCasinoPlayer(db, play.discordId);
+        if (!resolved.ok) return casinoFailure(resolved);
+        const { player } = resolved;
 
-    const limits = houseLimits((await loadHouse(db)).anchorBalance);
-    const taken = await takeStake(db, player, play.stake, limits);
-    if (!taken.ok) return casinoFailure(taken);
+        const limits = houseLimits((await loadHouse(db)).anchorBalance);
+        const taken = await takeStake(db, player, play.stake, limits);
+        if (!taken.ok) return casinoFailure(taken);
 
-    const playId = new ObjectId().toString();
-    const { multiplier, outcome } = drawInstantGame(play, cryptoRng);
-    const settled = await settleHouseBet(db, {
-      player,
-      game: play.game,
-      stakeLocal: play.stake,
-      multiplier,
-      limits,
-      meta: { playId },
-    });
-    if (!settled.ok) return casinoFailure(settled);
+        const { multiplier, outcome } = draw;
+        const settled = await settleHouseBet(db, {
+          player,
+          game: play.game,
+          stakeLocal: play.stake,
+          multiplier,
+          limits,
+          meta: { playId },
+        });
+        if (!settled.ok) return casinoFailure(settled);
 
-    return NextResponse.json({
-      playId,
-      game: play.game,
-      characterName: player.characterName,
-      currency: player.currency,
-      stake: settled.stake,
-      multiplier,
-      payout: settled.payout,
-      net: settled.payout - settled.stake,
-      capped: settled.capped,
-      outcome,
-      limits: limitsFor(player, houseLimits(settled.newHouseAnchor)),
-    });
+        return NextResponse.json({
+          playId,
+          game: play.game,
+          characterName: player.characterName,
+          currency: player.currency,
+          stake: settled.stake,
+          multiplier,
+          payout: settled.payout,
+          net: settled.payout - settled.stake,
+          capped: settled.capped,
+          outcome,
+          limits: limitsFor(player, houseLimits(settled.newHouseAnchor)),
+        });
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

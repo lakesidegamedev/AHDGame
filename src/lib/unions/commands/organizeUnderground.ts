@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import type { Db } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
 import type { UnionOrganizer } from "@/lib/db/types/union";
@@ -57,7 +58,7 @@ function isDuplicateKeyError(error: unknown): boolean {
  * contention reasoning as the legal drive; heat is clamped on read and by
  * the turn step.
  */
-export async function organizeUnderground(
+async function organizeUndergroundInTransaction(
   db: Db,
   character: Character,
   union: Union,
@@ -260,4 +261,11 @@ export async function organizeUnderground(
     actionsSpent: UNDERGROUND_ACTION_COST,
     crisisExtended,
   };
+}
+
+export async function organizeUnderground(
+  ...args: Parameters<typeof organizeUndergroundInTransaction>
+): Promise<Awaited<ReturnType<typeof organizeUndergroundInTransaction>>> {
+  const [db, ...rest] = args;
+  return withAtomicResult(db, (tx) => organizeUndergroundInTransaction(tx, ...rest));
 }

@@ -129,9 +129,10 @@ export async function transferIndependentCandidaciesToParty(
  */
 export async function withdrawFromMismatchedPrimaries(
   characterId: ObjectId,
-  newParty: string
+  newParty: string,
+  providedDb?: Db
 ): Promise<{ withdrawnCount: number; elections: string[] }> {
-  const db = await getDb();
+  const db = providedDb ?? (await getDb());
   const now = new Date();
 
   // Find all active candidacies for this character where party doesn't match
@@ -297,7 +298,8 @@ export async function cleanupPartyPositionsOnSwitch(
   characterId: ObjectId,
   oldParty: string,
   newParty: string,
-  countryId?: CountryId
+  countryId?: CountryId,
+  providedDb?: Db
 ): Promise<{
   clearedNationalLeadership: string[];
   clearedStateLeadership: string[];
@@ -319,7 +321,7 @@ export async function cleanupPartyPositionsOnSwitch(
     };
   }
 
-  const db = await getDb();
+  const db = providedDb ?? (await getDb());
   const now = new Date();
   const charIdStr = characterId.toString();
   const clearedNationalLeadership: string[] = [];
@@ -692,13 +694,16 @@ export async function sweepPartyMismatchedCandidates(): Promise<number> {
  * Parent-election tallies are cleaned for general-election candidacies. Used on
  * relocation: relocation auto-withdraws rather than blocks.
  */
-export async function withdrawAllActiveCandidacies(characterId: ObjectId): Promise<{
+export async function withdrawAllActiveCandidacies(
+  characterId: ObjectId,
+  providedDb?: Db
+): Promise<{
   withdrawnGeneralElections: number;
   withdrawnStatePartyElections: number;
   withdrawnNationalPartyElections: number;
   withdrawnCommitteeElections: number;
 }> {
-  const db = await getDb();
+  const db = providedDb ?? (await getDb());
   const now = new Date();
 
   // 1. General / primary election candidacies

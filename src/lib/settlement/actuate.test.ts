@@ -1,4 +1,5 @@
-vi.mock("@/lib/db/sessionDb", () => ({
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
   withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
   afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
   unboundDb: (db: unknown) => db,
@@ -69,6 +70,18 @@ describe("actuateSettlementOutcome", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 120,
+      currentYear: 1991,
+      preset: "1991-default",
+      worldEpochId: "synthetic",
+    });
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () =>
+        ["DEM", "DDM", "EUR", "USD", "GBP"].map((currencyCode) => ({ currencyCode, rate: 1 })),
+    });
+
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     prime(db, "settlementCrises").updateOne.mockResolvedValue({ matchedCount: 1 });

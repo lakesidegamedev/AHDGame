@@ -4,11 +4,9 @@ import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { EffectIntent } from "@/lib/crises/v2/effectModule";
 import { stepScars, type ScarStep } from "@/lib/crises/v2/scars";
 import type { Crisis } from "@/lib/db/types/crisis";
-import { logger } from "@/lib/observability/logger";
+import { withTurnValueSettlement } from "../withTurnValueSettlement";
 import { routeEffectIntents } from "./intents";
 import { crisesCollection } from "@/lib/db/repositories/crises";
-
-const COMPONENT = "crisisV2Scars";
 
 /** Basis points of sovereign premium a fully lost credit standing is worth. */
 const CREDIT_BPS_PER_UNIT = 10_000;
@@ -72,9 +70,13 @@ export interface ScarPassResult {
  * Advances every crisis's scars one turn, active or resolved, until the last
  * has healed. Output scars are read live by the plant lookup; the rest are
  * written to their systems as the difference from what was last applied. The
- * turn is claimed before anything is written, so a rerun cannot heal twice.
+ * claim, effects and saved baseline commit together so failed passes remain retryable.
  */
 export async function processCrisisScars(db: Db, turn: number): Promise<ScarPassResult> {
+  return withTurnValueSettlement(db, "crisis-scar-healing", turn, (db) => advanceScars(db, turn));
+}
+
+async function advanceScars(db: Db, turn: number): Promise<ScarPassResult> {
   const result: ScarPassResult = { advanced: 0, failed: 0 };
   const crises = crisesCollection(db);
   const unclaimed = { scarsHealUntil: { $gte: turn }, "v2.lastScarTurn": { $not: { $gte: turn } } };
@@ -97,7 +99,7 @@ export async function processCrisisScars(db: Db, turn: number): Promise<ScarPass
   let world: ScarWorld | undefined;
   const saves: AnyBulkWriteOperation<Crisis>[] = [];
   for (const crisis of claimed) {
-    try {
+    {
       const { scars, steps } = stepScars(crisis.v2?.scars ?? [], turn);
       if (steps.length > 0) {
         world ??= await loadScarWorld(db);
@@ -116,11 +118,6 @@ export async function processCrisisScars(db: Db, turn: number): Promise<ScarPass
         });
       }
       result.advanced += 1;
-    } catch (error) {
-      result.failed += 1;
-      logger.error(COMPONENT, "scar step failed; the next pass writes the difference", error, {
-        crisisId: crisis._id.toString(),
-      });
     }
   }
   if (saves.length > 0) await crises.bulkWrite(saves, { ordered: false });

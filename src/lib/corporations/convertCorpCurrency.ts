@@ -1,12 +1,12 @@
+import { nonAtomicMoneyFlowReceiptsCollection } from "@/lib/db/repositories/nonAtomicMoneyFlowReceipts";
+import { acquisitionSettlementsCollection } from "@/lib/db/repositories/acquisitionSettlements";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
-import { boundSession } from "@/lib/db/sessionDb";
-import type { Db, AnyBulkWriteOperation, MongoServerError, ClientSession } from "mongodb";
+import { boundSession, withSessionDb } from "@/lib/db/sessionDb";
+import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import * as Sentry from "@sentry/nextjs";
-import { getMongoClient } from "@/lib/mongodb";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { cancelShareOrderAndRefund } from "@/lib/corporations/cancelShareOrder";
 import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListing";
@@ -48,23 +48,31 @@ export interface ConvertCorpCurrencyError {
   error: string;
 }
 
-/**
- * Signals that the on-standalone-Mongo conversion flipped the corp's currency
- * fields but the follow-up sector write failed AND the compensating revert of
- * the corp document also failed. In that state the corp is left holding the new
- * currency with unconverted sectors — an explicitly uncertain state that an
- * operator must reconcile by hand. Never swallowed: callers surface it as a 500
- * rather than reporting a clean abort.
- */
-export class CorpCurrencyConversionUncertainError extends Error {
-  /** Discriminator, so a structured-clone or cross-realm copy still matches. */
-  readonly corpCurrencyStateUncertain = true;
-
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "CorpCurrencyConversionUncertainError";
+class CurrencyMoveRejected extends Error {
+  constructor(readonly result: ConvertCorpCurrencyError) {
+    super(result.error);
   }
 }
+
+const TREASURY_CURRENCY_FIELDS = [
+  "liquidCurrencyCode",
+  "liquidCapital",
+  "sharePrice",
+  "marketingBudget",
+  "logisticsBudget",
+  "ceoSalary",
+  "rdBudget",
+  "shareEscrowBalance",
+  "escrowFundingPerTurn",
+  "productVentureDebitsV1",
+] as const;
+const treasurySourceFields = (corp: Corporation) =>
+  Object.fromEntries(
+    TREASURY_CURRENCY_FIELDS.map((field) => [
+      field,
+      Object.hasOwn(corp, field) ? corp[field] : { $exists: false },
+    ])
+  );
 
 /**
  * Convert every corp-economic money field from the corp's current
@@ -109,6 +117,50 @@ export async function convertCorpCurrency(
   forexEnabled: boolean,
   sectorSnapshot?: CorporateSector[]
 ): Promise<ConvertCorpCurrencyResult> {
+  try {
+    return await withSessionDb(db, async (transactionDb) => {
+      const result = await convertInTransaction(
+        transactionDb,
+        corp,
+        toCurrencyCode,
+        fxByCurrency,
+        now,
+        forexEnabled,
+        sectorSnapshot
+      );
+      if (!result.ok) throw new CurrencyMoveRejected(result);
+      return result;
+    });
+  } catch (error) {
+    if (boundSession(db)) throw error;
+    if (error instanceof CurrencyMoveRejected) return error.result;
+    if (error instanceof TreasuryQuoteChanged) return { ok: false, error: error.message };
+    if (
+      error instanceof Error &&
+      "result" in error &&
+      error.result &&
+      typeof error.result === "object" &&
+      "ok" in error.result &&
+      error.result.ok === false
+    )
+      return {
+        ok: false,
+        error: error.message,
+        rateUnavailable: /exchange rate/i.test(error.message),
+      };
+    throw error;
+  }
+}
+
+async function convertInTransaction(
+  db: Db,
+  corp: Corporation,
+  toCurrencyCode: CurrencyCode,
+  fxByCurrency: ReadonlyMap<CurrencyCode, number>,
+  now: Date,
+  forexEnabled: boolean,
+  sectorSnapshot?: CorporateSector[]
+): Promise<ConvertCorpCurrencyResult> {
   if (
     corp.primaryUnderwritingIncomingFunding ||
     corp.bankUnderwritingFunding ||
@@ -133,6 +185,33 @@ export async function convertCorpCurrency(
       listingsCancelled: 0,
     };
   }
+
+  const idHex = corp._id.toHexString();
+  const [shareSettlement, acquisition] = await Promise.all([
+    nonAtomicMoneyFlowReceiptsCollection(db).findOne(
+      {
+        status: { $nin: ["completed", "compensated"] },
+        $or: ["fillerDebit", "fillerCredit", "sellerProceeds", "buyerRefund"].map((field) => ({
+          [`shareFillMoneyPlan.${field}.collection`]: "corporations",
+          [`shareFillMoneyPlan.${field}.idHex`]: idHex,
+        })),
+      },
+      { projection: { _id: 1 } }
+    ),
+    acquisitionSettlementsCollection(db).findOne(
+      {
+        status: "in_progress",
+        legs: { $elemMatch: { collection: "corporations", "filter._id": corp._id } },
+      },
+      { projection: { _id: 1 } }
+    ),
+  ]);
+  if (shareSettlement || acquisition)
+    return {
+      ok: false,
+      error:
+        "A frozen share or acquisition payment must finish before changing this corporation's currency.",
+    };
 
   // Both source and target FX rates must be present before we mutate anything.
   // Reading with passthrough (rate=1 fallback) is safe for cross-corp aggregation,
@@ -186,6 +265,18 @@ export async function convertCorpCurrency(
       retainedCurrency: fromCurrency,
       error: "Repay outstanding bank loans before changing the corporation's treasury currency.",
     };
+  const fence = await corporationsCollection(db).updateOne(
+    {
+      _id: corp._id,
+      ...treasurySourceFields(corp),
+      primaryUnderwritingIncomingFunding: { $exists: false },
+      bankUnderwritingFunding: { $exists: false },
+      headquartersRelocationBondFunding: { $exists: false },
+    },
+    { $set: { updatedAt: now } }
+  );
+  if (fence.matchedCount !== 1)
+    throw new TreasuryQuoteChanged("Treasury changed; refresh before changing currency");
   const transitionKeys = await reserveSectorsForTransition(
     db,
     sectors,
@@ -250,7 +341,18 @@ export async function convertCorpCurrency(
     listingsCancelled++;
   }
 
-  // Convert corp money fields and sector revenue atomically. `liquidCurrencyCode` is the source of truth for how downstream code reads money fields, so partial failure drifts undetectably: wrap both writes in one transaction. On standalone mongod, fall back to sequential writes. Preserve `ceoSalary` being optional: only `$set` when already present.
+  if (ordersCancelled || listingsCancelled) {
+    const refreshed = await corporationsCollection(db).findOne(
+      { _id: corp._id },
+      {
+        projection: Object.fromEntries(TREASURY_CURRENCY_FIELDS.map((field) => [field, 1])),
+      }
+    );
+    if (!refreshed)
+      throw new TreasuryQuoteChanged("Corporation disappeared during currency conversion");
+    corp = { ...corp, ...refreshed };
+  }
+
   const round2 = (v: number) => Math.round(v * 100) / 100;
   const round4 = (v: number) => Math.round(v * 10000) / 10000;
   const corpSet: Record<string, unknown> = {
@@ -269,46 +371,20 @@ export async function convertCorpCurrency(
   for (const field of ["rdBudget", "shareEscrowBalance", "escrowFundingPerTurn"] as const) {
     if (corp[field] !== undefined) corpSet[field] = round2(corp[field]! * scale);
   }
-  const sourceCashFields = Object.fromEntries(
-    (
-      [
-        "liquidCurrencyCode",
-        "liquidCapital",
-        "sharePrice",
-        "marketingBudget",
-        "logisticsBudget",
-        "ceoSalary",
-        "rdBudget",
-        "shareEscrowBalance",
-        "escrowFundingPerTurn",
-      ] as const
-    ).map((field) => [field, Object.hasOwn(corp, field) ? corp[field] : { $exists: false }])
-  );
-
-  // Exact pre-write values, captured so a standalone-Mongo failure after the
-  // corp write can be undone. `liquidCurrencyCode` was absent on pre-forex
-  // corps (the write backfills it), so it is `$unset` again rather than set to
-  // a placeholder; `ceoSalary` is only reverted when the write touched it.
-  const revertCorpSet: Record<string, unknown> = {
-    liquidCapital: corp.liquidCapital ?? 0,
-    sharePrice: corp.sharePrice ?? 0,
-    marketingBudget: corp.marketingBudget ?? 0,
-    logisticsBudget: corp.logisticsBudget ?? 0,
-    updatedAt: now,
-  };
-  const revertCorpUnset: Record<string, ""> = {};
-  if (fromCurrency === undefined) {
-    revertCorpUnset.liquidCurrencyCode = "";
-  } else {
-    revertCorpSet.liquidCurrencyCode = fromCurrency;
+  if (corp.productVentureDebitsV1) {
+    corpSet.productVentureDebitsV1 = Object.fromEntries(
+      Object.entries(corp.productVentureDebitsV1).map(([id, receipt]) => [
+        id,
+        {
+          ...receipt,
+          ...(receipt.localAmount !== undefined
+            ? { localAmount: round2(receipt.localAmount * scale) }
+            : {}),
+        },
+      ])
+    );
   }
-  if (corp.ceoSalary !== undefined) {
-    revertCorpSet.ceoSalary = corp.ceoSalary;
-  }
-
-  for (const field of ["rdBudget", "shareEscrowBalance", "escrowFundingPerTurn"] as const) {
-    if (corp[field] !== undefined) revertCorpSet[field] = corp[field];
-  }
+  const sourceCashFields = treasurySourceFields(corp);
 
   // Fields an FX flip may and may not touch.
   // `revenue` and `currentGrowthCost` are LOCAL-currency fields, so a change of
@@ -330,6 +406,8 @@ export async function convertCorpCurrency(
       filter: {
         _id: s._id,
         "constructionPropertyTransition.key": transitionKeys[index],
+        revenue: s.revenue ?? { $exists: false },
+        currentGrowthCost: s.currentGrowthCost ?? { $exists: false },
       },
       update: {
         $set: {
@@ -340,146 +418,35 @@ export async function convertCorpCurrency(
       },
     },
   }));
-  const restoreSectorOps: AnyBulkWriteOperation<CorporateSector>[] = sectors.map(
-    (sector, index) => {
-      const $set: Record<string, unknown> = {};
-      const $unset: Record<string, ""> = {};
-      for (const field of ["revenue", "currentGrowthCost", "updatedAt"] as const) {
-        if (sector[field] === undefined) $unset[field] = "";
-        else $set[field] = sector[field];
-      }
-      return {
-        updateOne: {
-          filter: {
-            _id: sector._id,
-            "constructionPropertyTransition.key": transitionKeys[index],
-          },
-          update: {
-            ...(Object.keys($set).length > 0 ? { $set } : {}),
-            ...(Object.keys($unset).length > 0 ? { $unset } : {}),
-          },
-        },
-      };
-    }
+  const corpWrite = await corporationsCollection(db).updateOne(
+    {
+      _id: corp._id,
+      ...sourceCashFields,
+      primaryUnderwritingIncomingFunding: { $exists: false },
+      bankUnderwritingFunding: { $exists: false },
+      headquartersRelocationBondFunding: { $exists: false },
+    },
+    { $set: corpSet },
+    undefined
   );
-
-  const applyCorpAndSectors = async (
-    sessionOpts: { session?: ClientSession } = {},
-    compensateStandaloneFailure = false
-  ) => {
-    let corpWriteApplied = false;
-    try {
-      const corpWrite = await corporationsCollection(db).updateOne(
-        {
-          _id: corp._id,
-          ...sourceCashFields,
-          primaryUnderwritingIncomingFunding: { $exists: false },
-          bankUnderwritingFunding: { $exists: false },
-          headquartersRelocationBondFunding: { $exists: false },
-        },
-        { $set: corpSet },
-        sessionOpts
-      );
-      if (corpWrite.matchedCount !== 1) {
-        throw new TreasuryQuoteChanged(
-          "Treasury changed; retry the currency move with a fresh quote"
-        );
-      }
-      corpWriteApplied = true;
-      if (sectorOps.length > 0) {
-        const bulkResult = await corporateSectorsCollection(db).bulkWrite(sectorOps, sessionOpts);
-        // A matchedCount shortfall means sectors exist in the DB that we fetched
-        // but the bulkWrite didn't touch — the corp's liquidCurrencyCode would be
-        // flipped while those sectors retain old-currency revenue values, inflating
-        // sectorNPV and share price by the FX cross rate on the next turn.
-        if (bulkResult.matchedCount !== sectorOps.length) {
-          const msg =
-            `convertCorpCurrency: sector count mismatch for corp ${corp._id.toString()} ` +
-            `(${fromCurrency ?? "₳"}→${toCurrencyCode}, scale=${scale.toFixed(6)}): ` +
-            `expected ${sectorOps.length} matched, got ${bulkResult.matchedCount}`;
-          Sentry.captureException(new Error(msg));
-          // Throw so the transaction (if active) aborts before committing the corp update.
-          // In the non-transaction fallback the corp write has already landed, so
-          // the catch below reverts it before surfacing the error to the caller.
-          throw new Error(msg);
-        }
-      }
-    } catch (error) {
-      // Only the standalone/sequential path (no session) leaves a partially
-      // applied write behind: with an active transaction the throw aborts the
-      // whole unit and there is nothing to compensate.
-      if (!compensateStandaloneFailure || !corpWriteApplied) throw error;
-      const revertErrors: unknown[] = [];
-      if (restoreSectorOps.length > 0) {
-        try {
-          // An ordered bulkWrite can apply an arbitrary prefix before throwing.
-          // Restore every fetched sector, not just the reported matched count.
-          await corporateSectorsCollection(db).bulkWrite(restoreSectorOps);
-        } catch (revertError) {
-          revertErrors.push(revertError);
-          Sentry.captureException(revertError as Error);
-        }
-      }
-      try {
-        const restored = await corporationsCollection(db).updateOne(
-          { _id: corp._id, ...corpSet },
-          {
-            $set: revertCorpSet,
-            ...(Object.keys(revertCorpUnset).length > 0 ? { $unset: revertCorpUnset } : {}),
-          }
-        );
-        if (restored.matchedCount !== 1)
-          throw new Error("Treasury changed before currency rollback");
-      } catch (revertError) {
-        revertErrors.push(revertError);
-        Sentry.captureException(revertError as Error);
-      }
-      if (revertErrors.length > 0) {
-        throw new CorpCurrencyConversionUncertainError(
-          `convertCorpCurrency: corp ${corp._id.toString()} was flipped ` +
-            `${fromCurrency ?? "₳"}→${toCurrencyCode} but the sector write failed and ` +
-            `${revertErrors.length} compensation step(s) could not be completed.`,
-          { cause: new AggregateError([error, ...revertErrors]) }
-        );
-      }
-      throw error;
+  if (corpWrite.matchedCount !== 1) {
+    throw new TreasuryQuoteChanged("Treasury changed; retry the currency move with a fresh quote");
+  }
+  if (sectorOps.length > 0) {
+    const bulkResult = await corporateSectorsCollection(db).bulkWrite(sectorOps);
+    // A matchedCount shortfall means sectors exist in the DB that we fetched
+    // but the bulkWrite didn't touch — the corp's liquidCurrencyCode would be
+    // flipped while those sectors retain old-currency revenue values, inflating
+    // sectorNPV and share price by the FX cross rate on the next turn.
+    if (bulkResult.matchedCount !== sectorOps.length) {
+      const msg =
+        `convertCorpCurrency: sector count mismatch for corp ${corp._id.toString()} ` +
+        `(${fromCurrency ?? "₳"}→${toCurrencyCode}, scale=${scale.toFixed(6)}): ` +
+        `expected ${sectorOps.length} matched, got ${bulkResult.matchedCount}`;
+      Sentry.captureException(new Error(msg));
+      throw new Error(msg);
     }
-  };
-
-  const outerSession = boundSession(db);
-  if (outerSession) {
-    await applyCorpAndSectors({ session: outerSession }, false);
-  } else
-    try {
-      await runTransactionWithSessionRetry(getMongoClient, async (session) => {
-        // `session` is undefined on the standalone fallback path (topology probe
-        // returned false), where a partial write must be compensated by hand.
-        await applyCorpAndSectors({ session }, !session);
-      });
-    } catch (err) {
-      // Standalone mongods report TransactionNotSupported (code 20). Fall back
-      // to sequential writes so dev-on-standalone still functions — production
-      // Atlas always runs a replica set and gets the atomicity guarantee.
-      const code = (err as MongoServerError | undefined)?.code;
-      if (code === 20 || code === 263 /* IllegalOperation for sessions */) {
-        try {
-          await applyCorpAndSectors({}, true);
-        } catch (fallbackError) {
-          if (!(fallbackError instanceof CorpCurrencyConversionUncertainError))
-            await releaseTransitions();
-          if (fallbackError instanceof TreasuryQuoteChanged)
-            return { ok: false, error: fallbackError.message };
-          throw fallbackError;
-        }
-      } else {
-        if (!(err instanceof CorpCurrencyConversionUncertainError)) {
-          await releaseTransitions();
-        }
-        if (err instanceof TreasuryQuoteChanged) return { ok: false, error: err.message };
-        throw err;
-      }
-    }
-
+  }
   await releaseTransitions();
 
   const sectorsConverted = sectors.length;

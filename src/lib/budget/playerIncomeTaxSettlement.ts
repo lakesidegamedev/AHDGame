@@ -1,13 +1,14 @@
+import { creditRegionalCash } from "./regionalCash";
 import { planTaxCollection, outstandingTax, type TaxCollectionSlice } from "./rules/taxCollection";
 import { playerTaxWalletDebit } from "./rules/incomeTaxTiers";
 import { planTaxFunding, type TaxFundingLeg } from "./rules/playerTaxFunding";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+
 /**
  * Income-tax collection batches guarded wallet debits and treasury credits.
  * One active batch freezes each payer's outcome before any treasury is credited;
  * monotonic target receipts make crashes, concurrency and stale retries safe.
  */
-import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
+import type { FederalBudget } from "@/lib/db/types/budget";
 import { createHash } from "node:crypto";
 import { ObjectId, type Db, type Document, type AnyBulkWriteOperation } from "mongodb";
 import type {
@@ -19,7 +20,6 @@ import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
-import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { playerIncomeTaxAssessmentsCollection } from "@/lib/db/repositories/playerIncomeTaxAssessments";
@@ -254,31 +254,18 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         },
       })
     );
-    const regionalOps: AnyBulkWriteOperation<StateBudget>[] = Array.from(regional, ([id, sum]) => ({
-      updateOne: {
-        filter: { _id: id, countryId: sum.countryId, ...receiptGuard(batch.turn) },
-        update: {
-          $inc: { balance: sum.amount },
-          $set: { incomeTaxBatchReceipt: { key: batch.key, turn: batch.turn } },
-        },
-      },
-    }));
     if (nationalOps.length) await federalBudgetCollection(db).bulkWrite(nationalOps);
-    if (regionalOps.length) await stateBudgetsCollection(db).bulkWrite(regionalOps);
-    const [nationalProof, regionalProof] = await Promise.all([
-      federalBudgetCollection(db)
-        .find({ _id: { $in: [...national.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
-        .toArray(),
-      stateBudgetsCollection(db)
-        .find({ _id: { $in: [...regional.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
-        .toArray(),
-    ]);
+    await creditRegionalCash(
+      db,
+      [...regional].map(([stateId, row]) => ({ stateId, ...row })),
+      { receipt: { key: batch.key, turn: batch.turn } }
+    );
+    const nationalProof = await federalBudgetCollection(db)
+      .find({ _id: { $in: [...national.keys()] } }, { projection: { incomeTaxBatchReceipt: 1 } })
+      .toArray();
     if (
       nationalProof.length !== national.size ||
-      regionalProof.length !== regional.size ||
-      [...nationalProof, ...regionalProof].some(
-        (target) => target.incomeTaxBatchReceipt?.key !== batch.key
-      )
+      nationalProof.some((target) => target.incomeTaxBatchReceipt?.key !== batch.key)
     )
       throw new Error("Income-tax treasury delivery is incomplete");
     await batches.updateOne({ ...identity, stage: "debited" }, { $set: { stage: "credited" } });

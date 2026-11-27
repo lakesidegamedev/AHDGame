@@ -35,12 +35,17 @@ describe("processInvestorConfidenceDecay", () => {
     );
 
     const { processInvestorConfidenceDecay } = await import("./investorConfidenceDecay");
+    db.collectionMocks.federalBudget.bulkWrite.mockResolvedValue({ modifiedCount: 1 });
     const result = await processInvestorConfidenceDecay(5);
 
     expect(result.countriesHealed).toBe(1);
     const call = db.collectionMocks.federalBudget.bulkWrite.mock.calls[0][0];
     expect(call).toHaveLength(1);
-    expect(call[0].updateOne.filter).toEqual({ countryId: "US" });
+    expect(call[0].updateOne.filter).toEqual({
+      countryId: "US",
+      investorConfidence: 40,
+      investorConfidenceUpdatedAtTurn: { $ne: 5 },
+    });
     expect(call[0].updateOne.update.$set.investorConfidence).toBeGreaterThan(40);
     expect(call[0].updateOne.update.$set.investorConfidence).toBeLessThanOrEqual(
       INVESTOR_CONFIDENCE_BASELINE

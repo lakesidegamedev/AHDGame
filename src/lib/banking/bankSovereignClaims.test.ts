@@ -470,8 +470,8 @@ describe("bank sovereign claims", () => {
 
     // Funding receipt, escrow and charter, vault payout, the claim pull off the
     // budget and the journal records. A per-claim probe or a separate charter
-    // read raises this by one each, so the bound is the measured 29 plus one.
-    expect(trips.total(), trips.summary()).toBeLessThanOrEqual(30);
+    // read raises this by one each. Two projected precision reads keep cash deltas exact.
+    expect(trips.total(), trips.summary()).toBeLessThanOrEqual(32);
   });
 
   it("sends a closed or rechartered epoch's recovery to the currency insurance fund", async () => {

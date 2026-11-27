@@ -44,6 +44,11 @@ export interface LatestCorpIncomeRow {
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
   settledBankLoanInterestPaid?: number;
+  settledImfInterestPaid?: number;
+  settledImfInterestReceived?: number;
+  settledImfPrincipalPaid?: number;
+  settledImfPrincipalReceived?: number;
+  imfSettlementUnavailable?: boolean;
   currencyCode?: string;
   fxRateAtWrite?: number;
   turn?: number;
@@ -85,8 +90,8 @@ export interface PortfolioHoldings {
   historicalIncomeUnavailable?: boolean;
   turnIncomeForImf: number;
   dividendIncomeReceivedDaily: number;
-  imfFacilityPaymentDaily: number;
-  imfFacilityReceiptsDaily: number;
+  imfFacilityInterestPaidDaily: number;
+  imfFacilityInterestReceivedDaily: number;
   totalDebtAnchor: number;
   debtBreakdownAnchor?: Record<string, number>;
   annualInterestAnchor: number;
@@ -217,6 +222,11 @@ export async function loadPortfolioHoldings(
           settledBondCouponIncome: 1,
           settledBondInterestPaid: 1,
           settledBankLoanInterestPaid: 1,
+          settledImfInterestPaid: 1,
+          settledImfInterestReceived: 1,
+          settledImfPrincipalPaid: 1,
+          settledImfPrincipalReceived: 1,
+          imfSettlementUnavailable: 1,
           currencyCode: 1,
           fxRateAtWrite: 1,
           turn: 1,
@@ -229,7 +239,7 @@ export async function loadPortfolioHoldings(
       }
     ),
     imfReceivableRows.length > 0
-      ? sumImfLenderReceiptsAnchorPerTurnForReceivables(db, imfReceivableRows)
+      ? sumImfLenderReceiptsAnchorPerTurnForReceivables(db, imfReceivableRows, "interest")
       : Promise.resolve(0),
   ]);
   const latestCorpIncomeRow = rawCorpIncomeRow
@@ -249,26 +259,36 @@ export async function loadPortfolioHoldings(
           "settledBondCouponIncome",
           "settledBondInterestPaid",
           "settledBankLoanInterestPaid",
+          "settledImfInterestPaid",
+          "settledImfInterestReceived",
+          "settledImfPrincipalPaid",
+          "settledImfPrincipalReceived",
         ]
       )
     : null;
   const turnIncomeForImf =
-    typeof latestCorpIncomeRow?.income === "number" ? latestCorpIncomeRow.income : 0;
+    typeof latestCorpIncomeRow?.income === "number"
+      ? corpLiquidCapitalToAnchor(
+          latestCorpIncomeRow.income,
+          corporation,
+          fxRateForCorpFromMap(corporation, fxByCurrency)
+        )
+      : 0;
   // Realized dividend income (local ccy) this corp received last turn, scaled
   // per-turn to daily to match projected `income` units. Reporting only; cash was already credited.
   const dividendIncomeReceivedDaily =
     typeof latestCorpIncomeRow?.dividendIncomeReceived === "number"
       ? Math.round(latestCorpIncomeRow.dividendIncomeReceived * TURNS_PER_DAY)
       : 0;
-  const imfFacilityPaymentDaily =
+  const imfFacilityInterestPaidDaily =
     corporation.imfBailoutActive === true
       ? Math.round(
           anchorPerTurnToFinancialDaily(
-            imfFacilityPaymentAnchorPerTurn(corporation, turnIncomeForImf)
+            imfFacilityPaymentAnchorPerTurn(corporation, turnIncomeForImf, "interest")
           )
         )
       : 0;
-  const imfFacilityReceiptsDaily =
+  const imfFacilityInterestReceivedDaily =
     imfReceivableRows.length > 0
       ? Math.round(anchorPerTurnToFinancialDaily(imfLenderReceiptsAnchor))
       : 0;
@@ -341,6 +361,7 @@ export async function loadPortfolioHoldings(
     0
   );
   const arrearsAnchor = corporateCashArrearsAnchor({
+    producerPayables: corporation.producerPayables?.claims,
     operatingByCurrency: corporation.operatingCashArrearsByCurrency,
     federalTaxByCountryAnchor: corporation.federalTaxArrearsAnchorByCountry,
     fxByCurrency,
@@ -395,8 +416,8 @@ export async function loadPortfolioHoldings(
     historicalIncomeUnavailable: rawCorpIncomeRow != null && latestCorpIncomeRow == null,
     turnIncomeForImf,
     dividendIncomeReceivedDaily,
-    imfFacilityPaymentDaily,
-    imfFacilityReceiptsDaily,
+    imfFacilityInterestPaidDaily,
+    imfFacilityInterestReceivedDaily,
     totalDebtAnchor,
     debtBreakdownAnchor,
     annualInterestAnchor,

@@ -348,6 +348,25 @@ describe("deposit insurance", () => {
       const result = await resolveFailedBankDepositors(memory as unknown as Db, bankId, 12);
 
       expect(result.treasuryBackstop).toBe(90_000);
+      const payouts = memory
+        .collection("financialTxLog")
+        .docs.filter((row) => row.type === "bank_insurance_payout");
+      expect(payouts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ subjectType: "government", amount: -90_000, countryId: "US" }),
+          expect.objectContaining({
+            subjectType: "system",
+            amount: -10_000,
+            meta: expect.objectContaining({ source: "insurance_fund" }),
+          }),
+        ])
+      );
+      expect(
+        payouts
+          .filter((row) => row.subjectType === "government")
+          .reduce((sum, row) => sum + Number(row.amount), 0)
+      ).toBe(-result.treasuryBackstop);
+
       expect(result.insurancePaid).toBe(100_000);
       expect(fundNow().balance).toBe(0);
       expect(fundNow().treasuryBackstopLifetime).toBe(90_000);

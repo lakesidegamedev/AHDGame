@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -7,6 +10,11 @@ import { normalizeAndMergeCorporateSectors } from "./repairDuplicateSectors";
 describe("normalizeAndMergeCorporateSectors secured rows", () => {
   it("does not merge or delete a duplicate group containing an active construction pledge", async () => {
     const db = createMockDb();
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 100,
+      isProcessing: false,
+    });
     const corporationId = new ObjectId();
     const makeSector = (constructionFinancing?: CorporateSector["constructionFinancing"]) =>
       ({

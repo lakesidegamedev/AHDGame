@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 /**
  * Bond-pool accounting records actual upkeep, issuer receipts, secondary trades
  * and refunds via witnessBondPoolCash. Modeled liquidity remains excluded
@@ -154,7 +155,7 @@ export async function witnessBondPoolCash(
       },
     ],
   };
-  if (context.pendingEntries && !options?.session) {
+  if (context.pendingEntries && !options?.session && !boundSession(db)) {
     context.pendingEntries.push(entry);
   } else {
     await emitLedgerEntries(

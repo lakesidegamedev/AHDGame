@@ -95,7 +95,7 @@ export function getElectionResolutionAndGovernmentPhases(): TurnPhaseAdapter[] {
         // tally, and the field starts the next turn-tick interval at 0
         // ready to accumulate player upgrades + new maintenance writes.
         const campaignSpendResetResult = await runtime.runPhase("campaignSpendReset", () =>
-          processCampaignSpendReset(db)
+          processCampaignSpendReset(db, newTurn)
         );
         phaseResults.campaignSpendReset = {
           campaignsReset: campaignSpendResetResult?.campaignsReset ?? 0,
@@ -349,10 +349,11 @@ export function getElectionResolutionAndGovernmentPhases(): TurnPhaseAdapter[] {
         let newFiscalYear: number | null = null;
         if (isFiscalYearEnd(calendarTurn)) {
           newFiscalYear = calculateFiscalYear(currentYear, calendarTurn);
-          await runtime.runPhase("fiscalYear", () =>
-            processFiscalYear(db, newFiscalYear!, newTurn)
-          );
-          fiscalYearProcessed = true;
+          const result = await runtime.runPhase("fiscalYear", async () => {
+            await processFiscalYear(db, newFiscalYear!, newTurn);
+            return { processed: true };
+          });
+          fiscalYearProcessed = result?.processed === true;
         } else {
           await runtime.markPhaseSkipped(
             "fiscalYear",

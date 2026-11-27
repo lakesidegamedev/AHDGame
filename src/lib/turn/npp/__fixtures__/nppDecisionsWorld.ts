@@ -17,7 +17,9 @@ import { CORPORATION_TYPES } from "@/lib/constants/corporations";
 import type { CorporationType } from "@/lib/constants/corporations";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 
 export interface NppDecisionsWorldOptions {
   /** Total corporations in the world, NPP-run and player-owned together. */
@@ -92,10 +94,10 @@ const NPP_ARCHETYPES = [
   "traditionalist",
 ] as const;
 
-const STRATEGY_IDS = ["expand", "defend", "consolidate", "retool", "harvest"] as const;
+type StrategyId = "expand" | "defend" | "consolidate" | "retool" | "harvest";
 
 /** Live worlds are expand-heavy: the loop defaults to expand on first sight. */
-function strategyIdFor(rng: () => number): (typeof STRATEGY_IDS)[number] {
+function strategyIdFor(rng: () => number): StrategyId {
   const roll = rng();
   if (roll < 0.62) return "expand";
   if (roll < 0.82) return "defend";

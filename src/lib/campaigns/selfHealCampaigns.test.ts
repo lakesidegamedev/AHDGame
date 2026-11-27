@@ -84,8 +84,8 @@ describe("selfHealMissingCampaigns", () => {
     const healed = await selfHealMissingCampaigns(db as unknown as Db, NOW);
 
     // One created (missingCampaignChar). haveCampaignChar = no-op. UK = ineligible, skipped.
-    expect(db.collectionMocks.campaigns!.insertOne).toHaveBeenCalledTimes(1);
-    const inserted = db.collectionMocks.campaigns!.insertOne.mock.calls[0][0];
+    expect(db.collectionMocks.campaigns!.updateOne).toHaveBeenCalledTimes(1);
+    const inserted = db.collectionMocks.campaigns!.updateOne.mock.calls[0][1].$setOnInsert;
     expect(inserted.candidateId).toEqual(missingCampaignChar);
     expect(inserted.electionId).toEqual(presElectionId);
     expect(inserted.status).toBe("active");

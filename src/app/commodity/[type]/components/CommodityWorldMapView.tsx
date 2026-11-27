@@ -54,13 +54,14 @@ interface CommodityWorldMapViewProps {
   unit: string;
   basePrice: number;
   globalPrice: number;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   stateSupply: Record<string, number>;
   stateDemand: Record<string, number>;
   statePrices: Record<string, number>;
   nationalSupply?: Record<string, number>;
   nationalDemand?: Record<string, number>;
+  nationalPrices?: Record<string, number>;
   fundedCountryBooks?: Record<string, FundedCountryMarket>;
   /**
    * Per-country reachable book for THIS commodity. Absent on a world that has
@@ -97,6 +98,7 @@ export default function CommodityWorldMapView({
   statePrices,
   nationalSupply,
   nationalDemand,
+  nationalPrices,
   fundedCountryBooks,
   reachableBooks,
   stateCountryMap,
@@ -121,7 +123,8 @@ export default function CommodityWorldMapView({
         basePrice,
         globalPrice,
         nationalSupply,
-        nationalDemand
+        nationalDemand,
+        nationalPrices
       ),
     [
       stateSupply,
@@ -132,6 +135,7 @@ export default function CommodityWorldMapView({
       globalPrice,
       nationalSupply,
       nationalDemand,
+      nationalPrices,
     ]
   );
 

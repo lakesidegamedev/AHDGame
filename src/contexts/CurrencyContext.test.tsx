@@ -4,6 +4,7 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { CurrencyProvider, useCurrency } from "./CurrencyContext";
 
 const state = vi.hoisted(() => ({
+  preset: "1991-default",
   countryId: "DE",
   preference: "home",
   eurozoneEnabled: false,
@@ -21,7 +22,7 @@ vi.mock("@/contexts/AuthDataContext", () => ({
   }),
 }));
 vi.mock("@/hooks/useWorldFlags", () => ({
-  useWorldFlags: () => ({ preset: "1991-default", eurozoneEnabled: state.eurozoneEnabled }),
+  useWorldFlags: () => ({ preset: state.preset, eurozoneEnabled: state.eurozoneEnabled }),
 }));
 vi.mock("@/hooks/useGameEvents", () => ({
   useGameEvents: (callback: () => void, types: string[]) => {
@@ -31,6 +32,7 @@ vi.mock("@/hooks/useGameEvents", () => ({
 }));
 
 beforeEach(() => {
+  state.preset = "1991-default";
   state.countryId = "DE";
   state.preference = "home";
   state.eurozoneEnabled = false;
@@ -162,4 +164,20 @@ it("refreshes spread settings even when the currency quotes are unchanged", asyn
     window.dispatchEvent(new Event("focus"));
   });
   await waitFor(() => expect(result.current.forexSpreadStrengths).toEqual({ EUR: 1.5 }));
+});
+
+it("keeps named conversions unavailable until their actual quotes exist", async () => {
+  state.rates = { EUR: 1 };
+  const result = await currency();
+  expect(Number.isNaN(result.current.toInternalFrom(100, "JPY"))).toBe(true);
+  expect(Number.isNaN(result.current.toLocalOf(100, "JPY"))).toBe(true);
+  expect(Number.isNaN(result.current.convertFrom(100, "JPY"))).toBe(true);
+});
+it("uses EUR as a modern French character's home currency", async () => {
+  state.preset = "2027-default";
+  state.countryId = "FR";
+  state.rates = { EUR: 1, USD: 1, FRF: 6.55957 };
+  const result = await currency();
+  expect(result.current.currencyCode).toBe("EUR");
+  expect(result.current.convertFrom(100, "EUR") + result.current.convertFrom(1, "USD")).toBe(101);
 });

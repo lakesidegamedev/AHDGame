@@ -6,16 +6,10 @@ import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalyti
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import { ObjectId } from "mongodb";
 import type { Db, Document } from "mongodb";
-import type {
-  PoliticalParty,
-  ExchangeRate,
-  GameState,
-  ElectedOfficial,
-  CabinetMember,
-} from "@/lib/db/types";
+import type { ExchangeRate } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types/character";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
-import type { IndexFund } from "@/lib/db/types/indexFund";
+
 import type { RetiredCharacter, RetiredCharacterSnapshot } from "@/lib/db/types/retiredCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -100,6 +94,11 @@ export async function retireCharacter(
 ): Promise<void> {
   const characterId = character._id;
   const now = new Date();
+  const retirementWorld = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { preset: 1 } }
+  );
+  const homeCurrency = getHomeCurrency(character, retirementWorld?.preset);
 
   const achievementCount = await characterAchievementsCollection<Document>(db).countDocuments({
     characterId,
@@ -128,7 +127,7 @@ export async function retireCharacter(
     [...careerRates.values()].map((r) => [r.currencyCode, r.rate ?? r.baseRate ?? 1])
   );
   const retirementLiquid = liquidBalancesAnchor({
-    homeCurrency: getHomeCurrency(character),
+    homeCurrency: homeCurrency,
     personal: character.currencyBalances?.personal,
     savings: character.currencyBalances?.savings,
     legacyPersonal: character.cashOnHand ?? 0,
@@ -233,14 +232,9 @@ export async function retireCharacter(
       infamy: character.infamy,
       // LOCAL home-currency balances at time of retirement.
       funds: character.currencyBalances?.campaign ?? character.funds ?? 0,
-      cashOnHand:
-        character.currencyBalances?.personal?.[getHomeCurrency(character)] ??
-        character.cashOnHand ??
-        0,
+      cashOnHand: character.currencyBalances?.personal?.[homeCurrency] ?? character.cashOnHand ?? 0,
       savingsOnHand:
-        character.currencyBalances?.savings?.[getHomeCurrency(character)] ??
-        character.savingsOnHand ??
-        0,
+        character.currencyBalances?.savings?.[homeCurrency] ?? character.savingsOnHand ?? 0,
       cashValueAnchor: retirementLiquid.personal,
       savingsValueAnchor: retirementLiquid.savings,
       debtValueAnchor: retirementDebt,

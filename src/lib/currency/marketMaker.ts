@@ -1,3 +1,5 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
 /**
  * Market-maker conversion exchanges balances at live quotes with a spread fee.
  * executeMarketMakerTrade uses fixed, fee-free settlement within the euro area.
@@ -8,7 +10,7 @@ import { loadEuroMonetaryUnion } from "./euro/service";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { ExchangeRate, TradeHistoryEntry, TradeSource } from "@/lib/db/types";
+import type { TradeHistoryEntry, TradeSource } from "@/lib/db/types";
 import {
   MARKET_MAKER_SPREAD,
   CURRENCY_ANCHOR_COUNTRY,
@@ -120,7 +122,8 @@ export async function distributeConversionSpreadsBatch(
     fee: number;
     fromCurrency: CurrencyCode;
     toCurrency: CurrencyCode;
-  }[]
+  }[],
+  settlement?: { key: string; turn: number }
 ): Promise<void> {
   const incrementsByBank = new Map<string, Record<string, number>>();
   const add = (bankId: string, field: string, amount: number) => {
@@ -154,8 +157,59 @@ export async function distributeConversionSpreadsBatch(
       },
     })
   );
-  if (operations.length > 0) {
-    await centralBanksCollection(db).bulkWrite(operations);
+  if (!settlement) {
+    if (operations.length) await centralBanksCollection(db).bulkWrite(operations);
+    return;
+  }
+  if (!settlement.key || !Number.isInteger(settlement.turn) || settlement.turn < 0)
+    throw new Error("Conversion spread settlement requires a stable turn key");
+  const matchesReceipt = (receipt: { kind?: string; status?: string; turn?: number } | null) =>
+    receipt?.kind === "conversion_spread_distribution" &&
+    receipt.status === "applied" &&
+    receipt.turn === settlement.turn;
+  try {
+    await withSessionDb(db, async (transactionDb) => {
+      const receipts = bankMoneyMovesCollection<{
+        _id: string;
+        kind: string;
+        status: string;
+        turn: number;
+        currency: string;
+        legs: [];
+        projections: [];
+        createdAt: Date;
+        spreadDistribution: typeof operations;
+      }>(transactionDb);
+      const existing = await receipts.findOne({ _id: settlement.key });
+      if (existing) {
+        if (!matchesReceipt(existing))
+          throw new Error("Conversion spread receipt requires reconciliation");
+        return;
+      }
+      await receipts.insertOne({
+        _id: settlement.key,
+        kind: "conversion_spread_distribution",
+        status: "applied",
+        turn: settlement.turn,
+        currency: "MULTI",
+        legs: [],
+        projections: [],
+        createdAt: new Date(),
+        spreadDistribution: operations,
+      });
+      if (operations.length) await centralBanksCollection(transactionDb).bulkWrite(operations);
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === 11000) {
+      const completed = await bankMoneyMovesCollection<{
+        _id: string;
+        kind: string;
+        status: string;
+        turn: number;
+      }>(db).findOne({ _id: settlement.key });
+      if (matchesReceipt(completed)) return;
+    }
+    throw error;
   }
 }
 

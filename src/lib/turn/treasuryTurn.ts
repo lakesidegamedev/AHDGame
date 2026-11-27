@@ -15,8 +15,7 @@ import { advanceTaxRatePhaseIn } from "@/lib/budget/taxRatePhaseIn";
 import { getDb } from "@/lib/mongodb";
 import { loadCouponCashWitnessContext } from "@/lib/banking/fundedCouponPayeeWitness";
 import type { FederalBudget, TreasuryAccrualReceipt } from "@/lib/db/types/budget";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { GameState } from "@/lib/db/types/gameState";
+
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -303,16 +302,24 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // Stage 2: real taxes from household wallets into Treasury cash, before the
   // coupon pass reads the cash it can settle from.
   if (fiscalScaleStage >= FISCAL_SCALE_STAGE.TAX_AND_SPEND && treasuryCashLedgerEnabled) {
-    const collected = await collectFiscalTaxes(db, {
+    await collectFiscalTaxes(db, {
       turn: _turn,
       worldEpoch: gameStateDoc?.worldEpochId ?? undefined,
       budgets: allBudgets.filter((b) => liveCountries.has(String(b.countryId ?? b._id))),
       scaleByBudget: fiscalScaleByBudget,
       rateByCurrency,
     });
+    // A replayed tax receipt is already included in the stored cash balance.
+    const cashRows = await federalBudgetCollection(db)
+      .find(
+        { _id: { $in: allBudgets.map((b) => b._id) } },
+        { projection: { treasuryCashLocal: 1 } }
+      )
+      .toArray();
+    const cashByBudget = new Map(cashRows.map((row) => [String(row._id), row.treasuryCashLocal]));
     for (const b of allBudgets) {
-      const amount = collected.get(String(b._id));
-      if (amount) b.treasuryCashLocal = (b.treasuryCashLocal ?? 0) + amount;
+      const cash = cashByBudget.get(String(b._id));
+      if (typeof cash === "number" && Number.isFinite(cash)) b.treasuryCashLocal = cash;
     }
     steps.mark("fiscalTaxes");
   }

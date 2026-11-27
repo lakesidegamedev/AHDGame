@@ -27,7 +27,7 @@ import {
   eraRateForCurrency,
 } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import type { ExchangeRate } from "@/lib/db/types";
+import { authoritativeCurrencyRates } from "./rules/authoritativeCurrencyRates";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 // Re-exported so server-side callers keep importing them from here. The
@@ -45,8 +45,12 @@ type FxRateCacheEntry = {
   rates: Map<CurrencyCode, number>;
 };
 
-let fxRateCache: FxRateCacheEntry | null = null;
-let fxRateCachePromise: Promise<Map<CurrencyCode, number>> | null = null;
+interface ScopedFxRateCache {
+  epoch: string;
+  entry?: FxRateCacheEntry;
+  pending?: Promise<Map<CurrencyCode, number>>;
+}
+let fxRateCaches = new WeakMap<Db, ScopedFxRateCache>();
 
 export interface CorpCapitalCurrencyInfo {
   countryId?: string | null;
@@ -58,15 +62,6 @@ export function requireCurrencyRate(code: string, rate: number | undefined): num
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0)
     throw new Error(`Exchange rate unavailable for ${code}`);
   return rate;
-}
-
-function buildFxRateMap(docs: ExchangeRate[]): Map<CurrencyCode, number> {
-  const map = new Map<CurrencyCode, number>();
-  for (const doc of docs) {
-    if (Number.isFinite(doc.rate) && doc.rate > 0)
-      map.set(doc.currencyCode as CurrencyCode, doc.rate);
-  }
-  return map;
 }
 
 /**
@@ -230,8 +225,8 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
   const code = resolveCorpLiquidCurrencyCode(corp);
   // Only pre-forex corps (no resolvable code) skip conversion. USD is forex-active.
   if (!code) return 1.0;
-  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
-  if (doc) return requireCurrencyRate(code, doc.rate);
+  const docs = await exchangeRatesCollection(db).find({ currencyCode: code }).toArray();
+  if (docs.length) return requireCurrencyRate(code, authoritativeCurrencyRates(docs).get(code));
   return requireCurrencyRate(code, await eraFallbackRate(db, code));
 }
 
@@ -242,8 +237,8 @@ export async function getCorpFxRate(db: Db, corp: CorpCapitalCurrencyInfo): Prom
  * rate; unavailable quotes refuse conversion.
  */
 export async function getCurrencyFxRate(db: Db, code: CurrencyCode): Promise<number> {
-  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
-  if (doc) return requireCurrencyRate(code, doc.rate);
+  const docs = await exchangeRatesCollection(db).find({ currencyCode: code }).toArray();
+  if (docs.length) return requireCurrencyRate(code, authoritativeCurrencyRates(docs).get(code));
   return requireCurrencyRate(code, await eraFallbackRate(db, code));
 }
 
@@ -261,8 +256,8 @@ export async function getSectorHostFxRate(
 ): Promise<number> {
   const code = resolveSectorHostCurrencyCode(sector, corp);
   if (!code) return 1.0;
-  const doc = await exchangeRatesCollection(db).findOne({ currencyCode: code });
-  if (doc) return requireCurrencyRate(code, doc.rate);
+  const docs = await exchangeRatesCollection(db).find({ currencyCode: code }).toArray();
+  if (docs.length) return requireCurrencyRate(code, authoritativeCurrencyRates(docs).get(code));
   return requireCurrencyRate(code, await eraFallbackRate(db, code));
 }
 
@@ -332,36 +327,33 @@ async function eraFallbackRate(db: Db, code: CurrencyCode): Promise<number | und
 }
 
 export async function loadFxRatesByCurrency(db: Db): Promise<Map<CurrencyCode, number>> {
-  const now = Date.now();
-  if (fxRateCache && fxRateCache.expiresAt > now) {
-    return new Map(fxRateCache.rates);
+  const world = await gameStateCollection<{ _id: string; worldEpochId?: string }>(db).findOne(
+    { _id: "current" },
+    { projection: { worldEpochId: 1 } }
+  );
+  const epoch = world?.worldEpochId ?? "legacy";
+  let cache = fxRateCaches.get(db);
+  if (!cache || cache.epoch !== epoch) {
+    cache = { epoch };
+    fxRateCaches.set(db, cache);
   }
-
-  if (!fxRateCachePromise) {
-    fxRateCachePromise = exchangeRatesCollection(db)
+  if (cache.entry && cache.entry.expiresAt > Date.now()) return new Map(cache.entry.rates);
+  const scope = cache;
+  if (!scope.pending) {
+    scope.pending = exchangeRatesCollection(db)
       .find({})
       .toArray()
       .then((docs) => {
-        // ⚠️ Deliberately NOT back-filled with authored era rates, though the
-        // valuation helpers below do exactly that. This map is shared with
-        // TRANSACTION paths — `cancelShareListingAndRefund` and friends — which
-        // treat a missing entry as "no live rate" and fail closed rather than
-        // move money at a substituted one. The authored rate is a turn-0 anchor;
-        // the live rate drifts every turn, so silently standing in for it would
-        // refund at a stale price. Absence has to stay detectable here.
-        const rates = buildFxRateMap(docs);
-        fxRateCache = {
-          expiresAt: Date.now() + FX_RATE_CACHE_TTL_MS,
-          rates,
-        };
+        // Settlement callers require live quotes; authored valuation rates stay separate.
+        const rates = authoritativeCurrencyRates(docs);
+        scope.entry = { rates, expiresAt: Date.now() + FX_RATE_CACHE_TTL_MS };
         return rates;
       })
       .finally(() => {
-        fxRateCachePromise = null;
+        scope.pending = undefined;
       });
   }
-
-  return new Map(await fxRateCachePromise);
+  return new Map(await scope.pending);
 }
 
 /**
@@ -433,6 +425,9 @@ export async function loadFxRatesRecord(db: Db): Promise<Partial<Record<Currency
 
 export function resetCorpFxRateCacheForTests(): void {
   if (process.env.NODE_ENV !== "test") return;
-  fxRateCache = null;
-  fxRateCachePromise = null;
+  fxRateCaches = new WeakMap();
+}
+
+export function invalidateCorpFxRateCache(db: Db): void {
+  fxRateCaches.delete(db);
 }

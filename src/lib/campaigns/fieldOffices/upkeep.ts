@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import {
   campaignAnchorToLocal,
@@ -24,7 +26,19 @@ export interface FieldOfficeUpkeepResult {
  * offices first when a campaign cannot pay; rewrites fieldOfficeCount from
  * surviving rows to heal any drift.
  */
-export async function processFieldOfficeUpkeep(db: Db): Promise<FieldOfficeUpkeepResult> {
+export async function processFieldOfficeUpkeep(
+  db: Db,
+  turn?: number
+): Promise<FieldOfficeUpkeepResult> {
+  return withTurnValueSettlement(
+    db,
+    "campaign-field-office-upkeep",
+    turn ?? (await getCurrentTurn(db)),
+    processFieldOfficeUpkeepWork
+  );
+}
+
+async function processFieldOfficeUpkeepWork(db: Db): Promise<FieldOfficeUpkeepResult> {
   const result: FieldOfficeUpkeepResult = {
     campaignsCharged: 0,
     officesClosedInsolvent: 0,

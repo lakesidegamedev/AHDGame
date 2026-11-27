@@ -1,3 +1,4 @@
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -141,6 +142,7 @@ export async function updateCountryState(
   }
 
   invalidateCachedCountryState(db, countryId);
+  await afterCommit(db, () => invalidateCachedCountryState(unboundDb(db), countryId));
   return result;
 }
 

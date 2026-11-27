@@ -34,7 +34,8 @@ export async function shedVacantCeoSectors(
   lookups: CorporationLookups,
   now: Date,
   /** `marketSystemMode >= "plants"` — sheds capacity units instead of revenue. */
-  plantsEnabled: boolean = false
+  plantsEnabled: boolean = false,
+  currentTurn?: number
 ): Promise<VacantCeoShedResult> {
   const sheddingCorps = lookups.corporations.filter(shouldShedSectors);
   return shedSectorsForCorps(
@@ -44,6 +45,7 @@ export async function shedVacantCeoSectors(
     VACANT_CEO_SECTOR_SHED_RATE,
     now,
     "Vacant CEO",
-    plantsEnabled
+    plantsEnabled,
+    currentTurn
   );
 }

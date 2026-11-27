@@ -1,12 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { BankCharter } from "@/lib/db/types/bank";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
-import { defaultSupplyRates } from "@/lib/constants/capacityEconomy";
-import { impliedOutputUnits } from "@/lib/market/capital";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { isPrivateBankingEnabled } from "@/lib/banking/featureFlag";
-import { getStrategy } from "@/lib/constants/sectorStrategies";
 import { isDepositTakingCharter } from "@/lib/banking/charterKinds";
 
 export {
@@ -35,23 +31,8 @@ export type SetBranchCapacityShareResult =
  * the sector's revenue and effective supply mix (same map capacityEconomy /
  * sectorTurn use via {@link impliedOutputUnits}).
  */
-export function financialSectorCapacityUnits(
-  sector: Pick<CorporateSector, "capitalStock" | "revenue" | "strategyId" | "sectorType">,
-  eraUnitScale: number
-): number {
-  const stock = sector.capitalStock;
-  if (typeof stock === "number" && Number.isFinite(stock) && stock > 0) {
-    return stock;
-  }
-  const revenue =
-    typeof sector.revenue === "number" && Number.isFinite(sector.revenue)
-      ? Math.max(0, sector.revenue)
-      : 0;
-  if (!(revenue > 0)) return 0;
-  const strategy = getStrategy("financial", sector.strategyId ?? "standard");
-  const supply = strategy?.supply ?? defaultSupplyRates("financial");
-  return impliedOutputUnits(revenue, supply, COMMODITY_BASE_PRICES, eraUnitScale);
-}
+export { financialSectorCapacityUnits } from "./rules/financialCapacity";
+import { financialSectorCapacityUnits } from "./rules/financialCapacity";
 
 /**
  * Sum of the corp's financial-sector capacity × branch share × ceiling factor.

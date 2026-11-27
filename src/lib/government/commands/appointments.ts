@@ -1,3 +1,4 @@
+import { senateAppointmentTermEnd } from "../rules/senateAppointmentTerm";
 import { restoreParliamentarySeats } from "@/lib/parliament/restoreParliamentarySeats";
 import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
 import { clearCabinetOnTransition } from "@/lib/cabinetTransition";
@@ -403,10 +404,12 @@ async function appointSenatorInTransaction(
     },
     { sort: { startTime: 1 } }
   );
-  const termEnd =
-    nextClassElection?.endTime instanceof Date
-      ? nextClassElection.endTime
-      : new Date(now.getTime() + 6 * 365 * 24 * 60 * 60 * 1000);
+  const termEnd = new Date(
+    senateAppointmentTermEnd(
+      now.getTime(),
+      nextClassElection?.endTime instanceof Date ? nextClassElection.endTime.getTime() : undefined
+    )
+  );
 
   const officialFields: Partial<ElectedOfficial> = {
     countryId: "US",

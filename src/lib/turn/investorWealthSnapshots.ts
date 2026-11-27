@@ -12,7 +12,6 @@ import type {
   Character,
   Corporation,
   State,
-  InvestorRankingSnapshot,
   User,
   WealthListSnapshot,
   WealthListEntry,
@@ -32,6 +31,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { ALL_EXCHANGES, isStateRegister } from "@/lib/constants/exchangeRegistry";
 import {
   computeCharacterWealth,
+  CHARACTER_WEALTH_PROJECTION,
   sumBondValueByCharacter,
   sumStockValueByCharacter,
   withHeldStakeIssuers,
@@ -203,20 +203,12 @@ export async function generateWealthListSnapshots(currentTurn: number, db?: Db):
         | "homeState"
         | "countryId"
         | "cashOnHand"
+        | "savingsOnHand"
+        | "lineOfCredit"
         | "currencyBalances"
         | "sequentialId"
       >
-    >({
-      _id: 1,
-      userId: 1,
-      name: 1,
-      avatarUrl: 1,
-      homeState: 1,
-      countryId: 1,
-      cashOnHand: 1,
-      currencyBalances: 1,
-      sequentialId: 1,
-    })
+    >({ ...CHARACTER_WEALTH_PROJECTION })
     .toArray();
 
   if (characters.length === 0) return;

@@ -1,3 +1,64 @@
+// Scoring tests use a transport recorder; publisher isolation and rollback have separate suites.
+vi.mock("./publishBillVotes", () => ({
+  publishNppBillVotes: async (
+    db: Db,
+    plans: import("./publishBillVotes").NppBillVotePublication[],
+    turn: number,
+    now: Date
+  ) => {
+    let count = 0;
+    const interests = new Set<string>();
+    for (const plan of plans) {
+      const result = await db
+        .collection("bills")
+        .updateOne(
+          { _id: plan.billId, status: plan.status, ...plan.observedVotes },
+          { $set: plan.setFields, $inc: plan.incFields }
+        );
+      if (result.matchedCount !== 1) continue;
+      count += plan.votesCast;
+      if (plan.predictions.length)
+        await db.collection("nppVotePredictions").bulkWrite(
+          plan.predictions.map((p) => ({
+            updateOne: {
+              filter: { nppId: p.nppId, billId: plan.billId },
+              update: {
+                $set: {
+                  computedAtTurn: turn,
+                  forces: p.forces,
+                  donorsLabel: p.donorsLabel,
+                  verdict: p.verdict,
+                  resolvedVote: p.resolvedVote,
+                  updatedAt: now,
+                },
+                $setOnInsert: { nppId: p.nppId, billId: plan.billId, createdAt: now },
+              },
+              upsert: true,
+            },
+          }))
+        );
+      for (const id of plan.interestNppIds) interests.add(id.toHexString());
+    }
+    if (interests.size)
+      await db.collection("npps").bulkWrite(
+        [...interests].map((id) => ({
+          updateOne: {
+            filter: { _id: new ObjectId(id) },
+            update: [
+              {
+                $set: {
+                  favorability: {
+                    $max: [0, { $subtract: [{ $ifNull: ["$favorability", 0] }, 1] }],
+                  },
+                },
+              },
+            ],
+          },
+        }))
+      );
+    return count;
+  },
+}));
 /**
  * Tests for processBillVoting and for castLeadershipVote in leadershipVoting.ts.
  *
@@ -150,7 +211,7 @@ function makeMockDb(opts: { governorAddresses?: unknown[]; referendums?: unknown
       updateOne: vi.fn((...args: unknown[]) => {
         if (!calls[name]) calls[name] = [];
         calls[name].push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       // Phase 4: processBillVoting reads gameState.currentTurn and bulk-writes
       // nppVotePredictions. Tests don't assert on the prediction snapshots, so
@@ -261,7 +322,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -302,7 +363,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -337,7 +398,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -377,7 +438,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -430,7 +491,7 @@ describe("processBillVoting", () => {
         for (const key of Object.keys(update.$set ?? {})) {
           capturedSets.push(`${key}=${String(update.$set[key])}`);
         }
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -467,7 +528,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -508,7 +569,7 @@ describe("processBillVoting", () => {
     const bulkWriteCalls: unknown[][] = [];
     const db = makeMockDb();
     const collectionSpy = vi.fn((name: string) => ({
-      updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1 })),
+      updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1, matchedCount: 1 })),
       bulkWrite: vi.fn((...args: unknown[]) => {
         if (name === "nppVotePredictions") bulkWriteCalls.push(args);
         return Promise.resolve({ upsertedCount: 0, modifiedCount: 0 });
@@ -581,7 +642,7 @@ describe("processBillVoting", () => {
         for (const [k, v] of Object.entries(update.$set ?? {})) {
           if (k.startsWith("votes.")) capturedVotes.push(String(v));
         }
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -649,7 +710,7 @@ describe("processBillVoting", () => {
       ],
     });
     const collectionSpy = vi.fn((name: string) => ({
-      updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1 })),
+      updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1, matchedCount: 1 })),
       bulkWrite: vi.fn((...args: unknown[]) => {
         if (name === "nppVotePredictions") bulkWriteCalls.push(args);
         return Promise.resolve({ upsertedCount: 0, modifiedCount: 0 });
@@ -767,7 +828,7 @@ describe("processBillVoting", () => {
 
     const bulkWriteCalls: unknown[][] = [];
     const collectionSpy = vi.fn((name: string) => ({
-      updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1 })),
+      updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1, matchedCount: 1 })),
       bulkWrite: vi.fn((...args: unknown[]) => {
         if (name === "nppVotePredictions") bulkWriteCalls.push(args);
         return Promise.resolve({ upsertedCount: 0, modifiedCount: 0 });
@@ -860,7 +921,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") billUpdateCalls.push([args[0], args[1]]);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -912,7 +973,7 @@ describe("processBillVoting", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -978,108 +1039,61 @@ describe("castLeadershipVote", () => {
     } as SpeakerNomination;
   }
 
-  it("casts a vote for the target nomination when not already voted", async () => {
+  it("casts one vote and preserves it on retry", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
     const { castLeadershipVote } = await import("./leadershipVoting");
-    const nom = makeNomination();
-    const nppKey = "npp_abc123";
-    const updateOneCalls: unknown[][] = [];
-    const db = {
-      collection: vi.fn(() => ({
-        updateOne: vi.fn((...args: unknown[]) => {
-          updateOneCalls.push(args);
-          return Promise.resolve({ modifiedCount: 1 });
-        }),
-      })),
-    } as unknown as Db;
-
-    const result = await castLeadershipVote(
-      db,
-      "speakerNominations",
-      [nom],
-      nppKey,
-      nom._id,
-      new Date()
-    );
-
-    expect(result).toBe(true);
-    expect(updateOneCalls.length).toBe(1);
-    const [filter, update] = updateOneCalls[0] as [
-      { _id: ObjectId },
-      { $set: Record<string, unknown>; $inc: Record<string, number> },
-    ];
-    expect(filter._id).toEqual(nom._id);
-    expect(update.$set[`votes.${nppKey}`]).toBe("for");
-    expect(update.$inc.votesFor).toBe(1);
+    const f = createTransactionalMemoryDb(),
+      nom = makeNomination();
+    f.memory.seed("speakerNominations", [{ ...nom }]);
+    expect(
+      await castLeadershipVote(f.db, "speakerNominations", [nom], "npp_abc123", nom._id, new Date())
+    ).toBe(true);
+    expect(
+      await castLeadershipVote(f.db, "speakerNominations", [nom], "npp_abc123", nom._id, new Date())
+    ).toBe(false);
+    expect(await f.db.collection("speakerNominations").findOne({ _id: nom._id })).toMatchObject({
+      votesFor: 1,
+      votes: { npp_abc123: "for" },
+    });
   });
-
-  it("returns false and does not write if already voted for the same nomination", async () => {
+  it("returns false when the fresh nomination already has this vote", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
     const { castLeadershipVote } = await import("./leadershipVoting");
-    const nppKey = "npp_abc123";
-    const nom = makeNomination({ votes: { [nppKey]: "for" } });
-    const updateOneSpy = vi.fn().mockResolvedValue({ modifiedCount: 0 });
-    const db = {
-      collection: vi.fn(() => ({ updateOne: updateOneSpy })),
-    } as unknown as Db;
-
-    const result = await castLeadershipVote(
-      db,
-      "speakerNominations",
-      [nom],
-      nppKey,
-      nom._id,
-      new Date()
+    const f = createTransactionalMemoryDb(),
+      nom = makeNomination({ votesFor: 1, votes: { npp_abc123: "for" } });
+    f.memory.seed("speakerNominations", [{ ...nom }]);
+    expect(
+      await castLeadershipVote(f.db, "speakerNominations", [nom], "npp_abc123", nom._id, new Date())
+    ).toBe(false);
+    expect((await f.db.collection("speakerNominations").findOne({ _id: nom._id }))!.votesFor).toBe(
+      1
     );
-
-    expect(result).toBe(false);
-    expect(updateOneSpy).not.toHaveBeenCalled();
   });
-
-  it("removes previous vote for a different nomination before casting new one", async () => {
+  it("moves a previous vote to the fresh target nomination", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
     const { castLeadershipVote } = await import("./leadershipVoting");
-    const nppKey = "npp_abc123";
-    const nom1 = makeNomination({ votes: { [nppKey]: "for" } }); // previously voted here
-    const nom2 = makeNomination(); // new target
-
-    const updateOneCalls: unknown[][] = [];
-    const db = {
-      collection: vi.fn(() => ({
-        updateOne: vi.fn((...args: unknown[]) => {
-          updateOneCalls.push(args);
-          return Promise.resolve({ modifiedCount: 1 });
-        }),
-      })),
-    } as unknown as Db;
-
-    const result = await castLeadershipVote(
-      db,
-      "speakerNominations",
-      [nom1, nom2],
-      nppKey,
-      nom2._id,
-      new Date()
-    );
-
-    expect(result).toBe(true);
-    // Two updateOne calls: remove from nom1, add to nom2
-    expect(updateOneCalls.length).toBe(2);
-
-    // First call removes previous vote from nom1
-    const [removeFilter, removeUpdate] = updateOneCalls[0] as [
-      { _id: ObjectId },
-      { $unset: Record<string, string>; $inc: Record<string, number> },
-    ];
-    expect(removeFilter._id).toEqual(nom1._id);
-    expect(removeUpdate.$unset[`votes.${nppKey}`]).toBe("");
-    expect(removeUpdate.$inc.votesFor).toBe(-1);
-
-    // Second call adds vote to nom2
-    const [addFilter, addUpdate] = updateOneCalls[1] as [
-      { _id: ObjectId },
-      { $set: Record<string, unknown>; $inc: Record<string, number> },
-    ];
-    expect(addFilter._id).toEqual(nom2._id);
-    expect((addUpdate.$set as Record<string, unknown>)[`votes.${nppKey}`]).toBe("for");
-    expect(addUpdate.$inc.votesFor).toBe(1);
+    const f = createTransactionalMemoryDb(),
+      first = makeNomination({ votesFor: 1, votes: { npp_abc123: "for" } }),
+      next = makeNomination();
+    f.memory.seed("speakerNominations", [{ ...first }, { ...next }]);
+    expect(
+      await castLeadershipVote(
+        f.db,
+        "speakerNominations",
+        [first, next],
+        "npp_abc123",
+        next._id,
+        new Date()
+      )
+    ).toBe(true);
+    expect(await f.db.collection("speakerNominations").findOne({ _id: first._id })).toMatchObject({
+      votesFor: 0,
+      votes: {},
+    });
+    expect(await f.db.collection("speakerNominations").findOne({ _id: next._id })).toMatchObject({
+      votesFor: 1,
+      votes: { npp_abc123: "for" },
+    });
   });
 });
 
@@ -1090,7 +1104,7 @@ describe("processBillVoting - concurrent (active_both) bills", () => {
     const collectionSpy = vi.fn((name: string) => ({
       updateOne: vi.fn((...args: unknown[]) => {
         if (name === "bills") updateOneCalls.push(args);
-        return Promise.resolve({ modifiedCount: 1 });
+        return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
       }),
       bulkWrite: vi.fn(() => Promise.resolve({ upsertedCount: 0, modifiedCount: 0 })),
       findOne: vi.fn(() => Promise.resolve(null)),
@@ -1517,7 +1531,7 @@ describe("processBillVoting — engine 6.7 government whip (v6)", () => {
     const predictions: unknown[][] = [];
     const db = {
       collection: vi.fn((name: string) => ({
-        updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1 })),
+        updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1, matchedCount: 1 })),
         bulkWrite: vi.fn((...args: unknown[]) => {
           if (name === "nppVotePredictions") predictions.push(args);
           return Promise.resolve({ upsertedCount: 0, modifiedCount: 0 });
@@ -1615,7 +1629,7 @@ describe("processBillVoting — engine 6.8 business interest (v6)", () => {
     const predictions: unknown[][] = [];
     const db = {
       collection: vi.fn((name: string) => ({
-        updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1 })),
+        updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1, matchedCount: 1 })),
         bulkWrite: vi.fn((...args: unknown[]) => {
           if (name === "nppVotePredictions") predictions.push(args);
           if (name === "npps") nppBulkWrites.push(args);
@@ -1696,7 +1710,7 @@ describe("processBillVoting — engine 6.11 opposition battles (v6)", () => {
     const predictions: unknown[][] = [];
     const db = {
       collection: vi.fn((name: string) => ({
-        updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1 })),
+        updateOne: vi.fn(() => Promise.resolve({ modifiedCount: 1, matchedCount: 1 })),
         bulkWrite: vi.fn((...args: unknown[]) => {
           if (name === "nppVotePredictions") predictions.push(args);
           return Promise.resolve({ upsertedCount: 0, modifiedCount: 0 });
@@ -1746,5 +1760,35 @@ describe("processBillVoting — engine 6.11 opposition battles (v6)", () => {
 
   it("drops the bloc against a commanding government", async () => {
     expect(await oppositionForce(60)).toBe(0);
+  });
+});
+
+// Stale contexts may be reused by phase retry; the stored ballot is authoritative.
+describe("bill ballot publication race guard", () => {
+  it("does not count or publish predictions after losing a ballot comparison", async () => {
+    const db = makeMockDb();
+    const baseCollection = db.collection.bind(db);
+    db.collection = vi.fn((name: string) => {
+      const collection = baseCollection(name);
+      if (name === "bills")
+        collection.updateOne = vi.fn(async () => ({
+          acknowledged: true,
+          matchedCount: 0,
+          modifiedCount: 0,
+          upsertedCount: 0,
+          upsertedId: null,
+        }));
+      return collection;
+    }) as typeof db.collection;
+    const npp = makeNPP();
+    const bill = makeBill();
+    const ctx = makeCtx(db, {
+      activeBills: [bill],
+      nppOfficials: [makeOfficial(npp._id, "house")],
+      nppMap: new Map([[npp._id.toHexString(), npp]]),
+    });
+    const { processBillVoting } = await import("./billVoting");
+    expect(await processBillVoting(ctx)).toBe(0);
+    expect(db._calls.nppVotePredictions).toEqual([]);
   });
 });

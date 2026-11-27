@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -80,6 +83,7 @@ describe("releaseCharacterHeldIndexFundPositionsToFloat", () => {
     const { releaseCharacterHeldIndexFundPositionsToFloat } =
       await import("./releaseCharacterHeldPositionsToFloat");
     const { debitFundPosition, creditFundPosition } = await import("./fundQueries");
+    db.collection("indexFunds").findOne.mockResolvedValue({ quotedNav: 100 });
     vi.mocked(debitFundPosition).mockResolvedValue({ ok: false });
 
     const result = await releaseCharacterHeldIndexFundPositionsToFloat(db as unknown as Db, [

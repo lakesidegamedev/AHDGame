@@ -1,3 +1,4 @@
+import { withSessionDb, boundSession } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -19,7 +20,11 @@ async function claimCorporationSettlementLock(
   now: Date
 ): Promise<boolean> {
   const claim = await corporationsCollection(db).updateOne(
-    { _id: corporationId, [field]: { $exists: false } },
+    {
+      _id: corporationId,
+      bondSettlementInProgressAt: { $exists: false },
+      dissolutionInProgressAt: { $exists: false },
+    },
     { $set: { [field]: now, updatedAt: now } }
   );
   return claim.matchedCount > 0;
@@ -30,14 +35,30 @@ export async function withCorporationSettlementLock<T>(
   corporationId: ObjectId,
   field: CorporationSettlementLock,
   now: Date,
-  run: () => Promise<T>
+  run: (transactionDb: Db) => Promise<T>
 ): Promise<T | null> {
-  const claimed = await claimCorporationSettlementLock(db, corporationId, field, now);
-  if (!claimed) return null;
-
   try {
-    return await run();
-  } finally {
-    await clearLock(db, corporationId, field);
+    return await withSessionDb(db, async (transactionDb) => {
+      const claimed = await claimCorporationSettlementLock(
+        transactionDb,
+        corporationId,
+        field,
+        now
+      );
+      if (!claimed) return null;
+      const result = await run(transactionDb);
+      if (result instanceof Response && !result.ok) throw new SettlementRefused(result);
+      await clearLock(transactionDb, corporationId, field);
+      return result;
+    });
+  } catch (error) {
+    if (error instanceof SettlementRefused && !boundSession(db)) return error.result as T;
+    throw error;
+  }
+}
+
+class SettlementRefused extends Error {
+  constructor(readonly result: Response) {
+    super("Corporation settlement refused");
   }
 }

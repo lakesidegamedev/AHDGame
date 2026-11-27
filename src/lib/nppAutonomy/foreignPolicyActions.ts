@@ -1,13 +1,10 @@
 import { ObjectId, type Db } from "mongodb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NPP } from "@/lib/db/types";
-import type {
-  OrganizationLeadershipElection,
-  OrganizationLegislation,
-  OrganizationMembershipProposal,
-  ProposalVoteRecord,
-} from "@/lib/db/types/internationalOrganization";
-import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
+import type { ProposalVoteRecord } from "@/lib/db/types/internationalOrganization";
+
 import { proposeOrganizationLegislation } from "@/lib/internationalOrganizations/commands/proposeLegislation";
 import {
   getDiplomaticActionsRemaining,
@@ -90,67 +87,92 @@ async function executeOrganizationProposal(
     return rejected("The selected organization proposal is missing its organization or target.");
   }
 
-  if ((await getDiplomaticActionsRemaining(db, countryId, currentTurn)) < 1) {
-    return rejected("No diplomatic actions remain this turn.");
-  }
+  const { organizationId, targetCountryId } = choice;
+  const result = await withAtomicResult(db, async (db) => {
+    const replay = await withTurnValueSettlement(
+      db,
+      "npp-organization-proposal",
+      currentTurn,
+      async (db) => {
+        if ((await getDiplomaticActionsRemaining(db, countryId, currentTurn)) < 1) {
+          return { ok: false as const, note: "No diplomatic actions remain this turn." };
+        }
 
-  const actor = { characterId: head._id, characterName: head.name };
-  const shared = { db, countryId, orgId: choice.organizationId, actor };
-  const result =
-    choice.type === "propose_fta"
-      ? await proposeOrganizationLegislation({
-          ...shared,
-          input: { type: "free_trade_agreement", parties: [countryId, choice.targetCountryId] },
-        })
-      : choice.type === "propose_sanctions"
-        ? await proposeOrganizationLegislation({
-            ...shared,
-            input: { type: "sanctions", targetCountryId: choice.targetCountryId, commodity: "all" },
-          })
-        : choice.type === "propose_aid"
-          ? await proposeOrganizationLegislation({
-              ...shared,
-              input: {
-                type: "aid_package",
-                recipientCountryId: choice.targetCountryId,
-                amount: DEFAULT_AID_AMOUNT,
-              },
-            })
-          : choice.type === "support_war"
+        const actor = { characterId: head._id, characterName: head.name };
+        const shared = { db, countryId, orgId: organizationId, actor };
+        const result =
+          choice.type === "propose_fta"
             ? await proposeOrganizationLegislation({
                 ...shared,
                 input: {
-                  type: "aid_package",
-                  recipientCountryId: choice.targetCountryId,
-                  amount: DEFAULT_AID_AMOUNT,
-                  description: choice.conflictId
-                    ? `Material support for the allied war effort in ${choice.conflictId}.`
-                    : "Material support for an allied war effort.",
+                  type: "free_trade_agreement",
+                  parties: [countryId, targetCountryId],
                 },
               })
-            : choice.type === "join_war"
-              ? choice.conflictId && choice.conflictSide
+            : choice.type === "propose_sanctions"
+              ? await proposeOrganizationLegislation({
+                  ...shared,
+                  input: {
+                    type: "sanctions",
+                    targetCountryId: targetCountryId,
+                    commodity: "all",
+                  },
+                })
+              : choice.type === "propose_aid"
                 ? await proposeOrganizationLegislation({
                     ...shared,
                     input: {
-                      type: "join_conflict",
-                      theaterId: choice.conflictId,
-                      side: choice.conflictSide,
+                      type: "aid_package",
+                      recipientCountryId: targetCountryId,
+                      amount: DEFAULT_AID_AMOUNT,
                     },
                   })
-                : { ok: false as const, error: "The war-entry choice has no conflict side." }
-              : await proposeOrganizationLegislation({
-                  ...shared,
-                  input: {
-                    type: "joint_statement",
-                    subjectCountryId: choice.targetCountryId,
-                    stance: choice.type === "condemn_country" ? "condemn" : "endorse",
-                  },
-                });
+                : choice.type === "support_war"
+                  ? await proposeOrganizationLegislation({
+                      ...shared,
+                      input: {
+                        type: "aid_package",
+                        recipientCountryId: targetCountryId,
+                        amount: DEFAULT_AID_AMOUNT,
+                        description: choice.conflictId
+                          ? `Material support for the allied war effort in ${choice.conflictId}.`
+                          : "Material support for an allied war effort.",
+                      },
+                    })
+                  : choice.type === "join_war"
+                    ? choice.conflictId && choice.conflictSide
+                      ? await proposeOrganizationLegislation({
+                          ...shared,
+                          input: {
+                            type: "join_conflict",
+                            theaterId: choice.conflictId,
+                            side: choice.conflictSide,
+                          },
+                        })
+                      : { ok: false as const, error: "The war-entry choice has no conflict side." }
+                    : await proposeOrganizationLegislation({
+                        ...shared,
+                        input: {
+                          type: "joint_statement",
+                          subjectCountryId: targetCountryId,
+                          stance: choice.type === "condemn_country" ? "condemn" : "endorse",
+                        },
+                      });
 
-  if (!result.ok) return rejected(result.error);
-  await spendDiplomaticAction(db, countryId, currentTurn);
-  return { acted: true, note: `Tabled organization legislation ${result.legislationId}.` };
+        if (!result.ok) return { ok: false as const, note: result.error };
+        const spent = await spendDiplomaticAction(db, countryId, currentTurn);
+        if (!spent.ok)
+          return { ok: false as const, note: "No diplomatic actions remain this turn." };
+        return {
+          ok: true as const,
+          note: `Tabled organization legislation ${result.legislationId}.`,
+        };
+      },
+      { sourceKey: `${currentTurn}:${countryId}:${head._id.toHexString()}` }
+    );
+    return replay;
+  });
+  return { acted: result.ok, note: result.note };
 }
 
 async function executeEmbargo(

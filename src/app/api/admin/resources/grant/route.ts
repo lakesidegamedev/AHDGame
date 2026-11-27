@@ -1,14 +1,19 @@
+import { getGameState } from "@/lib/gameState";
+import {
+  loadCampaignCurrencyRates,
+  campaignLocalRate,
+  getCampaignCurrency,
+} from "@/lib/campaigns/campaignCurrency";
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminResourcesGrantSchema } from "@/lib/api/schemas/admin";
-import type { ExchangeRate } from "@/lib/db/types";
+
 import { ObjectId } from "mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
-  COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
   getCountryIdForCurrency,
   type CurrencyCode,
@@ -16,7 +21,7 @@ import {
 import {
   buildHomeCurrencyCashGrantSetStage,
   buildCampaignFundsGrantExpression,
-} from "@/lib/currency/grantCashBuilder";
+} from "@/lib/currency/rules/grantCashBuilder";
 import { ENERGY_MAX_ACTION_CAP } from "@/lib/stats/statsConstants";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { POSITION_UPDATE_VOUCHER_GRANT_AMOUNT } from "@/lib/positionUpdateVouchers/rules";
@@ -39,6 +44,8 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
 
   const db = await getDb();
   const forexEnabled = await isForexEnabled();
+  const preset = (await getGameState(db))?.preset;
+  const campaignRates = forexEnabled && funds ? await loadCampaignCurrencyRates(db) : {};
 
   // Build the aggregation pipeline $set stage
   const setStage: Record<string, unknown> = {
@@ -64,11 +71,10 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
   if (funds !== undefined && funds !== 0) {
     if (forexEnabled) {
       setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
-      const rateDocs = await exchangeRatesCollection(db).find({}).toArray();
-      const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
       setStage["currencyBalances.campaign"] = buildCampaignFundsGrantExpression(
         funds,
-        rateByCountry
+        campaignRates,
+        preset
       );
     } else {
       setStage.funds = { $add: [{ $ifNull: ["$funds", 0] }, funds] };
@@ -91,7 +97,10 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
         const rateByCountry = new Map<string, number>(
           rateDocs.map((r) => [r._id as string, r.rate])
         );
-        Object.assign(setStage, buildHomeCurrencyCashGrantSetStage(cashOnHand, rateByCountry));
+        Object.assign(
+          setStage,
+          buildHomeCurrencyCashGrantSetStage(cashOnHand, rateByCountry, preset)
+        );
       }
     } else {
       setStage.cashOnHand = { $add: [{ $ifNull: ["$cashOnHand", 0] }, cashOnHand] };
@@ -173,9 +182,7 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
     const rateDocs = forexEnabled ? await exchangeRatesCollection(db).find({}).toArray() : [];
     const rateByCountry = new Map<string, number>(rateDocs.map((r) => [r._id as string, r.rate]));
     const transferEntries = affectedChars.flatMap((char) => {
-      const homeCurrency = (COUNTRY_CURRENCY_MAP[
-        char.countryId as keyof typeof COUNTRY_CURRENCY_MAP
-      ] ?? "USD") as CurrencyCode;
+      const homeCurrency = getCampaignCurrency(char.countryId, preset);
       // Resolve the rate per-currency (via the currency's anchor country) so the ledger
       // amount matches the credit for countries that share a currency (e.g. IE uses the
       // DE-anchored EUR rate, not its own missing/initial rate).
@@ -202,7 +209,9 @@ export const POST = withAdminRoute(async (auth, request: Request) => {
           subjectType: "character",
           subjectId: char._id,
           subjectName: char.name,
-          amount: forexEnabled ? funds * homeRate : funds,
+          amount: forexEnabled
+            ? funds * campaignLocalRate(char.countryId, campaignRates, preset)
+            : funds,
           currencyCode: homeCurrency,
           meta: { ...baseMeta, resource: "campaign_funds" },
         });

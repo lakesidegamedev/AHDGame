@@ -5,11 +5,13 @@ export function corpNavMarketFields(
   corp: { sharePrice: number; isPrivate?: boolean },
   historyDocs: { sharePrice: number }[],
   includeCorpMarket: boolean
-): { isPrivate: true } | { sharePrice: number; priceChange1h: number } {
+): { isPrivate: true } | { sharePrice: number; priceChange1h?: number } {
   if (corp.isPrivate) return { isPrivate: true };
   return {
     sharePrice: corp.sharePrice,
-    priceChange1h: includeCorpMarket ? liveChangeVsPreviousClose(corp.sharePrice, historyDocs) : 0,
+    ...(includeCorpMarket && historyDocs.length >= 2
+      ? { priceChange1h: liveChangeVsPreviousClose(corp.sharePrice, historyDocs) }
+      : {}),
   };
 }
 

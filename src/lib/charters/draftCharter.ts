@@ -1,3 +1,5 @@
+import { afterCommit } from "@/lib/db/sessionDb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * Party founders draft an identity for three eligible human signatories.
  * draftCharter protects existing names and abbreviations, while an explicit
@@ -11,7 +13,6 @@ import type {
   FoundingCohortPick,
   PartyCharter,
   PartyCharterPlatform,
-  PoliticalParty,
   GameState,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -103,6 +104,13 @@ export type DraftCharterResult =
     };
 
 export async function draftCharter(input: DraftCharterInput, db: Db): Promise<DraftCharterResult> {
+  return withAtomicResult(db, (db) => draftCharterInTransaction(input, db));
+}
+
+async function draftCharterInTransaction(
+  input: DraftCharterInput,
+  db: Db
+): Promise<DraftCharterResult> {
   const founders = input.foundersCharacterIds;
   // Sandbox testers may found alone (1 to 3 founders) when the dedicated
   // env flag is on; everywhere else exactly 3 are required.
@@ -296,28 +304,30 @@ export async function draftCharter(input: DraftCharterInput, db: Db): Promise<Dr
   // Notify each non-proposer founder that they've been invited. The
   // proposer is already auto-signed, so they don't need a nudge.
   // Notification is non-fatal — `createNotification` swallows errors.
-  try {
-    const { createNotification } = await import("@/lib/notifications");
-    for (const c of founderCharacters) {
-      if (c._id.equals(input.proposedBy)) continue;
-      if (!c.userId) continue;
-      await createNotification({
-        userId: c.userId,
-        type: "charter_invited",
-        title: `You were named as a founder of ${input.proposedName}`,
-        message: `Open the charter to sign or reject. All three founders must sign before the party is ratified.`,
-        metadata: {
-          charterId: charter._id.toString(),
-          characterId: c._id.toString(),
-          proposedAbbr: input.proposedAbbr.toUpperCase(),
-          countryId: input.countryId,
-          href: `/charters/${charter._id.toString()}`,
-        },
-      });
+  await afterCommit(db, async () => {
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      for (const c of founderCharacters) {
+        if (c._id.equals(input.proposedBy)) continue;
+        if (!c.userId) continue;
+        await createNotification({
+          userId: c.userId,
+          type: "charter_invited",
+          title: `You were named as a founder of ${input.proposedName}`,
+          message: `Open the charter to sign or reject. All three founders must sign before the party is ratified.`,
+          metadata: {
+            charterId: charter._id.toString(),
+            characterId: c._id.toString(),
+            proposedAbbr: input.proposedAbbr.toUpperCase(),
+            countryId: input.countryId,
+            href: `/charters/${charter._id.toString()}`,
+          },
+        });
+      }
+    } catch {
+      /* non-fatal */
     }
-  } catch {
-    /* non-fatal */
-  }
+  });
 
   // A solo charter (sandbox testing only) is fully signed by the proposer's
   // auto-signature, so ratify now instead of waiting for a second sign call.

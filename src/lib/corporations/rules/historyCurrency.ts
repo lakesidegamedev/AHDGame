@@ -26,3 +26,28 @@ export function restateHistoryFinancials<
   }
   return { ...result, currencyCode: targetCurrency, fxRateAtWrite: destinationRate };
 }
+
+/** Keep a complete time window; an unknown denomination must not become a gap-free trend. */
+export function recordedHistoryWindow<T extends { currencyCode?: string; fxRateAtWrite?: number }>(
+  rows: readonly T[],
+  targetCurrency: string | undefined,
+  targetRate: number,
+  fields: readonly (keyof T)[]
+): T[] {
+  const normalized: T[] = [];
+  for (const row of rows) {
+    if (!row.currencyCode || !targetCurrency) return [];
+    const restated = restateHistoryFinancials(row, targetCurrency, targetRate, fields);
+    if (
+      !restated ||
+      fields.some(
+        (key) =>
+          restated[key] != null &&
+          (typeof restated[key] !== "number" || !Number.isFinite(restated[key]))
+      )
+    )
+      return [];
+    normalized.push(restated);
+  }
+  return normalized;
+}

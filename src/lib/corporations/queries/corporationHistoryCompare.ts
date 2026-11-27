@@ -1,4 +1,4 @@
-import { historyBondSettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
+import { historySettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
 import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -42,6 +42,11 @@ export interface CorpHistoryComparePoint {
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
   settledBankLoanInterestPaid?: number;
+  settledImfInterestPaid?: number;
+  settledImfInterestReceived?: number;
+  settledImfPrincipalPaid?: number;
+  settledImfPrincipalReceived?: number;
+  imfSettlementUnavailable?: boolean;
   currencyCode?: CurrencyCode;
   fxRateAtWrite?: number;
 }
@@ -190,6 +195,11 @@ export async function loadCorporationHistoryComparePoints(args: {
           settledBondCouponIncome: 1,
           settledBondInterestPaid: 1,
           settledBankLoanInterestPaid: 1,
+          settledImfInterestPaid: 1,
+          settledImfInterestReceived: 1,
+          settledImfPrincipalPaid: 1,
+          settledImfPrincipalReceived: 1,
+          imfSettlementUnavailable: 1,
           perTurnBondDragOnNetIncome: 1,
           dividendIncomeReceived: 1,
           currencyCode: 1,
@@ -204,7 +214,7 @@ export async function loadCorporationHistoryComparePoints(args: {
     points: points.map((point) => ({
       ...point,
       income: realizedNetIncomePerTurn(point),
-      incomeIsEstimated: historyBondSettlementUnavailable(point),
+      incomeIsEstimated: historySettlementUnavailable(point),
     })),
     currencyCode: representative ?? corporation.liquidCurrencyCode,
   };

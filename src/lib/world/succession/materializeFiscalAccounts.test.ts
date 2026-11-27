@@ -1,3 +1,7 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { ClientSession, Db } from "mongodb";
 import { describe, expect, it } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
@@ -148,5 +152,67 @@ describe("federation fiscal materialization", () => {
     expect(await db.collection("macroCountries").findOne({ _id: "CZ2" as never })).toMatchObject({
       federationTreasuryMinor: -1200,
     });
+  });
+});
+
+describe("funded federation cash boundary", () => {
+  it("allocates spendable cash separately from the signed fiscal position, with rollback and retry proof", async () => {
+    const f = createTransactionalMemoryDb();
+    f.memory.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
+    f.memory.seed("gameState", [{ _id: "current", worldEpochId: "funded-federation" }]);
+    f.memory.seed("federalBudget", [
+      {
+        _id: "RU",
+        countryId: "RU",
+        currencyCode: "SUR",
+        treasuryBalance: -300,
+        treasuryCashLocal: 200,
+      },
+    ]);
+    f.memory.seed("macroCountries", [
+      {
+        _id: "UKR",
+        presetId: "1991-default",
+        simulationTier: "background-macro",
+        dataQuality: { provenance: "succession-derived" },
+      },
+    ]);
+    const funded = { ...accounting, cashSource: "funded" as const, fiscalPositionMinor: -15_000 };
+    const run = (db = f.db) =>
+      withTurnValueSettlement(db, "test-fiscal-materialization", 1, (tx) =>
+        withSessionDb(tx, (inner) =>
+          materializeFederationFiscalAccounts({
+            db: inner,
+            session,
+            applicationId,
+            sourceCountryId: "RU",
+            accounting: funded,
+            shares: [
+              share("RU", "continuing-state", 6000, 12_000, 20_000),
+              share("UKR", "background-successor", 4000, 8000, 0),
+            ],
+          })
+        )
+      );
+    const fault = withInjectedCrash(f.memory, {
+      collection: "macroCountries",
+      op: "updateOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    await expect(run(fault.db)).rejects.toThrow();
+    expect(f.memory.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 200,
+      treasuryBalance: -300,
+    });
+    await Promise.all([run(), run()]);
+    expect(f.memory.collection("federalBudget").docs[0]).toMatchObject({
+      treasuryCashLocal: 120,
+      treasuryBalance: -380,
+    });
+    expect(f.memory.collection("macroCountries").docs[0]).toMatchObject({
+      federationTreasuryMinor: 4000,
+    });
+    expect(f.memory.collection("federationFiscalAccounts").docs).toHaveLength(2);
   });
 });

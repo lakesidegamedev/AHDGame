@@ -1,3 +1,12 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+import { historyAppendInfo } from "@/lib/test-utils/historyAppendInfo";
 import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import { METRIC_HISTORY_CAP, snapshotMetricHistory } from "./metricHistory";
@@ -59,17 +68,14 @@ describe("snapshotMetricHistory", () => {
       nationalOps as Array<{ updateOne: { filter: { _id: string }; update: unknown } }>
     )[0];
     expect(federalOp.updateOne.filter._id).toBe("federal");
-    expect(federalOp.updateOne.update).toEqual({
-      $push: {
-        "economic.unemploymentRate": {
-          $each: [{ turn: 12, value: 9.5 }],
-          $slice: -METRIC_HISTORY_CAP,
-        },
-        "economic.gdpGrowth": {
-          $each: [{ turn: 12, value: 2.7 }],
-          $slice: -METRIC_HISTORY_CAP,
-        },
-      },
+    const update = federalOp.updateOne.update as Array<{ $set: Record<string, unknown> }>;
+    expect(historyAppendInfo(update[0].$set["economic.unemploymentRate"])).toEqual({
+      point: { turn: 12, value: 9.5 },
+      cap: METRIC_HISTORY_CAP,
+    });
+    expect(historyAppendInfo(update[0].$set["economic.gdpGrowth"])).toEqual({
+      point: { turn: 12, value: 2.7 },
+      cap: METRIC_HISTORY_CAP,
     });
   });
 });

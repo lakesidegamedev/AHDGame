@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: (_db: Db, work: (db: Db) => Promise<unknown>) => work(_db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";

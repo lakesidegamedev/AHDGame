@@ -8,7 +8,7 @@ import {
   computeLocScheduledPaymentFace,
   toInternalUnits,
 } from "../locMath";
-import { floorSavingsAmount, roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { floorSavingsAmount, roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 export type CurrencyAmounts = Partial<Record<CurrencyCode, number>>;
 export interface LocServiceInput {
   loc: NonNullable<Character["lineOfCredit"]>;

@@ -222,13 +222,39 @@ export {
   NPP_FOUNDING_DEPLOY_FRACTION,
 };
 
-export async function processNppCorporationDecisions(
+import { frozenRelocationDecisionPlan } from "./npp/frozenRelocationDecisionPlan";
+
+async function processNppCorporationDecisionsFrozen(
+  db: Db,
+  turn: number,
+  now: Date,
+  techTreesEnabled = false,
+  preloaded?: NppCorporationDecisionPreload
+): Promise<Omit<Awaited<ReturnType<typeof processNppCorporationDecisions>>, "relocationBonds">> {
+  if (!preloaded?.batchRelocationCredit)
+    return processNppCorporationDecisions(db, turn, now, techTreesEnabled, preloaded);
+  return frozenRelocationDecisionPlan(db, turn, async () => {
+    const { relocationBonds, ...output } = await processNppCorporationDecisions(
+      db,
+      turn,
+      now,
+      techTreesEnabled,
+      preloaded
+    );
+    return { output, bonds: relocationBonds ?? [] };
+  });
+}
+
+export { processNppCorporationDecisionsFrozen as processNppCorporationDecisions };
+
+async function processNppCorporationDecisions(
   db: Db,
   turn: number,
   now: Date,
   techTreesEnabled: boolean = false,
   preloaded?: NppCorporationDecisionPreload
 ): Promise<{
+  relocationBonds?: import("@/lib/db/types").Bond[];
   corpUpdates: NppCorpUpdateOp[];
   sectorUpdates: Array<{
     filter: { _id: ObjectId };
@@ -1130,7 +1156,7 @@ export async function processNppCorporationDecisions(
 
   // v2: every planned relocation bond lands in loop order, exactly where v1's
   // per-corp `insertOne` would have put it, before the caller reads bonds again.
-  await relocationCreditBatch?.flush();
+  const relocationBonds = relocationCreditBatch?.plannedBonds();
 
   // Short-lane growth requests rank under their own cap with exposure and cash
   // limits (rules/shortageGrowthFinance); every other request keeps the
@@ -1207,6 +1233,7 @@ export async function processNppCorporationDecisions(
   );
 
   return {
+    ...(relocationBonds?.length ? { relocationBonds } : {}),
     corpUpdates,
     sectorUpdates: allSectorUpdates,
     newSectors,

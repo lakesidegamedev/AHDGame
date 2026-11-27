@@ -1,17 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAdmin", () => ({
   requireAdmin: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
-let db: ReturnType<typeof createInMemoryDb>;
+let db: ReturnType<typeof createTransactionalMemoryDb>["memory"];
 beforeEach(async () => {
-  db = createInMemoryDb();
+  const fixture = createTransactionalMemoryDb();
+  db = fixture.memory;
+  db.seed("gameState", [{ _id: "current", currentTurn: 7, worldEpochId: "test-world" }]);
   const { getDb } = await import("@/lib/mongodb");
-  vi.mocked(getDb).mockResolvedValue(db as never);
+  vi.mocked(getDb).mockResolvedValue(fixture.db);
 });
 
 describe("corporation share recalculation", () => {
@@ -73,5 +75,47 @@ describe("corporation share recalculation", () => {
     expect((await db.collection("corporations").findOne({ _id: corporationId }))?.totalShares).toBe(
       100
     );
+  });
+  it("rolls back a landed correction and retries without changing cash or holdings", async () => {
+    const corporationId = new ObjectId();
+    db.seed("corporations", [
+      {
+        _id: corporationId,
+        name: "Repair",
+        totalShares: 999,
+        publicFloat: 10,
+        liquidCapital: 1234,
+        shareholders: [{ characterId: new ObjectId(), shares: 40 }],
+      },
+    ]);
+    const collection = db.collection("corporations");
+    const original = collection.bulkWrite.bind(collection);
+    const fault = vi.spyOn(collection, "bulkWrite").mockImplementationOnce(async (...args) => {
+      await original(...args);
+      throw new Error("landed share repair failure");
+    });
+    const { POST } = await import("./route");
+    expect((await POST()).ok).toBe(false);
+    expect((await collection.findOne({ _id: corporationId }))?.totalShares).toBe(999);
+    fault.mockRestore();
+    const responses = await Promise.all([POST(), POST()]);
+    expect(responses.every((response) => response.ok)).toBe(true);
+    expect(await collection.findOne({ _id: corporationId })).toMatchObject({
+      totalShares: 50,
+      liquidCapital: 1234,
+    });
+    expect((await (await POST()).json()).fixes).toEqual([]);
+  });
+
+  it("refuses reconciliation while a turn is processing", async () => {
+    await db
+      .collection("gameState")
+      .updateOne({ _id: "current" }, { $set: { isProcessing: true } });
+    db.seed("corporations", [
+      { _id: new ObjectId(), name: "Busy", totalShares: 999, publicFloat: 10 },
+    ]);
+    const { POST } = await import("./route");
+    expect((await POST()).status).toBe(409);
+    expect(db.collection("corporations").docs[0].totalShares).toBe(999);
   });
 });

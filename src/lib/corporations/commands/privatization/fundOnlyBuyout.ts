@@ -1,8 +1,10 @@
+import { afterCommit, boundSession, withSessionDb } from "@/lib/db/sessionDb";
+import { allocateReservedPayouts } from "@/lib/corporations/rules/reservedPayouts";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import { referenceValuation } from "../acquisitions/referenceValuation";
 import type { Db } from "mongodb";
-import type { Corporation, IndexFund } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { sellFundHoldingShares } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { loadBankingPolicy } from "@/lib/banking/policy";
@@ -18,6 +20,12 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 
 export type FundOnlyBuyoutResult = { ok: true } | { ok: false; error: string; status: number };
+
+export class FundBuyoutRefusal extends Error {
+  constructor(public readonly result: Extract<FundOnlyBuyoutResult, { ok: false }>) {
+    super(result.error);
+  }
+}
 
 /**
  * Take a corporation private by buying out index-fund minority holders from the
@@ -56,6 +64,23 @@ export type FundOnlyBuyoutResult = { ok: true } | { ok: false; error: string; st
  *  - publicFloat === 0 (float-present take-privates are a follow-up)
  */
 export async function executeFundOnlyBuyout(
+  db: Db,
+  corporation: Corporation,
+  currentTurn: number
+): Promise<FundOnlyBuyoutResult> {
+  try {
+    return await withSessionDb(db, async (transactionDb) => {
+      const result = await executeInTransaction(transactionDb, corporation, currentTurn);
+      if (!result.ok) throw new FundBuyoutRefusal(result);
+      return result;
+    });
+  } catch (error) {
+    if (error instanceof FundBuyoutRefusal && !boundSession(db)) return error.result;
+    throw error;
+  }
+}
+
+async function executeInTransaction(
   db: Db,
   corporation: Corporation,
   currentTurn: number
@@ -99,36 +124,26 @@ export async function executeFundOnlyBuyout(
   const activeCharter =
     corporation.bankCharter?.status === "active" ? corporation.bankCharter : null;
   if (activeCharter) {
-    try {
-      const fxByCurrency = await loadFxRatesByCurrency(db);
-      const bankCurrency = activeCharter.currency;
-      let playerDepositsAreLiabilities = false;
-      try {
-        const bankingPolicy = await loadBankingPolicy(db);
-        playerDepositsAreLiabilities = bankCurrency
-          ? savingsReadsAuthoritative(bankingPolicy, bankCurrency)
-          : false;
-      } catch {
-        playerDepositsAreLiabilities = false;
-      }
-      const navAnchor = corpCapitalToAnchor(
-        takeoverBankNav(activeCharter, { playerDepositsAreLiabilities }),
-        bankCurrency,
-        bankCurrency ? (fxByCurrency.get(bankCurrency) ?? 1) : 1
-      );
-      floorPerShareAnchor = bankNavFloorPerShareAnchor({
-        bankNavAnchor: navAnchor,
-        totalShares: corporation.totalShares ?? 0,
-      });
-      floorPerShareLocal = anchorToCorpCapital(
-        floorPerShareAnchor,
-        currency,
-        fxRateForCorpFromMap(corporation, fxByCurrency)
-      );
-    } catch {
-      floorPerShareAnchor = 0;
-      floorPerShareLocal = 0;
-    }
+    const fxByCurrency = await loadFxRatesByCurrency(db);
+    const bankCurrency = activeCharter.currency;
+    const bankingPolicy = await loadBankingPolicy(db);
+    const playerDepositsAreLiabilities = bankCurrency
+      ? savingsReadsAuthoritative(bankingPolicy, bankCurrency)
+      : false;
+    const navAnchor = corpCapitalToAnchor(
+      takeoverBankNav(activeCharter, { playerDepositsAreLiabilities }),
+      bankCurrency,
+      fxRateForCorpFromMap({ liquidCurrencyCode: bankCurrency }, fxByCurrency)
+    );
+    floorPerShareAnchor = bankNavFloorPerShareAnchor({
+      bankNavAnchor: navAnchor,
+      totalShares: corporation.totalShares ?? 0,
+    });
+    floorPerShareLocal = anchorToCorpCapital(
+      floorPerShareAnchor,
+      currency,
+      fxRateForCorpFromMap(corporation, fxByCurrency)
+    );
   }
 
   // Cheap pre-flight so we don't begin a buyback we can't finish. The real,
@@ -168,6 +183,13 @@ export async function executeFundOnlyBuyout(
     .find({ _id: { $in: fundIds } })
     .toArray();
 
+  const fence = await corporationsCollection(db).updateOne(
+    { _id: corporation._id, isPrivate: { $ne: true }, shareholders: corporation.shareholders },
+    { $set: { updatedAt: new Date() } }
+  );
+  if (fence.matchedCount !== 1)
+    return { ok: false, error: "Ownership changed; refresh and retry", status: 409 };
+
   // Buy each fund's stake back into the corp's float (corp-funded).
   let boughtBack = 0;
   let cashPaidAnchor = 0;
@@ -187,7 +209,9 @@ export async function executeFundOnlyBuyout(
     }
     const wanted = Math.floor(holder.shares);
     const res = await sellFundHoldingShares(db, fund, corporation._id, wanted, {
-      note: "Take-private buyout of index-fund holding (#71)",
+      session: boundSession(db),
+      turn: currentTurn,
+      note: "Take-private buyout of index-fund holding",
       settlementCounterparty: "issuer",
     });
     boughtBack += res.sharesSold;
@@ -229,12 +253,7 @@ export async function executeFundOnlyBuyout(
   }
   if (topUpAnchorTotal > 0) {
     const now = new Date();
-    let fxRate = 1;
-    try {
-      fxRate = fxRateForCorpFromMap(corporation, await loadFxRatesByCurrency(db));
-    } catch {
-      fxRate = 1;
-    }
+    const fxRate = fxRateForCorpFromMap(corporation, await loadFxRatesByCurrency(db));
     const topUpLocalTotal = anchorToCorpCapital(topUpAnchorTotal, currency, fxRate);
     const debit = await corporationsCollection(db).updateOne(
       {
@@ -253,22 +272,20 @@ export async function executeFundOnlyBuyout(
         status: 400,
       };
     }
-    // Split the top-up across funds pro-rata to shares sold (uniform per-share
-    // shortfall). Last fund takes the rounding remainder so cents conserve.
-    let creditedAnchor = 0;
-    for (let i = 0; i < settlements.length; i++) {
-      const s = settlements[i];
-      if (s.sharesSold <= 0) continue;
-      const share =
-        i === settlements.length - 1
-          ? Math.round((topUpAnchorTotal - creditedAnchor) * 100) / 100
-          : Math.round((s.sharesSold / boughtBack) * topUpAnchorTotal * 100) / 100;
+    const topUpsCents = allocateReservedPayouts(
+      settlements.map(
+        (settlement) => (settlement.sharesSold / boughtBack) * topUpAnchorTotal * 100
+      ),
+      Math.round(topUpAnchorTotal * 100)
+    );
+    for (const [index, settlement] of settlements.entries()) {
+      const share = topUpsCents[index] / 100;
       if (share <= 0) continue;
-      await indexFundsCollection(db).updateOne(
-        { _id: s.fundId },
+      const credit = await indexFundsCollection(db).updateOne(
+        { _id: settlement.fundId },
         { $inc: { cashAnchor: share }, $set: { updatedAt: now } }
       );
-      creditedAnchor += share;
+      if (credit.matchedCount !== 1) throw new Error("Buyout fund disappeared before top-up");
     }
     cashPaidAnchor = Math.round((cashPaidAnchor + topUpAnchorTotal) * 100) / 100;
   }
@@ -331,23 +348,25 @@ export async function executeFundOnlyBuyout(
     }
   );
 
-  recordAudit({
-    source: "api",
-    action: "privatization.fundBuyout",
-    category: "corp",
-    turn: currentTurn,
-    ts: now,
-    actor: { kind: "player", userId: undefined, characterId: corporation.ceoId },
-    subject: { type: "corporation", id: corporation._id, name: corporation.name },
-    refs: { corporationId: corporation._id },
-    outcome: "ok",
-    meta: {
-      fundsBoughtOut: fundHolders.length,
-      sharesBoughtBack: boughtBack,
-      cashPaidAnchor,
-      bankNavFloorApplied: topUpAnchorTotal > 0,
-      bankNavTopUpAnchor: topUpAnchorTotal,
-    },
+  await afterCommit(db, async () => {
+    recordAudit({
+      source: "api",
+      action: "privatization.fundBuyout",
+      category: "corp",
+      turn: currentTurn,
+      ts: now,
+      actor: { kind: "player", userId: undefined, characterId: corporation.ceoId },
+      subject: { type: "corporation", id: corporation._id, name: corporation.name },
+      refs: { corporationId: corporation._id },
+      outcome: "ok",
+      meta: {
+        fundsBoughtOut: fundHolders.length,
+        sharesBoughtBack: boughtBack,
+        cashPaidAnchor,
+        bankNavFloorApplied: topUpAnchorTotal > 0,
+        bankNavTopUpAnchor: topUpAnchorTotal,
+      },
+    });
   });
 
   return { ok: true };

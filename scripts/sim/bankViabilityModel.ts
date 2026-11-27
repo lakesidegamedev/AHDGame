@@ -10,7 +10,7 @@ import { computeNpcDepositShare } from "@/lib/banking/rules/deposits";
 import { npcFlowDelta, fundedNpcFlowDelta } from "@/lib/banking/rules/loans";
 import { bandOriginationTargets, getCreditBand } from "@/lib/banking/rules/creditBands";
 import { computeInsurancePremium } from "@/lib/banking/rules/insurance";
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 import { NPC_DEPOSIT_MAX_EQUITY_LEVERAGE } from "@/lib/banking/rules/balanceSheet";
 import type { LendingProfileId } from "@/lib/banking/rules/creditBands";
 

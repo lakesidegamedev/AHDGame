@@ -1,4 +1,5 @@
-vi.mock("@/lib/db/sessionDb", () => ({
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
   withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
   afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
   unboundDb: (db: unknown) => db,
@@ -1204,7 +1205,7 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     merge: { targetPartyId: targetId },
   } as unknown as CommitteeProposal;
 
-  it("hard-deletes incoming NPPs that exceed the surviving party's per-state cap", async () => {
+  it("retires incoming NPPs that exceed the surviving party's per-state cap", async () => {
     // DUB post-merge org 0 → 2 slots; target has none → 2 remaining. Three
     // incoming NPPs → the weakest (influence 5) is culled.
     const strong = {
@@ -1219,10 +1220,11 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     const db = setup({ proposingActiveNpps: [strong, mid, weak] });
     await processMergeProposal(db as unknown as Db, proposal, 120);
 
-    const del = db.collectionMocks.npps!.deleteMany.mock.calls.find(
+    const del = db.collectionMocks.npps!.updateMany.mock.calls.find(
       (c) => (c[0] as { _id?: { $in?: ObjectId[] } })._id?.$in
     );
     expect(del).toBeTruthy();
+    expect(del![1]).toMatchObject({ $set: { retiredAt: expect.any(Date), currentOffice: null } });
     const deletedIds = (del![0] as { _id: { $in: ObjectId[] } })._id.$in.map((i) => i.toString());
     expect(deletedIds).toEqual([weak._id.toString()]);
 
@@ -1274,7 +1276,7 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     const db = setup({ proposingActiveNpps: [a, b] });
     await processMergeProposal(db as unknown as Db, proposal, 120);
 
-    const del = db.collectionMocks.npps!.deleteMany.mock.calls.find(
+    const del = db.collectionMocks.npps!.updateMany.mock.calls.find(
       (c) => (c[0] as { _id?: { $in?: ObjectId[] } })._id?.$in
     );
     expect(del).toBeFalsy();
@@ -1312,7 +1314,9 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     expect(db.collectionMocks.characters!.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
       capacity.mock.invocationCallOrder[0]
     );
-    expect(db.collectionMocks.npps!.deleteMany).toHaveBeenCalledWith({ _id: { $in: [weak._id] } });
+    expect(db.collectionMocks.npps!.updateMany.mock.calls.map((call) => call[0])).toContainEqual({
+      _id: { $in: [weak._id] },
+    });
     const moved = db.collectionMocks.electionCandidates!.updateMany.mock.calls[0][0] as {
       characterId: { $in: ObjectId[] };
     };
@@ -1347,7 +1351,7 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     const db = setup({ proposingActiveNpps: [incoming], targetActiveNpps: own });
     db.collection("electedOfficials").find.mockReturnValue(makeCursor([seat]));
     await processMergeProposal(db as unknown as Db, proposal, 120);
-    expect(db.collectionMocks.npps!.deleteMany).toHaveBeenCalledWith({
+    expect(db.collectionMocks.npps!.updateMany.mock.calls.map((call) => call[0])).toContainEqual({
       _id: { $in: [incoming._id] },
     });
     expect(db.collectionMocks.electedOfficials!.deleteMany).toHaveBeenCalledWith({
@@ -1379,14 +1383,16 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     });
     await processMergeProposal(db as unknown as Db, proposal, 120);
     const removed = [blocked._id, nationalOverflow._id];
-    expect(db.collectionMocks.npps!.deleteMany).toHaveBeenCalledWith({ _id: { $in: removed } });
+    expect(db.collectionMocks.npps!.updateMany.mock.calls.map((call) => call[0])).toContainEqual({
+      _id: { $in: removed },
+    });
     expect(db.collectionMocks.npps!.updateMany).toHaveBeenCalledWith(
       { party: "1", countryId: "IE", _id: { $nin: removed } },
       { $set: { party: "3" } }
     );
   });
 
-  it("deletes all incoming active NPPs at zero national capacity but still transfers retired history", async () => {
+  it("retires all incoming active NPPs at zero national capacity but still transfers retired history", async () => {
     vi.mocked(getPartyNppCapacity).mockResolvedValue({
       activeMemberCount: 0,
       maxNpps: 0,
@@ -1400,7 +1406,7 @@ describe("processMergeProposal (NPP recruitment-cap enforcement)", () => {
     };
     const db = setup({ proposingActiveNpps: [incoming] });
     await processMergeProposal(db as unknown as Db, proposal, 120);
-    expect(db.collectionMocks.npps!.deleteMany).toHaveBeenCalledWith({
+    expect(db.collectionMocks.npps!.updateMany.mock.calls.map((call) => call[0])).toContainEqual({
       _id: { $in: [incoming._id] },
     });
     expect(db.collectionMocks.npps!.find).toHaveBeenCalledWith(

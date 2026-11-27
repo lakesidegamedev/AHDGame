@@ -1,4 +1,12 @@
-import { describe, it, expect } from "vitest";
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
+import { describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { processCommandEconomyTurn } from "./commandEconomyTurn";
 
@@ -68,6 +76,10 @@ function makeDb(
   const updateOnes: UpdateOneCall[] = [];
   const federalBudget = {
     find: () => ({ toArray: async () => budgets }),
+    bulkWrite: async (ops: { updateOne: UpdateOneCall }[]) => {
+      updateOnes.push(...ops.map((op) => op.updateOne));
+      return { matchedCount: ops.length, modifiedCount: ops.length };
+    },
     updateOne: async (
       filter: { _id: ObjectId },
       update: { $set: Record<string, number>; $unset?: Record<string, string> }
@@ -402,6 +414,10 @@ function makeSoeDb(
       if (name === "federalBudget")
         return {
           find: () => ({ toArray: async () => budgets }),
+          bulkWrite: async (ops: { updateOne: { update: { $set: Record<string, number> } } }[]) => {
+            for (const op of ops) budgetSets.push(op.updateOne.update.$set);
+            return { matchedCount: ops.length };
+          },
           updateOne: async (_f: unknown, u: { $set: Record<string, number> }) => {
             budgetSets.push(u.$set);
             return { matchedCount: 1 };
@@ -521,6 +537,10 @@ function makeGovDb(
       if (name === "federalBudget")
         return {
           find: () => ({ toArray: async () => budgets }),
+          bulkWrite: async (ops: { updateOne: { update: { $set: Record<string, number> } } }[]) => {
+            for (const op of ops) budgetSets.push(op.updateOne.update.$set);
+            return { matchedCount: ops.length };
+          },
           updateOne: async (_f: unknown, u: { $set: Record<string, number> }) => {
             budgetSets.push(u.$set);
             return { matchedCount: 1 };

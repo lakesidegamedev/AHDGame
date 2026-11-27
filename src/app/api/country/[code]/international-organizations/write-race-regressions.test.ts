@@ -1,6 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 
+// Route policy fixtures; atomic command rollback and races have dedicated suites.
+vi.mock("@/lib/api/withRecordedEconomicCommand", () => ({
+  withRecordedEconomicCommand: async (
+    db: unknown,
+    _kind: unknown,
+    _actor: unknown,
+    _key: unknown,
+    _request: unknown,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+  economicRequestId: () => "synthetic",
+}));
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
 }));

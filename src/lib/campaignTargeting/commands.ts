@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Campaign managers buy standing ads for a player or campaign-bound ads for an
  * NPP. Player purchases share the character revision with the Actions page,
@@ -8,17 +9,10 @@ import { ObjectId, type Db, type ClientSession } from "mongodb";
 import { randomUUID } from "node:crypto";
 import { COUNTRIES_WITH_BESPOKE_PRESIDENTIAL_ELECTIONS } from "@/lib/constants/countries";
 import type { AuthUserWithCharacter } from "@/lib/auth";
-import type {
-  Campaign,
-  Character,
-  Election,
-  ElectionCandidate,
-  GameConfig,
-  NPP,
-} from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/api/errors";
 import { isCampaignManagerUser, isCampaignNomineeUser } from "@/lib/campaigns/access";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { getGameTime } from "@/lib/time/gameTime";
 import { getCampaignCurrency } from "@/lib/campaigns/campaignCurrency";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
@@ -130,7 +124,7 @@ export async function quoteTargetedAds(
   );
 }
 
-export async function purchaseTargetedAds(
+async function purchaseTargetedAdsInTransaction(
   db: Db,
   campaignId: ObjectId,
   user: Actor,
@@ -240,24 +234,10 @@ export async function purchaseTargetedAds(
     );
     if (!result.modifiedCount) throw conflict("Campaign changed. Refresh before buying ads");
   };
-  await runWithOptionalTransaction(
-    async (session) => {
-      await debit(session);
-      await write(session);
-    },
-    async () => {
-      await debit();
-      try {
-        await write();
-      } catch (error) {
-        await charactersCollection(db).updateOne(
-          { _id: user.character._id },
-          { $inc: { actions, [fundsField]: funds } }
-        );
-        throw error;
-      }
-    }
-  );
+  await runWithDbSession(db, async (session) => {
+    await debit(session);
+    await write(session);
+  });
   return {
     success: true,
     cost: funds,
@@ -269,4 +249,11 @@ export async function purchaseTargetedAds(
         ad.bucket === request.bucket
     )?.bonus,
   };
+}
+
+export async function purchaseTargetedAds(
+  ...args: Parameters<typeof purchaseTargetedAdsInTransaction>
+): Promise<Awaited<ReturnType<typeof purchaseTargetedAdsInTransaction>>> {
+  const [db, ...rest] = args;
+  return withSessionDb(db, (tx) => purchaseTargetedAdsInTransaction(tx, ...rest));
 }

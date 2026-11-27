@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -229,17 +234,14 @@ describe("tech unlock ledger (ticket #1998)", () => {
     expect(txInserts).toHaveLength(1);
   });
 
-  it("persistent ledger failure rolls the unlock back: no debit, no row", async () => {
+  it("propagates persistent ledger failure to the owning transaction", async () => {
     const corp = makeCorp();
     const { db, txInserts, corpsUpdateOne } = mockDb({ failTxInserts: 10 });
-    const res = await unlockTechNode(db, corp, NODE_1950_1, 1953, 82);
-    expect(res).toMatchObject({ ok: false, status: 500 });
+    await expect(unlockTechNode(db, corp, NODE_1950_1, 1953, 82)).rejects.toThrow(
+      "transient ledger outage"
+    );
     expect(txInserts).toHaveLength(0);
-    expect(corpsUpdateOne.mock.calls.length).toBe(2);
-    const [, refund] = corpsUpdateOne.mock.calls[1];
-    expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$inc.rdScore).toBe(6);
-    expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
+    expect(corpsUpdateOne).toHaveBeenCalledOnce();
   });
 
   it("an applied-but-unacked ledger insert is adopted, not rolled back", async () => {
@@ -301,14 +303,10 @@ describe("tech unlock ledger (ticket #1998)", () => {
       }),
     });
 
-    const res = await unlockTechNode(db, corp, NODE_1950_1, 1953, 82);
-    // Must fail loudly, never adopted as success: the debit is refunded.
-    expect(res).toMatchObject({ ok: false, status: 500 });
-    expect(corpsUpdateOne.mock.calls.length).toBe(2);
-    const [, refund] = corpsUpdateOne.mock.calls[1];
-    expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$inc.rdScore).toBe(6);
-    expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
+    await expect(unlockTechNode(db, corp, NODE_1950_1, 1953, 82)).rejects.toThrow(
+      /mismatched content/
+    );
+    expect(corpsUpdateOne).toHaveBeenCalledOnce();
     expect(vi.mocked(recordAudit)).not.toHaveBeenCalled();
   });
 
@@ -320,14 +318,9 @@ describe("tech unlock ledger (ticket #1998)", () => {
     );
     (db.collection("financialTxLog") as any).findOne = () => Promise.resolve(null);
 
-    const res = await unlockTechNode(db, corp, NODE_1950_1, 1953, 82);
-    // Nothing to adopt, so strict failure stands: no row, full refund.
-    expect(res).toMatchObject({ ok: false, status: 500 });
+    await expect(unlockTechNode(db, corp, NODE_1950_1, 1953, 82)).rejects.toThrow(/E11000/);
     expect(txInserts).toHaveLength(0);
-    expect(corpsUpdateOne.mock.calls.length).toBe(2);
-    const [, refund] = corpsUpdateOne.mock.calls[1];
-    expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
+    expect(corpsUpdateOne).toHaveBeenCalledOnce();
     expect(vi.mocked(recordAudit)).not.toHaveBeenCalled();
   });
 

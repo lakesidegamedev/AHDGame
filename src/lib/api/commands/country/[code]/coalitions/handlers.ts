@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ObjectId } from "mongodb";
@@ -48,155 +49,161 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const { name, abbreviation, color } = parsed.data;
 
     const db = await getDb();
-    const { code } = await params;
-    const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId]) {
-      return errorResponse(400, "Invalid country code");
-    }
-
-    // Verify the character belongs to a party
-    if (!character.party || character.party === "independent") {
-      throw badRequest("You must be a member of a party to create a coalition.");
-    }
-
-    // Look up the character's party
-    const party = await politicalPartiesCollection(db).findOne({
-      sequentialId: Number(character.party),
-      countryId,
-    });
-
-    if (!party) {
-      throw badRequest("Your party could not be found.");
-    }
-
-    // Chair authority — vice-chair may act when the chair seat is vacant.
-    if (!canActAsChair(party, character._id)) {
-      throw forbidden(
-        "Only the national party chair (or acting vice-chair) can create a coalition."
-      );
-    }
-
-    // One-party-state guard: in a one-party state, only the ruling party
-    // may create a coalition, and banned parties cannot operate coalitions
-    // at all. Reads runtime governmentType so a post-Stage-4 conversion
-    // immediately lifts the coalition restriction.
-    const runtime = await getCountryState(db, countryId);
-    const runtimeConfig = { governmentType: runtime.governmentType };
-    if (runtime.governmentType === "onePartyState") {
-      if (isBannedParty(runtimeConfig, party)) {
-        throw forbidden("Banned parties cannot create coalitions.");
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const { code } = await params;
+      const countryId = code.toUpperCase() as CountryId;
+      if (!COUNTRY_CONFIGS[countryId]) {
+        return errorResponse(400, "Invalid country code");
       }
-      if (!canInviteToCoalition(runtimeConfig, party)) {
-        throw forbidden("Coalitions are not available to non-ruling parties in this country.");
+
+      // Verify the character belongs to a party
+      if (!character.party || character.party === "independent") {
+        throw badRequest("You must be a member of a party to create a coalition.");
       }
-    }
 
-    // Party must not already be in a coalition
-    if (party.coalitionId) {
-      throw badRequest("Your party is already a member of a coalition.");
-    }
-
-    // Character needs >= 25 actions
-    if (character.actions < 25) {
-      throw badRequest(`You need 25 actions to create a coalition. You have ${character.actions}.`);
-    }
-
-    // Coalition name must be unique within the country (case-insensitive)
-    const existingCoalition = await coalitionsCollection(db).findOne({
-      countryId,
-      name: { $regex: new RegExp(`^${escapeRegex(name)}$`, "i") },
-    });
-
-    if (existingCoalition) {
-      throw badRequest("A coalition with this name already exists in your country.");
-    }
-
-    const now = new Date();
-    const coalitionId = new ObjectId();
-    const sequentialId = await getNextSequentialId(db, "coalition", countryId);
-
-    // Atomic claim — match the acting-chair identity (either seated chair
-    // or VC when chair is vacant) to mirror the upstream `canActAsChair`
-    // check. Combined with the coalition-membership guard.
-    const reservedParty = await politicalPartiesCollection(db).findOneAndUpdate(
-      {
-        _id: party._id,
+      // Look up the character's party
+      const party = await politicalPartiesCollection(db).findOne({
+        sequentialId: Number(character.party),
         countryId,
-        $and: [
-          {
-            $or: [{ chairId: character._id }, { chairId: null, viceChairId: character._id }],
-          },
-          {
-            $or: [{ coalitionId: null }, { coalitionId: { $exists: false } }],
-          },
-        ],
-      },
-      { $set: { coalitionId, updatedAt: now } },
-      { returnDocument: "before" }
-    );
+      });
 
-    if (!reservedParty) {
-      throw badRequest("Your party is already a member of a coalition.");
-    }
+      if (!party) {
+        throw badRequest("Your party could not be found.");
+      }
 
-    const actionDebit = await charactersCollection(db).updateOne(
-      { _id: character._id, actions: { $gte: 25 } },
-      { $inc: { actions: -25 }, $set: { updatedAt: now } }
-    );
+      // Chair authority — vice-chair may act when the chair seat is vacant.
+      if (!canActAsChair(party, character._id)) {
+        throw forbidden(
+          "Only the national party chair (or acting vice-chair) can create a coalition."
+        );
+      }
 
-    if (actionDebit.matchedCount === 0) {
-      await politicalPartiesCollection(db).updateOne(
-        { _id: party._id, coalitionId },
-        { $set: { coalitionId: null, updatedAt: now } }
-      );
-      throw badRequest(`You need 25 actions to create a coalition. You have ${character.actions}.`);
-    }
+      // One-party-state guard: in a one-party state, only the ruling party
+      // may create a coalition, and banned parties cannot operate coalitions
+      // at all. Reads runtime governmentType so a post-Stage-4 conversion
+      // immediately lifts the coalition restriction.
+      const runtime = await getCountryState(db, countryId);
+      const runtimeConfig = { governmentType: runtime.governmentType };
+      if (runtime.governmentType === "onePartyState") {
+        if (isBannedParty(runtimeConfig, party)) {
+          throw forbidden("Banned parties cannot create coalitions.");
+        }
+        if (!canInviteToCoalition(runtimeConfig, party)) {
+          throw forbidden("Coalitions are not available to non-ruling parties in this country.");
+        }
+      }
 
-    const newCoalition: Coalition = {
-      _id: coalitionId,
-      sequentialId,
-      countryId,
-      name,
-      abbreviation,
-      color,
-      chairPartyId: party._id,
-      chairCharacterId: character._id,
-      members: [
+      // Party must not already be in a coalition
+      if (party.coalitionId) {
+        throw badRequest("Your party is already a member of a coalition.");
+      }
+
+      // Character needs >= 25 actions
+      if (character.actions < 25) {
+        throw badRequest(
+          `You need 25 actions to create a coalition. You have ${character.actions}.`
+        );
+      }
+
+      // Coalition name must be unique within the country (case-insensitive)
+      const existingCoalition = await coalitionsCollection(db).findOne({
+        countryId,
+        name: { $regex: new RegExp(`^${escapeRegex(name)}$`, "i") },
+      });
+
+      if (existingCoalition) {
+        throw badRequest("A coalition with this name already exists in your country.");
+      }
+
+      const now = new Date();
+      const coalitionId = new ObjectId();
+      const sequentialId = await getNextSequentialId(db, "coalition", countryId);
+
+      // Atomic claim — match the acting-chair identity (either seated chair
+      // or VC when chair is vacant) to mirror the upstream `canActAsChair`
+      // check. Combined with the coalition-membership guard.
+      const reservedParty = await politicalPartiesCollection(db).findOneAndUpdate(
         {
-          partyId: party._id,
-          partySequentialId: party.sequentialId,
-          joinedAt: now,
+          _id: party._id,
+          countryId,
+          $and: [
+            {
+              $or: [{ chairId: character._id }, { chairId: null, viceChairId: character._id }],
+            },
+            {
+              $or: [{ coalitionId: null }, { coalitionId: { $exists: false } }],
+            },
+          ],
         },
-      ],
-      pendingInvites: [],
-      joinRequests: [],
-      disbandVote: null,
-      createdBy: character._id,
-      createdAt: now,
-      updatedAt: now,
-    };
+        { $set: { coalitionId, updatedAt: now } },
+        { returnDocument: "before" }
+      );
 
-    try {
-      await coalitionsCollection(db).insertOne(newCoalition);
-    } catch (error) {
-      await Promise.all([
-        politicalPartiesCollection(db).updateOne(
+      if (!reservedParty) {
+        throw badRequest("Your party is already a member of a coalition.");
+      }
+
+      const actionDebit = await charactersCollection(db).updateOne(
+        { _id: character._id, actions: { $gte: 25 } },
+        { $inc: { actions: -25 }, $set: { updatedAt: now } }
+      );
+
+      if (actionDebit.matchedCount === 0) {
+        await politicalPartiesCollection(db).updateOne(
           { _id: party._id, coalitionId },
           { $set: { coalitionId: null, updatedAt: now } }
-        ),
-        charactersCollection(db).updateOne(
-          { _id: character._id },
-          { $inc: { actions: 25 }, $set: { updatedAt: now } }
-        ),
-      ]);
-      throw error;
-    }
+        );
+        throw badRequest(
+          `You need 25 actions to create a coalition. You have ${character.actions}.`
+        );
+      }
 
-    return NextResponse.json({
-      success: true,
-      message: `${name} has been created! Your party is the founding member.`,
-      coalitionId: coalitionId.toString(),
-      sequentialId,
+      const newCoalition: Coalition = {
+        _id: coalitionId,
+        sequentialId,
+        countryId,
+        name,
+        abbreviation,
+        color,
+        chairPartyId: party._id,
+        chairCharacterId: character._id,
+        members: [
+          {
+            partyId: party._id,
+            partySequentialId: party.sequentialId,
+            joinedAt: now,
+          },
+        ],
+        pendingInvites: [],
+        joinRequests: [],
+        disbandVote: null,
+        createdBy: character._id,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      try {
+        await coalitionsCollection(db).insertOne(newCoalition);
+      } catch (error) {
+        await Promise.all([
+          politicalPartiesCollection(db).updateOne(
+            { _id: party._id, coalitionId },
+            { $set: { coalitionId: null, updatedAt: now } }
+          ),
+          charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: { actions: 25 }, $set: { updatedAt: now } }
+          ),
+        ]);
+        throw error;
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `${name} has been created! Your party is the founding member.`,
+        coalitionId: coalitionId.toString(),
+        sequentialId,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

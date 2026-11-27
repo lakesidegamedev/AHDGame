@@ -1,3 +1,4 @@
+import { withSessionDb, unboundDb } from "@/lib/db/sessionDb";
 import { loadAccountabilityAttributions } from "./crisisV2/attribution";
 import { freezeAccountabilityAttributions } from "@/lib/crises/v2/accountability";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
@@ -213,13 +214,9 @@ async function loadHolders(
   return loaded;
 }
 
-/**
- * Claims a crisis's step for this turn before any effect is routed, so a retry
- * after a failed state write cannot apply the same effects twice. Losing the
- * claim means another run already stepped it.
- */
-async function claimTurn(db: Db, crisisId: ObjectId, turn: number): Promise<boolean> {
-  const claimed = await crisesCollection(db).updateOne(
+/** Claim and return the opening instance inside the effect transaction. */
+async function claimTurn(db: Db, crisisId: ObjectId, turn: number): Promise<LiveCrisis | null> {
+  const claimed = await crisesCollection(db).findOneAndUpdate(
     {
       _id: crisisId,
       status: "active",
@@ -228,9 +225,10 @@ async function claimTurn(db: Db, crisisId: ObjectId, turn: number): Promise<bool
         { "v2.lastEvaluatedTurn": { $lt: turn } },
       ],
     },
-    { $set: { "v2.lastEvaluatedTurn": turn } }
+    { $set: { "v2.lastEvaluatedTurn": turn } },
+    { returnDocument: "before", projection: LIVE_PROJECTION }
   );
-  return claimed.matchedCount > 0;
+  return claimed as LiveCrisis | null;
 }
 
 function toCrisisScope(scope: CrisisScope): Crisis["scope"] {
@@ -554,189 +552,233 @@ export async function processCrisisV2Turn(
     );
     const effectRegistry = getCrisisEffectRegistry();
     const scriptedResolved: ObjectId[] = [];
-    const writes: AnyBulkWriteOperation<Crisis>[] = [];
-    const consumedUseIds: ObjectId[] = [];
     const unsupportedTotals: Record<string, number> = {};
     const missingModules = new Set<string>();
     const resolvedCrises: LiveCrisis[] = [];
-    const afterWrite: (() => Promise<void>)[] = [];
 
-    for (const { crisis, def } of runnable) {
+    for (const candidate of runnable) {
+      const { def } = candidate;
       try {
-        if (!(await claimTurn(db, crisis._id, turn))) continue;
-        const crisisCountries = crisisCountryIds(crisis, world);
-        const driverInputs: Record<string, number> = {};
-        const wantedInputs = def.severity.drivers.map((driver) => driver.input);
-        if (def.pacing?.kind === "tracked") wantedInputs.push(def.pacing.input);
-        for (const input of wantedInputs) {
-          const byCountry = inputs.get(input);
-          if (!byCountry) continue;
-          driverInputs[input] = mean(
-            crisisCountries.flatMap((id) =>
-              byCountry.has(id) ? [byCountry.get(id) as number] : []
-            )
-          );
-        }
-
-        const rows = usesByCrisis.get(crisis._id.toString()) ?? [];
-        const leverUses: LeverUse[] = rows.map((row) => ({
-          leverId: row.leverId,
-          holderId: row.holderId,
-          intensity: row.intensity,
-          ...(row.attribution ? { attribution: row.attribution } : {}),
-        }));
-
-        const before = crisis.v2;
-        const step = computeSeverityStep(before, def, { turn, driverInputs, leverUses });
-        let next = recordLeverUses(before, step.accepted, turn);
-        const stateIds = crisisStateIds(crisis, world);
-        const reach: CrisisReach = {
-          scope: before.scope,
-          stateIds: new Set(stateIds),
-          sectors: def.affectedSectors,
-        };
-        const exposed = filterExposedHolders(
-          mergeHolders(holderMaps, crisisCountries),
-          footprints,
-          reach
-        );
-        next = recordInaction(next, def, exposed, turn);
-        next = {
-          ...next,
-          ledger: freezeAccountabilityAttributions(
-            next.ledger,
-            attributions,
-            next.scope === "state" || next.scope === "local" ? crisis.regionIds : []
-          ),
-        };
-        next = applySeverityStep(next, step, turn);
-        const length = scheduledLength.get(crisis._id.toString()) ?? crisis.durationTurns;
-        if (def.pacing?.kind === "tracked" && driverInputs[def.pacing.input] !== undefined) {
-          next = applyTrackedSeverity(next, driverInputs[def.pacing.input]);
-        }
-        const scripted = def.pacing?.kind === "scripted";
-        const transition = scripted
-          ? scriptedTransition(next, turn, length)
-          : nextStage(next, def, step.after, turn);
-        next = applyTransition(next, transition, turn);
-        const laid = layScars(
-          def,
-          next,
-          scarTargets(next.scope, crisisCountries, crisis.regionIds),
-          turn
-        );
-        if (laid.length > 0) next = { ...next, scars: [...next.scars, ...laid] };
-        const forced = stepForcedEvents(def, next);
-        next = { ...next, forced: forced.progress, lastEvaluatedTurn: turn };
-        if (forced.fired.some((threshold) => threshold.event === "stateOfEmergency")) {
-          next = { ...next, emergency: true };
-        }
-        const settling =
-          !next.consequencesSettled && (next.stage === "aftermath" || next.stage === "resolved");
-        if (settling || forced.fired.length > 0) {
-          const owed = owedDelivery(next.pendingDelivery, {
-            consequences: settling,
-            forced: forced.fired,
-          });
-          next = {
-            ...next,
-            ...(settling ? { consequencesSettled: true } : {}),
-            ...(owed ? { pendingDelivery: owed } : {}),
-          };
-        }
-
-        const refs = scripted
-          ? def.effectModules.filter((ref) => ref.moduleId !== LEGACY_STORED_EFFECTS_MODULE_ID)
-          : def.effectModules;
-        const evaluation = evaluateEffectModules(refs, effectRegistry, {
-          instance: next,
-          severity: next.severity,
-          stage: next.stage,
-          turn,
-          countryIds: crisisCountries,
-          regionIds: crisis.scope === "region" ? crisis.regionIds : [],
-        });
-        for (const id of evaluation.missing) missingModules.add(id);
-        const intents: EffectIntent[] =
-          next.emergency && next.stage !== "resolved"
-            ? [...evaluation.intents, { kind: "approval", delta: EMERGENCY_APPROVAL_DRIFT }]
-            : evaluation.intents;
-        let v2Output: CrisisV2Output | undefined;
-        if (intents.length > 0) {
-          const routing = await routeEffectIntents(db, intents, {
-            stateIds,
-            countryIds: crisisCountries,
-            crisisId: crisis._id,
-            turn,
-          });
-          v2Output = routing.v2Output;
-          for (const [kind, count] of Object.entries(routing.unsupported)) {
-            unsupportedTotals[kind] = (unsupportedTotals[kind] ?? 0) + count;
-          }
-        }
-
-        await routeStanceConsequences(db, {
-          crisisId: crisis._id,
-          definitionId: def.id,
-          turn,
-          accepted: step.accepted,
-          rows,
-          stateIdsByCountry: world.stateIdsByCountry,
-        });
-
-        if (scripted) {
-          // Authored effects keep their original writers, so size and scoping
-          // match what the crisis did before it ran on v2.
-          const authored = legacyEffectsForTurn(crisis.effects, {
-            turn,
-            startTurn: crisis.startTurn,
-            durationTurns: length,
-            factor: Math.min(1, next.severity / SCRIPTED_REFERENCE_SEVERITY),
-          });
-          if (authored.length > 0 && stateIds.length > 0) {
-            await applyCrisisTurnEffects(
-              db,
-              crisis as unknown as Crisis,
-              authored,
-              stateIds,
-              world.countryByState,
-              world.stateIdsByCountry
+        const committed = await withSessionDb(db, async (db) => {
+          const crisis = await claimTurn(db, candidate.crisis._id, turn);
+          if (!crisis) return null;
+          const writes: AnyBulkWriteOperation<Crisis>[] = [];
+          const consumedUseIds: ObjectId[] = [];
+          const unsupportedTotals: Record<string, number> = {};
+          const missingModules = new Set<string>();
+          const afterWrite: (() => Promise<void>)[] = [];
+          const crisisCountries = crisisCountryIds(crisis, world);
+          const driverInputs: Record<string, number> = {};
+          const wantedInputs = def.severity.drivers.map((driver) => driver.input);
+          if (def.pacing?.kind === "tracked") wantedInputs.push(def.pacing.input);
+          for (const input of wantedInputs) {
+            const byCountry = inputs.get(input);
+            if (!byCountry) continue;
+            driverInputs[input] = mean(
+              crisisCountries.flatMap((id) =>
+                byCountry.has(id) ? [byCountry.get(id) as number] : []
+              )
             );
           }
-        }
 
-        const resolving = next.stage === "resolved";
-        // A scripted crisis is closed by the shared finalizer, which also ends
-        // its interactions and advances any chain; until then it stays active.
-        const closesHere = resolving && !scripted;
-        writes.push({
-          updateOne: {
-            filter: { _id: crisis._id, status: "active" },
-            update: {
-              $set: {
-                v2: next,
-                ...(v2Output ? { v2Output } : {}),
-                ...(laid.length > 0 ? { scarsHealUntil: scarHorizon(next.scars) } : {}),
-                ...(closesHere
-                  ? { status: "resolved", endTurn: turn, resolvedAt: new Date() }
-                  : {}),
+          const prefetchedRows = usesByCrisis.get(crisis._id.toString()) ?? [];
+          const rows = prefetchedRows.length
+            ? await crisisLeverUsesCollection(db)
+                .find({
+                  _id: { $in: prefetchedRows.map((row) => row._id) },
+                  appliedTurn: null,
+                  chargeState: { $ne: "pending" },
+                })
+                .toArray()
+            : [];
+          const leverUses: LeverUse[] = rows.map((row) => ({
+            leverId: row.leverId,
+            holderId: row.holderId,
+            intensity: row.intensity,
+            ...(row.attribution ? { attribution: row.attribution } : {}),
+          }));
+
+          const before = crisis.v2;
+          const step = computeSeverityStep(before, def, { turn, driverInputs, leverUses });
+          let next = recordLeverUses(before, step.accepted, turn);
+          const stateIds = crisisStateIds(crisis, world);
+          const reach: CrisisReach = {
+            scope: before.scope,
+            stateIds: new Set(stateIds),
+            sectors: def.affectedSectors,
+          };
+          const exposed = filterExposedHolders(
+            mergeHolders(holderMaps, crisisCountries),
+            footprints,
+            reach
+          );
+          next = recordInaction(next, def, exposed, turn);
+          next = {
+            ...next,
+            ledger: freezeAccountabilityAttributions(
+              next.ledger,
+              attributions,
+              next.scope === "state" || next.scope === "local" ? crisis.regionIds : []
+            ),
+          };
+          next = applySeverityStep(next, step, turn);
+          const length = scheduledLength.get(crisis._id.toString()) ?? crisis.durationTurns;
+          if (def.pacing?.kind === "tracked" && driverInputs[def.pacing.input] !== undefined) {
+            next = applyTrackedSeverity(next, driverInputs[def.pacing.input]);
+          }
+          const scripted = def.pacing?.kind === "scripted";
+          const transition = scripted
+            ? scriptedTransition(next, turn, length)
+            : nextStage(next, def, step.after, turn);
+          next = applyTransition(next, transition, turn);
+          const laid = layScars(
+            def,
+            next,
+            scarTargets(next.scope, crisisCountries, crisis.regionIds),
+            turn
+          );
+          if (laid.length > 0) next = { ...next, scars: [...next.scars, ...laid] };
+          const forced = stepForcedEvents(def, next);
+          next = { ...next, forced: forced.progress, lastEvaluatedTurn: turn };
+          if (forced.fired.some((threshold) => threshold.event === "stateOfEmergency")) {
+            next = { ...next, emergency: true };
+          }
+          const settling =
+            !next.consequencesSettled && (next.stage === "aftermath" || next.stage === "resolved");
+          if (settling || forced.fired.length > 0) {
+            const owed = owedDelivery(next.pendingDelivery, {
+              consequences: settling,
+              forced: forced.fired,
+            });
+            next = {
+              ...next,
+              ...(settling ? { consequencesSettled: true } : {}),
+              ...(owed ? { pendingDelivery: owed } : {}),
+            };
+          }
+
+          const refs = scripted
+            ? def.effectModules.filter((ref) => ref.moduleId !== LEGACY_STORED_EFFECTS_MODULE_ID)
+            : def.effectModules;
+          const evaluation = evaluateEffectModules(refs, effectRegistry, {
+            instance: next,
+            severity: next.severity,
+            stage: next.stage,
+            turn,
+            countryIds: crisisCountries,
+            regionIds: crisis.scope === "region" ? crisis.regionIds : [],
+          });
+          for (const id of evaluation.missing) missingModules.add(id);
+          const intents: EffectIntent[] =
+            next.emergency && next.stage !== "resolved"
+              ? [...evaluation.intents, { kind: "approval", delta: EMERGENCY_APPROVAL_DRIFT }]
+              : evaluation.intents;
+          let v2Output: CrisisV2Output | undefined;
+          if (intents.length > 0) {
+            const routing = await routeEffectIntents(db, intents, {
+              stateIds,
+              countryIds: crisisCountries,
+              crisisId: crisis._id,
+              turn,
+            });
+            v2Output = routing.v2Output;
+            for (const [kind, count] of Object.entries(routing.unsupported)) {
+              unsupportedTotals[kind] = (unsupportedTotals[kind] ?? 0) + count;
+            }
+          }
+
+          await routeStanceConsequences(db, {
+            crisisId: crisis._id,
+            definitionId: def.id,
+            turn,
+            accepted: step.accepted,
+            rows,
+            stateIdsByCountry: world.stateIdsByCountry,
+          });
+
+          if (scripted) {
+            // Authored effects keep their original writers, so size and scoping
+            // match what the crisis did before it ran on v2.
+            const authored = legacyEffectsForTurn(crisis.effects, {
+              turn,
+              startTurn: crisis.startTurn,
+              durationTurns: length,
+              factor: Math.min(1, next.severity / SCRIPTED_REFERENCE_SEVERITY),
+            });
+            if (authored.length > 0 && stateIds.length > 0) {
+              await applyCrisisTurnEffects(
+                db,
+                crisis as unknown as Crisis,
+                authored,
+                stateIds,
+                world.countryByState,
+                world.stateIdsByCountry
+              );
+            }
+          }
+
+          const resolving = next.stage === "resolved";
+          // A scripted crisis is closed by the shared finalizer, which also ends
+          // its interactions and advances any chain; until then it stays active.
+          const closesHere = resolving && !scripted;
+          writes.push({
+            updateOne: {
+              filter: { _id: crisis._id, status: "active" },
+              update: {
+                $set: {
+                  v2: next,
+                  ...(v2Output ? { v2Output } : {}),
+                  ...(laid.length > 0 ? { scarsHealUntil: scarHorizon(next.scars) } : {}),
+                  ...(closesHere
+                    ? { status: "resolved", endTurn: turn, resolvedAt: new Date() }
+                    : {}),
+                },
               },
             },
-          },
+          });
+          for (const row of rows) consumedUseIds.push(row._id);
+          if (next.pendingDelivery) {
+            const target = deliveryTarget(crisis, def, stateIds, crisisCountries);
+            const instance = next;
+            afterWrite.push(() => deliverPending(unboundDb(db), instance, target, turn));
+          }
+          const saved = await crisesCollection(db).bulkWrite(writes, { ordered: true });
+          if (saved.matchedCount !== 1) throw new Error("Crisis changed before state publication");
+          if (consumedUseIds.length)
+            await crisisLeverUsesCollection(db).updateMany(
+              { _id: { $in: consumedUseIds } },
+              { $set: { appliedTurn: turn } }
+            );
+          return {
+            crisis,
+            before,
+            next,
+            resolving,
+            scripted,
+            afterWrite,
+            unsupportedTotals,
+            missingModules,
+          };
         });
-        for (const row of rows) consumedUseIds.push(row._id);
-        if (next.pendingDelivery) {
-          const target = deliveryTarget(crisis, def, stateIds, crisisCountries);
-          const instance = next;
-          afterWrite.push(() => deliverPending(db, instance, target, turn));
+        if (!committed) continue;
+        for (const id of committed.missingModules) missingModules.add(id);
+        for (const [kind, count] of Object.entries(committed.unsupportedTotals))
+          unsupportedTotals[kind] = (unsupportedTotals[kind] ?? 0) + count;
+        for (const run of committed.afterWrite) {
+          try {
+            await run();
+          } catch (error) {
+            logger.error(COMPONENT, "consequence delivery remains pending after commit", error);
+          }
         }
-        if (resolving) {
-          if (scripted) scriptedResolved.push(crisis._id);
-          else resolvedCrises.push(crisis);
+        if (committed.resolving) {
+          if (committed.scripted) scriptedResolved.push(committed.crisis._id);
+          else resolvedCrises.push(committed.crisis);
           result.resolved += 1;
           const index = stillActive.findIndex(
             (active) =>
-              active.definitionId === before.definitionId && active.startTurn === before.startTurn
+              active.definitionId === committed.before.definitionId &&
+              active.startTurn === committed.before.startTurn
           );
           if (index >= 0) stillActive[index] = { ...stillActive[index], stage: "resolved" };
         }
@@ -744,7 +786,7 @@ export async function processCrisisV2Turn(
       } catch (error) {
         result.failed += 1;
         logger.error(COMPONENT, "crisis step failed; skipped this turn", error, {
-          crisisId: crisis._id.toString(),
+          crisisId: candidate.crisis._id.toString(),
           definitionId: def.id,
         });
       }
@@ -759,31 +801,6 @@ export async function processCrisisV2Turn(
       logger.warn(COMPONENT, "unsupported intent kinds dropped", unsupportedTotals);
     }
 
-    if (writes.length > 0) {
-      try {
-        await crisesCollection(db).bulkWrite(writes, { ordered: false });
-        if (consumedUseIds.length > 0) {
-          await crisisLeverUsesCollection(db).updateMany(
-            { _id: { $in: consumedUseIds } },
-            { $set: { appliedTurn: turn } }
-          );
-        }
-        for (const run of afterWrite) {
-          try {
-            await run();
-          } catch (error) {
-            logger.error(COMPONENT, "consequence step failed after the crisis was saved", error);
-          }
-        }
-      } catch (error) {
-        logger.error(COMPONENT, "writing crisis state failed", error);
-        result.failed += writes.length;
-        result.processed -= writes.length;
-        result.resolved = 0;
-        resolvedCrises.length = 0;
-        scriptedResolved.length = 0;
-      }
-    }
     await finalizeScripted(db, turn, scriptedResolved, world);
     for (const crisis of resolvedCrises) {
       if (!crisis.wireMessageOnEnd) continue;

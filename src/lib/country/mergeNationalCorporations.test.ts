@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -58,6 +62,10 @@ describe("mergeNationalCorporations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("corporateSectors").bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+      modifiedCount: ops.length,
+    }));
     db.collection("corporations");
     db.collection("corporateSectors");
     db.collection("bonds");
@@ -141,9 +149,14 @@ describe("mergeNationalCorporations", () => {
       toCountryId: "DD",
     });
 
-    const updates = db.collectionMocks.corporateSectors.updateOne.mock.calls.filter(
-      (c) => c[1]?.$set?.corporationId != null
-    );
+    const updates = db.collectionMocks.corporateSectors.bulkWrite.mock.calls
+      .flatMap(([ops]) =>
+        ops.map((op: { updateOne: { filter: unknown; update: unknown } }) => [
+          op.updateOne.filter,
+          op.updateOne.update,
+        ])
+      )
+      .filter((c) => c[1]?.$set?.corporationId != null);
     const retailUpdate = updates.find(
       (c) =>
         (c[1] as { $set: { corporationId: ObjectId } }).$set.corporationId.toString() ===
@@ -186,9 +199,14 @@ describe("mergeNationalCorporations", () => {
       toCountryId: "DD",
     });
 
-    const updates = db.collectionMocks.corporateSectors.updateOne.mock.calls.filter(
-      (c) => c[1]?.$set?.corporationId != null
-    );
+    const updates = db.collectionMocks.corporateSectors.bulkWrite.mock.calls
+      .flatMap(([ops]) =>
+        ops.map((op: { updateOne: { filter: unknown; update: unknown } }) => [
+          op.updateOne.filter,
+          op.updateOne.update,
+        ])
+      )
+      .filter((c) => c[1]?.$set?.corporationId != null);
     expect(updates).toHaveLength(1);
     expect(
       (updates[0][1] as { $set: { corporationId: ObjectId } }).$set.corporationId.toString()

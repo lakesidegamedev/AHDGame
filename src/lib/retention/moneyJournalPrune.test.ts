@@ -138,4 +138,42 @@ describe("pruneMoneyJournals", () => {
     expect(result.ledgerEntries).toBe(0);
     expect(await ids("ledgerEntries")).toEqual(["early"]);
   });
+  it("retains every pending supply plan part and never prunes unrelated source proofs", async () => {
+    const phases = [
+      "supply-agreement-cash",
+      "supply-agreement-plan-chunk",
+      "supply-agreement-projection",
+    ];
+    await db.collection("bankMoneyMoves").insertMany([
+      ...phases.flatMap((phase) => [
+        {
+          _id: `done:${phase}`,
+          kind: "turn-value-settlement",
+          phase,
+          status: "applied",
+          turn: OLD,
+          supplyProjectionsComplete: true,
+        },
+        {
+          _id: `pending:${phase}`,
+          kind: "turn-value-settlement",
+          phase,
+          status: "applied",
+          turn: OLD,
+        },
+      ]),
+      {
+        _id: "other-source",
+        kind: "turn-value-settlement",
+        phase: "pension-payment",
+        status: "applied",
+        turn: OLD,
+        supplyProjectionsComplete: true,
+      },
+    ] as never);
+    expect((await pruneMoneyJournals(db)).bankMoneyMoves).toBe(3);
+    expect(await ids("bankMoneyMoves")).toEqual(
+      ["other-source", ...phases.map((phase) => `pending:${phase}`)].sort()
+    );
+  });
 });

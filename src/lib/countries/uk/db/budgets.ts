@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import type { Db, ObjectId } from "mongodb";
 import type { UKBudget, UKBudgetStatus } from "@/lib/db/types/ukBudget";
 import type { Bill, BillProvision } from "@/lib/db/types/legislation";
@@ -187,6 +188,13 @@ export async function tableBudgetWithBill(
   db: Db,
   args: Parameters<typeof createBudgetBill>[1]
 ): Promise<TabledBudgetResult> {
+  return withAtomicResult(db, (db) => tableBudgetWithBillInTransaction(db, args));
+}
+
+async function tableBudgetWithBillInTransaction(
+  db: Db,
+  args: Parameters<typeof createBudgetBill>[1]
+): Promise<TabledBudgetResult> {
   const tabled = await tableBudget(db, args.fiscalYear, args.now);
   if (!tabled.ok) return tabled;
 
@@ -231,6 +239,19 @@ export interface BudgetResolution {
  * majority). Sets status and, on defeat, fires the budgetDefeat confidence hit.
  */
 export async function applyBudgetOutcome(
+  db: Db,
+  args: {
+    fiscalYear: number;
+    passed: boolean;
+    votesFor?: number;
+    votesAgainst?: number;
+    now: Date;
+  }
+): Promise<BudgetResolution> {
+  return withAtomicResult(db, (db) => applyBudgetOutcomeInTransaction(db, args));
+}
+
+async function applyBudgetOutcomeInTransaction(
   db: Db,
   args: {
     fiscalYear: number;

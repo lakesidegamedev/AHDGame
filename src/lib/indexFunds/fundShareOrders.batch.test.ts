@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { ObjectId, type Db } from "mongodb";
+vi.mock("@/lib/ledger/featureFlag", () => ({ isLedgerShadowEnabled: async () => false }));
+vi.mock("@/lib/audit/recordAudit", () => ({
+  recordAudit: () => undefined,
+  recordAuditBulk: () => undefined,
+}));
+import { describe, expect, it, vi } from "vitest";
+import { ObjectId } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import type { TxInput } from "@/lib/financialTxLog/emit";
 import {
   cancelFundShareOrder,
@@ -15,7 +21,13 @@ const FUND_ID = new ObjectId("650000000000000000000101");
 const CORPS = [1, 2, 3].map((n) => new ObjectId(`65000000000000000000020${n}`));
 
 function world() {
-  const memory = createInMemoryDb();
+  const { memory, db } = createTransactionalMemoryDb();
+  memory.seed(
+    "corporations",
+    CORPS.map((_id) => ({ _id, countryId: "US", liquidCurrencyCode: "USD" }))
+  );
+  memory.seed("gameState", [{ _id: "current", currentTurn: 9 }]);
+  memory.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
   memory.seed("indexFunds", [
     {
       _id: FUND_ID,
@@ -25,7 +37,7 @@ function world() {
       holdings: CORPS.map((corporationId) => ({ corporationId, shares: 10 })),
     },
   ]);
-  return { memory, db: memory as unknown as Db };
+  return { memory, db };
 }
 
 const fund = {
@@ -96,7 +108,11 @@ describe("batched fund quote placement", () => {
     expect(state(batch.memory)).toEqual(state(one.memory));
     expect(state(batch.memory).cash).toBe(10);
     expect(placed!.ledgerEntries.map((row) => row.amount)).toEqual(ledger.map((row) => row.amount));
-    expect(placed!.escrowTxs).toHaveLength(2);
+    expect(placed!.escrowTxs).toHaveLength(0);
+    expect(batch.memory.collection("indexFundTransactions").docs).toHaveLength(2);
+    expect(batch.memory.collection("financialTxLog").docs.map((row) => row.amount)).toEqual(
+      one.memory.collection("financialTxLog").docs.map((row) => row.amount)
+    );
   });
 
   it("writes nothing and declines when the fund's cash moved underneath", async () => {
@@ -106,9 +122,9 @@ describe("batched fund quote placement", () => {
       .updateOne({ _id: FUND_ID }, { $set: { cashAnchor: 100 } });
     const original = batch.memory
       .collection("indexFunds")
-      .findOne.bind(batch.memory.collection("indexFunds"));
+      .findOneAndUpdate.bind(batch.memory.collection("indexFunds"));
     // A concurrent debit lands between the batch's cash read and its debit.
-    batch.memory.collection("indexFunds").findOne = (async (...args: unknown[]) => {
+    batch.memory.collection("indexFunds").findOneAndUpdate = (async (...args: unknown[]) => {
       const row = await (original as (...a: unknown[]) => Promise<unknown>)(...args);
       await batch.memory
         .collection("indexFunds")
@@ -164,6 +180,9 @@ describe("batched fund order cancellation", () => {
     const rows = (ledger: TxInput[]) =>
       ledger.map((row) => [row.type, row.amount, (row.meta as { orderId: string }).orderId]);
     expect(rows(batchLedger)).toEqual(rows(oneLedger));
+    expect(rows(batch.memory.collection("financialTxLog").docs as unknown as TxInput[])).toEqual(
+      rows(one.memory.collection("financialTxLog").docs as unknown as TxInput[])
+    );
 
     // A repeat cancels nothing more and refunds nothing more.
     await cancelFundShareOrdersBatch(batch.db, fund, ids, 9, { ledgerSink: [] });

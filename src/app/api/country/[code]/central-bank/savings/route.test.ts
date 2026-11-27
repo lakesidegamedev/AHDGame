@@ -147,6 +147,21 @@ describe("GET /api/country/[code]/central-bank/savings", () => {
     expect(data.savingsHolderType).toBe("private-bank");
     expect(data.savingsHolderName).toBe("Example Bank");
     expect(data.apyPercent).toBe(20.13);
+    expect(data.creditIntervalTurns).toBe(1);
+    expect(data.turnsUntilCredit).toBe(1);
+    expect(data.interestEligibleBalance).toBe(248_848);
+
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: bankId,
+      name: "Low rate bank",
+      bankCharter: { status: "active", type: "retail", currency: "BRL", depositOffset: -22.95 },
+    });
+    const low = await GET(new Request("http://localhost/api/savings"), {
+      params: Promise.resolve({ code: "br" }),
+    });
+    const lowData = await low.json();
+    expect(lowData.apyPercent).toBe(0.05);
+    expect(lowData.estimatedAccrualThisTurn).toBe(2.59);
 
     db.collectionMocks.corporations.findOne.mockResolvedValue({
       _id: bankId,
@@ -162,4 +177,38 @@ describe("GET /api/country/[code]/central-bank/savings", () => {
     expect(staleHolderData.apyPercent).toBe(0);
     expect(staleHolderData.estimatedAccrualThisTurn).toBe(0);
   });
+});
+
+it("quotes the central-bank pool eligibility cap and zero-prime rule used by the turn", async () => {
+  const { requireBasicAuth } = await import("@/lib/api/requireAuth");
+  vi.mocked(requireBasicAuth).mockResolvedValue({
+    ok: true,
+    user: { userId: new ObjectId().toString() },
+  } as never);
+  const { getCharacterByUserId } = await import("@/lib/db/characterLookup");
+  vi.mocked(getCharacterByUserId).mockResolvedValue({
+    _id: new ObjectId(),
+    countryId: "US",
+    currencyBalances: { personal: { USD: 0 }, savings: { USD: 10000 } },
+  } as never);
+  const { getGameState } = await import("@/lib/gameState");
+  vi.mocked(getGameState).mockResolvedValue({ currentTurn: 100 } as never);
+  db.collectionMocks.centralBanks.findOne.mockResolvedValue({
+    primeRate: 10,
+    nationalSavingsBalance: 10000,
+  });
+  const { GET } = await import("./route");
+  const run = () =>
+    GET(new Request("http://localhost/api/savings"), { params: Promise.resolve({ code: "us" }) });
+  const capped = await (await run()).json();
+  expect(capped.interestEligibleBalance).toBe(2500);
+  expect(capped.estimatedAccrualThisTurn).toBe(2.6);
+  expect(capped.creditIntervalTurns).toBe(12);
+  db.collectionMocks.centralBanks.findOne.mockResolvedValue({
+    primeRate: 0,
+    nationalSavingsBalance: 10000,
+  });
+  const zero = await (await run()).json();
+  expect(zero.apyPercent).toBe(0);
+  expect(zero.estimatedAccrualThisTurn).toBe(0);
 });

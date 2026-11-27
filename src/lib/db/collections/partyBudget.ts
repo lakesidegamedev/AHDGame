@@ -1,3 +1,4 @@
+import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { PartyBudget } from "../types";
 
@@ -7,7 +8,7 @@ import type { PartyBudget } from "../types";
  * This collection stores party budgets for GOTV (Get Out The Vote) campaigns,
  * tracking allocations and spending across different demographic groups.
  */
-export async function getPartyBudgetCollection() {
-  const db = await getDb();
+export async function getPartyBudgetCollection(existingDb?: Db) {
+  const db = existingDb ?? (await getDb());
   return db.collection<PartyBudget>("partyBudget");
 }

@@ -81,32 +81,25 @@ export async function POST(request: Request, { params }: RouteParams) {
     // The draw is unconditional — it may push the reserve negative (national
     // debt). The per-turn allowance above is the only hard limit; a minister who
     // wants to forbid draws sets treasuryDrawCap to 0.
-    await drawFromTreasury(
+    const result = await drawFromTreasury(
       db,
       {
         countryId,
         corpId: target._id,
         amountLocal: amount,
         corpCurrency: snapshotCorporationCurrency(target),
+        actorId: auth.user.character._id,
       },
       now
     );
 
-    // Track the per-turn tally (reset on a new turn).
-    await corporationsCollection(db).updateOne(
-      { _id: target._id },
-      sameTurn
-        ? { $inc: { treasuryDrawnThisTurn: amount }, $set: { updatedAt: now } }
-        : {
-            $set: {
-              treasuryDrawnThisTurn: amount,
-              treasuryDrawTurn: currentTurn,
-              updatedAt: now,
-            },
-          }
-    );
+    if (!result.ok) return errorResponse(400, result.error);
 
-    return NextResponse.json({ success: true, drawn: amount });
+    return NextResponse.json({
+      success: true,
+      drawn: result.amount,
+      corporationCredit: result.corporationAmount,
+    });
   } catch (error) {
     return handleRouteError(error);
   }

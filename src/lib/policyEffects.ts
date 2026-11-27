@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Policy Effects Processing Module
  *
@@ -24,14 +25,13 @@
 
 import type { Db } from "mongodb";
 import type { StatePolicy, StateMetricBaseline } from "@/lib/db/types/statePolicy";
-import type { StateMetrics, MetricCategoryId, StateMetricValue } from "@/lib/db/types/stateMetrics";
+import type { MetricCategoryId, StateMetricValue } from "@/lib/db/types/stateMetrics";
 import type {
   LegislationType,
   EffectTargetWeighted,
   PolicyOptionMetricEffect,
 } from "@/lib/db/types/legislation";
-import type { State } from "@/lib/db/types/state";
-import type { GameState } from "@/lib/db/types/gameState";
+
 import {
   getFederalMultiplier,
   applyPolicyDecay,
@@ -357,6 +357,22 @@ export async function processStateMetrics(
   legTypeMap: LegislationTypeMap,
   currentTurn: number = 0
 ): Promise<void> {
+  return withTurnValueSettlement(
+    db,
+    "legacy-region-policy-metrics",
+    currentTurn,
+    (db) => applyStateMetricEffects(db, stateId, federalPolicies, legTypeMap, currentTurn),
+    { sourceKey: `${stateId}:${currentTurn}` }
+  );
+}
+
+async function applyStateMetricEffects(
+  db: Db,
+  stateId: string,
+  federalPolicies: ActivePolicy[],
+  legTypeMap: LegislationTypeMap,
+  currentTurn: number
+): Promise<void> {
   const statePoliciesCollectionHandle = statePoliciesCollection(db);
   const stateBaselinesCollectionHandle = stateBaselinesCollection(db);
 
@@ -500,14 +516,30 @@ export async function processStateMetrics(
  */
 export async function processStatePolicyEffects(
   db: Db,
-  knownLegislationTypes?: readonly LegislationType[]
+  knownLegislationTypes?: readonly LegislationType[],
+  turnNumber?: number
+): Promise<void> {
+  const state = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1 } }
+  );
+  const turn = turnNumber ?? state?.currentTurn ?? 0;
+  return withTurnValueSettlement(db, "legacy-policy-metrics", turn, (db) =>
+    applyStatePolicyEffects(db, knownLegislationTypes, turn)
+  );
+}
+
+async function applyStatePolicyEffects(
+  db: Db,
+  knownLegislationTypes: readonly LegislationType[] | undefined,
+  currentTurn: number
 ): Promise<void> {
   const gameStates = gameStateCollection(db);
 
   // Get game state for current turn (needed for time-based effect decay)
   const gameState =
     (await gameStates.findOne({ _id: "current" })) ?? (await gameStates.findOne({ _id: "main" }));
-  const currentTurn = gameState?.currentTurn ?? 0;
+
   // Era gate year (reuses the already-fetched gameState — no extra read). Null
   // when the flag is off, so every isMetricActive check below returns true.
   const eraYear = gameState ? resolveGameYear(gameState) : null;

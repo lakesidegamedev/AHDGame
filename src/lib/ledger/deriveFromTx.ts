@@ -48,6 +48,7 @@ const UNATTRIBUTED_REASON = "unattributed";
  * Anything not listed falls through to `unattributed`.
  */
 const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = {
+  sponsored_post_payment: "sponsored_news_placement",
   corp_sector_founding: "sector_founding_cash",
   org_cash: "organization_fund_cash",
   org_tribute_mint: "organization_tribute_unmodeled",
@@ -87,6 +88,7 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   // Genuine one-directional system mint: the new-player checklist completion
   // bonus has no in-world payer, so it is an attributed mint rather than
   // Phase-3 `unattributed` backlog.
+  referral_reward: "referral_reward",
   onboarding_reward: "onboarding_reward",
   // The weekly contest prize is the same kind of system mint: no in-world payer.
   contest_prize: "contest_prize",
@@ -189,6 +191,8 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   // seeding against its return per currency instead of pooling both in
   // `unattributed`.
   corp_capital_seed: "seed_capital",
+  sovereign_bailout_disbursement: "sovereign_bailout_funding",
+  sovereign_monetization: "sovereign_monetization",
   // Order-book escrow. The debit is a reservation, not destruction: the
   // standing escrow reads as a named sink bucket (same convention as
   // capacity_capex), and the refund shares the reason so a placement nets

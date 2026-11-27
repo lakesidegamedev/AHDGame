@@ -1,7 +1,9 @@
-import type { ObjectId } from "mongodb";
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import type { Db, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
-import type { CongressLeader, LeadershipRole } from "@/lib/db/types/leadership";
+import type { LeadershipRole } from "@/lib/db/types/leadership";
 import {
   applyNationalInfluenceTurn,
   applyPoliticalInfluenceDecay,
@@ -30,7 +32,7 @@ import {
   resolvePositionNiBonus,
 } from "@/lib/actions/positionNiBonus";
 import type { CountryId } from "@/lib/constants/countries";
-import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
+
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { awardOfficeHolderAchievements } from "@/lib/achievements/officeHolders";
 import { logger } from "../observability/logger";
@@ -85,16 +87,51 @@ const DEFAULT_CHAIR_ACTION_BONUS = 3;
 export async function processActionRefresh(
   characters: Character[],
   config: GameConfig | null,
-  now: Date
+  now: Date,
+  turnNumber?: number
 ): Promise<void> {
   const db = await getDb();
+  const turn =
+    turnNumber ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ??
+    0;
+  await withTurnValueSettlement(db, "actor-stat-refresh", turn, async (db) => {
+    const fresh = await charactersCollection(db)
+      .find(
+        { _id: { $in: characters.map((c) => c._id) } },
+        {
+          projection: {
+            userId: 1,
+            countryId: 1,
+            homeState: 1,
+            party: 1,
+            currentOffice: 1,
+            stats: 1,
+            statXp: 1,
+            nationalInfluence: 1,
+            politicalInfluence: 1,
+            favorability: 1,
+            infamy: 1,
+            ceoNiTenure: 1,
+            debateDecayAnchor: 1,
+          },
+        }
+      )
+      .toArray();
+    await refreshActorStats(db, fresh, config, now, turn);
+  });
+}
+
+async function refreshActorStats(
+  db: Db,
+  characters: Character[],
+  config: GameConfig | null,
+  now: Date,
+  currentTurn: number
+): Promise<void> {
   const executives = new Map<CountryId, NationalExecutiveParty>();
   const accountability = await observeGovernmentAccountability(db, executives);
-  const gameState = await gameStateCollection(db).findOne(
-    { _id: "current" },
-    { projection: { currentTurn: 1 } }
-  );
-  const currentTurn = gameState?.currentTurn ?? 0;
   /** Political-influence decay multiplier for a member of `party` in `countryId`. */
   const influenceDecayMultiplier = (countryId: string | undefined, party: string | undefined) => {
     const executive = countryId ? executives.get(countryId as CountryId) : undefined;
@@ -439,7 +476,7 @@ export async function processActionRefresh(
 
   // Seat and chair achievements are awarded here, not on profile visits, so a
   // holder who never opens their profile (or leaves before they do) still earns them.
-  await awardOfficeHolderAchievements(db, characters);
+  await afterCommit(db, () => awardOfficeHolderAchievements(unboundDb(db), characters));
 
   // NPP stat decay mirrors player decay and keeps both stats in the 0-100 range.
   const nppCursor = (await getNppsCollection(db)).find(
@@ -448,6 +485,7 @@ export async function processActionRefresh(
       projection: {
         _id: 1,
         countryId: 1,
+        homeState: 1,
         party: 1,
         politicalInfluence: 1,
         favorability: 1,

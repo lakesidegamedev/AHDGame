@@ -166,7 +166,7 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
           <h2 className="text-body font-semibold text-muted mb-4">Bond details</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-body">
             {[
-              // Bond money fields (totalIssued, perTurnCoupon, totalInterestPaid)
+              // Principal and coupon quotes use the bond denomination. Recorded interest uses anchor units.
               // denominate in `bond.currencyCode` post-v0.2.6. Normalize to ₳ + pass
               // the code so formatAmount honors wallet-pref display.
               ...(() => {
@@ -207,7 +207,10 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
                   },
                   { label: "Matures at turn", value: `T${bond.maturityTurn}` },
                   { label: "Coupon / Turn", value: fmtBond(bond.perTurnCoupon) },
-                  { label: "Total interest paid", value: fmtBond(bond.totalInterestPaid) },
+                  {
+                    label: "Recorded interest paid",
+                    value: formatAmount(bond.totalInterestPaid, bondCode),
+                  },
                 ];
               })(),
             ].map(({ label, value }) => (
@@ -217,6 +220,10 @@ export default function BondDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             ))}
           </div>
+          <p className="mt-3 text-body-sm text-muted">
+            Recorded interest includes confirmed settlement history. Earlier payments without
+            settlement evidence are not included.
+          </p>
         </div>
 
         {/* ─── CEO: Retire Debt ────────────────────────────────────────── */}

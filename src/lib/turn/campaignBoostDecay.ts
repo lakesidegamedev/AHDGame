@@ -24,6 +24,10 @@ export async function processCampaignBoostDecay(
         electionType: { $in: ["house", "caCommons", "snap_caCommons"] },
         status: { $in: ["active", "upcoming"] },
         districtCampaignBoosts: { $exists: true },
+        $or: [
+          { districtCampaignBoostLastDecayTurn: { $exists: false } },
+          { districtCampaignBoostLastDecayTurn: { $lt: currentTurn } },
+        ],
       },
       { projection: { _id: 1, districtCampaignBoosts: 1 } }
     )
@@ -39,11 +43,24 @@ export async function processCampaignBoostDecay(
             _id: e._id,
             status: { $in: ["active", "upcoming"] },
             districtCampaignBoosts: e.districtCampaignBoosts,
+            $or: [
+              { districtCampaignBoostLastDecayTurn: { $exists: false } },
+              { districtCampaignBoostLastDecayTurn: { $lt: currentTurn } },
+            ],
           },
           update:
             Object.keys(next).length > 0
-              ? { $set: { districtCampaignBoosts: next, updatedAt: now } }
-              : { $unset: { districtCampaignBoosts: "" }, $set: { updatedAt: now } },
+              ? {
+                  $set: {
+                    districtCampaignBoosts: next,
+                    districtCampaignBoostLastDecayTurn: currentTurn,
+                    updatedAt: now,
+                  },
+                }
+              : {
+                  $unset: { districtCampaignBoosts: "" },
+                  $set: { districtCampaignBoostLastDecayTurn: currentTurn, updatedAt: now },
+                },
         },
       },
     ];

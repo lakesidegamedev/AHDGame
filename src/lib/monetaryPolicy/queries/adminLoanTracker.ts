@@ -27,7 +27,7 @@ import {
 import { estimatePerTurnCurrencyIncomeHomeFace } from "@/lib/lineOfCredit/currencyIncomeEstimate";
 import { estimateTurnsToPayOffLocIdealized } from "@/lib/lineOfCredit/locTurnEstimate";
 import { getPersonalBalance, getHomeCurrency } from "@/lib/currency/characterFunds";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { buildLocSnapshot } from "@/lib/lineOfCredit/buildSnapshot";
 import {
   computeLocBorrowerComposite,

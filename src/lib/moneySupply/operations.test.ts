@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { BankCharter } from "@/lib/db/types/bank";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { executeMonetaryOperation } from "./operations";
 vi.mock("@/lib/banking/featureFlag", () => ({
   isPrivateBankingEnabled: vi.fn().mockResolvedValue(true),
@@ -22,6 +23,8 @@ describe("liquidity operation wrapper", () => {
           _id: new ObjectId(),
           bankCharter: {
             status: "active",
+            type: "retail",
+            charteredTurn: 1,
             currency: "USD",
             cashReserves: 0,
             cbMarginDebt: 0,
@@ -55,7 +58,14 @@ describe("liquidity operation wrapper", () => {
       "corporations",
       [0, 0].map((totalDeposits) => ({
         _id: new ObjectId(),
-        bankCharter: { status: "active", currency: "USD", cashReserves: 0, totalDeposits },
+        bankCharter: {
+          status: "active",
+          type: "retail",
+          charteredTurn: 1,
+          currency: "USD",
+          cashReserves: 0,
+          totalDeposits,
+        },
       }))
     );
     await expect(
@@ -96,6 +106,8 @@ describe("liquidity operation wrapper", () => {
           name: "Euro bank",
           bankCharter: {
             status: "active",
+            type: "retail",
+            charteredTurn: 1,
             currency: "EUR",
             cashReserves: 0,
             cbMarginDebt: 0,

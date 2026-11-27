@@ -3,7 +3,7 @@ import { SovereignBondRisk } from "@/components/SovereignBondRisk";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { trackAction } from "@/lib/observability/actionBreadcrumb";
 import { Button, useDialogA11y } from "@/components/ui";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
@@ -57,6 +57,7 @@ export function BondTradeModal({
   } = useCurrency();
   const { euroMonetaryUnion } = useWorldFlags();
   const unitsInputId = useId();
+  const pendingTrades = useRef(new Map<string, string>());
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [account, setAccount] = useState<"character" | "corporation" | "investmentBank">(
     "character"
@@ -498,16 +499,22 @@ export function BondTradeModal({
         account === "corporation" && userContext.myCorporation
           ? `?corporationId=${userContext.myCorporation.id}`
           : "";
+      const fingerprint = JSON.stringify([bondId, side, units, requestPayCurrency, corpParam]);
+      const requestId = pendingTrades.current.get(fingerprint) ?? crypto.randomUUID();
+      pendingTrades.current.set(fingerprint, requestId);
       trackAction(`bond.${side}`, { bondId, units, account });
       const res = await fetch(`/api/bonds/${bondId}/${side}${corpParam}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           units,
+          requestId,
           ...(requestPayCurrency ? { payCurrency: requestPayCurrency } : {}),
         }),
       });
       const json = await res.json();
+      if (res.ok || (res.status < 500 && res.status !== 409))
+        pendingTrades.current.delete(fingerprint);
       if (!res.ok) {
         setError(apiErrorText(json, `Failed to ${side} bond`));
         return;

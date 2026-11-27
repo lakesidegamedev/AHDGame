@@ -1,10 +1,12 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, IndexFund, IndexFundTransaction, ShareOrder } from "@/lib/db/types";
 import { corpLiquidCapitalToAnchor } from "@/lib/currency/corporationCapital";
-import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
-import { emitTx, type TxInput } from "@/lib/financialTxLog/emit";
+import { insertFundTransaction, insertFundTransactionsBulk } from "@/lib/indexFunds/fundQueries";
+import { emitTx, emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { shareOrdersCollection } from "@/lib/db/repositories/shareOrders";
 
 /**
@@ -43,10 +45,40 @@ async function atomicallyDebitFundCashAnchor(
 /** Refund `amountAnchor` back to a fund's `cashAnchor`. */
 async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
   if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
-  await indexFundsCollection(db).updateOne(
+  const credit = await indexFundsCollection(db).updateOne(
     { _id: fundId },
     { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: new Date() } }
   );
+  if (credit.matchedCount !== 1) throw new Error("Fund escrow recipient is missing");
+}
+
+async function fenceFundOrderBook(db: Db, fundId: ObjectId): Promise<IndexFund | null> {
+  return indexFundsCollection(db).findOneAndUpdate(
+    { _id: fundId },
+    {
+      $inc: { shareOrderRevision: 1 },
+      $set: { updatedAt: new Date() },
+    },
+    {
+      returnDocument: "after",
+      projection: { name: 1, anchorCurrencyCode: 1, holdings: 1, cashAnchor: 1, mandate: 1 },
+    }
+  );
+}
+
+async function fenceIssuerQuote(
+  db: Db,
+  corp: PlaceFundShareBuyOrderInput["corp"]
+): Promise<boolean> {
+  const claim = await corporationsCollection(db).updateOne(
+    {
+      _id: corp._id,
+      liquidCurrencyCode: corp.liquidCurrencyCode ?? { $exists: false },
+      countryId: corp.countryId ?? { $exists: false },
+    },
+    { $inc: { shareMarketRevision: 1 } }
+  );
+  return claim.matchedCount === 1;
 }
 
 export interface PlaceFundShareBuyOrderInput {
@@ -95,15 +127,19 @@ export async function placeFundShareBuyOrder(
   db: Db,
   input: PlaceFundShareBuyOrderInput
 ): Promise<PlaceFundShareBuyOrderResult> {
+  return withSessionDb(db, (transactionDb) =>
+    placeFundShareBuyOrderInTransaction(transactionDb, input)
+  );
+}
+
+async function placeFundShareBuyOrderInTransaction(
+  db: Db,
+  input: PlaceFundShareBuyOrderInput
+): Promise<PlaceFundShareBuyOrderResult> {
   const { fund, corp, shares, limitPriceLocal, fxRate } = input;
-  if (!input.verifiedNotPickedStocks) {
-    const current = await indexFundsCollection(db).findOne(
-      { _id: fund._id },
-      { projection: { mandate: 1 } }
-    );
-    if (current?.mandate?.mode === "picked_stocks")
-      return { ok: false, reason: "This fund buys available shares during rebalancing." };
-  }
+  const current = await fenceFundOrderBook(db, fund._id);
+  if (!current || current.mandate?.mode === "picked_stocks")
+    return { ok: false, reason: "This fund cannot place resting buy orders." };
 
   if (!Number.isFinite(shares) || shares <= 0) {
     return { ok: false, reason: "Invalid share quantity" };
@@ -117,6 +153,8 @@ export async function placeFundShareBuyOrder(
   const escrowAmount = shares * limitPriceLocal;
   const escrowAnchor = corpLiquidCapitalToAnchor(escrowAmount, corp, fxRate);
 
+  if (!(await fenceIssuerQuote(db, corp)))
+    return { ok: false, reason: "The issuer quote changed. Refresh before placing an order." };
   const debited = await atomicallyDebitFundCashAnchor(db, fund._id, escrowAnchor);
   if (!debited) {
     return { ok: false, reason: "Insufficient fund cash for escrow" };
@@ -126,16 +164,11 @@ export async function placeFundShareBuyOrder(
   const rows = fundBuyOrderRows(input, orderId, escrowAmount, escrowAnchor, new Date());
   try {
     await shareOrdersCollection(db).insertOne(rows.order);
-    if (input.txSink) input.txSink.push(rows.escrowTx);
-    else await insertFundTransaction(db, rows.escrowTx);
-    if (input.ledgerSink) input.ledgerSink.push(rows.ledgerEntry);
-    else
-      await emitTx(db, rows.ledgerEntry, input.thresholds, {
-        turnLengthMinutes: input.turnLengthMinutes,
-      });
+    await insertFundTransaction(db, rows.escrowTx);
+    await emitTx(db, rows.ledgerEntry, input.thresholds, {
+      turnLengthMinutes: input.turnLengthMinutes,
+    });
   } catch (err) {
-    // Roll the escrow back if we couldn't persist the order.
-    await refundFundCashAnchor(db, fund._id, escrowAnchor);
     throw err;
   }
 
@@ -237,14 +270,54 @@ export async function placeFundQuotesBatch(
   escrowTxs: Omit<IndexFundTransaction, "_id">[];
   ledgerEntries: TxInput[];
 } | null> {
-  const current = await indexFundsCollection(db).findOne(
-    { _id: fund._id },
-    { projection: { cashAnchor: 1, mandate: 1 } }
+  return withSessionDb(db, (transactionDb) =>
+    placeFundQuotesBatchInTransaction(transactionDb, fund, placements, reservedSharesByCorp)
   );
+}
+
+async function placeFundQuotesBatchInTransaction(
+  db: Db,
+  fund: Pick<IndexFund, "_id" | "name" | "anchorCurrencyCode" | "holdings">,
+  placements: readonly FundQuotePlacement[],
+  reservedSharesByCorp: Map<string, number>
+): Promise<{
+  results: { bid: PlaceFundShareBuyOrderResult; ask?: PlaceFundShareBuyOrderResult }[];
+  escrowTxs: Omit<IndexFundTransaction, "_id">[];
+  ledgerEntries: TxInput[];
+} | null> {
+  const current = await fenceFundOrderBook(db, fund._id);
   if (!current || current.mandate?.mode === "picked_stocks") return null;
+  fund = { ...fund, ...current };
+  const issuers = new Map(placements.map((p) => [String(p.bid.corp._id), p.bid.corp]));
+  if (issuers.size) {
+    const fenced = await corporationsCollection(db).bulkWrite(
+      [...issuers.values()].map((corp) => ({
+        updateOne: {
+          filter: {
+            _id: corp._id,
+            liquidCurrencyCode: corp.liquidCurrencyCode ?? { $exists: false },
+            countryId: corp.countryId ?? { $exists: false },
+          },
+          update: { $inc: { shareMarketRevision: 1 } },
+        },
+      })),
+      { ordered: true }
+    );
+    if (fenced.matchedCount !== issuers.size) return null;
+  }
+  const openAsks = await shareOrdersCollection(db)
+    .find(
+      { placerFundId: fund._id, type: "sell", status: "open" },
+      { projection: { corporationId: 1, sharesRemaining: 1 } }
+    )
+    .toArray();
   let cash = current.cashAnchor;
   let totalEscrow = 0;
-  const reserved = new Map(reservedSharesByCorp);
+  const reserved = new Map<string, number>();
+  for (const order of openAsks) {
+    const key = String(order.corporationId);
+    reserved.set(key, (reserved.get(key) ?? 0) + order.sharesRemaining);
+  }
   const now = new Date();
   const orders: ShareOrder[] = [];
   const escrowTxs: Omit<IndexFundTransaction, "_id">[] = [];
@@ -300,26 +373,18 @@ export async function placeFundQuotesBatch(
     if (!debited.matchedCount) return null;
   }
   if (orders.length) {
-    try {
-      await shareOrdersCollection(db).insertMany(orders, { ordered: true });
-    } catch (err) {
-      // Roll back the escrow of every bid whose order did not persist.
-      const landed = new Set(
-        (
-          await shareOrdersCollection(db)
-            .find({ _id: { $in: orders.map((order) => order._id) } }, { projection: { _id: 1 } })
-            .toArray()
-        ).map((row) => row._id.toString())
-      );
-      const lost = orders
-        .filter((order) => order.type === "buy" && !landed.has(order._id.toString()))
-        .reduce((sum, order) => sum + (order.escrowAnchor ?? 0), 0);
-      await refundFundCashAnchor(db, fund._id, lost);
-      throw err;
-    }
+    await shareOrdersCollection(db).insertMany(orders, { ordered: true });
+    await insertFundTransactionsBulk(db, escrowTxs);
+    await emitTxBulk(
+      db,
+      ledgerEntries,
+      placements[0]?.bid.thresholds ?? (await loadTxThresholds(db))
+    );
   }
-  for (const [key, value] of reserved) reservedSharesByCorp.set(key, value);
-  return { results, escrowTxs, ledgerEntries };
+  await afterCommit(db, () => {
+    for (const [key, value] of reserved) reservedSharesByCorp.set(key, value);
+  });
+  return { results, escrowTxs: [], ledgerEntries: [] };
 }
 
 export interface PlaceFundShareSellOrderInput {
@@ -343,19 +408,26 @@ export async function placeFundShareSellOrder(
   db: Db,
   input: PlaceFundShareSellOrderInput
 ): Promise<PlaceFundShareBuyOrderResult> {
-  const { fund, corp } = input;
-  const reserved =
-    input.reservedOpenShares ??
-    (
-      await shareOrdersCollection(db)
-        .find({
-          placerFundId: fund._id,
-          corporationId: corp._id,
-          type: "sell",
-          status: "open",
-        })
-        .toArray()
-    ).reduce((sum, order) => sum + order.sharesRemaining, 0);
+  return withSessionDb(db, (transactionDb) =>
+    placeFundShareSellOrderInTransaction(transactionDb, input)
+  );
+}
+
+async function placeFundShareSellOrderInTransaction(
+  db: Db,
+  input: PlaceFundShareSellOrderInput
+): Promise<PlaceFundShareBuyOrderResult> {
+  const corp = input.corp;
+  const fund = await fenceFundOrderBook(db, input.fund._id);
+  if (!fund) return { ok: false, reason: "Fund is missing" };
+  const reserved = (
+    await shareOrdersCollection(db)
+      .find(
+        { placerFundId: fund._id, corporationId: corp._id, type: "sell", status: "open" },
+        { projection: { sharesRemaining: 1 } }
+      )
+      .toArray()
+  ).reduce((sum, order) => sum + order.sharesRemaining, 0);
   const decision = fundSellOrderDecision(fund, { ...input, reservedOpenShares: reserved });
   if (!decision.ok) return decision;
 
@@ -439,14 +511,47 @@ export async function cancelFundShareOrder(
     ledgerSink?: TxInput[];
   }
 ): Promise<void> {
+  return withSessionDb(db, (transactionDb) =>
+    cancelFundShareOrderInTransaction(transactionDb, orderId, turn, options)
+  );
+}
+
+async function cancelFundShareOrderInTransaction(
+  db: Db,
+  orderId: ObjectId,
+  turn?: number,
+  options?: {
+    /** Preloaded thresholds for the refund row; avoids a per-cancel read. */
+    thresholds?: TxThresholds;
+    /** Preloaded turn cadence for the transaction expiry date. */
+    turnLengthMinutes?: number;
+    /** Preloaded fund metadata; used only when it matches the claimed order. */
+    fund?: Pick<IndexFund, "_id" | "name" | "anchorCurrencyCode">;
+    /** Caller flushes refund rows after all completed cancellations. */
+    ledgerSink?: TxInput[];
+  }
+): Promise<void> {
   // Atomically claim the order so a concurrent fill/cancel can't double-refund.
   const claimed = await shareOrdersCollection(db).findOneAndUpdate(
-    { _id: orderId, status: "open", activeShareFillKey: { $exists: false } },
+    {
+      _id: orderId,
+      status: "open",
+      placerFundId: { $exists: true },
+      activeShareFillKey: { $exists: false },
+    },
     { $set: { status: "cancelled", updatedAt: new Date() } },
     { returnDocument: "before" }
   );
 
-  if (!claimed) return;
+  if (!claimed) {
+    const remaining = await shareOrdersCollection(db).findOne(
+      { _id: orderId },
+      { projection: { status: 1 } }
+    );
+    if (remaining?.status === "open")
+      throw new Error("Fund order is settling; escrow remains held");
+    return;
+  }
   if (!claimed.placerFundId) {
     // Not a fund order - restore status; this helper only handles fund orders.
     await shareOrdersCollection(db).updateOne(
@@ -493,11 +598,9 @@ export async function cancelFundShareOrder(
             escrowAmountAnchor: refundAnchor,
           },
         };
-        if (options?.ledgerSink) options.ledgerSink.push(ledgerEntry);
-        else
-          await emitTx(db, ledgerEntry, options?.thresholds, {
-            turnLengthMinutes: options?.turnLengthMinutes,
-          });
+        await emitTx(db, ledgerEntry, options?.thresholds, {
+          turnLengthMinutes: options?.turnLengthMinutes,
+        });
       }
     }
   }
@@ -517,6 +620,18 @@ export async function cancelFundShareOrdersBatch(
   orderIds: readonly ObjectId[],
   turn: number | undefined,
   options: { ledgerSink: TxInput[] }
+): Promise<boolean> {
+  return withSessionDb(db, (transactionDb) =>
+    cancelFundShareOrdersBatchInTransaction(transactionDb, fund, orderIds, turn, options)
+  );
+}
+
+async function cancelFundShareOrdersBatchInTransaction(
+  db: Db,
+  fund: Pick<IndexFund, "_id" | "name" | "anchorCurrencyCode">,
+  orderIds: readonly ObjectId[],
+  turn: number | undefined,
+  _options: { ledgerSink: TxInput[] }
 ): Promise<boolean> {
   if (!orderIds.length) return true;
   const claimId = new ObjectId();
@@ -548,9 +663,10 @@ export async function cancelFundShareOrdersBatch(
   const refundAnchor = refunds.reduce((sum, order) => sum + (order.escrowAnchor ?? 0), 0);
   if (refundAnchor > 0) await refundFundCashAnchor(db, fund._id, refundAnchor);
   if (turn === undefined) return true;
+  const entries: TxInput[] = [];
   for (const order of refunds) {
     const amount = order.escrowAnchor ?? 0;
-    options.ledgerSink.push({
+    entries.push({
       type: "stock_order_refund",
       turn,
       createdAt: now,
@@ -570,5 +686,6 @@ export async function cancelFundShareOrdersBatch(
       },
     });
   }
+  if (entries.length) await emitTxBulk(db, entries, await loadTxThresholds(db));
   return true;
 }

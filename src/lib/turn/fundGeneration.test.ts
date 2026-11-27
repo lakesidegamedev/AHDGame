@@ -1,3 +1,11 @@
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { processFundGeneration } from "./fundGeneration";
 import type { Db } from "mongodb";
@@ -29,15 +37,20 @@ import { emitTxBulk } from "@/lib/financialTxLog/emit";
 
 describe("fundGeneration", () => {
   let db: MockDb;
+  let cohort: Character[] = [];
 
   beforeEach(async () => {
     db = createMockDb();
+    cohort = [];
+    db.collection("characters").find.mockImplementation(
+      () => ({ toArray: async () => cohort }) as never
+    );
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     vi.clearAllMocks();
   });
 
-  const createCharacter = (overrides?: Partial<Character>): Character =>
-    ({
+  const createCharacter = (overrides?: Partial<Character>): Character => {
+    const character = {
       _id: new ObjectId(),
       name: "Test Character",
       homeState: "US-CA",
@@ -47,7 +60,10 @@ describe("fundGeneration", () => {
       currentOffice: null,
       funds: 0,
       ...overrides,
-    }) as Character;
+    } as Character;
+    cohort.push(character);
+    return character;
+  };
 
   const createState = (id: string, population: number): State =>
     ({

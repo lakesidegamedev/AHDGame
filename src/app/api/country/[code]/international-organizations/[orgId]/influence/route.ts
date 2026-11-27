@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/international-organizations/[orgId]/influence
 // Foreign minister of `code` (a current member) spends the organization's pooled
 // fund to pull a nation toward that org's alignment pole. The play is queued and
@@ -18,7 +22,7 @@ import {
   commitInfluencePlay,
   type CommitPlayFailure,
 } from "@/lib/alignment/commands/commitInfluencePlay";
-import type { GameState } from "@/lib/db/types";
+
 import { resolveGameYear } from "@/lib/era/era";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -63,58 +67,66 @@ export async function POST(
     const rl = checkRateLimit(`org-influence:${ip}`, 10, 60_000);
     if (!rl.ok) return rateLimitResponse(rl.retryAfter);
 
-    const db = await getDb();
-    const orgDef = await loadOrganizationDef(db, orgId);
-    if (!orgDef) {
-      return NextResponse.json(badRequest("Unknown organization").toJson(), { status: 400 });
-    }
+    return await withRecordedEconomicCommand(
+      await getDb(),
+      "organization-influence-play",
+      String(auth.user.userId),
+      economicRequestId(request),
+      { countryId, orgId, ...body.data },
+      async (db) => {
+        const orgDef = await loadOrganizationDef(db, orgId);
+        if (!orgDef) {
+          return NextResponse.json(badRequest("Unknown organization").toJson(), { status: 400 });
+        }
 
-    const fm = await requireForeignMinister(
-      countryId,
-      auth.user.character._id,
-      auth.user.character.name,
-      db
+        const fm = await requireForeignMinister(
+          countryId,
+          auth.user.character._id,
+          auth.user.character.name,
+          db
+        );
+        if (!fm.ok) return fm.response;
+
+        // Everything downstream uses the def's canonical id, never the raw URL
+        // segment, so a differently-cased path can never resolve an org here and
+        // then miss its alignment channel there.
+        const organizationId = orgDef.id;
+
+        if (!(await isMember(db, organizationId, countryId))) {
+          return NextResponse.json(
+            badRequest(`${countryId} is not a member of ${organizationId}.`).toJson(),
+            { status: 400 }
+          );
+        }
+
+        // Read the clock here so the command stays free of clock lookups and is
+        // trivially testable.
+        const gs = await gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: { currentYear: 1, startingYear: 1 } }
+        );
+        const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
+        const turn = await getCurrentTurn(db);
+
+        const result = await commitInfluencePlay({
+          db,
+          organizationId,
+          sponsorCountryId: countryId,
+          targetEntityId: body.data.targetEntityId.toUpperCase(),
+          amountLocal: body.data.amountLocal,
+          turn,
+          year,
+        });
+
+        if (!result.ok) {
+          return NextResponse.json(badRequest(FAILURE_MESSAGE[result.reason]).toJson(), {
+            status: 400,
+          });
+        }
+
+        return NextResponse.json({ ok: true, amountUsd: result.amountUsd });
+      }
     );
-    if (!fm.ok) return fm.response;
-
-    // Everything downstream uses the def's canonical id, never the raw URL
-    // segment, so a differently-cased path can never resolve an org here and
-    // then miss its alignment channel there.
-    const organizationId = orgDef.id;
-
-    if (!(await isMember(db, organizationId, countryId))) {
-      return NextResponse.json(
-        badRequest(`${countryId} is not a member of ${organizationId}.`).toJson(),
-        { status: 400 }
-      );
-    }
-
-    // Read the clock here so the command stays free of clock lookups and is
-    // trivially testable.
-    const gs = await gameStateCollection(db).findOne(
-      { _id: "current" },
-      { projection: { currentYear: 1, startingYear: 1 } }
-    );
-    const year = (gs ? resolveGameYear(gs) : null) ?? new Date().getFullYear();
-    const turn = await getCurrentTurn(db);
-
-    const result = await commitInfluencePlay({
-      db,
-      organizationId,
-      sponsorCountryId: countryId,
-      targetEntityId: body.data.targetEntityId.toUpperCase(),
-      amountLocal: body.data.amountLocal,
-      turn,
-      year,
-    });
-
-    if (!result.ok) {
-      return NextResponse.json(badRequest(FAILURE_MESSAGE[result.reason]).toJson(), {
-        status: 400,
-      });
-    }
-
-    return NextResponse.json({ ok: true, amountUsd: result.amountUsd });
   } catch (err) {
     return handleRouteError(err);
   }

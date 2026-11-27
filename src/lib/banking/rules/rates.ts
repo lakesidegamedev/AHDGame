@@ -6,7 +6,7 @@
 
 import type { BankCharter } from "@/lib/db/types/bank";
 import type { RateCorridor } from "@/lib/banking/separationLaw";
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 
 /** Floor on effective deposit rate (percent). Provisional - flagged for user review. */
 export const MIN_DEPOSIT_RATE_PERCENT = 0.05;

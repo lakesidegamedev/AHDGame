@@ -2,7 +2,7 @@
  * Discrete tension shocks share one bounded formula across ordinary and replayed events.
  * planTensionEvent preserves the pressure floor and caps the visible event history.
  */
-import type { ColdWarTensionState, TensionEventKind } from "../tension";
+import type { ColdWarTensionState, TensionEventKind } from "./tension";
 
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value * 10) / 10));
 export function planTensionEvent(

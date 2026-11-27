@@ -1,3 +1,6 @@
+import { NATIONAL_SCOPE } from "@/lib/constants/nationalScope";
+import { nationalDemographicScope } from "@/lib/demographics/rules/nationalPolicyScope";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Demographic Effects Processing Module
  *
@@ -40,9 +43,7 @@ import type {
   DemographicEffectTarget,
   LegislationType,
 } from "@/lib/db/types/legislation";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { State } from "@/lib/db/types/state";
-import { getFederalMultiplier } from "@shared/constants/formulas";
+
 import {
   censusCachedStateLean,
   type CachedStateLeanContext,
@@ -54,7 +55,7 @@ import {
   type MediaPull,
 } from "@/lib/mediaEditorial/opinionPull";
 import type { StateSlant } from "@/lib/mediaEditorial/slant";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
+
 import { isBucketTarget } from "@/lib/demographics/turnoutTarget";
 import {
   applyDurableBucketShift,
@@ -528,7 +529,18 @@ function computeCacheUpdate(
 export async function processAllStateDemographics(
   db: Db,
   knownLegislationTypes?: readonly LegislationType[],
-  /** Current turn; makes the newsroom slant pull apply at most once per turn. */
+  /** Scheduled calls supply the turn to settle all demographic effects once. Omit only in controlled simulations. */
+  turn?: number
+): Promise<number> {
+  if (turn !== undefined)
+    return withTurnValueSettlement(db, "legislative-demographics", turn, (db) =>
+      processAllStateDemographicsWork(db, knownLegislationTypes, turn)
+    );
+  return processAllStateDemographicsWork(db, knownLegislationTypes);
+}
+async function processAllStateDemographicsWork(
+  db: Db,
+  knownLegislationTypes?: readonly LegislationType[],
   turn?: number
 ): Promise<number> {
   // Bulk-fetch ALL data upfront in parallel (eliminates per-state queries)
@@ -597,22 +609,19 @@ export async function processAllStateDemographics(
     policiesByState.set(policy.stateId, list);
   }
 
-  // Build federal/UK national policies with country-aware scope multipliers.
-  // US uses 1/50 and UK uses 1/12 so that the sum of per-region effects equals
-  // the intended national total regardless of region count.
-  const federalPolicies: ActivePolicy[] = (policiesByState.get("federal") ?? []).map((p) => ({
-    ...p,
-    scopeMultiplier: getFederalMultiplier("US"),
-  }));
-  const ukNationalPolicies: ActivePolicy[] = (policiesByState.get("uk_national") ?? []).map(
-    (p) => ({ ...p, scopeMultiplier: getFederalMultiplier("UK") })
-  );
-  const jpNationalPolicies: ActivePolicy[] = (policiesByState.get("jp_national") ?? []).map(
-    (p) => ({ ...p, scopeMultiplier: getFederalMultiplier("JP") })
-  );
-  const deNationalPolicies: ActivePolicy[] = (policiesByState.get("de_national") ?? []).map(
-    (p) => ({ ...p, scopeMultiplier: getFederalMultiplier("DE") })
-  );
+  const regionCounts = new Map<string, number>();
+  for (const state of states)
+    regionCounts.set(state.countryId, (regionCounts.get(state.countryId) ?? 0) + 1);
+  const nationalPoliciesByCountry = new Map<string, ActivePolicy[]>();
+  for (const [nationalId, countryId] of Object.entries(NATIONAL_SCOPE)) {
+    nationalPoliciesByCountry.set(
+      countryId,
+      (policiesByState.get(nationalId) ?? []).map((policy) => ({
+        ...policy,
+        scopeMultiplier: nationalDemographicScope(countryId, regionCounts.get(countryId) ?? 0),
+      }))
+    );
+  }
 
   // Build demographics lookup
   const demographicsMap = new Map(allDemographics.map((d) => [String(d._id), d]));
@@ -641,13 +650,7 @@ export async function processAllStateDemographics(
 
   for (const state of states) {
     // Build combined policies for this state
-    const nationalPoliciesMap: Record<string, ActivePolicy[]> = {
-      US: federalPolicies,
-      UK: ukNationalPolicies,
-      JP: jpNationalPolicies,
-      DE: deNationalPolicies,
-    };
-    const nationalPolicies = nationalPoliciesMap[state.countryId] ?? federalPolicies;
+    const nationalPolicies = nationalPoliciesByCountry.get(state.countryId) ?? [];
     const statePoliciesArray = policiesByState.get(state._id) ?? [];
     const stateWithMultiplier: ActivePolicy[] = statePoliciesArray.map((p) => ({
       ...p,

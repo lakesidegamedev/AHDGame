@@ -1,3 +1,7 @@
+// This suite checks orchestration with all reset and bootstrap bodies stubbed.
+vi.mock("@/lib/admin/resetAdmission", () => ({
+  withWorldResetAdmission: (_db: unknown, work: () => unknown) => work(),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";

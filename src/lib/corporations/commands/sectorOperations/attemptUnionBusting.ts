@@ -1,7 +1,7 @@
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, State } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
 import { getGameState } from "@/lib/gameState";
 import { isTurnProcessingNow } from "@/lib/turn/processingLock";
@@ -24,7 +24,15 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { notifyUnionOfBustingAttempt } from "@/lib/unions/unionBustingNotice";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
+import {
+  anchorToCorpCapital,
+  corpCapitalToAnchor,
+  fxRateForCorpFromMap,
+  fxRateForSectorHostFromMap,
+  resolveSectorHostCurrencyCode,
+  loadValuationFxRates,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -126,8 +134,21 @@ export async function attemptUnionBusting(
   // capacity nameplate in exactly that case and is unchanged for a running
   // sector. Below plants it IS `revenue`, so the price does not move.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+  const fx = await loadValuationFxRates(db);
+  const site = { ...sector, countryId };
+  const hostRate = fxRateForSectorHostFromMap(site, corporation, fx);
+  const hostScale = sectorEconomicScale(
+    sector,
+    plantsEnabled,
+    await loadWorldEraUnitScale(db),
+    hostRate
+  );
   const cashCost = unionBustingCashCost(
-    sectorEconomicScale(sector, plantsEnabled, await loadWorldEraUnitScale(db))
+    anchorToCorpCapital(
+      corpCapitalToAnchor(hostScale, resolveSectorHostCurrencyCode(site, corporation), hostRate),
+      resolveCorpLiquidCurrencyCode(corporation),
+      fxRateForCorpFromMap(corporation, fx)
+    )
   );
   if ((corporation.liquidCapital ?? 0) < cashCost) {
     return { ok: false, status: 402, error: "Not enough cash to attempt union-busting." };

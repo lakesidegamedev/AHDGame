@@ -727,7 +727,9 @@ export async function appointPrimeMinister(
   const priorGov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
   const priorPmCharacterId = priorGov?.pmCharacterId ?? null;
   const isSameHolder =
-    characterId != null && priorPmCharacterId != null && priorPmCharacterId.equals(characterId);
+    characterId != null
+      ? priorPmCharacterId?.equals(characterId) === true
+      : nppId != null && priorGov?.pmNppId?.equals(nppId) === true;
   const outgoingPlayerPm =
     priorPmCharacterId && !isSameHolder
       ? await (

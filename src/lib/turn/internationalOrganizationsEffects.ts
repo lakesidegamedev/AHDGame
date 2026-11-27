@@ -40,7 +40,7 @@ import {
   warEntryIsImmediate,
 } from "@/lib/military/warEntryPolicy";
 import type { OrganizationLegislation } from "@/lib/db/types/internationalOrganization";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+
 import {
   planOrganizationWarDeclarationFromDb,
   type OrganizationWarPlanningContext,
@@ -124,6 +124,8 @@ export async function applyResolutionEffect(
       if (!recipient || !amount) return;
       const paid = await payOrganizationAid(db, resolution.organizationId, recipient, amount, {
         context: cashContext,
+        turn: currentTurn,
+        settlementKey: `resolution:${resolution._id}`,
       });
       if (paid) {
         // The political half of the bargain: a bloc that pays its clients keeps
@@ -131,6 +133,7 @@ export async function applyResolutionEffect(
         // and locked gate as everything else that moves the meter.
         await queueAidAlignmentPull({
           db,
+          sourceResolutionId: resolution._id,
           organizationId: resolution.organizationId,
           recipient,
           amountUsd: localToUsd(

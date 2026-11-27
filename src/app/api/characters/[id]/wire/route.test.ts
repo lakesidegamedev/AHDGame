@@ -4,6 +4,12 @@ import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: async (db: Db, work: (db: Db) => Promise<Response>) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", () => ({ afterCommit: (_db: Db, work: () => unknown) => work() }));
+vi.mock("@/lib/gameState", () => ({ getGameStateCore: async () => ({ currentTurn: 100 }) }));
+
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn().mockReturnValue({ ok: true }),
@@ -99,7 +105,7 @@ describe("POST /api/characters/[id]/wire", () => {
     expect(db.collectionMocks.characters.updateOne).not.toHaveBeenCalled();
   });
 
-  it("rolls back the quota claim when the sender debit loses a balance race", async () => {
+  it("refuses when the sender debit loses a balance race without issuing a compensating write", async () => {
     await setupBase();
     const targetId = new ObjectId();
     const senderId = new ObjectId();
@@ -150,13 +156,7 @@ describe("POST /api/characters/[id]/wire", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(db.collectionMocks.users.updateOne).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ _id: senderUserId }),
-      expect.objectContaining({
-        $inc: expect.objectContaining({ wireQuotaUsed: -1_000_000 }),
-      })
-    );
+    expect(db.collectionMocks.users.updateOne).toHaveBeenCalledTimes(1);
   });
 
   it("blocks a cross-country wire when forex is disabled", async () => {

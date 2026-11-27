@@ -77,6 +77,25 @@ describe("rename is limited to the CEO character", () => {
   });
 });
 describe("rename cash and obligation guard", () => {
+  it("charges only once when two requests quote the same eligible cooldown", async () => {
+    const results = await Promise.all([request(), request()]);
+    expect(results.map((result) => result.status).sort()).toEqual([200, 409]);
+    expect(await memory.collection("corporations").findOne({ _id: id })).toMatchObject({
+      liquidCapital: CORPORATION_RENAME_COST,
+      marketingStrength: 75,
+    });
+    expect(logWireEvent).toHaveBeenCalledTimes(1);
+  });
+  it("refuses a quote after its currency changed without debiting the new wallet", async () => {
+    const collection = memory.collection("corporations");
+    const update = collection.updateOne.bind(collection);
+    vi.spyOn(collection, "updateOne").mockImplementation(async (...args) => {
+      collection.docs[0].liquidCurrencyCode = "CAD";
+      return update(...args);
+    });
+    expect((await request()).status).toBe(409);
+    expect(collection.docs[0].liquidCapital).toBe(2 * CORPORATION_RENAME_COST);
+  });
   it("charges and renames an eligible corporation once", async () => {
     expect((await request()).status).toBe(200);
     expect(await memory.collection("corporations").findOne({ _id: id })).toMatchObject({

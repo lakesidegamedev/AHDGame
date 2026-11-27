@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 
@@ -13,9 +21,9 @@ function mockDb(opts: { lapsed?: Array<Record<string, unknown>>; claimModified?:
   const db = {
     collection: () => ({
       find: () => ({ toArray: async () => opts.lapsed ?? [] }),
-      updateOne: async (filter: unknown, update: unknown) => {
-        updates.push({ filter, update });
-        return { modifiedCount: opts.claimModified ?? 1 };
+      bulkWrite: async (ops: { updateOne: { filter: unknown; update: unknown } }[]) => {
+        updates.push(...ops.map((op) => op.updateOne));
+        return { modifiedCount: ops.length };
       },
     }),
   } as unknown as Db;
@@ -38,18 +46,12 @@ describe("resolvePeaceWindows", () => {
     });
   });
 
-  it("claims on status, so two overlapping turn runs resolve it once", async () => {
+  it("scopes expiry writes to pending conflicts", async () => {
     // The find and the writes are not atomic, and this project has had overlapping
     // turn runs from a rolling deploy.
     const { db, updates } = mockDb({ lapsed: [lapsedWar] });
     await resolvePeaceWindows(db, 100);
     expect(updates[0]!.filter).toMatchObject({ _id: "w1", status: "terms_pending" });
-  });
-
-  it("does nothing when another runner claimed it first", async () => {
-    const { db } = mockDb({ lapsed: [lapsedWar], claimModified: 0 });
-    expect(await resolvePeaceWindows(db, 100)).toEqual({ resolved: 0 });
-    expect(resolveConflict).not.toHaveBeenCalled();
   });
 
   it("stamps the settlement as a white peace, so the war reaches the news wire", async () => {

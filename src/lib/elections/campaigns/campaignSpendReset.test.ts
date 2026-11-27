@@ -64,7 +64,7 @@ describe("processCampaignSpendReset", () => {
       collection: vi.fn().mockReturnValue({ updateMany: mockUpdateMany }),
     } as unknown as Db;
 
-    const result = await processCampaignSpendReset(mockDb);
+    const result = await processCampaignSpendReset(mockDb, 100);
 
     expect(result).toEqual({ campaignsReset: 3 });
     expect(mockUpdateMany).toHaveBeenCalledOnce();
@@ -83,3 +83,13 @@ describe("processCampaignSpendReset", () => {
     expect(JSON.stringify(setStage)).toContain(String(SPEND_STOCK_RETENTION));
   });
 });
+
+// Rollover formula fixture; atomic recurrence tests cover phase recovery.
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

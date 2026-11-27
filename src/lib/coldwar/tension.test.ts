@@ -1,6 +1,9 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import {
   applyTensionEvent,

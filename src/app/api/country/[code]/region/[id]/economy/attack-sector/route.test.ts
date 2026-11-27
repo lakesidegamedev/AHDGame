@@ -1,9 +1,23 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
-const withTransaction = vi.fn(async (callback: () => Promise<void>) => callback());
+const withTransaction = vi.fn(async (callback: (session: object) => Promise<void>) => callback({}));
 const endSession = vi.fn().mockResolvedValue(undefined);
 const makeSession = () => ({ withTransaction, endSession });
 vi.mock("@/lib/mongodb", () => ({
@@ -60,6 +74,9 @@ beforeEach(async () => {
   vi.clearAllMocks();
   assertTransactionSupport.mockResolvedValue(true);
   db = createMockDb();
+  const { getMongoClient } = await import("@/lib/mongodb");
+  vi.mocked(getMongoClient).mockResolvedValue({ startSession: () => makeSession() } as never);
+  Object.assign(db, { client: await getMongoClient() });
   db.collection("gameState");
   db.collection("states");
   db.collection("users");
@@ -361,7 +378,7 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     expect(withTransaction).toHaveBeenCalledTimes(1);
   });
 
-  it("survives a stale-session ConflictingOperationInProgress (117) and retries on a fresh session", async () => {
+  it("refuses a poisoned session without writes and succeeds on a fresh request", async () => {
     const attackerCharId = new ObjectId();
     const attackerCorpId = new ObjectId();
     const defenderCorpId = new ObjectId();
@@ -442,21 +459,39 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
       startSession: vi.fn().mockReturnValueOnce(poisonedSession).mockReturnValueOnce(makeSession()),
     } as never);
 
+    Object.assign(db, { client: await getMongoClient() });
     const { POST } = await import("./route");
     const response = await POST(makeRequest({ sectorId: targetSectorId.toHexString() }), ctx());
-    const data = await response.json();
+    await response.json();
 
-    // The stale session must not surface as a 500; the retry commits the split.
-    expect(response.status).toBe(200);
-    expect(data).toMatchObject({ splitSucceeded: true, plantsTransferred: 20 });
+    // A non-retryable transaction-start failure must leave every money leg untouched.
+    expect(response.status).toBe(500);
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
     expect(poisonedSession.withTransaction).toHaveBeenCalledTimes(1);
     expect(poisonedSession.endSession).toHaveBeenCalledTimes(1);
-    expect(withTransaction).toHaveBeenCalledTimes(1);
+    expect(withTransaction).not.toHaveBeenCalled();
+
+    // A subsequent request uses a healthy session and the same valid ownership rows.
+    db.collectionMocks.corporations.findOne
+      .mockReset()
+      .mockImplementation(async (filter) =>
+        filter.ceoId || String(filter._id) === String(attackerCorpId) ? attacker : defender
+      );
+    db.collectionMocks.corporateSectors.findOne
+      .mockReset()
+      .mockImplementation(async (filter) =>
+        String(filter.corporationId) === String(attackerCorpId) ? null : target
+      );
 
     // Restore the shared mock so later tests get the default session factory.
     vi.mocked(getMongoClient).mockResolvedValue({
       startSession: () => makeSession(),
     } as never);
+    Object.assign(db, { client: await getMongoClient() });
+    const retried = await POST(makeRequest({ sectorId: targetSectorId.toHexString() }), ctx());
+    expect(retried.status).toBe(200);
+    expect(await retried.json()).toMatchObject({ splitSucceeded: true, plantsTransferred: 20 });
   });
 
   it("spends the quoted cash and MS on failure without moving plants", async () => {
@@ -522,10 +557,22 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
   });
 
-  it("completes the split on standalone Mongo, which cannot open a transaction", async () => {
+  it("refuses the split on Mongo without transaction support", async () => {
     // Ticket #1239: prod Mongo is standalone, so requiring a transaction turned
     // every attack into an opaque 500. The split must run sequentially instead.
     assertTransactionSupport.mockResolvedValue(false);
+    Object.assign(db, {
+      client: {
+        startSession: () => ({
+          withTransaction: async () => {
+            throw Object.assign(new Error("Transaction numbers require a replica set"), {
+              code: 20,
+            });
+          },
+          endSession: async () => {},
+        }),
+      },
+    });
     const attackerCharId = new ObjectId();
     const attackerCorpId = new ObjectId();
     const defenderCorpId = new ObjectId();
@@ -591,19 +638,15 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
 
     const { POST } = await import("./route");
     const response = await POST(makeRequest({ sectorId: targetSectorId.toHexString() }), ctx());
-    const data = await response.json();
+    await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toMatchObject({ splitSucceeded: true, plantsTransferred: 20 });
-    // No transaction was ever opened, and the writes still landed.
-    expect(withTransaction).not.toHaveBeenCalled();
-    expect(db.collectionMocks.corporateSectors.insertOne).toHaveBeenCalled();
+    expect(response.status).toBe(500);
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.corporateSectors.insertOne).not.toHaveBeenCalled();
   });
 
-  it("refunds the debit when a sequential split conflicts after charging the attacker", async () => {
-    // Without a transaction there is no abort to undo the debit, so the route
-    // has to hand the cash and MS back itself.
-    assertTransactionSupport.mockResolvedValue(false);
+  it("aborts the debit when the split conflicts after charging the attacker", async () => {
+    // All mutation writes join the transaction; the conflict must abort its debit.
     const attackerCharId = new ObjectId();
     const attackerCorpId = new ObjectId();
     const defenderCorpId = new ObjectId();
@@ -672,12 +715,10 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     const response = await POST(makeRequest({ sectorId: targetSectorId.toHexString() }), ctx());
 
     expect(response.status).toBe(409);
-    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
-      expect.objectContaining({ _id: attackerCorpId }),
-      expect.objectContaining({
-        $inc: expect.objectContaining({ liquidCapital: 100_000, marketingStrength: 14 }),
-      })
-    );
+    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.corporations.updateOne.mock.calls[0][1]).toMatchObject({
+      $inc: { liquidCapital: -100_000, marketingStrength: -14 },
+    });
   });
   it("never runs two session operations at once inside the transaction", async () => {
     // Ticket #1239. A Mongo ClientSession cannot carry concurrent operations.

@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -38,7 +46,9 @@ describe("processRegimeEscalationTurn", () => {
   });
 
   it("self-heals a stable row on first tick when no doc exists", async () => {
-    db.collectionMocks.regimeEscalation.findOne.mockResolvedValueOnce(null);
+    db.collectionMocks.regimeEscalation.findOne
+      .mockResolvedValue(seedEscalation())
+      .mockResolvedValueOnce(null);
 
     const result = await processRegimeEscalationTurn({
       db: db as unknown as Db,
@@ -49,7 +59,11 @@ describe("processRegimeEscalationTurn", () => {
       currentTurn: 1,
     });
 
-    expect(db.collectionMocks.regimeEscalation.insertOne).toHaveBeenCalled();
+    expect(db.collectionMocks.regimeEscalation.updateOne).toHaveBeenCalledWith(
+      { _id: "CN" },
+      { $setOnInsert: expect.objectContaining({ currentStage: "stable" }) },
+      { upsert: true }
+    );
     expect(result?.fromStage).toBe("stable");
     expect(result?.toStage).toBe("stable");
   });

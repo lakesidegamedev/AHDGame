@@ -589,9 +589,10 @@ export async function generateNPP(
  */
 export async function createNPP(
   config: NPPGenerationConfig,
-  context?: NPPGenerationContext
+  context?: NPPGenerationContext,
+  dbArg?: Db
 ): Promise<NPP> {
-  const db = await getDb();
+  const db = dbArg ?? (await getDb());
   const countryId = config.countryId ?? "US";
   return withPartyTerritoryMutation(db, [{ countryId, partyId: config.party }], async () => {
     let effectiveConfig = config;

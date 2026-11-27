@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
@@ -87,7 +88,7 @@ export async function autoResolveLingeringDefaults(args: {
           corp._id,
           "bondSettlementInProgressAt",
           now,
-          async () => {
+          async (db) => {
             // 1. Prefer refinance — no sectors sold.
             const refi = await executeCorporationBondRefinance(db, corp, {
               now,
@@ -95,52 +96,60 @@ export async function autoResolveLingeringDefaults(args: {
               maturityTurns: refiMaturityTurns,
             });
             if (refi.ok) {
-              bondsAutoRefinanced += refi.bondsMatured;
+              await afterCommit(db, () => {
+                bondsAutoRefinanced += refi.bondsMatured;
+              });
               if (corp.userId) {
-                phase7Notifications.push({
-                  userId: corp.userId,
-                  type: "corp_bond_auto_refinanced",
-                  title: "Bonds auto-refinanced",
-                  message: `${corp.name}'s defaulted bonds were automatically refinanced into a new ${refiMaturityTurns}-turn bond (coupon ${refi.couponRate.toFixed(1)}%). No sectors were sold — the debt was rolled into a replacement issuance.`,
-                  // Without recipientCharacterId the inbox's per-character
-                  // filter and unread badge exclude this entirely, so the CEO
-                  // never sees it (ticket #1130).
-                  metadata: {
-                    recipientCharacterId: corp.ceoId?.toString(),
-                    corporationId: corp._id.toString(),
-                  },
+                await afterCommit(db, () => {
+                  phase7Notifications.push({
+                    userId: corp.userId,
+                    type: "corp_bond_auto_refinanced",
+                    title: "Bonds auto-refinanced",
+                    message: `${corp.name}'s defaulted bonds were automatically refinanced into a new ${refiMaturityTurns}-turn bond (coupon ${refi.couponRate.toFixed(1)}%). No sectors were sold — the debt was rolled into a replacement issuance.`,
+                    // Without recipientCharacterId the inbox's per-character
+                    // filter and unread badge exclude this entirely, so the CEO
+                    // never sees it (ticket #1130).
+                    metadata: {
+                      recipientCharacterId: corp.ceoId?.toString(),
+                      corporationId: corp._id.toString(),
+                    },
+                  });
                 });
               }
-              auditRows.push({
-                action: "bond-default-auto-resolved",
-                corporationId: corp._id,
-                corporationName: corp.name,
-                method: "refinance",
-                turn,
-                detail: {
-                  bondId: refi.bondId,
-                  faceValueAnchor: refi.faceValueAnchor,
-                  couponRate: refi.couponRate,
-                  maturityTurn: refi.maturityTurn,
-                  bondsMatured: refi.bondsMatured,
-                  retiredBondIds: refi.retiredBondIds,
-                },
-                createdAt: now,
+              await afterCommit(db, () => {
+                auditRows.push({
+                  action: "bond-default-auto-resolved",
+                  corporationId: corp._id,
+                  corporationName: corp.name,
+                  method: "refinance",
+                  turn,
+                  detail: {
+                    bondId: refi.bondId,
+                    faceValueAnchor: refi.faceValueAnchor,
+                    couponRate: refi.couponRate,
+                    maturityTurn: refi.maturityTurn,
+                    bondsMatured: refi.bondsMatured,
+                    retiredBondIds: refi.retiredBondIds,
+                  },
+                  createdAt: now,
+                });
               });
-              actionAuditEntries.push({
-                source: "turn",
-                category: "corp",
-                action: "corp.auto_refinance",
-                phase: "bondTurn",
-                subject: { type: "corporation", id: corp._id.toString(), name: corp.name },
-                outcome: "ok",
-                turn,
-                meta: {
-                  bondId: refi.bondId,
-                  faceValueAnchor: refi.faceValueAnchor,
-                  couponRate: refi.couponRate,
-                  bondsMatured: refi.bondsMatured,
-                },
+              await afterCommit(db, () => {
+                actionAuditEntries.push({
+                  source: "turn",
+                  category: "corp",
+                  action: "corp.auto_refinance",
+                  phase: "bondTurn",
+                  subject: { type: "corporation", id: corp._id.toString(), name: corp.name },
+                  outcome: "ok",
+                  turn,
+                  meta: {
+                    bondId: refi.bondId,
+                    faceValueAnchor: refi.faceValueAnchor,
+                    couponRate: refi.couponRate,
+                    bondsMatured: refi.bondsMatured,
+                  },
+                });
               });
               return;
             }
@@ -150,47 +159,55 @@ export async function autoResolveLingeringDefaults(args: {
               now,
               cureTurn: turn,
             });
-            bondsAutoRestructured += result.bondsMatured;
+            await afterCommit(db, () => {
+              bondsAutoRestructured += result.bondsMatured;
+            });
             if (corp.userId) {
-              phase7Notifications.push({
-                userId: corp.userId,
-                type: "corp_bond_auto_restructured",
-                title: "Sectors sold to cover bond default",
-                message: `${corp.name} could not refinance its defaulted bonds, so ${result.sectorsLiquidated} sector${result.sectorsLiquidated === 1 ? "" : "s"} ${result.sectorsLiquidated === 1 ? "was" : "were"} sold to repay bondholders in full. The corporation survives with its remaining sectors.`,
-                metadata: {
-                  recipientCharacterId: corp.ceoId?.toString(),
-                  corporationId: corp._id.toString(),
-                },
+              await afterCommit(db, () => {
+                phase7Notifications.push({
+                  userId: corp.userId,
+                  type: "corp_bond_auto_restructured",
+                  title: "Sectors sold to cover bond default",
+                  message: `${corp.name} could not refinance its defaulted bonds, so ${result.sectorsLiquidated} sector${result.sectorsLiquidated === 1 ? "" : "s"} ${result.sectorsLiquidated === 1 ? "was" : "were"} sold to repay bondholders in full. The corporation survives with its remaining sectors.`,
+                  metadata: {
+                    recipientCharacterId: corp.ceoId?.toString(),
+                    corporationId: corp._id.toString(),
+                  },
+                });
               });
             }
-            auditRows.push({
-              action: "bond-default-auto-resolved",
-              corporationId: corp._id,
-              corporationName: corp.name,
-              method: "restructure",
-              turn,
-              detail: {
-                bondsMatured: result.bondsMatured,
-                sectorsLiquidated: result.sectorsLiquidated,
-                paid: result.paid,
-                proceeds: result.proceeds,
-              },
-              createdAt: now,
+            await afterCommit(db, () => {
+              auditRows.push({
+                action: "bond-default-auto-resolved",
+                corporationId: corp._id,
+                corporationName: corp.name,
+                method: "restructure",
+                turn,
+                detail: {
+                  bondsMatured: result.bondsMatured,
+                  sectorsLiquidated: result.sectorsLiquidated,
+                  paid: result.paid,
+                  proceeds: result.proceeds,
+                },
+                createdAt: now,
+              });
             });
-            actionAuditEntries.push({
-              source: "turn",
-              category: "corp",
-              action: "corp.auto_restructure",
-              phase: "bondTurn",
-              subject: { type: "corporation", id: corp._id.toString(), name: corp.name },
-              outcome: "ok",
-              turn,
-              meta: {
-                bondsMatured: result.bondsMatured,
-                sectorsLiquidated: result.sectorsLiquidated,
-                paid: result.paid,
-                proceeds: result.proceeds,
-              },
+            await afterCommit(db, () => {
+              actionAuditEntries.push({
+                source: "turn",
+                category: "corp",
+                action: "corp.auto_restructure",
+                phase: "bondTurn",
+                subject: { type: "corporation", id: corp._id.toString(), name: corp.name },
+                outcome: "ok",
+                turn,
+                meta: {
+                  bondsMatured: result.bondsMatured,
+                  sectorsLiquidated: result.sectorsLiquidated,
+                  paid: result.paid,
+                  proceeds: result.proceeds,
+                },
+              });
             });
           }
         );

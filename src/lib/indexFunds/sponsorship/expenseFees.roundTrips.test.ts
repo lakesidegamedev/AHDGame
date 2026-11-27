@@ -10,7 +10,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { countRoundTrips } from "@/lib/test-utils/roundTripCounter";
 import { chargeSponsorExpenseFees } from "./expenseFees";
 import { expenseFeeForTurn } from "./constants";
@@ -139,7 +141,8 @@ describe("expense fee pass round trips", () => {
       await emitTx(old.db, row);
     }
 
-    expect(currentTrips.count("financialTxLog", "insertOne")).toBe(fundCount);
+    expect(currentTrips.count("financialTxLog", "insertMany")).toBe(1);
+    expect(current.memory.collection("financialTxLog").docs).toHaveLength(fundCount);
     expect(currentTrips.total(), currentTrips.summary()).toBeLessThan(oldTrips.total() / 2);
     expect(currentTrips.count("systemSettings", "findOne")).toBeLessThanOrEqual(1);
   });

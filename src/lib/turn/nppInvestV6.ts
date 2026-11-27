@@ -205,17 +205,7 @@ export async function investNppBondSurplusV6(
     const homeRate = fxByCcy.get(d.homeCurrency) ?? 1;
     const units = bondBuyUnits(d.cashAnchor, d.saveInvestAppetiteMult, homeRate, bond);
     if (units < 1) continue;
-    const result = await nppBuyBond(
-      db,
-      d.npp,
-      bond._id,
-      units,
-      currentTurn,
-      homeRate,
-      bond,
-      preset
-    );
-    if (result.ok) bond.publicFloat -= units;
+    await nppBuyBond(db, d.npp, bond._id, units, currentTurn, homeRate, bond, preset);
   }
 }
 
@@ -331,7 +321,7 @@ export async function investNppStockSurplusV6(
       const chosen = candidates[pickStockCandidate(candidates, d.riskToleranceMult, rng())];
       const shares = stockBuyShares(d.cashAnchor, d.saveInvestAppetiteMult, homeRate, chosen);
       if (shares < 1) continue;
-      const result = await nppBuyShares(
+      await nppBuyShares(
         db,
         d.npp,
         chosen.corp._id,
@@ -339,9 +329,9 @@ export async function investNppStockSurplusV6(
         homeRate,
         chosen.corp,
         preset,
-        pools
+        pools,
+        currentTurn
       );
-      if (result.ok) chosen.corp.publicFloat = (chosen.corp.publicFloat ?? 0) - shares;
     }
   });
 }

@@ -8,9 +8,9 @@ import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/a
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { buildHomeCurrencyCashGrantSetStage } from "@/lib/currency/grantCashBuilder";
+import { getGameState } from "@/lib/gameState";
+import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import {
-  COUNTRY_CURRENCY_MAP,
   INITIAL_RATES,
   getCountryIdForCurrency,
   type CurrencyCode,
@@ -72,7 +72,7 @@ async function resolveCredit(
   character: Character,
   amountAnchor: number
 ): Promise<ResolvedCredit | null> {
-  const currency = COUNTRY_CURRENCY_MAP[character.countryId] as CurrencyCode | undefined;
+  const currency = getHomeCurrency(character, (await getGameState(db))?.preset);
   if (!currency) return null;
   const forexEnabled = await isForexEnabled();
   if (!forexEnabled) {
@@ -109,7 +109,14 @@ async function creditCharacter(
     if (paidEarlier) return;
   }
   const setStage: Record<string, unknown> = credit.forexEnabled
-    ? buildHomeCurrencyCashGrantSetStage(amountAnchor, credit.rateByCountry)
+    ? {
+        [`currencyBalances.personal.${credit.currency}`]: {
+          $add: [
+            { $ifNull: [`$currencyBalances.personal.${credit.currency}`, 0] },
+            credit.amountLocal,
+          ],
+        },
+      }
     : { cashOnHand: { $add: [{ $ifNull: ["$cashOnHand", 0] }, amountAnchor] } };
   setStage.promoGrantReceipts = {
     $concatArrays: [{ $ifNull: ["$promoGrantReceipts", []] }, { $literal: [receipt] }],

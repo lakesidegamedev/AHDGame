@@ -1,3 +1,7 @@
+import { vi } from "vitest";
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, expect, it } from "vitest";
 import { proposeCabinetBillSchema } from "./cabinetBills";
 

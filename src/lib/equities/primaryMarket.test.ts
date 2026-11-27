@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import type { Db as SessionDb } from "mongodb";
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: SessionDb, work: (db: SessionDb) => unknown) => work(db),
+  boundSession: () => undefined,
+}));
+import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -134,7 +139,7 @@ describe("placePendingShareIssuances", () => {
     expect(result).toMatchObject({ corporationsTouched: 1, sharesPlaced: 1 });
     expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
       expect.objectContaining({
-        "pendingShareIssuance.remainingShares": { $gte: 1 },
+        pendingShareIssuance: expect.objectContaining({ remainingShares: 100 }),
       }),
       expect.anything()
     );

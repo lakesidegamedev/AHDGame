@@ -1,43 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { ObjectId, type Db } from "mongodb";
+import { type Db } from "mongodb";
 import {
   getDiplomaticActionsRemaining,
   remainingFromRow,
   spendDiplomaticAction,
 } from "./diplomaticActions";
 import { DIPLOMATIC_ACTIONS_PER_TURN } from "@/lib/constants/internationalOrganizations";
-import type { DiplomaticActionBudget } from "@/lib/db/types/diplomaticAction";
 
-/**
- * Minimal stateful fake of the `diplomaticActions` collection — enough for
- * findOne by countryId + upsert via $set. The shared MockDb is stateless, so a
- * hand-rolled store is needed to exercise the decrement / refresh logic.
- */
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 function makeDb(): Db {
-  const rows: DiplomaticActionBudget[] = [];
-  const col = {
-    async findOne(filter: { countryId: string }) {
-      return rows.find((r) => r.countryId === filter.countryId) ?? null;
-    },
-    async updateOne(
-      filter: { countryId: string },
-      update: { $set: Partial<DiplomaticActionBudget> },
-      opts?: { upsert?: boolean }
-    ) {
-      let row = rows.find((r) => r.countryId === filter.countryId);
-      if (!row) {
-        if (!opts?.upsert) return { matchedCount: 0, modifiedCount: 0 };
-        row = { _id: new ObjectId(), countryId: filter.countryId } as DiplomaticActionBudget;
-        rows.push(row);
-      }
-      Object.assign(row, update.$set);
-      return { matchedCount: 1, modifiedCount: 1 };
-    },
-  };
-  return { collection: () => col } as unknown as Db;
+  return createTransactionalMemoryDb().db;
 }
 
 describe("remainingFromRow (pure)", () => {
+  it("refuses future, malformed and nonfinite budgets", () => {
+    expect(remainingFromRow({ turn: 11, remaining: 4 }, 10)).toBe(0);
+    expect(remainingFromRow({ turn: 10, remaining: NaN }, 10)).toBe(0);
+    expect(remainingFromRow(null, NaN)).toBe(0);
+  });
   it("a missing row reads as full budget", () => {
     expect(remainingFromRow(null, 10)).toBe(DIPLOMATIC_ACTIONS_PER_TURN);
   });
@@ -81,6 +61,14 @@ describe("diplomatic action budget (stateful)", () => {
     expect(r.remaining).toBe(DIPLOMATIC_ACTIONS_PER_TURN - 1);
   });
 
+  it("overlapping first spends cannot mint extra actions", async () => {
+    const db = makeDb();
+    const results = await Promise.all(
+      Array.from({ length: 12 }, () => spendDiplomaticAction(db, "CA", 10))
+    );
+    expect(results.filter((r) => r.ok)).toHaveLength(DIPLOMATIC_ACTIONS_PER_TURN);
+    expect(await db.collection("diplomaticActions").countDocuments({ countryId: "CA" })).toBe(1);
+  });
   it("budgets are independent per country", async () => {
     const db = makeDb();
     await spendDiplomaticAction(db, "US", 10);

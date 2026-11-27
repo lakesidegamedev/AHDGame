@@ -1,3 +1,8 @@
+import type { Db as SessionDb } from "mongodb";
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: SessionDb, work: (db: SessionDb) => unknown) => work(db),
+  boundSession: () => undefined,
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -162,6 +167,15 @@ describe("placeUnsoldBondUnits", () => {
       toArray: async () => [{ currencyCode: "USD", rate: 1 }],
     });
     const corpId = new ObjectId();
+    db.collection("corporations").find.mockReturnValue({
+      toArray: async () => [
+        { _id: corpId, countryId: "US", liquidCurrencyCode: "USD", name: "Synthetic issuer" },
+      ],
+    });
+    db.collection("corporations").updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
     const bond = {
       _id: new ObjectId(),
       corporationId: corpId,
@@ -206,17 +220,20 @@ describe("placeUnsoldBondUnits", () => {
     expect(db.collectionMocks.bonds.updateOne).toHaveBeenCalledWith(
       {
         _id: bond._id,
-        unsoldUnits: { $gte: 14 },
+        unsoldUnits: 600,
+        matured: false,
+        defaulted: false,
         sovereignMaturityClaim: { $exists: false },
       },
       expect.objectContaining({
         $inc: { unsoldUnits: -14, publicFloat: 14, totalIssued: 14_000 },
       })
     );
-    expect(result.corporateProceedsByCorp.get(corpId.toString())).toEqual({
-      local: 14_280,
-      currency: "USD",
-    });
+    expect(result.corporateProceedsByCorp.size).toBe(0);
+    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: corpId }),
+      expect.objectContaining({ $inc: { liquidCapital: 14_280 } })
+    );
     const quoteSnapshot = vi.mocked(loadBondQuote).mock.calls[0]?.[2]?.pools;
     expect(quoteSnapshot?.get("USD")?.cashLocal).toBe(285_720);
   });

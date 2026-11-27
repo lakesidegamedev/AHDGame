@@ -1,3 +1,7 @@
+import {
+  settledFinancialDisplay,
+  type SettledFinancialRow,
+} from "@/lib/corporations/rules/settledFinancialDisplay";
 import { prepareExchangeSnapshots } from "@/lib/stockExchange/prepareExchangeSnapshots";
 /**
  * Generate pre-computed stock exchange snapshots for fast API responses.
@@ -91,6 +95,7 @@ const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
 /** One corporationHistory row reduced to a 1h/24h/48h comparison slot. */
 interface RawHistorySlot {
+  financial?: SettledFinancialRow;
   turn: number;
   sharePrice: number;
   totalShares: number;
@@ -158,8 +163,15 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             h24?: RawHistorySlot;
             h48?: RawHistorySlot;
             earliest?: RawHistorySlot;
+            settled?: RawHistorySlot;
           }>([
             ...atOrBeforeBranch("h1", turn1Ago),
+            {
+              $unionWith: {
+                coll: "corporationHistory",
+                pipeline: atOrBeforeBranch("settled", currentTurn),
+              },
+            },
             {
               $unionWith: {
                 coll: "corporationHistory",
@@ -188,6 +200,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
                     sharePrice: "$sharePrice",
                     totalShares: "$totalShares",
                     createdAt: "$createdAt",
+                    financial: "$financial",
                   },
                 },
               },
@@ -199,6 +212,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
                 h24: slotToPoint("h24"),
                 h48: slotToPoint("h48"),
                 earliest: slotToPoint("earliest"),
+                settled: slotToPoint("settled"),
               },
             },
           ])
@@ -230,6 +244,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           h24?: RawHistorySlot;
           h48?: RawHistorySlot;
           earliest?: RawHistorySlot;
+          settled?: RawHistorySlot;
         }
       >();
       for (const entry of historyRows) {
@@ -354,8 +369,8 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       // IMF facility flows per corp (daily, anchor units) — net income includes these on the corp
       // page, so including them here keeps stock-market and corp-page numbers aligned for the
       // handful of corps currently under IMF restructuring.
-      const imfFacilityPaymentDailyByCorpId = new Map<string, number>();
-      const imfFacilityReceiptsDailyByCorpId = new Map<string, number>();
+      const imfFacilityInterestPaidDailyByCorpId = new Map<string, number>();
+      const imfFacilityInterestReceivedDailyByCorpId = new Map<string, number>();
 
       // Fetch outstanding bonds for interest cost calculation + coupon income from held bonds
       const allBonds = await bondsCollection(database).find({ matured: false }).toArray();
@@ -364,6 +379,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         if (!bond.corporationId) continue;
         const corpKey = bond.corporationId.toString();
         const corpBonds = bondsByCorpId.get(corpKey) ?? [];
+
         corpBonds.push(bond);
         bondsByCorpId.set(corpKey, corpBonds);
       }
@@ -431,31 +447,46 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           corporationId: ObjectId;
           income?: number;
         }>(database)
-          .aggregate<{ _id: ObjectId; income: number }>([
+          .aggregate<{
+            _id: ObjectId;
+            income: number;
+            currencyCode?: string;
+            fxRateAtWrite?: number;
+          }>([
             { $match: { corporationId: { $in: bailoutCorpIds } } },
             // Sort by group key first so the {corporationId, turn} index serves the pipeline as a DISTINCT_SCAN instead of walking the full history.
             { $sort: { corporationId: 1, turn: -1 } },
-            { $group: { _id: "$corporationId", income: { $first: "$income" } } },
+            {
+              $group: {
+                _id: "$corporationId",
+                income: { $first: "$income" },
+                currencyCode: { $first: "$currencyCode" },
+                fxRateAtWrite: { $first: "$fxRateAtWrite" },
+              },
+            },
           ])
           .toArray();
         const bailoutIncomeById = new Map(
           bailoutIncomeRows.map((r) => [
             r._id.toString(),
-            typeof r.income === "number" ? r.income : 0,
+            typeof r.income === "number" &&
+            (!r.currencyCode || (Number.isFinite(r.fxRateAtWrite) && r.fxRateAtWrite! > 0))
+              ? r.income / (r.currencyCode ? r.fxRateAtWrite! : 1)
+              : 0,
           ])
         );
         for (const bc of bailoutCorps) {
           const turnIncomeAnchor = bailoutIncomeById.get(bc._id.toString()) ?? 0;
-          const paymentAnchor = imfFacilityPaymentAnchorPerTurn(bc, turnIncomeAnchor);
+          const paymentAnchor = imfFacilityPaymentAnchorPerTurn(bc, turnIncomeAnchor, "interest");
           const paymentDaily = anchorPerTurnToFinancialDaily(paymentAnchor);
-          imfFacilityPaymentDailyByCorpId.set(bc._id.toString(), paymentDaily);
+          imfFacilityInterestPaidDailyByCorpId.set(bc._id.toString(), paymentDaily);
           // Receipts flow to the lender corp (imfBailoutImfCorporationId).
           const lenderId = bc.imfBailoutImfCorporationId;
           if (lenderId) {
             const lenderKey = lenderId.toString();
-            imfFacilityReceiptsDailyByCorpId.set(
+            imfFacilityInterestReceivedDailyByCorpId.set(
               lenderKey,
-              (imfFacilityReceiptsDailyByCorpId.get(lenderKey) ?? 0) + paymentDaily
+              (imfFacilityInterestReceivedDailyByCorpId.get(lenderKey) ?? 0) + paymentDaily
             );
           }
         }
@@ -465,6 +496,16 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         const corpKey = corp._id.toString();
         const corpSectors = sectorsByCorpId.get(corpKey) ?? [];
         const corpBonds = bondsByCorpId.get(corpKey) ?? [];
+        if (slotsByCorpId.get(corpKey)?.settled?.financial) {
+          const growth = corpSectors
+            .map((sector) => sector.currentGrowthRate ?? sector.growthRate)
+            .filter(Number.isFinite);
+          growthByCorpId.set(corpKey, {
+            total: growth.reduce((sum, value) => sum + value, 0),
+            count: growth.length,
+          });
+          continue;
+        }
 
         // The per-corp income statement below runs in the corp's home currency.
         // Sector economic fields are stored in each sector's HOST-state currency,
@@ -746,7 +787,15 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       function buildListing(corp: Corporation): StockExchangeListing {
         const ceo = corp.ceoId && !corp.ceoVacant ? ceoMap.get(corp.ceoId.toString()) : undefined;
         const corpKey = corp._id.toString();
-        const totalRevenue = revenueByCorpId.get(corpKey) ?? 0;
+        const recorded = slotsByCorpId.get(corpKey)?.settled;
+        const settled = recorded?.financial
+          ? settledFinancialDisplay(
+              recorded.financial,
+              resolveCorpLiquidCurrencyCode(corp),
+              fxRateForCorpFromMap(corp, fxByCurrencySnapshot)
+            )
+          : null;
+        const totalRevenue = settled ? settled.revenue : (revenueByCorpId.get(corpKey) ?? 0);
         const sectorIncome = incomeByCorpId.get(corpKey) ?? 0;
         // Net income matches the corporation page and real-world income-statement bottom line:
         //   operating income − corporate tax + bond coupon income (− bond interest, already
@@ -761,8 +810,9 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           resolveCorpLiquidCurrencyCode(corp),
           fxRateForCorpFromMap(corp, fxByCurrencySnapshot)
         );
-        const imfFacilityPaymentDaily = imfFacilityPaymentDailyByCorpId.get(corpKey) ?? 0;
-        const imfFacilityReceiptsDaily = imfFacilityReceiptsDailyByCorpId.get(corpKey) ?? 0;
+        const imfFacilityInterestPaidDaily = imfFacilityInterestPaidDailyByCorpId.get(corpKey) ?? 0;
+        const imfFacilityInterestReceivedDaily =
+          imfFacilityInterestReceivedDailyByCorpId.get(corpKey) ?? 0;
         // Same corp-level cost base the tax apportionment above uses, so the two
         // cannot drift apart. It re-listed three of these lines by hand before,
         // and omitted R&D from both.
@@ -771,8 +821,8 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           corpLevelDailyCosts(corp) -
           corporateTax +
           bondCouponIncome -
-          imfFacilityPaymentDaily +
-          imfFacilityReceiptsDaily;
+          imfFacilityInterestPaidDaily +
+          imfFacilityInterestReceivedDaily;
         // Subtract the effective dividend payout so the stock-list "Income" column
         // matches the corp page hero (both post-distribution). Mirrors the turn loop's
         // effective rate (sectorCalculations.ts:735-745): honors the legal-structure
@@ -796,7 +846,7 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
                 incomePreDividends
               )
             : 0;
-        const income = incomePreDividends - snapshotDividendDistribution;
+        const income = settled ? settled.income : incomePreDividends - snapshotDividendDistribution;
         const sharePrice = getPublicShareQuote(corp);
         const totalShares = corp.totalShares ?? CEO_INITIAL_SHARES;
         const marketCap = getRoundedPublicMarketCap(corp, totalShares);
@@ -835,8 +885,12 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         const rate = fx?.rate ?? 1;
         const sharePriceAnchor = readCorpEconomicAnchor(sharePrice, code, rate);
         const marketCapAnchor = Math.round(readCorpEconomicAnchor(marketCap, code, rate));
-        const totalRevenueAnchor = Math.round(readCorpEconomicAnchor(totalRevenue, code, rate));
-        const incomeAnchor = Math.round(readCorpEconomicAnchor(income, code, rate));
+        const totalRevenueAnchor =
+          totalRevenue == null
+            ? null
+            : Math.round(readCorpEconomicAnchor(totalRevenue, code, rate));
+        const incomeAnchor =
+          income == null ? null : Math.round(readCorpEconomicAnchor(income, code, rate));
 
         return {
           _id: corp._id,
@@ -856,8 +910,14 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           sharePrice,
           totalShares,
           marketCap,
-          totalRevenue: Math.round(totalRevenue),
-          income: Math.round(income),
+          totalRevenue: totalRevenue == null ? null : Math.round(totalRevenue),
+          income: income == null ? null : Math.round(income),
+          incomeBasis: recorded?.financial
+            ? settled?.income == null
+              ? "unavailable"
+              : "settled"
+            : "estimate",
+          ...(recorded?.financial ? { incomeTurn: recorded.turn } : {}),
           liquidCurrencyCode: code ?? null,
           sharePriceAnchor,
           marketCapAnchor,

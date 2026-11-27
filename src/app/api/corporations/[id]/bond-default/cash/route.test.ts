@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 /**
  * Regression tests for POST /api/corporations/[id]/bond-default/cash —
  * specifically the financial-ledger emission added to fix the gap where
@@ -23,12 +41,12 @@ vi.mock("@/lib/currency/featureFlag", () => ({
 vi.mock("@/lib/corporations/settlementLock", () => ({
   withCorporationSettlementLock: vi.fn(
     async (
-      _db: unknown,
+      db: unknown,
       _corpId: unknown,
       _field: unknown,
       _now: unknown,
-      run: () => Promise<unknown>
-    ) => run()
+      run: (db: unknown) => Promise<unknown>
+    ) => run(db)
   ),
 }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
@@ -564,7 +582,7 @@ describe("POST /api/corporations/[id]/bond-default/cash: standalone fallback", (
     return corpId;
   }
 
-  it("exactly refunds the issuer when the first holder credit fails after debit", async () => {
+  it("refuses unsupported transactions before the first issuer debit", async () => {
     const corpId = await arrangeStandalone([{ characterId: new ObjectId(), units: 4 }]);
     db.collectionMocks["characters"]!.updateOne.mockRejectedValueOnce(
       new Error("first credit failed")
@@ -579,15 +597,12 @@ describe("POST /api/corporations/[id]/bond-default/cash: standalone fallback", (
     );
 
     expect(response.status).toBe(500);
-    const issuerWrites = db.collectionMocks["corporations"]!.updateOne.mock.calls;
-    expect(issuerWrites).toHaveLength(2);
-    const debit = (issuerWrites[0]![1] as { $inc: { liquidCapital: number } }).$inc.liquidCapital;
-    const refund = (issuerWrites[1]![1] as { $inc: { liquidCapital: number } }).$inc.liquidCapital;
-    expect(refund).toBe(-debit);
+    expect(db.collectionMocks["corporations"]!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["characters"]!.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks["bonds"]!.updateMany).not.toHaveBeenCalled();
   });
 
-  it("reverses only confirmed earlier holders when a later holder credit fails", async () => {
+  it("never starts partial holder credits on an unsupported deployment", async () => {
     const firstHolderId = new ObjectId();
     const secondHolderId = new ObjectId();
     const corpId = await arrangeStandalone([
@@ -610,21 +625,8 @@ describe("POST /api/corporations/[id]/bond-default/cash: standalone fallback", (
     );
 
     expect(response.status).toBe(500);
-    const holderWrites = db.collectionMocks["characters"]!.updateOne.mock.calls;
-    expect(holderWrites).toHaveLength(3);
-    expect((holderWrites[0]![0] as { _id: ObjectId })._id.toString()).toBe(
-      firstHolderId.toString()
-    );
-    expect((holderWrites[1]![0] as { _id: ObjectId })._id.toString()).toBe(
-      secondHolderId.toString()
-    );
-    expect((holderWrites[2]![0] as { _id: ObjectId })._id.toString()).toBe(
-      firstHolderId.toString()
-    );
-    const firstCredit = (holderWrites[0]![1] as { $inc: { cashOnHand: number } }).$inc.cashOnHand;
-    const firstReversal = (holderWrites[2]![1] as { $inc: { cashOnHand: number } }).$inc.cashOnHand;
-    expect(firstCredit).toBe(3_000);
-    expect(firstReversal).toBe(-firstCredit);
+    expect(db.collectionMocks["characters"]!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["corporations"]!.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks["bonds"]!.updateMany).not.toHaveBeenCalled();
   });
 });

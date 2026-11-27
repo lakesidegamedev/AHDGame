@@ -245,8 +245,8 @@ export default function SnapshotTab({
           (point.turn === earlierTurn || point.turn === laterTurn) && point.incomeIsEstimated
       ) && (
         <p className="mb-3 text-body-sm text-muted">
-          Bond payments were not recorded for one of these turns. Retained income includes accrued
-          coupons and may differ from cash received.
+          Financing settlement evidence is incomplete for one of these turns. Retained income is an
+          estimate and may differ from the settled result.
         </p>
       )}
       <TableScroll>

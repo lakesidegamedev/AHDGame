@@ -229,7 +229,7 @@ export interface CorporationLookups {
    * outstanding bank construction-loan principal in anchor units. Absent = off.
    */
   honestBalanceSheetsStage?: number;
-  constructionLoanDebtByCorpId?: Map<string, number>;
+  corporateLoanDebtByCorpId?: Map<string, number>;
   /** Control-group root per corporation for the dumping guard; null/absent = per corporation. */
   dumpingGuardRootByCorpId?: Map<string, string> | null;
   /**
@@ -503,6 +503,11 @@ export interface CorpSnapshot {
   /** Pre-tax operating income minus overhead, before bond flows and dividends (₳/turn). */
   incomePreDividends: number;
   income: number;
+  settledImfInterestPaid?: number;
+  settledImfInterestReceived?: number;
+  settledImfPrincipalPaid?: number;
+  settledImfPrincipalReceived?: number;
+  imfSettlementUnavailable?: boolean;
   /** Net operating cash delta in the corporation's liquid currency for this turn. */
   operatingCashIncomeLocal?: number;
   operatingCashLedgerOwnedBySettlement?: boolean;

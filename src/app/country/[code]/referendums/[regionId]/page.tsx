@@ -1,4 +1,5 @@
 import { cohortMember } from "@/lib/referendum/rules/pooledElectorate";
+import { referendumLeadMargin } from "@/lib/referendum/rules/leadMargin";
 import {
   sovereigntyMemberRegionIds,
   sovereigntyRegionIn,
@@ -13,7 +14,6 @@ import {
   getCountryConfig,
   type CountryId,
 } from "@/lib/constants/countries";
-import type { Bill, PoliticalParty, State, StatePartyOrg } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { getHeadOfGovernmentCharacterId } from "@/lib/api/headOfGovernment";
@@ -349,7 +349,7 @@ export default async function ReferendumDetailPage({
   // Masthead tiles — the mockup's six while campaigning, all from data we hold.
   const momentum = computeReferendumMomentum(ref.pollHistory);
   const turnoutEst = weightedTurnout(cohortRows);
-  const margin = Math.abs(ref.yesShare - 50);
+  const margin = referendumLeadMargin(ref.yesShare);
   const leader = ref.yesShare >= 50 ? labels.yes : labels.no;
   const campaigningTiles: {
     label: string;
@@ -359,7 +359,11 @@ export default async function ReferendumDetailPage({
   }[] = [
     { label: labels.yes, value: `${Math.round(ref.yesShare)}%`, tone: "yes" },
     { label: labels.no, value: `${Math.round(100 - ref.yesShare)}%`, tone: "no" },
-    { label: "Margin", value: `±${margin.toFixed(1)} pts`, sub: `${leader} ahead` },
+    {
+      label: "Margin",
+      value: `${margin.toFixed(1)} pts`,
+      sub: margin > 0 ? `${leader} ahead` : "Tied",
+    },
     {
       label: "Momentum",
       value: momentum

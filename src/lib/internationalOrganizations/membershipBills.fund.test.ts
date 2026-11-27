@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { type Db } from "mongodb";
 
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 vi.mock("@/lib/internationalOrganizations/service", () => ({
   isMember: vi.fn(),
   recordOrgHistoryEvent: vi.fn().mockResolvedValue(undefined),
@@ -28,7 +36,7 @@ const provision = {
 
 /** Fake db capturing federalBudget.updateOne calls. */
 function fakeDb() {
-  const budgetUpdate = vi.fn().mockResolvedValue({ modifiedCount: 1 });
+  const budgetUpdate = vi.fn().mockResolvedValue({ modifiedCount: 1, matchedCount: 1 });
   const db = {
     collection: (name: string) => {
       if (name === "federalBudget") return { updateOne: budgetUpdate };
@@ -36,6 +44,7 @@ function fakeDb() {
       if (name === "gameState") {
         return { findOne: async () => ({ _id: "current", preset: "2019-default" }) };
       }
+      if (name === "gameConfig") return { findOne: async () => null };
       throw new Error(`unexpected collection ${name}`);
     },
   } as unknown as Db;
@@ -46,7 +55,7 @@ describe("applyOrgFundProvision", () => {
   it("debits the treasury and credits the org fund when still a member", async () => {
     vi.mocked(isMember).mockResolvedValue(true);
     const { db, budgetUpdate } = fakeDb();
-    await applyOrgFundProvision(db, "DE", provision);
+    await applyOrgFundProvision(db, "DE", provision, "bill");
     expect(budgetUpdate).toHaveBeenCalledWith(
       { countryId: "DE" },
       expect.objectContaining({ $inc: { treasuryBalance: -5_000_000 } })
@@ -57,7 +66,7 @@ describe("applyOrgFundProvision", () => {
   it("voids (no spend) when the country is no longer a member at enactment", async () => {
     vi.mocked(isMember).mockResolvedValue(false);
     const { db, budgetUpdate } = fakeDb();
-    await applyOrgFundProvision(db, "DE", provision);
+    await applyOrgFundProvision(db, "DE", provision, "bill");
     expect(budgetUpdate).not.toHaveBeenCalled();
     expect(creditOrganizationFund).not.toHaveBeenCalled();
   });

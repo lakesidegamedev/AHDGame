@@ -76,7 +76,24 @@ function ledgerEntriesPruneFilter(cutoff: number): Document {
 function bankMoneyMovesPruneFilter(cutoff: number): Document {
   return {
     turn: { $lt: cutoff },
-    kind: { $in: [...PRUNABLE_MONEY_MOVE_KINDS] },
+    $and: [
+      {
+        $or: [
+          { kind: { $in: [...PRUNABLE_MONEY_MOVE_KINDS] } },
+          {
+            kind: "turn-value-settlement",
+            phase: {
+              $in: [
+                "supply-agreement-cash",
+                "supply-agreement-plan-chunk",
+                "supply-agreement-projection",
+              ],
+            },
+            supplyProjectionsComplete: true,
+          },
+        ],
+      },
+    ],
     status: { $in: ["applied", "rejected"] },
     treasuryReserveRecoveryPending: { $ne: true },
     // Keep legacy records whose projections never completed: recovery

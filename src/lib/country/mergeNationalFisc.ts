@@ -1,3 +1,5 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { mergeFiscalBooks } from "./rules/mergeFiscalBooks";
 /**
  * The absorbed country's national balance sheet moves to the survivor:
  * treasury, defence account, sovereign bonds held by players, and the
@@ -17,8 +19,8 @@
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { EnactedLaw } from "@/lib/db/types/budget";
-import type { GameState } from "@/lib/db/types/gameState";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+
+import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { resyncSovereignPrincipalFromBonds } from "@/lib/bonds/sovereign";
 import { countryFiscalBase } from "@/lib/politicalLegislation/fiscalBase";
 import { resolveMergeFxScale } from "./mergeFxScale";
@@ -77,6 +79,12 @@ export async function mergeNationalFisc(
   db: Db,
   args: MergeNationalFiscArgs
 ): Promise<MergeNationalFiscResult> {
+  return withSessionDb(db, (tx) => mergeInTransaction(tx, args));
+}
+async function mergeInTransaction(
+  db: Db,
+  args: MergeNationalFiscArgs
+): Promise<MergeNationalFiscResult> {
   const {
     fromCountryId,
     toCountryId,
@@ -85,12 +93,15 @@ export async function mergeNationalFisc(
     mergeBases,
   } = args;
   const now = new Date();
-  const scale = await resolveMergeFxScale(db, fromCountryId, toCountryId);
   const budgets = federalBudgetCollection(db);
 
   // ── Treasury + defence account ─────────────────────────────────────────────
   const from = await budgets.findOne({ _id: fromCountryId });
   const to = await budgets.findOne({ _id: toCountryId });
+  const scale = await resolveMergeFxScale(db, fromCountryId, toCountryId, {
+    fromCurrency: from?.currencyCode,
+    toCurrency: to?.currencyCode,
+  });
   let treasuryMoved = 0;
 
   // The `mergedInto` stamp is the idempotency guard for this whole block: a
@@ -98,7 +109,7 @@ export async function mergeNationalFisc(
   // re-carry levers over anything the unified government has since legislated.
   if (from && to && !from.mergedInto) {
     const fromTreasury = from.treasuryBalance ?? 0;
-    const fromDefence = from.defenseAppropriation?.balance ?? 0;
+
     treasuryMoved = fromTreasury * scale;
 
     // THE WINNER'S FISCAL LAW TAKES OVER. Where both states carry a legislated
@@ -152,12 +163,10 @@ export async function mergeNationalFisc(
       {
         $set: {
           treasuryBalance: newToTreasury,
+          ...mergeFiscalBooks(from, to, scale, fromCountryId),
           ...lawSet,
           updatedAt: now,
         },
-        ...(fromDefence !== 0
-          ? { $inc: { "defenseAppropriation.balance": fromDefence * scale } }
-          : {}),
       }
     );
     // The absorbed book: zeroed, stamped. NOT deleted — history and the wiki
@@ -170,7 +179,22 @@ export async function mergeNationalFisc(
       {
         $set: {
           treasuryBalance: 0,
-          ...(from.defenseAppropriation ? { "defenseAppropriation.balance": 0 } : {}),
+          ...(from.treasuryCashLocal !== undefined ? { treasuryCashLocal: 0 } : {}),
+          ...(from.defenseAppropriation
+            ? {
+                defenseAppropriation: {
+                  ...from.defenseAppropriation,
+                  balance: 0,
+                  encumbered: 0,
+                  governmentTenderReservations: {},
+                },
+              }
+            : {}),
+          ...(from.intelligenceAppropriation
+            ? { intelligenceAppropriation: { ...from.intelligenceAppropriation, balance: 0 } }
+            : {}),
+          ...(from.departmentAccounts ? { departmentAccounts: {} } : {}),
+
           mergedInto: { countryId: toCountryId, turn: currentTurn },
           updatedAt: now,
         },
@@ -179,7 +203,7 @@ export async function mergeNationalFisc(
   }
 
   // ── Sovereign bonds ────────────────────────────────────────────────────────
-  const toCurrency = COUNTRY_CURRENCY_MAP[toCountryId];
+  const toCurrency = (to?.currencyCode ?? COUNTRY_CURRENCY_MAP[toCountryId]) as CurrencyCode;
   const bonds = bondsCollection(db);
   const absorbedBonds = await bonds
     .find({ issuerType: "sovereign", countryId: fromCountryId, matured: false })
@@ -195,6 +219,17 @@ export async function mergeNationalFisc(
   // corporationId + issuerName onto the survivor primary along with the sectors
   // and shells. Two writers for one field in one pipeline is how the halves
   // drift; each owns what its name says.
+  if (absorbedBonds.some((bond) => bond.sovereignMaturityClaim))
+    throw new Error("Settle frozen sovereign maturities before merging fiscal books");
+  const bondScales = new Map<string, number>();
+  for (const bond of absorbedBonds)
+    bondScales.set(
+      String(bond._id),
+      await resolveMergeFxScale(db, fromCountryId, toCountryId, {
+        fromCurrency: bond.currencyCode ?? from?.currencyCode,
+        toCurrency,
+      })
+    );
   if (absorbedBonds.length > 0) {
     await bonds.bulkWrite(
       absorbedBonds.map((bond) => ({
@@ -203,15 +238,24 @@ export async function mergeNationalFisc(
           update: {
             $set: {
               countryId: toCountryId,
-              totalIssued: (bond.totalIssued ?? 0) * scale,
-              publicFloat: (bond.publicFloat ?? 0) * scale,
+              totalIssued: (bond.totalIssued ?? 0) * bondScales.get(String(bond._id))!,
+              publicFloat: (bond.publicFloat ?? 0) * bondScales.get(String(bond._id))!,
               ...(bond.centralBankHoldings != null
-                ? { centralBankHoldings: bond.centralBankHoldings * scale }
+                ? {
+                    centralBankHoldings:
+                      bond.centralBankHoldings * bondScales.get(String(bond._id))!,
+                  }
                 : {}),
               ...(bond.originalTotalIssued != null
-                ? { originalTotalIssued: bond.originalTotalIssued * scale }
+                ? {
+                    originalTotalIssued:
+                      bond.originalTotalIssued * bondScales.get(String(bond._id))!,
+                  }
                 : {}),
-              holders: (bond.holders ?? []).map((h) => ({ ...h, units: h.units * scale })),
+              holders: (bond.holders ?? []).map((h) => ({
+                ...h,
+                units: h.units * bondScales.get(String(bond._id))!,
+              })),
               ...(toCurrency ? { currencyCode: toCurrency } : {}),
               updatedAt: now,
             },

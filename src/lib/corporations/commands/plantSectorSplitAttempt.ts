@@ -9,8 +9,8 @@ import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discre
  * spent either way. See `calculatePlantSectorSplit` for the quote.
  */
 import type { Db, ObjectId } from "mongodb";
-import { getMongoClient } from "@/lib/mongodb";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
+import { withSessionDb, boundSession } from "@/lib/db/sessionDb";
+import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -68,6 +68,7 @@ export async function attemptPlantSectorSplit(
     stateId: string;
     countryId: CountryId;
     currentTurn: number;
+    autonomous?: boolean;
     attackerFxRate: number;
     attackerCurrencyCode: CurrencyCode | undefined;
     /** Auditable roll in [0, 1). */
@@ -88,17 +89,12 @@ export async function attemptPlantSectorSplit(
   } = args;
   let resolution: SplitResolution | null = null;
   let rejection: SplitRejection | null = null;
-  // Production Mongo is standalone, so this body may run WITHOUT a transaction
-  // (see `runTransactionWithSessionRetry`). The attacker is debited before the
-  // plant writes, and on that path a later `SplitConflictError` will NOT roll
-  // the debit back, so record what was taken and refund it by hand.
-  let uncommittedDebit: { cashLocal: number; marketingStrength: number } | null = null;
 
   try {
-    await runTransactionWithSessionRetry(getMongoClient, async (session) => {
+    await withSessionDb(db, async (db) => {
+      const session = boundSession(db);
       resolution = null;
       rejection = null;
-      uncommittedDebit = null;
 
       // READ THESE IN SEQUENCE. A Mongo ClientSession cannot carry concurrent
       // operations. Promise.all would race all four reads to open the transaction
@@ -129,6 +125,25 @@ export async function attemptPlantSectorSplit(
           status: 409,
           error: "The target changed before the split began. Refresh and try again.",
         };
+        return;
+      }
+
+      if (
+        hasProtectedConstructionProperty(freshTarget) ||
+        (existingOwnSector && hasProtectedConstructionProperty(existingOwnSector))
+      ) {
+        rejection = {
+          status: 409,
+          error: "A construction-financed site or an active property transfer cannot be split.",
+        };
+        return;
+      }
+      if (
+        args.autonomous &&
+        ((freshAttacker.lastAutoAttackTurn ?? -1) >= currentTurn ||
+          (freshDefender.lastAutoAttackedTurn ?? -1) >= currentTurn)
+      ) {
+        rejection = { status: 409, error: "This autonomous attack has already been settled." };
         return;
       }
 
@@ -226,15 +241,6 @@ export async function attemptPlantSectorSplit(
         };
         return;
       }
-      // Only outside a transaction does this need undoing by hand; inside one
-      // the abort reverses it for us.
-      if (!session) {
-        uncommittedDebit = {
-          cashLocal: attackCostLocal,
-          marketingStrength: quote.marketingStrengthCost,
-        };
-      }
-
       const succeeded = didPlantSectorSplitSucceed(quote.successProbability, randomRoll);
       let capacityTransferred = 0;
       let bookValueTransferredAnchor = 0;
@@ -331,6 +337,22 @@ export async function attemptPlantSectorSplit(
         }
       }
 
+      if (args.autonomous) {
+        await corporationsCollection(db).bulkWrite([
+          {
+            updateOne: {
+              filter: { _id: freshAttacker._id },
+              update: { $set: { lastAutoAttackTurn: currentTurn } },
+            },
+          },
+          {
+            updateOne: {
+              filter: { _id: freshDefender._id },
+              update: { $set: { lastAutoAttackedTurn: currentTurn } },
+            },
+          },
+        ]);
+      }
       resolution = {
         quote,
         succeeded,
@@ -342,31 +364,8 @@ export async function attemptPlantSectorSplit(
         capacityTransferred,
         bookValueTransferredAnchor,
       };
-      uncommittedDebit = null;
     });
   } catch (error) {
-    // Non-atomic path only: the cash and MS were already taken and no plant
-    // moved, so give them back before answering. Failing to refund would
-    // charge the attacker for a split that never happened.
-    const pendingRefund = uncommittedDebit as {
-      cashLocal: number;
-      marketingStrength: number;
-    } | null;
-    if (pendingRefund) {
-      uncommittedDebit = null;
-      await corporationsCollection(db)
-        .updateOne(
-          { _id: attacker._id },
-          {
-            $inc: {
-              liquidCapital: pendingRefund.cashLocal,
-              marketingStrength: pendingRefund.marketingStrength,
-            },
-            $set: { updatedAt: new Date() },
-          }
-        )
-        .catch(() => {});
-    }
     if (error instanceof SplitConflictError) {
       return { ok: false, status: 409, error: error.message };
     }

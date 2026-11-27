@@ -39,6 +39,7 @@ export const supplyListingActionSchema = z
 
 /** POST /api/corporations/[id]/supply-listings/take. */
 export const supplyListingTakeSchema = z.object({
+  requestId: z.string().uuid(),
   listingId: z.string().trim().min(1).max(80),
   /** Units per turn to contract; may be less than the listing's remaining volume. */
   volume: z.number().finite().positive(),

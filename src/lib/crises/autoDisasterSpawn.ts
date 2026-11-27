@@ -1,9 +1,18 @@
+import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { settleTransition } from "@/lib/banking/settlementJournal";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import {
+  COUNTRY_CURRENCY_MAP,
+  ZOD_CURRENCY_ENUM,
+  type CurrencyCode,
+} from "@/lib/constants/currencies";
 import { isLiveWorldSwitchOn } from "@/lib/gameConfig/liveWorldSwitches";
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { Crisis, CrisisEffect, CrisisTemplate } from "@/lib/db/types/crisis";
 import type { FederalBudget } from "@/lib/db/types/budget";
-import type { CountryGameState, GameState } from "@/lib/db/types/gameState";
+
 import type { State } from "@/lib/db/types/state";
 import {
   AUTO_DISASTER_CADENCE_TURNS,
@@ -42,20 +51,142 @@ interface ResilienceRow {
   environment?: { climateResilience?: { value?: number } };
 }
 
-/** A crisis carries the charge so a retry can reconcile a missed budget debit. */
-async function chargeDisasterFiscalLoss(db: Db, crisis: Crisis): Promise<void> {
+/** Accrue the whole loss once; only actually funded payments leave spendable cash. */
+export async function chargeDisasterFiscalLoss(db: Db, crisis: Crisis): Promise<void> {
   const amount = crisis.autoDisasterFiscalCost;
   if (!amount || amount <= 0) return;
-  await federalBudgetCollection(db).updateOne(
-    {
-      countryId: crisis.countryIds[0] as FederalBudget["countryId"],
-      disasterFiscalReceipts: { $ne: crisis._id.toString() },
-    },
-    {
-      $inc: { treasuryBalance: -amount },
-      $addToSet: { disasterFiscalReceipts: crisis._id.toString() },
-    }
+  if (!Number.isFinite(amount)) throw new Error("Invalid disaster fiscal loss");
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { projection: { treasuryCashLedgerEnabled: 1 } }
   );
+  if (config?.treasuryCashLedgerEnabled !== true) {
+    await federalBudgetCollection(db).updateOne(
+      {
+        countryId: crisis.countryIds[0] as FederalBudget["countryId"],
+        disasterFiscalReceipts: { $ne: String(crisis._id) },
+      },
+      {
+        $inc: { treasuryBalance: -amount },
+        $addToSet: { disasterFiscalReceipts: String(crisis._id) },
+      }
+    );
+    return;
+  }
+  await withSessionDb(db, async (tx) => {
+    const fresh = await crisesCollection(tx).findOne({ _id: crisis._id });
+    if (!fresh) return;
+    const paid = fresh.autoDisasterFiscalPaidLocal ?? 0;
+    const remaining = Math.max(0, amount - paid);
+    if (!remaining) return;
+    const budget = await federalBudgetCollection(tx).findOne({
+      countryId: fresh.countryIds[0] as FederalBudget["countryId"],
+    });
+    if (!budget) {
+      await crisesCollection(tx).updateOne(
+        { _id: fresh._id },
+        { $set: { autoDisasterFiscalUnfundedCost: remaining } }
+      );
+      return;
+    }
+    const rawCurrency =
+      budget.currencyCode ?? COUNTRY_CURRENCY_MAP[fresh.countryIds[0] as CountryId];
+    if (!ZOD_CURRENCY_ENUM.includes(rawCurrency as CurrencyCode))
+      throw new Error("Disaster treasury currency is invalid");
+    const currency = rawCurrency as CurrencyCode;
+    if (!currency) throw new Error("Disaster treasury currency is unavailable");
+    const accrualRecorded = budget.disasterFiscalReceipts?.includes(String(fresh._id)) === true;
+    const available = Math.max(
+      0,
+      Number.isFinite(budget.treasuryCashLocal) ? (budget.treasuryCashLocal ?? 0) : 0
+    );
+    const sourceCurrency = fresh.autoDisasterFiscalCurrency ?? currency;
+    let scale = 1;
+    if (sourceCurrency !== currency) {
+      const rates = await loadFxRatesByCurrency(tx),
+        fromRate = rates.get(sourceCurrency),
+        toRate = rates.get(currency);
+      if (!(
+        fromRate &&
+        toRate &&
+        Number.isFinite(fromRate) &&
+        Number.isFinite(toRate) &&
+        fromRate > 0 &&
+        toRate > 0
+      ))
+        return;
+      scale = toRate / fromRate;
+    }
+    const payment = Math.min(remaining * scale, available);
+    const paidSource = payment / scale;
+    if (payment > 0) {
+      const state = await gameStateCollection(tx).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
+      const settled = await settleTransition(tx, {
+        key: `disaster-fiscal:${fresh._id}:${paid}:${payment}`,
+        kind: "treasury_funded_expense",
+        turn: state?.currentTurn ?? fresh.startTurn,
+        currency,
+        legs: [
+          {
+            kind: "debit",
+            amount: payment,
+            collection: "federalBudget",
+            filter: { _id: budget._id, treasuryCashLocal: { $gte: payment } },
+            path: "treasuryCashLocal",
+            note: "Fund the accrued disaster expense from available Treasury cash",
+          },
+          {
+            kind: "burn",
+            amount: payment,
+            note: "Settle the funded disaster loss outside government cash",
+          },
+        ],
+        projections: [],
+        event: {
+          kind: "monetary.executed",
+          command: "crisis.disasterFiscalLoss",
+          subjectType: "government",
+          subjectId: fresh.countryIds[0],
+          amount: payment,
+          meta: { flow: "crisis_response", crisisId: String(fresh._id) },
+        },
+      });
+      if (settled.status !== "applied" && settled.status !== "replayed")
+        throw new Error(settled.error ?? "Disaster fiscal payment is incomplete");
+    }
+    if (!accrualRecorded)
+      await federalBudgetCollection(tx).updateOne(
+        { _id: budget._id },
+        {
+          $inc: { treasuryBalance: -amount * scale },
+          $addToSet: { disasterFiscalReceipts: String(fresh._id) },
+        }
+      );
+    await crisesCollection(tx).updateOne(
+      { _id: fresh._id },
+      {
+        $set: {
+          autoDisasterFiscalCurrency: sourceCurrency,
+          autoDisasterFiscalPaidLocal: paid + paidSource,
+          autoDisasterFiscalUnfundedCost: Math.max(0, remaining - paidSource),
+        },
+      }
+    );
+  });
+}
+
+export async function settlePendingDisasterFiscalLosses(db: Db): Promise<void> {
+  const pending = await crisesCollection(db)
+    .find(
+      { autoDisasterFiscalUnfundedCost: { $gt: 0 } },
+      { projection: { countryIds: 1, autoDisasterFiscalCost: 1 } }
+    )
+    .limit(64)
+    .toArray();
+  for (const crisis of pending) await chargeDisasterFiscalLoss(db, crisis);
 }
 
 function chooseCandidate<T extends { key: string; region: State }>(

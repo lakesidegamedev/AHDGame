@@ -1,5 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
-import type { ShareListing, ShareOffer, ShareOrder } from "@/lib/db/types";
+import type { ShareOffer } from "@/lib/db/types";
 import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListing";
 import { cancelShareOrderAndRefund } from "@/lib/corporations/cancelShareOrder";
 import {
@@ -33,7 +34,19 @@ export async function cancelPendingShareOfferAndRefund(
   now: Date,
   forexEnabled: boolean
 ): Promise<boolean> {
+  return withSessionDb(db, (transactionDb) =>
+    cancelOfferInTransaction(transactionDb, offer, now, forexEnabled)
+  );
+}
+
+async function cancelOfferInTransaction(
+  db: Db,
+  offer: ShareOffer,
+  now: Date,
+  forexEnabled: boolean
+): Promise<boolean> {
   const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
+  if (!listingCorp) throw new Error("Listing issuer is missing; escrow remains held");
   const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
   const refundAnchor = corpLiquidCapitalToAnchor(
     offer.escrowAmount,
@@ -44,25 +57,20 @@ export async function cancelPendingShareOfferAndRefund(
 
   if (offer.buyerCorporationId) {
     const buyerCorp = await corporationsCollection(db).findOne({ _id: offer.buyerCorporationId });
-    if (!buyerCorp) {
-      const cancelRes = await shareOffersCollection(db).updateOne(
-        { _id: offer._id, status: "pending" },
-        { $set: { status: "cancelled", updatedAt: now } }
-      );
-      return cancelRes.modifiedCount === 1;
-    }
+    if (!buyerCorp) return false;
 
     const buyerFxRate = await getCorpFxRate(db, buyerCorp);
     const refundInBuyerCapital = anchorToCorpLiquidCapital(refundAnchor, buyerCorp, buyerFxRate);
     const cancelRes = await shareOffersCollection(db).updateOne(
-      { _id: offer._id, status: "pending" },
+      { _id: offer._id, status: "pending", escrowAmount: offer.escrowAmount },
       { $set: { status: "cancelled", updatedAt: now } }
     );
     if (cancelRes.modifiedCount !== 1) return false;
-    await corporationsCollection(db).updateOne(
+    const credit = await corporationsCollection(db).updateOne(
       { _id: offer.buyerCorporationId },
       { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
     );
+    if (credit.matchedCount !== 1) throw new Error("Offer refund recipient is missing");
     await emitTx(db, {
       type: "share_listing_refund",
       turn: currentTurn,
@@ -90,13 +98,7 @@ export async function cancelPendingShareOfferAndRefund(
     { _id: offer.buyerCharacterId },
     { projection: { countryId: 1, name: 1 } }
   );
-  if (!buyerChar) {
-    const cancelRes = await shareOffersCollection(db).updateOne(
-      { _id: offer._id, status: "pending" },
-      { $set: { status: "cancelled", updatedAt: now } }
-    );
-    return cancelRes.modifiedCount === 1;
-  }
+  if (!buyerChar) return false;
 
   const buyerCurrency = getHomeCurrency(buyerChar);
   let buyerFxRate = 1.0;
@@ -109,17 +111,18 @@ export async function cancelPendingShareOfferAndRefund(
   }
   const refundInBuyerHome = refundAnchor * buyerFxRate;
   const cancelRes = await shareOffersCollection(db).updateOne(
-    { _id: offer._id, status: "pending" },
+    { _id: offer._id, status: "pending", escrowAmount: offer.escrowAmount },
     { $set: { status: "cancelled", updatedAt: now } }
   );
   if (cancelRes.modifiedCount !== 1) return false;
-  await charactersCollection(db).updateOne(
+  const credit = await charactersCollection(db).updateOne(
     { _id: offer.buyerCharacterId },
     {
       $inc: buildPersonalBalanceInc(refundInBuyerHome, buyerCurrency, forexEnabled),
       $set: { updatedAt: now },
     }
   );
+  if (credit.matchedCount !== 1) throw new Error("Offer refund recipient is missing");
   await emitTx(db, {
     type: "share_listing_refund",
     turn: currentTurn,

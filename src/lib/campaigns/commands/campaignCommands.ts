@@ -8,8 +8,8 @@ import type { AuthUserWithCharacter } from "@/lib/auth";
 import { ApiError, badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { assertSameCountry, isSameCountry } from "@/lib/api/sameCountry";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { Campaign, Character, Election, NPP, PoliticalParty } from "@/lib/db/types";
+import { runWithDbSession } from "@/lib/db/sessionDb";
+import type { Campaign, Character, PoliticalParty } from "@/lib/db/types";
 import {
   getEffectiveBranchCost,
   getOpsBranch,
@@ -432,36 +432,9 @@ export async function donateToCampaign(params: {
       }
     };
 
-    const applyPartyDonationWithoutTransaction = async () => {
-      const debitResult = await politicalPartiesCollection(db).updateOne(
-        { _id: party._id, treasury: { $gte: amountPartyLocal } },
-        partyDebit
-      );
-      if (debitResult.matchedCount === 0) {
-        throw badRequest("Insufficient party funds");
-      }
-
-      const campaignUpdateResult = await campaignsCollection(db).updateOne(
-        { _id: campaignId },
-        campaignUpdate
-      );
-      if (campaignUpdateResult.matchedCount === 0) {
-        await politicalPartiesCollection(db).updateOne(
-          { _id: party._id },
-          { $inc: { treasury: amountPartyLocal }, $set: { updatedAt: new Date() } }
-        );
-        throw notFound("Campaign not found");
-      }
-    };
-
-    await runWithOptionalTransaction(
-      async (session) => {
-        await applyPartyDonationInTransaction(session);
-      },
-      async () => {
-        await applyPartyDonationWithoutTransaction();
-      }
-    );
+    await runWithDbSession(db, async (session) => {
+      await applyPartyDonationInTransaction(session);
+    });
 
     // Log the donor-side outflow in the party's local home currency — same
     // unit the treasury ledger / chair UI displays. (The donation amount the
@@ -559,52 +532,25 @@ export async function donateToCampaign(params: {
     [campaignFundsField]: { $gte: amountLocal },
   };
 
-  await runWithOptionalTransaction(
-    async (session) => {
-      const debitResult = await charactersCollection(db).updateOne(
-        characterBalanceFilter,
-        characterDebit,
-        { session }
-      );
-      if (debitResult.matchedCount === 0) {
-        throw badRequest("Insufficient funds");
-      }
-
-      const campaignUpdateResult = await campaignsCollection(db).updateOne(
-        { _id: campaignId },
-        campaignUpdate,
-        { session }
-      );
-      if (campaignUpdateResult.matchedCount === 0) {
-        throw notFound("Campaign not found");
-      }
-    },
-    async () => {
-      const debitResult = await charactersCollection(db).updateOne(
-        characterBalanceFilter,
-        characterDebit
-      );
-      if (debitResult.matchedCount === 0) {
-        throw badRequest("Insufficient funds");
-      }
-
-      try {
-        const campaignUpdateResult = await campaignsCollection(db).updateOne(
-          { _id: campaignId },
-          campaignUpdate
-        );
-        if (campaignUpdateResult.matchedCount === 0) {
-          throw notFound("Campaign not found");
-        }
-      } catch (error) {
-        await charactersCollection(db).updateOne(
-          { _id: character._id },
-          { $inc: { [campaignFundsField]: amountLocal } }
-        );
-        throw error;
-      }
+  await runWithDbSession(db, async (session) => {
+    const debitResult = await charactersCollection(db).updateOne(
+      characterBalanceFilter,
+      characterDebit,
+      { session }
+    );
+    if (debitResult.matchedCount === 0) {
+      throw badRequest("Insufficient funds");
     }
-  );
+
+    const campaignUpdateResult = await campaignsCollection(db).updateOne(
+      { _id: campaignId },
+      campaignUpdate,
+      { session }
+    );
+    if (campaignUpdateResult.matchedCount === 0) {
+      throw notFound("Campaign not found");
+    }
+  });
 
   // Log the donor-side outflow in the character's local home currency so the
   // activityLog reflects what the character actually paid. The Campaign.funds

@@ -16,6 +16,8 @@ export type DemographicModifiers = Record<string, Record<string, number>>;
  * One document exists per region (US: 51 state/DC docs; UK: 650 constituency docs).
  */
 export interface StateDemographicTurnout {
+  /** Modifier decay already applied in this turn. */
+  decayAppliedTurn?: number;
   /** Region ID (e.g. "PA", "CA" for US; "E14000530" for UK constituency) */
   _id: string;
   countryId: CountryId;

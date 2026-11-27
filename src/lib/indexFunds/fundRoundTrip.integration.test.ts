@@ -18,7 +18,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { IndexFundRedemptionQueueEntry } from "@/lib/db/types";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { runIndexFundCron, rebalanceFundToTarget } from "@/lib/indexFunds/fundCron";
 import { fundBidLimitPriceLocal } from "@/lib/indexFunds/fundBidPolicy";
 import { placeFundShareBuyOrder } from "@/lib/indexFunds/fundShareOrders";

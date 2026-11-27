@@ -234,10 +234,15 @@ async function deliverLegacyDepositInterest(
     throw new Error("Bank could not fund the original legacy interest allocation");
 
   const netCreditsByCharacter = new Map<string, number>();
-  if (plan.incomeTaxAtSource) {
+  const allIncomeCreditsDelivered = plan.credits.every((credit, index) =>
+    (before.get(credit.characterId.toHexString())?.[SETTLED_KEYS_FIELD] ?? []).includes(
+      legStamp(record._id, index + 1)
+    )
+  );
+  if (plan.incomeTaxAtSource && !allIncomeCreditsDelivered) {
     const incomeCredits = await creditIncomeAfterTax(
       db,
-      "bank-interest:" + plan.bankId.toHexString(),
+      "bank-interest:" + plan.bankId.toHexString() + ":" + record._id,
       record.turn as number,
       (record.createdAt as Date) ?? new Date(),
       plan.credits.map((credit, i) => ({
@@ -254,7 +259,7 @@ async function deliverLegacyDepositInterest(
     result.withheld = incomeCredits.reduce((sum, credit) => sum + credit.gross - credit.net, 0);
     for (const credit of incomeCredits)
       netCreditsByCharacter.set(credit.characterId.toHexString(), credit.net);
-  } else {
+  } else if (!plan.incomeTaxAtSource) {
     await charactersCollection<InterestBalanceDocument>(db).bulkWrite(
       plan.credits.map((credit, i) => ({
         updateOne: {

@@ -77,6 +77,7 @@ export async function ensureManpowerPool(
 
 /** Guarded draw. False when the pool was short — caller must not proceed. */
 export async function drawManpower(db: Db, countryId: string, men: number): Promise<boolean> {
+  if (!Number.isSafeInteger(men) || men <= 0) return false;
   const res = await getNationalManpowerCollection(db).updateOne(
     { countryId: countryId as CountryId, pool: { $gte: men } },
     { $inc: { pool: -men } }
@@ -84,35 +85,13 @@ export async function drawManpower(db: Db, countryId: string, men: number): Prom
   return res.modifiedCount > 0;
 }
 
-/**
- * Return men to the pool, never above the ceiling. Atomic in both branches;
- * runs on the recruit rollback path where a lost update destroys manpower.
- *
- * Branch 1: guarded `$inc` when the full amount fits under the ceiling.
- * Branch 2 clamps only when the pool is below the ceiling: a pool above its
- * ceiling is legitimate (conscription downgrade or population fall), and an
- * unconditional `$set` would destroy that excess. `$lt: ceiling` makes the
- * clamp a no-op there, leaving the men in the pool.
- *
- * No `upsert`; `ensureManpowerPool` guarantees the document exists, and an
- * upsert would insert one without the required `mode`.
- */
+/** A single capped addition preserves intervening draws and any existing excess. */
 export async function returnManpower(db: Db, countryId: string, men: number): Promise<void> {
-  if (men <= 0) return;
+  if (!Number.isSafeInteger(men) || men <= 0) return;
   const { ceiling: known } = await ensureManpowerPool(db, countryId);
-  // ensureManpowerPool only computes the ceiling when it had to create the doc;
-  // the return path genuinely needs it, so resolve it here when it did not.
   const ceiling = known ?? (await ceilingFor(db, countryId));
-  const col = getNationalManpowerCollection(db);
-
-  const incremented = await col.updateOne(
-    { countryId: countryId as CountryId, pool: { $lte: ceiling - men } },
-    { $inc: { pool: men } }
-  );
-  if (incremented.modifiedCount > 0) return;
-
-  await col.updateOne(
+  await getNationalManpowerCollection(db).updateOne(
     { countryId: countryId as CountryId, pool: { $lt: ceiling } },
-    { $set: { pool: ceiling } }
+    [{ $set: { pool: { $min: [ceiling, { $add: ["$pool", men] }] } } }]
   );
 }

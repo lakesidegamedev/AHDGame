@@ -1,3 +1,5 @@
+import type { Db } from "mongodb";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
@@ -26,7 +28,7 @@ import {
   humanizeLegislationTypeId,
 } from "@/lib/legislationTypeAliases";
 import { billRequiresExecutiveAction } from "@/lib/internationalOrganizations/withdrawalBills";
-import type { Bill, BillStatus, LegislationType, Character } from "@/lib/db/types";
+import type { Bill, BillStatus, Character } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import {
   BILL_PROPOSE_ACTION_COST,
@@ -338,12 +340,21 @@ export async function listCabinetBills(countryId: CountryId) {
 }
 
 /** Validates and files a cabinet bill proposed by the PM or a cabinet member. */
-export async function proposeCabinetBill({
+export async function proposeCabinetBill(
+  params: Parameters<typeof proposeCabinetBillInTransaction>[0]
+) {
+  const db = params.db ?? (await getDb());
+  return withAtomicEconomicCommand(db, (db) => proposeCabinetBillInTransaction({ ...params, db }));
+}
+
+async function proposeCabinetBillInTransaction({
+  db: providedDb,
   countryId,
   character,
   isAdmin,
   input,
 }: {
+  db?: Db;
   countryId: CountryId;
   character: Character;
   isAdmin: boolean;
@@ -362,7 +373,7 @@ export async function proposeCabinetBill({
     confirmElectionRisk,
   } = input;
 
-  const db = await getDb();
+  const db = providedDb ?? (await getDb());
 
   // Check that requester is PM or cabinet member
   const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });

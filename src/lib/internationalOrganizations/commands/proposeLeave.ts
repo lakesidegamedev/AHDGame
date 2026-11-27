@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
@@ -65,7 +66,15 @@ function buildFtaWithdrawalBill(
   };
 }
 
-export async function proposeInternationalOrganizationLeave(params: {
+export async function proposeInternationalOrganizationLeave(
+  params: Parameters<typeof proposeInternationalOrganizationLeaveInTransaction>[0]
+) {
+  return withAtomicResult(params.db, (db) =>
+    proposeInternationalOrganizationLeaveInTransaction({ ...params, db })
+  );
+}
+
+async function proposeInternationalOrganizationLeaveInTransaction(params: {
   db: Db;
   countryId: CountryId;
   orgId: string;

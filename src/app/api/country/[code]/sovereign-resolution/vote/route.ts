@@ -1,3 +1,4 @@
+import { loadChamberSeatWeights } from "@/lib/sovereignDefault/legislative/loadChamberSeatWeights";
 // POST /api/country/[code]/sovereign-resolution/vote — Legislator vote on a sovereign-crisis bill.
 // Auth: requireAuthWithCharacter; character must be seated in the active chamber.
 // Body: { vote: "for" | "against" }
@@ -11,7 +12,6 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { COUNTRY_CONFIGS, getOfficeTypeConfig, type CountryId } from "@/lib/constants/countries";
-import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
 const bodySchema = z.object({
@@ -80,6 +80,9 @@ export async function POST(req: Request, { params }: RouteParams) {
   }
 
   const charKey = character._id.toString();
+  const weight = (await loadChamberSeatWeights(db, upper, phase.chamberKey)).get(charKey) ?? 0;
+  if (!weight)
+    return errorResponse(403, "Only legislators holding seats in the active chamber may vote");
   if (phase.votes[charKey]) {
     return errorResponse(409, "You have already voted on this chamber");
   }
@@ -92,10 +95,16 @@ export async function POST(req: Request, { params }: RouteParams) {
   // tally. Filter on the dotted-path field NOT existing so the second writer
   // matches no document and modifiedCount stays at 0.
   const result = await sovereignCrisisDecisionsCollection(db).updateOne(
-    { _id: decision._id, [voteFieldKey]: { $exists: false } },
+    {
+      _id: decision._id,
+      state: "executiveProposed",
+      currentChamberIndex: idx,
+      [`legislativePhases.${idx}.outcome`]: "pending",
+      [voteFieldKey]: { $exists: false },
+    },
     {
       $set: { [voteFieldKey]: vote },
-      $inc: { [`legislativePhases.${idx}.${counterField}`]: 1 },
+      $inc: { [`legislativePhases.${idx}.${counterField}`]: weight },
     }
   );
   if (result.modifiedCount === 0) {

@@ -1,8 +1,10 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /** Primary equity underwriting and paced placement of approved unsold shares. */
 
 import { poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
-import type { Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { issuanceDilutionFactorExpr } from "@/lib/corporations/shareConsolidation";
@@ -459,75 +461,88 @@ export async function placePendingShareIssuances(
         },
       },
     ];
-    if (offer && underwritingBank && offer.instrumentId) {
-      const settlement = await settlePrimaryUnderwritingFill(db, {
-        bank: underwritingBank,
-        issuer: corporation,
-        issuerCurrencyCode: currency,
-        offer,
-        instrumentId: offer.instrumentId,
-        grossPlacedLocal: paidLocal,
+    const settlement = await withAtomicResult(db, (db) =>
+      withTurnValueSettlement(
+        db,
+        "pending-equity-placement",
         turn,
-        now,
-        poolCollection: EQUITY_MARKET_POOLS_COLLECTION,
-        instrumentProjection: {
-          collection: "corporations",
-          filter: {
-            _id: corporation._id,
-            "pendingShareIssuance.remainingShares": { $gte: shares },
-          },
-          pipelineUpdate: publication,
-          note: "Publish the filled share tranche after its cash and underwriting fee settle",
+        async (db) => {
+          if (offer && underwritingBank && offer.instrumentId) {
+            const settlement = await settlePrimaryUnderwritingFill(db, {
+              bank: underwritingBank,
+              issuer: corporation,
+              issuerCurrencyCode: currency,
+              offer,
+              instrumentId: offer.instrumentId,
+              grossPlacedLocal: paidLocal,
+              turn,
+              now,
+              poolCollection: EQUITY_MARKET_POOLS_COLLECTION,
+              instrumentProjection: {
+                collection: "corporations",
+                filter: {
+                  _id: corporation._id,
+                  "pendingShareIssuance.remainingShares": { $gte: shares },
+                },
+                pipelineUpdate: publication,
+                note: "Publish the filled share tranche after its cash and underwriting fee settle",
+              },
+            });
+            if (settlement.status !== "applied" && settlement.status !== "replayed")
+              return { ok: false, sharesPlaced: 0, paidLocal: 0 };
+          } else {
+            const debit = await debitEquityPoolGated(db, currency, paidLocal, "issuanceOut", now);
+            if (!debit.ok) return { ok: false, sharesPlaced: 0, paidLocal: 0 };
+            const update = await corporationsCollection(db).updateOne(
+              { _id: corporation._id, pendingShareIssuance: pending, isPrivate: { $ne: true } },
+              publication
+            );
+            if (update.modifiedCount === 0) {
+              await refundEquityPoolDebit(db, currency, paidLocal, "issuanceOut", now);
+              return { ok: false, sharesPlaced: 0, paidLocal: 0 };
+            }
+          }
+          if (cashoutLimits) await recordPrimaryPoolPlacement(db, corporation._id, turn, paidLocal);
+          const fxRate = await getCorpFxRate(db, corporation);
+          await recordShareTrade(db, {
+            corporationId: corporation._id,
+            kind: "issuance",
+            turn,
+            shares,
+            pricePerShareAnchor: corpLiquidCapitalToAnchor(price, corporation, fxRate),
+            from: null,
+            to: null,
+            corpCurrencyCode: corporation.liquidCurrencyCode,
+            note: `Equity market pool placed ${shares.toLocaleString("en-US")} approved shares`,
+          });
+          await emitTx(db, {
+            type: "ipo_proceeds",
+            turn,
+            createdAt: now,
+            subjectType: "corporation",
+            subjectId: corporation._id,
+            subjectName: corporation.name,
+            amount: issuerNetLocal,
+            currencyCode: currency,
+            meta: {
+              sharesPlaced: shares,
+              sharesPending: pending.remainingShares - shares,
+              counterparty: "equity_market_pool",
+              deferredPlacement: true,
+              ...(offer ? { grossPlacedLocal: paidLocal, underwritingFeeLocal: feeLocal } : {}),
+            },
+          });
+          return { ok: true, sharesPlaced: shares, paidLocal };
         },
-      });
-      if (settlement.status !== "applied" && settlement.status !== "replayed") continue;
-    } else {
-      const debit = await debitEquityPoolGated(db, currency, paidLocal, "issuanceOut", now);
-      if (!debit.ok) continue;
-      const update = await corporationsCollection(db).updateOne(
-        { _id: corporation._id, "pendingShareIssuance.remainingShares": { $gte: shares } },
-        publication
-      );
-      if (update.modifiedCount === 0) {
-        await refundEquityPoolDebit(db, currency, paidLocal, "issuanceOut", now);
-        continue;
-      }
-    }
-    if (cashoutLimits) await recordPrimaryPoolPlacement(db, corporation._id, turn, paidLocal);
-    budget -= paidLocal;
+        { sourceKey: `${corporation._id.toHexString()}:${turn}` }
+      )
+    );
+    if (!settlement.ok) continue;
+    budget -= settlement.paidLocal;
     budgetByCurrency.set(currency, budget);
     result.corporationsTouched++;
-    result.sharesPlaced += shares;
-    result.paidLocal += paidLocal;
-    const fxRate = await getCorpFxRate(db, corporation);
-    void recordShareTrade(db, {
-      corporationId: corporation._id,
-      kind: "issuance",
-      turn,
-      shares,
-      pricePerShareAnchor: corpLiquidCapitalToAnchor(price, corporation, fxRate),
-      from: null,
-      to: null,
-      corpCurrencyCode: corporation.liquidCurrencyCode,
-      note: `Equity market pool placed ${shares.toLocaleString("en-US")} approved shares`,
-    });
-    void emitTx(db, {
-      type: "ipo_proceeds",
-      turn,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: corporation._id,
-      subjectName: corporation.name,
-      amount: issuerNetLocal,
-      currencyCode: currency,
-      meta: {
-        sharesPlaced: shares,
-        sharesPending: pending.remainingShares - shares,
-        counterparty: "equity_market_pool",
-        deferredPlacement: true,
-        ...(offer ? { grossPlacedLocal: paidLocal, underwritingFeeLocal: feeLocal } : {}),
-      },
-    });
+    result.sharesPlaced += settlement.sharesPlaced;
+    result.paidLocal += settlement.paidLocal;
   }
   return result;
 }

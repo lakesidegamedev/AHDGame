@@ -28,7 +28,7 @@ describe("loadWatchlist", () => {
     const quiet = new ObjectId();
     const corpHistoryFind = vi
       .fn()
-      .mockReturnValue(cursor([{ corporationId: acme, sharePrice: 10 }]));
+      .mockReturnValue(cursor([{ corporationId: acme, sharePrice: 10, currencyCode: "GBP" }]));
     const priceHistoryFind = vi
       .fn()
       .mockReturnValue(cursor([{ commodity: "oil", globalPrice: 50 }]));

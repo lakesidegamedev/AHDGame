@@ -1,14 +1,8 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { GameState } from "@/lib/db/types/gameState";
-import type {
-  ElectedOfficial,
-  PoliticalParty,
-  Seat,
-  SenateClass,
-  StatePartyOrg,
-  StateRegistrationPool,
-} from "@/lib/db/types";
+import type { ElectedOfficial, PoliticalParty, SenateClass } from "@/lib/db/types";
 import { SENATE_CLASSES } from "@/lib/constants";
 import { getHouseSeats } from "@/lib/constants/states";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -294,6 +288,13 @@ export async function runStatehoodAdmission(
   _turn: number,
   currentYearOverride?: number
 ): Promise<StatehoodResult> {
+  return withSessionDb(db, (tx) => admitInTransaction(tx, _turn, currentYearOverride));
+}
+async function admitInTransaction(
+  db: Db,
+  _turn: number,
+  currentYearOverride?: number
+): Promise<StatehoodResult> {
   const gameState = await (
     await getGameStateCollection(db)
   ).findOne({ _id: "current" } as Partial<GameState>);
@@ -364,9 +365,11 @@ export async function runStatehoodAdmission(
   });
 
   if (admitted.length > 0) {
-    await createSystemNewsPost(buildAdmissionContent(admitted), "election", {
-      title: `${admitted.map((d) => d.name).join(" and ")} Admitted to the Union`,
-    });
+    await afterCommit(db, () =>
+      createSystemNewsPost(buildAdmissionContent(admitted), "election", {
+        title: `${admitted.map((d) => d.name).join(" and ")} Admitted to the Union`,
+      })
+    );
   }
 
   return { ran: true, year: currentYear, admitted };

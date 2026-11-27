@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -14,7 +15,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { abandonTechDecade } from "@/lib/corporations/commands/techTree/abandonTechDecade";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type { GameState } from "@/lib/db/types";
+
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const abandonSchema = z.object({
@@ -44,30 +45,32 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    const currentTurn = gameState?.currentTurn ?? 1;
-    const startingYear = gameState?.startingYear ?? STARTING_YEAR;
-    const currentYear =
-      gameState?.currentYear ?? startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);
+      const currentTurn = gameState?.currentTurn ?? 1;
+      const startingYear = gameState?.startingYear ?? STARTING_YEAR;
+      const currentYear =
+        gameState?.currentYear ?? startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);
 
-    const result = await abandonTechDecade(db, corporation, parsed.data.decadeId, currentYear);
+      const result = await abandonTechDecade(db, corporation, parsed.data.decadeId, currentYear);
 
-    if (!result.ok) {
-      return errorResponse(result.status, result.error);
-    }
+      if (!result.ok) {
+        return errorResponse(result.status, result.error);
+      }
 
-    return NextResponse.json({
-      success: true,
-      decadeId: result.decadeId,
-      removedNodeIds: result.removedNodeIds,
+      return NextResponse.json({
+        success: true,
+        decadeId: result.decadeId,
+        removedNodeIds: result.removedNodeIds,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

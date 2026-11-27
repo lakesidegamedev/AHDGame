@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
-import { getDb, getMongoClient } from "@/lib/mongodb";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
+import { ObjectId, type ClientSession, type UpdateFilter } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import { runWithDbSession } from "@/lib/db/sessionDb";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { badRequest, handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -25,8 +26,7 @@ import {
   isLeadershipElectionFreezeActive,
   LEADERSHIP_FREEZE_MESSAGE,
 } from "@/lib/parties/leadershipElectionFreeze";
-import { getGameTime } from "@/lib/time/gameTime";
-import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
+import { getGameStateCore } from "@/lib/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
 import { activityLogCollection } from "@/lib/db/repositories/activityLog";
@@ -67,258 +67,179 @@ export async function POST(request: Request, { params }: RouteParams) {
     const targetCharacterOid = new ObjectId(characterId);
 
     const db = await getDb();
-    const transferGuard = await requirePlayerTransfersEnabled(db);
-    if (transferGuard) return transferGuard;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const transferGuard = await requirePlayerTransfersEnabled(db);
+      if (transferGuard) return transferGuard;
 
-    const party = await findPartyBySequentialId(db, partyId, countryId);
-    if (!party) {
-      return errorResponse(404, "Party not found");
-    }
-    const partyIdStr = String(party.sequentialId);
-
-    const resolved = await findCaucusBySlug(db, countryId, partyIdStr, slug);
-    if (!resolved) {
-      return errorResponse(404, "Caucus not found");
-    }
-    const { caucus } = resolved;
-
-    const isAdmin = authUser.isAdmin;
-    const isChair = caucus.chairId?.equals(authUser.character._id) ?? false;
-    if (!isAdmin && !isChair) {
-      return errorResponse(403, "Only the Caucus Chair or an admin can send caucus funds");
-    }
-    // Defense-in-depth: chair role retains across relocation, so refuse if the
-    // actor's character is no longer in this country.
-    if (!isAdmin && !isSameCountry(authUser.character, { countryId })) {
-      return errorResponse(403, "You must be a citizen of this country to send caucus funds");
-    }
-
-    const memberships = await listCaucusMemberships(db, caucus._id, "character");
-    const activeCharacterIds = new Set(
-      memberships.map((membership) => membership.memberId.toString())
-    );
-    if (!activeCharacterIds.has(targetCharacterOid.toString())) {
-      return errorResponse(400, "Character is not an active player member of this caucus");
-    }
-
-    const targetCharacter = await charactersCollection(db).findOne({
-      _id: targetCharacterOid,
-      countryId,
-      party: partyIdStr,
-    });
-    if (!targetCharacter) {
-      return errorResponse(404, "Character not found");
-    }
-
-    // Caucus money is party money for the purposes of both controls,
-    // otherwise a caucus is a way around the party leadership freeze and
-    // the recipient's per-turn cap.
-    const { currentTurn } = await getGameTime();
-    if (!isAdmin) {
-      if (await isLeadershipElectionFreezeActive(db, party, currentTurn)) {
-        return errorResponse(400, LEADERSHIP_FREEZE_MESSAGE);
+      const party = await findPartyBySequentialId(db, partyId, countryId);
+      if (!party) {
+        return errorResponse(404, "Party not found");
       }
-      const cap = await checkPlayerPayoutCap(db, {
-        characterId: targetCharacterOid,
+      const partyIdStr = String(party.sequentialId);
+
+      const resolved = await findCaucusBySlug(db, countryId, partyIdStr, slug);
+      if (!resolved) {
+        return errorResponse(404, "Caucus not found");
+      }
+      const { caucus } = resolved;
+
+      const isAdmin = authUser.isAdmin;
+      const isChair = caucus.chairId?.equals(authUser.character._id) ?? false;
+      if (!isAdmin && !isChair) {
+        return errorResponse(403, "Only the Caucus Chair or an admin can send caucus funds");
+      }
+      // Defense-in-depth: chair role retains across relocation, so refuse if the
+      // actor's character is no longer in this country.
+      if (!isAdmin && !isSameCountry(authUser.character, { countryId })) {
+        return errorResponse(403, "You must be a citizen of this country to send caucus funds");
+      }
+
+      const memberships = await listCaucusMemberships(db, caucus._id, "character");
+      const activeCharacterIds = new Set(
+        memberships.map((membership) => membership.memberId.toString())
+      );
+      if (!activeCharacterIds.has(targetCharacterOid.toString())) {
+        return errorResponse(400, "Character is not an active player member of this caucus");
+      }
+
+      const targetCharacter = await charactersCollection(db).findOne({
+        _id: targetCharacterOid,
         countryId,
-        currentTurn,
-        amount: sendAmount,
-        // A caucus has only the two seats, so "two officers" here means
-        // both are filled. Counted on the paying body itself, as every
-        // treasury is judged on its own oversight.
-        seatedOfficers: countDistinctOfficers([
-          caucus.chairId?.toString(),
-          caucus.viceChairId?.toString(),
-        ]),
+        party: partyIdStr,
       });
-      if (!cap.ok) {
-        return errorResponse(400, cap.reason);
-      }
-    }
-
-    const treasury = caucus.treasury ?? 0;
-    if (treasury < sendAmount) {
-      return errorResponse(400, "Insufficient caucus funds");
-    }
-
-    const now = new Date();
-    const forexEnabled = await isForexEnabled();
-    // Post-Phase-6: caucus treasury and recipient campaign balance are both
-    // in the same local home currency.
-    const recipientFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
-    const caucusDebit: UpdateFilter<Caucus> = {
-      $inc: { treasury: -sendAmount },
-      $set: { updatedAt: now },
-    };
-    const characterCredit = {
-      $inc: { [recipientFundsField]: sendAmount },
-    };
-
-    const applySendInTransaction = async (session: ClientSession) => {
-      const debitResult = await caucusesCollection(db).updateOne(
-        { _id: caucus._id, treasury: { $gte: sendAmount } },
-        caucusDebit,
-        { session }
-      );
-
-      if (debitResult.matchedCount === 0) {
-        throw badRequest("Insufficient caucus funds");
-      }
-
-      const creditResult = await charactersCollection(db).updateOne(
-        { _id: targetCharacterOid },
-        characterCredit,
-        { session }
-      );
-
-      if (creditResult.matchedCount === 0) {
-        throw notFound("Character not found");
-      }
-    };
-
-    const applySendWithoutTransaction = async () => {
-      const debitResult = await caucusesCollection(db).updateOne(
-        { _id: caucus._id, treasury: { $gte: sendAmount } },
-        caucusDebit
-      );
-
-      if (debitResult.matchedCount === 0) {
-        return errorResponse(400, "Insufficient caucus funds");
-      }
-
-      // The debit has landed and there is no transaction to roll back, so every exit
-      // from here must either complete the credit or refund the debit.
-      const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
-        try {
-          const refundResult = await caucusesCollection(db).updateOne(
-            { _id: caucus._id },
-            { $inc: { treasury: sendAmount }, $set: { updatedAt: new Date() } }
-          );
-          if (refundResult.matchedCount !== 1) {
-            throw new Error("Caucus treasury no longer exists during refund");
-          }
-        } catch (refundError) {
-          console.error(
-            JSON.stringify({
-              error: "caucus_send_refund_failed",
-              operation: "caucus_send",
-              caucusId: caucus._id.toString(),
-              countryId,
-              amount: sendAmount,
-              recipientId: targetCharacterOid.toString(),
-              reason,
-              message: refundError instanceof Error ? refundError.message : String(refundError),
-              ...(cause !== undefined && {
-                causedBy: cause instanceof Error ? cause.message : String(cause),
-              }),
-            })
-          );
-          throw new TreasuryExecutionUncertainError(
-            `Caucus treasury debited but neither credited nor refunded (${reason}).`,
-            { cause: refundError }
-          );
-        }
-      };
-
-      let creditResult;
-      try {
-        creditResult = await charactersCollection(db).updateOne(
-          { _id: targetCharacterOid },
-          characterCredit
-        );
-      } catch (creditError) {
-        await refundDebit("credit threw", creditError);
-        throw creditError;
-      }
-
-      if (creditResult.matchedCount === 0) {
-        await refundDebit("recipient not found");
+      if (!targetCharacter) {
         return errorResponse(404, "Character not found");
       }
 
-      return null;
-    };
-
-    try {
-      // No session (standalone Mongo, probed by the helper) routes to the
-      // sequential path, which compensates for partial writes itself.
-      const fallbackResponse = await runTransactionWithSessionRetry(
-        getMongoClient,
-        async (session) => {
-          if (!session) return applySendWithoutTransaction();
-          await applySendInTransaction(session);
-          return null;
+      // Caucus money is party money for the purposes of both controls,
+      // otherwise a caucus is a way around the party leadership freeze and
+      // the recipient's per-turn cap.
+      const clock = await getGameStateCore(db);
+      if (!clock) return errorResponse(409, "The game clock is unavailable. Try again shortly.");
+      const { currentTurn } = clock;
+      if (!isAdmin) {
+        if (await isLeadershipElectionFreezeActive(db, party, currentTurn)) {
+          return errorResponse(400, LEADERSHIP_FREEZE_MESSAGE);
         }
-      );
-      if (fallbackResponse) return fallbackResponse;
-    } catch (err) {
-      const code = (err as MongoServerError | undefined)?.code;
-      if (code === 20 || code === 263) {
-        const fallbackResponse = await applySendWithoutTransaction();
-        if (fallbackResponse) return fallbackResponse;
-      } else {
-        throw err;
+        const cap = await checkPlayerPayoutCap(db, {
+          characterId: targetCharacterOid,
+          countryId,
+          currentTurn,
+          amount: sendAmount,
+          // A caucus has only the two seats, so "two officers" here means
+          // both are filled. Counted on the paying body itself, as every
+          // treasury is judged on its own oversight.
+          seatedOfficers: countDistinctOfficers([
+            caucus.chairId?.toString(),
+            caucus.viceChairId?.toString(),
+          ]),
+        });
+        if (!cap.ok) {
+          return errorResponse(400, cap.reason);
+        }
       }
-    }
 
-    const adminLog: AdminLog = {
-      _id: new ObjectId(),
-      createdAt: now,
-      category: "election",
-      action: "funds_transferred",
-      username: targetCharacter.name,
-      adminUsername: authUser.username,
-      details: `Sent $${sendAmount.toLocaleString()} from caucus ${caucus.name} to ${targetCharacter.name}`,
-    };
-    await adminLogsCollection(db).insertOne(adminLog);
+      const treasury = caucus.treasury ?? 0;
+      if (treasury < sendAmount) {
+        return errorResponse(400, "Insufficient caucus funds");
+      }
 
-    await emitTreasuryTransaction({
-      db,
-      countryId,
-      partyId: partyIdStr,
-      holderType: "caucus",
-      holderId: caucus._id.toString(),
-      category: "transfers",
-      direction: "debit",
-      amount: sendAmount,
-      memo: `Send to ${targetCharacter.name}`,
-      counterparty: {
-        type: "character",
-        id: targetCharacterOid.toString(),
-        label: targetCharacter.name,
-      },
-      initiatedBy: {
-        type: "character",
-        id: authUser.character._id.toString(),
-        label: authUser.character.name,
-      },
-      // Same turn the payout cap was checked against, so the check and
-      // the record cannot land in different turn buckets.
-      turn: currentTurn,
-      now,
-    });
+      const now = new Date();
+      const forexEnabled = await isForexEnabled();
+      // Post-Phase-6: caucus treasury and recipient campaign balance are both
+      // in the same local home currency.
+      const recipientFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
+      const caucusDebit: UpdateFilter<Caucus> = {
+        $inc: { treasury: -sendAmount },
+        $set: { updatedAt: now },
+      };
+      const characterCredit = {
+        $inc: { [recipientFundsField]: sendAmount },
+      };
 
-    void activityLogCollection<Document>(db).insertOne({
-      type: "fund_event",
-      timestamp: now,
-      userId: new ObjectId(authUser.userId),
-      characterId: authUser.character._id,
-      characterName: authUser.character.name,
-      username: authUser.username,
-      countryId,
-      fundEventType: "caucus_transfer",
-      amount: sendAmount,
-      currencyCode: COUNTRY_CURRENCY_MAP[countryId] ?? "USD",
-      fromId: caucus._id,
-      fromName: caucus.name,
-      fromType: "caucus",
-      toId: targetCharacterOid,
-      toName: targetCharacter.name,
-      toType: "character",
-    });
+      const applySendInTransaction = async (session: ClientSession) => {
+        const debitResult = await caucusesCollection(db).updateOne(
+          { _id: caucus._id, treasury: { $gte: sendAmount } },
+          caucusDebit,
+          { session }
+        );
 
-    return NextResponse.json({
-      message: `Sent $${sendAmount.toLocaleString()} to ${targetCharacter.name}`,
+        if (debitResult.matchedCount === 0) {
+          throw badRequest("Insufficient caucus funds");
+        }
+
+        const creditResult = await charactersCollection(db).updateOne(
+          { _id: targetCharacterOid },
+          characterCredit,
+          { session }
+        );
+
+        if (creditResult.matchedCount === 0) {
+          throw notFound("Character not found");
+        }
+      };
+
+      await runWithDbSession(db, applySendInTransaction);
+
+      const adminLog: AdminLog = {
+        _id: new ObjectId(),
+        createdAt: now,
+        category: "election",
+        action: "funds_transferred",
+        username: targetCharacter.name,
+        adminUsername: authUser.username,
+        details: `Sent $${sendAmount.toLocaleString()} from caucus ${caucus.name} to ${targetCharacter.name}`,
+      };
+      await adminLogsCollection(db).insertOne(adminLog);
+
+      await emitTreasuryTransaction({
+        db,
+        countryId,
+        partyId: partyIdStr,
+        holderType: "caucus",
+        holderId: caucus._id.toString(),
+        category: "transfers",
+        direction: "debit",
+        amount: sendAmount,
+        memo: `Send to ${targetCharacter.name}`,
+        counterparty: {
+          type: "character",
+          id: targetCharacterOid.toString(),
+          label: targetCharacter.name,
+        },
+        initiatedBy: {
+          type: "character",
+          id: authUser.character._id.toString(),
+          label: authUser.character.name,
+        },
+        // Same turn the payout cap was checked against, so the check and
+        // the record cannot land in different turn buckets.
+        turn: currentTurn,
+        now,
+      });
+
+      await activityLogCollection<Document>(db).insertOne({
+        type: "fund_event",
+        timestamp: now,
+        userId: new ObjectId(authUser.userId),
+        characterId: authUser.character._id,
+        characterName: authUser.character.name,
+        username: authUser.username,
+        countryId,
+        fundEventType: "caucus_transfer",
+        amount: sendAmount,
+        currencyCode: COUNTRY_CURRENCY_MAP[countryId] ?? "USD",
+        fromId: caucus._id,
+        fromName: caucus.name,
+        fromType: "caucus",
+        toId: targetCharacterOid,
+        toName: targetCharacter.name,
+        toType: "character",
+      });
+
+      return NextResponse.json({
+        message: `Sent $${sendAmount.toLocaleString()} to ${targetCharacter.name}`,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

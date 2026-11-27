@@ -6,7 +6,7 @@ import type { Corporation } from "@/lib/db/types/corporation";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { ensureFund } from "@/lib/banking/insurance";
 import {
   resumeSettlement,

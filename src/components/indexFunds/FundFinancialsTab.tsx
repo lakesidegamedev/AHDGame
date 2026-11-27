@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { useState } from "react";
+import { recordedDividendSummary } from "@/lib/indexFunds/rules/financialSummary";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
@@ -47,16 +48,6 @@ interface FundFinancialsTabProps {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const INCOME_KINDS = new Set(["dividend_pass_through", "dividend_reinvest", "bond_allocation"]);
-
-const EXPENSE_KINDS = new Set(["public_float_buy", "redemption", "redemption_queued"]);
-
-function classifyKind(kind: string): "income" | "expense" | "neutral" {
-  if (INCOME_KINDS.has(kind)) return "income";
-  if (EXPENSE_KINDS.has(kind)) return "expense";
-  return "neutral";
-}
 
 function kindLabel(kind: string): string {
   const map: Record<string, string> = {
@@ -117,38 +108,7 @@ export default function FundFinancialsTab({
   const [view, setView] = useState<"income_statement" | "balance_sheet">("income_statement");
 
   // ── Income Statement ──────────────────────────────────────────────────────
-  const incomeStatement = (() => {
-    if (!financials) return null;
-
-    let grossIncome = 0;
-    let grossExpense = 0;
-    const byKind = new Map<string, { income: number; expense: number; count: number }>();
-
-    for (const tx of financials.transactions) {
-      const cls = classifyKind(tx.kind);
-      if (cls === "neutral") continue;
-      const amt = Math.abs(tx.amountAnchor);
-      const existing = byKind.get(tx.kind) ?? { income: 0, expense: 0, count: 0 };
-      if (cls === "income") {
-        grossIncome += amt;
-        existing.income += amt;
-      } else {
-        grossExpense += amt;
-        existing.expense += amt;
-      }
-      existing.count += 1;
-      byKind.set(tx.kind, existing);
-    }
-
-    const netIncome = grossIncome - grossExpense;
-
-    return {
-      grossIncome,
-      grossExpense,
-      netIncome,
-      byKind,
-    };
-  })();
+  const incomeStatement = financials ? recordedDividendSummary(financials.transactions) : null;
 
   // ── Balance Sheet ─────────────────────────────────────────────────────────
   const bs = balanceSheet;
@@ -159,7 +119,7 @@ export default function FundFinancialsTab({
       <div className="flex items-center gap-1 rounded-lg bg-card-elevated p-1 w-fit border border-card-border">
         {(
           [
-            { key: "income_statement" as const, label: "Income statement" },
+            { key: "income_statement" as const, label: "Investment income" },
             { key: "balance_sheet" as const, label: "Balance sheet" },
           ] as const
         ).map((v) => (
@@ -180,16 +140,18 @@ export default function FundFinancialsTab({
       {view === "income_statement" && (
         <div className="rounded-xl border border-card-border bg-card overflow-hidden">
           <div className="border-b border-card-border bg-background/60 px-6 py-4">
-            <h2 className="text-heading font-bold text-foreground">Income statement</h2>
+            <h2 className="text-heading font-bold text-foreground">Recorded investment income</h2>
             <p className="text-body-sm text-muted mt-0.5">
-              Fund-wide totals across all holders — based on the last 200 transactions
+              Recorded dividends and holder distributions within the last 200 transactions. Capital
+              purchases, subscriptions, redemptions and queued requests are excluded. This window is
+              not a complete profit statement.
             </p>
           </div>
 
           <div className="px-6 py-4 space-y-1">
             {incomeStatement ? (
               <>
-                <div className="text-body-sm font-medium text-muted pt-1 pb-2">Revenue</div>
+                <div className="text-body-sm font-medium text-muted pt-1 pb-2">Dividend income</div>
                 {Array.from(incomeStatement.byKind.entries())
                   .filter(([, vals]) => vals.income > 0)
                   .map(([kind, vals]) => (
@@ -207,7 +169,9 @@ export default function FundFinancialsTab({
                 )}
 
                 <div className="border-t border-card-border mt-3" />
-                <div className="text-body-sm font-medium text-muted pt-3 pb-2">Expenses</div>
+                <div className="text-body-sm font-medium text-muted pt-3 pb-2">
+                  Holder distributions
+                </div>
                 {Array.from(incomeStatement.byKind.entries())
                   .filter(([, vals]) => vals.expense > 0)
                   .map(([kind, vals]) => (
@@ -226,11 +190,11 @@ export default function FundFinancialsTab({
 
                 <div className="border-t-2 border-foreground/20 mt-3 pt-2">
                   <FinRow
-                    label="Net income"
+                    label="Dividends retained"
                     value={formatAmount(incomeStatement.netIncome, ccy)}
                     valueClass={incomeStatement.netIncome >= 0 ? "text-success" : "text-error"}
                     bold
-                    tooltip="Total income minus total expenses from recorded transactions."
+                    tooltip="Recorded dividends less distributions to holders. Excludes capital movements and unrecorded gains or expenses."
                   />
                 </div>
               </>

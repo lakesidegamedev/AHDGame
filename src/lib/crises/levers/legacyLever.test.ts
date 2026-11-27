@@ -389,7 +389,8 @@ describe("pooled aid and collective levers", () => {
     await expect(pull("pool.aid", { pctGdp: 0.001 })).rejects.toThrow("treasury down");
     expect(hooks.undo).toHaveBeenCalledTimes(1);
     expect(hooks.aidBill).not.toHaveBeenCalled();
-    expect(db.collectionMocks.crisisAidCommitments.deleteOne).toHaveBeenCalledTimes(1);
+    // The pledge command owns the transaction; abort removes its uncommitted claim.
+    expect(db.collectionMocks.crisisAidCommitments.deleteOne).not.toHaveBeenCalled();
   });
 
   it("claims a contribution, spends once and refuses a second", async () => {

@@ -1,5 +1,5 @@
 /** Owned, isolated mongod proof of the party renewal shell; never reads a configured URI. */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import {
   REAL_MONGO_ENABLED,
@@ -11,6 +11,12 @@ import { makeSeededRng } from "@/lib/events/substrate/rng";
 import { SPLINTER_CHANCE_BOTH } from "./rules/partyRenewal";
 import { processPartyRenewal } from "./partyRenewal";
 import { getPartyFrontier } from "./partyFrontier";
+
+vi.mock("@/lib/discordWebhooks", () => ({
+  sendNewsEvent: vi.fn(),
+  DISCORD_COLORS: { newsPost: 1 },
+}));
+vi.mock("@/lib/analytics/serverPosthog", () => ({ captureServerGameEvent: vi.fn(async () => {}) }));
 
 /** A world id whose cycle-2 splinter roll succeeds, so the proof is deterministic. */
 function splinteringWorldId(): string {
@@ -24,9 +30,21 @@ describe.skipIf(!REAL_MONGO_ENABLED)("party renewal on real Mongo", () => {
   let fixture: IsolatedMongod;
   let db: Db;
   beforeAll(async () => {
-    fixture = await startIsolatedMongod("ahd-party-renewal-");
+    fixture = await startIsolatedMongod("ahd-party-renewal-", { replicaSet: "partyRenewal" });
+    await fixture.client.db("admin").command({
+      replSetInitiate: {
+        _id: "partyRenewal",
+        members: [{ _id: 0, host: new URL(fixture.uri).host }],
+      },
+    });
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      if ((await fixture.client.db("admin").command({ hello: 1 })).isWritablePrimary) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect((await fixture.client.db("admin").command({ hello: 1 })).isWritablePrimary).toBe(true);
     db = fixture.db;
-  }, 40_000);
+  }, 60_000);
   afterAll(async () => {
     if (fixture) await stopIsolatedMongod(fixture);
   });
@@ -198,6 +216,57 @@ describe.skipIf(!REAL_MONGO_ENABLED)("party renewal on real Mongo", () => {
       ])
     );
   });
+
+  it.each(["politicalParties", "partyRenewalStates"])(
+    "rolls back landed %s before retrying the cycle",
+    async (collectionName) => {
+      await seedWorld(true, splinteringWorldId());
+      await seedElection(1);
+      await processPartyRenewal(db, 6);
+      await seedElection(2);
+      let crashed = false;
+      const faulty = new Proxy(db, {
+        get(target, key) {
+          if (key === "collection")
+            return (name: string) => {
+              const collection = target.collection(name);
+              if (name !== collectionName) return collection;
+              return new Proxy(collection, {
+                get(c, method) {
+                  const value = Reflect.get(c, method);
+                  if (
+                    method === (collectionName === "politicalParties" ? "insertOne" : "bulkWrite")
+                  )
+                    return async (...args: unknown[]) => {
+                      const result = await Reflect.apply(value, c, args);
+                      if (!crashed) {
+                        crashed = true;
+                        throw new Error("Synthetic landed renewal interruption");
+                      }
+                      return result;
+                    };
+                  return typeof value === "function" ? value.bind(c) : value;
+                },
+              });
+            };
+          const value = Reflect.get(target, key);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      await expect(processPartyRenewal(faulty, 18)).rejects.toThrow("Synthetic landed");
+      expect(crashed).toBe(true);
+      expect(
+        (await db.collection("partyRenewalStates").findOne({ _id: "DE" as never }))?.lastCycle
+      ).toBe(1);
+      expect(await db.collection("politicalParties").countDocuments()).toBe(3);
+      const results = await Promise.all([processPartyRenewal(db, 18), processPartyRenewal(db, 18)]);
+      expect(results[0]).toEqual(results[1]);
+      expect(results[0]).toMatchObject({ countries: 1, splinters: 1, folds: 1 });
+      expect(
+        await db.collection("politicalParties").countDocuments({ "renewalOrigin.cycle": 2 })
+      ).toBe(1);
+    }
+  );
 
   it("lets a party back into a region it held within two cycles", async () => {
     await db.collection("states").insertMany([

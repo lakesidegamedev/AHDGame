@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 /**
  * Phase 10 end-to-end integration scenarios.
  *
@@ -53,6 +58,18 @@ function makeScenarioDb(fx: ScenarioFixture) {
     getBudget: () => budget,
     db: {
       collection: vi.fn((name: string) => {
+        if (name === "electedOfficials")
+          return {
+            find: () => ({
+              toArray: async () =>
+                fx.chamberNpps.map((npp) => ({
+                  countryId: "US",
+                  officeType: "representative",
+                  isNPP: true,
+                  nppId: npp._id,
+                })),
+            }),
+          };
         if (name === "characters") {
           return {
             findOne: vi.fn().mockResolvedValue(fx.characterExecutive ?? null),

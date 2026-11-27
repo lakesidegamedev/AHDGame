@@ -265,7 +265,18 @@ export async function loadCorporationLookupInputs({
       .find({}, { projection: { currencyCode: 1, rate: 1 } })
       .toArray() as Promise<ExchangeRate[]>,
     stateResourceCapacityCollection(db)
-      .find({}, { projection: { stateId: 1, resources: 1 } })
+      .find(
+        {},
+        {
+          projection: {
+            stateId: 1,
+            resources: 1,
+            extractedUnits: 1,
+            extractionDepletionTurn: 1,
+            extractionOpeningUnits: 1,
+          },
+        }
+      )
       .toArray(),
     loadActiveFtaPairs(db),
     // Latest trade-flow snapshot (prev turn) → per-country export intensity for

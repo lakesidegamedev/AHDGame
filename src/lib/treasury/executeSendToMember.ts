@@ -1,25 +1,13 @@
-/**
- * Atomic debit + credit for "Send to Member" treasury actions.
- *
- * Shared by the immediate path (`transactionApprovalMode === "single"`) and
- * the two-person-approval execute step. Balance race-protection, replica-set
- * vs standalone Mongo fallback, admin log, treasury audit log, and activity
- * log stay identical across callers.
- *
- * Auth, target lookup, and the player-transfers feature gate stay in the
- * route layer. Reserve breach computation is up to the caller; pass the
- * warning string (or null) so it shows in the admin log and response message.
- */
-
-import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
+import { ObjectId, type ClientSession, type UpdateFilter } from "mongodb";
 import { NextResponse } from "next/server";
 import type { Db } from "mongodb";
-import { getMongoClient } from "@/lib/mongodb";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
+import { boundSession, runWithDbSession } from "@/lib/db/sessionDb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 import { badRequest, notFound, errorResponse } from "@/lib/api/errors";
 import type { AdminLog, Character, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
+import { getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { getGameState } from "@/lib/gameState";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -30,7 +18,6 @@ import { checkPlayerPayoutCap } from "@/lib/treasury/payoutCap";
 // pure helper with no database dependency, and tests that mock the
 // database-facing module should not have to stub it.
 import { countDistinctOfficers } from "@/lib/treasury/payoutCapValues";
-import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { adminLogsCollection } from "@/lib/db/repositories/adminLogs";
@@ -79,6 +66,16 @@ export interface ExecuteSendToMemberArgs {
  * Either way the caller can pass `response` straight through.
  */
 export async function executeSendToMember(
+  args: ExecuteSendToMemberArgs
+): Promise<{ ok: boolean; response: NextResponse }> {
+  return withAtomicResult(args.db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) return { ok: false, response: errorResponse(refusal.status, refusal.error) };
+    return executeSendToMemberAtomic({ ...args, db });
+  });
+}
+
+async function executeSendToMemberAtomic(
   args: ExecuteSendToMemberArgs
 ): Promise<{ ok: boolean; response: NextResponse }> {
   const { db, countryId, party, targetCharacter, amount, reserveWarning, initiator } = args;
@@ -136,109 +133,10 @@ export async function executeSendToMember(
     }
   };
 
-  const applyWithoutTransaction = async (): Promise<NextResponse | null> => {
-    const debitResult = await politicalPartiesCollection(db).updateOne(
-      { _id: party._id, treasury: { $gte: amount } },
-      partyDebit
-    );
-    if (debitResult.matchedCount === 0) {
-      return errorResponse(400, "Insufficient treasury funds");
-    }
-    // The debit has landed and there is no transaction to roll back, so
-    // every exit from here must either complete the credit or refund the
-    // debit. A thrown credit that escapes leaves the treasury short and
-    // lets a retry debit again.
-    const refundDebit = async (reason: string, cause?: unknown): Promise<void> => {
-      try {
-        await politicalPartiesCollection(db).updateOne(
-          { _id: party._id },
-          { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
-        );
-      } catch (refundError) {
-        console.error(
-          JSON.stringify({
-            error: "treasury_send_refund_failed",
-            operation: "execute_send_to_member",
-            partyId: partyIdStr,
-            countryId,
-            amount,
-            recipientId: targetCharacter._id.toString(),
-            reason,
-            message: refundError instanceof Error ? refundError.message : String(refundError),
-            // The failure that triggered the refund. Without it an
-            // operator reconciling this row sees only that the refund
-            // failed, not what went wrong first.
-            ...(cause !== undefined && {
-              causedBy: cause instanceof Error ? cause.message : String(cause),
-            }),
-          })
-        );
-        throw new TreasuryExecutionUncertainError(
-          `Treasury debited but neither credited nor refunded (${reason}).`,
-          { cause: refundError }
-        );
-      }
-    };
+  await runWithDbSession(db, applyInTransaction);
 
-    let creditResult;
-    try {
-      creditResult = await charactersCollection(db).updateOne(
-        { _id: targetCharacter._id },
-        characterCredit
-      );
-    } catch (creditError) {
-      await refundDebit("credit threw", creditError);
-      throw creditError;
-    }
-    if (creditResult.matchedCount === 0) {
-      await refundDebit("recipient not found");
-      return errorResponse(404, "Character not found");
-    }
-    return null;
-  };
-
-  try {
-    // No session (standalone Mongo, probed by the helper) routes to the
-    // sequential path, which compensates for partial writes itself.
-    const fallbackResponse = await runTransactionWithSessionRetry(
-      getMongoClient,
-      async (session) => {
-        if (!session) return applyWithoutTransaction();
-        await applyInTransaction(session);
-        return null;
-      }
-    );
-    if (fallbackResponse) {
-      return { ok: false, response: fallbackResponse };
-    }
-  } catch (err) {
-    const code = (err as MongoServerError | undefined)?.code;
-    if (code === 20 || code === 263) {
-      const fallbackResponse = await applyWithoutTransaction();
-      if (fallbackResponse) {
-        return { ok: false, response: fallbackResponse };
-      }
-    } else {
-      throw err;
-    }
-  }
-
-  // ─── Audit + activity logs ──────────────────────────────────────────────
-  // PAST THIS POINT THE MONEY HAS MOVED. Nothing below may throw: the
-  // callers treat an exception as "the transfer did not happen" and
-  // unwind accordingly — the two-person approve route hands the
-  // approver's signature back, reopening a row whose funds are already
-  // gone, which a second Approve click then spends again. A lost audit
-  // row is a reporting gap; a thrown audit row was a double payout.
-  //
-  // Record currency is the world's seed home code, so 2027 euro members
-  // stamp EUR. The gameState read resolves failures to the default preset
-  // (era-blind map), never to a throw. One read on a user-initiated
-  // transfer; nothing on the turn path.
-  const txCurrency = await getGameState().then(
-    (gameState) => getSeedCurrencyCode(countryId, gameState?.preset ?? DEFAULT_SEED_PRESET),
-    () => COUNTRY_CURRENCY_MAP[countryId] ?? "USD"
-  );
+  const state = await getGameState(db);
+  const txCurrency = getSeedCurrencyCode(countryId, state?.preset ?? DEFAULT_SEED_PRESET);
   const adminLog: AdminLog = {
     _id: new ObjectId(),
     createdAt: now,
@@ -253,6 +151,7 @@ export async function executeSendToMember(
   try {
     await adminLogsCollection(db).insertOne(adminLog);
   } catch (err) {
+    if (boundSession(db)) throw err;
     console.error(
       JSON.stringify({
         error: "treasury_send_admin_log_failed",
@@ -308,6 +207,7 @@ export async function executeSendToMember(
       currencyCode: txCurrency,
     });
   } catch (err) {
+    if (boundSession(db)) throw err;
     console.error(
       JSON.stringify({
         error: "treasury_send_emit_failed",
@@ -326,7 +226,7 @@ export async function executeSendToMember(
   // SYNCHRONOUSLY on a malformed id, so even a call that is never
   // awaited can escape this function with the money already moved.
   try {
-    void activityLogCollection<Document>(db).insertOne({
+    await activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: now,
       userId: new ObjectId(args.initiatorUserId),
@@ -345,6 +245,7 @@ export async function executeSendToMember(
       toType: "character",
     });
   } catch (err) {
+    if (boundSession(db)) throw err;
     console.error(
       JSON.stringify({
         error: "treasury_send_activity_log_failed",

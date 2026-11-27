@@ -115,10 +115,13 @@ export function CorporationsAdminPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inline, imfRetention, imfAnnualRate, imfTurns, imfIncomeCapture]);
 
-  const callAction = async (url: string, method: string, body?: object) => {
+  const callAction = async (url: string, method: string, body?: object, requestId?: string) => {
     const res = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: {
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(requestId ? { "Idempotency-Key": requestId } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {
@@ -139,7 +142,7 @@ export function CorporationsAdminPanel() {
           await callAction(`${base}/timers`, "POST");
           break;
         case "forceDividend":
-          await callAction(`${base}/dividend`, "POST");
+          await callAction(`${base}/dividend`, "POST", undefined, confirm.requestId);
           break;
         case "vacateCeo":
           await callAction(`${base}/ceo`, "DELETE");
@@ -374,7 +377,12 @@ export function CorporationsAdminPanel() {
   const openConfirm = (action: ConfirmAction) => {
     dispatch({
       type: "SET_CONFIRM",
-      value: confirm?.corpId === action?.corpId && confirm?.type === action?.type ? null : action,
+      value:
+        confirm?.corpId === action?.corpId && confirm?.type === action?.type
+          ? null
+          : action
+            ? { ...action, requestId: crypto.randomUUID() }
+            : null,
     });
     dispatch({ type: "SET_INLINE", value: null });
     dispatch({ type: "SET_ACTION_ERROR", value: null });

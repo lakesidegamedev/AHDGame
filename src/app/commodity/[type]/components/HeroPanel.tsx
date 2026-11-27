@@ -31,7 +31,7 @@ interface HeroPanelProps {
   data: CommodityDetail;
   marketScope: CommodityMarketScope;
   activeCountry: CountryId | null;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   onSelectExchange: (countryId: CountryId | null) => void;
 }

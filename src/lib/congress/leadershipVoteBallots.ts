@@ -1,5 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
-import type { ElectedOfficial } from "@/lib/db/types";
+
 import { electedOfficialsCollection } from "@/lib/db/repositories/electedOfficials";
 
 type BallotCollectionName =
@@ -40,6 +41,23 @@ async function seatWeightForCharacter(
 
 export async function castLeadershipVoteBallot(
   db: Db,
+  options: LeadershipBallotInput
+): Promise<{ previousNominationId: ObjectId | null }> {
+  return withSessionDb(db, (db) => settleLeadershipVoteBallot(db, options));
+}
+
+type LeadershipBallotInput = {
+  ballotCollectionName: BallotCollectionName;
+  nominationCollectionName: NominationCollectionName;
+  nominationId: ObjectId;
+  voterCharacterId: ObjectId;
+  role?: string;
+  now: Date;
+  ballotToken?: string;
+};
+
+async function settleLeadershipVoteBallot(
+  db: Db,
   {
     ballotCollectionName,
     nominationCollectionName,
@@ -48,15 +66,7 @@ export async function castLeadershipVoteBallot(
     role,
     now,
     ballotToken: providedBallotToken,
-  }: {
-    ballotCollectionName: BallotCollectionName;
-    nominationCollectionName: NominationCollectionName;
-    nominationId: ObjectId;
-    voterCharacterId: ObjectId;
-    role?: string;
-    now: Date;
-    ballotToken?: string;
-  }
+  }: LeadershipBallotInput
 ): Promise<{ previousNominationId: ObjectId | null }> {
   const ballotCollection = db.collection<LeadershipVoteBallot>(ballotCollectionName);
   const nominationCollection = db.collection(nominationCollectionName);

@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, Shareholder } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -55,6 +56,12 @@ async function requirePlayableCharacter(
  * are chosen by the admin via {@link SeedImfInstitutionInput}.
  */
 export async function seedImfInstitution(
+  db: Db,
+  input: SeedImfInstitutionInput
+): Promise<SeedImfInstitutionResult> {
+  return withSessionDb(db, (tx) => seedInTransaction(tx, input));
+}
+async function seedInTransaction(
   db: Db,
   input: SeedImfInstitutionInput
 ): Promise<SeedImfInstitutionResult> {
@@ -141,9 +148,41 @@ export async function seedImfInstitution(
     };
   }
 
+  const existingShares = (existing.shareholders ?? []).reduce(
+    (sum, holder) => sum + holder.shares,
+    0
+  );
+  if (
+    existingShares > 0 ||
+    (existing.publicFloat ?? 0) > 0 ||
+    (existing.pendingShareIssuance?.remainingShares ?? 0) > 0
+  ) {
+    const unchanged =
+      (existing.shareholders ?? []).length === 2 &&
+      (existing.publicFloat ?? 0) === 0 &&
+      existing.totalShares === halfShares * 2 &&
+      shareholders.every((expected) =>
+        (existing.shareholders ?? []).some(
+          (actual) =>
+            actual.characterId?.equals(expected.characterId!) && actual.shares === expected.shares
+        )
+      );
+    if (!unchanged)
+      throw new SeedImfInstitutionError(
+        "Existing IMF shares must be transferred through the share market; setup cannot replace investor holdings."
+      );
+  }
   const res = await corporationsCollection(db).updateOne(
     { _id: existing._id },
-    { $set: baseOwnership }
+    {
+      $set: {
+        ...baseOwnership,
+        ...(existingShares > 0
+          ? { totalShares: existing.totalShares, shareholders: existing.shareholders }
+          : {}),
+        publicFloat: existing.publicFloat ?? 0,
+      },
+    }
   );
 
   return {

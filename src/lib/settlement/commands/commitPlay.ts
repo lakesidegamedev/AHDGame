@@ -1,23 +1,9 @@
-/**
- * Commit one play: validate, take the guarded debit, charge the treasury,
- * insert. Order is the correctness story.
- *
- * Both debits are guarded `$inc`s whose filter restates the precondition, so a
- * double-submit races on the write, not the read, and the loser spends nothing.
- *
- * NOT ATOMIC across the three writes; this repo does not use Mongo transactions
- * on player action paths. Failure modes:
- *   - guarded claim fails   → nothing spent or queued. Safe; the only outcome a
- *                             concurrent double-submit can produce.
- *   - `spendFromTreasury` throws → AP and capital gone, no play.
- *   - `insertOne` throws    → AP, capital, treasury gone, no play.
- * The last two require a DB outage mid-request. Money always moves before the
- * effect exists, so a player can be over-charged and refunded but never get a
- * free play. If transactions are ever added, wrap claim through insert.
- *
- * ONE EXCEPTION: on the personal path, a duplicate-key rejection from the
- * once-per-turn index is refunded because there is no effect to have paid for.
- */
+import { isDuplicateKeyError } from "@/lib/api/errors";
+import { boundSession } from "@/lib/db/sessionDb";
+/** Resource charges and the queued effect must commit as one accepted play. */
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import { ObjectId, type Db } from "mongodb";
 import type { SettlementPaymentMode, SettlementPlayDoc } from "@/lib/db/types/settlementPlay";
 import { capitalPriceFor } from "../capitalPrice";
@@ -34,6 +20,7 @@ export interface CommitPlayInput {
   characterId: ObjectId;
   actor: "seat" | "personal";
   playId: string;
+  requestId?: string;
   /** Required for a personal play; ignored on a seat play. */
   direction?: 1 | -1;
   /**
@@ -50,20 +37,47 @@ export type CommitPlayResult =
 
 const fail = (status: number, error: string): CommitPlayResult => ({ ok: false, status, error });
 
-/**
- * A write the `settlementPlays_personal_once` index rejected.
- *
- * Matched on the code rather than the message: 11000 is the duplicate-key
- * error, and the only unique constraint on this collection is the once-per-turn
- * allowance, so any duplicate reaching the personal insert is that one.
- */
-function isDuplicatePersonalPlay(error: unknown): boolean {
-  return typeof error === "object" && error !== null && (error as { code?: number }).code === 11000;
-}
-
 export async function commitSettlementPlay(
   db: Db,
   input: CommitPlayInput
+): Promise<CommitPlayResult> {
+  const operationId = new ObjectId();
+  const fingerprint = JSON.stringify([
+    input.characterId.toString(),
+    input.actor,
+    input.playId,
+    input.direction,
+    input.payment ?? "funds",
+  ]);
+  try {
+    return await withAtomicResult(db, async (db) => {
+      const refusal = await fenceEconomicTurn(db);
+      if (refusal) return fail(refusal.status, refusal.error);
+      const outcome = await withTurnValueSettlement(
+        db,
+        "settlement-play",
+        await getCurrentTurn(db),
+        async (db) => ({
+          fingerprint,
+          result: await commitSettlementPlayInner(db, input, operationId),
+        }),
+        { sourceKey: `${input.characterId}:${input.requestId ?? operationId}` }
+      );
+      if (outcome.fingerprint !== fingerprint)
+        return fail(409, "This request was already accepted with different play details.");
+      return outcome.result;
+    });
+  } catch (error) {
+    if (!boundSession(db) && input.actor === "personal" && isDuplicateKeyError(error))
+      return fail(409, "You have already used this play this turn. It resets next turn.");
+    throw error;
+  }
+}
+
+async function commitSettlementPlayInner(
+  db: Db,
+  input: CommitPlayInput,
+  operationId: ObjectId
 ): Promise<CommitPlayResult> {
   const play = getPlay(input.playId);
   if (!play) return fail(400, "No such play.");
@@ -170,7 +184,7 @@ export async function commitSettlementPlay(
       await spendFromTreasury(db, seat.id as CountryId, fundsLocal, {
         witness: {
           flow: "settlement_play",
-          key: `settlement-play:${play.id}:${seat.id}`,
+          key: `settlement-play:${operationId}`,
           site: "settlement/commitPlay",
         },
       });
@@ -178,7 +192,7 @@ export async function commitSettlementPlay(
 
     await plays.insertOne({
       ...base,
-      _id: new ObjectId(),
+      _id: operationId,
       actor: "seat",
       seatId: seat.id,
       countryId: seat.id as CountryId,
@@ -234,35 +248,14 @@ export async function commitSettlementPlay(
     return fail(409, "Your actions or funds changed before the play landed. Try again.");
   }
 
-  try {
-    await plays.insertOne({
-      ...base,
-      _id: new ObjectId(),
-      actor: "personal",
-      seatId: null,
-      countryId: null,
-      direction: input.direction,
-      // Record what was ACTUALLY charged, not the anchor figure — the audit
-      // trail has to match the balance the player watched go down.
-      costs: { ...base.costs, funds: funds.local },
-    });
-  } catch (error) {
-    // The unique partial index is the BACKSTOP for the allowance. The count
-    // above and this insert are not atomic, so two fast clicks can both read
-    // zero and both arrive here; the second one loses on the index instead of
-    // buying a second use.
-    if (!isDuplicatePersonalPlay(error)) throw error;
-    // The debit already happened, so give it back. This is the one place the
-    // file's usual ordering — money moves before the effect exists — has to be
-    // undone, because there IS no effect to pay for.
-    await charactersCollection(db).updateOne(
-      { _id: input.characterId },
-      {
-        $inc: { actions: play.actionCost, [funds.field]: funds.local },
-        $set: { updatedAt: new Date() },
-      }
-    );
-    return fail(409, "You have already used this play this turn. It resets next turn.");
-  }
+  await plays.insertOne({
+    ...base,
+    _id: operationId,
+    actor: "personal",
+    seatId: null,
+    countryId: null,
+    direction: input.direction,
+    costs: { ...base.costs, funds: funds.local },
+  });
   return { ok: true, playId: play.id, appliedDirection: input.direction };
 }

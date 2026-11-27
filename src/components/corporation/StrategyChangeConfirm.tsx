@@ -1,5 +1,6 @@
 "use client";
 
+import { readRetoolQuote, type RetoolQuote } from "@/lib/corporations/rules/retoolQuote";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useEffect, useState } from "react";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
@@ -7,7 +8,6 @@ import {
   getSectorStrategies,
   getStrategy,
   STRATEGY_COOLDOWN_TURNS,
-  STRATEGY_RETOOL_COST_FRACTION,
   STRATEGY_TRANSITION_MARGIN_PENALTY,
   STRATEGY_TRANSITION_TURNS,
   type SectorStrategy,
@@ -20,10 +20,7 @@ import {
   computeEffectiveCommodityPressureRatio,
   type CommodityType,
 } from "@/lib/constants/commodities";
-import {
-  methodAdoptionSurchargeFraction,
-  methodBuildDelayTurns,
-} from "@/lib/corporations/rules/methodAdoption";
+import { methodBuildDelayTurns } from "@/lib/corporations/rules/methodAdoption";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 
@@ -32,12 +29,9 @@ interface StrategyChangeConfirmProps {
   mediaOperatingModelsEnabled?: boolean;
   currentStrategyId: string;
   targetStrategyId: string;
-  /** Sector revenue in the corp's liquidCurrencyCode (post-v0.2.6). */
-  dailyRevenue: number;
-  /** Corp's liquidCurrencyCode — drives formatAmount wallet-pref display. */
   liquidCurrencyCode?: string | null;
-  /** Multiplier on the retool fee; below 1 for a discounted sunset conversion. */
-  retoolCostMultiplier?: number;
+  quote?: RetoolQuote;
+  quoteUrl?: string;
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
@@ -109,21 +103,40 @@ export default function StrategyChangeConfirm({
   mediaOperatingModelsEnabled,
   currentStrategyId,
   targetStrategyId,
-  dailyRevenue,
   liquidCurrencyCode,
-  retoolCostMultiplier = 1,
+  quote: suppliedQuote,
+  quoteUrl,
   onConfirm,
   onCancel,
   loading,
 }: StrategyChangeConfirmProps) {
-  const { formatAmount, toInternalFrom } = useCurrency();
+  const { formatAmount } = useCurrency();
   const liquidCode =
     (liquidCurrencyCode as import("@/lib/constants/currencies").CurrencyCode | null | undefined) ??
     undefined;
-  const fmtMoney = (val: number) => {
-    const anchor = liquidCode ? toInternalFrom(val, liquidCode) : val;
-    return formatAmount(anchor, liquidCode);
-  };
+  const fmtMoney = (anchor: number) => formatAmount(anchor, liquidCode);
+  const quoteKey = `${quoteUrl ?? ""}:${targetStrategyId}`;
+  const [quoted, setQuoted] = useState<{ key: string; quote: RetoolQuote | null } | null>(null);
+  const quote = suppliedQuote ?? (quoted?.key === quoteKey ? quoted.quote : null);
+  useEffect(() => {
+    if (suppliedQuote || !quoteUrl) return;
+    const controller = new AbortController();
+    fetchJson<{ strategy?: { availableStrategies?: ({ id: string } & Partial<RetoolQuote>)[] } }>(
+      quoteUrl,
+      { signal: controller.signal, feature: "retool-quote" }
+    )
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        const quote = readRetoolQuote(
+          data.strategy?.availableStrategies?.find((row) => row.id === targetStrategyId)
+        );
+        setQuoted({ key: quoteKey, quote });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setQuoted({ key: quoteKey, quote: null });
+      });
+    return () => controller.abort();
+  }, [suppliedQuote, quoteUrl, quoteKey, targetStrategyId]);
   const [marketData, setMarketData] = useState<Record<string, CommodityMarket>>({});
 
   useEffect(() => {
@@ -160,12 +173,11 @@ export default function StrategyChangeConfirm({
   const target = strategies.find((s) => s.id === targetStrategyId) as SectorStrategy | undefined;
   if (!current || !target) return null;
 
-  // The downside charge is billed on top of the retool fee and no discount covers it.
-  const downsideCharge = dailyRevenue * methodAdoptionSurchargeFraction(target);
-  const retoolCost =
-    dailyRevenue * STRATEGY_RETOOL_COST_FRACTION * retoolCostMultiplier + downsideCharge;
+  const downsideCharge = quote?.downsideCharge ?? 0;
+  const retoolCostMultiplier = quote?.retoolCostMultiplier ?? 1;
   const buildDelay = methodBuildDelayTurns(target);
-  const sunsetDiscount = retoolCostMultiplier < 1;
+  const sunsetDiscount =
+    retoolCostMultiplier < 1 && !quote?.freeConversion && !quote?.shortageDiscount;
   const hasMarketData = Object.keys(marketData).length > 0;
 
   // Estimate commodity margin impact
@@ -206,7 +218,13 @@ export default function StrategyChangeConfirm({
       <div className="flex items-center justify-between">
         <span className="text-body font-semibold text-foreground">Switch to {target.name}?</span>
         <span className="text-body-sm text-error font-medium">
-          Retooling cost {fmtMoney(retoolCost)}
+          {quote ? (
+            <>Retooling cost {fmtMoney(quote.retoolCost)}</>
+          ) : quoted?.key === quoteKey ? (
+            "Retool quote unavailable. Reload before switching."
+          ) : (
+            "Loading current retool quote..."
+          )}
           {sunsetDiscount && (
             <span className="ml-1 text-success">
               ({Math.round((1 - retoolCostMultiplier) * 100)}% off: replaces a retired method)
@@ -224,6 +242,23 @@ export default function StrategyChangeConfirm({
         </p>
       )}
 
+      {quote?.foreignSpread ? (
+        <p className="text-body-sm text-muted">
+          Currency conversion charge {fmtMoney(quote.foreignSpread)}, included above.
+        </p>
+      ) : null}
+      {quote?.freeConversion && (
+        <p className="text-body-sm text-success">
+          The base retool fee is waived for this conversion. Any downside and currency charges are
+          included above.
+        </p>
+      )}
+      {quote?.shortageDiscount && (
+        <p className="text-body-sm text-success">
+          The base retool fee is waived to supply a resource in shortage. Any downside and currency
+          charges are included above.
+        </p>
+      )}
       {/* Commodity changes table */}
       <table className="w-full border-collapse">
         <thead>
@@ -373,7 +408,7 @@ export default function StrategyChangeConfirm({
       <div className="flex items-center justify-between pt-0.5">
         <span className="text-body-sm text-muted">
           {buildDelay > 0 && `Runs your current method for ${buildDelay} turns while it is built. `}
-          Phases in over {STRATEGY_TRANSITION_TURNS} turns, costs{" "}
+          Phases in over {quote?.transitionTurns ?? STRATEGY_TRANSITION_TURNS} turns, costs{" "}
           {Math.abs(STRATEGY_TRANSITION_MARGIN_PENALTY)} points of margin meanwhile, and locks
           further changes for {STRATEGY_COOLDOWN_TURNS} turns.
         </span>
@@ -389,7 +424,7 @@ export default function StrategyChangeConfirm({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || !quote}
             className="rounded bg-primary px-3 py-1 text-body-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
           >
             {loading ? "Switching" : "Switch strategy"}

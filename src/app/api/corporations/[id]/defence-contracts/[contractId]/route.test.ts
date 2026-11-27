@@ -51,6 +51,10 @@ describe("POST corporations/[id]/defence-contracts/[contractId]", () => {
       countryId: "US",
       liquidCurrencyCode: "USD",
     });
+    db.collection("federalBudget").findOne.mockResolvedValue({
+      countryId: "US",
+      currencyCode: "USD",
+    });
     db.collection("defenceContracts");
     db.collectionMocks.defenceContracts.findOne.mockResolvedValue({
       _id: CONTRACT_ID,

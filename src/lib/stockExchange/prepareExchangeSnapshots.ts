@@ -133,6 +133,31 @@ export async function prepareExchangeSnapshots(currentTurn: number, db?: Db) {
         sharePrice: { $first: "$sharePrice" },
         totalShares: { $first: "$totalShares" },
         createdAt: { $first: "$createdAt" },
+        ...(slot === "settled"
+          ? {
+              financial: {
+                $first: {
+                  income: "$income",
+                  revenue: "$revenue",
+                  currencyCode: "$currencyCode",
+                  fxRateAtWrite: "$fxRateAtWrite",
+                  settledBankLoanInterestPaid: "$settledBankLoanInterestPaid",
+                  settledImfInterestPaid: "$settledImfInterestPaid",
+                  settledImfInterestReceived: "$settledImfInterestReceived",
+                  settledImfPrincipalPaid: "$settledImfPrincipalPaid",
+                  settledImfPrincipalReceived: "$settledImfPrincipalReceived",
+                  imfSettlementUnavailable: "$imfSettlementUnavailable",
+                  settledBondCouponIncome: "$settledBondCouponIncome",
+                  settledBondInterestPaid: "$settledBondInterestPaid",
+                  perTurnBondCouponIncome: "$perTurnBondCouponIncome",
+                  perTurnBondDragOnNetIncome: "$perTurnBondDragOnNetIncome",
+                  perTurnBondInterestExpense: "$perTurnBondInterestExpense",
+                  bondCouponFxFees: "$bondCouponFxFees",
+                  dividendIncomeReceived: "$dividendIncomeReceived",
+                },
+              },
+            }
+          : {}),
       },
     },
     {
@@ -144,6 +169,7 @@ export async function prepareExchangeSnapshots(currentTurn: number, db?: Db) {
         sharePrice: 1,
         totalShares: 1,
         createdAt: 1,
+        ...(slot === "settled" ? { financial: 1 } : {}),
       },
     },
   ];
@@ -198,6 +224,7 @@ export async function prepareExchangeSnapshots(currentTurn: number, db?: Db) {
             sharePrice: "$$s.sharePrice",
             totalShares: "$$s.totalShares",
             createdAt: "$$s.createdAt",
+            ...(slot === "settled" ? { financial: "$$s.financial" } : {}),
           },
         },
       },

@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Immediately apply whip-influenced NPP votes to bills, leadership
  * elections, and confidence votes. Called from both national and state
@@ -16,9 +17,7 @@ import type {
   ElectedOfficial,
   LegislationType,
   NPP,
-  NPPVotePrediction,
   SpeakerNomination,
-  SpeakerVacateMotion,
   StateBill,
   StateDemographics,
 } from "@/lib/db/types";
@@ -28,7 +27,7 @@ import {
   nppVacateMotionVote,
 } from "@/lib/congress/speaker/nppVacateVote";
 import { loadImpeachmentFallbackContext, nppImpeachmentVote } from "@/lib/impeachment/autoVoteNpps";
-import type { Impeachment, ImpeachmentVoteValue } from "@/lib/db/types/impeachment";
+import type { ImpeachmentVoteValue } from "@/lib/db/types/impeachment";
 import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { computeCrossPressureForces, verdictFromForces } from "@/lib/turn/npp/crossPressure";
 import {
@@ -36,7 +35,10 @@ import {
   getPMAppointmentVotesCollection,
   getNoConfidenceVotesCollection,
 } from "@/lib/db/collections/governmentFormation";
-import { castLeadershipVote } from "@/lib/turn/npp/leadershipVoting";
+import {
+  castLeadershipVoteBatch,
+  type LeadershipVoteIntent,
+} from "@/lib/turn/npp/leadershipVoting";
 import { resolveNppWhipSuccess, type NppWhipMode } from "@/lib/partyWhips/whipSuccess";
 import {
   loadCabinetDiscipline,
@@ -573,6 +575,28 @@ export async function applyWhipVotesToLeadership(
   mode: NppWhipMode = "hard",
   statecraftBonus = 0
 ): Promise<ApplyWhipResult> {
+  return withSessionDb(db, (db) =>
+    settleWhipVotesToLeadership(
+      db,
+      candidacyId,
+      nominationCollection,
+      nppOfficials,
+      nppMap,
+      mode,
+      statecraftBonus
+    )
+  );
+}
+
+async function settleWhipVotesToLeadership(
+  db: Db,
+  candidacyId: ObjectId,
+  nominationCollection: string,
+  nppOfficials: ElectedOfficial[],
+  nppMap: Map<string, NPP>,
+  mode: NppWhipMode = "hard",
+  statecraftBonus = 0
+): Promise<ApplyWhipResult> {
   // Fetch active nominations for re-vote handling. House/Senate leadership
   // nominations share one collection across roles — scope to the target's role
   // so whipping Majority Whip cannot steal Pro Tempore / Majority Leader votes
@@ -596,6 +620,7 @@ export async function applyWhipVotesToLeadership(
   let fellInLine = 0;
   let ignored = 0;
   const now = new Date();
+  const intents: LeadershipVoteIntent[] = [];
 
   for (const official of nppOfficials) {
     if (!official.nppId) continue;
@@ -624,33 +649,26 @@ export async function applyWhipVotesToLeadership(
         continue;
       }
 
-      await castLeadershipVote(
-        db,
-        nominationCollection,
-        raceNominations,
-        nppKey,
-        fallbackNomination._id,
-        now,
-        official.seatsHeld ?? 1
-      );
+      intents.push({
+        voterKey: nppKey,
+        nominationId: fallbackNomination._id,
+        seatWeight: official.seatsHeld ?? 1,
+      });
 
       ignored++;
       continue;
     }
 
-    await castLeadershipVote(
-      db,
-      nominationCollection,
-      raceNominations,
-      nppKey,
-      candidacyId,
-      now,
-      official.seatsHeld ?? 1
-    );
+    intents.push({
+      voterKey: nppKey,
+      nominationId: candidacyId,
+      seatWeight: official.seatsHeld ?? 1,
+    });
 
     fellInLine++;
   }
 
+  await castLeadershipVoteBatch(db, nominationCollection, intents, now);
   return { fellInLine, ignored };
 }
 

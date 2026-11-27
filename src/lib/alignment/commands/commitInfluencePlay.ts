@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * Commit an influence play: a member spends its organization's pooled fund to
  * pull a nation toward that org's alignment pole.
@@ -36,7 +37,7 @@ export type CommitPlayFailure =
 export type CommitPlayResult =
   { ok: true; amountUsd: number } | { ok: false; reason: CommitPlayFailure };
 
-export async function commitInfluencePlay(params: {
+async function commitInfluencePlayInTransaction(params: {
   db: Db;
   organizationId: InternationalOrganizationId;
   sponsorCountryId: CountryId;
@@ -112,4 +113,10 @@ export async function commitInfluencePlay(params: {
   });
 
   return { ok: true, amountUsd };
+}
+
+export async function commitInfluencePlay(
+  params: Parameters<typeof commitInfluencePlayInTransaction>[0]
+): Promise<CommitPlayResult> {
+  return withAtomicResult(params.db, (db) => commitInfluencePlayInTransaction({ ...params, db }));
 }

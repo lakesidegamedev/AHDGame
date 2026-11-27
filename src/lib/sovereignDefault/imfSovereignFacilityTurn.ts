@@ -1,32 +1,17 @@
-/**
- * Per-turn IMF sovereign-facility processor.
- *
- * Mirrors `imfBailoutTurn.ts` for sovereigns:
- *   - reads each country with `imfSovereignBailoutActive: true`
- *   - per-turn income approximated as annual revenue / TURNS_PER_YEAR
- *   - delegates math to existing `computeImfFacilityPaymentTurn`
- *   - persists new principal/amortization on the federal-budget row
- *   - credits IMF Corp `liquidCapital` by the actual payment, FX-converted
- *     from the country's local revenue currency to the IMF Corp's
- *     `liquidCurrencyCode` via the anchor.
- *
- * Country-side balance impact (capture acts as forced spending) is left for
- * the existing budget→metrics pipeline. Phase 5 only models the IMF Corp
- * credit side; budget-revenue netting lands in Phase 8 / 10 calibration.
- */
-
-import type { Db, ObjectId } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import type { CurrencyCode } from "@/lib/constants/currencies";
+import type { CountryId } from "@/lib/constants/countries";
+import type { Db } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { getImfCorporation } from "@/lib/imf/resolveImfCorporation";
 import { computeImfFacilityPaymentTurn } from "@/lib/imf/imfFacilityMath";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
 import {
   anchorToCorpLiquidCapital,
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
   loadFxRatesByCurrency,
+  resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import {
   IMF_SOVEREIGN_AMORTIZATION_TURNS,
@@ -34,90 +19,140 @@ import {
 } from "./constants";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
+import { emitTx } from "@/lib/financialTxLog/emit";
 
 const PRINCIPAL_EPS = 1e-6;
 
+/** Debit the available sovereign cash and service its facility once per turn. */
 export async function processSovereignImfFacilityPayments(
   db: Db,
-  _turn: number
+  turn: number
 ): Promise<{ paymentsApplied: number }> {
-  const imfCorp = await getImfCorporation(db);
-  if (!imfCorp) return { paymentsApplied: 0 };
-
   const active = await federalBudgetCollection(db)
-    .find({ imfSovereignBailoutActive: true })
+    .find({ imfSovereignBailoutActive: true }, { projection: { _id: 1 } })
     .toArray();
   if (active.length === 0) return { paymentsApplied: 0 };
-
-  // FX rates: country revenue is in local currency; IMF Corp liquidCapital
-  // is in `liquidCurrencyCode` (typically USD). Convert via the anchor.
-  const fxByCurrency = await loadFxRatesByCurrency(db);
-  const imfCorpFx = fxRateForCorpFromMap(imfCorp, fxByCurrency);
-
+  if (!Number.isInteger(turn) || turn < 0)
+    throw new Error("Sovereign IMF payment requires a valid turn");
+  const fx = await loadFxRatesByCurrency(db);
   let paymentsApplied = 0;
-  const now = new Date();
-
-  for (const budget of active) {
-    const principal = budget.imfSovereignFacilityPrincipalOutstanding ?? 0;
-    if (principal <= PRINCIPAL_EPS) continue;
-
-    const annualRate = budget.imfSovereignFacilityAnnualRate ?? 0;
-    const remainingTurns =
-      budget.imfSovereignFacilityAmortizationTurnsRemaining ?? IMF_SOVEREIGN_AMORTIZATION_TURNS;
-    const captureFraction =
-      budget.imfSovereignFacilityIncomeCaptureFraction ?? IMF_SOVEREIGN_INCOME_CAPTURE_DEFAULT;
-    const annualRevenue = budget.revenue?.total ?? 0;
-    const perTurnRevenue = annualRevenue / TURNS_PER_YEAR;
-
-    const split = computeImfFacilityPaymentTurn({
-      principalOutstanding: principal,
-      annualRatePercent: annualRate,
-      remainingTurns,
-      turnIncome: perTurnRevenue,
-      incomeCapFraction: captureFraction,
-    });
-
-    if (split.actualPayment > PRINCIPAL_EPS) paymentsApplied++;
-
-    const facilityCleared = split.newPrincipal <= PRINCIPAL_EPS;
-    const set: Partial<FederalBudget> = {
-      imfSovereignFacilityPrincipalOutstanding: facilityCleared ? 0 : split.newPrincipal,
-      imfSovereignFacilityAmortizationTurnsRemaining: facilityCleared ? 0 : split.newRemainingTurns,
-    };
-    if (facilityCleared) {
-      set.imfSovereignBailoutActive = false;
-    }
-
-    // FX conversion is needed both for the IMF Corp credit AND for the
-    // per-budget cumulative-anchor accumulator (Phase 11a). Compute up-front
-    // so the budget update can include the cumulative $inc in the same write.
-    let paymentAnchor = 0;
-    let paymentInImfCurrency = 0;
-    if (split.actualPayment > PRINCIPAL_EPS) {
-      const countryCcy = budget.countryId
-        ? COUNTRY_CURRENCY_MAP[budget.countryId as CountryId]
-        : undefined;
-      const countryFx = countryCcy ? (fxByCurrency.get(countryCcy) ?? 1) : 1;
-      paymentAnchor = corpCapitalToAnchor(split.actualPayment, countryCcy, countryFx);
-      paymentInImfCurrency = anchorToCorpLiquidCapital(paymentAnchor, imfCorp, imfCorpFx);
-    }
-
-    const update: Record<string, unknown> = { $set: set };
-    if (paymentAnchor > 0) {
-      update.$inc = { imfSovereignFacilityCumulativePaidAnchor: paymentAnchor };
-    }
-    await federalBudgetCollection(db).updateOne({ _id: budget._id }, update);
-
-    if (paymentInImfCurrency > 0) {
-      await corporationsCollection(db).updateOne(
-        { _id: imfCorp._id as ObjectId },
+  for (const candidate of active) {
+    const paid = await withSessionDb(db, async (transactionDb) => {
+      const budget = await federalBudgetCollection(transactionDb).findOne({ _id: candidate._id });
+      if (
+        !budget?.imfSovereignBailoutActive ||
+        (budget.imfSovereignFacilityLastPaymentTurn ?? -1) >= turn
+      )
+        return false;
+      const principal = budget.imfSovereignFacilityPrincipalOutstanding ?? 0;
+      if (principal <= PRINCIPAL_EPS) return false;
+      const imf = await getImfCorporation(transactionDb);
+      if (!imf) return false;
+      const config = await gameConfigCollection(transactionDb).findOne(
+        { _id: "default" },
+        { projection: { treasuryCashLedgerEnabled: 1 } }
+      );
+      const funded = config?.treasuryCashLedgerEnabled === true;
+      const cashField = funded ? "treasuryCashLocal" : "treasuryBalance";
+      const available = Math.max(0, budget[cashField] ?? 0);
+      const currency = (budget.currencyCode ??
+        COUNTRY_CURRENCY_MAP[budget.countryId as CountryId]) as CurrencyCode;
+      const rate = fx.get(currency);
+      if (!rate || !Number.isFinite(rate) || rate <= 0)
+        throw new Error("Sovereign IMF payment requires a valid treasury quote");
+      const imfRate = fxRateForCorpFromMap(imf, fx);
+      const capture = Math.max(
+        0,
+        Math.min(
+          1,
+          budget.imfSovereignFacilityIncomeCaptureFraction ?? IMF_SOVEREIGN_INCOME_CAPTURE_DEFAULT
+        )
+      );
+      const revenue = Math.max(0, budget.revenue?.total ?? 0) / TURNS_PER_YEAR;
+      const split = computeImfFacilityPaymentTurn({
+        principalOutstanding: principal,
+        annualRatePercent: budget.imfSovereignFacilityAnnualRate ?? 0,
+        remainingTurns:
+          budget.imfSovereignFacilityAmortizationTurnsRemaining ?? IMF_SOVEREIGN_AMORTIZATION_TURNS,
+        turnIncome: capture > 0 ? Math.min(revenue, available / capture) : 0,
+        incomeCapFraction: capture,
+      });
+      const cleared = split.newPrincipal <= PRINCIPAL_EPS;
+      const anchor = corpCapitalToAnchor(split.actualPayment, currency, rate);
+      const creditAmount = anchorToCorpLiquidCapital(anchor, imf, imfRate);
+      const now = new Date();
+      const claim = await federalBudgetCollection(transactionDb).updateOne(
         {
-          $inc: { liquidCapital: paymentInImfCurrency },
+          _id: budget._id,
+          imfSovereignBailoutActive: true,
+          imfSovereignFacilityLastPaymentTurn: { $not: { $gte: turn } },
+          ...(split.actualPayment > 0 ? { [cashField]: { $gte: split.actualPayment } } : {}),
+        },
+        {
+          $set: {
+            imfSovereignFacilityLastPaymentTurn: turn,
+            imfSovereignFacilityPrincipalOutstanding: cleared ? 0 : split.newPrincipal,
+            imfSovereignFacilityAmortizationTurnsRemaining: cleared ? 0 : split.newRemainingTurns,
+            ...(cleared ? { imfSovereignBailoutActive: false } : {}),
+            updatedAt: now,
+          },
+          $inc: {
+            treasuryBalance: -split.actualPayment,
+            ...(funded ? { treasuryCashLocal: -split.actualPayment } : {}),
+            imfSovereignFacilityCumulativePaidAnchor: anchor,
+          },
+        }
+      );
+      if (claim.matchedCount !== 1) throw new Error("Sovereign IMF source changed");
+      if (split.actualPayment <= PRINCIPAL_EPS) return false;
+      const credited = await corporationsCollection(transactionDb).updateOne(
+        { _id: imf._id },
+        {
+          $inc: { liquidCapital: creditAmount },
           $set: { updatedAt: now },
         }
       );
-    }
+      if (credited.matchedCount !== 1) throw new Error("Sovereign IMF recipient is missing");
+      const meta = {
+        kind: "sovereign_imf_facility",
+        settlementId: `sovereign-imf:${budget._id}:${turn}`,
+        principalLocal: split.principalPortion,
+        interestLocal: split.interestPortion,
+        treasuryCurrency: currency,
+      };
+      await emitTx(transactionDb, {
+        type: "bank_loan_repayment",
+        turn,
+        createdAt: now,
+        subjectType: "government",
+        subjectName: budget.countryId,
+        countryId: budget.countryId,
+        amount: -split.actualPayment,
+        anchorAmount: -anchor,
+        currencyCode: currency,
+        counterpartyType: "corporation",
+        counterpartyId: imf._id,
+        counterpartyName: imf.name,
+        meta,
+      });
+      await emitTx(transactionDb, {
+        type: "bank_loan_repayment",
+        turn,
+        createdAt: now,
+        subjectType: "corporation",
+        subjectId: imf._id,
+        subjectName: imf.name,
+        amount: creditAmount,
+        anchorAmount: anchor,
+        currencyCode: resolveCorpLiquidCurrencyCode(imf) ?? "USD",
+        counterpartyType: "government",
+        counterpartyName: budget.countryId,
+        meta,
+      });
+      return true;
+    });
+    if (paid) paymentsApplied++;
   }
-
   return { paymentsApplied };
 }

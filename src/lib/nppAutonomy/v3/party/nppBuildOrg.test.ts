@@ -368,3 +368,8 @@ describe("nppBuildPartyOrg", () => {
     expect(half.orgGain).toBeCloseTo(full.orgGain, 6);
   });
 });
+
+// Transport fixtures; atomic build tests exercise resource rollback.
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);

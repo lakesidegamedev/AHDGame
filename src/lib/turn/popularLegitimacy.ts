@@ -1,3 +1,4 @@
+import { adjustLeaderScalar } from "./adjustLeaderScalar";
 /**
  * Popular legitimacy (public mood) for one-party states, 0-100, initial 75.
  *
@@ -18,10 +19,7 @@ import {
 } from "@/lib/government/leaderReference";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type {
-  CountryLeaderState,
-  LeaderConfidenceHistoryEntry,
-} from "@/lib/db/types/countryLeaderState";
+import type { CountryLeaderState } from "@/lib/db/types/countryLeaderState";
 import { getCountryLeaderStatesCollection } from "@/lib/db/collections/countryLeaderState";
 import { INITIAL_CONFIDENCE } from "@/lib/turn/rulingPartyConfidence";
 
@@ -73,29 +71,6 @@ export function clampPopular(value: number): number {
 
 export function initializePopularLegitimacy(): number {
   return INITIAL_POPULAR_LEGITIMACY;
-}
-
-// ── History helpers ────────────────────────────────────────────────────────
-
-function makeHistoryEntry(
-  turn: number,
-  previous: number,
-  next: number,
-  reason: string
-): LeaderConfidenceHistoryEntry {
-  return {
-    turn,
-    previous,
-    next,
-    delta: next - previous,
-    reason,
-    at: new Date(),
-  };
-}
-
-function trimHistory(history: LeaderConfidenceHistoryEntry[]): LeaderConfidenceHistoryEntry[] {
-  if (history.length <= MAX_POPULAR_HISTORY_ENTRIES) return history;
-  return history.slice(0, MAX_POPULAR_HISTORY_ENTRIES);
 }
 
 // ── Persistence helpers ────────────────────────────────────────────────────
@@ -165,22 +140,16 @@ export async function adjustPopularLegitimacy(
     existing = (await coll.findOne({ _id })) ?? seed;
   }
 
-  const previous = existing.popularLegitimacy ?? INITIAL_POPULAR_LEGITIMACY;
-  const next = clampPopular(previous + delta);
-  const entry = makeHistoryEntry(currentTurn, previous, next, reason);
-  const history = trimHistory([entry, ...(existing.popularLegitimacyHistory ?? [])]);
-
-  const result = await coll.findOneAndUpdate(
-    { _id },
-    {
-      $set: {
-        popularLegitimacy: next,
-        popularLegitimacyHistory: history,
-        updatedAt: new Date(),
-      },
-    },
-    { returnDocument: "after" }
+  return adjustLeaderScalar(
+    db,
+    existing,
+    "popularLegitimacy",
+    "popularLegitimacyHistory",
+    INITIAL_POPULAR_LEGITIMACY,
+    delta,
+    clampPopular,
+    reason,
+    currentTurn,
+    MAX_POPULAR_HISTORY_ENTRIES
   );
-
-  return result;
 }

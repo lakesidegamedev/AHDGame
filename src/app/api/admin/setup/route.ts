@@ -1,26 +1,26 @@
 /**
  * POST /api/admin/setup
  *
- * One-shot idempotent setup route that ensures every collection the app
- * needs at runtime is populated. Safe to call repeatedly - each step
- * skips work that has already been done.
+ * Initial setup for an uninitialized database. Existing worlds use the
+ * guarded reset workflow or explicit targeted seeders.
  */
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError } from "@/lib/api/errors";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { initializeGameState } from "@/lib/turnSystem";
 import { parseJsonBody } from "@/lib/api/validate";
-import { ZOD_COUNTRY_ENUM } from "@/lib/constants/countries";
-import type { GameState } from "@/lib/db/types";
+import { INITIAL_SETUP_SCOPES } from "@/lib/admin/rules/setupScopes";
 
 // Individual CountryId values or "all" (every active country).
 // "both" is accepted for backward compatibility but treated as "all".
-const setupSchema = z.object({
-  scope: z.union([z.enum(ZOD_COUNTRY_ENUM), z.enum(["all", "both"])]).optional(),
-});
+const setupSchema = z
+  .object({
+    scope: z.enum([...INITIAL_SETUP_SCOPES, "both"]).optional(),
+  })
+  .strict();
 
 import {
   seedStates,
@@ -145,7 +145,8 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const parsed = await parseJsonBody(request, setupSchema);
-    const body = parsed.success ? parsed.data : {};
+    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+    const body = parsed.data;
     const scope: string = body.scope ?? "US";
     // "both" is legacy — treat as "all"
     const seedAll = scope === "all" || scope === "both";
@@ -160,7 +161,12 @@ export async function POST(request: Request) {
       { _id: "current" },
       { projection: { preset: 1 } }
     );
-    const preset = gsPreset?.preset ?? DEFAULT_SEED_PRESET;
+    if (gsPreset)
+      return errorResponse(
+        409,
+        "This world is already initialized. Use targeted seeders or the world reset workflow."
+      );
+    const preset = DEFAULT_SEED_PRESET;
     const logs: string[] = [];
     const log = (msg: string) => logs.push(msg);
 
@@ -169,7 +175,7 @@ export async function POST(request: Request) {
     if (countryHasFeature("usApi", scope) || seedAll) {
       await seedStates(db, false, log, preset);
       await seedPolicies(db, false, log);
-      await seedDemographics(db, false, log);
+      await seedDemographics(db, false, log, preset);
       await seedGameConfig(db, false, log);
       await seedParties(db, log);
       await seedStatePartyOrg(db, log, preset);

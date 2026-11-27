@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * National index funds for background countries.
  *
@@ -82,6 +83,16 @@ export async function markNationalIndexFunds(
   now = new Date()
 ): Promise<{ created: number; marked: number }> {
   if (marks.length === 0) return { created: 0, marked: 0 };
+  return withTurnValueSettlement(db, "national-index-marks", turn, (db) =>
+    markNationalIndexFundsWork(db, marks, turn, now)
+  );
+}
+async function markNationalIndexFundsWork(
+  db: Db,
+  marks: readonly NationalIndexMark[],
+  turn: number,
+  now: Date
+): Promise<{ created: number; marked: number }> {
   const funds = indexFundsCollection(db);
   const existing = await funds
     .find(
@@ -100,7 +111,7 @@ export async function markNationalIndexFunds(
       );
     } catch (err) {
       // A concurrent or retried tick already created it; the slug index keeps one.
-      if (!(err && typeof err === "object" && "code" in err && err.code === 11000)) throw err;
+      throw err;
     }
   }
 

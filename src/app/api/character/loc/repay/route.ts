@@ -36,7 +36,7 @@ import {
 } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 
 const repaySchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),

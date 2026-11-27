@@ -9,6 +9,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { SectionLabel } from "@/components/ui";
+import { assumedDebtSummary } from "@/lib/nationalization/rules/assumedDebtSummary";
 import type { NationalCorporationViewModel } from "@/lib/nationalization/nationalCorporationView";
 import type { NatOfficialActions } from "../NationalCorporationView";
 import { CeoControlPanel } from "../official/CeoControlPanel";
@@ -94,7 +95,7 @@ function BudgetFlowStrip({
 }: {
   stats: NationalCorporationViewModel["stats"];
   currency: string;
-  debtService: number;
+  debtService: number | null;
   retentionPercent: number;
 }) {
   // The real cash chain from operating profit to the budget. Two legs the old
@@ -104,8 +105,8 @@ function BudgetFlowStrip({
   // so this reconciles with the budget page's State-Enterprise line. Mandate
   // subsidy is a notional attribution already baked into operating profit, not a
   // second cash deduction, so it is NOT in the flow (it stays an info row below).
-  const netToTreasury = Math.max(0, stats.remittedPerTurn - debtService);
-  const nodes: Array<{ title: string; value: number; tone?: Tone; sub: string }> = [
+  const netToTreasury = debtService == null ? null : stats.remittedPerTurn - debtService;
+  const nodes: Array<{ title: string; value: number | null; tone?: Tone; sub: string }> = [
     { title: "Operating profit", value: stats.operatingProfitPerTurn, sub: "across held sectors" },
     {
       title: "− Retained in corp",
@@ -121,7 +122,7 @@ function BudgetFlowStrip({
     },
     {
       title: "− Assumed-debt service",
-      value: -debtService,
+      value: debtService == null ? null : -debtService,
       tone: "error",
       sub: "coupons on absorbed bonds",
     },
@@ -154,7 +155,7 @@ function BudgetFlowStrip({
               <div
                 className={`mt-0.5 text-body-lg font-bold tabular-nums ${TONE[n.tone ?? "foreground"]}`}
               >
-                {money(n.value, currency)}/t
+                {n.value == null ? "n/a" : `${money(n.value, currency)}/t`}
               </div>
               <div className="text-body-sm text-muted">{n.sub}</div>
             </div>
@@ -182,11 +183,9 @@ export function NatOverviewTab({
   official?: NatOfficialActions | null;
 }) {
   const { stats, currency } = vm;
-  const debtService = vm.assumedBonds.reduce(
-    (acc, b) => acc + Math.round((b.principal * b.couponRate) / 100),
-    0
-  );
-  const totalAssumedFace = vm.assumedBonds.reduce((acc, b) => acc + b.principal, 0);
+  const debt = vm.assumedDebtSummary ?? assumedDebtSummary(vm.assumedBonds, currency, new Map());
+  const debtService = debt.couponPerTurnLocal;
+  const totalAssumedFace = debt.principalLocal;
   const confTone: Tone = stats.investorConfidence < stats.confidenceBaseline ? "error" : "success";
   const effTone: Tone =
     stats.sectorCount === 0 ? "foreground" : stats.soeEfficiencyPenalty > -12 ? "success" : "error";
@@ -247,7 +246,11 @@ export function NatOverviewTab({
           />
           <StatRow
             label="Net to budget / turn"
-            value={`${money(Math.max(0, stats.remittedPerTurn - debtService), currency)}/turn`}
+            value={
+              debtService == null
+                ? "n/a"
+                : `${money(stats.remittedPerTurn - debtService, currency)}/turn`
+            }
             tone="success"
           />
           <StatRow
@@ -321,10 +324,13 @@ export function NatOverviewTab({
           accent="info"
           icon={<FileText className="h-4 w-4" />}
         >
-          <StatRow label="Total assumed face" value={money(totalAssumedFace, currency)} />
+          <StatRow
+            label="Total assumed face"
+            value={totalAssumedFace == null ? "n/a" : money(totalAssumedFace, currency)}
+          />
           <StatRow
             label="Debt service / turn"
-            value={`${money(debtService, currency)}/turn`}
+            value={debtService == null ? "n/a" : `${money(debtService, currency)}/turn`}
             tone="error"
           />
           <StatRow label="Bond series" value={`${vm.assumedBonds.length} series`} />

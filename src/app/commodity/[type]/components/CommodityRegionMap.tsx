@@ -27,7 +27,7 @@ interface CommodityRegionMapProps {
   stateCountryMap: Record<string, string>;
   capacityByState?: Record<string, number>;
   unit: string;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   onStateClick?: (stateId: string) => void;
 }

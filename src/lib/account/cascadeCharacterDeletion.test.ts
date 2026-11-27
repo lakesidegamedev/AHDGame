@@ -1,3 +1,12 @@
+vi.mock("@/lib/corporations/releaseCharacterHeldBondsToFloat", () => ({
+  releaseCharacterHeldBondsToFloat: vi.fn(async () => ({ unitsReleased: 0, bondsCleared: 0 })),
+}));
+vi.mock("@/lib/indexFunds/releaseCharacterHeldPositionsToFloat", () => ({
+  releaseCharacterHeldIndexFundPositionsToFloat: vi.fn(async () => ({
+    unitsReleased: 0,
+    positionsReleased: 0,
+  })),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -45,7 +54,7 @@ vi.mock("@/lib/bonds/executeCorporationBondDefaultDissolution", () => ({
 
 vi.mock("@/lib/corporations/settlementLock", () => ({
   // Pass-through lock: always "claims" and runs the work.
-  withCorporationSettlementLock: vi.fn((_db, _id, _field, _now, run) => run()),
+  withCorporationSettlementLock: vi.fn((_db, _id, _field, _now, run) => run(_db)),
 }));
 
 describe("cascadeCharacterDeletion", () => {

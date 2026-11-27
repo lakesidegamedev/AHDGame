@@ -50,6 +50,7 @@ export function savingsApyPercent(
   inflationPercent: number,
   depositBonusPercent = 0
 ): number {
+  if (!Number.isFinite(primeRatePercent) || primeRatePercent <= 0) return 0;
   const realRatePercent = Math.max(
     SAVINGS_REAL_RATE_FLOOR_PERCENT,
     primeRatePercent - inflationPercent
@@ -85,8 +86,14 @@ export function estimateSavingsAccrualFromApy(
   savingsApyPercent: number,
   currencyCode: CurrencyCode
 ): number {
-  if (savingsApyPercent <= 0) return 0;
-  return computeSavingsInterestForTurn(balance, savingsApyPercent * 2, currencyCode);
+  if (
+    !Number.isFinite(balance) ||
+    balance <= 0 ||
+    !Number.isFinite(savingsApyPercent) ||
+    savingsApyPercent <= 0
+  )
+    return 0;
+  return roundSavingsAmount((balance * savingsApyPercent) / 100 / TURNS_PER_YEAR, currencyCode);
 }
 
 /** Round interest/credits to whole yen or 2 decimal places for other currencies. */

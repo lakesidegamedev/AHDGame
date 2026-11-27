@@ -1,22 +1,23 @@
 import { getCharactersCollection } from "@/lib/db/collections/characters";
-import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
+import type { Db, ObjectId } from "mongodb";
 import { isResolvedBillStatus } from "@/lib/crises/aidFinalize";
 import { LEDGER_LIMIT } from "@/lib/crises/v2/accountability";
 import type { AccountabilityEntry } from "@/lib/crises/v2/types";
 import type { Bill } from "@/lib/db/types";
-import type { Crisis } from "@/lib/db/types/crisis";
 import { proposeCrisisEmergencyBill } from "@/lib/legislature/commands/proposeCrisisEmergencyBill";
 import { logger } from "@/lib/observability/logger";
 import {
   checkLeverEligibility,
   commitLeverUse,
   loadLiveCrisis,
-  loadLiveCrises,
+  withLeverTransaction,
+  abortLeverTransaction,
   fail,
   type LeverResult,
 } from "./leverCommand";
 import { resolveCrisisDefinition } from "@/lib/turn/crisisV2/ensureContent";
 import { billsCollection } from "@/lib/db/repositories/bills";
+import { crisisLeverUsesCollection } from "@/lib/db/repositories/crisisLeverUses";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 
 const COMPONENT = "crisisEmergencyBill";
@@ -91,45 +92,65 @@ function inactionRow(crisis: LiveCrisis, bill: Bill, turn: number): Accountabili
   };
 }
 
-/** Codes that mean the legislature could not pay yet, so a later turn may succeed. */
-const RETRYABLE_CODES = new Set(["insufficient_funds", "insufficient_actions"]);
-
-/** True when the bill's charge failed for want of funds and should be tried again next turn. */
-async function recordPassedBill(
-  db: Db,
-  bill: Bill,
-  crisis: LiveCrisis,
-  turn: number
-): Promise<boolean> {
-  const marker = bill.crisisEmergency;
-  const lever = resolveCrisisDefinition(crisis.v2.definitionId)?.levers.find(
-    (candidate) => candidate.id === marker?.leverId
-  );
-  if (!marker || !lever || crisis.v2.stage === "resolved") return false;
-  const result = await commitLeverUse(db, {
-    crisis,
-    lever,
-    holderId: marker.holderId,
-    countryId: bill.countryId,
-    billId: bill._id,
-    intensity: 1,
-    turn,
+/** A bill's terminal marker and funded response share the same commit. */
+async function recordEmergencyBillOutcome(db: Db, bill: Bill, turn: number) {
+  return withLeverTransaction(db, async (db) => {
+    const marker = bill.crisisEmergency;
+    if (!marker) return { ok: true, passed: 0, failed: 0 };
+    const outcome = isResolvedBillStatus(bill.status);
+    if (!outcome) return { ok: true, passed: 0, failed: 0 };
+    const claimed = await billsCollection(db).updateOne(
+      { _id: bill._id, status: bill.status, "crisisEmergency.recordedTurn": { $exists: false } },
+      { $set: { "crisisEmergency.recordedTurn": turn } }
+    );
+    if (claimed.matchedCount !== 1) return { ok: true, passed: 0, failed: 0 };
+    const crisis = await loadLiveCrisis(db, marker.crisisId);
+    if (!crisis || crisis.v2.stage === "resolved") return { ok: true, passed: 0, failed: 0 };
+    const live = await crisesCollection(db).updateOne(
+      { _id: crisis._id, status: "active", "v2.stage": crisis.v2.stage },
+      { $set: { updatedAt: new Date() } }
+    );
+    if (live.matchedCount !== 1)
+      abortLeverTransaction(fail("resolved", "The crisis changed before the response"));
+    if (outcome === "passed") {
+      const lever = resolveCrisisDefinition(crisis.v2.definitionId)?.levers.find(
+        (candidate) => candidate.id === marker.leverId
+      );
+      if (!lever)
+        abortLeverTransaction(
+          fail("not_found", "The emergency response definition is unavailable")
+        );
+      const original = await crisisLeverUsesCollection(db).findOne(
+        { billId: bill._id, chargeState: "charged" },
+        { projection: { _id: 1 } }
+      );
+      if (!original) {
+        const result = await commitLeverUse(db, {
+          crisis,
+          lever,
+          holderId: marker.holderId,
+          countryId: bill.countryId,
+          billId: bill._id,
+          intensity: 1,
+          turn,
+        });
+        if (!result.ok) abortLeverTransaction(result);
+      }
+      return { ok: true, passed: 1, failed: 0 };
+    }
+    const row = inactionRow(crisis, bill, turn);
+    if (row)
+      await crisesCollection(db).updateOne(
+        { _id: crisis._id },
+        {
+          $push: { "v2.ledger": { $each: [row], $slice: -LEDGER_LIMIT } },
+        }
+      );
+    return { ok: true, passed: 0, failed: row ? 1 : 0 };
   });
-  if (!result.ok && result.code !== "duplicate") {
-    logger.warn(COMPONENT, "passed emergency bill could not be charged", {
-      billId: bill._id.toString(),
-      code: result.code,
-    });
-    return RETRYABLE_CODES.has(result.code);
-  }
-  return false;
 }
 
-/**
- * Records the outcome of every resolved emergency bill exactly once: a passed
- * bill becomes a charged lever use for the legislature role, a failed one an
- * inaction row. Runs before the crisis step so the same turn sees the result.
- */
+/** Isolate each appropriation so an unfunded response does not block other bills. */
 export async function processCrisisEmergencyBills(
   db: Db,
   turn: number
@@ -140,68 +161,18 @@ export async function processCrisisEmergencyBills(
       "crisisEmergency.recordedTurn": { $exists: false },
     })
     .toArray();
-  const resolved = bills.flatMap((bill) => {
-    const outcome = isResolvedBillStatus(bill.status);
-    return outcome ? [{ bill, outcome }] : [];
-  });
   const counts = { passed: 0, failed: 0 };
-  if (resolved.length === 0) return counts;
-
-  // Claim every outcome in one write first, so a retry never records one twice.
-  await billsCollection(db).updateMany(
-    {
-      _id: { $in: resolved.map(({ bill }) => bill._id) },
-      "crisisEmergency.recordedTurn": { $exists: false },
-    },
-    { $set: { "crisisEmergency.recordedTurn": turn } }
-  );
-
-  const crisisIds = [
-    ...new Set(resolved.flatMap(({ bill }) => bill.crisisEmergency?.crisisId ?? [])),
-  ];
-  const crises = new Map(
-    (await loadLiveCrises(db, crisisIds)).map((crisis) => [crisis._id.toString(), crisis])
-  );
-
-  const inaction: AnyBulkWriteOperation<Crisis>[] = [];
-  const retry: Bill["_id"][] = [];
-  for (const { bill, outcome } of resolved) {
-    const crisis = crises.get(bill.crisisEmergency?.crisisId.toString() ?? "");
-    if (!crisis) continue;
-    try {
-      if (outcome === "passed") {
-        if (await recordPassedBill(db, bill, crisis, turn)) retry.push(bill._id);
-        else counts.passed += 1;
-      } else {
-        const row = inactionRow(crisis, bill, turn);
-        if (!row) continue;
-        inaction.push({
-          updateOne: {
-            filter: { _id: crisis._id },
-            update: { $push: { "v2.ledger": { $each: [row], $slice: -LEDGER_LIMIT } } },
-          },
-        });
-        counts.failed += 1;
-      }
-    } catch (error) {
-      logger.error(COMPONENT, "recording emergency bill outcome failed", error, {
-        billId: bill._id.toString(),
+  for (const bill of bills) {
+    if (!isResolvedBillStatus(bill.status)) continue;
+    const result = await recordEmergencyBillOutcome(db, bill, turn);
+    if (result.ok) {
+      counts.passed += result.passed;
+      counts.failed += result.failed;
+    } else
+      logger.warn(COMPONENT, "Emergency bill remains pending until its response can be delivered", {
+        billId: bill._id.toHexString(),
+        code: result.code,
       });
-    }
-  }
-  if (retry.length > 0) {
-    // Release the claim so an empty treasury delays the response instead of voiding it.
-    await billsCollection(db).updateMany(
-      { _id: { $in: retry } },
-      { $unset: { "crisisEmergency.recordedTurn": "" } }
-    );
-  }
-  if (inaction.length > 0) {
-    try {
-      await crisesCollection(db).bulkWrite(inaction, { ordered: false });
-    } catch (error) {
-      logger.error(COMPONENT, "recording failed emergency bills failed", error);
-    }
   }
   return counts;
 }

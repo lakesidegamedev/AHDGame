@@ -102,6 +102,20 @@ it("includes loans, operating and tax arrears and IMF principal without changing
     liquidCurrencyCode: "USD",
     operatingCashArrearsByCurrency: { CAD: 140 },
     federalTaxArrearsAnchorByCountry: { US: 20 },
+    producerPayables: {
+      worldEpoch: "test",
+      turn: 10,
+      claims: [
+        {
+          id: "wages",
+          debtorAccountId: "corp",
+          creditorAccountId: "workers",
+          producerId: "plant",
+          kind: "labour",
+          amount: 700,
+        },
+      ],
+    },
     imfBailoutActive: true,
     imfFacilityPrincipalOutstanding: 30,
   });
@@ -117,7 +131,36 @@ it("includes loans, operating and tax arrears and IMF principal without changing
       ["CAD", 1.4],
     ])
   );
-  expect(result.debtBreakdownAnchor).toEqual({ bonds: 0, loans: 200, arrears: 120, imf: 30 });
-  expect(result.totalDebtAnchor).toBe(350);
+  expect(result.debtBreakdownAnchor).toEqual({ bonds: 0, loans: 200, arrears: 820, imf: 30 });
+  expect(result.totalDebtAnchor).toBe(1050);
   expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
+});
+
+it("converts JPY history income to anchor before capping the IMF interest forecast", async () => {
+  const db = createMockDb();
+  const corporation = makeCorporation({
+    countryId: "JP",
+    liquidCurrencyCode: "JPY",
+    imfBailoutActive: true,
+    imfFacilityPrincipalOutstanding: 100000,
+    imfFacilityAnnualRate: 12,
+    imfFacilityAmortizationTurnsRemaining: 48,
+    imfFacilityIncomeCaptureFraction: 0.15,
+  });
+  db.collection("corporationHistory").findOne.mockResolvedValue({
+    income: 150,
+    revenue: 300,
+    currencyCode: "JPY",
+    fxRateAtWrite: 150,
+    turn: 9,
+    settledBankLoanInterestPaid: 0,
+  });
+  const result = await loadPortfolioHoldings(
+    db as unknown as Db,
+    corporation,
+    10,
+    new Map([["JPY", 300]])
+  );
+  expect(result.turnIncomeForImf).toBe(0.5);
+  expect(result.imfFacilityInterestPaidDaily).toBe(Math.round(0.5 * 0.15 * 24));
 });

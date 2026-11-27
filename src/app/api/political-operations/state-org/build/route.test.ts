@@ -1,3 +1,19 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (
+    db: import("mongodb").Db,
+    work: (db: import("mongodb").Db) => Promise<Response>
+  ) => work(db),
+}));
+// Collection-only route behavior; paid rollback is checked with transactional fixtures.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  runWithDbSession: (
+    _db: import("mongodb").Db,
+    work: (session: import("mongodb").ClientSession) => Promise<unknown>
+  ) => work({} as import("mongodb").ClientSession),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, MongoServerError } from "mongodb";
 import { stateOrgLevelCost } from "@/lib/elections/engine/constants";

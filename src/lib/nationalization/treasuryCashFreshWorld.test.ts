@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { coreGameConfigUpdate } from "@/lib/admin/seed/coreGameConfigUpdate";
 import { resolveBankingPolicy } from "@/lib/banking/rules/policy";
@@ -34,4 +34,33 @@ describe("funded Treasury cash on a fresh world", () => {
     const context = await loadTreasuryCashContext(db as never, 401);
     expect(context?.treasuryCashLedgerEnabled ?? false).toBe(false);
   });
+});
+
+it("does not select unfunded writers when an enabled cash context cannot be loaded", async () => {
+  const db = createInMemoryDb();
+  db.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
+  db.seed("gameState", [{ _id: "current", currentTurn: 10 }]);
+  db.seed("federalBudget", [
+    { _id: "CA", countryId: "CA", treasuryCashLocal: 1000, treasuryBalance: 1000 },
+  ]);
+  vi.spyOn(db.collection("exchangeRates"), "find").mockImplementationOnce(() => {
+    throw new Error("cash context read interrupted");
+  });
+  await expect(loadTreasuryCashContext(db as never, 11)).rejects.toThrow(
+    "cash context read interrupted"
+  );
+  expect(db.collection("federalBudget").docs[0]).toMatchObject({
+    treasuryCashLocal: 1000,
+    treasuryBalance: 1000,
+  });
+});
+
+it("still returns disabled accounting without requiring a currency context", async () => {
+  const db = createInMemoryDb();
+  db.seed("gameConfig", [
+    { _id: "default", treasuryCashLedgerEnabled: false, ledgerShadow: false },
+  ]);
+  const rates = vi.spyOn(db.collection("exchangeRates"), "find");
+  expect(await loadTreasuryCashContext(db as never, 11)).toBeNull();
+  expect(rates).not.toHaveBeenCalled();
 });

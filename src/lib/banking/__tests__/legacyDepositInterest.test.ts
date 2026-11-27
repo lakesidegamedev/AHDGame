@@ -101,6 +101,29 @@ describe("legacy savings interest batches", () => {
       { applied: true },
     ]);
   });
+  it("acknowledges already-delivered income after the bounded payout receipt rotates", async () => {
+    const memory = world(),
+      db = memory as unknown as Db;
+    const fault = withInjectedCrash(memory, {
+      collection: "financialTxLog",
+      op: "bulkWrite",
+      onCall: 1,
+      afterWrite: false,
+    });
+    await expect(settleLegacyDepositInterest(fault.db, input)).rejects.toThrow();
+    const { creditIncomeAfterTax } = await import("@/lib/budget/incomePayout");
+    vi.mocked(creditIncomeAfterTax).mockImplementationOnce(async () => {
+      throw new Error("Stale income payout cannot be replayed");
+    });
+    const calls = vi.mocked(creditIncomeAfterTax).mock.calls.length;
+    await settleLegacyDepositInterest(db, input);
+    expect(vi.mocked(creditIncomeAfterTax).mock.calls).toHaveLength(calls);
+    vi.mocked(creditIncomeAfterTax).mockReset();
+    const { untaxedIncomePayout } = await import("@/lib/test-utils/untaxedIncomePayout");
+    vi.mocked(creditIncomeAfterTax).mockImplementation(untaxedIncomePayout);
+    expect(balances(memory)).toEqual({ bank: 70, savers: [1010, 1020] });
+    expect(memory.collection(MONEY_MOVE_COLLECTION).docs[0].status).toBe("applied");
+  });
   it("conserves the original batch when two deliveries share its key", async () => {
     const memory = world(),
       db = memory as unknown as Db;

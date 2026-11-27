@@ -1,3 +1,7 @@
+import * as Sentry from "@sentry/nextjs";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { afterCommit } from "@/lib/db/sessionDb";
+import { getCurrentTurn } from "@/lib/currentTurn";
 /**
  * Iteration referral contest award: the top three referrers of the iteration
  * (from the contest's stored standings) get Supporter for the whole next
@@ -6,7 +10,7 @@
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { GameConfig, User } from "@/lib/db/types";
+
 import type { ContestWinner } from "@/lib/db/types/contestRound";
 import { applyPatreonStatus } from "@/lib/patreon/service";
 import { createNotification } from "@/lib/notifications";
@@ -19,6 +23,8 @@ import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 export class ReferralAwardError extends Error {}
 
 export interface ReferralAwardInput {
+  roundId?: string;
+  turn?: number;
   /** Staff username, or "system" for the automatic award at an iteration change. */
   awardedBy: string;
   now?: Date;
@@ -38,9 +44,35 @@ export async function awardReferralContest(
   db: Db,
   input: ReferralAwardInput
 ): Promise<ReferralAwardResult> {
+  const roundId =
+    input.roundId ??
+    (
+      await getContestRoundsCollection(db).findOne(
+        { kind: "referrals_iteration", status: "active" },
+        { projection: { _id: 1 } }
+      )
+    )?._id;
+  if (!roundId) throw new ReferralAwardError("No referral contest is running");
+  return withTurnValueSettlement(
+    db,
+    "referral-contest-award",
+    input.turn ?? (await getCurrentTurn(db)),
+    (db) => awardReferralContestWork(db, { ...input, roundId }),
+    { sourceKey: roundId }
+  );
+}
+
+async function awardReferralContestWork(
+  db: Db,
+  input: ReferralAwardInput
+): Promise<ReferralAwardResult> {
   const now = input.now ?? new Date();
   const rounds = getContestRoundsCollection(db);
-  const active = await rounds.findOne({ kind: "referrals_iteration", status: "active" });
+  const active = await rounds.findOne({
+    _id: input.roundId,
+    kind: "referrals_iteration",
+    status: "active",
+  });
   if (!active) throw new ReferralAwardError("No referral contest is running");
 
   // Standings are already ranked, alt-filtered and limited to live players.
@@ -135,15 +167,21 @@ export async function awardReferralContest(
         });
       }
       outcomes[`winners.${index}.alreadySupporter`] = decision === "already_supporter";
-      await createNotification({
-        userId: user._id,
-        type: "system",
-        title: "You placed in the referral contest",
-        message:
-          decision === "already_supporter"
-            ? `You finished #${index + 1} with ${standing.score} referrals. Thank you for bringing new players in.`
-            : `You finished #${index + 1} with ${standing.score} referrals. Supporter benefits are yours for the whole next iteration.`,
-        metadata: { href: "/contests" },
+      await afterCommit(db, async () => {
+        try {
+          await createNotification({
+            userId: user._id,
+            type: "system",
+            title: "You placed in the referral contest",
+            message:
+              decision === "already_supporter"
+                ? `You finished #${index + 1} with ${standing.score} referrals. Thank you for bringing new players in.`
+                : `You finished #${index + 1} with ${standing.score} referrals. Supporter benefits are yours for the whole next iteration.`,
+            metadata: { href: "/contests" },
+          });
+        } catch (error) {
+          Sentry.captureException(error, { tags: { area: "benefit-notification" } });
+        }
       });
       winners.push({
         rank: index + 1,

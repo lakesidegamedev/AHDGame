@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, it, expect, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { triggerSystemNoConfidence } from "../triggerSystemNoConfidence";
@@ -15,7 +20,7 @@ function makeDb(opts: { formation: Record<string, unknown> | null }) {
             findOne: vi.fn().mockResolvedValue(opts.formation),
             updateOne: vi.fn(async (_f, u: Record<string, unknown>) => {
               formationUpdates.push(u.$set as Record<string, unknown>);
-              return { acknowledged: true, modifiedCount: 1 };
+              return { acknowledged: true, modifiedCount: 1, matchedCount: 1 };
             }),
           };
         }

@@ -1,11 +1,8 @@
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
-import type {
-  ExecutiveEndorsement,
-  GovernorOfficeState,
-  Election,
-  ElectionCandidate,
-} from "@/lib/db/types";
+import type { ExecutiveEndorsement } from "@/lib/db/types";
 import { getExecutiveEndorseableElectionTypes, type CountryId } from "@/lib/constants/countries";
 import { GOVERNOR_ENDORSEMENT_ACTION_COST } from "@/lib/constants/governorOffice";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
@@ -41,101 +38,107 @@ export async function createExecutiveEndorsement(
   db: Db,
   input: CreateExecutiveEndorsementInput
 ): Promise<{ status: number; body: { endorsementId?: string; error?: string } }> {
-  const { countryId, character, electionId, candidateId } = input;
+  return withSessionDb(db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) return { status: refusal.status, body: { error: refusal.error } };
+    const { countryId, character, electionId, candidateId } = input;
 
-  const election = await electionsCollection(db).findOne({ _id: electionId });
-  if (!election || election.status !== "active") {
-    return { status: 400, body: { error: "Election is not active." } };
-  }
-  if (election.countryId !== countryId) {
-    return { status: 400, body: { error: "Cross-country endorsements are not permitted." } };
-  }
-
-  const allowed = new Set<string>(getExecutiveEndorseableElectionTypes(countryId));
-  if (!allowed.has(election.electionType)) {
-    return {
-      status: 400,
-      body: { error: "This race is not endorseable from the executive's office." },
-    };
-  }
-
-  const candidate = await electionCandidatesCollection(db).findOne({
-    _id: candidateId,
-    electionId,
-  });
-  if (!candidate || candidate.status !== "active") {
-    return { status: 400, body: { error: "Candidate is not active." } };
-  }
-  let candidateParty = candidate.party;
-  if (!candidate.isNPP && candidate.characterId) {
-    const candChar = await charactersCollection(db).findOne(
-      { _id: candidate.characterId },
-      { projection: { party: 1 } }
-    );
-    if (candChar?.party) candidateParty = candChar.party;
-  }
-  const sameParty = await partiesMatchInCountry(db, countryId, character.party, candidateParty);
-  if (!sameParty) {
-    return { status: 400, body: { error: "Cannot endorse across party lines." } };
-  }
-
-  // One active endorsement per (leader, race).
-  const existing = await executiveEndorsementsCollection(db).findOne({
-    countryId,
-    endorsedByCharacterId: character._id,
-    electionId,
-    isActive: true,
-  });
-  if (existing) {
-    return {
-      status: 409,
-      body: { error: "You already have an active endorsement for this race." },
-    };
-  }
-
-  // Office AP spend on the national pseudo-stateId row.
-  const nationalStateId = getNationalStateId(countryId);
-  const spend = await governorOfficeStateCollection(db).updateOne(
-    {
-      countryId,
-      stateId: nationalStateId,
-      gubernatorialActions: { $gte: GOVERNOR_ENDORSEMENT_ACTION_COST },
-    },
-    {
-      $inc: { gubernatorialActions: -GOVERNOR_ENDORSEMENT_ACTION_COST },
-      $set: { updatedAt: new Date() },
+    const election = await electionsCollection(db).findOne({ _id: electionId });
+    if (!election || election.status !== "active") {
+      return { status: 400, body: { error: "Election is not active." } };
     }
-  );
-  if (spend.modifiedCount === 0) {
-    return { status: 400, body: { error: "Insufficient office action points." } };
-  }
+    if (election.countryId !== countryId) {
+      return { status: 400, body: { error: "Cross-country endorsements are not permitted." } };
+    }
 
-  const id = new MongoObjectId();
-  const currentTurn = await getCurrentTurn(db);
-  const doc: ExecutiveEndorsement = {
-    _id: id,
-    countryId,
-    targetStateId: election.state ?? nationalStateId,
-    endorsedByCharacterId: character._id,
-    endorsedByName: character.name,
-    electionId,
-    candidateId,
-    candidateName: candidate.characterName ?? "",
-    candidateIsNPP: candidate.isNPP === true,
-    candidatePartyId: candidate.party,
-    isActive: true,
-    createdAtTurn: currentTurn,
-    createdAt: new Date(),
-  };
-  await executiveEndorsementsCollection(db).insertOne(doc);
+    const allowed = new Set<string>(getExecutiveEndorseableElectionTypes(countryId));
+    if (!allowed.has(election.electionType)) {
+      return {
+        status: 400,
+        body: { error: "This race is not endorseable from the executive's office." },
+      };
+    }
 
-  // B3 — endorsement landing bumps the endorsed candidate's Support.
-  // Use candidate.characterId rather than the param `candidateId`
-  // because executiveEndorsements key by the candidate-row id, while
-  // applySupportDelta looks up by character id.
-  if (candidate.characterId && !candidate.isNPP) {
-    await applyEndorsementSupportBump(db, candidate.characterId);
-  }
+    const candidate = await electionCandidatesCollection(db).findOne({
+      _id: candidateId,
+      electionId,
+    });
+    if (!candidate || candidate.status !== "active") {
+      return { status: 400, body: { error: "Candidate is not active." } };
+    }
+    let candidateParty = candidate.party;
+    if (!candidate.isNPP && candidate.characterId) {
+      const candChar = await charactersCollection(db).findOne(
+        { _id: candidate.characterId },
+        { projection: { party: 1 } }
+      );
+      if (candChar?.party) candidateParty = candChar.party;
+    }
+    const sameParty = await partiesMatchInCountry(db, countryId, character.party, candidateParty);
+    if (!sameParty) {
+      return { status: 400, body: { error: "Cannot endorse across party lines." } };
+    }
 
-  return { status: 200, body: { endorsementId: id.toString() } };
+    // One active endorsement per (leader, race).
+    const existing = await executiveEndorsementsCollection(db).findOne({
+      countryId,
+      endorsedByCharacterId: character._id,
+      electionId,
+      isActive: true,
+    });
+    if (existing) {
+      if (existing.candidateId.equals(candidateId))
+        return { status: 200, body: { endorsementId: existing._id!.toString() } };
+      return {
+        status: 409,
+        body: { error: "You already have an active endorsement for this race." },
+      };
+    }
+
+    // Office AP spend on the national pseudo-stateId row.
+    const nationalStateId = getNationalStateId(countryId);
+    const spend = await governorOfficeStateCollection(db).updateOne(
+      {
+        countryId,
+        stateId: nationalStateId,
+        gubernatorialActions: { $gte: GOVERNOR_ENDORSEMENT_ACTION_COST },
+      },
+      {
+        $inc: { gubernatorialActions: -GOVERNOR_ENDORSEMENT_ACTION_COST },
+        $set: { updatedAt: new Date() },
+      }
+    );
+    if (spend.modifiedCount === 0) {
+      return { status: 400, body: { error: "Insufficient office action points." } };
+    }
+
+    const id = new MongoObjectId();
+    const currentTurn = await getCurrentTurn(db);
+    const doc: ExecutiveEndorsement = {
+      _id: id,
+      countryId,
+      targetStateId: election.state ?? nationalStateId,
+      endorsedByCharacterId: character._id,
+      endorsedByName: character.name,
+      electionId,
+      candidateId,
+      candidateName: candidate.characterName ?? "",
+      candidateIsNPP: candidate.isNPP === true,
+      candidatePartyId: candidate.party,
+      isActive: true,
+      createdAtTurn: currentTurn,
+      createdAt: new Date(),
+    };
+    await executiveEndorsementsCollection(db).insertOne(doc);
+
+    // B3 — endorsement landing bumps the endorsed candidate's Support.
+    // Use candidate.characterId rather than the param `candidateId`
+    // because executiveEndorsements key by the candidate-row id, while
+    // applySupportDelta looks up by character id.
+    if (candidate.characterId && !candidate.isNPP) {
+      await applyEndorsementSupportBump(db, candidate.characterId);
+    }
+
+    return { status: 200, body: { endorsementId: id.toString() } };
+  });
 }

@@ -1,30 +1,16 @@
-/**
- * Atomic debit + state-party credit for "Transfer to State Party" treasury
- * actions.
- *
- * Extracted from
- * `src/app/api/country/[code]/parties/[id]/transfer/route.ts` so the
- * same logic runs in both the immediate path (`transactionApprovalMode
- * === "single"`) and the two-person-approval execute step. Behavior
- * mirrors the legacy immediate path — balance race-protection, replica-
- * set vs standalone fallback, admin log, two treasury audit rows
- * (debit on national + credit on state-party), financialTx log entries,
- * activity log — so existing transfer-route tests continue to apply.
- */
-
-import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
+import { ObjectId, type ClientSession, type UpdateFilter } from "mongodb";
 import { NextResponse } from "next/server";
 import type { Db } from "mongodb";
-import { getMongoClient } from "@/lib/mongodb";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
+import { boundSession, runWithDbSession } from "@/lib/db/sessionDb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 import { badRequest, errorResponse } from "@/lib/api/errors";
-import type { PoliticalParty, StatePartyOrg, State } from "@/lib/db/types";
+import type { PoliticalParty, State } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getSeedCurrencyCode, type CurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { emitTreasuryTransaction } from "@/lib/treasury/emit";
 import { emitTx } from "@/lib/financialTxLog/emit";
-import { TreasuryExecutionUncertainError } from "@/lib/treasury/executionUncertain";
 import { getGameState } from "@/lib/gameState";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
 import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
@@ -46,6 +32,16 @@ export interface ExecuteTransferToStateArgs {
 }
 
 export async function executeTransferToStateParty(
+  args: ExecuteTransferToStateArgs
+): Promise<{ ok: boolean; response: NextResponse }> {
+  return withAtomicResult(args.db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) return { ok: false, response: errorResponse(refusal.status, refusal.error) };
+    return executeTransferToStatePartyAtomic({ ...args, db });
+  });
+}
+
+async function executeTransferToStatePartyAtomic(
   args: ExecuteTransferToStateArgs
 ): Promise<{ ok: boolean; response: NextResponse }> {
   const { db, countryId, party, state, amount, reserveWarning, initiator } = args;
@@ -93,87 +89,8 @@ export async function executeTransferToStateParty(
     });
   };
 
-  const applyWithoutTransaction = async (): Promise<NextResponse | null> => {
-    const debitResult = await politicalPartiesCollection(db).updateOne(
-      { _id: party._id, treasury: { $gte: amount } },
-      partyDebit
-    );
-    if (debitResult.matchedCount === 0) {
-      return errorResponse(
-        400,
-        `Insufficient treasury balance. Available: $${treasury.toLocaleString()}`
-      );
-    }
-    try {
-      await statePartyOrgCollection(db).updateOne({ _id: statePartyKey }, statePartyCredit, {
-        upsert: true,
-      });
-    } catch (error) {
-      // Refund on failure. If the refund ALSO fails the treasury is
-      // short with nothing credited, and this can no longer be reported
-      // as an ordinary refusal: the approve route would hand the
-      // signature back and reopen the row for a second debit.
-      try {
-        await politicalPartiesCollection(db).updateOne(
-          { _id: party._id },
-          { $inc: { treasury: amount }, $set: { updatedAt: new Date() } }
-        );
-      } catch (refundError) {
-        console.error(
-          JSON.stringify({
-            error: "treasury_state_transfer_refund_failed",
-            operation: "execute_transfer_to_state_party",
-            partyId: partyIdStr,
-            countryId,
-            stateId: upperStateId,
-            amount,
-            message: refundError instanceof Error ? refundError.message : String(refundError),
-            // The credit failure that triggered the refund. Without it
-            // an operator reconciling this row sees only that the refund
-            // failed, not what went wrong first.
-            causedBy: error instanceof Error ? error.message : String(error),
-          })
-        );
-        throw new TreasuryExecutionUncertainError(
-          "Treasury debited but the state party was neither credited nor refunded.",
-          { cause: refundError }
-        );
-      }
-      throw error;
-    }
-    return null;
-  };
+  await runWithDbSession(db, applyInTransaction);
 
-  try {
-    // No session (standalone Mongo, probed by the helper) routes to the
-    // sequential path, which compensates for partial writes itself.
-    const fallbackResponse = await runTransactionWithSessionRetry(
-      getMongoClient,
-      async (session) => {
-        if (!session) return applyWithoutTransaction();
-        await applyInTransaction(session);
-        return null;
-      }
-    );
-    if (fallbackResponse) return { ok: false, response: fallbackResponse };
-  } catch (err) {
-    const code = (err as MongoServerError | undefined)?.code;
-    if (code === 20 || code === 263) {
-      const fallbackResponse = await applyWithoutTransaction();
-      if (fallbackResponse) return { ok: false, response: fallbackResponse };
-    } else {
-      throw err;
-    }
-  }
-
-  // ─── Audit + activity logs ──────────────────────────────────────────────
-  // PAST THIS POINT THE MONEY HAS MOVED: the national treasury is
-  // debited and the state party credited. Nothing below may throw —
-  // callers read an exception as "the transfer did not happen", and
-  // the two-person approve route responds by handing the approver's
-  // signature back, reopening a row whose funds are already gone for a
-  // second Approve click to spend again. Losing an audit row is a
-  // reporting gap; throwing one was a double payout.
   try {
     await adminLogsCollection<Document>(db).insertOne({
       category: "system",
@@ -191,7 +108,7 @@ export async function executeTransferToStateParty(
     // stamp EUR on every audit row. A gameState failure resolves to the
     // default preset (era-blind map), never to a throw — nothing below may
     // throw (see the PAST THIS POINT contract above).
-    const gameState = await getGameState().catch(() => null);
+    const gameState = await getGameState(db);
     const txCurrency = getSeedCurrencyCode(
       countryId,
       gameState?.preset ?? DEFAULT_SEED_PRESET
@@ -235,7 +152,7 @@ export async function executeTransferToStateParty(
       now,
       currencyCode: txCurrency,
     });
-    void emitTx(db, {
+    await emitTx(db, {
       type: "party_transfer",
       turn: gameState?.currentTurn ?? 0,
       createdAt: now,
@@ -253,7 +170,7 @@ export async function executeTransferToStateParty(
         side: "national_outflow",
       },
     });
-    void emitTx(db, {
+    await emitTx(db, {
       type: "party_transfer",
       turn: gameState?.currentTurn ?? 0,
       createdAt: now,
@@ -272,7 +189,7 @@ export async function executeTransferToStateParty(
       },
     });
 
-    void activityLogCollection<Document>(db).insertOne({
+    await activityLogCollection<Document>(db).insertOne({
       type: "fund_event",
       timestamp: new Date(),
       userId: new ObjectId(args.initiatorUserId),
@@ -291,6 +208,7 @@ export async function executeTransferToStateParty(
       toType: "party",
     });
   } catch (err) {
+    if (boundSession(db)) throw err;
     console.error(
       JSON.stringify({
         error: "treasury_state_transfer_audit_failed",

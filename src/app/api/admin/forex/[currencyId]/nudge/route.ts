@@ -10,7 +10,9 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
-import type { ExchangeRate } from "@/lib/db/types";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { invalidateCorpFxRateCache } from "@/lib/currency/corporationCapital";
+import { afterCommit } from "@/lib/db/sessionDb";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 const schema = z.object({ rate: z.number().positive() });
@@ -28,13 +30,16 @@ export async function POST(
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const result = await exchangeRatesCollection(db).updateOne(
-      { _id: currencyId },
-      { $set: { rate: parsed.data.rate, updatedAt: new Date() } }
-    );
-    if (result.matchedCount === 0) throw notFound("Currency not found");
-
-    return NextResponse.json({ success: true });
+    return await withAtomicEconomicCommand(db, async (transactionDb) => {
+      const quote = await exchangeRatesCollection(transactionDb).findOne({ _id: currencyId });
+      if (!quote) throw notFound("Currency not found");
+      await exchangeRatesCollection(transactionDb).updateMany(
+        { currencyCode: quote.currencyCode },
+        { $set: { rate: parsed.data.rate, updatedAt: new Date() } }
+      );
+      await afterCommit(transactionDb, () => invalidateCorpFxRateCache(db));
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

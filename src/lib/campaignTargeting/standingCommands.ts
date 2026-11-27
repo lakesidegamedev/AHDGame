@@ -1,13 +1,14 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Standing targeted ads spend personal campaign resources on regional exposure.
  * Purchases need no candidacy; one character revision serializes all buyers and
  * their bonuses persist across races while decaying through the shared rules.
  */
 import { ObjectId, type Db, type ClientSession } from "mongodb";
-import type { Character, GameConfig } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { randomUUID } from "node:crypto";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/api/errors";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { getGameTime } from "@/lib/time/gameTime";
 import { getCampaignCurrency } from "@/lib/campaigns/campaignCurrency";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
@@ -41,7 +42,7 @@ export async function quoteStandingAds(db: Db, character: Character, stateId: st
   };
 }
 
-export async function purchaseStandingAds(
+async function purchaseStandingAdsInTransaction(
   db: Db,
   owner: Character,
   payer: Character,
@@ -151,24 +152,10 @@ export async function purchaseStandingAds(
     if (!result.modifiedCount)
       throw conflict("Resources or ad purchases changed. Refresh before buying");
   } else {
-    await runWithOptionalTransaction(
-      async (session) => {
-        await debit(session);
-        await write(session);
-      },
-      async () => {
-        await debit();
-        try {
-          await write();
-        } catch (error) {
-          await charactersCollection(db).updateOne(
-            { _id: payer._id },
-            { $inc: { actions, [fundsField]: funds } }
-          );
-          throw error;
-        }
-      }
-    );
+    await runWithDbSession(db, async (session) => {
+      await debit(session);
+      await write(session);
+    });
   }
   return {
     success: true,
@@ -181,4 +168,11 @@ export async function purchaseStandingAds(
         ad.bucket === request.bucket
     )?.bonus,
   };
+}
+
+export async function purchaseStandingAds(
+  ...args: Parameters<typeof purchaseStandingAdsInTransaction>
+): Promise<Awaited<ReturnType<typeof purchaseStandingAdsInTransaction>>> {
+  const [db, ...rest] = args;
+  return withSessionDb(db, (tx) => purchaseStandingAdsInTransaction(tx, ...rest));
 }

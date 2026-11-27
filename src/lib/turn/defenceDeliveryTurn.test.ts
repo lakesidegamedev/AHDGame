@@ -5,9 +5,22 @@ import { lotsFromSector, rawLotsFromSector } from "@/lib/military/arsenal";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
 
 describe("lotsFromSector", () => {
@@ -179,6 +192,7 @@ function stubDb(w: World): Db {
       }
       if (name === "corporateSectors") {
         return {
+          find: () => ({ toArray: async () => (w.sector ? [w.sector] : []) }),
           findOne: async () => w.sector,
           bulkWrite: async (ops: Record<string, unknown>[]) => {
             w.sectorOps.push(...ops);
@@ -285,12 +299,12 @@ describe("applyDefenceDeliveries", () => {
     const w = world();
     const db = stubDb(w);
     const corporations = db.collection("corporations") as unknown as {
-      findOne: (filter: Record<string, unknown>, options?: Record<string, unknown>) => unknown;
+      find: (filter: Record<string, unknown>, options?: Record<string, unknown>) => unknown;
     };
-    const findOne = vi.spyOn(corporations, "findOne");
+    const findOne = vi.spyOn(corporations, "find");
     await applyDefenceDeliveries(db, "US", 1953, 3, 42);
     expect(findOne).toHaveBeenCalledWith(
-      { _id: CORP_ID },
+      { _id: { $in: [CORP_ID] } },
       { projection: SETTLEMENT_HISTORY_EXCLUDED }
     );
   });
@@ -379,7 +393,7 @@ describe("applyDefenceDeliveries", () => {
     // the old floor-every-turn behaviour left it stuck at zero indefinitely.
     let total = t1.lots;
     for (let i = 0; i < 30; i++) {
-      total += (await applyDefenceDeliveries(stubDb(w), "US", 1953)).lots;
+      total += (await applyDefenceDeliveries(stubDb(w), "US", 1953, 3, i + 1)).lots;
     }
     expect(total).toBeGreaterThan(0);
     expect(w.contracts[0].lotsDelivered).toBe(total);
@@ -461,53 +475,15 @@ describe("applyDefenceDeliveries", () => {
   });
 });
 
-// The buyer's money leaves the pot BEFORE the materiel and the supplier's payment land.
-// Every failure past that point has to unwind, or the appropriation is simply destroyed.
-describe("applyDefenceDeliveries — unwind after a successful debit", () => {
-  // The money now moves BEFORE the arsenal deposit, because the shared primitive guards its own
-  // debit and reports a refused move having touched nothing. So the supplier IS paid and then
-  // refunded through a paired reversing move, rather than never being paid at all. What must
-  // still hold is that both books come back to where they started.
-  it("refunds the whole cost when the arsenal deposit fails", async () => {
-    const w = world({ failDeposit: true });
-    const opening = w.appropriation;
-
-    const res = await applyDefenceDeliveries(stubDb(w), "US", 1953);
-
-    expect(res.lots).toBe(0);
-    expect(res.stalled).toBe(1);
-    expect(w.appropriation).toBe(opening);
-    expect(w.arsenalDeposits).toHaveLength(0);
-    // Paid, then reversed: the supplier nets exactly zero.
-    expect(w.corpCredits.reduce((a, b) => a + b, 0)).toBe(0);
-  });
-
-  // A supplier write that throws now fails INSIDE the money move, before the arsenal is
-  // touched. Nothing is delivered, the contract keeps its lots banked, and the half-applied
-  // move is left in the repair queue rather than being silently swallowed - which is the whole
-  // reason the shared primitive owns this instead of a hand-rolled unwind ladder.
-  it("stalls without delivering when the supplier's payment leg throws", async () => {
-    const w = world({ failCorpCredit: true });
-
-    const res = await applyDefenceDeliveries(stubDb(w), "US", 1953);
-
-    expect(res.lots).toBe(0);
-    expect(res.stalled).toBe(1);
-    expect(w.arsenalDeposits).toHaveLength(0);
-    expect(w.stock.ground ?? 0).toBe(0);
-    // The lot record is reversed, so the contract does not claim materiel nobody received.
-    expect(w.contracts[0].lotsDelivered).toBe(0);
-  });
-
-  it("keeps the sweep alive for later contracts when one fails", async () => {
-    const w = world({ failDeposit: true });
-    w.contracts.push({ ...w.contracts[0], _id: new ObjectId() });
-
-    const res = await applyDefenceDeliveries(stubDb(w), "US", 1953);
-
-    // Both contracts were attempted rather than the first throw aborting the country.
-    expect(res.stalled).toBe(2);
-  });
+describe("applyDefenceDeliveries failure propagation", () => {
+  it.each(["failDeposit", "failCorpCredit"] as const)(
+    "propagates %s to the owning transaction",
+    async (failure) => {
+      const w = world({ [failure]: true });
+      await expect(applyDefenceDeliveries(stubDb(w), "US", 1953)).rejects.toThrow();
+      expect(w.sectorOps).toHaveLength(0);
+    }
+  );
 });
 
 // Output shipped to an arsenal is paid for per lot and must not also be sold on the market.

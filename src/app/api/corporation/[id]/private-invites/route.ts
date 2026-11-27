@@ -1,3 +1,7 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { afterCommit } from "@/lib/db/sessionDb";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
+import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 /**
  * Private share invitation endpoints for close-corporation (e.g. S-Corp) flow.
  *
@@ -23,7 +27,7 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { createNotification } from "@/lib/notifications";
-import type { Corporation, CorporationShareInvite, User } from "@/lib/db/types";
+import type { Corporation, CorporationShareInvite } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { corporationShareInvitesCollection } from "@/lib/db/repositories/corporationShareInvites";
@@ -117,140 +121,156 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const { invitedCharacterId, shares, pricePerShare } = parsed.data;
 
-    const db = await getDb();
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+    const sourceDb = await getDb();
+    return await withAtomicEconomicCommand(sourceDb, async (db) => {
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    if (!corporation.isPrivate) {
-      return errorResponse(
-        400,
-        "Private share invitations are for private corporations only. Public corps issue shares through the market."
+      if (!corporation.isPrivate) {
+        return errorResponse(
+          400,
+          "Private share invitations are for private corporations only. Public corps issue shares through the market."
+        );
+      }
+
+      const legalStructure = getLegalStructureForCorp(corporation);
+      const maxShareholders = legalStructure.maxShareholders ?? 1;
+      if (maxShareholders <= 1) {
+        return errorResponse(
+          400,
+          `${legalStructure.name} corporations are CEO-only and cannot bring in outside shareholders. Convert to an S-Corp (or similar) to enable private placements.`
+        );
+      }
+
+      if (!ObjectId.isValid(invitedCharacterId)) {
+        return errorResponse(400, "Invalid invitedCharacterId");
+      }
+      const inviteeId = new ObjectId(invitedCharacterId);
+
+      if (corporation.ceoId && inviteeId.equals(corporation.ceoId)) {
+        return errorResponse(400, "CEO is already the sole shareholder");
+      }
+
+      const invitee = await charactersCollection(db).findOne({ _id: inviteeId });
+      if (!invitee) {
+        return errorResponse(404, "Invited character not found");
+      }
+
+      const existingShareholder = (corporation.shareholders ?? []).find(
+        (sh) => sh.characterId?.toString() === invitedCharacterId && (sh.shares ?? 0) > 0
       );
-    }
+      if (existingShareholder) {
+        return errorResponse(400, `${invitee.name} is already a shareholder of this corporation.`);
+      }
 
-    const legalStructure = getLegalStructureForCorp(corporation);
-    const maxShareholders = legalStructure.maxShareholders ?? 1;
-    if (maxShareholders <= 1) {
-      return errorResponse(
-        400,
-        `${legalStructure.name} corporations are CEO-only and cannot bring in outside shareholders. Convert to an S-Corp (or similar) to enable private placements.`
+      const now = new Date();
+      // Count current shareholders plus any outstanding pending invites — both
+      // consume the cap. A pending invite that's accepted will land a new holder.
+      const pendingInviteCount = await corporationShareInvitesCollection(db).countDocuments({
+        corporationId: corporation._id,
+        status: "pending",
+        expiresAt: { $gt: now },
+      });
+      const projected = shareholderCount(corporation) + pendingInviteCount + 1;
+      if (projected > maxShareholders) {
+        return errorResponse(
+          400,
+          `Adding another shareholder would exceed the ${legalStructure.name} cap of ${maxShareholders} shareholders (${shareholderCount(corporation)} current + ${pendingInviteCount} pending).`
+        );
+      }
+
+      // Validate that the corp has enough authorized-but-unissued shares to back
+      // this invite. Mirrors the IPO/secondary-offering invariant: newly issued
+      // shares come from the unissued pool, not from existing holders.
+      const totalShares = corporation.totalShares ?? 0;
+      const issuedToShareholders = (corporation.shareholders ?? []).reduce(
+        (sum, sh) => sum + (sh.shares ?? 0),
+        0
       );
-    }
+      const issued = issuedToShareholders + (corporation.publicFloat ?? 0);
+      const unissued = Math.max(0, totalShares - issued);
 
-    if (!ObjectId.isValid(invitedCharacterId)) {
-      return errorResponse(400, "Invalid invitedCharacterId");
-    }
-    const inviteeId = new ObjectId(invitedCharacterId);
-
-    if (corporation.ceoId && inviteeId.equals(corporation.ceoId)) {
-      return errorResponse(400, "CEO is already the sole shareholder");
-    }
-
-    const invitee = await charactersCollection(db).findOne({ _id: inviteeId });
-    if (!invitee) {
-      return errorResponse(404, "Invited character not found");
-    }
-
-    const existingShareholder = (corporation.shareholders ?? []).find(
-      (sh) => sh.characterId?.toString() === invitedCharacterId && (sh.shares ?? 0) > 0
-    );
-    if (existingShareholder) {
-      return errorResponse(400, `${invitee.name} is already a shareholder of this corporation.`);
-    }
-
-    const now = new Date();
-    // Count current shareholders plus any outstanding pending invites — both
-    // consume the cap. A pending invite that's accepted will land a new holder.
-    const pendingInviteCount = await corporationShareInvitesCollection(db).countDocuments({
-      corporationId: corporation._id,
-      status: "pending",
-      expiresAt: { $gt: now },
-    });
-    const projected = shareholderCount(corporation) + pendingInviteCount + 1;
-    if (projected > maxShareholders) {
-      return errorResponse(
-        400,
-        `Adding another shareholder would exceed the ${legalStructure.name} cap of ${maxShareholders} shareholders (${shareholderCount(corporation)} current + ${pendingInviteCount} pending).`
-      );
-    }
-
-    // Validate that the corp has enough authorized-but-unissued shares to back
-    // this invite. Mirrors the IPO/secondary-offering invariant: newly issued
-    // shares come from the unissued pool, not from existing holders.
-    const totalShares = corporation.totalShares ?? 0;
-    const issuedToShareholders = (corporation.shareholders ?? []).reduce(
-      (sum, sh) => sum + (sh.shares ?? 0),
-      0
-    );
-    const issued = issuedToShareholders + (corporation.publicFloat ?? 0);
-    const unissued = Math.max(0, totalShares - issued);
-
-    // Outstanding pending invites reserve unissued capacity to prevent over-
-    // promising the same pool.
-    const reservedByInvites = await corporationShareInvitesCollection(db)
-      .aggregate<{ total: number }>([
-        {
-          $match: {
-            corporationId: corporation._id,
-            status: "pending",
-            expiresAt: { $gt: now },
+      // Outstanding pending invites reserve unissued capacity to prevent over-
+      // promising the same pool.
+      const reservedByInvites = await corporationShareInvitesCollection(db)
+        .aggregate<{ total: number }>([
+          {
+            $match: {
+              corporationId: corporation._id,
+              status: "pending",
+              expiresAt: { $gt: now },
+            },
           },
-        },
-        { $group: { _id: null, total: { $sum: "$shares" } } },
-      ])
-      .toArray();
-    const reserved = reservedByInvites[0]?.total ?? 0;
-    const available = unissued - reserved;
-    if (shares > available) {
-      return errorResponse(
-        400,
-        `Only ${available.toLocaleString()} unissued shares available (after reserving ${reserved.toLocaleString()} for other pending invites).`
+          { $group: { _id: null, total: { $sum: "$shares" } } },
+        ])
+        .toArray();
+      const reserved = reservedByInvites[0]?.total ?? 0;
+      const available = unissued - reserved;
+      if (shares > available) {
+        return errorResponse(
+          400,
+          `Only ${available.toLocaleString()} unissued shares available (after reserving ${reserved.toLocaleString()} for other pending invites).`
+        );
+      }
+
+      const issuingCharacterId = corporation.ceoId ?? new ObjectId(auth.user.userId);
+      const issuingCharacter = corporation.ceoId
+        ? await charactersCollection(db).findOne({ _id: corporation.ceoId })
+        : null;
+
+      const inviteCurrency = resolveCorpLiquidCurrencyCode(corporation);
+      if (!inviteCurrency)
+        return errorResponse(
+          409,
+          "The corporation needs a valid cash currency before issuing shares."
+        );
+      const invite: CorporationShareInvite = {
+        _id: new ObjectId(),
+        corporationId: corporation._id,
+        corporationName: corporation.name,
+        invitedCharacterId: inviteeId,
+        invitedCharacterName: invitee.name,
+        issuedByCharacterId: issuingCharacterId,
+        issuedByCharacterName: issuingCharacter?.name ?? "CEO",
+        shares,
+        pricePerShare,
+        totalCost: shares * pricePerShare,
+        currencyCode: inviteCurrency,
+        status: "pending",
+        expiresAt: new Date(now.getTime() + INVITE_EXPIRY_MS),
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const fence = await corporationsCollection(db).updateOne(
+        { _id: corporation._id },
+        { $inc: { shareMarketRevision: 1 } }
       );
-    }
+      if (fence.matchedCount !== 1)
+        return errorResponse(409, "The corporation changed. Refresh and try again.");
+      await corporationShareInvitesCollection(db).insertOne(invite);
 
-    const issuingCharacterId = corporation.ceoId ?? new ObjectId(auth.user.userId);
-    const issuingCharacter = corporation.ceoId
-      ? await charactersCollection(db).findOne({ _id: corporation.ceoId })
-      : null;
+      await afterCommit(db, () =>
+        createNotification({
+          userId: invitee.userId,
+          type: "share_invite_received",
+          title: `Private share offer from ${corporation.name}`,
+          message: `${invite.issuedByCharacterName} has offered you ${shares.toLocaleString()} shares at ${invite.currencyCode} ${pricePerShare.toLocaleString()}/share (total ${invite.currencyCode} ${invite.totalCost.toLocaleString()}). Review on the corporation page.`,
+          metadata: {
+            corporationId: corporation._id.toString(),
+            inviteId: invite._id.toString(),
+          },
+        }).catch(() => {})
+      );
 
-    const invite: CorporationShareInvite = {
-      _id: new ObjectId(),
-      corporationId: corporation._id,
-      corporationName: corporation.name,
-      invitedCharacterId: inviteeId,
-      invitedCharacterName: invitee.name,
-      issuedByCharacterId: issuingCharacterId,
-      issuedByCharacterName: issuingCharacter?.name ?? "CEO",
-      shares,
-      pricePerShare,
-      totalCost: shares * pricePerShare,
-      currencyCode: corporation.liquidCurrencyCode ?? "USD",
-      status: "pending",
-      expiresAt: new Date(now.getTime() + INVITE_EXPIRY_MS),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await corporationShareInvitesCollection(db).insertOne(invite);
-
-    await createNotification({
-      userId: invitee.userId,
-      type: "share_invite_received",
-      title: `Private share offer from ${corporation.name}`,
-      message: `${invite.issuedByCharacterName} has offered you ${shares.toLocaleString()} shares at ${invite.currencyCode} ${pricePerShare.toLocaleString()}/share (total ${invite.currencyCode} ${invite.totalCost.toLocaleString()}). Review on the corporation page.`,
-      metadata: {
-        corporationId: corporation._id.toString(),
+      return NextResponse.json({
+        success: true,
         inviteId: invite._id.toString(),
-      },
-    }).catch(() => {});
-
-    return NextResponse.json({
-      success: true,
-      inviteId: invite._id.toString(),
+      });
     });
   } catch (error) {
     return handleRouteError(error);

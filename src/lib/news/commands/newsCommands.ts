@@ -1,3 +1,8 @@
+import { emitTxStrict } from "@/lib/financialTxLog/emit";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 import { ApiError, badRequest, forbidden, notFound } from "@/lib/api/errors";
 import { createNotification } from "@/lib/notifications";
 import { sendNewsEvent, DISCORD_COLORS, type DiscordEmbed } from "@/lib/discordWebhooks";
@@ -5,18 +10,10 @@ import { getSiteUrl } from "@/lib/siteMetadata";
 import { containsSlur } from "@/lib/moderation";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { getHomeCurrency, getTotalPersonalWealth } from "@/lib/currency/characterFunds";
+import { getHomeCurrency, getPersonalBalance } from "@/lib/currency/characterFunds";
 import { isTrustedNewsImageUrl } from "@/lib/news/trustedImageUrl";
 import { ObjectId, type Db } from "mongodb";
-import type {
-  Character,
-  NewsFeedType,
-  NewsPost,
-  NewsReaction,
-  PoliticalParty,
-  User,
-  UserSubscription,
-} from "@/lib/db/types";
+import type { Character, NewsFeedType, NewsPost, NewsReaction } from "@/lib/db/types";
 import type { NewsPostView, NewsReplyView } from "@/lib/news/dto/newsView";
 import { serializeNewsPost, serializeNewsReply } from "@/lib/news/dto/newsView";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -55,16 +52,43 @@ interface ReactToNewsPostInput {
   reaction: "agree" | "disagree";
 }
 
+async function activeNewsCharacter(db: Db, userId: string) {
+  const id = new ObjectId(userId);
+  const user = await usersCollection(db).findOne(
+    { _id: id },
+    { projection: { activeCharacterId: 1, activeCharacterType: 1 } }
+  );
+  if (user?.activeCharacterType === "imperial") return null;
+  return charactersCollection(db).findOne({
+    userId: id,
+    ...(user?.activeCharacterId ? { _id: user.activeCharacterId } : {}),
+  });
+}
+
 export async function createNewsPost(
   db: Db,
-  { userId, title, content, feedType, imageUrl: imageUrlRaw }: CreateNewsPostInput
+  input: CreateNewsPostInput
 ): Promise<{ post: NewsPostView }> {
-  const character = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
+  const submittedAt = new Date();
+  return withSessionDb(db, async (db) => {
+    const refused = await fenceEconomicTurn(db);
+    if (refused) throw new ApiError(refused.status, refused.error);
+    return createNewsPostInTransaction(db, input, submittedAt);
+  });
+}
+
+async function createNewsPostInTransaction(
+  db: Db,
+  { userId, title, content, feedType, imageUrl: imageUrlRaw }: CreateNewsPostInput,
+  submittedAt: Date
+): Promise<{ post: NewsPostView }> {
+  const character = await activeNewsCharacter(db, userId);
   if (!character) {
     throw forbidden("Character required to post");
   }
 
   const forexEnabled = await isForexEnabled();
+  const homeCurrency = getHomeCurrency(character, await getGameStatePresetOrDefault(db));
 
   if (imageUrlRaw !== undefined && imageUrlRaw !== "" && !isTrustedNewsImageUrl(imageUrlRaw)) {
     throw badRequest("Invalid or untrusted image URL. Upload an image using the post composer.");
@@ -84,13 +108,19 @@ export async function createNewsPost(
     if (character.actions < actionCostAd) {
       throw badRequest(`You need at least ${actionCostAd} actions to place a sponsored post.`);
     }
-    const personal = getTotalPersonalWealth(character, forexEnabled);
+    const personal = getPersonalBalance(character, homeCurrency, forexEnabled);
     if (personal < personalCashAd) {
       throw badRequest(
-        `You need at least $${personalCashAd.toLocaleString()} personal cash to place a sponsored post. Available: $${personal.toLocaleString()}.`
+        `You need at least ${personalCashAd.toLocaleString()} ${homeCurrency} personal cash to place a sponsored post. Available: ${personal.toLocaleString()} ${homeCurrency}.`
       );
     }
   }
+
+  const locked = await charactersCollection(db).updateOne(
+    { _id: character._id },
+    { $inc: { newsPublicationRevision: 1 } }
+  );
+  if (locked.matchedCount !== 1) throw forbidden("Character required to post");
 
   const lastSameKind = await newsPostsCollection(db).findOne(
     {
@@ -104,7 +134,7 @@ export async function createNewsPost(
     { sort: { createdAt: -1 } }
   );
   if (lastSameKind) {
-    const elapsed = Date.now() - lastSameKind.createdAt.getTime();
+    const elapsed = submittedAt.getTime() - lastSameKind.createdAt.getTime();
     if (elapsed < cooldownMs) {
       const remainingMs = cooldownMs - elapsed;
       const remainingMinutes = Math.ceil(remainingMs / 60000);
@@ -122,7 +152,7 @@ export async function createNewsPost(
     }
   }
 
-  const now = new Date();
+  const now = submittedAt;
   const post: Omit<NewsPost, "_id"> = {
     authorId: character._id,
     authorName: character.name,
@@ -139,7 +169,6 @@ export async function createNewsPost(
   };
 
   if (feedType === "advertisement") {
-    const homeCurrency = getHomeCurrency(character);
     const balanceField = forexEnabled ? `currencyBalances.personal.${homeCurrency}` : "cashOnHand";
     const spendResult = await charactersCollection(db).updateOne(
       {
@@ -161,26 +190,35 @@ export async function createNewsPost(
         "Your available actions or personal funds changed. Please try again."
       );
     }
-
-    try {
-      const result = await newsPostsCollection<Document>(db).insertOne(post);
-      return finishNewsPost(db, userId, character, post, result.insertedId, now);
-    } catch (error) {
-      await charactersCollection(db).updateOne(
-        { _id: character._id },
-        {
-          $inc: {
-            actions: actionCostAd,
-            [balanceField]: personalCashAd,
-          },
-          $set: { updatedAt: new Date() },
-        }
-      );
-      throw error;
-    }
   }
 
   const result = await newsPostsCollection<Document>(db).insertOne(post);
+  if (feedType === "advertisement") {
+    const turn =
+      (
+        await gameStateCollection(db).findOne(
+          { _id: "current" },
+          { projection: { currentTurn: 1 } }
+        )
+      )?.currentTurn ?? 0;
+    await emitTxStrict(db, {
+      type: "sponsored_post_payment",
+      subjectType: "character",
+      subjectId: character._id,
+      subjectName: character.name,
+      amount: -personalCashAd,
+      currencyCode: homeCurrency,
+      turn,
+      createdAt: now,
+      counterpartyType: "system",
+      counterpartyName: "Sponsored news placement",
+      meta: {
+        wallet: "personal",
+        newsPostId: result.insertedId.toHexString(),
+        actionsSpent: actionCostAd,
+      },
+    });
+  }
   return finishNewsPost(db, userId, character, post, result.insertedId, now);
 }
 
@@ -192,7 +230,7 @@ export async function editNewsPost(
     throw badRequest("Invalid post ID");
   }
 
-  const character = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
+  const character = await activeNewsCharacter(db, userId);
   if (!character) {
     throw forbidden("Character required to edit a post");
   }
@@ -292,7 +330,7 @@ export async function createNewsReply(
     throw notFound("Post not found");
   }
 
-  const character = await charactersCollection(db).findOne({ userId: new ObjectId(userId) });
+  const character = await activeNewsCharacter(db, userId);
   if (!character) {
     throw forbidden("Character required to reply");
   }
@@ -418,16 +456,18 @@ async function finishNewsPost(
   resultId: ObjectId,
   now: Date
 ): Promise<{ post: NewsPostView }> {
-  try {
-    const { checkNewsPostAchievements } = await import("@/lib/achievements/triggers");
-    await checkNewsPostAchievements(new ObjectId(userId), character._id);
-  } catch (error) {
-    console.error("Achievement check failed:", error);
-  }
-
-  void autoReactFromDiscordLinkedUser(db, userId, resultId, now);
-  void sendNewsDiscordWebhook(db, character, post, resultId, now);
-  void notifySubscribers(db, character, post.content, resultId);
+  await afterCommit(db, async () => {
+    const externalDb = unboundDb(db);
+    try {
+      const { checkNewsPostAchievements } = await import("@/lib/achievements/triggers");
+      await checkNewsPostAchievements(new ObjectId(userId), character._id);
+    } catch (error) {
+      console.error("Achievement check failed:", error);
+    }
+    void autoReactFromDiscordLinkedUser(externalDb, userId, resultId, now);
+    void sendNewsDiscordWebhook(externalDb, character, post, resultId, now);
+    void notifySubscribers(externalDb, character, post.content, resultId);
+  });
 
   const postBorderMap = await fetchBordersByUserIds(db, [new ObjectId(userId)]);
   const postBorder = postBorderMap.get(userId);

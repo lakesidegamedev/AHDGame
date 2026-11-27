@@ -1,4 +1,5 @@
-import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
+import { publishBankLoanInterestHistory } from "@/lib/banking/publishLoanInterest";
+
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 import { fundPositionValue } from "@/lib/indexFunds/rules/portfolioValue";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
@@ -621,34 +622,7 @@ export async function snapshotCorporationPortfolioValues(turn: number): Promise<
   }
 
   if (portfolioMap.size === 0) return 0;
-  const historyRows = await corporationHistoryCollection(db)
-    .find(
-      { turn },
-      {
-        projection: { corporationId: 1, currencyCode: 1 },
-      }
-    )
-    .toArray();
-  const corpById = new Map(allCorps.map((corp) => [String(corp._id), corp]));
-  const loanCosts = historyRows.flatMap((row) => {
-    const corp = corpById.get(String(row.corporationId));
-    if (!corp) return [];
-    const recorded = corp.bankLoanInterestPaidByTurn?.[String(turn)];
-    if (recorded == null && loansByCorporation.has(String(corp._id))) return [];
-    const paid = recorded ?? 0;
-    const source = corp.bankLoanInterestCurrencyByTurn?.[String(turn)];
-    if (paid > 0 && source !== row.currencyCode) return [];
-    return [
-      {
-        updateOne: {
-          filter: { _id: row._id, turn },
-          update: { $set: { settledBankLoanInterestPaid: paid } },
-        },
-      },
-    ];
-  });
-  if (loanCosts.length)
-    await corporationHistoryCollection(db).bulkWrite(loanCosts, { ordered: false });
+  await publishBankLoanInterestHistory(db, turn);
   const prune = allCorps.flatMap((corp) => {
     const old = Object.keys(corp.bankLoanInterestPaidByTurn ?? {}).filter(
       (key) => Number(key) < turn - 64

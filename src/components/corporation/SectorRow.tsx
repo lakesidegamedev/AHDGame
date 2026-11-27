@@ -1001,7 +1001,7 @@ export function SectorRow({
             sectorType={sector.sectorType as CorporationType}
             currentStrategyId={currentId}
             targetStrategyId={pendingChange.targetStrategyId}
-            dailyRevenue={sector.revenue}
+            quoteUrl={`/api/corporations/${encodeURIComponent(corpId)}/sectors/${encodeURIComponent(sector._id)}`}
             mediaOperatingModelsEnabled={mediaOperatingModelsEnabled}
             liquidCurrencyCode={liquidCurrencyCode}
             loading={isUpdating}

@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -57,71 +58,73 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { amount } = parsed.data;
 
     const db = await getDb();
-    const corpGuard = await requireCorporationActionsEnabled(db);
-    if (corpGuard) return corpGuard;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const corpGuard = await requireCorporationActionsEnabled(db);
+      if (corpGuard) return corpGuard;
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    const gameState = await getGameState();
-    const currentTurn = gameState?.currentTurn ?? 0;
-    const escrowBalance = corporation.shareEscrowBalance ?? 0;
+      const gameState = await getGameState(db);
+      const currentTurn = gameState?.currentTurn ?? 0;
+      const escrowBalance = corporation.shareEscrowBalance ?? 0;
 
-    const verdict = evaluateEscrowWithdrawal({
-      escrowBalance,
-      amount,
-      currentTurn,
-      lastWithdrawalTurn: corporation.lastEscrowWithdrawalTurn,
-    });
-    if (!verdict.ok) {
-      return errorResponse(verdict.status, verdict.error);
-    }
-
-    // Atomic, race-safe move: the filter re-asserts the positive-balance and
-    // cooldown invariants so two concurrent withdrawals can't both pass the
-    // read-side check above and over-withdraw.
-    const cooldownFloor = currentTurn - ESCROW_WITHDRAW_COOLDOWN_TURNS;
-    const now = new Date();
-    const result = await corporationsCollection(db).updateOne(
-      {
-        _id: corporation._id,
-        shareEscrowBalance: { $gte: amount },
-        $or: [
-          { lastEscrowWithdrawalTurn: { $exists: false } },
-          { lastEscrowWithdrawalTurn: { $lte: cooldownFloor } },
-        ],
-      },
-      {
-        $inc: { shareEscrowBalance: -amount, liquidCapital: amount },
-        $set: { lastEscrowWithdrawalTurn: currentTurn, updatedAt: now },
+      const verdict = evaluateEscrowWithdrawal({
+        escrowBalance,
+        amount,
+        currentTurn,
+        lastWithdrawalTurn: corporation.lastEscrowWithdrawalTurn,
+      });
+      if (!verdict.ok) {
+        return errorResponse(verdict.status, verdict.error);
       }
-    );
-    if (result.matchedCount === 0) {
-      return errorResponse(409, "Escrow changed before the withdrawal could be applied");
-    }
 
-    const withdrawalEntry = buildEscrowWithdrawalTxEntry({
-      corpId: corporation._id,
-      corpName: corporation.name,
-      currencyCode: (corporation.liquidCurrencyCode ?? "USD") as CurrencyCode,
-      turn: currentTurn,
-      createdAt: now,
-      amount,
-      escrowBalanceAfter: escrowBalance - amount,
-    });
-    if (withdrawalEntry) {
-      // Fire-and-forget — a dropped audit write must not fail the withdrawal.
-      void emitTx(db, withdrawalEntry);
-    }
+      // Atomic, race-safe move: the filter re-asserts the positive-balance and
+      // cooldown invariants so two concurrent withdrawals can't both pass the
+      // read-side check above and over-withdraw.
+      const cooldownFloor = currentTurn - ESCROW_WITHDRAW_COOLDOWN_TURNS;
+      const now = new Date();
+      const result = await corporationsCollection(db).findOneAndUpdate(
+        {
+          _id: corporation._id,
+          shareEscrowBalance: { $gte: amount },
+          $or: [
+            { lastEscrowWithdrawalTurn: { $exists: false } },
+            { lastEscrowWithdrawalTurn: { $lte: cooldownFloor } },
+          ],
+        },
+        {
+          $inc: { shareEscrowBalance: -amount, liquidCapital: amount },
+          $set: { lastEscrowWithdrawalTurn: currentTurn, updatedAt: now },
+        },
+        { returnDocument: "after", projection: { shareEscrowBalance: 1, liquidCurrencyCode: 1 } }
+      );
+      if (!result) {
+        return errorResponse(409, "Escrow changed before the withdrawal could be applied");
+      }
 
-    return NextResponse.json({
-      success: true,
-      withdrawn: amount,
-      escrowRemaining: escrowBalance - amount,
+      const withdrawalEntry = buildEscrowWithdrawalTxEntry({
+        corpId: corporation._id,
+        corpName: corporation.name,
+        currencyCode: (corporation.liquidCurrencyCode ?? "USD") as CurrencyCode,
+        turn: currentTurn,
+        createdAt: now,
+        amount,
+        escrowBalanceAfter: result.shareEscrowBalance ?? 0,
+      });
+      if (withdrawalEntry) {
+        await emitTx(db, withdrawalEntry);
+      }
+
+      return NextResponse.json({
+        success: true,
+        withdrawn: amount,
+        escrowRemaining: result.shareEscrowBalance ?? 0,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

@@ -1,3 +1,4 @@
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   generateStockExchangeSnapshots,
@@ -146,6 +147,55 @@ describe("stockExchangeSnapshot", () => {
       sequentialId: 1,
       ...overrides,
     });
+
+    it.each([true, false])(
+      "reads settled income rather than repricing operations, with loan proof %s",
+      async (complete) => {
+        const corp = createCorporation({ liquidCurrencyCode: "USD", marketingBudget: 1e9 });
+        mockCollection
+          .mockReturnValueOnce(createMockChain([corp]))
+          .mockReturnValueOnce(createMockChain([]))
+          .mockReturnValueOnce(
+            createMockChain([
+              createSector({ corporationId: corp._id, revenue: 1e12, profitMargin: 90 }),
+            ])
+          )
+          .mockReturnValueOnce(
+            createMockChain([
+              {
+                _id: corp._id,
+                settled: {
+                  turn: 99,
+                  sharePrice: 100,
+                  totalShares: 1000,
+                  financial: {
+                    currencyCode: "USD",
+                    fxRateAtWrite: 1,
+                    income: 500,
+                    revenue: 1000,
+                    ...(complete ? { settledBankLoanInterestPaid: 50 } : {}),
+                    settledBondCouponIncome: 20,
+                    settledBondInterestPaid: 10,
+                    dividendIncomeReceived: 5,
+                  },
+                },
+              },
+            ])
+          );
+        vi.mocked(getPublicShareQuote).mockReturnValue(100);
+        vi.mocked(getRoundedPublicMarketCap).mockReturnValue(100000);
+        await generateStockExchangeSnapshots(100, mockDb);
+        const listing = mockUpdateOne.mock.calls
+          .map((call) => call[1]?.$set?.listings?.[0])
+          .find(Boolean);
+        expect(listing).toMatchObject({
+          totalRevenue: 1000 * TURNS_PER_DAY,
+          income: complete ? 465 * TURNS_PER_DAY : null,
+          incomeBasis: complete ? "settled" : "unavailable",
+          incomeTurn: 99,
+        });
+      }
+    );
 
     it("returns early when no corporations exist", async () => {
       mockCollection.mockReturnValue(createMockChain([]));
@@ -581,12 +631,12 @@ describe("stockExchangeSnapshot", () => {
       const atOrBeforeBounds = branches
         .map((branch) => branch[0].$match.turn?.$lte)
         .filter((bound) => bound != null);
-      expect(atOrBeforeBounds).toEqual([99, 76, 52]);
+      expect(atOrBeforeBounds).toEqual([99, 100, 76, 52]);
       // No at-or-before branch reads a whole turn window: each is a $lte bound.
-      for (const branch of branches.slice(0, 3)) {
+      for (const branch of branches.slice(0, 4)) {
         expect(branch[0].$match.turn?.$gte).toBeUndefined();
       }
-      const earliestBranch = branches[3];
+      const earliestBranch = branches[4];
       expect(earliestBranch[0].$match.turn).toEqual({ $gte: 52 });
       expect(earliestBranch[1].$sort).toEqual({ corporationId: -1, turn: 1 });
     });
@@ -1014,6 +1064,7 @@ describe("stockExchangeSnapshot", () => {
         .mockReturnValueOnce(createMockChain([{ _id: "NY", name: "New York" }]))
         .mockReturnValueOnce(createMockChain([]))
         .mockReturnValueOnce(createMockChain([]))
+        .mockReturnValueOnce(createMockChain([])) // FX cache world epoch
         .mockReturnValueOnce(createMockChain([])) // exchangeRates (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // gameState preset (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // corporations held by corporations (withHeldStakeIssuers)
@@ -1084,6 +1135,7 @@ describe("stockExchangeSnapshot", () => {
     it("returns early when no corporations have shareholders", async () => {
       mockCollection
         .mockReturnValueOnce(createMockChain([])) // corporations
+        .mockReturnValueOnce(createMockChain([])) // FX cache world epoch
         .mockReturnValueOnce(createMockChain([])) // exchangeRates (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // gameState preset (loadValuationFxRates)
         .mockReturnValue({ updateOne: mockUpdateOne });
@@ -1113,6 +1165,7 @@ describe("stockExchangeSnapshot", () => {
             }),
           ])
         )
+        .mockReturnValueOnce(createMockChain([])) // FX cache world epoch
         .mockReturnValueOnce(createMockChain([])) // exchangeRates (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // gameState preset (loadValuationFxRates)
         .mockReturnValueOnce(
@@ -1162,6 +1215,7 @@ describe("stockExchangeSnapshot", () => {
 
       mockCollection
         .mockReturnValueOnce(createMockChain(corps))
+        .mockReturnValueOnce(createMockChain([])) // FX cache world epoch
         .mockReturnValueOnce(createMockChain([])) // exchangeRates (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // gameState preset (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([createCharacter({ _id: charId, name: "Investor" })]));
@@ -1195,6 +1249,7 @@ describe("stockExchangeSnapshot", () => {
             },
           ])
         )
+        .mockReturnValueOnce(createMockChain([])) // FX cache world epoch
         .mockReturnValueOnce(createMockChain([])) // exchangeRates (loadValuationFxRates)
         .mockReturnValueOnce(createMockChain([])) // gameState preset (loadValuationFxRates)
         .mockReturnValueOnce(

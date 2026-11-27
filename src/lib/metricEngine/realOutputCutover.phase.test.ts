@@ -1,5 +1,8 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: vi.fn(async (db, _phase, _turn, work) => work(db)),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Db } from "mongodb";
+
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
 import { GDP_GROWTH_SCENARIOS, captureGoldenOutput } from "./__fixtures__/gdpGrowthGolden";

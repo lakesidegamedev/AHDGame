@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/executive/cabinet/[positionId]/intelligence/operation
 //
 // Run one intelligence operation. Collection buys coverage; action spends it.
@@ -39,46 +43,55 @@ export async function POST(request: Request, { params }: IntelligenceRouteParams
       return errorResponse(parsed.status, parsed.error);
     }
 
-    const target = await requireRegisteredTarget(db, parsed.data.targetCountryId, countryId);
-    if ("error" in target) return target.error;
-    const { targetCountryId } = target;
-
-    const turn = await loadCurrentTurn(db);
-    const agency = await getOrCreateAgency(db, countryId, turn, member?.characterId ?? null);
-
-    // A vacant seat resolves NEUTRAL rather than failing. Most countries have no
-    // director, and a service that simply stopped would make the world inert.
-    const director = agency.directorCharacterId
-      ? await (
-          await getCharactersCollection(db)
-        ).findOne({ _id: agency.directorCharacterId }, { projection: { stats: 1 } })
-      : null;
-
-    const result = await runOperation({
+    return await withRecordedEconomicCommand(
       db,
-      agency,
-      targetCountryId,
-      domain: parsed.data.domain,
-      kind: parsed.data.kind,
-      opType: parsed.data.opType,
-      turn,
-      statMultiplier: directorStatMultiplier(director?.stats),
-      actorUserId: user.userId ?? null,
-    });
+      "minister-intelligence-operation",
+      String(user.userId ?? countryId),
+      economicRequestId(request),
+      { countryId, positionId, ...parsed.data },
+      async (db) => {
+        const target = await requireRegisteredTarget(db, parsed.data.targetCountryId, countryId);
+        if (target.error) return target.error;
+        const { targetCountryId } = target;
 
-    if (!result.ok) {
-      return errorResponse(result.status, result.error);
-    }
+        const turn = await loadCurrentTurn(db);
+        const agency = await getOrCreateAgency(db, countryId, turn, member?.characterId ?? null);
 
-    // The acting service's own view. `rollDetail` never leaves the server.
-    return NextResponse.json({
-      outcome: result.outcome,
-      compromise: result.compromise,
-      coverage: result.coverage,
-      networkLevel: result.networkLevel,
-      networkStatus: result.networkStatus,
-      message: result.message,
-    });
+        // A vacant seat resolves NEUTRAL rather than failing. Most countries have no
+        // director, and a service that simply stopped would make the world inert.
+        const director = agency.directorCharacterId
+          ? await (
+              await getCharactersCollection(db)
+            ).findOne({ _id: agency.directorCharacterId }, { projection: { stats: 1 } })
+          : null;
+
+        const result = await runOperation({
+          db,
+          agency,
+          targetCountryId,
+          domain: parsed.data.domain,
+          kind: parsed.data.kind,
+          opType: parsed.data.opType,
+          turn,
+          statMultiplier: directorStatMultiplier(director?.stats),
+          actorUserId: user.userId ?? null,
+        });
+
+        if (!result.ok) {
+          return errorResponse(result.status, result.error);
+        }
+
+        // The acting service's own view. `rollDetail` never leaves the server.
+        return NextResponse.json({
+          outcome: result.outcome,
+          compromise: result.compromise,
+          coverage: result.coverage,
+          networkLevel: result.networkLevel,
+          networkStatus: result.networkStatus,
+          message: result.message,
+        });
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

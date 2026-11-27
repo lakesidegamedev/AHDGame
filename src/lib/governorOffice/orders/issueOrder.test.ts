@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 /**
  * The executive-order ladder was written against the 7-option (0–6) policy
  * ladder most legislation types use: a missing prior policy defaulted to index
@@ -34,6 +37,11 @@ const THREE_OPTION_TYPE = {
 
 function setup(priorPolicy: unknown = null) {
   const db = createMockDb() as unknown as MockDb;
+  db.collection("gameState").findOne.mockResolvedValue({
+    _id: "current",
+    currentTurn: 100,
+    isProcessing: false,
+  });
   // Collections are created lazily; touch each one so the mocks exist to stub.
   db.collection("governorOfficeState").findOne.mockResolvedValue({
     countryId: "US",
@@ -126,6 +134,11 @@ describe("issueOrder — new-generation `both` laws in a region", () => {
 
   function setupNewGen(priorPolicy: unknown = null) {
     const db = createMockDb() as unknown as MockDb;
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 100,
+      isProcessing: false,
+    });
     db.collection("governorOfficeState").findOne.mockResolvedValue({
       countryId: "RU",
       stateId: "MOW",

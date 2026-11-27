@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { visibleGlobalResponses } from "@/lib/livingConflict/globalResponse";
 import { crisisDecisionRegion } from "@/lib/crises/rules/authorization";
 import { NextResponse } from "next/server";
@@ -15,7 +16,7 @@ import {
 } from "@/lib/crises/interactionEngine";
 import { submitCrisisAidPledge } from "@/lib/crises/aidPledge";
 import type { CountryId } from "@/lib/constants/countries";
-import type { Crisis } from "@/lib/db/types/crisis";
+
 import { ObjectId } from "mongodb";
 import { crisesCollection } from "@/lib/db/repositories/crises";
 
@@ -100,21 +101,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       if (pctGdp == null) {
         return errorResponse(400, "pctGdp required for aid pledge");
       }
-      const pledge = await submitCrisisAidPledge(db, {
-        interactionId: interaction._id,
-        nodeId: currentNode.nodeId,
-        pctGdp,
-        characterId: character._id,
-        characterName: character.name,
-        senderCountryId: character.countryId as CountryId,
-        characterParty: character.party ?? undefined,
-        characterRoles,
-      });
-      return NextResponse.json({
-        success: true,
-        pledged: true,
-        billId: pledge.billId.toString(),
-        impact: pledge.impact,
+      return await withAtomicEconomicCommand(db, async (db) => {
+        const pledge = await submitCrisisAidPledge(db, {
+          interactionId: interaction._id,
+          nodeId: currentNode.nodeId,
+          pctGdp,
+          characterId: character._id,
+          characterName: character.name,
+          senderCountryId: character.countryId as CountryId,
+          characterParty: character.party ?? undefined,
+          characterRoles,
+        });
+        return NextResponse.json({
+          success: true,
+          pledged: true,
+          billId: pledge.billId.toString(),
+          impact: pledge.impact,
+        });
       });
     }
 

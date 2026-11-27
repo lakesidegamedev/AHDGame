@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Db } from "mongodb";
 import { createAsyncIterableCursor, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { ensureStatePartyOrgRow } from "./ensureStatePartyOrgRow";
@@ -11,6 +14,11 @@ describe("ensureStatePartyOrgRow", () => {
   beforeEach(() => {
     db = createMockDb();
     db.collection("statePartyOrg");
+    db.collectionMocks.statePartyOrg.updateOne.mockImplementation(async (_filter, update) =>
+      update.$setOnInsert
+        ? { matchedCount: 0, upsertedCount: 1 }
+        : { matchedCount: 1, modifiedCount: 1 }
+    );
   });
 
   it("returns the existing row without upserting when one is present", async () => {
@@ -73,7 +81,7 @@ describe("ensureStatePartyOrgRow", () => {
     expect(row.politicalStrength).toBe(30);
     expect(row.chairId).toBe("abc");
     expect(db.collectionMocks["statePartyOrg"]!.updateOne).toHaveBeenCalledWith(
-      { _id: "BY_2" },
+      expect.objectContaining({ _id: "BY_2", countryId: { $exists: false } }),
       { $set: expect.objectContaining({ countryId: "DE" }) }
     );
   });
@@ -115,41 +123,29 @@ describe("ensureStatePartyOrgRow", () => {
     );
   });
 
-  it("removes a squatter holding the canonical key before re-keying", async () => {
-    // Two drifted rows can compete for one canonical key: the live row (stale
-    // _id, right fields) and a squatter (canonical _id, wrong fields). The live
-    // row wins the key; the squatter is the misattributed remnant.
+  it("preserves both chapters when another row occupies the canonical key", async () => {
     const drifted = {
       _id: "NW_7",
       countryId: "DD",
       stateId: "NW",
       partyId: "1",
       organization: 36.76,
+      treasury: 500,
     };
-    db.collectionMocks["statePartyOrg"]!.findOne.mockImplementation(
-      async (filter: Record<string, unknown>) => {
-        if (filter.partyId === "1") return drifted;
-        return null;
-      }
+    const occupied = { _id: "NW_1", countryId: "DD", stateId: "NW", partyId: "6", treasury: 700 };
+    db.collectionMocks.statePartyOrg!.findOne.mockImplementation(
+      async (filter: Record<string, unknown>) =>
+        filter.partyId === "1" ? drifted : filter._id === "NW_1" ? occupied : null
     );
-    db.collectionMocks["statePartyOrg"]!.deleteOne.mockResolvedValue({ deletedCount: 1 });
-
-    await ensureStatePartyOrgRow(db as unknown as Db, {
+    const row = await ensureStatePartyOrgRow(db as unknown as Db, {
       countryId: "DD",
       stateId: "NW",
       party: { sequentialId: 1 } as never,
       hasPresence: true,
     });
-
-    // First delete targets the squatter on the canonical key (only when its
-    // partyId differs), second the drifted row's stale key.
-    expect(db.collectionMocks["statePartyOrg"]!.deleteOne).toHaveBeenNthCalledWith(1, {
-      _id: "NW_1",
-      partyId: { $ne: "1" },
-    });
-    expect(db.collectionMocks["statePartyOrg"]!.deleteOne).toHaveBeenNthCalledWith(2, {
-      _id: "NW_7",
-    });
+    expect(row).toEqual(drifted);
+    expect(db.collectionMocks.statePartyOrg!.deleteOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.statePartyOrg!.insertOne).not.toHaveBeenCalled();
   });
 
   it("bootstraps a 0% row via upsert when none exists", async () => {

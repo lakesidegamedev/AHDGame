@@ -3,6 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
+import { useSavingsRequest } from "@/lib/savings/useSavingsRequest";
 import { Button, Input, useDialogA11y } from "@/components/ui";
 import { formatBankMoney, formatRatePercent } from "@/components/banking/formatBankMoney";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -33,6 +34,7 @@ export function PrivateDepositModal({
   const { dialogProps, titleId } = useDialogA11y(onClose);
   const [amountText, setAmountText] = useState("");
   const [busy, setBusy] = useState(false);
+  const savingsRequest = useSavingsRequest();
   const [error, setError] = useState("");
   const amount = Number(amountText);
   const canSubmit = !busy && Number.isFinite(amount) && amount > 0 && amount <= availableCash;
@@ -56,16 +58,11 @@ export function PrivateDepositModal({
         body: JSON.stringify({ currency: bank.currency }),
       });
 
-      const response = await fetch("/api/character/savings/deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency: bank.currency, amount, holder: bank.corporationId }),
+      const { response, json } = await savingsRequest("/api/character/savings/deposit", {
+        currency: bank.currency,
+        amount,
+        holder: bank.corporationId,
       });
-      const json = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        holderRouted?: boolean;
-        holderError?: string;
-      };
       if (!response.ok) {
         setError(apiErrorText(json, "Deposit failed."));
         return;
@@ -119,7 +116,7 @@ export function PrivateDepositModal({
             aria-label="Close"
           >
             <span className="text-heading leading-none" aria-hidden>
-              ×
+              &times;
             </span>
           </button>
         </div>

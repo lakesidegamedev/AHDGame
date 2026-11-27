@@ -416,3 +416,56 @@ it("paces a country's reachable price like the global price on a funded turn", (
   const { priceOp } = priceCommodity(ctx, "food", new Set());
   expect(priceOp.updateOne.update.$set.reachablePrices?.US).toBeCloseTo(400 * (1 - 0.06), 6);
 });
+
+describe("same-turn commodity recovery", () => {
+  it.each([0, 1])("replays scarcity and price baselines at drift stage %s", (commodityFixStage) => {
+    const before = commodityPrice({
+      turn: 4,
+      scarcityMult: 1.2,
+      scarcityImbalanceHistory: [0.1],
+      reachablePrices: { US: 110 },
+      nationalPrices: { US: 100 },
+      statePrices: { s1: 105 },
+    });
+    const make = (price: CommodityPrice) =>
+      pricingContext(
+        { supply: 10, demand: 100 },
+        {
+          turn: 5,
+          scarcityDriftEnabled: true,
+          commodityFixStage: commodityFixStage as never,
+          existingPriceMap: new Map([["food", price]]),
+        }
+      );
+    const first = priceCommodity(make(before), "food", new Set()).priceOp.updateOne.update.$set;
+    const retry = priceCommodity(make({ ...before, ...first }), "food", new Set()).priceOp.updateOne
+      .update.$set;
+    expect(retry.scarcityMult).toBe(first.scarcityMult);
+    expect(retry.scarcityImbalanceHistory).toEqual(first.scarcityImbalanceHistory);
+    expect(retry.globalPrice).toBe(first.globalPrice);
+    expect(retry.statePrices).toEqual(first.statePrices);
+    expect(retry.nationalPrices).toEqual(first.nationalPrices);
+    expect(retry.pricingOpening).toEqual(first.pricingOpening);
+    expect(retry.pricingOpening).not.toHaveProperty("pricingOpening");
+  });
+  it("retains a consumed global and regional nudge on retry", () => {
+    const before = commodityPrice({
+      turn: 4,
+      nudgePrice: 80,
+      nudgeTurn: 5,
+      stateNudges: { s1: 75 },
+    });
+    const firstContext = pricingContext(
+      { supply: 10, demand: 100 },
+      { turn: 5, existingPriceMap: new Map([["food", before]]), nudgeMap: new Map([["food", 80]]) }
+    );
+    const first = priceCommodity(firstContext, "food", new Set()).priceOp.updateOne.update.$set;
+    const retryContext = pricingContext(
+      { supply: 10, demand: 100 },
+      { turn: 5, existingPriceMap: new Map([["food", { ...before, ...first }]]) }
+    );
+    const retry = priceCommodity(retryContext, "food", new Set()).priceOp.updateOne.update.$set;
+    expect(retry.globalPrice).toBe(first.globalPrice);
+    expect(retry.statePrices).toEqual(first.statePrices);
+  });
+});

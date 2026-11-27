@@ -1,3 +1,6 @@
+import { emitTx } from "@/lib/financialTxLog/emit";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Primary bond market: the pool underwrites new issues with real cash.
  *
@@ -32,6 +35,8 @@ import {
   anchorToCorpCapital,
   corpCapitalToAnchor,
   resolveCorpLiquidCurrencyCode,
+  loadFxRatesByCurrency,
+  fxRateForCorpFromMap,
 } from "@/lib/currency/corporationCapital";
 import { getNationalBudgetId, refreshSovereignDebtTerms } from "@/lib/bonds/sovereign";
 import { poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
@@ -273,6 +278,7 @@ export async function placeUnsoldBondUnits(
   if (placing.length === 0) return result;
 
   const accounting = await loadPrimaryAccounting(db);
+  const placementFx = await loadFxRatesByCurrency(db);
   // Placement settlement keys are per bond per turn, and nothing but this
   // bond's own iteration writes one while the turn runs, so a key absent now
   // stays absent until its bond is reached. One read finds the ones already recorded (a retried turn); only
@@ -297,7 +303,9 @@ export async function placeUnsoldBondUnits(
   ];
   const issuerIds = [
     ...new Map(
-      underwrittenBonds.map((bond) => [bond.corporationId.toHexString(), bond.corporationId])
+      placing
+        .filter((bond) => bond.issuerType !== "sovereign")
+        .map((bond) => [bond.corporationId.toHexString(), bond.corporationId])
     ).values(),
   ];
   const [banks, issuers] = await Promise.all([
@@ -453,43 +461,74 @@ export async function placeUnsoldBondUnits(
       result.unitsPlaced += units;
       continue;
     }
-    const debited = await debitPoolForPrimary(db, currency, units, price, now);
-    if (debited <= 0) continue;
-    const actualPaid = debited;
-    advanceBondPoolSnapshot(poolByCurrency, currency, -actualPaid);
-    const face = units * BOND_UNIT_FACE_VALUE;
-    const claim = await bondsCollection(db).updateOne(
-      {
-        _id: bond._id,
-        unsoldUnits: { $gte: units },
-        sovereignMaturityClaim: { $exists: false },
-      },
-      {
-        $inc: { unsoldUnits: -units, publicFloat: units, totalIssued: face },
-        $set: { updatedAt: now },
-      }
+    const issuer = issuerById.get(bond.corporationId.toHexString());
+    if (!issuer) continue;
+    const sourceRate = fxRateForCorpFromMap({ liquidCurrencyCode: currency }, placementFx);
+    const recipientCurrency = resolveCorpLiquidCurrencyCode(issuer);
+    const recipientRate = fxRateForCorpFromMap(issuer, placementFx);
+    const settlement = await withAtomicResult(db, (db) =>
+      withTurnValueSettlement(
+        db,
+        "corporate-bond-placement",
+        turn,
+        async (db) => {
+          const debited = await debitPoolForPrimary(db, currency, units, price, now);
+          if (debited <= 0) return { ok: false, paidLocal: 0, unitsPlaced: 0 };
+          const claim = await bondsCollection(db).updateOne(
+            {
+              _id: bond._id,
+              unsoldUnits: bond.unsoldUnits,
+              sovereignMaturityClaim: { $exists: false },
+              matured: false,
+              defaulted: false,
+            },
+            {
+              $inc: {
+                unsoldUnits: -units,
+                publicFloat: units,
+                totalIssued: units * BOND_UNIT_FACE_VALUE,
+              },
+              $set: { updatedAt: now },
+            }
+          );
+          if (claim.modifiedCount !== 1) return { ok: false, paidLocal: 0, unitsPlaced: 0 };
+          const local = anchorToCorpCapital(debited / sourceRate, recipientCurrency, recipientRate);
+          const credit = await corporationsCollection(db).updateOne(
+            {
+              _id: issuer._id,
+              liquidCurrencyCode: issuer.liquidCurrencyCode,
+              countryId: issuer.countryId,
+            },
+            { $inc: { liquidCapital: local }, $set: { updatedAt: now } }
+          );
+          if (credit.matchedCount !== 1)
+            throw new Error("Primary bond issuer changed during placement");
+          await emitTx(db, {
+            type: "bond_issuance",
+            turn,
+            createdAt: now,
+            subjectType: "corporation",
+            subjectId: issuer._id,
+            subjectName: issuer.name,
+            amount: local,
+            currencyCode: recipientCurrency ?? "USD",
+            meta: {
+              bondId: bond._id.toHexString(),
+              units,
+              counterparty: "bond_market_pool",
+              deferredPlacement: true,
+            },
+          });
+          return { ok: true, paidLocal: debited, unitsPlaced: units };
+        },
+        { sourceKey: `${bond._id.toHexString()}:${turn}` }
+      )
     );
-    if (claim.modifiedCount === 0) {
-      // Someone else moved the units first; give the pool its cash back.
-      await bondMarketPoolsCollection<BondMarketPool>(db).updateOne(
-        { _id: currency },
-        {
-          $inc: { cashLocal: actualPaid, "lifetime.issuanceOut": -actualPaid },
-          $set: { updatedAt: now },
-        }
-      );
-      advanceBondPoolSnapshot(poolByCurrency, currency, actualPaid);
-      continue;
-    }
-    budget.shared -= actualPaid;
-    if (sovereign) budget.sovereign -= actualPaid;
+    if (!settlement.ok) continue;
+    advanceBondPoolSnapshot(poolByCurrency, currency, -settlement.paidLocal);
+    budget.shared -= settlement.paidLocal;
     result.bondsTouched++;
-    result.unitsPlaced += units;
-
-    const key = bond.corporationId.toString();
-    const row = result.corporateProceedsByCorp.get(key) ?? { local: 0, currency };
-    row.local += actualPaid;
-    result.corporateProceedsByCorp.set(key, row);
+    result.unitsPlaced += settlement.unitsPlaced;
   }
   return result;
 }

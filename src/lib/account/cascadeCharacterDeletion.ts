@@ -1,3 +1,5 @@
+import { releaseCharacterHeldBondsToFloat } from "@/lib/corporations/releaseCharacterHeldBondsToFloat";
+import { releaseCharacterHeldIndexFundPositionsToFloat } from "@/lib/indexFunds/releaseCharacterHeldPositionsToFloat";
 /**
  * Cascade helper invoked before a character is hard-deleted (self-delete or
  * admin-delete). Historically the delete flows only removed rows from
@@ -10,7 +12,7 @@
 
 import { closeCharacterSavings } from "@/lib/savings/closeCharacterSavings";
 import type { Db, ObjectId } from "mongodb";
-import type { ElectionCandidate, GameState } from "@/lib/db/types";
+
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   cleanupShareMarketActivityForCharacters,
@@ -48,6 +50,8 @@ export async function cascadeCharacterDeletion(
   characterId: ObjectId
 ): Promise<CascadeResult> {
   await closeCharacterSavings(db, characterId);
+  await releaseCharacterHeldBondsToFloat(db, [characterId]);
+  await releaseCharacterHeldIndexFundPositionsToFloat(db, [characterId]);
   const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
@@ -158,7 +162,7 @@ export async function cascadeCharacterDeletion(
           corp._id,
           "bondSettlementInProgressAt",
           now,
-          () =>
+          (db) =>
             executeCorporationBondDefaultDissolution(db, corp, {
               requireDefaultedBonds: false,
               exitReason: "owner_deleted",

@@ -12,7 +12,7 @@ import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { getCashReserves, type BalanceSheetOptions } from "@/lib/banking/rules/balanceSheet";
 import { charterMay } from "@/lib/banking/rules/capabilities";
 import { getLendableHeadroom } from "@/lib/banking/rules/reserves";

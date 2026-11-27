@@ -18,13 +18,13 @@ import {
   nonConvertibleCurrencyMessage,
   nonConvertibleTradeCurrency,
 } from "@/lib/constants/commandEconomy";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   getNewCharacterTransferBarrier,
   NEW_CHARACTER_TRANSFER_BARRIER_TURNS,
 } from "@/lib/character/newCharacterTransferBarrier";
-import type { CurrencyOrder, GameConfig, PlayerMail } from "@/lib/db/types";
+import type { CurrencyOrder, PlayerMail } from "@/lib/db/types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -138,52 +138,25 @@ export async function POST(request: Request) {
     };
 
     let requestId: ObjectId | null = null;
-    await runWithOptionalTransaction(
-      async (session) => {
-        const escrowResult = await charactersCollection(db).updateOne(
-          { _id: character._id, [balanceField]: { $gte: amount } },
-          { $inc: escrowInc },
-          { session }
+    await runWithDbSession(db, async (session) => {
+      const escrowResult = await charactersCollection(db).updateOne(
+        { _id: character._id, [balanceField]: { $gte: amount } },
+        { $inc: escrowInc },
+        { session }
+      );
+      if (escrowResult.modifiedCount === 0) {
+        const balance = getPersonalBalance(character, fromCurrency, true);
+        throw badRequest(
+          `Insufficient ${fromCurrency}. Have ${Math.floor(balance).toLocaleString()}, need ${amount.toLocaleString()}.`
         );
-        if (escrowResult.modifiedCount === 0) {
-          const balance = getPersonalBalance(character, fromCurrency, true);
-          throw badRequest(
-            `Insufficient ${fromCurrency}. Have ${Math.floor(balance).toLocaleString()}, need ${amount.toLocaleString()}.`
-          );
-        }
-
-        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
-          order as CurrencyOrder,
-          { session }
-        );
-        requestId = result.insertedId;
-      },
-      async () => {
-        const escrowResult = await charactersCollection(db).updateOne(
-          { _id: character._id, [balanceField]: { $gte: amount } },
-          { $inc: escrowInc }
-        );
-        if (escrowResult.modifiedCount === 0) {
-          const balance = getPersonalBalance(character, fromCurrency, true);
-          throw badRequest(
-            `Insufficient ${fromCurrency}. Have ${Math.floor(balance).toLocaleString()}, need ${amount.toLocaleString()}.`
-          );
-        }
-
-        try {
-          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(
-            db
-          ).insertOne(order as CurrencyOrder);
-          requestId = result.insertedId;
-        } catch (error) {
-          await charactersCollection(db).updateOne(
-            { _id: character._id },
-            { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
-          );
-          throw error;
-        }
       }
-    );
+
+      const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
+        order as CurrencyOrder,
+        { session }
+      );
+      requestId = result.insertedId;
+    });
 
     // Send in-game mail notification to target
     const mail: Omit<PlayerMail, "_id"> = {

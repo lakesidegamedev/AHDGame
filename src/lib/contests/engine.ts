@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { PlayerCharacter, ContestWorld } from "@/lib/contests/standings";
 import {
   loadCorpRows,
@@ -398,7 +399,19 @@ async function computeStandings(
 
 // ── Settlement ──────────────────────────────────────────────────────────────
 
-async function settleRound(
+export async function settleContestRound(
+  db: Db,
+  world: ContestWorld,
+  round: ContestRound
+): Promise<SettledRoundResult | null> {
+  return withSessionDb(db, async (db) => {
+    const current = await contestRounds(db).findOne({ _id: round._id, status: "active" });
+    if (!current) return null;
+    return settleRoundWork(db, world, current);
+  });
+}
+
+async function settleRoundWork(
   db: Db,
   world: ContestWorld,
   round: ContestRound
@@ -437,32 +450,28 @@ async function settleRound(
   for (const [i, winner] of winners.entries()) {
     const character = world.players.get(winner.characterId);
     if (!character) continue;
-    try {
-      const paid = await payContestPrize(db, {
-        character,
-        round: { _id: round._id, kind, roundNumber: round.roundNumber },
-        subjectName: winner.subjectName,
-        place: i + 1,
-        turn: world.turn,
-        preset: world.preset,
-        now: world.now,
-      });
-      await contestRounds(db).updateOne(
-        { _id: round._id },
-        {
-          $set: {
-            [`winners.${i}.prizeAnchor`]: paid.anchorAmount,
-            [`winners.${i}.prizeLocal`]: paid.localAmount,
-            [`winners.${i}.currencyCode`]: paid.currencyCode,
-            ...(paid.credited ? { [`winners.${i}.paidAt`]: world.now } : {}),
-          },
-        }
-      );
-      winners[i] = { ...winner, prizeAnchor: paid.anchorAmount };
-    } catch (err) {
-      Sentry.captureException(err, { tags: { area: "contests", round: round._id } });
-      console.error(`[contests] prize payment failed for ${round._id} place ${i + 1}`, err);
-    }
+    const paid = await payContestPrize(db, {
+      character,
+      round: { _id: round._id, kind, roundNumber: round.roundNumber },
+      subjectName: winner.subjectName,
+      place: i + 1,
+      turn: world.turn,
+      preset: world.preset,
+      now: world.now,
+    });
+    if (!paid.credited) throw new Error("Contest winner unavailable during prize settlement");
+    await contestRounds(db).updateOne(
+      { _id: round._id },
+      {
+        $set: {
+          [`winners.${i}.prizeAnchor`]: paid.anchorAmount,
+          [`winners.${i}.prizeLocal`]: paid.localAmount,
+          [`winners.${i}.currencyCode`]: paid.currencyCode,
+          ...(paid.credited ? { [`winners.${i}.paidAt`]: world.now } : {}),
+        },
+      }
+    );
+    winners[i] = { ...winner, prizeAnchor: paid.anchorAmount };
   }
   return { kind, roundNumber: round.roundNumber, standings, winners };
 }
@@ -472,30 +481,36 @@ async function settleRound(
 const ITERATION_KIND = "referrals_iteration" as const;
 
 async function openIterationRound(db: Db, world: ContestWorld, startedAt: Date): Promise<void> {
-  const last = await contestRounds(db)
-    .find({ kind: ITERATION_KIND }, { projection: { roundNumber: 1 } })
-    .sort({ roundNumber: -1 })
-    .limit(1)
-    .toArray();
-  const roundNumber = (last[0]?.roundNumber ?? 0) + 1;
   try {
-    await contestRounds(db).insertOne({
-      _id: contestRoundId(ITERATION_KIND, roundNumber),
-      kind: ITERATION_KIND,
-      roundNumber,
-      status: "active",
-      startedAt,
-      endsAt: startedAt,
-      startTurn: world.turn,
-      ...(world.iterationKey ? { iterationKey: world.iterationKey } : {}),
-      baselines: [],
-      standings: await referralStandings(db, world.playersByUser, startedAt),
-      refreshedAt: world.now,
-      winners: [],
+    await withSessionDb(db, async (db) => {
+      if (await contestRounds(db).findOne({ kind: ITERATION_KIND, status: "active" })) return;
+      const last = await contestRounds(db)
+        .find({ kind: ITERATION_KIND }, { projection: { roundNumber: 1 } })
+        .sort({ roundNumber: -1 })
+        .limit(1)
+        .toArray();
+      const roundNumber = (last[0]?.roundNumber ?? 0) + 1;
+      await contestRounds(db).insertOne({
+        _id: contestRoundId(ITERATION_KIND, roundNumber),
+        kind: ITERATION_KIND,
+        roundNumber,
+        status: "active",
+        startedAt,
+        endsAt: startedAt,
+        startTurn: world.turn,
+        ...(world.iterationKey ? { iterationKey: world.iterationKey } : {}),
+        baselines: [],
+        standings: await referralStandings(db, world.playersByUser, startedAt),
+        refreshedAt: world.now,
+        winners: [],
+      });
     });
-  } catch (err) {
-    // Duplicate id: another process opened this round first.
-    if ((err as { code?: number }).code !== 11000) throw err;
+  } catch (error) {
+    if (
+      (error as { code?: number }).code !== 11000 ||
+      !(await contestRounds(db).findOne({ kind: ITERATION_KIND, status: "active" }))
+    )
+      throw error;
   }
 }
 
@@ -519,7 +534,12 @@ async function runIterationReferrals(
   }
 
   if (iterationChanged(active.iterationKey, world.iterationKey)) {
-    await awardReferralContest(db, { awardedBy: "system", now: world.now });
+    await awardReferralContest(db, {
+      awardedBy: "system",
+      now: world.now,
+      roundId: active._id,
+      turn: world.turn,
+    });
     await openIterationRound(db, world, worldStart);
     return "awarded";
   }
@@ -645,7 +665,7 @@ export async function runContests(
       continue;
     }
     if (roundIsDue(round.endsAt.getTime(), now.getTime())) {
-      const result = await settleRound(db, world, round);
+      const result = await settleContestRound(db, world, round);
       if (result) {
         summary.settled++;
         settled.push(result);

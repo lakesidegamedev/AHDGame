@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -25,6 +28,11 @@ function register(db: MockDb) {
 }
 
 function primeCommon(db: MockDb) {
+  db.collection("gameState").findOne.mockResolvedValue({
+    _id: "current",
+    currentTurn: TURN,
+    isProcessing: false,
+  });
   db.collectionMocks.stateResourceCapacity.findOne.mockResolvedValue({
     stateId: "TX",
     countryId: "US",

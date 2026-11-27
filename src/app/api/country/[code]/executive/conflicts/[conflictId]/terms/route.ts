@@ -1,3 +1,6 @@
+import { logger } from "@/lib/observability/logger";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { afterCommit } from "@/lib/db/sessionDb";
 // POST /api/country/[code]/executive/conflicts/[conflictId]/terms — impose the
 // terms of a war won outright.
 // Auth: head of government OR the foreign seat holder, either one, no precedence.
@@ -66,139 +69,146 @@ export async function POST(
     if (!auth.ok) return auth.response;
     const { character } = auth.user;
 
-    const db = await getDb();
-    const gs = await (
-      await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
-    const currentTurn = gs?.currentTurn ?? 0;
-
-    // The same seat gate the peace routes use: head of government or the foreign
-    // seat holder, either one, no precedence.
-    const gate = await requirePeaceNegotiator(db, countryId, character._id, auth.user.isAdmin);
-    if (!gate.ok) return gate.response;
-
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
+    const rootDb = await getDb();
+    return await withAtomicEconomicCommand(rootDb, async (db) => {
+      const gs = await (
+        await getGameStateCollection(db)
+      ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+      const currentTurn = gs?.currentTurn ?? 0;
 
-    const conflict = await getConflict(db, conflictId);
-    if (!conflict) {
-      return errorResponse(404, "That war does not exist.");
-    }
-    if (conflict.status !== "terms_pending" || !conflict.termsWindow) {
-      return errorResponse(409, "That war is not awaiting terms.");
-    }
-    // Refused here as well as by the sweeper. The sweep runs on a tick, so a window
-    // can be past its closing turn for a while before anything acts on it, and a
-    // victor must not be able to impose inside that gap.
-    if (currentTurn >= conflict.termsWindow.closesTurn) {
-      return errorResponse(409, "The window to impose terms on that war has closed.");
-    }
-    // THE COUNTRY GATE, and the whole reason a coalition victory yields one term
-    // rather than one per ally.
-    if (conflict.termsWindow.imposer !== countryId) {
-      return errorResponse(
-        403,
-        "Only the country that led this war to victory can impose its terms."
-      );
-    }
+      // The same seat gate the peace routes use: head of government or the foreign
+      // seat holder, either one, no precedence.
+      const gate = await requirePeaceNegotiator(db, countryId, character._id, auth.user.isAdmin);
+      if (!gate.ok) return gate.response;
 
-    const target = conflict.termsWindow.target;
-    const term = normaliseTerm(parsed.data.term);
-
-    // The GDP ceiling is only meaningful for an indemnity. Reading it for the other
-    // terms would refuse a settlement over a figure it does not contain.
-    let maxIndemnity: number | null = null;
-    if (term.kind === "indemnity") {
-      const payerBudget = await federalBudgetCollection(db).findOne(
-        { countryId: term.payer },
-        { projection: { gdp: 1 } }
-      );
-      maxIndemnity = maxIndemnityForGdp(payerBudget?.gdp);
-      if (maxIndemnity == null) {
+      const conflict = await getConflict(db, conflictId);
+      if (!conflict) {
+        return errorResponse(404, "That war does not exist.");
+      }
+      if (conflict.status !== "terms_pending" || !conflict.termsWindow) {
+        return errorResponse(409, "That war is not awaiting terms.");
+      }
+      // Refused here as well as by the sweeper. The sweep runs on a tick, so a window
+      // can be past its closing turn for a while before anything acts on it, and a
+      // victor must not be able to impose inside that gap.
+      if (currentTurn >= conflict.termsWindow.closesTurn) {
+        return errorResponse(409, "The window to impose terms on that war has closed.");
+      }
+      // THE COUNTRY GATE, and the whole reason a coalition victory yields one term
+      // rather than one per ally.
+      if (conflict.termsWindow.imposer !== countryId) {
         return errorResponse(
-          400,
-          "The paying country has no GDP on record to size an indemnity against."
+          403,
+          "Only the country that led this war to victory can impose its terms."
         );
       }
-    }
 
-    const targetState = await getCountryState(db, target);
-    // Loaded only for the term that can name a party, so an indemnity or a
-    // demilitarisation does not pay for a query it never reads.
-    const targetPartyIds =
-      term.kind === "regime_change" && term.rulingPartyId != null
-        ? await loadPartySequentialIds(db, target)
-        : null;
-    // Loaded only for the term that settles a crisis. Null REFUSES a reunification
-    // rather than skipping the check, unlike the two above it.
-    const settlement =
-      term.kind === "reunification" ? await loadTermSettlement(db, conflict._id) : null;
+      const target = conflict.termsWindow.target;
+      const term = normaliseTerm(parsed.data.term);
 
-    const check = validatePeaceTerm(term, {
-      from: countryId,
-      to: target,
-      target,
-      targetSystem: targetState.governmentType,
-      maxIndemnity,
-      targetPartyIds,
-      settlement,
-    });
-    if (!check.ok) return errorResponse(400, check.error);
+      // The GDP ceiling is only meaningful for an indemnity. Reading it for the other
+      // terms would refuse a settlement over a figure it does not contain.
+      let maxIndemnity: number | null = null;
+      if (term.kind === "indemnity") {
+        const payerBudget = await federalBudgetCollection(db).findOne(
+          { countryId: term.payer },
+          { projection: { gdp: 1 } }
+        );
+        maxIndemnity = maxIndemnityForGdp(payerBudget?.gdp);
+        if (maxIndemnity == null) {
+          return errorResponse(
+            400,
+            "The paying country has no GDP on record to size an indemnity against."
+          );
+        }
+      }
 
-    // CLAIM THE WAR BEFORE APPLYING ANYTHING. Two simultaneous requests both pass
-    // every check above; only one can move this document off `terms_pending`, and
-    // the loser applies nothing. Without the status in the filter, both would
-    // impose, and `applyPeaceTerm` is not replayable: it moves money and converts
-    // governments. This is the same guard `acceptPeace` makes on the offer.
-    const claim = await getConflictsCollection(db).updateOne(
-      { _id: conflict._id, status: "terms_pending" },
-      {
-        $set: {
-          status: "resolved" as const,
-          settlement: {
-            term,
-            path: "dictated" as const,
-            imposedBy: countryId,
-            target,
-            turn: currentTurn,
+      const targetState = await getCountryState(db, target);
+      // Loaded only for the term that can name a party, so an indemnity or a
+      // demilitarisation does not pay for a query it never reads.
+      const targetPartyIds =
+        term.kind === "regime_change" && term.rulingPartyId != null
+          ? await loadPartySequentialIds(db, target)
+          : null;
+      // Loaded only for the term that settles a crisis. Null REFUSES a reunification
+      // rather than skipping the check, unlike the two above it.
+      const settlement =
+        term.kind === "reunification" ? await loadTermSettlement(db, conflict._id) : null;
+
+      const check = validatePeaceTerm(term, {
+        from: countryId,
+        to: target,
+        target,
+        targetSystem: targetState.governmentType,
+        maxIndemnity,
+        targetPartyIds,
+        settlement,
+      });
+      if (!check.ok) return errorResponse(400, check.error);
+
+      // CLAIM THE WAR BEFORE APPLYING ANYTHING. Two simultaneous requests both pass
+      // every check above; only one can move this document off `terms_pending`, and
+      // the loser applies nothing. Without the status in the filter, both would
+      // impose, and `applyPeaceTerm` is not replayable: it moves money and converts
+      // governments. This is the same guard `acceptPeace` makes on the offer.
+      const claim = await getConflictsCollection(db).updateOne(
+        { _id: conflict._id, status: "terms_pending" },
+        {
+          $set: {
+            status: "resolved" as const,
+            settlement: {
+              term,
+              path: "dictated" as const,
+              imposedBy: countryId,
+              target,
+              turn: currentTurn,
+            },
           },
-        },
+        }
+      );
+      if (claim.modifiedCount === 0) {
+        return errorResponse(409, "That war is already settled.");
       }
-    );
-    if (claim.modifiedCount === 0) {
-      return errorResponse(409, "That war is already settled.");
-    }
 
-    await applyPeaceTerm(db, term, {
-      imposer: countryId,
-      target,
-      conflictId: conflict._id,
-      currentTurn,
+      await applyPeaceTerm(db, term, {
+        imposer: countryId,
+        target,
+        conflictId: conflict._id,
+        currentTurn,
+      });
+
+      // Stamps the outcome and records a 240-turn truce for every cross-side pair. Runs
+      // AFTER the term so a regime change lands on the country while it is still a
+      // belligerent on the record.
+      //
+      // A WHITE PEACE names no victor, even here where one plainly won the ground: the
+      // point of choosing it is that the war is recorded as settling nothing. That is
+      // what lets a question being fought over go back to being a question.
+      await resolveConflict(
+        db,
+        conflict,
+        term.kind === "white_peace" ? "stalemate" : conflict.termsWindow.victor,
+        currentTurn,
+        {
+          endingType: "peace",
+          attackerNation: conflict.sideA.countries[0],
+          defenderNation: conflict.sideB.countries[0],
+        }
+      );
+      await afterCommit(db, async () => {
+        try {
+          await flushServerPosthog();
+        } catch (error) {
+          logger.error("peace-terms", "War analytics flush failed", error);
+        }
+      });
+
+      return NextResponse.json({ success: true, term });
     });
-
-    // Stamps the outcome and records a 240-turn truce for every cross-side pair. Runs
-    // AFTER the term so a regime change lands on the country while it is still a
-    // belligerent on the record.
-    //
-    // A WHITE PEACE names no victor, even here where one plainly won the ground: the
-    // point of choosing it is that the war is recorded as settling nothing. That is
-    // what lets a question being fought over go back to being a question.
-    await resolveConflict(
-      db,
-      conflict,
-      term.kind === "white_peace" ? "stalemate" : conflict.termsWindow.victor,
-      currentTurn,
-      {
-        endingType: "peace",
-        attackerNation: conflict.sideA.countries[0],
-        defenderNation: conflict.sideB.countries[0],
-      }
-    );
-    await flushServerPosthog();
-
-    return NextResponse.json({ success: true, term });
   } catch (error) {
     return handleRouteError(error);
   }

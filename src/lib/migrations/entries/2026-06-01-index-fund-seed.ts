@@ -6,7 +6,6 @@ import {
   INDEX_FUND_SEED_CASH_ANCHOR,
   INDEX_FUND_SEED_RESERVE_UNITS,
 } from "@/lib/indexFunds/unitAccounting";
-import type { IndexFund, IndexFundPosition } from "@/lib/db/types";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 
@@ -64,8 +63,17 @@ async function seedFundDefinitions(db: Db, ctx: MigrationContext): Promise<Migra
       { upsert: true }
     );
 
-    const fundDoc = await coll.findOne(filter, { projection: { _id: 1 } });
+    const fundDoc = await coll.findOne(filter, {
+      projection: { _id: 1, reserveUnits: 1, quotedNav: 1 },
+    });
     if (fundDoc) {
+      if (
+        !Number.isFinite(fundDoc.reserveUnits) ||
+        fundDoc.reserveUnits < 0 ||
+        !Number.isFinite(fundDoc.quotedNav) ||
+        fundDoc.quotedNav <= 0
+      )
+        throw new Error("Fund reserve authority requires reconciliation");
       await positions.updateOne(
         { fundId: fundDoc._id, holderKind: "fund_reserve" },
         {
@@ -73,10 +81,8 @@ async function seedFundDefinitions(db: Db, ctx: MigrationContext): Promise<Migra
             fundId: fundDoc._id,
             holderKind: "fund_reserve",
             createdAt: now,
-          },
-          $set: {
-            units: INDEX_FUND_SEED_RESERVE_UNITS,
-            avgNavAnchor: INDEX_FUND_INITIAL_NAV,
+            units: fundDoc.reserveUnits,
+            avgNavAnchor: fundDoc.quotedNav,
             updatedAt: now,
           },
         },

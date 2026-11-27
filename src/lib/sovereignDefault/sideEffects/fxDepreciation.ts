@@ -1,3 +1,7 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { CURRENCY_ANCHOR_COUNTRY } from "@/lib/constants/currencyCodes";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { invalidateCorpFxRateCache } from "@/lib/currency/corporationCapital";
 /**
  * Apply a one-shot FX depreciation to a country's exchange rate.
  *
@@ -15,7 +19,7 @@
 
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export async function applyExchangeRateDepreciation(
@@ -23,16 +27,27 @@ export async function applyExchangeRateDepreciation(
   countryId: CountryId,
   percent: number
 ): Promise<{ ok: boolean; previousRate?: number; newRate?: number }> {
-  const row = await exchangeRatesCollection(db).findOne({ _id: countryId });
-  if (!row) return { ok: false };
+  return withSessionDb(db, async (db) => {
+    const source = await exchangeRatesCollection(db).findOne({ _id: countryId });
+    if (!source) return { ok: false };
+    const currency = source.currencyCode ?? COUNTRY_CURRENCY_MAP[countryId];
+    const authorityId = CURRENCY_ANCHOR_COUNTRY[currency];
+    const row =
+      authorityId && authorityId !== countryId
+        ? await exchangeRatesCollection(db).findOne({ _id: authorityId })
+        : source;
+    if (!row) return { ok: false };
 
-  const previousRate = row.rate;
-  const newRate = previousRate * (1 + percent);
+    const previousRate = row.rate;
+    const newRate = previousRate * (1 + percent);
+    if (!Number.isFinite(newRate) || newRate <= 0) return { ok: false };
 
-  await exchangeRatesCollection(db).updateOne(
-    { _id: countryId },
-    { $set: { rate: newRate, updatedAt: new Date() } }
-  );
+    await exchangeRatesCollection(db).updateMany(
+      { $or: [{ _id: row._id }, { currencyCode: currency }] },
+      { $set: { rate: newRate, updatedAt: new Date() } }
+    );
 
-  return { ok: true, previousRate, newRate };
+    await afterCommit(db, () => invalidateCorpFxRateCache(unboundDb(db)));
+    return { ok: true, previousRate, newRate };
+  });
 }

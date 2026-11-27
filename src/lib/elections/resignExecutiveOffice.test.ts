@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -52,7 +55,7 @@ describe("resignExecutiveOffice", () => {
       })
     );
     expect(db.collectionMocks.characters!.updateOne).toHaveBeenCalledWith(
-      { _id: characterId },
+      { _id: characterId, currentOffice: { type: "vicePresident" } },
       expect.objectContaining({
         $set: { currentOffice: null, updatedAt: now },
         $push: {

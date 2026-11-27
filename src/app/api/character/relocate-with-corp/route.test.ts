@@ -1,3 +1,9 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (
+    _db: import("mongodb").Db,
+    work: (db: import("mongodb").Db) => Promise<Response>
+  ) => work(_db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -11,7 +17,7 @@ vi.mock("@/lib/api/rateLimit", () => ({
   ),
 }));
 vi.mock("@/lib/countryAccess", () => ({
-  getCountryAccess: vi.fn().mockResolvedValue({ enabledForPlayers: true, status: "active" }),
+  getCountryAccessFromDb: vi.fn().mockResolvedValue({ enabledForPlayers: true, status: "active" }),
 }));
 vi.mock("@/lib/gameState", () => ({ getGameState: vi.fn() }));
 vi.mock("@/lib/time/gameTime", () => ({

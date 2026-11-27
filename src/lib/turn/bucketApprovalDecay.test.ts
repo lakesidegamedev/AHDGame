@@ -84,3 +84,13 @@ describe("approval decay turn persistence", () => {
     expect(db.collectionMocks.npps!.bulkWrite).not.toHaveBeenCalled();
   });
 });
+
+// Formula/transport fixture; the recurrence atomic suite uses the real boundary.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

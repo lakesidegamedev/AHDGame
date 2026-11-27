@@ -81,4 +81,12 @@ describe("POST general/train", () => {
     const res = await POST(req({ nodeId: "tr1" }), call);
     expect(res.status).toBe(403);
   });
+  it("refuses stale training rather than overwriting earned points or another trained node", async () => {
+    db.collectionMocks.characterGenerals.updateOne.mockResolvedValue({ matchedCount: 0 });
+    const { POST } = await import(ROUTE);
+    expect((await POST(req({ nodeId: "tr1" }), call)).status).toBe(409);
+    const filter = db.collectionMocks.characterGenerals.updateOne.mock.calls[0][0];
+    expect(filter.general).toBeDefined();
+    expect(filter.commissioned).toEqual({ $ne: false });
+  });
 });
