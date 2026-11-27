@@ -1039,108 +1039,61 @@ describe("castLeadershipVote", () => {
     } as SpeakerNomination;
   }
 
-  it("casts a vote for the target nomination when not already voted", async () => {
+  it("casts one vote and preserves it on retry", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
     const { castLeadershipVote } = await import("./leadershipVoting");
-    const nom = makeNomination();
-    const nppKey = "npp_abc123";
-    const updateOneCalls: unknown[][] = [];
-    const db = {
-      collection: vi.fn(() => ({
-        updateOne: vi.fn((...args: unknown[]) => {
-          updateOneCalls.push(args);
-          return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
-        }),
-      })),
-    } as unknown as Db;
-
-    const result = await castLeadershipVote(
-      db,
-      "speakerNominations",
-      [nom],
-      nppKey,
-      nom._id,
-      new Date()
-    );
-
-    expect(result).toBe(true);
-    expect(updateOneCalls.length).toBe(1);
-    const [filter, update] = updateOneCalls[0] as [
-      { _id: ObjectId },
-      { $set: Record<string, unknown>; $inc: Record<string, number> },
-    ];
-    expect(filter._id).toEqual(nom._id);
-    expect(update.$set[`votes.${nppKey}`]).toBe("for");
-    expect(update.$inc.votesFor).toBe(1);
+    const f = createTransactionalMemoryDb(),
+      nom = makeNomination();
+    f.memory.seed("speakerNominations", [{ ...nom }]);
+    expect(
+      await castLeadershipVote(f.db, "speakerNominations", [nom], "npp_abc123", nom._id, new Date())
+    ).toBe(true);
+    expect(
+      await castLeadershipVote(f.db, "speakerNominations", [nom], "npp_abc123", nom._id, new Date())
+    ).toBe(false);
+    expect(await f.db.collection("speakerNominations").findOne({ _id: nom._id })).toMatchObject({
+      votesFor: 1,
+      votes: { npp_abc123: "for" },
+    });
   });
-
-  it("returns false and does not write if already voted for the same nomination", async () => {
+  it("returns false when the fresh nomination already has this vote", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
     const { castLeadershipVote } = await import("./leadershipVoting");
-    const nppKey = "npp_abc123";
-    const nom = makeNomination({ votes: { [nppKey]: "for" } });
-    const updateOneSpy = vi.fn().mockResolvedValue({ modifiedCount: 0 });
-    const db = {
-      collection: vi.fn(() => ({ updateOne: updateOneSpy })),
-    } as unknown as Db;
-
-    const result = await castLeadershipVote(
-      db,
-      "speakerNominations",
-      [nom],
-      nppKey,
-      nom._id,
-      new Date()
+    const f = createTransactionalMemoryDb(),
+      nom = makeNomination({ votesFor: 1, votes: { npp_abc123: "for" } });
+    f.memory.seed("speakerNominations", [{ ...nom }]);
+    expect(
+      await castLeadershipVote(f.db, "speakerNominations", [nom], "npp_abc123", nom._id, new Date())
+    ).toBe(false);
+    expect((await f.db.collection("speakerNominations").findOne({ _id: nom._id }))!.votesFor).toBe(
+      1
     );
-
-    expect(result).toBe(false);
-    expect(updateOneSpy).not.toHaveBeenCalled();
   });
-
-  it("removes previous vote for a different nomination before casting new one", async () => {
+  it("moves a previous vote to the fresh target nomination", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
     const { castLeadershipVote } = await import("./leadershipVoting");
-    const nppKey = "npp_abc123";
-    const nom1 = makeNomination({ votes: { [nppKey]: "for" } }); // previously voted here
-    const nom2 = makeNomination(); // new target
-
-    const updateOneCalls: unknown[][] = [];
-    const db = {
-      collection: vi.fn(() => ({
-        updateOne: vi.fn((...args: unknown[]) => {
-          updateOneCalls.push(args);
-          return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
-        }),
-      })),
-    } as unknown as Db;
-
-    const result = await castLeadershipVote(
-      db,
-      "speakerNominations",
-      [nom1, nom2],
-      nppKey,
-      nom2._id,
-      new Date()
-    );
-
-    expect(result).toBe(true);
-    // Two updateOne calls: remove from nom1, add to nom2
-    expect(updateOneCalls.length).toBe(2);
-
-    // First call removes previous vote from nom1
-    const [removeFilter, removeUpdate] = updateOneCalls[0] as [
-      { _id: ObjectId },
-      { $unset: Record<string, string>; $inc: Record<string, number> },
-    ];
-    expect(removeFilter._id).toEqual(nom1._id);
-    expect(removeUpdate.$unset[`votes.${nppKey}`]).toBe("");
-    expect(removeUpdate.$inc.votesFor).toBe(-1);
-
-    // Second call adds vote to nom2
-    const [addFilter, addUpdate] = updateOneCalls[1] as [
-      { _id: ObjectId },
-      { $set: Record<string, unknown>; $inc: Record<string, number> },
-    ];
-    expect(addFilter._id).toEqual(nom2._id);
-    expect((addUpdate.$set as Record<string, unknown>)[`votes.${nppKey}`]).toBe("for");
-    expect(addUpdate.$inc.votesFor).toBe(1);
+    const f = createTransactionalMemoryDb(),
+      first = makeNomination({ votesFor: 1, votes: { npp_abc123: "for" } }),
+      next = makeNomination();
+    f.memory.seed("speakerNominations", [{ ...first }, { ...next }]);
+    expect(
+      await castLeadershipVote(
+        f.db,
+        "speakerNominations",
+        [first, next],
+        "npp_abc123",
+        next._id,
+        new Date()
+      )
+    ).toBe(true);
+    expect(await f.db.collection("speakerNominations").findOne({ _id: first._id })).toMatchObject({
+      votesFor: 0,
+      votes: {},
+    });
+    expect(await f.db.collection("speakerNominations").findOne({ _id: next._id })).toMatchObject({
+      votesFor: 1,
+      votes: { npp_abc123: "for" },
+    });
   });
 });
 

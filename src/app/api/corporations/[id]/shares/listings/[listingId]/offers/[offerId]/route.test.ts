@@ -64,6 +64,16 @@ describe("DELETE /api/corporations/[id]/shares/listings/[listingId]/offers/[offe
     });
 
     db.collection("exchangeRates");
+    db.collectionMocks["exchangeRates"].find.mockImplementation(
+      (filter: { currencyCode?: string }) => ({
+        toArray: async () => [
+          {
+            currencyCode: filter.currencyCode,
+            rate: ({ JPY: 100, GBP: 0.75 } as Record<string, number>)[filter.currencyCode!],
+          },
+        ],
+      })
+    );
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(
       (filter: { currencyCode?: string }) => {
         if (filter?.currencyCode === "JPY") {
@@ -128,6 +138,16 @@ describe("DELETE /api/corporations/[id]/shares/listings/[listingId]/offers/[offe
     });
 
     db.collection("exchangeRates");
+    db.collectionMocks["exchangeRates"].find.mockImplementation(
+      (filter: { currencyCode?: string }) => ({
+        toArray: async () => [
+          {
+            currencyCode: filter.currencyCode,
+            rate: ({ JPY: 100, GBP: 0.75 } as Record<string, number>)[filter.currencyCode!],
+          },
+        ],
+      })
+    );
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(
       (filter: { currencyCode?: string }) => {
         if (filter?.currencyCode === "JPY") {

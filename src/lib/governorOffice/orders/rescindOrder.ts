@@ -9,8 +9,8 @@ import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governo
 
 export interface RescindOrderInput {
   orderId: ObjectId;
-  countryId?: CountryId;
-  stateId?: string;
+  countryId: CountryId;
+  stateId: string;
   rescindedByCharacterId: ObjectId;
 }
 
@@ -25,11 +25,13 @@ export async function rescindOrder(
   db: Db,
   input: RescindOrderInput
 ): Promise<{ status: number; body: { success?: boolean; error?: string } }> {
+  if (!input.countryId || !input.stateId)
+    return { status: 400, body: { error: "An authorized order jurisdiction is required." } };
   return withSessionDb(db, async (db) => {
     const order = await governorExecutiveOrdersCollection(db).findOne({
       _id: input.orderId,
-      ...(input.countryId ? { countryId: input.countryId } : {}),
-      ...(input.stateId ? { stateId: input.stateId } : {}),
+      countryId: input.countryId,
+      stateId: input.stateId,
     });
     if (!order) return { status: 404, body: { error: "Order not found." } };
     if (order.status !== "active") {

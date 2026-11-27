@@ -158,7 +158,7 @@ export function BankingHero({
                     {primary.bankName}
                   </p>
                   <p className="text-body-sm text-muted">
-                    {primary.countryName} Â· {primary.currency}
+                    {primary.countryName} / {primary.currency}
                   </p>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export function PrivateBankRow({
               {bank.name}
             </span>
             <span className="block truncate text-body-sm text-muted">
-              {bank.countryName} Â· <span className="font-mono">{bank.currency}</span>
+              {bank.countryName} / <span className="font-mono">{bank.currency}</span>
             </span>
             <span className="mt-1 flex min-w-0 items-center gap-1.5 text-body-sm text-muted">
               <Avatar
@@ -481,7 +481,7 @@ export function BankHealthCell({
         </span>
       )}
       <span className="w-7 text-right font-mono text-body font-bold tabular-nums text-foreground">
-        {score ?? "â€”"}
+        {score ?? "\u2014"}
       </span>
       <WarningBandBadge band={band} />
     </div>
@@ -602,7 +602,7 @@ export function YourSavingsSection({
                 >
                   {row.options.map((opt) => (
                     <option key={opt.holder} value={opt.holder}>
-                      {opt.label} Â· {formatRatePercent(opt.depositRatePercent)}
+                      {opt.label} / {formatRatePercent(opt.depositRatePercent)}
                     </option>
                   ))}
                 </select>
@@ -638,7 +638,7 @@ export function YourSavingsSection({
                   onClick={() => void withdraw(row.currency, row.balance)}
                   className="h-10 rounded-lg border border-card-border bg-card px-4 text-body font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {busy === `withdraw:${row.currency}` ? "â€¦" : "Withdraw"}
+                  {busy === `withdraw:${row.currency}` ? "..." : "Withdraw"}
                 </button>
               </div>
             </div>

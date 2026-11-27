@@ -10,7 +10,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import type { LeaderReference } from "@/lib/government/leaderReference";
 import { leaderStateId } from "@/lib/government/leaderReference";
 import type { EscalationState, RegimeStage } from "@/lib/db/types/regimeEscalation";

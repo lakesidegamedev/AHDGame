@@ -116,7 +116,7 @@ export function PrivateDepositModal({
             aria-label="Close"
           >
             <span className="text-heading leading-none" aria-hidden>
-              Ã—
+              &times;
             </span>
           </button>
         </div>

@@ -185,8 +185,11 @@ describe("retireCharacter", () => {
 
   it("continues retirement when projected telemetry reads fail", async () => {
     const { retireCharacter } = await import("./retireCharacter");
-    db.collection("gameState").findOne.mockRejectedValueOnce(
-      new Error("Telemetry read unavailable")
+    db.collection("gameState").findOne.mockImplementation(
+      async (_filter: unknown, options?: { projection?: { currentTurn?: number } }) => {
+        if (options?.projection?.currentTurn) throw new Error("Telemetry read unavailable");
+        return { _id: "current", preset: "2019-default" };
+      }
     );
 
     await expect(

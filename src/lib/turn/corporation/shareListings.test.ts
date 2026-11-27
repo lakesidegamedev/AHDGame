@@ -7,7 +7,11 @@ import { cancelShareListingAndRefund } from "@/lib/corporations/cancelShareListi
 import { creditShares } from "@/lib/corporations/shareholderOps";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: async () => false }));
-vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/financialTxLog/emit", async (original) => ({
+  ...(await original<typeof import("@/lib/financialTxLog/emit")>()),
+  emitTx: vi.fn().mockResolvedValue(undefined),
+  emitTxBulk: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/corporations/shareholderOps", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/corporations/shareholderOps")>();
   return { ...actual, creditShares: vi.fn(actual.creditShares) };

@@ -67,6 +67,16 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
 
     // exchangeRates: JPY = 100/₳, USD = 1.0/₳.
     db.collection("exchangeRates");
+    db.collectionMocks["exchangeRates"].find.mockImplementation(
+      (filter: { currencyCode?: string }) => ({
+        toArray: async () => [
+          {
+            currencyCode: filter.currencyCode,
+            rate: ({ JPY: 100, USD: 1, GBP: 0.75 } as Record<string, number>)[filter.currencyCode!],
+          },
+        ],
+      })
+    );
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(
       (filter: { currencyCode?: string }) => {
         if (filter?.currencyCode === "JPY")
@@ -145,6 +155,16 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
     db.collectionMocks["corporations"].updateOne.mockResolvedValue({ modifiedCount: 1 });
 
     db.collection("exchangeRates");
+    db.collectionMocks["exchangeRates"].find.mockImplementation(
+      (filter: { currencyCode?: string }) => ({
+        toArray: async () => [
+          {
+            currencyCode: filter.currencyCode,
+            rate: ({ JPY: 100, USD: 1, GBP: 0.75 } as Record<string, number>)[filter.currencyCode!],
+          },
+        ],
+      })
+    );
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(
       (filter: { currencyCode?: string }) => {
         if (filter?.currencyCode === "JPY")
@@ -193,6 +213,16 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
     });
 
     db.collection("exchangeRates");
+    db.collectionMocks["exchangeRates"].find.mockImplementation(
+      (filter: { currencyCode?: string }) => ({
+        toArray: async () => [
+          {
+            currencyCode: filter.currencyCode,
+            rate: ({ JPY: 100, USD: 1, GBP: 0.75 } as Record<string, number>)[filter.currencyCode!],
+          },
+        ],
+      })
+    );
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(
       (filter: { currencyCode?: string }) => {
         if (filter?.currencyCode === "JPY") {
@@ -361,6 +391,16 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
     });
 
     db.collection("exchangeRates");
+    db.collectionMocks["exchangeRates"].find.mockImplementation(
+      (filter: { currencyCode?: string }) => ({
+        toArray: async () => [
+          {
+            currencyCode: filter.currencyCode,
+            rate: ({ JPY: 100, USD: 1, GBP: 0.75 } as Record<string, number>)[filter.currencyCode!],
+          },
+        ],
+      })
+    );
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(
       (filter: { currencyCode?: string }) => {
         if (filter?.currencyCode === "JPY")

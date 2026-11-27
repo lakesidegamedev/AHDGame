@@ -218,7 +218,8 @@ describe("GET /api/client-status", () => {
           .filter((op) => ENRICHMENT_COLLECTIONS.includes(op.collection))
           .map((op) => op.collection)
       );
-      expect([...touched]).toEqual([]);
+      // The authoritative turn is core state even in the minimal layout.
+      expect([...touched]).toEqual(["gameState"]);
     });
 
     it("minimal layout returns core fields with null enrichment", async () => {
@@ -403,6 +404,8 @@ describe("GET /api/client-status", () => {
             _id: new ObjectId(),
             sequentialId: 7,
             name: "Example Corp",
+            countryId: "US",
+            liquidCurrencyCode: "USD",
             sharePrice: 20,
             totalShares: 1000,
             liquidCapital: 500,
@@ -415,6 +418,8 @@ describe("GET /api/client-status", () => {
           find: [
             {
               turn: 50,
+              currencyCode: "USD",
+              fxRateAtWrite: 1,
               sharePrice: 20,
               marketCap: 20_000,
               liquidCapital: 500,
@@ -422,6 +427,8 @@ describe("GET /api/client-status", () => {
             },
             {
               turn: 49,
+              currencyCode: "USD",
+              fxRateAtWrite: 1,
               sharePrice: 18,
               marketCap: 18_000,
               liquidCapital: 600,

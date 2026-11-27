@@ -253,9 +253,37 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
     // No seeded statePartyOrg row (e.g. CDU in Bayern), but the party has
     // live presence (default checkPartyPresence → true). A national chair
     // builds: the row is created at 0% Org and the build proceeds.
-    db.collectionMocks["statePartyOrg"]!.findOne.mockResolvedValue(null);
+    let bootstrapped = false;
+    const row = {
+      _id: `${stateId}_${partyId}`,
+      stateId,
+      partyId,
+      countryId: "US",
+      organization: 0,
+      politicalStrength: 0,
+      treasury: 0,
+    };
+    db.collectionMocks["statePartyOrg"]!.findOne.mockImplementation(async () =>
+      bootstrapped ? row : null
+    );
+    db.collectionMocks["statePartyOrg"]!.updateOne.mockImplementation(
+      async (_filter, _update, options) => {
+        if (options?.upsert) bootstrapped = true;
+        return { matchedCount: 1, modifiedCount: 1 };
+      }
+    );
     db.collectionMocks["statePartyOrg"]!.find.mockReturnValue({
       toArray: async () => [
+        {
+          _id: `${stateId}_${partyId}`,
+          stateId,
+          partyId,
+          countryId: "US",
+          organization: 0,
+          politicalStrength: 0,
+          treasury: 0,
+        },
+        // The bootstrap has landed before the preview re-reads the bucket.
         // Only a rival row exists in the state — spender has no row yet.
         {
           _id: `${stateId}_2`,

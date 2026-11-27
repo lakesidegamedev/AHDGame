@@ -359,7 +359,7 @@ export async function witnessOrganizationCash(
         },
       ],
     };
-    if (context.pending && !boundSession(db)) context.pending.push(entry);
+    if (context.pending) context.pending.push(entry);
     else await emitLedgerEntries(db, [entry]);
   } catch (error) {
     Sentry.captureException(error, {

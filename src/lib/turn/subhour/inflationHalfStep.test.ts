@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { calculateInflationWithBreakdown, type InflationInputs } from "@/lib/budget/inflation";
 import {
   advanceHouseholdPriceIndex,
@@ -146,10 +147,14 @@ describe("inflation half step and the turn", () => {
 
   it("never applies a half twice when the tick is retried", async () => {
     const memory = seedWorld(3.4, 1.1);
-    await runInflationHalfStep(memory as unknown as Db, TURN, new Date());
+    const first = await runInflationHalfStep(memory as unknown as Db, TURN, new Date());
     const once = await budgetOf(memory);
     const retry = await runInflationHalfStep(memory as unknown as Db, TURN, new Date());
-    expect(retry.alreadyStepped).toBe(1);
+    // The phase receipt replays the original result without applying another half.
+    expect(retry).toMatchObject({
+      countries: first.countries,
+      alreadyStepped: first.alreadyStepped,
+    });
     expect(await budgetOf(memory)).toEqual(once);
   });
 

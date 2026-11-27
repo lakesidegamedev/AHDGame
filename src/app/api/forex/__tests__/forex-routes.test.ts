@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 /**
  * Route tests for player-facing forex endpoints: rates, trades, orders, transactions.
  * Uses mocked DB + auth; exercises validation, feature gating, and response shapes.
@@ -15,13 +33,7 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
   getMongoClient: vi.fn(async () => ({
     startSession: () => ({
-      withTransaction: vi.fn(async () => {
-        const err = new Error("transactions not supported on standalone") as Error & {
-          code?: number;
-        };
-        err.code = 20;
-        throw err;
-      }),
+      withTransaction: vi.fn(async (work: (session: unknown) => Promise<unknown>) => work({})),
       endSession: vi.fn(async () => {}),
     }),
   })),
@@ -458,7 +470,8 @@ describe("POST /api/forex/orders", () => {
       { _id: charId, "currencyBalances.personal.USD": { $gte: 2000 } },
       expect.objectContaining({
         $inc: expect.objectContaining({ "currencyBalances.personal.USD": -2000 }),
-      })
+      }),
+      expect.objectContaining({ session: expect.any(Object) })
     );
 
     const insertCall = db.collectionMocks.currencyOrders.insertOne.mock.calls[0][0] as {
@@ -469,7 +482,7 @@ describe("POST /api/forex/orders", () => {
     expect(insertCall.limitRate).toBe(108);
   });
 
-  it("refunds escrow when order insertion fails after the debit", async () => {
+  it("aborts escrow when order insertion fails after the debit", async () => {
     await setupDb();
     const { isForexEnabled } = await import("@/lib/currency/featureFlag");
     vi.mocked(isForexEnabled).mockResolvedValue(true);
@@ -505,13 +518,8 @@ describe("POST /api/forex/orders", () => {
     );
 
     expect(res.status).toBeGreaterThanOrEqual(500);
-    expect(db.collectionMocks.characters.updateOne).toHaveBeenNthCalledWith(
-      2,
-      { _id: charId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ "currencyBalances.personal.USD": 2000 }),
-      })
-    );
+    // The owning transaction aborts the debit without a compensating credit.
+    expect(db.collectionMocks.characters.updateOne).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -793,15 +801,15 @@ describe("POST /api/forex/orders/[orderId]/fill — spread fee", () => {
     const orderEdits = db.collectionMocks.currencyOrders.updateOne.mock.calls.map(
       (c) => (c[1] as { $set?: Record<string, unknown> }).$set
     );
-    // The order is reopened, never marked filled/partial.
-    expect(orderEdits.some((s) => s?.status === "open")).toBe(true);
+    // The transaction aborts without a second status write.
+    expect(orderEdits.some((s) => s?.status === "open")).toBe(false);
     expect(orderEdits.some((s) => s?.status === "filled" || s?.status === "partial")).toBe(false);
     expect(db.collectionMocks.tradeHistory.insertOne).not.toHaveBeenCalled();
-    // Both stamped balance legs were settled (2) and then rolled back (2).
-    expect(db.collectionMocks.characters.updateOne).toHaveBeenCalledTimes(4);
+    // Two balance writes join the aborted transaction; no inverse writes are issued.
+    expect(db.collectionMocks.characters.updateOne).toHaveBeenCalledTimes(2);
   });
 
-  it("reverses the first spread leg when the second leg fails", async () => {
+  it("aborts both spread legs when the second leg fails", async () => {
     const { orderId } = await setupFill();
     const { distributeSpreadFee, reverseSpreadFee } = await import("@/lib/currency/spreadFees");
     vi.mocked(distributeSpreadFee)
@@ -813,7 +821,7 @@ describe("POST /api/forex/orders/[orderId]/fill — spread fee", () => {
     expect(res.status).toBe(500);
     // Recovery completes each idempotent spread leg before reversing it, so
     // both legs are removed even when the initial attempt stopped on leg two.
-    expect(reverseSpreadFee).toHaveBeenCalledTimes(2);
+    expect(reverseSpreadFee).not.toHaveBeenCalled();
   });
 
   it("restores a completed status transition when trade-history persistence fails", async () => {
@@ -826,14 +834,11 @@ describe("POST /api/forex/orders/[orderId]/fill — spread fee", () => {
     const statusEdits = db.collectionMocks.currencyOrders.updateOne.mock.calls.map(
       (call) => call[1] as { $set?: { status?: string }; $inc?: Record<string, number> }
     );
-    expect(statusEdits).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ $set: expect.objectContaining({ status: "open" }) }),
-      ])
-    );
+    expect(statusEdits).toHaveLength(1);
+    expect(statusEdits[0].$set?.status).toBe("filled"); // Uncommitted; rollback owns restoration.
   });
 
-  it("surfaces compensation failure as an uncertain aggregate failure", async () => {
+  it("surfaces the transaction failure without attempting compensation", async () => {
     const { orderId } = await setupFill();
     const { distributeSpreadFee, reverseSpreadFee } = await import("@/lib/currency/spreadFees");
     vi.mocked(distributeSpreadFee).mockResolvedValue({
@@ -848,8 +853,9 @@ describe("POST /api/forex/orders/[orderId]/fill — spread fee", () => {
     const res = await fill(orderId);
 
     expect(res.status).toBe(500);
+    expect(reverseSpreadFee).not.toHaveBeenCalled();
     expect(consoleError.mock.calls.flat()).toEqual(
-      expect.arrayContaining([expect.any(AggregateError)])
+      expect.arrayContaining([expect.objectContaining({ message: "history failed" })])
     );
     consoleError.mockRestore();
   });
@@ -945,15 +951,15 @@ describe("POST /api/forex/direct/[requestId] — spread fee", () => {
     const orderEdits = db.collectionMocks.currencyOrders.updateOne.mock.calls.map(
       (c) => (c[1] as { $set?: Record<string, unknown> }).$set
     );
-    expect(orderEdits.some((s) => s?.status === "open")).toBe(true);
+    expect(orderEdits.some((s) => s?.status === "open")).toBe(false);
     expect(orderEdits.some((s) => s?.status === "filled")).toBe(false);
     expect(db.collectionMocks.tradeHistory.insertOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.playerMail.insertOne).not.toHaveBeenCalled();
-    // Both balance legs were settled (2) and then rolled back (2).
-    expect(db.collectionMocks.characters.updateOne).toHaveBeenCalledTimes(4);
+    // Two balance writes join the aborted transaction; no inverse writes are issued.
+    expect(db.collectionMocks.characters.updateOne).toHaveBeenCalledTimes(2);
   });
 
-  it("reverses the first spread leg when the second leg fails", async () => {
+  it("aborts both spread legs when the second leg fails", async () => {
     const { reqId } = await setupDirectAccept();
     const { distributeSpreadFee, reverseSpreadFee } = await import("@/lib/currency/spreadFees");
     vi.mocked(distributeSpreadFee)
@@ -963,7 +969,7 @@ describe("POST /api/forex/direct/[requestId] — spread fee", () => {
     const res = await accept(reqId);
 
     expect(res.status).toBe(500);
-    expect(reverseSpreadFee).toHaveBeenCalledTimes(1);
+    expect(reverseSpreadFee).not.toHaveBeenCalled();
   });
 
   it("restores a filled request when trade-history persistence fails", async () => {
@@ -976,8 +982,7 @@ describe("POST /api/forex/direct/[requestId] — spread fee", () => {
     const statusEdits = db.collectionMocks.currencyOrders.updateOne.mock.calls.map(
       (call) => (call[1] as { $set?: { status?: string } }).$set
     );
-    expect(statusEdits).toEqual(
-      expect.arrayContaining([expect.objectContaining({ status: "open" })])
-    );
+    expect(statusEdits).toHaveLength(1);
+    expect(statusEdits[0]?.status).toBe("filled"); // Uncommitted; rollback owns restoration.
   });
 });

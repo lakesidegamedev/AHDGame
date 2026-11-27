@@ -1,4 +1,9 @@
-vi.mock("@/lib/db/sessionDb", () => ({
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
   withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
   afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),
   unboundDb: (db: unknown) => db,

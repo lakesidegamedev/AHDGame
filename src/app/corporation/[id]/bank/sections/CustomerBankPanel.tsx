@@ -122,7 +122,7 @@ export function CustomerBankPanel({
                 className="h-8 w-48 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
               />
               <SmallButton tone="primary" disabled={busy} onClick={() => void deposit()}>
-                {busy ? "â€¦" : "Deposit"}
+                {busy ? "..." : "Deposit"}
               </SmallButton>
             </div>
           </div>

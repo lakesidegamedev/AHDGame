@@ -81,9 +81,7 @@ describe("fund dividend stock-flow witnesses", () => {
         ...(missingNpp ? {} : { [`npp:${nppId}:GBP`]: Number(npp!.nppInvestmentCashAnchor) }),
       };
       const holderDividend = Math.floor((gross / 8) * 100) / 100;
-      const retained =
-        gross * 0.75 +
-        Math.round((gross * 0.25 - holderDividend * (missingNpp ? 1 : 2)) * 100) / 100;
+      const retained = gross - holderDividend * (missingNpp ? 1 : 2);
       expect(
         Math.abs(
           Object.values(closing).reduce((s, v) => s + v, 0) -

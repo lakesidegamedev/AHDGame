@@ -1,3 +1,4 @@
+import { preflightCashPrecision } from "./preflightCashPrecision";
 import { boundSession } from "@/lib/db/sessionDb";
 import { representedCashDelta } from "./rules/representedCashDelta";
 /**
@@ -417,6 +418,9 @@ export async function applyMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
       leg.filter = { ...leg.filter, _id: target._id };
     }
   }
+  // Delivery still checks each balance atomically against concurrent changes.
+  if (!(await preflightCashPrecision(db, prepared)))
+    bindingError ??= `Money move ${move.key} cannot represent its cash amount exactly enough.`;
   const readEpoch = settlementReadEpoch();
   const claim = await claimMoneyMove(db, {
     ...move,

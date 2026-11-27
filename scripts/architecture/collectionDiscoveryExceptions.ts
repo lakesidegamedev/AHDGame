@@ -248,7 +248,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "applyMoneyMove",
     argument: "leg.collection!",
-    scopeHash: "af446333d75b07ba36f26bf60e70b1bbdb0721a55518880a07a45c9cdcbe114e",
+    scopeHash: "47ef4cb6742516f0e0fd971847813a1a42d727bd3380f9927eaabea3cd59dd31",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -716,5 +716,21 @@ export const SESSION_COLLECTION_FORWARDERS: readonly LegacyDynamicCollectionSite
     count: 1,
     reason:
       "Transparent session binding; names are supplied by already-scanned domain collection callsites, never generated here. No new collection, index or reset policy is introduced.",
+  },
+];
+
+/** Reviewed read-only cohorts over the existing money-move destination protocol.
+ * These selectors introduce no collection, writer, index or reset lifecycle.
+ * Keep them separate from legacy debt and session transport; an edit forces review.
+ */
+export const MONEY_MOVE_COHORT_READS: readonly LegacyDynamicCollectionSite[] = [
+  {
+    file: "src/lib/banking/preflightCashPrecision.ts",
+    owner: "checkCollectionCash",
+    argument: "name",
+    scopeHash: "992eff15948614b8566e77b33cc426f73b55a007fe184e27742a7d708365a07e",
+    count: 1,
+    reason:
+      "Reads only the identity and balance paths of existing MoneyMoveLeg targets, grouped by collection with $in. No target is written here. Tests pin one query for both 20 and 2,000 recipients and native profiling measures one additional command per cohort; target guards remain authoritative.",
   },
 ];

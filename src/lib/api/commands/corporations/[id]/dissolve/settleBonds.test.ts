@@ -1,3 +1,11 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+// Formula fixtures isolate transaction transport; atomic suites exercise rollback and races.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 /**
  * Voluntary dissolve while bonds are outstanding and none has defaulted: the
  * CEO must confirm, bondholders are paid pro-rata up to face value from the
@@ -131,6 +139,8 @@ function fixture(opts: { cash: number; defaulted?: boolean }) {
   };
   const characterBulk = vi.fn().mockResolvedValue({});
   const collections: Record<string, unknown> = {
+    bankLoans: { findOne: async () => null },
+    supplyAgreements: { findOne: async () => null },
     bonds: {
       find: (q: Record<string, unknown>) => cursor("holders.corporationId" in q ? [] : [bond]),
       updateOne: vi.fn().mockResolvedValue({}),

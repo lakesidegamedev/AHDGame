@@ -1,3 +1,22 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", async (original) => {
+  const actual = await original<typeof import("@/lib/db/sessionDb")>();
+  return {
+    ...actual,
+    withSessionDb: (
+      db: import("mongodb").Db,
+      work: (db: import("mongodb").Db) => Promise<unknown>
+    ) => ("client" in db && db.client ? actual.withSessionDb(db, work) : work(db)),
+  };
+});
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { PartyBudget } from "@/lib/db/types";

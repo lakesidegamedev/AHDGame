@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -72,6 +90,7 @@ describe("POST /api/corporations/[id]/dissolve", () => {
 
     db.collectionMocks.corporations.findOne.mockResolvedValue({
       _id: corpId,
+      isPrivate: true,
       ceoId: new ObjectId(),
       countryId: "UK",
       liquidCurrencyCode: "GBP",
@@ -156,6 +175,13 @@ describe("POST /api/corporations/[id]/dissolve", () => {
     } as never);
     vi.mocked(requireCeo).mockReturnValue(null);
 
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: corpId,
+      isPrivate: true,
+      liquidCapital: 0,
+      ceoId: new ObjectId(),
+      name: "Test Corp",
+    });
     db.collectionMocks.bonds.countDocuments.mockResolvedValue(0);
     db.collectionMocks.corporations.updateOne.mockResolvedValue({
       matchedCount: 0,
@@ -192,6 +218,14 @@ describe("POST /api/corporations/[id]/dissolve", () => {
     });
 
     const { resolveCorporation, requireCeo } = await import("@/lib/api/corporations/resolveQuery");
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: corpId,
+      isPrivate: true,
+      liquidCapital: 0,
+      ceoId: new ObjectId(),
+      foundedAtTurn: 0,
+      name: "Fresh Corp",
+    });
     // Founded this turn (gameState currentTurn defaults to 0) → too young.
     vi.mocked(resolveCorporation).mockResolvedValue({
       ok: true,

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BSON, ObjectId, type Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import type { Bond, IndexFund } from "@/lib/db/types";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { deployBondReserveFromCash } from "./fundBondReserve";
 
 vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
@@ -9,34 +11,10 @@ vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
   loadFxRatesRecord: vi.fn(async () => ({ USD: 1 })),
 }));
 
-// The transaction under test: run the body against the in-memory store and
-// restore every collection if it throws, which is what an aborted Mongo
-// transaction guarantees.
-let activeMemory: InMemoryDb;
-// A write another player makes between the plan and the commit.
+// The transactional fixture restores writes on abort. This hook models an
+// independent committed change after planning and before the transaction starts.
 let concurrentWrite: (() => void) | undefined;
 vi.mock("@/lib/mongodb", () => ({ getMongoClient: vi.fn() }));
-vi.mock("@/lib/db/transactionWithRetry", () => ({
-  runTransactionWithSessionRetry: vi.fn(
-    async (_client: unknown, run: (session?: unknown) => Promise<unknown>) => {
-      concurrentWrite?.();
-      const snapshot = new Map(
-        Array.from(activeMemory.collections, ([name, col]) => [
-          name,
-          BSON.serialize({ docs: col.docs }),
-        ])
-      );
-      try {
-        return await run({});
-      } catch (err) {
-        for (const [name, bytes] of snapshot) {
-          activeMemory.collection(name).docs = BSON.deserialize(bytes).docs;
-        }
-        throw err;
-      }
-    }
-  ),
-}));
 
 const fundId = new ObjectId("6a0000000000000000000001");
 const heldBondId = new ObjectId("6a0000000000000000000010");
@@ -110,11 +88,22 @@ function state(memory: InMemoryDb) {
 }
 
 async function deploy(memory: InMemoryDb, settleInTransaction: boolean) {
-  activeMemory = memory;
-  return deployBondReserveFromCash(memory as unknown as Db, fundDoc(), 0, {
-    liquidityTargetEnabled: true,
-    settleInTransaction,
+  const client = (memory as unknown as Db).client;
+  const start = client.startSession.bind(client);
+  const session = vi.spyOn(client, "startSession").mockImplementation((...args) => {
+    const write = concurrentWrite;
+    concurrentWrite = undefined;
+    write?.();
+    return start(...args);
   });
+  try {
+    return await deployBondReserveFromCash(memory as unknown as Db, fundDoc(), 0, {
+      liquidityTargetEnabled: true,
+      settleInTransaction,
+    });
+  } finally {
+    session.mockRestore();
+  }
 }
 
 describe("bond reserve batched settlement", () => {

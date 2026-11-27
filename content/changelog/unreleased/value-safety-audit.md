@@ -31,6 +31,13 @@ areas: [fullstack, engine]
 - Financial dialogs validate quantities and current quotes before spending.
   Forecasts, historical figures and incomplete records have clearer labels.
 - CEO attrition preserves plant wear and facility counts when a turn resumes.
+- Corporation founding, office actions, endorsements and membership proposals
+  retain their charges and published outcomes together. National rescission
+  respects jurisdiction, and sector renames recheck ownership before writing.
+- Cash movement refuses materially rounded mutations before debiting known
+  incompatible wallets, while preserving normal currency rounding and recovery.
+- Action audit entries distinguish anchor amounts from native-currency amounts;
+  banking controls use readable labels.
 - Turn settlement and recovery paths retain completion proofs and pending
   obligations so interruptions cannot silently erase a claim or repeat a
   completed charge.

@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { planEuroSettlement } from "@/lib/currency/euro/rules";
 import { POST as POST_LIMIT_ORDER } from "../orders/route";
 /**
@@ -808,13 +826,8 @@ describe("POST /api/forex/direct", () => {
     );
 
     expect(res.status).toBeGreaterThanOrEqual(500);
-    expect(db.collectionMocks.characters.updateOne).toHaveBeenNthCalledWith(
-      2,
-      { _id: senderId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ "currencyBalances.personal.USD": 500 }),
-      })
-    );
+    // The transaction rolls back escrow, without a compensating credit.
+    expect(db.collectionMocks.characters.updateOne).not.toHaveBeenCalled();
   });
 
   it("returns success even when the notification mail write fails", async () => {

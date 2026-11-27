@@ -1,3 +1,7 @@
+import { afterCommit } from "@/lib/db/sessionDb";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 import { ObjectId, type Db } from "mongodb";
 import type { z } from "zod";
 import { purchasedHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
@@ -17,7 +21,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { getEraFoundingBounds, getEraFounderShares } from "@/lib/constants/sectorSeedEra";
 import type { foundCorporationSchema } from "@/lib/api/schemas/corporations";
 import { randomBrandColor } from "@/lib/corporations/brandColor";
-import type { Character, Corporation, State, User } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { openCeoTenure } from "@/lib/corporations/ceoHistory";
 import {
@@ -47,10 +51,7 @@ import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getPersonalBalance, getHomeCurrency } from "@/lib/currency/characterFunds";
-import {
-  atomicallyDebitCharacterCash,
-  refundCharacterCash,
-} from "@/lib/financialTxLog/atomicCashGuard";
+import { atomicallyDebitCharacterCash } from "@/lib/financialTxLog/atomicCashGuard";
 import { CURRENCY_SYMBOLS, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
@@ -92,15 +93,42 @@ function fail(status: number, error: string): FoundCorporationResult {
   return { ok: false, status, error };
 }
 
-/**
- * Found a player corporation: eligibility, era-scaled costs, optional founding
- * IPO (pool placement or a funded underwriter), the founder debit, the
- * corporation insert and its ledger rows. The founder is debited before the
- * insert; any failure after the debit removes the corporation and refunds the
- * founder and the pool, unless an underwriting settlement has started, in which
- * case the shell is kept for journal recovery and the error propagates.
- */
-export async function foundCorporation({
+/** Founding payment, corporation, ownership and recovery receipt commit together. */
+export async function foundCorporation(
+  input: FoundCorporationInput
+): Promise<FoundCorporationResult> {
+  try {
+    return await withAtomicResult(input.db, async (db) => {
+      const refusal = await fenceEconomicTurn(db);
+      if (refusal) return { ok: false as const, status: refusal.status, error: refusal.error };
+      const turn = (await getGameState(db))?.currentTurn ?? 0;
+      const fingerprint = JSON.stringify(input.request);
+      const outcome = await withTurnValueSettlement(
+        db,
+        "player-corporation-founding",
+        turn,
+        async (db) => {
+          const fresh = await charactersCollection(db).findOne({ _id: input.character._id });
+          const result = fresh
+            ? await foundCorporationInTransaction({ ...input, db, character: fresh })
+            : fail(404, "Founder character not found.");
+          return { fingerprint, result };
+        },
+        { sourceKey: `${input.character._id}:${turn}:${input.request.tickerSymbol}` }
+      );
+      if (outcome.fingerprint !== fingerprint)
+        return fail(409, "This founding request was already accepted with different details.");
+      return outcome.result;
+    });
+  } catch (error) {
+    const code = (error as { code?: number }).code;
+    if (code === 11000 && error instanceof Error && error.message.includes("tickerSymbol"))
+      return fail(400, "That ticker symbol is already taken");
+    throw error;
+  }
+}
+
+async function foundCorporationInTransaction({
   db,
   userId,
   character,
@@ -169,7 +197,7 @@ export async function foundCorporation({
 
   // Per-user refounding cooldown, anchored when the previous corporation ends.
   // currentTurnAtFounding is reused below for founding records.
-  const foundingGameState = await getGameState();
+  const foundingGameState = await getGameState(db);
   const currentTurnAtFounding = foundingGameState?.currentTurn ?? 0;
 
   const founderUser = await usersCollection(db).findOne(
@@ -622,200 +650,197 @@ export async function foundCorporation({
     );
   }
 
-  let createdCorporationId: ObjectId | null = null;
-  let foundingSettlementStarted = false;
   let foundingSettlementPending = false;
   let foundingSettlementAborted = false;
-  try {
-    const result = await corporationsCollection(db).insertOne({
-      _id: corporationId,
-      ...corporation,
-    } as Corporation);
-    createdCorporationId = result.insertedId;
+  const result = await corporationsCollection(db).insertOne({
+    _id: corporationId,
+    ...corporation,
+  } as Corporation);
 
-    if (foundingOffer && foundingUnderwriterBank && foundingUnderwritingProjection) {
-      // The private shell and frozen publication plan exist before settlement.
-      // If the process stops here, corporation-turn recovery resumes the
-      // exact plan; no public shares or proceeds exist until its journal ACKs.
-      foundingSettlementStarted = true;
-      const settlement = await settlePrimaryUnderwritingFill(db, {
-        bank: foundingUnderwriterBank,
-        issuer: { _id: result.insertedId, ...corporation },
-        issuerCurrencyCode: underwritingCurrency,
-        offer: foundingOffer,
-        instrumentId: foundingOffer.instrumentId,
-        grossPlacedLocal: foundingPlacement!.paidLocal,
-        turn: foundedAtTurn,
-        now,
-        poolCollection: "equityMarketPools",
-        instrumentProjection: foundingUnderwritingProjection,
-      });
-      if (settlement.status === "applied" || settlement.status === "replayed") {
-        const quote = quotePrimaryUnderwritingFee({
-          grossPlacedLocal: foundingPlacement!.paidLocal,
-          feeRate: foundingOffer.feeRate,
-        });
-        void emitTx(db, {
-          type: "ipo_proceeds",
-          turn: foundedAtTurn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: result.insertedId,
-          subjectName: name,
-          amount: quote.issuerNetLocal,
-          currencyCode: underwritingCurrency,
-          meta: {
-            grossPlacedLocal: quote.grossPlacedLocal,
-            underwritingFeeLocal: quote.feeLocal,
-            sharesPlaced: foundingPlacement!.placedShares,
-            sharesRequested: foundingPlacement!.requestedShares,
-            sharesPending: foundingPlacement!.unsoldShares,
-            counterparty: "equity_market_pool",
-          },
-        });
-      } else if (settlement.status === "rejected" && settlement.appliedLegs.length === 0) {
-        await corporationsCollection(db).updateOne(
-          {
-            _id: result.insertedId,
-            "foundingIpoUnderwritingPending.offer.instrumentId": foundingOffer.instrumentId,
-          },
-          { $unset: { foundingIpoUnderwritingPending: "" }, $set: { updatedAt: now } }
-        );
-        foundingSettlementStarted = false;
-        foundingSettlementAborted = true;
-      } else {
-        foundingSettlementPending = true;
-      }
-    }
-
-    // Open the founder's CEO tenure so later departures stamp an endTurn
-    // (needed for the former-CEO bond-purchase block).
-    await openCeoTenure(db, result.insertedId, {
-      holderId: character._id,
-      ceoType: corporation.ceoType === "imperial" ? "imperial" : "character",
+  if (foundingOffer && foundingUnderwriterBank && foundingUnderwritingProjection) {
+    // The private shell and frozen publication plan exist before settlement.
+    // If the process stops here, corporation-turn recovery resumes the
+    // exact plan; no public shares or proceeds exist until its journal ACKs.
+    const settlement = await settlePrimaryUnderwritingFill(db, {
+      bank: foundingUnderwriterBank,
+      issuer: { _id: result.insertedId, ...corporation },
+      issuerCurrencyCode: underwritingCurrency,
+      offer: foundingOffer,
+      instrumentId: foundingOffer.instrumentId,
+      grossPlacedLocal: foundingPlacement!.paidLocal,
       turn: foundedAtTurn,
+      now,
+      poolCollection: "equityMarketPools",
+      instrumentProjection: foundingUnderwritingProjection,
     });
-
-    await charactersCollection(db).updateOne({ _id: character._id }, { $set: { updatedAt: now } });
-
-    // Auto-vote the founder as CEO so the vote record exists from creation
-    await corporationCeoVotesCollection<Document>(db).insertOne({
-      corporationId: result.insertedId,
-      voterCharacterId: character._id,
-      candidateCharacterId: character._id,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    // Financial ledger entries for both legs of the founding cash movement
-    // (player to corp, plus system grant and founding fee):
-    //   - corp_capital_seed on the character: NEGATIVE-amount debit covering
-    //     founding fee + extra treasury commitment, counterparty = corporation
-    //   - corp_capital_seed on the corp: POSITIVE-amount credit covering the
-    //     full starting capital landing in liquidCapital, counterparty = character
-    // The delta between the two (= CORPORATION_STARTING_CAPITAL minus the
-    // founding fee) represents the system's baseline grant + fee retention,
-    // captured in meta for forensics.
-    void emitTx(db, {
-      type: "corp_capital_seed",
-      turn: 0,
-      createdAt: now,
-      subjectType: "character",
-      subjectId: character._id,
-      subjectName: character.name,
-      amount: -totalPlayerCost,
-      currencyCode: homeCurrency,
-      counterpartyType: "corporation",
-      counterpartyId: result.insertedId,
-      counterpartyName: name,
-      meta: {
-        foundingFee: eraBounds.fee,
-        extraCapitalCommitment: extraCapitalOverBaselineAnchor,
-        side: "founder_outflow",
-      },
-    });
-    void emitTx(db, {
-      type: "corp_capital_seed",
-      turn: 0,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: result.insertedId,
-      subjectName: name,
-      amount: corpStartingCapital,
-      currencyCode: (corpHomeCurrency as CurrencyCode | undefined) ?? homeCurrency,
-      counterpartyType: "character",
-      counterpartyId: character._id,
-      counterpartyName: character.name,
-      meta: {
-        startingCapitalAnchor,
-        baselineCapital: CORPORATION_STARTING_CAPITAL,
-        extraCapitalCommitment: extraCapitalOverBaselineAnchor,
-        side: "corp_seed",
-      },
-    });
-
-    // The low-confidence founding premium is part of totalPlayerCost
-    // (already debited from the founder above) but does NOT land in the corp
-    // seed. Move it to the country treasury so money is conserved (no burn),
-    // and ledger the leg. Zero at/above baseline confidence ⇒ no-op.
-    if (confidencePremiumLocal > 0) {
-      await creditTreasuryProceedsPaired(db, {
-        countryId: corpCountryId,
-        amountLocal: confidencePremiumLocal,
-        now,
-        flow: "founding_confidence_premium",
-        key: `founding-premium:${result.insertedId.toHexString()}`,
-        site: "foundCorporation.confidencePremium",
+    if (settlement.status === "applied" || settlement.status === "replayed") {
+      const quote = quotePrimaryUnderwritingFee({
+        grossPlacedLocal: foundingPlacement!.paidLocal,
+        feeRate: foundingOffer.feeRate,
       });
-      void emitTx(db, {
-        type: "corp_capital_seed",
-        turn: 0,
-        createdAt: now,
-        subjectType: "government",
-        countryId: corpCountryId,
-        subjectName: `${corpCountryId} Treasury`,
-        amount: confidencePremiumLocal,
-        currencyCode: (corpHomeCurrency as CurrencyCode | undefined) ?? homeCurrency,
-        counterpartyType: "character",
-        counterpartyId: character._id,
-        counterpartyName: character.name,
-        meta: {
-          side: "founding_confidence_premium",
-          investorConfidence,
-          confidenceMultiplier,
-        },
-      });
-    }
-
-    if (foundingPlacement?.poolActive && foundingPlacement.paidLocal > 0 && !foundingOffer) {
-      void emitTx(db, {
+      await emitTx(db, {
         type: "ipo_proceeds",
         turn: foundedAtTurn,
         createdAt: now,
         subjectType: "corporation",
         subjectId: result.insertedId,
         subjectName: name,
-        amount: foundingPlacement.paidLocal,
-        currencyCode: (corpHomeCurrency as CurrencyCode | undefined) ?? homeCurrency,
+        amount: quote.issuerNetLocal,
+        currencyCode: underwritingCurrency,
         meta: {
-          sharesPlaced: foundingPlacement.placedShares,
-          sharesRequested: foundingPlacement.requestedShares,
-          sharesPending: foundingPlacement.unsoldShares,
+          grossPlacedLocal: quote.grossPlacedLocal,
+          underwritingFeeLocal: quote.feeLocal,
+          sharesPlaced: foundingPlacement!.placedShares,
+          sharesRequested: foundingPlacement!.requestedShares,
+          sharesPending: foundingPlacement!.unsoldShares,
           counterparty: "equity_market_pool",
         },
       });
+    } else if (settlement.status === "rejected" && settlement.appliedLegs.length === 0) {
+      await corporationsCollection(db).updateOne(
+        {
+          _id: result.insertedId,
+          "foundingIpoUnderwritingPending.offer.instrumentId": foundingOffer.instrumentId,
+        },
+        { $unset: { foundingIpoUnderwritingPending: "" }, $set: { updatedAt: now } }
+      );
+      foundingSettlementAborted = true;
+    } else {
+      foundingSettlementPending = true;
     }
+  }
 
-    const typeLabel = OPERATING_SECTOR_TYPE_LABELS[lane] ?? lane;
-    const hqStateDoc = await statesCollection(db).findOne(
-      { _id: headquartersState },
-      { projection: { name: 1 } }
-    );
-    const hqDisplayName = hqStateDoc?.name ?? headquartersState;
+  // Open the founder's CEO tenure so later departures stamp an endTurn
+  // (needed for the former-CEO bond-purchase block).
+  await openCeoTenure(db, result.insertedId, {
+    holderId: character._id,
+    ceoType: corporation.ceoType === "imperial" ? "imperial" : "character",
+    turn: foundedAtTurn,
+  });
+
+  await charactersCollection(db).updateOne({ _id: character._id }, { $set: { updatedAt: now } });
+
+  // Auto-vote the founder as CEO so the vote record exists from creation
+  await corporationCeoVotesCollection<Document>(db).insertOne({
+    corporationId: result.insertedId,
+    voterCharacterId: character._id,
+    candidateCharacterId: character._id,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Financial ledger entries for both legs of the founding cash movement
+  // (player to corp, plus system grant and founding fee):
+  //   - corp_capital_seed on the character: NEGATIVE-amount debit covering
+  //     founding fee + extra treasury commitment, counterparty = corporation
+  //   - corp_capital_seed on the corp: POSITIVE-amount credit covering the
+  //     full starting capital landing in liquidCapital, counterparty = character
+  // The delta between the two (= CORPORATION_STARTING_CAPITAL minus the
+  // founding fee) represents the system's baseline grant + fee retention,
+  // captured in meta for forensics.
+  await emitTx(db, {
+    type: "corp_capital_seed",
+    turn: 0,
+    createdAt: now,
+    subjectType: "character",
+    subjectId: character._id,
+    subjectName: character.name,
+    amount: -totalPlayerCost,
+    currencyCode: homeCurrency,
+    counterpartyType: "corporation",
+    counterpartyId: result.insertedId,
+    counterpartyName: name,
+    meta: {
+      foundingFee: eraBounds.fee,
+      extraCapitalCommitment: extraCapitalOverBaselineAnchor,
+      side: "founder_outflow",
+    },
+  });
+  await emitTx(db, {
+    type: "corp_capital_seed",
+    turn: 0,
+    createdAt: now,
+    subjectType: "corporation",
+    subjectId: result.insertedId,
+    subjectName: name,
+    amount: corpStartingCapital,
+    currencyCode: (corpHomeCurrency as CurrencyCode | undefined) ?? homeCurrency,
+    counterpartyType: "character",
+    counterpartyId: character._id,
+    counterpartyName: character.name,
+    meta: {
+      startingCapitalAnchor,
+      baselineCapital: CORPORATION_STARTING_CAPITAL,
+      extraCapitalCommitment: extraCapitalOverBaselineAnchor,
+      side: "corp_seed",
+    },
+  });
+
+  // The low-confidence founding premium is part of totalPlayerCost
+  // (already debited from the founder above) but does NOT land in the corp
+  // seed. Move it to the country treasury so money is conserved (no burn),
+  // and ledger the leg. Zero at/above baseline confidence ⇒ no-op.
+  if (confidencePremiumLocal > 0) {
+    await creditTreasuryProceedsPaired(db, {
+      countryId: corpCountryId,
+      amountLocal: confidencePremiumLocal,
+      now,
+      flow: "founding_confidence_premium",
+      key: `founding-premium:${result.insertedId.toHexString()}`,
+      site: "foundCorporation.confidencePremium",
+    });
+    await emitTx(db, {
+      type: "corp_capital_seed",
+      turn: 0,
+      createdAt: now,
+      subjectType: "government",
+      countryId: corpCountryId,
+      subjectName: `${corpCountryId} Treasury`,
+      amount: confidencePremiumLocal,
+      currencyCode: (corpHomeCurrency as CurrencyCode | undefined) ?? homeCurrency,
+      counterpartyType: "character",
+      counterpartyId: character._id,
+      counterpartyName: character.name,
+      meta: {
+        side: "founding_confidence_premium",
+        investorConfidence,
+        confidenceMultiplier,
+      },
+    });
+  }
+
+  if (foundingPlacement?.poolActive && foundingPlacement.paidLocal > 0 && !foundingOffer) {
+    await emitTx(db, {
+      type: "ipo_proceeds",
+      turn: foundedAtTurn,
+      createdAt: now,
+      subjectType: "corporation",
+      subjectId: result.insertedId,
+      subjectName: name,
+      amount: foundingPlacement.paidLocal,
+      currencyCode: (corpHomeCurrency as CurrencyCode | undefined) ?? homeCurrency,
+      meta: {
+        sharesPlaced: foundingPlacement.placedShares,
+        sharesRequested: foundingPlacement.requestedShares,
+        sharesPending: foundingPlacement.unsoldShares,
+        counterparty: "equity_market_pool",
+      },
+    });
+  }
+
+  const typeLabel = OPERATING_SECTOR_TYPE_LABELS[lane] ?? lane;
+  const hqStateDoc = await statesCollection(db).findOne(
+    { _id: headquartersState },
+    { projection: { name: 1 } }
+  );
+  const hqDisplayName = hqStateDoc?.name ?? headquartersState;
+  await afterCommit(db, () =>
     logWireEvent("corporation_founded", wireHeadlineCorpFounded(name, typeLabel, hqDisplayName), {
       href: `/corporation/${sequentialId}`,
-    });
+    })
+  );
 
+  await afterCommit(db, () =>
     recordAudit({
       source: "api",
       action: "corp.found",
@@ -832,62 +857,38 @@ export async function foundCorporation({
       refs: { corporationId: result.insertedId },
       outcome: "ok",
       meta: { type: lane, headquartersState, isPublicIpo: !!ipoResult },
-    });
+    })
+  );
 
-    if (ipoResult && ipo && !foundingSettlementPending && !foundingSettlementAborted) {
+  if (ipoResult && ipo && !foundingSettlementPending && !foundingSettlementAborted) {
+    await afterCommit(db, () =>
       logWireEvent("corporation_ipo", wireHeadlineCorpIpo(name, ipo.floatPct), {
         href: `/corporation/${sequentialId}`,
-      });
-    }
+      })
+    );
+  }
 
-    if (foundingSettlementPending) {
-      return {
-        ok: true,
-        status: 202,
-        body: {
-          corporationId: result.insertedId.toString(),
-          sequentialId,
-          message: `${name} has been founded privately while its funded IPO settlement completes.`,
-          settlementPending: true,
-        },
-      };
-    }
-    foundingSettlementStarted = false;
+  if (foundingSettlementPending) {
     return {
       ok: true,
-      status: 201,
+      status: 202,
       body: {
         corporationId: result.insertedId.toString(),
         sequentialId,
-        message: foundingSettlementAborted
-          ? `${name} has been founded privately; the selected bank could not fund the IPO. No public shares or proceeds were issued.`
-          : `${name} has been founded!`,
+        message: `${name} has been founded privately while its funded IPO settlement completes.`,
+        settlementPending: true,
       },
     };
-  } catch (error) {
-    if (foundingSettlementStarted) {
-      // The settlement may have committed one or more cash legs. Keep the
-      // frozen shell for journal recovery rather than deleting a paid issuer.
-      throw error;
-    }
-    if (createdCorporationId) {
-      await corporationCeoVotesCollection<Document>(db).deleteMany({
-        corporationId: createdCorporationId,
-      });
-      await corporationsCollection(db).deleteOne({ _id: createdCorporationId });
-    }
-    await refundCharacterCash(db, character._id, homeCurrency, totalPlayerCost, forexEnabled);
-    if (foundingPlacement && !foundingOffer) {
-      await refundPreparedEquityPlacement(db, foundingPlacement, now);
-    }
-    // Race-loser path: the pre-check above said the ticker was free, but a
-    // concurrent founder won the unique-index insert. Translate to the same
-    // 400 the pre-check returns instead of bubbling up a 500.
-    const code = (error as { code?: number }).code;
-    const msg = error instanceof Error ? error.message : String(error);
-    if (code === 11000 && msg.includes("tickerSymbol")) {
-      return fail(400, "That ticker symbol is already taken");
-    }
-    throw error;
   }
+  return {
+    ok: true,
+    status: 201,
+    body: {
+      corporationId: result.insertedId.toString(),
+      sequentialId,
+      message: foundingSettlementAborted
+        ? `${name} has been founded privately; the selected bank could not fund the IPO. No public shares or proceeds were issued.`
+        : `${name} has been founded!`,
+    },
+  };
 }

@@ -3,7 +3,8 @@ import { ObjectId, type Db } from "mongodb";
 import { applyDefenceDeliveries } from "@/lib/turn/defenceDeliveryTurn";
 import { lotProductionCost, GRADE_PRICE_SCALE } from "@/lib/military/defenceLotEconomics";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 
@@ -144,6 +145,11 @@ function stubDb(l: Ledger): Db {
       if (name === "corporateSectors") {
         return {
           findOne: async () => ({ _id: SECTOR_ID, strategyId: "heavy_armor", revenue: 10_000_000 }),
+          find: () => ({
+            toArray: async () => [
+              { _id: SECTOR_ID, strategyId: "heavy_armor", revenue: 10_000_000 },
+            ],
+          }),
           bulkWrite: async (ops: unknown[]) => ({ modifiedCount: ops.length }),
         };
       }

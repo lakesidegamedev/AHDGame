@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 /**
  * Vote → ideology shift wiring.
@@ -95,7 +100,7 @@ describe("national bill vote → policy shift", () => {
   });
 
   function usBill(overrides: Partial<Bill> = {}): Bill {
-    return {
+    const bill = {
       _id: new ObjectId(),
       title: "Public Works Act",
       summary: "Summary",
@@ -118,6 +123,8 @@ describe("national bill vote → policy shift", () => {
       ] as Bill["provisions"],
       ...overrides,
     } as Bill;
+    db.collection("bills").findOne.mockResolvedValue(bill).mockResolvedValueOnce(bill);
+    return bill;
   }
 
   it.each(["US", "UK", "JP"] as const)(

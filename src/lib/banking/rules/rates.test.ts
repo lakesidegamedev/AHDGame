@@ -37,9 +37,9 @@ describe("playerDepositRatePercent", () => {
     expect(playerDepositRatePercent(0.05, false, 4, 0)).toBe(0);
   });
 
-  it("treats a missing prime as zero prime, keeping the floor", () => {
-    // Base = max(0.5, 0 - 0) / 2 = 0.25; 4 - 0.25 = 3.75.
-    expect(playerDepositRatePercent(4, false, Number.NaN, 0)).toBeCloseTo(3.75, 10);
+  it("treats a missing prime as no central-bank base payment", () => {
+    // A non-positive prime pays no base savings APY.
+    expect(playerDepositRatePercent(4, false, Number.NaN, 0)).toBe(4);
   });
 });
 

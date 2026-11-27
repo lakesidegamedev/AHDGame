@@ -5,10 +5,12 @@ import { lotsFromSector, rawLotsFromSector } from "@/lib/military/arsenal";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 
-vi.mock("@/lib/db/sessionDb", () => ({
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
   withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
 }));
 vi.mock("@/lib/turn/withTurnValueSettlement", () => ({

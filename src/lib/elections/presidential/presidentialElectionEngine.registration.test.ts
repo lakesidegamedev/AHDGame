@@ -137,6 +137,7 @@ function buildMockDb(opts: HarnessOpts) {
       return {
         findOne: vi.fn().mockResolvedValue({
           electionId,
+          turnSnapshots: [],
           totalVotes: { [demId]: 0, [repId]: 0 },
           totalVotesByUnit: initialTotalVotesByUnit,
           unitTurnSnapshots: {},

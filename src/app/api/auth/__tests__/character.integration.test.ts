@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 /**
  * Integration tests for character creation endpoint.
  * Tests end-to-end character creation flow with mocked database.
@@ -271,7 +289,8 @@ describe("POST /api/auth/character - Character Creation", () => {
 
     const mockDb = {
       collection: vi.fn().mockImplementation((name: string) => {
-        if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
+        if (name === "exchangeRates")
+          return { find: () => ({ toArray: async () => [{ currencyCode: "USD", rate: 1 }] }) };
         if (name === "states") {
           return {
             // `loadUsPoliticalStateIds` reads admitted states with find().

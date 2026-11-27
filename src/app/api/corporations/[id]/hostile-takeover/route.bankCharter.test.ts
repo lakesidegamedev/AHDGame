@@ -1,3 +1,8 @@
+// Formula fixtures isolate transaction transport; atomic suites exercise rollback and races.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
   withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
 }));
@@ -194,7 +199,7 @@ describe("hostile takeover with a banked subsidiary (ticket-1267)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.bankCharterTransferred).toBe(true);
 
@@ -271,7 +276,7 @@ describe("hostile takeover with a banked subsidiary (ticket-1267)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(400);
+    expect(response.status, await response.clone().text()).toBe(400);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.error).toMatch(/already operates a bank/);
 
@@ -327,7 +332,7 @@ describe("hostile takeover with a banked subsidiary (ticket-1267)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(400);
+    expect(response.status, await response.clone().text()).toBe(400);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.error).toMatch(/already operates a bank/);
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
@@ -365,7 +370,7 @@ describe("hostile takeover of a subsidiary that owes ordinary bank loans", () =>
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
     expect(db.collectionMocks.bankLoans.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ _id: { $in: [loanId] }, borrowerId: targetId }),
       { $set: { borrowerId: parentId } }
@@ -397,7 +402,7 @@ describe("hostile takeover of a subsidiary that owes ordinary bank loans", () =>
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(409);
+    expect(response.status, await response.clone().text()).toBe(409);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.error).toMatch(/repaid in EUR/);
     expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();

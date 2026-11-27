@@ -278,8 +278,8 @@ describe("mixed coupon collections", () => {
         "npps"
       );
       expect((await applyMoneyMove(nppTracked.db, f.move)).status).toBe("applied");
-      expect(Object.values(tracked.counts).reduce((a, b) => a + b, 0)).toBe(4);
-      expect(Object.values(nppTracked.counts).reduce((a, b) => a + b, 0)).toBe(4);
+      expect(Object.values(tracked.counts).reduce((a, b) => a + b, 0)).toBe(5);
+      expect(Object.values(nppTracked.counts).reduce((a, b) => a + b, 0)).toBe(5);
       expect(f.move.legs).toHaveLength(npps + funds + characters + 1);
       f.checkPaid();
       expect((await applyMoneyMove(f.db, f.move)).status).toBe("replayed");

@@ -9,8 +9,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { withSessionDb } from "@/lib/db/sessionDb";
-import { emitTx, loadTxThresholds } from "@/lib/financialTxLog/emit";
-import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
+import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { sumFundBondHoldingsByFundId } from "@/lib/bonds/fundBondHoldings";
 import { loadOpenOrdersEscrowByFundId, loadQueuedRedemptionUnitsByFundId } from "../fundValuation";
 import { computeHoldingsValueAnchor } from "../fundAllocation";
@@ -178,15 +177,8 @@ export async function chargeSponsorExpenseFees(
     // single-row emitter repeated both once per sponsored fund. Loaded only
     // once a fee is actually charged, so a pass that charges nothing reads
     // nothing new.
-    const [thresholds, turnLengthMinutes] = await Promise.all([
-      loadTxThresholds(tx),
-      loadTurnLengthMinutes(tx),
-    ]);
-    // Each fee row still commits with the money it describes.
-    for (const witness of witnesses) {
-      if ((await emitTx(tx, witness, thresholds, { turnLengthMinutes })) === "failed")
-        throw new Error("Fund fee witness failed");
-    }
+    const thresholds = await loadTxThresholds(tx);
+    await emitTxBulk(tx, witnesses, thresholds);
     return outcome;
   });
 }

@@ -135,8 +135,13 @@ function collectionStub(store: Doc[]) {
       store.push(copy);
       return { insertedId: copy._id };
     }),
-    updateOne: vi.fn(async (filter: Doc, update: Doc) => {
+    updateOne: vi.fn(async (filter: Doc, update: Doc, options?: { upsert?: boolean }) => {
       const doc = store.find((d) => matchesQuery(d, filter));
+      if (!doc && options?.upsert) {
+        const inserted = { ...filter, ...((update.$setOnInsert as Doc) ?? {}) };
+        store.push(inserted);
+        return { modifiedCount: 0, matchedCount: 0, upsertedCount: 1, upsertedId: inserted._id };
+      }
       if (!doc) return { modifiedCount: 0, matchedCount: 0 };
       applyUpdate(doc, update);
       return { modifiedCount: 1, matchedCount: 1 };

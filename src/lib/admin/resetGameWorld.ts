@@ -382,6 +382,7 @@ export async function resetGameWorld(
   db: Db,
   options: ResetGameWorldOptions
 ): Promise<ResetGameWorldResult> {
+  assertKnownSeedPreset(options.preset);
   return withWorldResetAdmission(db, () => resetGameWorldInScope(db, options), options.admission);
 }
 

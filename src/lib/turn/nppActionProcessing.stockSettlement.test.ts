@@ -10,7 +10,8 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 
 vi.mock("@/lib/nppAutonomy/v3/finance/nppShares", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/nppAutonomy/v3/finance/nppShares")>();
@@ -211,8 +212,8 @@ describe("v6 stock-buy settlement", () => {
         corp as never,
         preset
       );
-      expect(result.ok).toBe(true);
-      corp.publicFloat = (corp.publicFloat as number) - shares;
+      expect(result, JSON.stringify(result)).toMatchObject({ ok: true });
+      // nppBuyShares advances the supplied snapshot only after commit.
     }
 
     expect(await snapshot(swept)).toEqual(await snapshot(replay));

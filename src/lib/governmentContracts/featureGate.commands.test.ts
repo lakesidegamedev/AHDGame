@@ -1,7 +1,8 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { publishTender, submitBid, awardTender, cancelTender } from "./commands";
 import { acceptContractOffer } from "@/lib/extraction/commands/acceptContractOffer";
 import type { GovernmentTender } from "./types";
@@ -163,13 +164,11 @@ describe("government contract server enforcement", () => {
     ).toBe("canceled");
   });
   it("blocks accepting a legacy extraction offer before any payment", async () => {
-    const result = await acceptContractOffer(
-      db,
-      { status: "offered" } as never,
-      {} as never,
-      5,
-      now
-    );
+    const offer = { _id: new ObjectId(), status: "offered" };
+    const corp = { _id: corporationId };
+    await db.collection("extractionContracts").insertOne(offer);
+    await db.collection("corporations").insertOne(corp);
+    const result = await acceptContractOffer(db, offer as never, corp as never, 5, now);
     expect(result).toEqual({ ok: false, status: 503, error: message });
     expect(await db.collection("bankMoneyMoves").countDocuments({})).toBe(0);
   });

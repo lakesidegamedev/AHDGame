@@ -100,7 +100,7 @@ describe("fundQueries position mutations", () => {
     const result = await debitFundPosition(db as never, fundId, "character", { characterId }, 4);
     expect(result).toEqual({ ok: true, position: null, legacyUnitsRedeemed: 0 });
     expect(db.collectionMocks[FUND_POSITION_COLLECTION]!.deleteOne).toHaveBeenCalledWith(
-      { _id: positionId },
+      { _id: positionId, units: { $lte: 0 } },
       undefined
     );
   });

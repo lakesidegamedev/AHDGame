@@ -43,6 +43,7 @@ function mockDb() {
   const updates: Array<{ filter: Record<string, unknown>; update: Record<string, unknown> }> = [];
   const db = {
     collection: () => ({
+      findOne: async () => null,
       updateOne: async (filter: Record<string, unknown>, update: Record<string, unknown>) => {
         updates.push({ filter, update });
         return { modifiedCount: 1 };

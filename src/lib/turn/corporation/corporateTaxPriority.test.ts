@@ -6,7 +6,8 @@ import {
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { settleCorporateTaxPriority } from "./corporateTaxPriority";
 import type { CorpSnapshot } from "./types";
 import { producerCashTransition } from "@/lib/market/producerMarket/cashSettlementRules";

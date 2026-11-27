@@ -9,7 +9,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { countRoundTrips } from "@/lib/test-utils/roundTripCounter";
 import { getDb } from "@/lib/mongodb";
 import { runIndexFundCron } from "./fundCron";
@@ -160,16 +161,29 @@ describe.each([false, true])(
 
     it("reads the equity pools and open bids once for the whole rebalance pass", async () => {
       const w = world(12);
+      const logBatches = vi.spyOn(w.memory.collection("financialTxLog"), "insertMany");
+      const poolReads = vi.spyOn(w.memory.collection("equityMarketPools"), "find");
       const trips = countRoundTrips(w.memory);
       const result = await runIndexFundCron(w.db, { currentTurn: 48, reuseRebalanceReads });
       expect(result.errors).toEqual([]);
       expect(result.floatPurchases).toBeGreaterThan(150);
       // One snapshot for every quoting fund: buys and sales advance it in memory.
-      expect(trips.count("equityMarketPools", "find"), trips.summary()).toBeLessThanOrEqual(2);
+      // Cash precision preflights read only the mutation targets; these do not reprice trades.
+      const preflights = poolReads.mock.calls.filter(
+        ([filter]) => (filter as { _id?: { $in?: unknown[] } })._id?.$in
+      );
+      expect(poolReads.mock.calls.length - preflights.length, trips.summary()).toBeLessThanOrEqual(
+        2
+      );
+      expect(preflights.length, trips.summary()).toBeLessThanOrEqual(w.funds + 2);
       // One query for every rebalancing fund's resting bids, not one per fund.
       expect(trips.count("shareOrders", "find"), trips.summary()).toBeLessThan(w.funds);
-      // The bid escrow journal rows are flushed once for the pass.
-      expect(trips.count("financialTxLog", "insertMany"), trips.summary()).toBeLessThanOrEqual(2);
+      // A fund now commits escrow and its ledger witness in its own transaction.
+      // Bound the protocol overhead to one batch per fund plus the two pass-wide flushes.
+      const bidBatches = logBatches.mock.calls.filter(([rows]) =>
+        rows.some((row) => row.type === "stock_order_escrow" || row.type === "stock_order_refund")
+      );
+      expect(bidBatches.length, trips.summary()).toBeLessThanOrEqual(w.funds + 2);
     }, 280_000);
 
     it("does not grow the quiet-turn per-fund cost as funds are added", async () => {

@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 /**
  * Regression: the banned-party guards must read the RUNTIME government type.
  *
@@ -104,6 +109,15 @@ describe("banned-party guards under a runtime conversion", () => {
       regimeStatus: "banned",
     });
 
+    const bill = {
+      _id: new ObjectId(),
+      countryId: "DE",
+      status: "active",
+      currentChamber: "bundestag",
+      votes: {},
+    } as unknown as Parameters<typeof performNationalBillAction>[1]["bill"];
+
+    db.collection("bills").findOne.mockResolvedValue(bill);
     const result = await performNationalBillAction(db as unknown as Db, {
       authUser: { userId: userId.toString(), isAdmin: false } as AuthUser,
       character: {
@@ -112,13 +126,7 @@ describe("banned-party guards under a runtime conversion", () => {
         userId,
         party: "1",
       } as unknown as Parameters<typeof performNationalBillAction>[1]["character"],
-      bill: {
-        _id: new ObjectId(),
-        countryId: "DE",
-        status: "active",
-        currentChamber: "bundestag",
-        votes: {},
-      } as unknown as Parameters<typeof performNationalBillAction>[1]["bill"],
+      bill,
       countryId: "DE",
       input: { action: "vote", vote: "for" },
     });
