@@ -14,11 +14,12 @@ const COST_LABELS: Record<StoreLedgerView["runningCostRows"][number]["key"], str
 };
 
 /**
- * A store's last settled turn. Stores buy finished goods from producers at the
- * market price and households pay the store that price plus its markup:
+ * A store's last settled turn. Revenue is the full value of the goods
+ * households bought through the store; the store paid producers the market
+ * price for them, and the difference is its markup:
  *
- *   sold to households = goods bought wholesale + markup earned
- *   margin             = markup earned - running costs
+ *   revenue - cost of goods resold = markup (gross profit)
+ *   markup  - running costs        = profit
  */
 export default function StoreLedgerPanel({
   ledger,
@@ -41,11 +42,12 @@ export default function StoreLedgerPanel({
       </h2>
       <p className="mt-1 text-body-sm text-muted">
         Households in this state buy groceries, electronics and consumer goods through stores. The
-        store pays producers the market price and keeps the markup. Each line below adds up to the
-        next.
+        store pays producers the market price, so its revenue is the full value of the goods it sold
+        and its gross profit is the markup. Each line below adds up to the next.
       </p>
       <dl className="mt-3 divide-y divide-border text-body-sm">
-        <Row label="Goods bought wholesale" value={money(ledger.goodsBoughtWholesale)} />
+        <Row strong label="Revenue (goods sold to households)" value={money(ledger.revenue)} />
+        <Row label="Cost of goods resold" value={`- ${money(ledger.costOfGoods)}`} />
         {ledger.wholesaleByCommodity.map((row) => (
           <Row
             key={row.commodity}
@@ -55,21 +57,21 @@ export default function StoreLedgerPanel({
           />
         ))}
         <Row
+          strong
           label={
             ledger.markupRate != null
-              ? `Markup earned (${percent(ledger.markupRate)} of wholesale)`
-              : "Markup earned"
+              ? `Markup (gross profit, ${percent(ledger.markupRate)} of cost)`
+              : "Markup (gross profit)"
           }
-          value={`+ ${money(ledger.markupEarned)}`}
+          value={money(ledger.grossProfit)}
         />
-        <Row strong label="Sold to households" value={money(ledger.soldToHouseholds)} />
         <Row label="Running costs" value={`- ${money(ledger.runningCosts)}`} />
         {ledger.runningCostRows
           .filter((row) => row.key !== "other" || Math.abs(row.value) > 1e-9)
           .map((row) => (
             <Row key={row.key} indent label={COST_LABELS[row.key]} value={money(row.value)} />
           ))}
-        <Row strong label="Margin (markup minus running costs)" value={money(ledger.margin)} />
+        <Row strong label="Profit (markup minus running costs)" value={money(ledger.margin)} />
       </dl>
       {ledger.capacityUsedShare != null && (
         <p className="mt-3 text-body-sm text-muted">

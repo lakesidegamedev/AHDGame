@@ -17,6 +17,8 @@ export interface CountryOperatingTotals {
   maintenance: number;
   labor: number;
   freightCosts: number;
+  /** Stores: wholesale value of goods resold, inside revenue. */
+  storeGoodsCost?: number;
   growthCosts: number;
   regulatoryBurden: number;
 }
@@ -38,6 +40,8 @@ export interface CountryStatement {
   maintenanceCosts: number;
   laborCosts: number;
   freightCosts: number;
+  /** Stores: what they paid producers for the goods they resold. */
+  storeGoodsCost: number;
   growthCosts: number;
   regulatoryBurden: number;
   federalTax: number;
@@ -64,6 +68,7 @@ export function buildCountryStatements(
         maintenanceCosts: whole(o.maintenance) - labor,
         laborCosts: labor,
         freightCosts: whole(o.freightCosts),
+        storeGoodsCost: whole(o.storeGoodsCost ?? 0),
         growthCosts: whole(o.growthCosts),
         regulatoryBurden: whole(o.regulatoryBurden),
         federalTax: whole(tax?.federal ?? 0),
@@ -76,6 +81,7 @@ export function buildCountryStatements(
         row.maintenanceCosts -
         row.laborCosts -
         row.freightCosts -
+        row.storeGoodsCost -
         row.growthCosts -
         row.regulatoryBurden -
         row.federalTax -

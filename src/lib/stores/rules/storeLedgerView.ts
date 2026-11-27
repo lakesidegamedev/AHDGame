@@ -1,7 +1,9 @@
 /**
- * A store's last settled turn laid out for its page: goods bought wholesale,
- * what households paid, markup earned and running costs, in daily-rate money
- * like every other sector figure. The rows add up by construction.
+ * A store's last settled turn laid out for its page, in daily-rate money in the
+ * sector's own currency like every other sector figure. Revenue is the full
+ * value of the goods sold to households; cost of goods is what the store paid
+ * producers; the markup is its gross profit; running costs come off that to
+ * leave the profit. The rows add up by construction.
  */
 import { storeLedger } from "./storeRules";
 
@@ -16,8 +18,14 @@ export interface StoreLedgerView {
   runningCosts: number;
   /** Wages, site bills, running inputs, and anything else the bill carried. */
   runningCostRows: { key: "wages" | "site" | "inputs" | "other"; value: number }[];
-  /** Markup earned minus running costs. */
+  /** Markup earned minus running costs: the store's profit. */
   margin: number;
+  /** Revenue shown on the page: the full value of goods sold to households. */
+  revenue: number;
+  /** Cost of goods resold: what the store paid producers, equal to goods bought wholesale. */
+  costOfGoods: number;
+  /** Gross profit: revenue less cost of goods, which is the markup earned. */
+  grossProfit: number;
   /** Markup as a share of the wholesale value, the rate charged that turn; null with no sales. */
   markupRate: number | null;
   /**
@@ -32,6 +40,11 @@ export interface StoreLedgerView {
 export function storeLedgerView(input: {
   turn: number;
   turnsPerDay: number;
+  /**
+   * Sector currency per anchor. Receipts are anchor per turn; the page shows
+   * the sector's own currency. Absent = 1.
+   */
+  localPerAnchor?: number;
   receipt: {
     store: {
       goodsBoughtWholesale: number;
@@ -60,7 +73,13 @@ export function storeLedgerView(input: {
     markupEarned: markup,
     runningCosts: running,
   });
-  const daily = (n: number) => n * turnsPerDay;
+  const rate =
+    input.localPerAnchor != null &&
+    Number.isFinite(input.localPerAnchor) &&
+    input.localPerAnchor > 0
+      ? input.localPerAnchor
+      : 1;
+  const daily = (n: number) => n * turnsPerDay * rate;
   return {
     turn: input.turn,
     goodsBoughtWholesale: daily(ledger.goodsBoughtWholesale),
@@ -78,6 +97,9 @@ export function storeLedgerView(input: {
       { key: "other", value: daily(other) },
     ],
     margin: daily(ledger.margin),
+    revenue: daily(ledger.soldToHouseholds),
+    costOfGoods: daily(ledger.goodsBoughtWholesale),
+    grossProfit: daily(ledger.markupEarned),
     markupRate:
       ledger.goodsBoughtWholesale > 0 ? ledger.markupEarned / ledger.goodsBoughtWholesale : null,
     capacityUsedShare:

@@ -799,6 +799,7 @@ export async function buildSectorDetailPlantsTier({
           .attackerSharePercent
       : marketShare;
     plants = buildSectorPlantsSection({
+      localPerAnchor: 1 / sectorAmountAnchor(1),
       sector,
       sectorType,
       worldBuildSettledTurn: gameState?.buildDeliverySettledTurn,

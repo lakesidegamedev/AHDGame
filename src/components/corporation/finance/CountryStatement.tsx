@@ -32,6 +32,7 @@ export function CountryStatement({
     ["Maintenance", row.maintenanceCosts],
     ["Wages", row.laborCosts],
     ["Freight charges", row.freightCosts],
+    ["Cost of goods resold", row.storeGoodsCost],
     ["Growth", row.growthCosts],
     ["Regulatory burden", row.regulatoryBurden],
     [

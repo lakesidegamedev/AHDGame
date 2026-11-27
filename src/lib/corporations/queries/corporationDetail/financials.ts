@@ -105,6 +105,8 @@ export function buildFinancials(inputs: FinancialsInputs) {
     maintenanceCosts: Math.round(totals.totalMaintenanceCosts - totals.totalLaborCosts),
     laborCosts: Math.round(totals.totalLaborCosts),
     freightCosts: Math.round(totals.totalFreightCosts ?? 0),
+    // Stores: what they paid producers for the goods inside totalRevenue.
+    storeGoodsCost: Math.round(totals.totalStoreGoodsCost ?? 0),
     freightIncome: Math.round(totals.totalFreightIncome ?? 0),
     growthCosts: Math.round(totals.totalGrowthCosts),
     regulatoryBurden: Math.round(totals.totalRegulatoryBurden),

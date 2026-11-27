@@ -32,6 +32,22 @@ describe("store ledger view", () => {
     expect(view.runningCostRows.find((r) => r.key === "other")!.value).toBeCloseTo(0, 9);
     expect(view.markupRate).toBeCloseTo(0.15, 12);
     expect(view.capacityUsedShare).toBeCloseTo(0.25, 12);
+    // Full value: revenue less cost of goods is the markup, the gross profit.
+    expect(view.revenue).toBeCloseTo(view.soldToHouseholds, 9);
+    expect(view.costOfGoods).toBeCloseTo(view.goodsBoughtWholesale, 9);
+    expect(view.revenue - view.costOfGoods).toBeCloseTo(view.grossProfit, 9);
+    expect(view.grossProfit).toBeCloseTo(view.markupEarned, 9);
+    expect(view.grossProfit - view.runningCosts).toBeCloseTo(view.margin, 9);
+  });
+
+  it("shows anchor receipts in the sector's own currency", () => {
+    const anchor = storeLedgerView({ turn: 247, turnsPerDay: 1, receipt });
+    const cad = storeLedgerView({ turn: 247, turnsPerDay: 1, localPerAnchor: 1.5, receipt });
+    expect(cad.revenue).toBeCloseTo(anchor.revenue * 1.5, 9);
+    expect(cad.costOfGoods).toBeCloseTo(anchor.costOfGoods * 1.5, 9);
+    expect(cad.margin).toBeCloseTo(receipt.profit * 1.5, 9);
+    // Rates and shares do not change with the currency.
+    expect(cad.markupRate).toBeCloseTo(anchor.markupRate!, 12);
   });
 
   it("puts any running cost the receipt does not name in its own line", () => {

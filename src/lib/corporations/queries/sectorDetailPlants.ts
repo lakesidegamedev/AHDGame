@@ -68,6 +68,8 @@ export { fundedIdleWeights, type IdleWeight } from "./sectorFundedIdle";
  * the prime rate the caller already has to resolve.
  */
 export function buildSectorPlantsSection(args: {
+  /** Sector currency per anchor, for receipts stored in anchor (store ledger). Absent = 1. */
+  localPerAnchor?: number;
   sector: CorporateSector;
   sectorType: OperatingSectorType;
   currentTurn: number;
@@ -208,6 +210,7 @@ export function buildSectorPlantsSection(args: {
     ? storeLedgerView({
         turn: storeReceipt.turn,
         turnsPerDay: TURNS_PER_DAY,
+        ...(args.localPerAnchor != null ? { localPerAnchor: args.localPerAnchor } : {}),
         receipt: {
           store: storeReceipt.store,
           profit: storeReceipt.profit,
