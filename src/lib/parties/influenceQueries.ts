@@ -10,6 +10,7 @@ export {
   DEFAULT_PARTY_INFLUENCE_POOL_MULTIPLIER,
   computeClosenessScalar,
   computeLeadershipBonus,
+  loadLeadershipBonusOptions,
   computeInfamyPenalty,
   computeTurnGain,
   computeBonusActions,
