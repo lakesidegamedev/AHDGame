@@ -62,6 +62,7 @@ import { cabinetNominationsCollection } from "@/lib/db/repositories/cabinetNomin
 import { congressLeadersCollection } from "@/lib/db/repositories/congressLeaders";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { logger } from "@/lib/observability/logger";
 import { partyChartersCollection } from "@/lib/db/repositories/partyCharters";
 import { retiredCharactersCollection } from "@/lib/db/repositories/retiredCharacters";
 import { statePartyCandidatesCollection } from "@/lib/db/repositories/statePartyCandidates";
@@ -113,7 +114,7 @@ export async function retireCharacter(
         { $set: { characterName: character.name } }
       );
     } catch (error) {
-      console.error("[retireCharacter] achievement name stamp failed:", error);
+      logger.error("retireCharacter", "achievement name stamp failed", error);
     }
   }
 

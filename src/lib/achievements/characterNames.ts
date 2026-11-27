@@ -4,6 +4,7 @@
  */
 import type { Db, ObjectId } from "mongodb";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { logger } from "@/lib/observability/logger";
 import { normalizeEarnedAsName } from "./earnedAs";
 
 /** Current names for the given character ids, keyed by id string. Never throws. */
@@ -25,7 +26,7 @@ export async function loadCharacterNames(
     }
     return names;
   } catch (error) {
-    console.error("[achievements] loadCharacterNames error:", error);
+    logger.error("achievements", "loadCharacterNames failed", error);
     return new Map();
   }
 }
