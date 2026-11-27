@@ -58,7 +58,11 @@ describe("store rules", () => {
     expect(at(247, schedule)).toBeCloseTo(0.4, 12);
     expect(at(259, schedule)).toBe(0.15);
     expect(at(300, schedule)).toBe(0.15);
-    // Defaults: 12 turns from 40%.
+    // Defaults: 4 turns from 40%, to a standing 35% when none is set.
+    expect(clampStoreMarkup(undefined)).toBe(0.35);
+    expect(
+      storeMarkupForTurn({ standingMarkup: undefined, transition: { startTurn: 247 }, turn: 251 })
+    ).toBe(0.35);
     expect(at(247, { startTurn: 247 })).toBeCloseTo(STORE_TRANSITION_DEFAULT_START_MARKUP, 12);
     expect(at(247 + STORE_TRANSITION_DEFAULT_TURNS, { startTurn: 247 })).toBe(0.15);
     // Start equal to standing: no changeover.

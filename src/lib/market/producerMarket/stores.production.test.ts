@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { laneKeyOf } from "./laneKey";
 import {
+  STORE_MARKUP_DEFAULT,
   STORE_TRANSITION_DEFAULT_START_MARKUP,
   STORE_TRANSITION_DEFAULT_TURNS,
   STORE_TYPICAL_RUNNING_COST_SHARE,
@@ -261,9 +262,13 @@ describe("a typical player retail company crosses over without a cliff", () => {
   };
   const schedule = { startTurn: 247 };
   const markups = Array.from({ length: STORE_TRANSITION_DEFAULT_TURNS + 1 }, (_, i) =>
-    storeMarkupForTurn({ standingMarkup: 0.15, transition: schedule, turn: 247 + i })
+    storeMarkupForTurn({ standingMarkup: undefined, transition: schedule, turn: 247 + i })
   );
   const profits = markups.map(turnProfit);
+  // Capacity-bound: it resells capacity / (1 + markup) wholesale and keeps the
+  // markup less its running costs on that.
+  const capacityBound = (markup: number) =>
+    (capacityValue / (1 + markup)) * (markup - STORE_TYPICAL_RUNNING_COST_SHARE);
 
   it("stays within about 20% of its pre-switch profit on the first stores turn", () => {
     expect(markups[0]).toBeCloseTo(STORE_TRANSITION_DEFAULT_START_MARKUP, 12);
@@ -277,15 +282,23 @@ describe("a typical player retail company crosses over without a cliff", () => {
     }
   });
 
-  it("ends on the standing markup with a store earning a normal margin on its value added", () => {
-    expect(markups.at(-1)).toBe(0.15);
-    // Capacity-bound: it resells capacity / (1 + markup) wholesale and keeps
-    // the markup less its running costs on that.
-    const wholesale = capacityValue / 1.15;
-    expect(profits.at(-1)!).toBeCloseTo(wholesale * (0.15 - STORE_TYPICAL_RUNNING_COST_SHARE), 0);
+  it("settles on the standing 35% markup at about a third under its basket-era profit", () => {
+    expect(markups.at(-1)).toBe(STORE_MARKUP_DEFAULT);
+    expect(STORE_MARKUP_DEFAULT).toBe(0.35);
+    expect(profits.at(-1)!).toBeCloseTo(capacityBound(0.35), 0);
+    // 3.45M / 1.35 x 0.225 = about 575 000 against about 837 000 before.
+    const change = profits.at(-1)! / profitBeforeSwitch - 1;
+    expect(change).toBeGreaterThan(-0.35);
+    expect(change).toBeLessThan(-0.25);
+  });
+
+  it("would keep 30% to 40% of its value added at a 15% markup (throughput calibration)", () => {
+    const profit = turnProfit(0.15);
+    expect(profit).toBeCloseTo(capacityBound(0.15), 0);
     // Supplies are about 70 of the 110 a capacity unit costs (8% of goods resold).
-    const valueAdded = wholesale * (0.15 - (STORE_TYPICAL_RUNNING_COST_SHARE * 70) / 110);
-    const share = profits.at(-1)! / valueAdded;
+    const valueAdded =
+      (capacityValue / 1.15) * (0.15 - (STORE_TYPICAL_RUNNING_COST_SHARE * 70) / 110);
+    const share = profit / valueAdded;
     expect(share).toBeGreaterThan(0.3);
     expect(share).toBeLessThan(0.4);
   });
