@@ -351,6 +351,30 @@ describe("funded bank treasury settlement", () => {
     expect((db.collection("bonds").docs[0] as unknown as Bond).holders).toEqual([]);
   });
 
+  it("does not sweep a bank whose net assets cannot absorb the ask-to-bid loss", async () => {
+    const db = world();
+    // Cash exactly covers the deposits: zero net assets, plenty of spendable cash.
+    await db.collection("corporations").updateOne(
+      { _id: BANK },
+      {
+        $set: {
+          "bankCharter.cashReserves": 100_000,
+          "bankCharter.npcDeposits": 100_000,
+          "bankCharter.totalDeposits": 100_000,
+          "bankCharter.sovereignTreasuryAutoSweep": true,
+        },
+      }
+    );
+    await db
+      .collection("bonds")
+      .updateOne({ _id: BOND }, { $set: { couponRate: 8, maturityTurn: TURN + 48 } });
+
+    const result = await sweepBankTreasury(db as unknown as Db, BANK, POLICY, TURN);
+    expect(result.trades).toBe(0);
+    expect((db.collection("bonds").docs[0] as unknown as Bond).holders).toEqual([]);
+    expect(balance(db).cash).toBe(100_000);
+  });
+
   it("buys the highest-yield bill first when automatic cash can fund only one", async () => {
     const db = world();
     const lowerYieldBondId = new ObjectId("cccccccccccccccccccccccc");

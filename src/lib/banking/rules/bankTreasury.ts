@@ -344,16 +344,27 @@ export type BankTreasurySweepCandidate = Pick<
   | "askPerUnitLocal"
   | "annualizedContractYieldPercent"
   | "eligible"
->;
+> &
+  Partial<Pick<BankTreasuryQuote, "bidPerUnitLocal">>;
 
-/** Buy positive-carry bills with the best annualized contract yield first. */
+/**
+ * Buy positive-carry bills with the best annualized contract yield first.
+ *
+ * Bills are bought at the ask and marked at the bid the same turn, so every
+ * unit costs `ask - bid` of net assets at once. `lossBudgetLocal` is the net
+ * assets the bank can give up: the plan never books a larger mark loss, so an
+ * automatic purchase cannot push a solvent bank below zero. A candidate with no
+ * bid counts its whole ask as the loss.
+ */
 export function planBankTreasurySweep(
   quotes: readonly BankTreasurySweepCandidate[],
   cashReserves: number,
   floorLocal: number,
-  fundingRatePercent: number
+  fundingRatePercent: number,
+  lossBudgetLocal: number = Number.POSITIVE_INFINITY
 ): BankTreasurySweepPlan[] {
   let spendable = Math.max(0, nonNegative(cashReserves) - nonNegative(floorLocal));
+  let lossBudget = Number.isNaN(lossBudgetLocal) ? 0 : Math.max(0, lossBudgetLocal);
   const plans: BankTreasurySweepPlan[] = [];
   for (const quote of [...quotes]
     .filter(
@@ -369,11 +380,23 @@ export function planBankTreasurySweep(
         a.bondId.localeCompare(b.bondId)
     )) {
     if (spendable < quote.askPerUnitLocal) continue;
-    const units = Math.min(quote.publicFloatUnits, Math.floor(spendable / quote.askPerUnitLocal));
+    const bid = quote.bidPerUnitLocal;
+    const lossPerUnit =
+      typeof bid === "number" && Number.isFinite(bid)
+        ? Math.max(0, quote.askPerUnitLocal - Math.max(0, bid))
+        : quote.askPerUnitLocal;
+    const affordableByLoss =
+      lossPerUnit > 0 ? Math.floor(lossBudget / lossPerUnit) : Number.POSITIVE_INFINITY;
+    const units = Math.min(
+      quote.publicFloatUnits,
+      Math.floor(spendable / quote.askPerUnitLocal),
+      affordableByLoss
+    );
     if (units <= 0) continue;
     const costLocal = Math.round(units * quote.askPerUnitLocal * 100) / 100;
     plans.push({ bondId: quote.bondId, units, askPerUnitLocal: quote.askPerUnitLocal, costLocal });
     spendable = Math.max(0, spendable - costLocal);
+    lossBudget = Math.max(0, lossBudget - units * lossPerUnit);
   }
   return plans;
 }
