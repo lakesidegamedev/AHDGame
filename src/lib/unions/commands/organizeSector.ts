@@ -1,3 +1,5 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 /**
  * Union dues v1, targeted organizing drive / raid.
  *
@@ -18,9 +20,9 @@
  */
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Character, CorporateSector, Union } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { unionApproval } from "@/lib/unions/unionDues";
-import { resolveOwnedUnion, rejectIfTurnProcessing, type UnionActionResult } from "./unionActions";
+import { resolveOwnedUnion, type UnionActionResult } from "./unionActions";
 import {
   ORGANIZE_SECTOR_ACTION_COST,
   RAID_APPROVAL_EDGE_REQUIRED,
@@ -151,7 +153,18 @@ export async function organizeSector(
   unionId: string,
   sectorId: string
 ): Promise<OrganizeSectorResult> {
-  const turnBusy = await rejectIfTurnProcessing(db);
+  return withAtomicResult(db, (transactionDb) =>
+    runInTransaction(transactionDb, character, unionId, sectorId)
+  );
+}
+
+async function runInTransaction(
+  db: Db,
+  character: Character,
+  unionId: string,
+  sectorId: string
+): Promise<OrganizeSectorResult> {
+  const turnBusy = await fenceEconomicTurn(db);
   if (turnBusy) return turnBusy;
 
   const resolved = await resolveOwnedUnion(db, character, unionId);
@@ -237,10 +250,6 @@ export async function organizeSector(
     { $inc: { treasury: -treasuryCost }, $set: { updatedAt: now } }
   );
   if (treasurySpend.modifiedCount === 0) {
-    await charactersCollection(db).updateOne(
-      { _id: character._id },
-      { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } }
-    );
     return {
       ok: false,
       status: 409,
@@ -281,13 +290,6 @@ export async function organizeSector(
     }
   );
   if (sectorUpdate.modifiedCount === 0) {
-    // Sector changed between our read and write, refund both spends rather
-    // than silently apply the drive against stale data.
-    await charactersCollection(db).updateOne(
-      { _id: character._id },
-      { $inc: { actions: ORGANIZE_SECTOR_ACTION_COST } }
-    );
-    await unionsCollection(db).updateOne({ _id: union._id }, { $inc: { treasury: treasuryCost } });
     return { ok: false, status: 409, error: "Sector state changed, please retry." };
   }
 

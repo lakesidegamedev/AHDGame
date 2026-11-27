@@ -1,3 +1,12 @@
+vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: async () => 5 }));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";

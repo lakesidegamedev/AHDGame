@@ -97,3 +97,30 @@ describe("budget healing protects the current US book", () => {
     );
   });
 });
+
+it("repairs the enacted Canadian option without restoring a default choice or inventing missing laws", async () => {
+  await db.collection("legislationTypes").insertOne({
+    _id: "ca_test_health" as never,
+    policyOptions: [{ annualCostPerCapita: 100 }, { annualCostPerCapita: 0 }],
+  });
+  await db.collection("enactedLaws").insertOne({
+    _id: "chosen" as never,
+    countryId: "CA",
+    scope: "national",
+    legislationTypeId: "ca_test_health",
+    policyOptionIndex: 1,
+    annualCostPerCapita: 999,
+    economic: 4,
+    title: "Enacted zero-cost choice",
+  });
+  const count = await db.collection("enactedLaws").countDocuments();
+  expect((await POST()).status).toBe(200);
+  expect((await POST()).status).toBe(200);
+  expect(await db.collection("enactedLaws").countDocuments()).toBe(count);
+  expect(await db.collection("enactedLaws").findOne({ _id: "chosen" as never })).toMatchObject({
+    policyOptionIndex: 1,
+    annualCostPerCapita: 0,
+    economic: 4,
+    title: "Enacted zero-cost choice",
+  });
+});

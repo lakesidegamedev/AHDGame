@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * NPP savings interest (v3 full-agency finance).
  *
@@ -20,7 +21,7 @@ import {
   computeSavingsInterestForTurn,
   interestEligibleBalance,
   SAVINGS_CREDIT_INTERVAL_TURNS,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 import { getNppsCollection } from "@/lib/db/collections/npps";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import type { Document } from "mongodb";
@@ -32,11 +33,34 @@ export async function processNppSavingsInterest(
   resolveInflation: (currency: CurrencyCode) => number = () => 0,
   resolvePoolTotal: (currency: CurrencyCode) => number = () => 0,
   depositBonusPercent = 0,
-  rerunSafe = false
+  _rerunSafe = false
+): Promise<{ nppsAccrued: number; totalInterest: number }> {
+  return withTurnValueSettlement(db, "npp-savings-interest", turn, (db) =>
+    settleNppSavingsInterest(
+      db,
+      turn,
+      resolvePrime,
+      resolveInflation,
+      resolvePoolTotal,
+      depositBonusPercent,
+      true
+    )
+  );
+}
+
+async function settleNppSavingsInterest(
+  db: Db,
+  turn: number,
+  resolvePrime: (currency: CurrencyCode) => number,
+  resolveInflation: (currency: CurrencyCode) => number,
+  resolvePoolTotal: (currency: CurrencyCode) => number,
+  depositBonusPercent: number,
+  rerunSafe: boolean
 ): Promise<{ nppsAccrued: number; totalInterest: number }> {
   // Phase 1: accrue this turn's interest into the pending bucket for any NPP
   // holding savings in an active currency.
   const accrualFilter = {
+    savingsAccrualTurn: { $ne: turn },
     $or: FOREX_ACTIVE_CURRENCIES.map((c) => ({
       [`currencyBalances.savings.${c}`]: { $gt: 0 },
     })),

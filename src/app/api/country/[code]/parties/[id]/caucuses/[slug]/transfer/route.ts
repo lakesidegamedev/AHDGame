@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { ObjectId, type ClientSession, type MongoServerError, type UpdateFilter } from "mongodb";
-import { getDb, getMongoClient } from "@/lib/mongodb";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
+import { ObjectId, type ClientSession, type UpdateFilter } from "mongodb";
+import { getDb } from "@/lib/mongodb";
+import { runWithDbSession } from "@/lib/db/sessionDb";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { badRequest, handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -54,186 +55,146 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { amount } = parsed.data;
 
     const db = await getDb();
-    const transferGuard = await requirePlayerTransfersEnabled(db);
-    if (transferGuard) return transferGuard;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const transferGuard = await requirePlayerTransfersEnabled(db);
+      if (transferGuard) return transferGuard;
 
-    const party = await findPartyBySequentialId(db, partyId, countryId);
-    if (!party) {
-      return errorResponse(404, "Party not found");
-    }
-    const partyIdStr = String(party.sequentialId);
+      const party = await findPartyBySequentialId(db, partyId, countryId);
+      if (!party) {
+        return errorResponse(404, "Party not found");
+      }
+      const partyIdStr = String(party.sequentialId);
 
-    const resolved = await findCaucusBySlug(db, countryId, partyIdStr, slug);
-    if (!resolved) {
-      return errorResponse(404, "Caucus not found");
-    }
-    const { caucus } = resolved;
+      const resolved = await findCaucusBySlug(db, countryId, partyIdStr, slug);
+      if (!resolved) {
+        return errorResponse(404, "Caucus not found");
+      }
+      const { caucus } = resolved;
 
-    const isAdmin = authUser.isAdmin;
-    const isChair = caucus.chairId?.equals(authUser.character._id) ?? false;
-    if (!isAdmin && !isChair) {
-      return errorResponse(403, "Only the Caucus Chair or an admin can transfer caucus funds");
-    }
-    // Defense-in-depth: chair role retains across relocation, so refuse if the
-    // actor's character is no longer in this country.
-    if (!isAdmin && !isSameCountry(authUser.character, { countryId })) {
-      return errorResponse(403, "You must be a citizen of this country to transfer caucus funds");
-    }
-
-    const treasury = caucus.treasury ?? 0;
-    if (amount > treasury) {
-      return errorResponse(
-        400,
-        `Insufficient caucus funds. Available: $${treasury.toLocaleString()}`
-      );
-    }
-
-    const now = new Date();
-    const caucusDebit: UpdateFilter<Caucus> = {
-      $inc: { treasury: -amount },
-      $set: { updatedAt: now },
-    };
-    const partyCredit: UpdateFilter<PoliticalParty> = {
-      $inc: { treasury: amount },
-      $set: { updatedAt: now },
-    };
-
-    const applyTransferInTransaction = async (session: ClientSession) => {
-      const debitResult = await caucusesCollection(db).updateOne(
-        { _id: caucus._id, treasury: { $gte: amount } },
-        caucusDebit,
-        { session }
-      );
-
-      if (debitResult.matchedCount === 0) {
-        throw badRequest(`Insufficient caucus funds. Available: $${treasury.toLocaleString()}`);
+      const isAdmin = authUser.isAdmin;
+      const isChair = caucus.chairId?.equals(authUser.character._id) ?? false;
+      if (!isAdmin && !isChair) {
+        return errorResponse(403, "Only the Caucus Chair or an admin can transfer caucus funds");
+      }
+      // Defense-in-depth: chair role retains across relocation, so refuse if the
+      // actor's character is no longer in this country.
+      if (!isAdmin && !isSameCountry(authUser.character, { countryId })) {
+        return errorResponse(403, "You must be a citizen of this country to transfer caucus funds");
       }
 
-      await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit, { session });
-    };
-
-    const applyTransferWithoutTransaction = async () => {
-      const debitResult = await caucusesCollection(db).updateOne(
-        { _id: caucus._id, treasury: { $gte: amount } },
-        caucusDebit
-      );
-
-      if (debitResult.matchedCount === 0) {
+      const treasury = caucus.treasury ?? 0;
+      if (amount > treasury) {
         return errorResponse(
           400,
           `Insufficient caucus funds. Available: $${treasury.toLocaleString()}`
         );
       }
 
-      try {
-        await politicalPartiesCollection(db).updateOne({ _id: party._id }, partyCredit);
-      } catch (error) {
-        await caucusesCollection(db).updateOne(
-          { _id: caucus._id },
+      const now = new Date();
+      const caucusDebit: UpdateFilter<Caucus> = {
+        $inc: { treasury: -amount },
+        $set: { updatedAt: now },
+      };
+      const partyCredit: UpdateFilter<PoliticalParty> = {
+        $inc: { treasury: amount },
+        $set: { updatedAt: now },
+      };
+
+      const applyTransferInTransaction = async (session: ClientSession) => {
+        const debitResult = await caucusesCollection(db).updateOne(
+          { _id: caucus._id, treasury: { $gte: amount } },
+          caucusDebit,
+          { session }
+        );
+
+        if (debitResult.matchedCount === 0) {
+          throw badRequest(`Insufficient caucus funds. Available: $${treasury.toLocaleString()}`);
+        }
+
+        const credit = await politicalPartiesCollection(db).updateOne(
+          { _id: party._id },
+          partyCredit,
           {
-            $inc: { treasury: amount },
-            $set: { updatedAt: new Date() },
+            session,
           }
         );
-        throw error;
-      }
+        if (credit.matchedCount !== 1) throw badRequest("Party not found");
+      };
 
-      return null;
-    };
+      await runWithDbSession(db, applyTransferInTransaction);
 
-    try {
-      // No session (standalone Mongo, probed by the helper) routes to the
-      // sequential path, which compensates for partial writes itself.
-      const fallbackResponse = await runTransactionWithSessionRetry(
-        getMongoClient,
-        async (session) => {
-          if (!session) return applyTransferWithoutTransaction();
-          await applyTransferInTransaction(session);
-          return null;
-        }
-      );
-      if (fallbackResponse) return fallbackResponse;
-    } catch (err) {
-      const code = (err as MongoServerError | undefined)?.code;
-      if (code === 20 || code === 263) {
-        const fallbackResponse = await applyTransferWithoutTransaction();
-        if (fallbackResponse) return fallbackResponse;
-      } else {
-        throw err;
-      }
-    }
+      await adminLogsCollection<Document>(db).insertOne({
+        category: "system",
+        action: "funds_transferred",
+        username: authUser.username,
+        characterName: authUser.character.name,
+        adminUsername: isAdmin ? authUser.username : undefined,
+        details: `Transferred $${amount.toLocaleString()} from caucus ${caucus.name} to ${party.name} national treasury`,
+        createdAt: now,
+      });
 
-    await adminLogsCollection<Document>(db).insertOne({
-      category: "system",
-      action: "funds_transferred",
-      username: authUser.username,
-      characterName: authUser.character.name,
-      adminUsername: isAdmin ? authUser.username : undefined,
-      details: `Transferred $${amount.toLocaleString()} from caucus ${caucus.name} to ${party.name} national treasury`,
-      createdAt: now,
-    });
+      await emitTreasuryTransaction({
+        db,
+        countryId,
+        partyId: partyIdStr,
+        holderType: "caucus",
+        holderId: caucus._id.toString(),
+        category: "transfers",
+        direction: "debit",
+        amount,
+        memo: `Transfer to ${party.name} national treasury`,
+        counterparty: { type: "party", id: partyIdStr, label: party.name },
+        initiatedBy: {
+          type: "character",
+          id: authUser.character._id.toString(),
+          label: authUser.character.name,
+        },
+        now,
+      });
+      await emitTreasuryTransaction({
+        db,
+        countryId,
+        partyId: partyIdStr,
+        holderType: "party",
+        holderId: partyIdStr,
+        category: "transfers",
+        direction: "credit",
+        amount,
+        memo: `Transfer from caucus ${caucus.name}`,
+        counterparty: { type: "caucus", id: caucus._id.toString(), label: caucus.name },
+        initiatedBy: {
+          type: "character",
+          id: authUser.character._id.toString(),
+          label: authUser.character.name,
+        },
+        now,
+      });
 
-    await emitTreasuryTransaction({
-      db,
-      countryId,
-      partyId: partyIdStr,
-      holderType: "caucus",
-      holderId: caucus._id.toString(),
-      category: "transfers",
-      direction: "debit",
-      amount,
-      memo: `Transfer to ${party.name} national treasury`,
-      counterparty: { type: "party", id: partyIdStr, label: party.name },
-      initiatedBy: {
-        type: "character",
-        id: authUser.character._id.toString(),
-        label: authUser.character.name,
-      },
-      now,
-    });
-    await emitTreasuryTransaction({
-      db,
-      countryId,
-      partyId: partyIdStr,
-      holderType: "party",
-      holderId: partyIdStr,
-      category: "transfers",
-      direction: "credit",
-      amount,
-      memo: `Transfer from caucus ${caucus.name}`,
-      counterparty: { type: "caucus", id: caucus._id.toString(), label: caucus.name },
-      initiatedBy: {
-        type: "character",
-        id: authUser.character._id.toString(),
-        label: authUser.character.name,
-      },
-      now,
-    });
+      await activityLogCollection<Document>(db).insertOne({
+        type: "fund_event",
+        timestamp: now,
+        userId: new ObjectId(authUser.userId),
+        characterId: authUser.character._id,
+        characterName: authUser.character.name,
+        username: authUser.username,
+        countryId,
+        fundEventType: "caucus_transfer",
+        amount,
+        currencyCode: COUNTRY_CURRENCY_MAP[countryId] ?? "USD",
+        fromId: caucus._id,
+        fromName: caucus.name,
+        fromType: "caucus",
+        toId: party._id,
+        toName: party.name,
+        toType: "party",
+      });
 
-    void activityLogCollection<Document>(db).insertOne({
-      type: "fund_event",
-      timestamp: now,
-      userId: new ObjectId(authUser.userId),
-      characterId: authUser.character._id,
-      characterName: authUser.character.name,
-      username: authUser.username,
-      countryId,
-      fundEventType: "caucus_transfer",
-      amount,
-      currencyCode: COUNTRY_CURRENCY_MAP[countryId] ?? "USD",
-      fromId: caucus._id,
-      fromName: caucus.name,
-      fromType: "caucus",
-      toId: party._id,
-      toName: party.name,
-      toType: "party",
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `Transferred $${amount.toLocaleString()} to ${party.name}`,
-      amount,
-      remainingTreasury: treasury - amount,
+      return NextResponse.json({
+        success: true,
+        message: `Transferred $${amount.toLocaleString()} to ${party.name}`,
+        amount,
+        remainingTreasury: treasury - amount,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

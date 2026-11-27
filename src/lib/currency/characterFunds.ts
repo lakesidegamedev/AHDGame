@@ -1,5 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
@@ -73,7 +73,8 @@ export function isSavingsAccountOpened(character: Character, currencyCode: Curre
 export function getTotalPersonalWealth(
   character: PersonalWealthHolder,
   forexEnabled: boolean,
-  exchangeRates?: Partial<Record<CurrencyCode, number>>
+  exchangeRates?: Partial<Record<CurrencyCode, number>>,
+  preset?: string
 ): number {
   if (forexEnabled && character.currencyBalances) {
     const personal = character.currencyBalances.personal ?? {};
@@ -91,7 +92,7 @@ export function getTotalPersonalWealth(
         return sum + (val ?? 0) / rate;
       }, 0);
     }
-    const homeCurrency = getHomeCurrency(character);
+    const homeCurrency = getHomeCurrency(character, preset);
     return combined[homeCurrency] ?? 0;
   }
   return (character.cashOnHand ?? 0) + (character.savingsOnHand ?? 0);
@@ -104,7 +105,8 @@ export function getTotalPersonalWealth(
 export function getTotalPersonalLiquidWealth(
   character: PersonalWealthHolder,
   forexEnabled: boolean,
-  exchangeRates?: Partial<Record<CurrencyCode, number>>
+  exchangeRates?: Partial<Record<CurrencyCode, number>>,
+  preset?: string
 ): number {
   if (forexEnabled && character.currencyBalances) {
     const personal = character.currencyBalances.personal ?? {};
@@ -116,7 +118,7 @@ export function getTotalPersonalLiquidWealth(
         return sum + (val ?? 0) / rate;
       }, 0);
     }
-    const homeCurrency = getHomeCurrency(character);
+    const homeCurrency = getHomeCurrency(character, preset);
     return personal[homeCurrency] ?? 0;
   }
   return character.cashOnHand ?? 0;
@@ -128,7 +130,8 @@ export function getTotalPersonalLiquidWealth(
 export function getTotalSavingsWealth(
   character: Character,
   forexEnabled: boolean,
-  exchangeRates?: Partial<Record<CurrencyCode, number>>
+  exchangeRates?: Partial<Record<CurrencyCode, number>>,
+  preset?: string
 ): number {
   if (forexEnabled && character.currencyBalances) {
     const savings = character.currencyBalances.savings ?? {};
@@ -140,7 +143,7 @@ export function getTotalSavingsWealth(
         return sum + (val ?? 0) / rate;
       }, 0);
     }
-    const homeCurrency = getHomeCurrency(character);
+    const homeCurrency = getHomeCurrency(character, preset);
     return savings[homeCurrency] ?? 0;
   }
   return character.savingsOnHand ?? 0;

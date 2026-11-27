@@ -6,7 +6,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { MongoClient, ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { getDb } from "@/lib/mongodb";
 import { resetLedgerShadowFlagCache } from "@/lib/ledger/featureFlag";
 import { writeBalanceSnapshot, writePreForexBalanceCheckpoint } from "@/lib/ledger/balanceSnapshot";
@@ -47,7 +47,7 @@ async function world(native: boolean) {
       throw new Error("Native petition fixtures require a local sandbox endpoint");
     client ??= await MongoClient.connect(uri.toString(), { maxPoolSize: 1 });
     db = client.db(`ahd_sim_fixture_petition_${randomUUID().replaceAll("-", "").slice(0, 24)}`);
-  } else db = createInMemoryDb() as unknown as Db;
+  } else db = createTransactionalMemoryDb().db;
   await db
     .collection<{ _id: string; ledgerShadow: boolean }>("gameConfig")
     .insertOne({ _id: "default", ledgerShadow: true });
@@ -65,6 +65,7 @@ async function world(native: boolean) {
   const corporation = {
     _id: new ObjectId(),
     name: "Fixture Listed",
+    ceoId: new ObjectId(),
     countryId: "UK",
     isPrivate: false,
     liquidCapital: 100_000,
@@ -99,9 +100,9 @@ const file = (db: Db, corporation: Corporation) =>
   fileListingPetition({
     db,
     corporation,
-    filedByCharacterId: new ObjectId(),
+    filedByCharacterId: corporation.ceoId!,
     contributionAnchor: 1_000,
-    currentTurn: 2,
+    currentTurn: 1,
     currentYear: 2019,
   });
 

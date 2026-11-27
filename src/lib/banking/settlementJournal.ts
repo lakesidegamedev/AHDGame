@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 import { resumeTreasuryReserveTransfer } from "@/lib/budget/treasuryReserveTransfer";
 /**
  * The Settlement Journal: apply a banking transition exactly once.
@@ -260,6 +261,19 @@ export async function settleTransition(
       (!leg.collection || (leg.kind !== "asset" && !leg.path) || !leg.filter)
     ) {
       return { ...result, status: "rejected", error: `leg "${leg.note}" is missing a target` };
+    }
+  }
+
+  // A duplicate insert aborts a Mongo transaction even when its error is caught.
+  if (boundSession(db) && transition.legs.length === 0) {
+    const previous = await journal.findOne(
+      { _id: transition.key },
+      { projection: { status: 1, error: 1 } }
+    );
+    if (previous) {
+      if (previous.status === "rejected")
+        return { ...result, status: "rejected", error: previous.error };
+      return finishProjections(db, transition, { ...result, status: "replayed" });
     }
   }
 

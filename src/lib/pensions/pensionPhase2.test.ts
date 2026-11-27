@@ -8,6 +8,19 @@ import { runPensionBenefitsTurn } from "./pensionBenefits";
 import { pensionFundingRatio, pensionSchemeAssetsAnchor } from "./rules";
 import type { IndexFund } from "@/lib/db/types/indexFund";
 
+// Formula fixtures isolate transaction plumbing; pensionTurn.rerun uses the rollback fixture.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
 
 const SCHEME_ID = new ObjectId();
@@ -58,6 +71,16 @@ let db: MockDb;
 beforeEach(() => {
   db = createMockDb();
   vi.clearAllMocks();
+  db.collection("exchangeRates").find.mockReturnValue({
+    toArray: async () => [{ currencyCode: "USD", rate: 1 }],
+  });
+  for (const name of ["pensionSchemes", "indexFunds"]) {
+    const collection = db.collection(name);
+    collection.findOne.mockImplementation(async (filter: { _id: ObjectId }) => {
+      const rows = (await collection.find({}).toArray()) as { _id: ObjectId }[];
+      return rows.find((row) => row._id.equals(filter._id)) ?? null;
+    });
+  }
 });
 
 describe("loadSchemeInvestedValues", () => {

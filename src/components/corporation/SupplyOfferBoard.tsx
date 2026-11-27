@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
   COMMODITY_TYPES,
@@ -41,6 +41,7 @@ export function SupplyOfferBoard({
   const [premium, setPremium] = useState(0);
   const [duration, setDuration] = useState("");
   const [revision, setRevision] = useState(0);
+  const takeRequests = useRef<Record<string, { signature: string; id: string }>>({});
   const [takeVolumes, setTakeVolumes] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
   const [confirming, setConfirming] = useState("");
@@ -116,17 +117,23 @@ export function SupplyOfferBoard({
     setBusy(true);
     setError("");
     setNotice("");
+    const volume = Number(takeVolumes[row.id] ?? row.volumeCap);
+    const signature = JSON.stringify({ corporation: corpId, listing: row.id, volume });
+    if (takeRequests.current[row.id]?.signature !== signature)
+      takeRequests.current[row.id] = { signature, id: crypto.randomUUID() };
     try {
       const response = await fetch(`/api/corporations/${corpId}/supply-listings/take`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          requestId: takeRequests.current[row.id].id,
           listingId: row.id,
-          volume: Number(takeVolumes[row.id] ?? row.volumeCap),
+          volume,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(apiErrorText(data, t("failed")));
+      delete takeRequests.current[row.id];
       setNotice(t("taken"));
       setConfirming("");
       setRevision((n) => n + 1);

@@ -24,5 +24,7 @@ export interface StateResourceCapacity {
    * where nothing writes it).
    */
   extractedUnits?: Partial<Record<ExtractableResource, number>>;
+  extractionDepletionTurn?: number;
+  extractionOpeningUnits?: Partial<Record<ExtractableResource, number>>;
   updatedAt: Date;
 }

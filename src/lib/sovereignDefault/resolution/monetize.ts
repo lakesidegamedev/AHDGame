@@ -1,3 +1,5 @@
+import { fundSovereignResolution } from "./funding";
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Monetize resolution path — Phase 6.
  *
@@ -52,6 +54,13 @@ export async function applyMonetizeResolution(
   db: Db,
   input: MonetizeResolutionInput
 ): Promise<MonetizeResolutionResult> {
+  return withSessionDb(db, (db) => applyMonetizeResolutionInTransaction(db, input));
+}
+
+async function applyMonetizeResolutionInTransaction(
+  db: Db,
+  input: MonetizeResolutionInput
+): Promise<MonetizeResolutionResult> {
   const { countryCode, currentTurn, realtimeMs, decisionId } = input;
 
   const budgetId = getNationalBudgetId(countryCode);
@@ -73,6 +82,16 @@ export async function applyMonetizeResolution(
   const rollover = await calculateSovereignRolloverAmount(db, countryCode, currentTurn);
   const annualDeficit = Math.max(0, -(budget.surplus ?? 0));
   const printedAmount = rollover + annualDeficit;
+
+  await fundSovereignResolution(db, {
+    kind: "monetize",
+    budget,
+    countryId: countryCode,
+    decisionKey: decisionId.toHexString(),
+    turn: currentTurn,
+    now: new Date(realtimeMs),
+    amountLocal: printedAmount,
+  });
 
   const gdp = budget.gdp ?? 0;
   const inflationShockFraction = gdp > 0 ? (printedAmount / gdp) * INFLATION_SHOCK_MULTIPLIER : 0;
@@ -121,7 +140,9 @@ export async function applyMonetizeResolution(
     );
   }
 
-  await emitMonetizedNews(countryCode, currentTurn, printedAmount, inflationShockPp);
+  await afterCommit(db, () =>
+    emitMonetizedNews(countryCode, currentTurn, printedAmount, inflationShockPp)
+  );
 
   // Phase 11b: executive personal political impact (inflation always wrecks
   // incumbents).
@@ -129,23 +150,15 @@ export async function applyMonetizeResolution(
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "monetize");
 
   // Phase 11b: parliamentary countries auto-trigger no-confidence after Monetize.
-  try {
-    await triggerSystemNoConfidence(
-      db,
-      countryCode,
-      "Sovereign-debt monetization (inflation shock)",
-      currentTurn
-    );
-  } catch (err) {
-    console.error("triggerSystemNoConfidence (monetize) failed", err);
-  }
+  await triggerSystemNoConfidence(
+    db,
+    countryCode,
+    "Sovereign-debt monetization (inflation shock)",
+    currentTurn
+  );
 
   // Phase 11b: civil-unrest events (2 for monetize — inflation shock).
-  try {
-    await emitCivilUnrestEvents(db, countryCode, "monetize");
-  } catch (err) {
-    console.error("emitCivilUnrestEvents (monetize) failed", err);
-  }
+  await emitCivilUnrestEvents(db, countryCode, "monetize");
 
   return { ok: true, printedAmount, inflationShockPp };
 }

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/observability/logger";
 import { configureGroupSupply } from "./groupSupplyTurn";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
 import { producerStageEnv, runFundedProducerTurn } from "./fundedProducerTurn";
@@ -10,8 +11,7 @@ import { resolvePhaseLookups } from "./phaseLookups";
  * processCorporationTurn shares monetary quotes across automatic dividend conversions.
  */
 import { CORPORATION_TURN_GAME_CONFIG_PROJECTION } from "./gameConfigProjection";
-import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
+
 import { getDb } from "@/lib/mongodb";
 import { buildCorporationLookups } from "./buildLookups";
 import { buildFreightBillingBySector } from "./freightBillingTurn";
@@ -39,7 +39,10 @@ import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
 import type { CorporationTurnOptions } from "./corporationTurnOptions";
 import { transitionAnchorTurn } from "@/lib/market/producerMarket/transitionRules";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
-import { type SettleableSupplyAgreement } from "./settleSupplyAgreements";
+import {
+  resumePendingSupplyProjections,
+  type SettleableSupplyAgreement,
+} from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { loadSettleableSupplyAgreements } from "./loadSettleableSupplyAgreements";
 import { resolveMinWageRatioByCountry } from "@/lib/labour/minimumWageLaws";
@@ -126,6 +129,11 @@ export async function processCorporationTurn(
     turn: turn ?? gameState?.currentTurn ?? 0,
     worldEpoch: gameState?.worldEpochId,
   };
+  try {
+    await resumePendingSupplyProjections(db, thresholds, now);
+  } catch (error) {
+    logger.error("corporationTurn", "Frozen supply receipt tail remains pending", error);
+  }
   if (marketGovernorConfig?.privateBankingEnabled === true) {
     await runJournaledStep(journal, "foundingUnderwriting", "refuse", () =>
       resumeFoundingUnderwritingPlans(db, now)
@@ -644,17 +652,14 @@ export async function processCorporationTurn(
   // Phase 1b: CEO-less player corps lose market footprint to unowned pools (same turn as step 2)
   // MUTATES lookups.sectorsByCorp, adjusts revenue/workers so processSectors sees reduced values.
   // Order matters: vacant shed runs first, then inactive-CEO shed (which excludes vacant corps).
-  const vacantShedResult = await runJournaledStepWithOutput(
-    journal,
-    "vacantCeoShed",
-    "refuse",
-    () => shedVacantCeoSectors(db, lookups, now, market.plantsEnabled)
+  const vacantShedResult = await runJournaledStepWithOutput(journal, "vacantCeoShed", "rerun", () =>
+    shedVacantCeoSectors(db, lookups, now, market.plantsEnabled, turn ?? 0)
   );
   const inactiveShedResult = await runJournaledStepWithOutput(
     journal,
     "inactiveCeoShed",
-    "refuse",
-    () => shedInactiveCeoSectors(db, lookups, now, market.plantsEnabled)
+    "rerun",
+    () => shedInactiveCeoSectors(db, lookups, now, market.plantsEnabled, turn ?? 0)
   );
   if (vacantShedResult.corporateSectorsUpdated > 0) {
     corpAuditEntries.push({

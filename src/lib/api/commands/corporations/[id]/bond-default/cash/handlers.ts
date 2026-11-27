@@ -1,8 +1,9 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { ObjectId, type ClientSession } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
 import { getDb } from "@/lib/mongodb";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { handleRouteError, badRequest, internalError, errorResponse } from "@/lib/api/errors";
@@ -57,560 +58,595 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
-    const db = await getDb();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      // Paying off defaulted bonds from corporate cash is a corporation action:
+      // blocked while an admin has paused corporation actions.
+      const pausedGuard = await requireCorporationActionsEnabled(db);
+      if (pausedGuard) return pausedGuard;
 
-    // Paying off defaulted bonds from corporate cash is a corporation action:
-    // blocked while an admin has paused corporation actions.
-    const pausedGuard = await requireCorporationActionsEnabled(db);
-    if (pausedGuard) return pausedGuard;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      if (corporation.countryOwnerId) {
+        return errorResponse(400, "Not available for national corporations");
+      }
 
-    if (corporation.countryOwnerId) {
-      return errorResponse(400, "Not available for national corporations");
-    }
+      // Game state is required: the cure stamp's `curedAtTurn`, the
+      // bond_maturity ledger rows' `turn`, and the audit trail all derive from
+      // `currentTurn`. Fail explicitly rather than leaking turn=0 sentinels.
+      const gameStateForCure = await getGameState(db);
+      const cureTurn = gameStateForCure?.currentTurn ?? 0;
+      if (cureTurn <= 0) {
+        return errorResponse(503, "Game state unavailable; cash payoff cannot be processed.");
+      }
 
-    // Game state is required: the cure stamp's `curedAtTurn`, the
-    // bond_maturity ledger rows' `turn`, and the audit trail all derive from
-    // `currentTurn`. Fail explicitly rather than leaking turn=0 sentinels.
-    const gameStateForCure = await getGameState();
-    const cureTurn = gameStateForCure?.currentTurn ?? 0;
-    if (cureTurn <= 0) {
-      return errorResponse(503, "Game state unavailable; cash payoff cannot be processed.");
-    }
+      const now = new Date();
+      const result = await withCorporationSettlementLock(
+        db,
+        corporation._id,
+        "bondSettlementInProgressAt",
+        now,
+        async (db) => {
+          const defaultedBonds = await bondsCollection(db)
+            .find({ corporationId: corporation._id, matured: false, defaulted: true })
+            .toArray();
 
-    const now = new Date();
-    const result = await withCorporationSettlementLock(
-      db,
-      corporation._id,
-      "bondSettlementInProgressAt",
-      now,
-      async () => {
-        const defaultedBonds = await bondsCollection(db)
-          .find({ corporationId: corporation._id, matured: false, defaulted: true })
-          .toArray();
-
-        if (defaultedBonds.length === 0) {
-          return errorResponse(400, "No defaulted bonds to resolve");
-        }
-
-        // Load FX rates once so the cost sum + per-bond face + holder payouts all
-        // normalize to ₳ coherently. Pre-fix `cost` summed LOCAL `totalIssued`,
-        // compared ₳ corpCapital against LOCAL cost, and `anchorToCorpLiquidCapital`
-        // treated LOCAL as ₳ when deducting — blocking JP corps from cash-paying
-        // off defaulted bonds and over-deducting UK corps.
-        const fxByCurrency = await loadFxRatesByCurrency(db);
-        const cost = sumDefaultedBondPrincipal(defaultedBonds, fxByCurrency);
-
-        const refreshedCorporation = await corporationsCollection(db).findOne({
-          _id: corporation._id,
-        });
-        if (!refreshedCorporation) {
-          return errorResponse(404, "Corporation not found");
-        }
-
-        const corpFxRate = fxRateForCorpFromMap(refreshedCorporation, fxByCurrency);
-        const corpCapitalAnchor = corpLiquidCapitalToAnchor(
-          refreshedCorporation.liquidCapital,
-          refreshedCorporation,
-          corpFxRate
-        );
-        // Bonds-only escrow fallback: a positive buyback escrow can top up a
-        // liquidCapital shortfall to pay off defaulted principal (never a negative
-        // escrow). Available cash = liquidCapital + max(0, escrow), in ₳ for the check.
-        const escrowPositiveAnchor = corpLiquidCapitalToAnchor(
-          Math.max(0, refreshedCorporation.shareEscrowBalance ?? 0),
-          refreshedCorporation,
-          corpFxRate
-        );
-        if (corpCapitalAnchor + escrowPositiveAnchor < cost) {
-          return NextResponse.json(
-            badRequest(
-              `Insufficient liquid capital. Need $${cost.toLocaleString()} to pay off defaulted principal (treasury + buyback escrow combined).`
-            ).toJson(),
-            { status: 400 }
-          );
-        }
-
-        const charIncs = new Map<string, number>();
-        const imperialIncs = new Map<string, number>();
-        const corpIncs = new Map<string, number>();
-        // Index funds and autonomous NPPs hold bond units too (BondHolder.fundId
-        // / .nppId). They must be included by the holder chain below, or their
-        // principal vanishes while the bond is still marked cured.
-        // Both hold in ₳, matching the bondTurn coupon/maturity legs.
-        const fundIncsAnchor = new Map<string, number>();
-        const nppIncsAnchor = new Map<string, number>();
-        // Per-(holder, bond) snapshot so each holder gets a `bond_maturity` row at
-        // emit time. Pre-fix the cash payoff moved cash silently — see audit on
-        // corp 100 (Kaviori) where £500M+ flowed with no ledger trail.
-        const pendingMaturityTxs: Array<{
-          holderType: "character" | "imperial" | "corp" | "fund" | "npp";
-          holderId: string;
-          bondId: string;
-          bondCcy: CurrencyCode | undefined;
-          faceAnchor: number;
-          units: number;
-          couponRate: number;
-        }> = [];
-
-        // Each bond's face is denominated in its own `currencyCode`; anchor-normalize
-        // per-bond so per-holder amounts are ₳, matching the downstream `anchorToLocal`
-        // expectation. Same fix as A10 in executeCorporationBondDefaultDissolution.
-        for (const bond of defaultedBonds) {
-          const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
-          const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
-          for (const h of bond.holders) {
-            const faceLocal = h.units * BOND_UNIT_FACE_VALUE;
-            const faceAnchor = corpCapitalToAnchor(faceLocal, bondCcy, bondRate);
-            if (h.characterId) {
-              const k = h.characterId.toString();
-              charIncs.set(k, (charIncs.get(k) ?? 0) + faceAnchor);
-              pendingMaturityTxs.push({
-                holderType: "character",
-                holderId: k,
-                bondId: bond._id.toString(),
-                bondCcy,
-                faceAnchor,
-                units: h.units,
-                couponRate: bond.couponRate,
-              });
-            } else if (h.imperialCharacterId) {
-              const k = h.imperialCharacterId.toString();
-              imperialIncs.set(k, (imperialIncs.get(k) ?? 0) + faceAnchor);
-              pendingMaturityTxs.push({
-                holderType: "imperial",
-                holderId: k,
-                bondId: bond._id.toString(),
-                bondCcy,
-                faceAnchor,
-                units: h.units,
-                couponRate: bond.couponRate,
-              });
-            } else if (
-              h.corporationId &&
-              h.corporationId.toString() !== refreshedCorporation._id.toString()
-            ) {
-              const k = h.corporationId.toString();
-              corpIncs.set(k, (corpIncs.get(k) ?? 0) + faceAnchor);
-              pendingMaturityTxs.push({
-                holderType: "corp",
-                holderId: k,
-                bondId: bond._id.toString(),
-                bondCcy,
-                faceAnchor,
-                units: h.units,
-                couponRate: bond.couponRate,
-              });
-            } else if (h.fundId) {
-              const k = h.fundId.toString();
-              fundIncsAnchor.set(k, (fundIncsAnchor.get(k) ?? 0) + faceAnchor);
-              pendingMaturityTxs.push({
-                holderType: "fund",
-                holderId: k,
-                bondId: bond._id.toString(),
-                bondCcy,
-                faceAnchor,
-                units: h.units,
-                couponRate: bond.couponRate,
-              });
-            } else if (h.nppId) {
-              const k = h.nppId.toString();
-              nppIncsAnchor.set(k, (nppIncsAnchor.get(k) ?? 0) + faceAnchor);
-              pendingMaturityTxs.push({
-                holderType: "npp",
-                holderId: k,
-                bondId: bond._id.toString(),
-                bondCcy,
-                faceAnchor,
-                units: h.units,
-                couponRate: bond.couponRate,
-              });
-            }
+          if (defaultedBonds.length === 0) {
+            return errorResponse(400, "No defaulted bonds to resolve");
           }
-        }
 
-        // Payoffs are now truly ₳ (per-bond face anchor-normalized above). Post-forex
-        // holders need conversion to their home currency before $inc into
-        // currencyBalances.personal.<code>; pre-forex holders keep the raw ₳ amount
-        // since legacy `cashOnHand` is itself ₳. Mirrors the corp-to-corp creditor
-        // path below (anchorToCorpLiquidCapital).
-        const anchorToLocal = (amtAnchor: number, currency: string): number => {
-          const rate = fxByCurrency.get(currency as never);
-          return Number.isFinite(rate) && rate && rate > 0 ? amtAnchor * rate : amtAnchor;
-        };
+          // Load FX rates once so the cost sum + per-bond face + holder payouts all
+          // normalize to ₳ coherently. Pre-fix `cost` summed LOCAL `totalIssued`,
+          // compared ₳ corpCapital against LOCAL cost, and `anchorToCorpLiquidCapital`
+          // treated LOCAL as ₳ when deducting — blocking JP corps from cash-paying
+          // off defaulted bonds and over-deducting UK corps.
+          const fxByCurrency = await loadFxRatesByCurrency(db);
+          const cost = sumDefaultedBondPrincipal(defaultedBonds, fxByCurrency);
 
-        // subjectName for tx emission. One map for all holder types; ids are unique
-        // ObjectIds so collisions across types are not a concern in practice.
-        const nameById = new Map<string, string>();
-        const holderCorpFxByHolderId = new Map<
-          string,
-          { currency: CurrencyCode; fxRate: number; doc: Corporation }
-        >();
-        const costInCorpCapital = anchorToCorpLiquidCapital(cost, refreshedCorporation, corpFxRate);
-        const bondIds = defaultedBonds.map((b) => b._id);
-        const forexEnabled = await isForexEnabled();
+          const refreshedCorporation = await corporationsCollection(db).findOne({
+            _id: corporation._id,
+          });
+          if (!refreshedCorporation) {
+            return errorResponse(404, "Corporation not found");
+          }
 
-        // Split the cost across liquidCapital first, then the positive escrow
-        // remainder. Both are corp-local, so split in local (costInCorpCapital).
-        const paymentSplit = splitBondPaymentWithEscrow({
-          liquidCapital: refreshedCorporation.liquidCapital,
-          escrowBalance: refreshedCorporation.shareEscrowBalance ?? 0,
-          amountDue: costInCorpCapital,
-        });
+          const corpFxRate = fxRateForCorpFromMap(refreshedCorporation, fxByCurrency);
+          const corpCapitalAnchor = corpLiquidCapitalToAnchor(
+            refreshedCorporation.liquidCapital,
+            refreshedCorporation,
+            corpFxRate
+          );
+          // Bonds-only escrow fallback: a positive buyback escrow can top up a
+          // liquidCapital shortfall to pay off defaulted principal (never a negative
+          // escrow). Available cash = liquidCapital + max(0, escrow), in ₳ for the check.
+          const escrowPositiveAnchor = corpLiquidCapitalToAnchor(
+            Math.max(0, refreshedCorporation.shareEscrowBalance ?? 0),
+            refreshedCorporation,
+            corpFxRate
+          );
+          if (corpCapitalAnchor + escrowPositiveAnchor < cost) {
+            return NextResponse.json(
+              badRequest(
+                `Insufficient liquid capital. Need $${cost.toLocaleString()} to pay off defaulted principal (treasury + buyback escrow combined).`
+              ).toJson(),
+              { status: 400 }
+            );
+          }
 
-        const runPayoff = async (session?: ClientSession, compensate = false) => {
-          const so = session ? { session } : {};
-
-          // Read and validate every holder before moving money. The standalone
-          // fallback cannot roll back these writes for us, so validation must be
-          // complete before the issuer debit lands.
-          const credits: Array<{
-            collection:
-              "characters" | "imperialCharacters" | "corporations" | "indexFunds" | "npps";
-            id: ObjectId;
-            inc: Record<string, number>;
+          const charIncs = new Map<string, number>();
+          const imperialIncs = new Map<string, number>();
+          const corpIncs = new Map<string, number>();
+          // Index funds and autonomous NPPs hold bond units too (BondHolder.fundId
+          // / .nppId). They must be included by the holder chain below, or their
+          // principal vanishes while the bond is still marked cured.
+          // Both hold in ₳, matching the bondTurn coupon/maturity legs.
+          const fundIncsAnchor = new Map<string, number>();
+          const nppIncsAnchor = new Map<string, number>();
+          // Per-(holder, bond) snapshot so each holder gets a `bond_maturity` row at
+          // emit time. Pre-fix the cash payoff moved cash silently — see audit on
+          // corp 100 (Kaviori) where £500M+ flowed with no ledger trail.
+          const pendingMaturityTxs: Array<{
+            holderType: "character" | "imperial" | "corp" | "fund" | "npp";
+            holderId: string;
+            bondId: string;
+            bondCcy: CurrencyCode | undefined;
+            faceAnchor: number;
+            units: number;
+            couponRate: number;
           }> = [];
 
-          if (charIncs.size > 0) {
-            const charIds = [...charIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const charDocs = await charactersCollection(db)
-              .find({ _id: { $in: charIds } }, so)
-              .project<Pick<Character, "_id" | "countryId" | "name">>({
-                _id: 1,
-                countryId: 1,
-                name: 1,
-              })
-              .toArray();
-            if (charDocs.length !== charIncs.size) {
-              throw internalError("Bond holder data is inconsistent; contact an admin.");
-            }
-            const currencies = new Map(
-              charDocs.map((c) => [c._id.toString(), getHomeCurrency(c as Character)])
-            );
-            for (const c of charDocs) nameById.set(c._id.toString(), c.name as string);
-            for (const [id, amountAnchor] of charIncs) {
-              const currency = currencies.get(id) ?? "USD";
-              const amount = forexEnabled ? anchorToLocal(amountAnchor, currency) : amountAnchor;
-              credits.push({
-                collection: "characters",
-                id: new ObjectId(id),
-                inc: buildPersonalBalanceInc(amount, currency, forexEnabled),
-              });
-            }
-          }
-
-          if (imperialIncs.size > 0) {
-            const ids = [...imperialIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const docs = await imperialCharactersCollection(db)
-              .find({ _id: { $in: ids } }, so)
-              .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
-                _id: 1,
-                countryId: 1,
-                name: 1,
-              })
-              .toArray();
-            if (docs.length !== imperialIncs.size) {
-              throw internalError("Bond holder data is inconsistent; contact an admin.");
-            }
-            const currencies = new Map(
-              docs.map((c) => [c._id.toString(), getHomeCurrency(c as ImperialCharacter)])
-            );
-            for (const c of docs) nameById.set(c._id.toString(), c.name as string);
-            for (const [id, amountAnchor] of imperialIncs) {
-              const currency = currencies.get(id) ?? "USD";
-              const amount = forexEnabled ? anchorToLocal(amountAnchor, currency) : amountAnchor;
-              credits.push({
-                collection: "imperialCharacters",
-                id: new ObjectId(id),
-                inc: buildPersonalBalanceInc(amount, currency, forexEnabled),
-              });
-            }
-          }
-
-          if (corpIncs.size > 0) {
-            const ids = [...corpIncs.keys()].map((entryId) => new ObjectId(entryId));
-            const docs = await corporationsCollection(db)
-              .find({ _id: { $in: ids } }, so)
-              .toArray();
-            if (docs.length !== corpIncs.size) {
-              throw internalError("Bond holder data is inconsistent; contact an admin.");
-            }
-            for (const creditor of docs) {
-              const fxRate = fxRateForCorpFromMap(creditor, fxByCurrency);
-              const currency = (resolveCorpLiquidCurrencyCode(creditor) ?? "USD") as CurrencyCode;
-              holderCorpFxByHolderId.set(creditor._id.toString(), {
-                currency,
-                fxRate,
-                doc: creditor,
-              });
-              nameById.set(creditor._id.toString(), creditor.name);
-            }
-            for (const [id, amountAnchor] of corpIncs) {
-              const info = holderCorpFxByHolderId.get(id);
-              if (!info) throw internalError("Bond holder data is inconsistent; contact an admin.");
-              credits.push({
-                collection: "corporations",
-                id: new ObjectId(id),
-                inc: {
-                  liquidCapital: anchorToCorpLiquidCapital(amountAnchor, info.doc, info.fxRate),
-                },
-              });
-            }
-          }
-
-          for (const [id, amount] of fundIncsAnchor) {
-            credits.push({
-              collection: "indexFunds",
-              id: new ObjectId(id),
-              inc: { cashAnchor: Math.round(amount * 100) / 100 },
-            });
-          }
-          for (const [id, amount] of nppIncsAnchor) {
-            credits.push({
-              collection: "npps",
-              id: new ObjectId(id),
-              inc: { nppInvestmentCashAnchor: Math.round(amount * 100) / 100 },
-            });
-          }
-
-          const undo: Array<() => Promise<void>> = [];
-          const compensateAndThrow = async (err: unknown): Promise<never> => {
-            const compensationErrors: unknown[] = [];
-            if (compensate) {
-              for (const revert of undo.reverse()) {
-                try {
-                  await revert();
-                } catch (compensationError) {
-                  compensationErrors.push(compensationError);
-                  Sentry.captureException(compensationError, {
-                    extra: {
-                      context: "bond-default cash fallback compensation failed",
-                      corporationId: refreshedCorporation._id.toString(),
-                    },
-                  });
-                }
+          // Each bond's face is denominated in its own `currencyCode`; anchor-normalize
+          // per-bond so per-holder amounts are ₳, matching the downstream `anchorToLocal`
+          // expectation. Same fix as A10 in executeCorporationBondDefaultDissolution.
+          for (const bond of defaultedBonds) {
+            const bondCcy = (bond.currencyCode ?? undefined) as CurrencyCode | undefined;
+            const bondRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
+            for (const h of bond.holders) {
+              const faceLocal = h.units * BOND_UNIT_FACE_VALUE;
+              const faceAnchor = corpCapitalToAnchor(faceLocal, bondCcy, bondRate);
+              if (h.characterId) {
+                const k = h.characterId.toString();
+                charIncs.set(k, (charIncs.get(k) ?? 0) + faceAnchor);
+                pendingMaturityTxs.push({
+                  holderType: "character",
+                  holderId: k,
+                  bondId: bond._id.toString(),
+                  bondCcy,
+                  faceAnchor,
+                  units: h.units,
+                  couponRate: bond.couponRate,
+                });
+              } else if (h.imperialCharacterId) {
+                const k = h.imperialCharacterId.toString();
+                imperialIncs.set(k, (imperialIncs.get(k) ?? 0) + faceAnchor);
+                pendingMaturityTxs.push({
+                  holderType: "imperial",
+                  holderId: k,
+                  bondId: bond._id.toString(),
+                  bondCcy,
+                  faceAnchor,
+                  units: h.units,
+                  couponRate: bond.couponRate,
+                });
+              } else if (
+                h.corporationId &&
+                h.corporationId.toString() !== refreshedCorporation._id.toString()
+              ) {
+                const k = h.corporationId.toString();
+                corpIncs.set(k, (corpIncs.get(k) ?? 0) + faceAnchor);
+                pendingMaturityTxs.push({
+                  holderType: "corp",
+                  holderId: k,
+                  bondId: bond._id.toString(),
+                  bondCcy,
+                  faceAnchor,
+                  units: h.units,
+                  couponRate: bond.couponRate,
+                });
+              } else if (h.fundId) {
+                const k = h.fundId.toString();
+                fundIncsAnchor.set(k, (fundIncsAnchor.get(k) ?? 0) + faceAnchor);
+                pendingMaturityTxs.push({
+                  holderType: "fund",
+                  holderId: k,
+                  bondId: bond._id.toString(),
+                  bondCcy,
+                  faceAnchor,
+                  units: h.units,
+                  couponRate: bond.couponRate,
+                });
+              } else if (h.nppId) {
+                const k = h.nppId.toString();
+                nppIncsAnchor.set(k, (nppIncsAnchor.get(k) ?? 0) + faceAnchor);
+                pendingMaturityTxs.push({
+                  holderType: "npp",
+                  holderId: k,
+                  bondId: bond._id.toString(),
+                  bondCcy,
+                  faceAnchor,
+                  units: h.units,
+                  couponRate: bond.couponRate,
+                });
               }
             }
-            if (compensationErrors.length > 0) {
-              throw new AggregateError(
-                [err, ...compensationErrors],
-                `Bond cash cure failed and ${compensationErrors.length} compensation step(s) were incomplete`
-              );
-            }
-            throw err;
+          }
+
+          // Payoffs are now truly ₳ (per-bond face anchor-normalized above). Post-forex
+          // holders need conversion to their home currency before $inc into
+          // currencyBalances.personal.<code>; pre-forex holders keep the raw ₳ amount
+          // since legacy `cashOnHand` is itself ₳. Mirrors the corp-to-corp creditor
+          // path below (anchorToCorpLiquidCapital).
+          const anchorToLocal = (amtAnchor: number, currency: string): number => {
+            const rate = fxByCurrency.get(currency as never);
+            return Number.isFinite(rate) && rate && rate > 0 ? amtAnchor * rate : amtAnchor;
           };
 
-          // Atomic, race-safe debit. Each leg is guarded only when it's actually
-          // drawn (a $gte:0 guard on an untouched negative escrow would wrongly block).
-          const debitResult = await corporationsCollection(db).updateOne(
-            {
-              _id: refreshedCorporation._id,
-              ...(paymentSplit.fromLiquid > 0
-                ? { liquidCapital: { $gte: paymentSplit.fromLiquid } }
-                : {}),
-              ...(paymentSplit.fromEscrow > 0
-                ? { shareEscrowBalance: { $gte: paymentSplit.fromEscrow } }
-                : {}),
-            },
-            {
-              $inc: {
-                liquidCapital: -paymentSplit.fromLiquid,
+          // subjectName for tx emission. One map for all holder types; ids are unique
+          // ObjectIds so collisions across types are not a concern in practice.
+          const nameById = new Map<string, string>();
+          const holderCorpFxByHolderId = new Map<
+            string,
+            { currency: CurrencyCode; fxRate: number; doc: Corporation }
+          >();
+          const costInCorpCapital = anchorToCorpLiquidCapital(
+            cost,
+            refreshedCorporation,
+            corpFxRate
+          );
+          const bondIds = defaultedBonds.map((b) => b._id);
+          const forexEnabled = await isForexEnabled();
+
+          // Split the cost across liquidCapital first, then the positive escrow
+          // remainder. Both are corp-local, so split in local (costInCorpCapital).
+          const paymentSplit = splitBondPaymentWithEscrow({
+            liquidCapital: refreshedCorporation.liquidCapital,
+            escrowBalance: refreshedCorporation.shareEscrowBalance ?? 0,
+            amountDue: costInCorpCapital,
+          });
+
+          const runPayoff = async (session?: ClientSession, compensate = false) => {
+            const so = session ? { session } : {};
+
+            // Read and validate every holder before moving money. The standalone
+            // fallback cannot roll back these writes for us, so validation must be
+            // complete before the issuer debit lands.
+            const credits: Array<{
+              collection:
+                "characters" | "imperialCharacters" | "corporations" | "indexFunds" | "npps";
+              id: ObjectId;
+              inc: Record<string, number>;
+            }> = [];
+
+            if (charIncs.size > 0) {
+              const charIds = [...charIncs.keys()].map((entryId) => new ObjectId(entryId));
+              const charDocs = await charactersCollection(db)
+                .find({ _id: { $in: charIds } }, so)
+                .project<Pick<Character, "_id" | "countryId" | "name">>({
+                  _id: 1,
+                  countryId: 1,
+                  name: 1,
+                })
+                .toArray();
+              if (charDocs.length !== charIncs.size) {
+                throw internalError("Bond holder data is inconsistent; contact an admin.");
+              }
+              const currencies = new Map(
+                charDocs.map((c) => [c._id.toString(), getHomeCurrency(c as Character)])
+              );
+              for (const c of charDocs) nameById.set(c._id.toString(), c.name as string);
+              for (const [id, amountAnchor] of charIncs) {
+                const currency = currencies.get(id) ?? "USD";
+                const amount = forexEnabled ? anchorToLocal(amountAnchor, currency) : amountAnchor;
+                credits.push({
+                  collection: "characters",
+                  id: new ObjectId(id),
+                  inc: buildPersonalBalanceInc(amount, currency, forexEnabled),
+                });
+              }
+            }
+
+            if (imperialIncs.size > 0) {
+              const ids = [...imperialIncs.keys()].map((entryId) => new ObjectId(entryId));
+              const docs = await imperialCharactersCollection(db)
+                .find({ _id: { $in: ids } }, so)
+                .project<Pick<ImperialCharacter, "_id" | "countryId" | "name">>({
+                  _id: 1,
+                  countryId: 1,
+                  name: 1,
+                })
+                .toArray();
+              if (docs.length !== imperialIncs.size) {
+                throw internalError("Bond holder data is inconsistent; contact an admin.");
+              }
+              const currencies = new Map(
+                docs.map((c) => [c._id.toString(), getHomeCurrency(c as ImperialCharacter)])
+              );
+              for (const c of docs) nameById.set(c._id.toString(), c.name as string);
+              for (const [id, amountAnchor] of imperialIncs) {
+                const currency = currencies.get(id) ?? "USD";
+                const amount = forexEnabled ? anchorToLocal(amountAnchor, currency) : amountAnchor;
+                credits.push({
+                  collection: "imperialCharacters",
+                  id: new ObjectId(id),
+                  inc: buildPersonalBalanceInc(amount, currency, forexEnabled),
+                });
+              }
+            }
+
+            if (corpIncs.size > 0) {
+              const ids = [...corpIncs.keys()].map((entryId) => new ObjectId(entryId));
+              const docs = await corporationsCollection(db)
+                .find({ _id: { $in: ids } }, so)
+                .toArray();
+              if (docs.length !== corpIncs.size) {
+                throw internalError("Bond holder data is inconsistent; contact an admin.");
+              }
+              for (const creditor of docs) {
+                const fxRate = fxRateForCorpFromMap(creditor, fxByCurrency);
+                const currency = (resolveCorpLiquidCurrencyCode(creditor) ?? "USD") as CurrencyCode;
+                holderCorpFxByHolderId.set(creditor._id.toString(), {
+                  currency,
+                  fxRate,
+                  doc: creditor,
+                });
+                nameById.set(creditor._id.toString(), creditor.name);
+              }
+              for (const [id, amountAnchor] of corpIncs) {
+                const info = holderCorpFxByHolderId.get(id);
+                if (!info)
+                  throw internalError("Bond holder data is inconsistent; contact an admin.");
+                credits.push({
+                  collection: "corporations",
+                  id: new ObjectId(id),
+                  inc: {
+                    liquidCapital: anchorToCorpLiquidCapital(amountAnchor, info.doc, info.fxRate),
+                  },
+                });
+              }
+            }
+
+            for (const [id, amount] of fundIncsAnchor) {
+              credits.push({
+                collection: "indexFunds",
+                id: new ObjectId(id),
+                inc: { cashAnchor: Math.round(amount * 100) / 100 },
+              });
+            }
+            for (const [id, amount] of nppIncsAnchor) {
+              credits.push({
+                collection: "npps",
+                id: new ObjectId(id),
+                inc: { nppInvestmentCashAnchor: Math.round(amount * 100) / 100 },
+              });
+            }
+
+            const undo: Array<() => Promise<void>> = [];
+            const compensateAndThrow = async (err: unknown): Promise<never> => {
+              const compensationErrors: unknown[] = [];
+              if (compensate) {
+                for (const revert of undo.reverse()) {
+                  try {
+                    await revert();
+                  } catch (compensationError) {
+                    compensationErrors.push(compensationError);
+                    Sentry.captureException(compensationError, {
+                      extra: {
+                        context: "bond-default cash fallback compensation failed",
+                        corporationId: refreshedCorporation._id.toString(),
+                      },
+                    });
+                  }
+                }
+              }
+              if (compensationErrors.length > 0) {
+                throw new AggregateError(
+                  [err, ...compensationErrors],
+                  `Bond cash cure failed and ${compensationErrors.length} compensation step(s) were incomplete`
+                );
+              }
+              throw err;
+            };
+
+            // Atomic, race-safe debit. Each leg is guarded only when it's actually
+            // drawn (a $gte:0 guard on an untouched negative escrow would wrongly block).
+            const debitResult = await corporationsCollection(db).updateOne(
+              {
+                _id: refreshedCorporation._id,
+                ...(paymentSplit.fromLiquid > 0
+                  ? { liquidCapital: { $gte: paymentSplit.fromLiquid } }
+                  : {}),
                 ...(paymentSplit.fromEscrow > 0
-                  ? { shareEscrowBalance: -paymentSplit.fromEscrow }
+                  ? { shareEscrowBalance: { $gte: paymentSplit.fromEscrow } }
                   : {}),
               },
-              $set: { updatedAt: now },
-            },
-            so
-          );
-          if (debitResult.modifiedCount === 0) {
-            throw badRequest(
-              "Insufficient liquid capital (race with another transaction). Refresh and try again."
-            );
-          }
-          undo.push(async () => {
-            const result = await corporationsCollection(db).updateOne(
-              { _id: refreshedCorporation._id },
               {
                 $inc: {
-                  liquidCapital: paymentSplit.fromLiquid,
+                  liquidCapital: -paymentSplit.fromLiquid,
                   ...(paymentSplit.fromEscrow > 0
-                    ? { shareEscrowBalance: paymentSplit.fromEscrow }
+                    ? { shareEscrowBalance: -paymentSplit.fromEscrow }
                     : {}),
                 },
                 $set: { updatedAt: now },
               },
               so
             );
-            if (result.matchedCount !== 1) {
-              throw new Error("Failed to restore issuer funds after bond cash cure failure");
-            }
-          });
-
-          // On standalone Mongo each holder is a separate confirmed write. A
-          // failed bulkWrite cannot tell us which earlier operations landed, so
-          // compensating the whole batch could debit untouched holders.
-          for (const credit of credits) {
-            try {
-              const result = await db
-                .collection(credit.collection)
-                .updateOne({ _id: credit.id }, { $inc: credit.inc, $set: { updatedAt: now } }, so);
-              if (result.modifiedCount !== 1) {
-                throw internalError("Bond holder data changed during payoff; contact an admin.");
-              }
-            } catch (err) {
-              return compensateAndThrow(err);
+            if (debitResult.modifiedCount === 0) {
+              throw badRequest(
+                "Insufficient liquid capital (race with another transaction). Refresh and try again."
+              );
             }
             undo.push(async () => {
-              const result = await db.collection(credit.collection).updateOne(
-                { _id: credit.id },
+              const result = await corporationsCollection(db).updateOne(
+                { _id: refreshedCorporation._id },
                 {
-                  $inc: Object.fromEntries(
-                    Object.entries(credit.inc).map(([field, amount]) => [field, -amount])
-                  ),
+                  $inc: {
+                    liquidCapital: paymentSplit.fromLiquid,
+                    ...(paymentSplit.fromEscrow > 0
+                      ? { shareEscrowBalance: paymentSplit.fromEscrow }
+                      : {}),
+                  },
                   $set: { updatedAt: now },
                 },
                 so
               );
               if (result.matchedCount !== 1) {
-                throw new Error(
-                  `Failed to reverse ${credit.collection} holder credit after bond cash cure failure`
-                );
+                throw new Error("Failed to restore issuer funds after bond cash cure failure");
               }
             });
-          }
 
-          // Maturation is last, after every financial leg has succeeded. The
-          // standalone path writes one bond at a time because updateMany can
-          // legitimately update a subset before returning a short count.
-          const maturityFilter = (bondId: ObjectId) => ({
-            _id: bondId,
-            corporationId: refreshedCorporation._id,
-            matured: false,
-            defaulted: true,
-          });
-          const maturityUpdate = {
-            $set: {
-              matured: true,
-              marketPrice: 1,
-              defaulted: false,
-              defaultCure: { cureMethod: "cash" as const, curedAtTurn: cureTurn },
-              updatedAt: now,
-            },
-          };
-
-          if (!compensate) {
-            const claimedBonds = await bondsCollection(db).updateMany(
-              { ...maturityFilter(bondIds[0]!), _id: { $in: bondIds } },
-              maturityUpdate,
-              so
-            );
-            if (claimedBonds.modifiedCount !== bondIds.length) {
-              throw badRequest("Bond state changed during payoff. Refresh and try again.");
-            }
-          } else {
-            for (const bond of defaultedBonds) {
-              let result: { modifiedCount: number };
+            // On standalone Mongo each holder is a separate confirmed write. A
+            // failed bulkWrite cannot tell us which earlier operations landed, so
+            // compensating the whole batch could debit untouched holders.
+            for (const credit of credits) {
               try {
-                result = await bondsCollection(db).updateOne(
-                  maturityFilter(bond._id),
-                  maturityUpdate,
-                  so
-                );
+                const result = await db
+                  .collection(credit.collection)
+                  .updateOne(
+                    { _id: credit.id },
+                    { $inc: credit.inc, $set: { updatedAt: now } },
+                    so
+                  );
+                if (result.modifiedCount !== 1) {
+                  throw internalError("Bond holder data changed during payoff; contact an admin.");
+                }
               } catch (err) {
                 return compensateAndThrow(err);
               }
-              if (result.modifiedCount !== 1) {
-                return compensateAndThrow(
-                  badRequest("Bond state changed during payoff. Refresh and try again.")
-                );
-              }
-
               undo.push(async () => {
-                const priorSet: Record<string, unknown> = {
-                  matured: bond.matured,
-                  defaulted: bond.defaulted,
-                };
-                const priorUnset: Record<string, ""> = {};
-                for (const field of ["marketPrice", "defaultCure", "updatedAt"] as const) {
-                  if (bond[field] === undefined) priorUnset[field] = "";
-                  else priorSet[field] = bond[field];
-                }
-                const result = await bondsCollection(db).updateOne(
+                const result = await db.collection(credit.collection).updateOne(
+                  { _id: credit.id },
                   {
-                    _id: bond._id,
-                    matured: true,
-                    defaulted: false,
-                    "defaultCure.cureMethod": "cash",
-                    "defaultCure.curedAtTurn": cureTurn,
-                  },
-                  {
-                    $set: priorSet,
-                    ...(Object.keys(priorUnset).length > 0 ? { $unset: priorUnset } : {}),
+                    $inc: Object.fromEntries(
+                      Object.entries(credit.inc).map(([field, amount]) => [field, -amount])
+                    ),
+                    $set: { updatedAt: now },
                   },
                   so
                 );
                 if (result.matchedCount !== 1) {
-                  throw new Error("Failed to restore matured bond after bond cash cure failure");
+                  throw new Error(
+                    `Failed to reverse ${credit.collection} holder credit after bond cash cure failure`
+                  );
                 }
               });
             }
+
+            // Maturation is last, after every financial leg has succeeded. The
+            // standalone path writes one bond at a time because updateMany can
+            // legitimately update a subset before returning a short count.
+            const maturityFilter = (bondId: ObjectId) => ({
+              _id: bondId,
+              corporationId: refreshedCorporation._id,
+              matured: false,
+              defaulted: true,
+            });
+            const maturityUpdate = {
+              $set: {
+                matured: true,
+                marketPrice: 1,
+                defaulted: false,
+                defaultCure: { cureMethod: "cash" as const, curedAtTurn: cureTurn },
+                updatedAt: now,
+              },
+            };
+
+            if (!compensate) {
+              const claimedBonds = await bondsCollection(db).updateMany(
+                { ...maturityFilter(bondIds[0]!), _id: { $in: bondIds } },
+                maturityUpdate,
+                so
+              );
+              if (claimedBonds.modifiedCount !== bondIds.length) {
+                throw badRequest("Bond state changed during payoff. Refresh and try again.");
+              }
+            } else {
+              for (const bond of defaultedBonds) {
+                let result: { modifiedCount: number };
+                try {
+                  result = await bondsCollection(db).updateOne(
+                    maturityFilter(bond._id),
+                    maturityUpdate,
+                    so
+                  );
+                } catch (err) {
+                  return compensateAndThrow(err);
+                }
+                if (result.modifiedCount !== 1) {
+                  return compensateAndThrow(
+                    badRequest("Bond state changed during payoff. Refresh and try again.")
+                  );
+                }
+
+                undo.push(async () => {
+                  const priorSet: Record<string, unknown> = {
+                    matured: bond.matured,
+                    defaulted: bond.defaulted,
+                  };
+                  const priorUnset: Record<string, ""> = {};
+                  for (const field of ["marketPrice", "defaultCure", "updatedAt"] as const) {
+                    if (bond[field] === undefined) priorUnset[field] = "";
+                    else priorSet[field] = bond[field];
+                  }
+                  const result = await bondsCollection(db).updateOne(
+                    {
+                      _id: bond._id,
+                      matured: true,
+                      defaulted: false,
+                      "defaultCure.cureMethod": "cash",
+                      "defaultCure.curedAtTurn": cureTurn,
+                    },
+                    {
+                      $set: priorSet,
+                      ...(Object.keys(priorUnset).length > 0 ? { $unset: priorUnset } : {}),
+                    },
+                    so
+                  );
+                  if (result.matchedCount !== 1) {
+                    throw new Error("Failed to restore matured bond after bond cash cure failure");
+                  }
+                });
+              }
+            }
+          };
+
+          try {
+            await runWithDbSession(db, (session) => runPayoff(session));
+          } catch (err) {
+            if (err instanceof Error && err.message === "RATE_UNAVAILABLE") {
+              return errorResponse(503, "Exchange rate unavailable, try again shortly");
+            }
+            throw err;
           }
-        };
 
-        try {
-          await runWithOptionalTransaction(
-            (session) => runPayoff(session),
-            () => runPayoff(undefined, true)
-          );
-        } catch (err) {
-          if (err instanceof Error && err.message === "RATE_UNAVAILABLE") {
-            return errorResponse(503, "Exchange rate unavailable, try again shortly");
-          }
-          throw err;
-        }
+          // Emit one bond_maturity row per (holder, bond) pair so the cash payoff is
+          // visible in the financial ledger / suspect-flag scan / wealth audit. This
+          // stays outside the transaction because the tx-log helper is best-effort and
+          // intentionally swallows its own write failures.
+          if (pendingMaturityTxs.length > 0) {
+            const currentTurn = cureTurn;
+            const txEntries: TxLogInput[] = pendingMaturityTxs.flatMap((t): TxLogInput[] => {
+              const bondRate = t.bondCcy ? (fxByCurrency.get(t.bondCcy) ?? 1) : 1;
+              const bondLocalAmount = t.faceAnchor * (bondRate > 0 ? bondRate : 1);
 
-        // Emit one bond_maturity row per (holder, bond) pair so the cash payoff is
-        // visible in the financial ledger / suspect-flag scan / wealth audit. This
-        // stays outside the transaction because the tx-log helper is best-effort and
-        // intentionally swallows its own write failures.
-        if (pendingMaturityTxs.length > 0) {
-          const currentTurn = cureTurn;
-          const txEntries: TxLogInput[] = pendingMaturityTxs.flatMap((t): TxLogInput[] => {
-            const bondRate = t.bondCcy ? (fxByCurrency.get(t.bondCcy) ?? 1) : 1;
-            const bondLocalAmount = t.faceAnchor * (bondRate > 0 ? bondRate : 1);
+              // Autonomous NPP investment returns are deliberately kept out of the
+              // tx log, matching the NPP investment-account isolation the bondTurn
+              // coupon/maturity legs already apply.
+              if (t.holderType === "npp") return [];
 
-            // Autonomous NPP investment returns are deliberately kept out of the
-            // tx log, matching the NPP investment-account isolation the bondTurn
-            // coupon/maturity legs already apply.
-            if (t.holderType === "npp") return [];
+              if (t.holderType === "corp" || t.holderType === "fund") {
+                // A fund holds in ₳ and has no corp FX doc, so it logs the anchor
+                // amount directly; a corporation logs in its own liquid currency.
+                const info =
+                  t.holderType === "corp" ? holderCorpFxByHolderId.get(t.holderId) : undefined;
+                const lcAmount =
+                  t.holderType === "fund"
+                    ? t.faceAnchor
+                    : anchorToCorpLiquidCapital(t.faceAnchor, info?.doc, info?.fxRate ?? 1);
+                const lcCurrency = t.holderType === "fund" ? "USD" : (info?.currency ?? "USD");
+                return [
+                  {
+                    type: "bond_maturity" as const,
+                    turn: currentTurn,
+                    createdAt: now,
+                    subjectType: "corporation" as const,
+                    subjectId: new ObjectId(t.holderId),
+                    subjectName: nameById.get(t.holderId) ?? "(holder)",
+                    amount: Math.round(lcAmount * 100) / 100,
+                    currencyCode: lcCurrency as CurrencyCode,
+                    counterpartyType: "corporation" as const,
+                    counterpartyId: refreshedCorporation._id,
+                    counterpartyName: refreshedCorporation.name,
+                    meta: {
+                      bondId: t.bondId,
+                      units: t.units,
+                      couponRate: t.couponRate,
+                      source: "default_cash_payoff",
+                      ...(t.holderType === "fund" ? { fundId: t.holderId } : {}),
+                      ...(t.bondCcy
+                        ? {
+                            bondCurrency: t.bondCcy,
+                            bondAmount: Math.round(bondLocalAmount * 100) / 100,
+                          }
+                        : {}),
+                    },
+                  },
+                ];
+              }
 
-            if (t.holderType === "corp" || t.holderType === "fund") {
-              // A fund holds in ₳ and has no corp FX doc, so it logs the anchor
-              // amount directly; a corporation logs in its own liquid currency.
-              const info =
-                t.holderType === "corp" ? holderCorpFxByHolderId.get(t.holderId) : undefined;
-              const lcAmount =
-                t.holderType === "fund"
-                  ? t.faceAnchor
-                  : anchorToCorpLiquidCapital(t.faceAnchor, info?.doc, info?.fxRate ?? 1);
-              const lcCurrency = t.holderType === "fund" ? "USD" : (info?.currency ?? "USD");
               return [
                 {
                   type: "bond_maturity" as const,
                   turn: currentTurn,
                   createdAt: now,
-                  subjectType: "corporation" as const,
+                  subjectType: "character" as const,
                   subjectId: new ObjectId(t.holderId),
                   subjectName: nameById.get(t.holderId) ?? "(holder)",
-                  amount: Math.round(lcAmount * 100) / 100,
-                  currencyCode: lcCurrency as CurrencyCode,
+                  amount: Math.round(bondLocalAmount * 100) / 100,
+                  currencyCode: (t.bondCcy ?? "USD") as CurrencyCode,
                   counterpartyType: "corporation" as const,
                   counterpartyId: refreshedCorporation._id,
                   counterpartyName: refreshedCorporation.name,
@@ -619,58 +655,29 @@ export async function POST(_request: Request, { params }: RouteParams) {
                     units: t.units,
                     couponRate: t.couponRate,
                     source: "default_cash_payoff",
-                    ...(t.holderType === "fund" ? { fundId: t.holderId } : {}),
-                    ...(t.bondCcy
-                      ? {
-                          bondCurrency: t.bondCcy,
-                          bondAmount: Math.round(bondLocalAmount * 100) / 100,
-                        }
-                      : {}),
+                    ...(t.holderType === "imperial" ? { imperial: true } : {}),
                   },
                 },
               ];
-            }
+            });
+            const thresholds = await loadTxThresholds(db);
+            await emitTxBulk(db, txEntries, thresholds);
+          }
 
-            return [
-              {
-                type: "bond_maturity" as const,
-                turn: currentTurn,
-                createdAt: now,
-                subjectType: "character" as const,
-                subjectId: new ObjectId(t.holderId),
-                subjectName: nameById.get(t.holderId) ?? "(holder)",
-                amount: Math.round(bondLocalAmount * 100) / 100,
-                currencyCode: (t.bondCcy ?? "USD") as CurrencyCode,
-                counterpartyType: "corporation" as const,
-                counterpartyId: refreshedCorporation._id,
-                counterpartyName: refreshedCorporation.name,
-                meta: {
-                  bondId: t.bondId,
-                  units: t.units,
-                  couponRate: t.couponRate,
-                  source: "default_cash_payoff",
-                  ...(t.holderType === "imperial" ? { imperial: true } : {}),
-                },
-              },
-            ];
+          return NextResponse.json({
+            success: true,
+            paid: cost,
+            bondsMatured: bondIds.length,
           });
-          const thresholds = await loadTxThresholds(db);
-          await emitTxBulk(db, txEntries, thresholds);
         }
+      );
 
-        return NextResponse.json({
-          success: true,
-          paid: cost,
-          bondsMatured: bondIds.length,
-        });
+      if (!result) {
+        return errorResponse(409, "Bond settlement is already in progress for this corporation");
       }
-    );
 
-    if (!result) {
-      return errorResponse(409, "Bond settlement is already in progress for this corporation");
-    }
-
-    return result;
+      return result;
+    });
   } catch (error) {
     return handleRouteError(error);
   }

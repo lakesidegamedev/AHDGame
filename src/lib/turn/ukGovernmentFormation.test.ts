@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 vi.mock("@/lib/db/sessionDb", () => ({
   withSessionDb: (_db: unknown, work: (db: unknown) => Promise<unknown>) => work(_db),
   afterCommit: (_db: unknown, effect: () => Promise<unknown>) => effect(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { EstateView } from "../../useCabinetOffice";
 import { getPortfolioCatalog } from "@/lib/constants/cabinetEstates";
 import { AggTile, EstateIcon, fmtMoneyM } from "./estatesUi";
@@ -66,18 +66,28 @@ export function EstatesRosterTab({
     [estates]
   );
 
+  const requestIntent = useRef<{ fingerprint: string; key: string } | null>(null);
+
   async function act(method: "POST" | "DELETE", path: string, body?: unknown) {
     if (busy) return;
+    const fingerprint = JSON.stringify([method, path, body]);
+    if (requestIntent.current?.fingerprint !== fingerprint)
+      requestIntent.current = { fingerprint, key: crypto.randomUUID() };
     setBusy(true);
     setActionError(null);
     try {
       const res = await fetch(path, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": requestIntent.current.key,
+        },
         body: body ? JSON.stringify(body) : undefined,
       });
-      if (res.ok) onUpdate();
-      else setActionError(await readApiError(res));
+      if (res.ok) {
+        requestIntent.current = null;
+        onUpdate();
+      } else setActionError(await readApiError(res));
     } catch (err) {
       setActionError(toDisplayError(err, "Could not reach the server. Please try again."));
     } finally {

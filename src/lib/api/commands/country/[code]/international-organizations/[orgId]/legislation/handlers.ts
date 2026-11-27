@@ -5,6 +5,7 @@
 // `joint_statement`, `set_posture`, and `fund_agency` (each gated by the org's
 // category powers).
 import { z } from "zod";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { clientIpFromRequest } from "@/lib/utils/network";
 import { getDb } from "@/lib/mongodb";
@@ -287,65 +288,72 @@ export async function POST(
       };
     }
 
-    const foreignMinister = await requireForeignMinister(
-      countryId,
-      auth.user.character._id,
-      auth.user.character.name,
-      db
-    );
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const foreignMinister = await requireForeignMinister(
+        countryId,
+        auth.user.character._id,
+        auth.user.character.name,
+        db
+      );
 
-    // The organisation's head may table its business from a personal agenda
-    // pool even without holding their country's foreign brief. The pool is
-    // spent first; the country budget backs it when the actor holds that too.
-    const currentTurn = await getCurrentTurn(db);
-    const budget = await resolveOrgProposalBudget({
-      db,
-      organizationId: orgId,
-      countryId,
-      actorCharacterId: auth.user.character._id,
-      proposalType: validatedInput.type,
-      countryAuthorized: foreignMinister.ok,
-      currentTurn,
-    });
-    if (!foreignMinister.ok && !budget.isOrgHead) return foreignMinister.response;
-
-    if (!(await isMember(db, orgId, countryId))) {
-      return NextResponse.json(badRequest(`${countryId} is not a member of ${orgId}.`).toJson(), {
-        status: 400,
+      // The organisation's head may table its business from a personal agenda
+      // pool even without holding their country's foreign brief. The pool is
+      // spent first; the country budget backs it when the actor holds that too.
+      const currentTurn = await getCurrentTurn(db);
+      const budget = await resolveOrgProposalBudget({
+        db,
+        organizationId: orgId,
+        countryId,
+        actorCharacterId: auth.user.character._id,
+        proposalType: validatedInput.type,
+        countryAuthorized: foreignMinister.ok,
+        currentTurn,
       });
-    }
+      if (!foreignMinister.ok && !budget.isOrgHead) return foreignMinister.response;
 
-    if (!budget.source) {
-      const message = foreignMinister.ok
-        ? "No diplomatic actions remaining this turn."
-        : "No agenda actions remaining.";
-      return NextResponse.json(badRequest(message).toJson(), { status: 400 });
-    }
+      if (!(await isMember(db, orgId, countryId))) {
+        return NextResponse.json(badRequest(`${countryId} is not a member of ${orgId}.`).toJson(), {
+          status: 400,
+        });
+      }
 
-    const result = await proposeOrganizationLegislation({
-      db,
-      countryId,
-      orgId,
-      actor: foreignMinister.ok
-        ? {
-            characterId: foreignMinister.auth.characterId,
-            characterName: foreignMinister.auth.characterName,
-          }
-        : { characterId: auth.user.character._id, characterName: auth.user.character.name },
-      input: validatedInput,
+      if (!budget.source) {
+        const message = foreignMinister.ok
+          ? "No diplomatic actions remaining this turn."
+          : "No agenda actions remaining.";
+        return NextResponse.json(badRequest(message).toJson(), { status: 400 });
+      }
+
+      const result = await proposeOrganizationLegislation({
+        db,
+        countryId,
+        orgId,
+        actor: foreignMinister.ok
+          ? {
+              characterId: foreignMinister.auth.characterId,
+              characterName: foreignMinister.auth.characterName,
+            }
+          : { characterId: auth.user.character._id, characterName: auth.user.character.name },
+        input: validatedInput,
+      });
+      if (!result.ok) {
+        return NextResponse.json(badRequest(result.error).toJson(), { status: result.status });
+      }
+
+      const spent = await spendOrgProposalBudget(db, budget.source, {
+        organizationId: orgId,
+        countryId,
+        characterId: auth.user.character._id,
+        currentTurn,
+      });
+
+      if (!spent.ok)
+        return NextResponse.json(
+          badRequest("No proposal actions remain. Refresh and try again.").toJson(),
+          { status: 409 }
+        );
+      return NextResponse.json({ ok: true, legislationId: result.legislationId });
     });
-    if (!result.ok) {
-      return NextResponse.json(badRequest(result.error).toJson(), { status: result.status });
-    }
-
-    await spendOrgProposalBudget(db, budget.source, {
-      organizationId: orgId,
-      countryId,
-      characterId: auth.user.character._id,
-      currentTurn,
-    });
-
-    return NextResponse.json({ ok: true, legislationId: result.legislationId });
   } catch (err) {
     return handleRouteError(err);
   }

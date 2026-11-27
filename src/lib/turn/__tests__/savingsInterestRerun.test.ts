@@ -21,7 +21,8 @@ function cloneValue(value: unknown): unknown {
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cloneValue(v)]));
   return value;
 }
-vi.mock("@/lib/db/runRequiredTransaction", () => ({
+vi.mock("@/lib/db/runRequiredTransaction", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/runRequiredTransaction")>()),
   runRequiredTransaction: async (body: (session: unknown) => Promise<unknown>) => {
     const world = activeWorld!;
     const snapshot = new Map(
@@ -42,7 +43,7 @@ const SAVERS = [new ObjectId(), new ObjectId(), new ObjectId()];
 const NPP = new ObjectId();
 
 function world(): InMemoryDb {
-  const db = createInMemoryDb();
+  const db = Object.assign(createInMemoryDb(), { client: {} });
   db.seed("gameConfig", [{ _id: "default", forexEnabled: true, nppAutonomyLevel: "v3" }]);
   db.seed("gameState", [{ _id: "current", currentTurn: QUARTER_TURN - 1, preset: "2019-default" }]);
   db.seed("centralBanks", [
@@ -192,7 +193,7 @@ describe("savingsInterestTurn below stage 2", () => {
     return db;
   }
 
-  it("writes no stamp fields and the same money as the stamped path", async () => {
+  it("uses the same stamped settlement regardless of the outer stage", async () => {
     const plain = await oneTurn(false);
     const stamped = await oneTurn(true);
     const text = JSON.stringify([
@@ -200,7 +201,7 @@ describe("savingsInterestTurn below stage 2", () => {
       plain.collection("npps").docs,
       plain.collection("centralBanks").docs,
     ]);
-    for (const key of STAMP_KEYS) expect(text.includes(key), `${key} written`).toBe(false);
+    expect(text.includes("savingsAccrualTurn")).toBe(true);
     expect(JSON.stringify(endState(stamped)).includes("savingsAccrualTurn")).toBe(true);
     const unstamped = (db: InMemoryDb) =>
       JSON.parse(JSON.stringify(endState(db), (k, v) => (STAMP_KEYS.includes(k) ? undefined : v)));
@@ -208,13 +209,13 @@ describe("savingsInterestTurn below stage 2", () => {
     expect(diagnostics(plain)).toEqual(diagnostics(stamped));
   });
 
-  it("defaults to the unstamped path", async () => {
+  it("defaults to a replay-safe settlement", async () => {
     const db = world();
     activeWorld = db;
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     await processSavingsInterestTurn(db as unknown as Db, QUARTER_TURN);
     expect(JSON.stringify(db.collection("characters").docs).includes("savingsAccrualTurn")).toBe(
-      false
+      true
     );
   });
 });

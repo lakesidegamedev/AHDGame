@@ -1495,6 +1495,40 @@ describe("appointPrimeMinister — same-holder announce guard", () => {
     expect(sendCountryGameEvent).not.toHaveBeenCalled();
   });
 
+  it("renews a sitting NPP leader without reinstalling confidence", async () => {
+    const pmId = new ObjectId();
+    setupAppointMocks(null);
+    db.collectionMocks.governmentFormations.findOne.mockResolvedValue({
+      _id: "UK",
+      pmCharacterId: null,
+      pmNppId: pmId,
+    });
+    db.collection("countryState").findOne.mockResolvedValue({
+      ...seedCountryStateFromConfig("UK", new Date(), "1991-default"),
+      hasLeaderConfidenceModel: true,
+    });
+    db.collectionMocks.npps.findOne.mockResolvedValue({ _id: pmId, party: "LAB" });
+    const confidence = await import("@/lib/turn/rulingPartyConfidence");
+    const renew = vi.spyOn(confidence, "renewLeaderMandate").mockResolvedValue({} as never);
+    const install = vi.spyOn(confidence, "installNewLeader").mockResolvedValue({} as never);
+    try {
+      const { appointPrimeMinister } = await import("./parliamentaryGovernment");
+      await appointPrimeMinister(db as unknown as Db, "UK", null, pmId, "Same NPP PM", new Date());
+      expect(renew).toHaveBeenCalledWith(
+        expect.anything(),
+        "UK",
+        { kind: "npp", id: pmId },
+        expect.anything(),
+        "LAB",
+        100
+      );
+      expect(install).not.toHaveBeenCalled();
+    } finally {
+      renew.mockRestore();
+      install.mockRestore();
+    }
+  });
+
   it("contains optional telemetry reads when a preset was already supplied", async () => {
     const pmId = new ObjectId();
     const outgoingId = new ObjectId();

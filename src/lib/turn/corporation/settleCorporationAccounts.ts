@@ -189,10 +189,11 @@ export function settleCorporationAccounts(
         ),
         otherLiabilitiesAnchor:
           corporateCashArrearsAnchor({
+            producerPayables: corp.producerPayables?.claims,
             operatingByCurrency: corp.operatingCashArrearsByCurrency,
             federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
             fxByCurrency: context.lookups.exchangeRatesByCurrency,
-          }) + (context.lookups.constructionLoanDebtByCorpId?.get(corp._id.toString()) ?? 0),
+          }) + (context.lookups.corporateLoanDebtByCorpId?.get(corp._id.toString()) ?? 0),
       });
       snapshot.creditComposite = creditPack.creditRating.compositeScore;
       snapshot.creditRating = creditPack.creditRating.rating;
@@ -284,7 +285,7 @@ export function settleCorporationAccounts(
       sectorNPVAnchor: s.sectorNPV + bankNpvAnchor,
       issuedBondDebt:
         (context.lookups.issuedBondDebtByCorpId.get(id) ?? 0) +
-        (context.lookups.constructionLoanDebtByCorpId?.get(id) ?? 0),
+        (context.lookups.corporateLoanDebtByCorpId?.get(id) ?? 0),
       bondHoldingsAnchor: context.lookups.bondAndImfPortfolioAnchorByCorpId.get(id) ?? 0,
       normalizedEarningsAnchor: adjustedEarningsMap.get(id) ?? 0,
       // Annualised bond-coupon income (snapshot value is per-turn ₳).

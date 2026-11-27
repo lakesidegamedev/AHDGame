@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildHomeCurrencyCashGrantSetStage,
   buildCampaignFundsGrantExpression,
-} from "./grantCashBuilder";
+} from "./rules/grantCashBuilder";
 
 /**
  * Minimal evaluator for the subset of MongoDB aggregation operators the grant
@@ -120,15 +120,7 @@ describe("buildHomeCurrencyCashGrantSetStage", () => {
 });
 
 describe("buildCampaignFundsGrantExpression", () => {
-  const rates = new Map<string, number>([
-    ["US", 1.0],
-    ["UK", 0.75],
-    ["JP", 106],
-    ["DE", 1.108],
-    ["IE", 0.357],
-    ["BR", 5],
-    ["CN", 7.2],
-  ]);
+  const rates = { USD: 1, GBP: 0.75, JPY: 106, EUR: 1.108, IEP: 0.357, BRL: 5, CNY: 7.2 };
   const FUNDS = 1_000_000;
   const EUR_RATE = 1.108;
   const IEP_RATE = 0.357;
@@ -161,4 +153,27 @@ describe("buildCampaignFundsGrantExpression", () => {
     const jp = { countryId: "JP", currencyBalances: {} };
     expect(evalCampaign(expr, jp)).toBeCloseTo(FUNDS * 106, 2);
   });
+});
+
+it("credits a modern French personal grant in EUR rather than FRF", () => {
+  const stage = buildHomeCurrencyCashGrantSetStage(
+    100,
+    new Map([
+      ["DE", 1],
+      ["FR", 6.55957],
+    ]),
+    "2027-default"
+  );
+  expect(
+    evalPath(stage, "currencyBalances.personal.EUR", {
+      countryId: "FR",
+      currencyBalances: { personal: { EUR: 0 } },
+    })
+  ).toBe(100);
+});
+it("credits campaign grants at their fixed base rate rather than floating personal FX", () => {
+  const expression = buildCampaignFundsGrantExpression(100, { CAD: 1.25 }, "2027-default");
+  expect(
+    evalPath({ value: expression }, "value", { countryId: "CA", currencyBalances: { campaign: 0 } })
+  ).toBe(125);
 });

@@ -1,31 +1,5 @@
-/**
- * The ONE safe way to move a single political-board family.
- *
- * WHY THIS EXISTS — a board doc's `values`/`residuals` keys are literal dotted
- * strings ("governance.integrity"), not nested objects. So a Mongo update path
- * like `{ $inc: { "residuals.governance.integrity": d } }` does NOT touch that
- * key: Mongo reads the dots as a path and quietly creates
- * `residuals: { governance: { integrity: d } }` instead. The read side then
- * looks up `residuals["governance.integrity"]`, finds nothing, and the write is
- * silently lost. Nothing errors; the effect just never happens.
- *
- * So every single-family write goes through a read-modify-write of the WHOLE
- * object, which is what the dynamics phase already does for the same reason.
- *
- * VALUE vs RESIDUAL — the caller's choice, and it is a real modelling decision:
- *
- *   "value"    a TRANSIENT SHOCK. The dynamics phase drifts the value back
- *              toward its law-implied target every turn, so the hit fades —
- *              exactly what the legacy `$inc` + natural-decay pair did. Right
- *              for events: a sovereign default damages trust, and trust
- *              recovers.
- *
- *   "residual" a STRUCTURAL shift of the equilibrium itself, so the value
- *              drifts to a NEW resting point and stays there. Right for
- *              enacted law, whose effect should persist while it is in force.
- *              A value shift would be drifted straight back out and the law
- *              would flicker and vanish.
- */
+/** Literal dotted board keys require whole-object updates within a transaction. */
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { AnyBulkWriteOperation, Db, Filter } from "mongodb";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { PoliticalMetricId } from "@/lib/politicalMetrics/types";
@@ -52,7 +26,16 @@ export async function applyBoardDelta(
   mode: "value" | "residual"
 ): Promise<BoardDeltaResult> {
   if (!Number.isFinite(scoreDelta) || scoreDelta === 0) return { regionsUpdated: 0 };
+  return withSessionDb(db, (db) => applyBoardDeltaWork(db, filter, familyId, scoreDelta, mode));
+}
 
+async function applyBoardDeltaWork(
+  db: Db,
+  filter: Filter<PoliticalMetricsDoc>,
+  familyId: string,
+  scoreDelta: number,
+  mode: "value" | "residual"
+): Promise<BoardDeltaResult> {
   const docs = await politicalMetricsCollection(db).find(filter).toArray();
   if (docs.length === 0) return { regionsUpdated: 0 };
 
@@ -110,6 +93,14 @@ export interface BoardDelta {
  * is ~1,300 serial round trips.
  */
 export async function applyBoardValueDeltasByRegion(
+  db: Db,
+  deltasByRegion: ReadonlyMap<string, readonly BoardDelta[]>
+): Promise<BoardDeltaResult> {
+  if (!deltasByRegion.size) return { regionsUpdated: 0 };
+  return withSessionDb(db, (db) => applyBoardValueDeltasByRegionWork(db, deltasByRegion));
+}
+
+async function applyBoardValueDeltasByRegionWork(
   db: Db,
   deltasByRegion: ReadonlyMap<string, readonly BoardDelta[]>
 ): Promise<BoardDeltaResult> {

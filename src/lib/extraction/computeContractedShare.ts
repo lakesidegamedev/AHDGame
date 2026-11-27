@@ -76,8 +76,9 @@ export async function computeContractedShare(
 export async function computeRemainingContractHeadroom(
   db: Db,
   stateId: string,
-  resource: ExtractableResource
+  resource: ExtractableResource,
+  countryId?: string
 ): Promise<number> {
-  const used = await computeContractedShare(db, stateId, resource);
+  const used = await computeContractedShare(db, stateId, resource, countryId);
   return Math.max(0, GOVT_CONTRACT_MAX_TOTAL_SHARE - used);
 }

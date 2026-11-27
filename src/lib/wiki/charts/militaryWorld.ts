@@ -20,7 +20,7 @@ import {
   tensionPressureBreakdown,
   stepTension,
   type TensionPressures,
-} from "@/lib/coldwar/tension";
+} from "@/lib/coldwar/rules/tension";
 import { advanceChannel, contestTarget } from "@/lib/navair/channels";
 import { MARINE_SUSTAINMENT_SEA_CONTROL } from "@/lib/navair/frontSupport";
 import { BLOCKADE, blockadeAffinityMultiplier } from "@/lib/navair/blockade";

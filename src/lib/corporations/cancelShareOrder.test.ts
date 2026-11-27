@@ -1,3 +1,7 @@
+vi.mock("@/lib/corporations/shareCancellationTransaction", () => ({
+  withShareCancellationTransaction: (db: unknown, work: (db: unknown) => Promise<unknown>) =>
+    work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { actorMayCancelShareOrder, cancelShareOrderAndRefund } from "./cancelShareOrder";
@@ -211,7 +215,7 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
     expect(db.collectionMocks["shareOrders"].updateOne).not.toHaveBeenCalled();
   });
 
-  it("cancels an orphaned buy order even when the owner document is missing", async () => {
+  it("retains escrow when the personal owner is missing", async () => {
     const orderId = new ObjectId();
     const targetCorpId = new ObjectId();
     const characterId = new ObjectId();
@@ -253,27 +257,11 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
 
     const result = await cancelShareOrderAndRefund(db as never, order as never);
 
-    expect(result).toEqual({ ok: true });
-    expect(db.collectionMocks["shareOrders"].updateOne).toHaveBeenCalledWith(
-      {
-        _id: orderId,
-        status: "open",
-        sharesRemaining: order.sharesRemaining,
-        escrowAmount: order.escrowAmount,
-        activeShareFillKey: { $exists: false },
-      },
-      expect.objectContaining({
-        $set: expect.objectContaining({ status: "cancelled" }),
-      })
-    );
+    expect(result).toEqual({ ok: false, error: "Order owner is missing; escrow remains held" });
+    expect(db.collectionMocks["shareOrders"].updateOne).not.toHaveBeenCalled();
   });
 
-  it("cancels an orphaned corp-placed buy order when the placer corp is missing", async () => {
-    // Repro: placer corp was dissolved while leaving an open buy order. Pre-fix
-    // this hard-failed with "Buyer corporation not found", blocking reverse
-    // splits indefinitely. New behavior mirrors the orphan-
-    // character branch: cancel the order without refund (escrow can't be
-    // returned, but the orphan can't keep blocking the target corp either).
+  it("retains escrow when the placer corporation is missing", async () => {
     const orderId = new ObjectId();
     const targetCorpId = new ObjectId();
     const placerCorpId = new ObjectId();
@@ -318,24 +306,14 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
 
     const result = await cancelShareOrderAndRefund(db as never, order as never);
 
-    expect(result).toEqual({ ok: true });
-    expect(db.collectionMocks["shareOrders"].updateOne).toHaveBeenCalledWith(
-      {
-        _id: orderId,
-        status: "open",
-        sharesRemaining: order.sharesRemaining,
-        escrowAmount: order.escrowAmount,
-        activeShareFillKey: { $exists: false },
-      },
-      expect.objectContaining({
-        $set: expect.objectContaining({ status: "cancelled" }),
-      })
-    );
-    // No refund should have been attempted on the missing placer corp.
-    expect(db.collectionMocks["corporations"].updateOne).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      ok: false,
+      error: "Buyer corporation is missing; escrow remains held",
+    });
+    expect(db.collectionMocks["shareOrders"].updateOne).not.toHaveBeenCalled();
   });
 
-  it("reopens the order if a corporation refund fails after the cancel claim", async () => {
+  it("propagates a failed refund so the transaction can abort its cancel claim", async () => {
     const orderId = new ObjectId();
     const targetCorpId = new ObjectId();
     const placerCorpId = new ObjectId();
@@ -393,13 +371,10 @@ describe("cancelShareOrderAndRefund — Option B escrow semantics", () => {
       }
     );
 
-    const result = await cancelShareOrderAndRefund(db as never, order as never);
-
-    expect(result).toEqual({ ok: false, error: "Buyer corporation not found" });
-    expect(db.collectionMocks["shareOrders"].updateOne).toHaveBeenCalledTimes(2);
-    expect(db.collectionMocks["shareOrders"].updateOne.mock.calls[1]?.[1]).toMatchObject({
-      $set: { status: "open" },
-    });
+    await expect(cancelShareOrderAndRefund(db as never, order as never)).rejects.toThrow(
+      "Buyer corporation not found"
+    );
+    expect(db.collectionMocks["shareOrders"].updateOne).toHaveBeenCalledTimes(1);
   });
 });
 

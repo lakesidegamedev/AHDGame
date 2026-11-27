@@ -235,7 +235,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       await Promise.all([ukRegionalBudgetPromise, jpRegionalBudgetPromise]);
       const policyResult = await runtime.runPhase("policyEffects", () =>
         getLegislationTypes().then((legislationTypes) =>
-          processStatePolicyEffects(db, legislationTypes)
+          processStatePolicyEffects(db, legislationTypes, newTurn)
         )
       );
       return { ...prerequisiteResults, policyResult };
@@ -276,7 +276,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
         }
         return result;
       }),
-      runtime.runPhase("bucketApprovalDecay", () => processBucketApprovalDecay()),
+      runtime.runPhase("bucketApprovalDecay", () => processBucketApprovalDecay(newTurn)),
       runtime.runPhase("metricDecay", () => processMetricDecay()),
       runtime.runPhase("subsidyBudget", () => processSubsidyBudget(db)),
       ukRegionalBudgetPromise,

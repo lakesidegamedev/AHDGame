@@ -16,6 +16,7 @@ import { getGameState } from "@/lib/gameState";
 import { insertLocLedgerEntry } from "@/lib/lineOfCredit/ledger";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 
 const openSchema = z.object({
@@ -41,71 +42,93 @@ export async function POST(request: Request) {
     const { currency } = parsed.data;
     const c = currency as CurrencyCode;
 
-    const db = await getDb();
-    const [forexEnabled, locEnabled] = await Promise.all([
-      isForexEnabled(),
-      isLineOfCreditEnabled(),
-    ]);
+    const baseDb = await getDb();
+    return await withAtomicEconomicCommand(baseDb, async (db) => {
+      const [forexEnabled, locEnabled] = await Promise.all([
+        isForexEnabled(),
+        isLineOfCreditEnabled(),
+      ]);
 
-    if (!locEnabled) {
-      return errorResponse(404, "Line of credit is not available");
-    }
-    const character = await getCharacterByUserId(db, auth.user.userId);
-    if (!character) {
-      return NextResponse.json(badRequest("Character not found").toJson(), { status: 400 });
-    }
-
-    // Cross-border lending is allowed: opening a JPY LOC means the player is
-    // borrowing yen at the Bank of Japan, even if their home country is the US.
-    // Forex must be on so we have FX rates to value the loan in internal units.
-    if (!forexEnabled) {
-      return NextResponse.json(badRequest("Line of credit requires the forex system").toJson(), {
-        status: 400,
-      });
-    }
-
-    const loc = character.lineOfCredit ?? {
-      balances: {},
-      arrears: {},
-    };
-    if (loc.accountsOpened?.[c]) {
-      return NextResponse.json(badRequest("LOC account already open for this currency").toJson(), {
-        status: 400,
-      });
-    }
-
-    const now = new Date();
-    await charactersCollection(db).updateOne(
-      { _id: character._id },
-      {
-        $set: {
-          lineOfCredit: {
-            balances: loc.balances ?? {},
-            arrears: loc.arrears ?? {},
-            accountsOpened: { ...loc.accountsOpened, [c]: true },
-            drawFrozen: loc.drawFrozen ?? false,
-          },
-          updatedAt: now,
-        },
+      if (!locEnabled) {
+        return errorResponse(404, "Line of credit is not available");
       }
-    );
+      const character = await getCharacterByUserId(db, auth.user.userId);
+      if (!character) {
+        return NextResponse.json(badRequest("Character not found").toJson(), { status: 400 });
+      }
 
-    const gameState = await getGameState();
-    const turn = gameState?.currentTurn ?? 0;
-    const after = await charactersCollection(db).findOne({ _id: character._id });
-    if (after?.lineOfCredit) {
-      await insertLocLedgerEntry(db, {
-        characterId: character._id,
-        currencyCode: c,
-        type: "open",
-        amount: 0,
-        balanceAfter: after.lineOfCredit.balances?.[c] ?? 0,
-        arrearsAfter: after.lineOfCredit.arrears?.[c] ?? 0,
-        turn,
-      });
-    }
+      // Cross-border lending is allowed: opening a JPY LOC means the player is
+      // borrowing yen at the Bank of Japan, even if their home country is the US.
+      // Forex must be on so we have FX rates to value the loan in internal units.
+      if (!forexEnabled) {
+        return NextResponse.json(badRequest("Line of credit requires the forex system").toJson(), {
+          status: 400,
+        });
+      }
 
-    return NextResponse.json({ success: true, currency: c });
+      const loc = character.lineOfCredit ?? {
+        balances: {},
+        arrears: {},
+      };
+      if (loc.accountsOpened?.[c]) {
+        return NextResponse.json(
+          badRequest("LOC account already open for this currency").toJson(),
+          {
+            status: 400,
+          }
+        );
+      }
+
+      const now = new Date();
+      const opened = await charactersCollection(db).updateOne(
+        {
+          _id: character._id,
+          pendingLocSettlement: { $exists: false },
+          [`lineOfCredit.accountsOpened.${c}`]: { $ne: true },
+        },
+        [
+          {
+            $set: {
+              lineOfCredit: {
+                $mergeObjects: [
+                  { balances: {}, arrears: {} },
+                  { $ifNull: ["$lineOfCredit", {}] },
+                  {
+                    accountsOpened: {
+                      $mergeObjects: [
+                        { $ifNull: ["$lineOfCredit.accountsOpened", {}] },
+                        { [c]: true },
+                      ],
+                    },
+                  },
+                ],
+              },
+              lineOfCreditRevision: { $add: [{ $ifNull: ["$lineOfCreditRevision", 0] }, 1] },
+              updatedAt: now,
+            },
+          },
+        ]
+      );
+      if (opened.matchedCount !== 1)
+        return errorResponse(409, "Credit account is busy or already open; refresh and retry");
+
+      const gameState = await getGameState(db);
+      const turn = gameState?.currentTurn ?? 0;
+      const after = await charactersCollection(db).findOne({ _id: character._id });
+      if (after?.lineOfCredit) {
+        await insertLocLedgerEntry(db, {
+          characterId: character._id,
+          currencyCode: c,
+          type: "open",
+          amount: 0,
+          balanceAfter: after.lineOfCredit.balances?.[c] ?? 0,
+          arrearsAfter: after.lineOfCredit.arrears?.[c] ?? 0,
+          turn,
+        });
+      }
+
+      return NextResponse.json({ success: true, currency: c });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

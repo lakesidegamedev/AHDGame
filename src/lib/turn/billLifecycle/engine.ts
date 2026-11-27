@@ -193,10 +193,12 @@ function recordTransition(
 
 /** Resolve the sponsor notifier for a config (per-country override or the US default). */
 function resolveNotifier(config: BillLifecycleConfig): SponsorNotifier {
-  return (db, bill, status) =>
-    afterCommit(db, () =>
+  return async (db, bill, status) => {
+    await config.onResolution?.(db, bill, status);
+    await afterCommit(db, () =>
       (config.notifySponsor ?? defaultNotifySponsor)(unboundDb(db), bill, status)
     );
+  };
 }
 
 /** Fixed evaluator per passRule name — preserves the US rule nuance exactly. */

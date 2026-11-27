@@ -132,7 +132,7 @@ import { JP_BILL_PHASE_SHAPE } from "@/lib/countries/jp/elections/billLifecycle"
 import { getElectionsCollection } from "@/lib/db/collections/elections";
 
 /** Countries that need a custom updateGovernmentSeats wrapper (e.g. for legacy seed). */
-const SEAT_UPDATE_OVERRIDES: Partial<Record<CountryId, () => Promise<void>>> = {
+const SEAT_UPDATE_OVERRIDES: Partial<Record<CountryId, (currentTurn?: number) => Promise<void>>> = {
   UK: updateUKGovernmentSeats,
 };
 
@@ -688,7 +688,7 @@ async function runParliamentaryCountry(
     // Some countries have custom seat update wrappers (e.g. UK legacy seed fallback)
     const seatUpdateOverride = SEAT_UPDATE_OVERRIDES[countryId];
     if (seatUpdateOverride) {
-      await seatUpdateOverride();
+      await seatUpdateOverride(currentTurn);
     } else {
       await updateParliamentaryGovernmentSeats(db, countryId, preset);
     }

@@ -57,7 +57,7 @@ function proposalSummary(vote: CorporationVote): string {
             vote.payload.destinationCountryId as keyof typeof COUNTRY_CLIENT_CONFIGS
           ]
         : null;
-      return `Relocate HQ to ${cfg?.name ?? vote.payload.destinationCountryId}`;
+      return `Authorize HQ relocation to ${cfg?.name ?? vote.payload.destinationCountryId}`;
     }
     case "share_issuance":
       return `Issue ${vote.payload.newShareCount?.toLocaleString("en-US") ?? "?"} new shares`;

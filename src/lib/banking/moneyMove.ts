@@ -1,3 +1,5 @@
+import { boundSession } from "@/lib/db/sessionDb";
+import { representedCashDelta } from "./rules/representedCashDelta";
 /**
  * One way to move money across documents on a database with no transactions.
  *
@@ -288,6 +290,14 @@ export async function claimMoneyMove(db: Db, move: MoneyMove): Promise<MoneyMove
     createdAt: new Date(),
   };
 
+  if (
+    boundSession(db) &&
+    (await bankMoneyMovesCollection<MoneyMoveRecord>(db).findOne(
+      { _id: move.key },
+      { projection: { _id: 1 } }
+    ))
+  )
+    return { status: "replayed" };
   try {
     await bankMoneyMovesCollection<MoneyMoveRecord>(db).insertOne(record);
   } catch (error) {
@@ -584,6 +594,7 @@ async function applyLeg(
   const target = db.collection<LegTarget>(leg.collection);
   const id = { _id: leg.filter._id } as Filter<LegTarget>;
   const stamp = legStamp(key, i);
+  // bounded-cas-retry(maxAttempts=5): Retry competing account generations.
   for (let attempt = 0; attempt < 5; attempt++) {
     const cached =
       attempt === 0
@@ -685,6 +696,9 @@ async function applyLeg(
         $and: [
           leg.filter,
           guard,
+          ...(leg.kind === "asset"
+            ? []
+            : [representedCashDelta(leg.path!, leg.kind === "debit" ? -amount : amount)]),
           ...(leg.kind === "debit" ? [{ [leg.path!]: { $gte: amount } }] : []),
         ],
       } as Filter<LegTarget>,
@@ -714,7 +728,7 @@ async function applyLeg(
       index: i,
       generation: revision + 1,
       outcome: "rejected",
-      error: `Leg ${i} of ${key} (${leg.note}) did not apply: the balance moved or the guard failed.`,
+      error: `Leg ${i} of ${key} (${leg.note}) did not apply: the balance moved, the guard failed, or the amount cannot change the stored balance finitely.`,
     };
     const stopped = await target.updateOne(guard, {
       $inc: { [LEG_REVISION]: 1 },
@@ -836,6 +850,7 @@ async function deliverCashLegsInBatch(
               [LEG_REVISION]: target.moneyMoveRevision ?? { $exists: false },
               [PENDING_LEG]: { $exists: false },
             },
+            representedCashDelta(leg.path!, (kind === "debit" ? -1 : 1) * Math.max(0, leg.amount)),
             ...(kind === "debit" ? [{ [leg.path!]: { $gte: Math.max(0, leg.amount) } }] : []),
           ],
         } as Filter<LegTarget>,

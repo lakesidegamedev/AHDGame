@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import { regenerateCongressionalDistricts } from "./regenerate";
 
@@ -37,6 +40,23 @@ function makeFakeDb(seed: Record<string, unknown[]>): {
           }
           store[name].push(doc);
           return { acknowledged: true };
+        },
+        async bulkWrite(
+          ops: Array<{
+            updateOne: {
+              filter: { _id: string };
+              update: { $set: Record<string, unknown> };
+              upsert?: boolean;
+            };
+          }>
+        ) {
+          for (const { updateOne: op } of ops) {
+            const idx = store[name].findIndex((r) => (r as { _id: string })._id === op.filter._id);
+            const row = { ...op.update.$set, _id: op.filter._id };
+            if (idx >= 0) store[name][idx] = row;
+            else if (op.upsert) store[name].push(row);
+          }
+          return { matchedCount: ops.length };
         },
         async updateOne(
           filter: { _id: string },

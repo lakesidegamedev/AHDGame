@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/military/conscriptionLaw", () => ({
@@ -121,32 +122,12 @@ describe("manpowerPool", () => {
       expect(db.collectionMocks.nationalManpower.updateOne).not.toHaveBeenCalled();
     });
 
-    it("increments atomically when the full amount fits under the ceiling", async () => {
+    it("caps the addition in one write evaluated against the current pool", async () => {
       await returnManpower(db as unknown as Db, "PL", 12_000);
-      expect(db.collectionMocks.nationalManpower.updateOne).toHaveBeenCalledWith(
-        { countryId: "PL", pool: { $lte: 2_000_000 - 12_000 } },
-        { $inc: { pool: 12_000 } }
-      );
-    });
-
-    // The branch the route tests never reach: the increment would breach the
-    // ceiling, so it clamps instead.
-    it("clamps to the ceiling when the increment would breach it", async () => {
-      db.collectionMocks.nationalManpower.updateOne.mockResolvedValueOnce({
-        matchedCount: 0,
-        modifiedCount: 0,
-      });
-      await returnManpower(db as unknown as Db, "PL", 12_000);
-
-      const calls = db.collectionMocks.nationalManpower.updateOne.mock.calls;
-      expect(calls).toHaveLength(2);
-      // `$lt: ceiling`, NOT an unconditional $set. A pool sitting ABOVE its
-      // ceiling is legitimate (a stance downgrade or population fall lowers the
-      // ceiling), and an unconditional set would silently destroy that excess.
-      expect(calls[1]).toEqual([
+      expect(db.collectionMocks.nationalManpower.updateOne).toHaveBeenCalledExactlyOnceWith(
         { countryId: "PL", pool: { $lt: 2_000_000 } },
-        { $set: { pool: 2_000_000 } },
-      ]);
+        [{ $set: { pool: { $min: [2_000_000, { $add: ["$pool", 12_000] }] } } }]
+      );
     });
 
     it("never upserts — ensureManpowerPool guarantees the document exists", async () => {
@@ -157,4 +138,33 @@ describe("manpowerPool", () => {
       }
     });
   });
+});
+
+it("caps each return against the current pool without overwriting a concurrent draw", async () => {
+  const f = createInMemoryDb();
+  f.seed("nationalManpower", [{ countryId: "PL", mode: "trained", pool: 1_999_000 }]);
+  f.seed("states", [{ _id: "PL1", countryId: "PL", population: 100_000_000 }]);
+  vi.mocked(resolveConscriptionStanceFor).mockResolvedValue({
+    id: "selective",
+    label: "Selective",
+    poolMult: 1,
+    conscriptAllowed: true,
+  });
+  const col = f.collection("nationalManpower");
+  const update = col.updateOne.bind(col);
+  let interposed = false;
+  vi.spyOn(col, "updateOne").mockImplementation(async (...args) => {
+    if (Array.isArray(args[1]) && !interposed) {
+      interposed = true;
+      await update({ countryId: "PL" }, { $inc: { pool: -100_000 } });
+    }
+    return update(...args);
+  });
+  await returnManpower(f as unknown as Db, "PL", 12_000);
+  expect(col.docs[0].pool).toBe(1_911_000);
+  await update({ countryId: "PL" }, { $set: { pool: 2_100_000 } });
+  await returnManpower(f as unknown as Db, "PL", 12_000);
+  expect(col.docs[0].pool).toBe(2_100_000);
+  expect(await drawManpower(f as unknown as Db, "PL", -50)).toBe(false);
+  expect(await drawManpower(f as unknown as Db, "PL", Number.NaN)).toBe(false);
 });

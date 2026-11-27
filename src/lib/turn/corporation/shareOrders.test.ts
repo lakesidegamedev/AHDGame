@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -26,6 +34,13 @@ let db: MockDb;
 
 beforeEach(async () => {
   db = createMockDb();
+  const pools = db.collection("equityMarketPools");
+  pools.bulkWrite.mockImplementation(
+    async (ops: { updateOne: { filter: unknown; update: unknown } }[]) => {
+      for (const op of ops) await pools.updateOne(op.updateOne.filter, op.updateOne.update);
+      return { matchedCount: ops.length, modifiedCount: ops.length };
+    }
+  );
   const { getDb } = await import("@/lib/mongodb");
   vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
 });

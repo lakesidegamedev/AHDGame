@@ -1,3 +1,8 @@
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { ApiError } from "@/lib/api/errors";
+import { logger } from "@/lib/observability/logger";
 import { type Db } from "mongodb";
 import {
   withdrawFromMismatchedPrimaries,
@@ -62,7 +67,7 @@ export interface ApplyCharacterPartyJoinArgs {
  * country / already-member / switch-cooldown / purge-block guards — this
  * function only performs the mutations.
  */
-export async function applyCharacterPartyJoin(
+async function applyCharacterPartyJoinInTransaction(
   args: ApplyCharacterPartyJoinArgs
 ): Promise<{ becameChair: boolean }> {
   const {
@@ -139,7 +144,11 @@ export async function applyCharacterPartyJoin(
       } else {
         // A party-to-party switch still invalidates candidacies filed under the
         // former party. Only Independent joiners carry their races forward.
-        const { withdrawnCount } = await withdrawFromMismatchedPrimaries(character._id, partyIdStr);
+        const { withdrawnCount } = await withdrawFromMismatchedPrimaries(
+          character._id,
+          partyIdStr,
+          db
+        );
         if (withdrawnCount > 0) {
           console.log(
             `[Party Join] ${character.name} withdrew from ${withdrawnCount} primary(ies) due to party switch`
@@ -153,7 +162,8 @@ export async function applyCharacterPartyJoin(
           character._id,
           oldParty,
           partyIdStr,
-          countryId
+          countryId,
+          db
         );
         if (cleanup.clearedNationalLeadership.length > 0) {
           console.log(
@@ -269,7 +279,7 @@ export async function applyCharacterPartyJoin(
         }
       }
 
-      await emitPartyMembershipEvent({
+      const event = await emitPartyMembershipEvent({
         db,
         countryId,
         character,
@@ -288,17 +298,47 @@ export async function applyCharacterPartyJoin(
         }),
       });
 
-      if (becameChair) {
-        try {
-          const { awardAchievement } = await import("@/lib/achievements");
-          await awardAchievement(character.userId, "party_leader", character._id);
-        } catch (e) {
-          console.error("Achievement check failed:", e);
-        }
-      }
+      if (!event) throw new Error("Party membership event could not be published");
+      if (becameChair)
+        await afterCommit(db, async () => {
+          try {
+            const { awardAchievement } = await import("@/lib/achievements");
+            await awardAchievement(character.userId, "party_leader", character._id);
+          } catch (e) {
+            logger.error("party-join", "Achievement check failed", e);
+          }
+        });
 
       return { becameChair };
     },
     character
   );
+}
+
+/** Membership, roster and election reconciliation must share one commit. */
+export async function applyCharacterPartyJoin(
+  args: ApplyCharacterPartyJoinArgs
+): Promise<{ becameChair: boolean }> {
+  return withSessionDb(args.db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) throw new ApiError(refusal.status, refusal.error);
+    if (args.currentTurn !== (await getCurrentTurn(db)))
+      throw new ApiError(409, "The game advanced. Refresh and try again.");
+    const character = await charactersCollection(db).findOne({ _id: args.character._id });
+    const party = await politicalPartiesCollection(db).findOne({
+      _id: args.party._id,
+      countryId: args.countryId,
+    });
+    if (!character || !party)
+      throw new ApiError(409, "Character or party changed. Refresh and try again.");
+    if (character.party === String(party.sequentialId))
+      return { becameChair: party.chairId?.toString() === character._id.toString() };
+    if (
+      character.party !== args.character.party ||
+      character.homeState !== args.character.homeState ||
+      character.countryId !== args.character.countryId
+    )
+      throw new ApiError(409, "Party or residence changed. Refresh and try again.");
+    return applyCharacterPartyJoinInTransaction({ ...args, db, character, party });
+  });
 }

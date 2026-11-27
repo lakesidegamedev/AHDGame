@@ -1,3 +1,4 @@
+import { retoolQuote } from "@/lib/corporations/rules/retoolQuote";
 import { commitSiteCashMutation } from "@/lib/corporations/siteCashMutation";
 import { requireSpendableCorporateCash } from "@/lib/api/corporations/requireSpendableCash";
 import { NextResponse } from "next/server";
@@ -34,11 +35,7 @@ import {
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { distributeConversionSpread } from "@/lib/currency/marketMaker";
-import {
-  COUNTRY_CURRENCY_MAP,
-  SECTOR_FX_SPREAD,
-  type CurrencyCode,
-} from "@/lib/constants/currencies";
+import { SECTOR_FX_SPREAD, type CurrencyCode } from "@/lib/constants/currencies";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
@@ -312,24 +309,20 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       resolveSectorHostCurrencyCode(sector, corporation),
       sectorHostRate
     );
-    // The method's downside is a one-off bill that waivers on the retool fee do not cover.
-    const adoptionSurchargeAnchor =
-      sectorRevenueAnchor * methodAdoptionSurchargeFraction(targetStrategy);
-    const retoolCostAnchor =
-      (shortageDiscount.qualifies || freeConversion
-        ? 0
-        : sectorRevenueAnchor * STRATEGY_RETOOL_COST_FRACTION * sunsetCostMultiplier) +
-      adoptionSurchargeAnchor;
-    // Foreign-sector FX friction (symmetry with the foreign operating-income
-    // spread): retooling a sector in a different-currency country incurs the
-    // reduced sector spread on top of the base cost, routed to the CB system.
-    const corpCcy = (liquidCode ?? null) as CurrencyCode | null;
-    const sectorCcy = (COUNTRY_CURRENCY_MAP[
-      sector.countryId as keyof typeof COUNTRY_CURRENCY_MAP
-    ] ?? null) as CurrencyCode | null;
+    const corpCcy = liquidCode ?? null;
+    const sectorCcy = resolveSectorHostCurrencyCode(sector, corporation) ?? null;
     const isForeignSector = !!corpCcy && !!sectorCcy && corpCcy !== sectorCcy;
-    const foreignSpreadAnchor = isForeignSector ? retoolCostAnchor * SECTOR_FX_SPREAD : 0;
-    const totalCostAnchor = retoolCostAnchor + foreignSpreadAnchor;
+    const quote = retoolQuote({
+      revenueAnchor: sectorRevenueAnchor,
+      baseFraction: STRATEGY_RETOOL_COST_FRACTION,
+      multiplier: sunsetCostMultiplier,
+      downsideFraction: methodAdoptionSurchargeFraction(targetStrategy),
+      freeConversion,
+      shortageDiscount: shortageDiscount.qualifies,
+      foreignSpreadRate: isForeignSector ? SECTOR_FX_SPREAD : 0,
+    });
+    const totalCostAnchor = quote.retoolCost;
+    const foreignSpreadAnchor = quote.foreignSpread;
     const corpCapitalAnchor = corpLiquidCapitalToAnchor(
       corporation.liquidCapital,
       corporation,
@@ -470,14 +463,14 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
       strategyName: targetStrategy.name,
       // retoolCost is returned in ₳ so the client can format via
       // formatAmount(retoolCost, corp.liquidCurrencyCode).
-      retoolCost: Math.round(retoolCostAnchor),
+      retoolCost: quote.retoolCost,
       spreadPaid: Math.round(foreignSpreadAnchor),
       transitionTurns: shortageDiscount.qualifies
         ? STRATEGY_TRANSITION_TURNS - SHORTAGE_RETOOL_TRANSITION_HEADSTART
         : STRATEGY_TRANSITION_TURNS,
       cooldownTurns: STRATEGY_COOLDOWN_TURNS,
       buildDelayTurns: methodBuildDelayTurns(targetStrategy),
-      adoptionSurcharge: Math.round(adoptionSurchargeAnchor),
+      adoptionSurcharge: quote.downsideCharge,
       freeConversion,
       // Shortage-destination discount metadata (client toast/messaging).
       shortageDiscount: shortageDiscount.qualifies

@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -6,7 +8,10 @@ import type {
   PoliticalParty,
   StatePartyOrg,
 } from "@/lib/db/types";
-import { emitTreasuryTransaction } from "@/lib/treasury/emit";
+import {
+  emitTreasuryTransactionsBulk,
+  type BulkTreasuryTransactionArgs,
+} from "@/lib/treasury/emit";
 import { activeUserIds } from "@/lib/players/playerActivity";
 import {
   NATIONAL_PASSIVE_PS_PER_TURN,
@@ -131,292 +136,294 @@ export async function processPartyActionGeneration(
   injectedDb?: Db,
   currentTurn?: number
 ): Promise<PartyActionGenerationResult> {
-  const db = injectedDb ?? (await getDb());
-  const turn = currentTurn ?? 0;
+  const rootDb = injectedDb ?? (await getDb());
+  const turn = currentTurn ?? (await getCurrentTurn(rootDb));
+  return withTurnValueSettlement(rootDb, "party-strength-generation", turn, async (db) => {
+    const treasuryEntries: BulkTreasuryTransactionArgs[] = [];
 
-  const result: PartyActionGenerationResult = {
-    nationalPartiesUpdated: 0,
-    statePartiesUpdated: 0,
-    totalActionsGenerated: 0,
-  };
+    const result: PartyActionGenerationResult = {
+      nationalPartiesUpdated: 0,
+      statePartiesUpdated: 0,
+      totalActionsGenerated: 0,
+    };
 
-  // ─── National parties ──────────────────────────────────────────────────
-  const nationalParties = await politicalPartiesCollection(db).find({}).toArray();
+    // ─── National parties ──────────────────────────────────────────────────
+    const nationalParties = await politicalPartiesCollection(db).find({}).toArray();
 
-  const nationalLedgerRows: Omit<PartyPoliticalStrengthLedgerRow, "_id">[] = [];
-  // NPP Action Point regen rides this loop independently of PS: a party already
-  // at its PS cap (which `continue`s below) must still bank AP. Collected and
-  // flushed via one bulkWrite. Also build a party→tier map for the state loop,
-  // since state-party rows carry their owning party's tier-derived AP economy.
-  // Keyed by country + sequentialId: `sequentialId` is unique per country only,
-  // so a country-blind key lets (say) BR party 8 decide UK party 8's tier.
-  const nationalApOps: AnyBulkWriteOperation<PoliticalParty>[] = [];
-  const nationalPsOps: AnyBulkWriteOperation<PoliticalParty>[] = [];
-  const tierByPartyKey = new Map<string, "major" | "minor">();
-  for (const party of nationalParties) {
-    const apTier = resolvePartyTier(party);
-    tierByPartyKey.set(partyTierKey(party.countryId, party.sequentialId), apTier);
-    const apNext = computeNppActionPointGain({
-      current: party.nppActionPoints,
-      cap: nppActionPointCap("national", apTier),
-      regenPerTurn: nppActionPointRegen("national", apTier),
-    });
-    if (apNext !== party.nppActionPoints) {
-      nationalApOps.push({
-        updateOne: {
-          filter: { _id: party._id },
-          update: { $set: { nppActionPoints: apNext, updatedAt: now } },
-        },
+    const nationalLedgerRows: Omit<PartyPoliticalStrengthLedgerRow, "_id">[] = [];
+    // NPP Action Point regen rides this loop independently of PS: a party already
+    // at its PS cap (which `continue`s below) must still bank AP. Collected and
+    // flushed via one bulkWrite. Also build a party→tier map for the state loop,
+    // since state-party rows carry their owning party's tier-derived AP economy.
+    // Keyed by country + sequentialId: `sequentialId` is unique per country only,
+    // so a country-blind key lets (say) BR party 8 decide UK party 8's tier.
+    const nationalApOps: AnyBulkWriteOperation<PoliticalParty>[] = [];
+    const nationalPsOps: AnyBulkWriteOperation<PoliticalParty>[] = [];
+    const tierByPartyKey = new Map<string, "major" | "minor">();
+    for (const party of nationalParties) {
+      const apTier = resolvePartyTier(party);
+      tierByPartyKey.set(partyTierKey(party.countryId, party.sequentialId), apTier);
+      const apNext = computeNppActionPointGain({
+        current: party.nppActionPoints,
+        cap: nppActionPointCap("national", apTier),
+        regenPerTurn: nppActionPointRegen("national", apTier),
       });
-    }
+      if (apNext !== party.nppActionPoints) {
+        nationalApOps.push({
+          updateOne: {
+            filter: { _id: party._id },
+            update: { $set: { nppActionPoints: apNext, updatedAt: now } },
+          },
+        });
+      }
 
-    // Tier-derived national cap (D5): Major → full national cap; Minor →
-    // 100 + 10×earned-regions (clamped). An explicit `politicalStrengthCap`
-    // override still wins. The `partyTierTurn` phase (run earlier this turn)
-    // keeps `tier`/`psCapEarnedRegions` fresh for this read.
-    const cap =
-      party.politicalStrengthCap ??
-      resolvePartyPsCap(
-        resolvePartyTier(party),
-        party.psCapEarnedRegions?.length ?? 0,
-        nationalCapForCountry(party.countryId)
-      );
-    const nationalRate = psInvestmentRate(party.countryId, "national");
-    const gain = computePartyPsGain({
-      current: party.politicalStrength ?? 0,
-      cap,
-      treasury: party.treasury ?? 0,
-      passivePerTurn: NATIONAL_PASSIVE_PS_PER_TURN,
-      // An NPP-run party spends its surplus here so its treasury does not
-      // compound without limit.
-      psInvestmentBudget: effectivePsInvestmentBudget({
-        party,
-        chairBudget: party.psInvestmentBudget ?? 0,
+      // Tier-derived national cap (D5): Major → full national cap; Minor →
+      // 100 + 10×earned-regions (clamped). An explicit `politicalStrengthCap`
+      // override still wins. The `partyTierTurn` phase (run earlier this turn)
+      // keeps `tier`/`psCapEarnedRegions` fresh for this read.
+      const cap =
+        party.politicalStrengthCap ??
+        resolvePartyPsCap(
+          resolvePartyTier(party),
+          party.psCapEarnedRegions?.length ?? 0,
+          nationalCapForCountry(party.countryId)
+        );
+      const nationalRate = psInvestmentRate(party.countryId, "national");
+      const gain = computePartyPsGain({
+        current: party.politicalStrength ?? 0,
+        cap,
         treasury: party.treasury ?? 0,
-        ratePerPs: nationalRate,
-        maxPsPerTurn: PS_INVESTMENT_MAX_TIERS,
-      }),
-      psInvestmentRatePerPs: nationalRate,
-    });
-    if (gain.total <= 0 && gain.investmentDebit <= 0) continue;
-
-    // Build the update — set new PS value; if explicit investment was
-    // spent, debit treasury by the same amount.
-    const update: Record<string, unknown> = {
-      politicalStrength: gain.clampedTo,
-      updatedAt: now,
-    };
-    if (gain.investmentDebit > 0) {
-      // $set + $inc on different fields is fine in one update operation.
-      nationalPsOps.push({
-        updateOne: {
-          filter: { _id: party._id },
-          update: { $set: update, $inc: { treasury: -gain.investmentDebit } },
-        },
+        passivePerTurn: NATIONAL_PASSIVE_PS_PER_TURN,
+        // An NPP-run party spends its surplus here so its treasury does not
+        // compound without limit.
+        psInvestmentBudget: effectivePsInvestmentBudget({
+          party,
+          chairBudget: party.psInvestmentBudget ?? 0,
+          treasury: party.treasury ?? 0,
+          ratePerPs: nationalRate,
+          maxPsPerTurn: PS_INVESTMENT_MAX_TIERS,
+        }),
+        psInvestmentRatePerPs: nationalRate,
       });
-      // Audit: emit treasury transaction for the investment debit.
-      await emitTreasuryTransaction({
-        db,
-        countryId: party.countryId ?? "US",
-        partyId: String(party.sequentialId),
-        holderType: "party",
-        holderId: String(party.sequentialId),
-        category: "ps_investment",
-        direction: "debit",
-        amount: gain.investmentDebit,
-        memo: `Political Strength purchase ($${gain.investmentDebit.toLocaleString()})`,
-        turn,
-        now,
-      });
-    } else {
-      nationalPsOps.push({
-        updateOne: { filter: { _id: party._id }, update: { $set: update } },
-      });
-    }
-    result.nationalPartiesUpdated += 1;
-    result.totalActionsGenerated += gain.total;
+      if (gain.total <= 0 && gain.investmentDebit <= 0) continue;
 
-    // Ledger rows per non-zero stream.
-    if (gain.passive > 0) {
-      nationalLedgerRows.push({
-        countryId: party.countryId,
-        partyId: String(party.sequentialId),
-        turn,
-        source: "passive",
-        delta: gain.passive,
-        value: gain.clampedTo,
-        createdAt: now,
-      });
-    }
-    if (gain.investment > 0.01) {
-      nationalLedgerRows.push({
-        countryId: party.countryId,
-        partyId: String(party.sequentialId),
-        turn,
-        source: "treasury",
-        delta: gain.investment,
-        value: gain.clampedTo,
-        action: "investment-budget",
-        createdAt: now,
-      });
-    }
-  }
+      // Build the update — set new PS value; if explicit investment was
+      // spent, debit treasury by the same amount.
+      const update: Record<string, unknown> = {
+        politicalStrength: gain.clampedTo,
+        updatedAt: now,
+      };
+      if (gain.investmentDebit > 0) {
+        // $set + $inc on different fields is fine in one update operation.
+        nationalPsOps.push({
+          updateOne: {
+            filter: { _id: party._id },
+            update: { $set: update, $inc: { treasury: -gain.investmentDebit } },
+          },
+        });
+        // Audit: emit treasury transaction for the investment debit.
+        treasuryEntries.push({
+          countryId: party.countryId ?? "US",
+          partyId: String(party.sequentialId),
+          holderType: "party",
+          holderId: String(party.sequentialId),
+          category: "ps_investment",
+          direction: "debit",
+          amount: gain.investmentDebit,
+          memo: `Political Strength purchase ($${gain.investmentDebit.toLocaleString()})`,
+          turn,
+          now,
+        });
+      } else {
+        nationalPsOps.push({
+          updateOne: { filter: { _id: party._id }, update: { $set: update } },
+        });
+      }
+      result.nationalPartiesUpdated += 1;
+      result.totalActionsGenerated += gain.total;
 
-  if (nationalApOps.length > 0 || nationalPsOps.length > 0) {
-    await politicalPartiesCollection(db).bulkWrite([...nationalApOps, ...nationalPsOps]);
-  }
-
-  // ─── State parties ─────────────────────────────────────────────────────
-  const stateParties = await statePartyOrgCollection(db).find({}).toArray();
-  const stateApOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
-  const statePsOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
-
-  // Resolve which state parties have at least one homed Player Character member.
-  // Key format matches StatePartyOrg._id (`${stateId}_${partyId}`). Ban-agnostic,
-  // matching checkPartyPresence / hasPresence. One projected find — no per-row query.
-  // Only players active within the inactivity window count: an all-inactive
-  // homed roster drops the party to the NPP-only cap (see playerActivity).
-  const memberRows = await charactersCollection(db)
-    .find({}, { projection: { party: 1, homeState: 1, userId: 1 } })
-    .toArray();
-  const memberUserIds = memberRows
-    .map((c) => c.userId)
-    .filter((id): id is NonNullable<typeof id> => id != null);
-  const activeIds = await activeUserIds(db, memberUserIds, now);
-  const playerMemberKeys = new Set(
-    memberRows
-      .filter((c) => c.party && c.homeState && c.userId && activeIds.has(c.userId.toString()))
-      .map((c) => `${c.homeState}_${c.party}`)
-  );
-
-  const stateLedgerRows: Omit<PartyPoliticalStrengthLedgerRow, "_id">[] = [];
-  for (const sp of stateParties) {
-    // NPP Action Point regen (state scope) — independent of the PS clamp/continue
-    // paths below. Uses the owning party's tier (state rows have no tier of their
-    // own); unknown owners fall back to "minor".
-    const apTier = tierByPartyKey.get(partyTierKey(sp.countryId, sp.partyId)) ?? "minor";
-    const apNext = computeNppActionPointGain({
-      current: sp.nppActionPoints,
-      cap: nppActionPointCap("state", apTier),
-      regenPerTurn: nppActionPointRegen("state", apTier),
-    });
-    if (apNext !== sp.nppActionPoints) {
-      stateApOps.push({
-        updateOne: {
-          filter: { _id: sp._id },
-          update: { $set: { nppActionPoints: apNext, updatedAt: now } },
-        },
-      });
+      // Ledger rows per non-zero stream.
+      if (gain.passive > 0) {
+        nationalLedgerRows.push({
+          countryId: party.countryId,
+          partyId: String(party.sequentialId),
+          turn,
+          source: "passive",
+          delta: gain.passive,
+          value: gain.clampedTo,
+          createdAt: now,
+        });
+      }
+      if (gain.investment > 0.01) {
+        nationalLedgerRows.push({
+          countryId: party.countryId,
+          partyId: String(party.sequentialId),
+          turn,
+          source: "treasury",
+          delta: gain.investment,
+          value: gain.clampedTo,
+          action: "investment-budget",
+          createdAt: now,
+        });
+      }
     }
 
-    const hasPlayerMember = playerMemberKeys.has(sp._id);
-    const cap = effectiveStatePsCap(hasPlayerMember);
-    const currentPs = sp.politicalStrength ?? 0;
-
-    // Clamp-down: a state party at/above its (possibly reduced) cap with no
-    // player member is pulled straight down to the cap this turn, regardless of
-    // treasury (broke hoarders drain too). Skip gain generation — already capped.
-    if (currentPs > cap) {
-      statePsOps.push({
-        updateOne: {
-          filter: { _id: sp._id },
-          update: { $set: { politicalStrength: cap, updatedAt: now } },
-        },
-      });
-      stateLedgerRows.push({
-        countryId: sp.countryId,
-        partyId: sp.partyId,
-        stateId: sp.stateId,
-        turn,
-        source: "decay",
-        action: "npp_cap_clamp",
-        delta: cap - currentPs,
-        value: cap,
-        createdAt: now,
-      });
-      result.statePartiesUpdated += 1;
-      continue;
+    if (nationalApOps.length > 0 || nationalPsOps.length > 0) {
+      await politicalPartiesCollection(db).bulkWrite([...nationalApOps, ...nationalPsOps]);
     }
-    const gain = computePartyPsGain({
-      current: sp.politicalStrength ?? 0,
-      cap,
-      treasury: sp.treasury ?? 0,
-      passivePerTurn: STATE_PASSIVE_PS_PER_TURN,
-      psInvestmentBudget: sp.psInvestmentBudget ?? 0,
-      psInvestmentRatePerPs: psInvestmentRate(sp.countryId, "state"),
-    });
-    if (gain.total <= 0 && gain.investmentDebit <= 0) continue;
 
-    const update: Record<string, unknown> = {
-      politicalStrength: gain.clampedTo,
-      updatedAt: now,
-    };
-    if (gain.investmentDebit > 0) {
-      statePsOps.push({
-        updateOne: {
-          filter: { _id: sp._id },
-          update: { $set: update, $inc: { treasury: -gain.investmentDebit } },
-        },
-      });
-      // Audit: emit treasury transaction for the state-party investment debit.
-      await emitTreasuryTransaction({
-        db,
-        countryId: sp.countryId ?? "US",
-        partyId: sp.partyId,
-        holderType: "state_party",
-        holderId: sp._id,
-        category: "ps_investment",
-        direction: "debit",
-        amount: gain.investmentDebit,
-        memo: `Political Strength purchase ($${gain.investmentDebit.toLocaleString()})`,
-        turn,
-        now,
-      });
-    } else {
-      statePsOps.push({
-        updateOne: { filter: { _id: sp._id }, update: { $set: update } },
-      });
-    }
-    result.statePartiesUpdated += 1;
-    result.totalActionsGenerated += gain.total;
+    // ─── State parties ─────────────────────────────────────────────────────
+    const stateParties = await statePartyOrgCollection(db).find({}).toArray();
+    const stateApOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
+    const statePsOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
 
-    if (gain.passive > 0) {
-      stateLedgerRows.push({
-        countryId: sp.countryId,
-        partyId: sp.partyId,
-        stateId: sp.stateId,
-        turn,
-        source: "passive",
-        delta: gain.passive,
-        value: gain.clampedTo,
-        createdAt: now,
-      });
-    }
-    if (gain.investment > 0.01) {
-      stateLedgerRows.push({
-        countryId: sp.countryId,
-        partyId: sp.partyId,
-        stateId: sp.stateId,
-        turn,
-        source: "treasury",
-        delta: gain.investment,
-        value: gain.clampedTo,
-        action: "investment-budget",
-        createdAt: now,
-      });
-    }
-  }
-
-  if (stateApOps.length > 0 || statePsOps.length > 0) {
-    await statePartyOrgCollection(db).bulkWrite([...stateApOps, ...statePsOps]);
-  }
-
-  const allLedgerRows = [...nationalLedgerRows, ...stateLedgerRows];
-  if (allLedgerRows.length > 0) {
-    await partyPoliticalStrengthLedgerCollection(db).insertMany(
-      allLedgerRows.map((r) => ({ ...r, _id: new ObjectId() }))
+    // Resolve which state parties have at least one homed Player Character member.
+    // Key format matches StatePartyOrg._id (`${stateId}_${partyId}`). Ban-agnostic,
+    // matching checkPartyPresence / hasPresence. One projected find — no per-row query.
+    // Only players active within the inactivity window count: an all-inactive
+    // homed roster drops the party to the NPP-only cap (see playerActivity).
+    const memberRows = await charactersCollection(db)
+      .find({}, { projection: { party: 1, homeState: 1, userId: 1 } })
+      .toArray();
+    const memberUserIds = memberRows
+      .map((c) => c.userId)
+      .filter((id): id is NonNullable<typeof id> => id != null);
+    const activeIds = await activeUserIds(db, memberUserIds, now);
+    const playerMemberKeys = new Set(
+      memberRows
+        .filter((c) => c.party && c.homeState && c.userId && activeIds.has(c.userId.toString()))
+        .map((c) => `${c.homeState}_${c.party}`)
     );
-  }
 
-  return result;
+    const stateLedgerRows: Omit<PartyPoliticalStrengthLedgerRow, "_id">[] = [];
+    for (const sp of stateParties) {
+      // NPP Action Point regen (state scope) — independent of the PS clamp/continue
+      // paths below. Uses the owning party's tier (state rows have no tier of their
+      // own); unknown owners fall back to "minor".
+      const apTier = tierByPartyKey.get(partyTierKey(sp.countryId, sp.partyId)) ?? "minor";
+      const apNext = computeNppActionPointGain({
+        current: sp.nppActionPoints,
+        cap: nppActionPointCap("state", apTier),
+        regenPerTurn: nppActionPointRegen("state", apTier),
+      });
+      if (apNext !== sp.nppActionPoints) {
+        stateApOps.push({
+          updateOne: {
+            filter: { _id: sp._id },
+            update: { $set: { nppActionPoints: apNext, updatedAt: now } },
+          },
+        });
+      }
+
+      const hasPlayerMember = playerMemberKeys.has(sp._id);
+      const cap = effectiveStatePsCap(hasPlayerMember);
+      const currentPs = sp.politicalStrength ?? 0;
+
+      // Clamp-down: a state party at/above its (possibly reduced) cap with no
+      // player member is pulled straight down to the cap this turn, regardless of
+      // treasury (broke hoarders drain too). Skip gain generation — already capped.
+      if (currentPs > cap) {
+        statePsOps.push({
+          updateOne: {
+            filter: { _id: sp._id },
+            update: { $set: { politicalStrength: cap, updatedAt: now } },
+          },
+        });
+        stateLedgerRows.push({
+          countryId: sp.countryId,
+          partyId: sp.partyId,
+          stateId: sp.stateId,
+          turn,
+          source: "decay",
+          action: "npp_cap_clamp",
+          delta: cap - currentPs,
+          value: cap,
+          createdAt: now,
+        });
+        result.statePartiesUpdated += 1;
+        continue;
+      }
+      const gain = computePartyPsGain({
+        current: sp.politicalStrength ?? 0,
+        cap,
+        treasury: sp.treasury ?? 0,
+        passivePerTurn: STATE_PASSIVE_PS_PER_TURN,
+        psInvestmentBudget: sp.psInvestmentBudget ?? 0,
+        psInvestmentRatePerPs: psInvestmentRate(sp.countryId, "state"),
+      });
+      if (gain.total <= 0 && gain.investmentDebit <= 0) continue;
+
+      const update: Record<string, unknown> = {
+        politicalStrength: gain.clampedTo,
+        updatedAt: now,
+      };
+      if (gain.investmentDebit > 0) {
+        statePsOps.push({
+          updateOne: {
+            filter: { _id: sp._id },
+            update: { $set: update, $inc: { treasury: -gain.investmentDebit } },
+          },
+        });
+        // Audit: emit treasury transaction for the state-party investment debit.
+        treasuryEntries.push({
+          countryId: sp.countryId ?? "US",
+          partyId: sp.partyId,
+          holderType: "state_party",
+          holderId: sp._id,
+          category: "ps_investment",
+          direction: "debit",
+          amount: gain.investmentDebit,
+          memo: `Political Strength purchase ($${gain.investmentDebit.toLocaleString()})`,
+          turn,
+          now,
+        });
+      } else {
+        statePsOps.push({
+          updateOne: { filter: { _id: sp._id }, update: { $set: update } },
+        });
+      }
+      result.statePartiesUpdated += 1;
+      result.totalActionsGenerated += gain.total;
+
+      if (gain.passive > 0) {
+        stateLedgerRows.push({
+          countryId: sp.countryId,
+          partyId: sp.partyId,
+          stateId: sp.stateId,
+          turn,
+          source: "passive",
+          delta: gain.passive,
+          value: gain.clampedTo,
+          createdAt: now,
+        });
+      }
+      if (gain.investment > 0.01) {
+        stateLedgerRows.push({
+          countryId: sp.countryId,
+          partyId: sp.partyId,
+          stateId: sp.stateId,
+          turn,
+          source: "treasury",
+          delta: gain.investment,
+          value: gain.clampedTo,
+          action: "investment-budget",
+          createdAt: now,
+        });
+      }
+    }
+
+    if (stateApOps.length > 0 || statePsOps.length > 0) {
+      await statePartyOrgCollection(db).bulkWrite([...stateApOps, ...statePsOps]);
+    }
+
+    const allLedgerRows = [...nationalLedgerRows, ...stateLedgerRows];
+    if (allLedgerRows.length > 0) {
+      await partyPoliticalStrengthLedgerCollection(db).insertMany(
+        allLedgerRows.map((r) => ({ ...r, _id: new ObjectId() }))
+      );
+    }
+
+    await emitTreasuryTransactionsBulk(db, treasuryEntries);
+    return result;
+  });
 }

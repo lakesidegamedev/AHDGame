@@ -271,6 +271,7 @@ describe("computeBonusActions", () => {
 });
 
 describe("processPartyInfluenceTurn", () => {
+  let storedCharacters: Character[] = [];
   const mockBulkWrite = vi.fn().mockResolvedValue({ modifiedCount: 1 });
   const mockPartiesFind = vi.fn();
   const mockStatePartyOrgFind = vi.fn();
@@ -279,6 +280,7 @@ describe("processPartyInfluenceTurn", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    storedCharacters = [];
     vi.resetModules();
     mockStatePartyOrgFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
     mockCaucusesFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) });
@@ -286,6 +288,11 @@ describe("processPartyInfluenceTurn", () => {
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue({
       collection: vi.fn().mockImplementation((name: string) => {
+        if (name === "characters")
+          return {
+            find: () => ({ toArray: async () => storedCharacters }),
+            bulkWrite: mockBulkWrite,
+          };
         if (name === "statePartyOrg") {
           return { find: mockStatePartyOrgFind, bulkWrite: mockBulkWrite };
         }
@@ -304,7 +311,7 @@ describe("processPartyInfluenceTurn", () => {
   });
 
   function makeChar(overrides: Partial<Character> = {}): Character {
-    return {
+    const character = {
       _id: new ObjectId(),
       userId: new ObjectId(),
       name: "Test Player",
@@ -325,6 +332,8 @@ describe("processPartyInfluenceTurn", () => {
       updatedAt: new Date(),
       ...overrides,
     } as Character;
+    storedCharacters.push(character);
+    return character;
   }
 
   function makeParty(overrides: Partial<PoliticalParty> = {}): PoliticalParty {
@@ -631,3 +640,12 @@ describe("caucus leadership bonus minimum size", () => {
     expect(options.isCaucusChair).toBe(false);
   });
 });
+// Formula fixture; recurrence tests use the real atomic phase.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

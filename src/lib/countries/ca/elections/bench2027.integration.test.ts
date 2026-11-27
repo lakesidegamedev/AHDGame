@@ -1,3 +1,4 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
@@ -33,8 +34,9 @@ vi.mock("@/lib/discordWebhooks", () => ({
 let memory: ReturnType<typeof createInMemoryDb>;
 let db: Db;
 beforeEach(() => {
-  memory = createInMemoryDb();
-  db = memory as unknown as Db;
+  const fixture = createTransactionalMemoryDb();
+  memory = fixture.memory;
+  db = fixture.db;
   vi.mocked(getDb).mockResolvedValue(db);
   memory.seed("gameState", [
     {

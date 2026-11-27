@@ -1,3 +1,4 @@
+import { commodityPricingOpening, freezeCommodityPricingOpening } from "./rules/pricingOpening";
 import type { CommodityPrice } from "@/lib/db/types";
 import type { State } from "@/lib/db/types/state";
 import type { CommodityPriceHistory } from "@/lib/db/types/commodityPriceHistory";
@@ -162,7 +163,6 @@ export function priceCommodity(
     ownRouteCorporationIds,
     freightSettlement,
     existingPriceMap,
-    nudgeMap,
     laggedRatios,
     reachableBooks,
     global,
@@ -180,7 +180,10 @@ export function priceCommodity(
   } = ctx;
   const basePrice = ledgerBasePrices[commodity];
   const globalBal = global.get(commodity)!;
-  const existing = existingPriceMap.get(commodity);
+  const existing = commodityPricingOpening(existingPriceMap.get(commodity), turn);
+  const nudgeMap = new Map(ctx.nudgeMap);
+  if (!nudgeMap.has(commodity) && existing?.nudgeTurn === turn && existing.nudgePrice != null)
+    nudgeMap.set(commodity, existing.nudgePrice);
 
   // Scarcity drift: advance this commodity's multiplier on the CURRENT
   // aggregate balance, then scale the base price so the global, national
@@ -530,6 +533,16 @@ export function priceCommodity(
         filter: { commodity },
         update: {
           $set: {
+            pricingOpening: freezeCommodityPricingOpening(
+              existing
+                ? {
+                    ...existing,
+                    ...(nudgeMap.has(commodity)
+                      ? { nudgePrice: nudgeMap.get(commodity), nudgeTurn: turn }
+                      : {}),
+                  }
+                : undefined
+            ),
             basePrice,
             globalPrice: globalMktPrice,
             globalSupply: Math.round(globalBal.supply * 100) / 100,

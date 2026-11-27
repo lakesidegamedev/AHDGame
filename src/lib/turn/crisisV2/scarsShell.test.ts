@@ -8,6 +8,16 @@ vi.mock("@/lib/observability/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+// Transport tests below inspect intent mapping; atomic tests use the real boundary.
+vi.mock("../withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+
 import { processCrisisScars } from "./scarsShell";
 
 const scar = (over: Partial<CrisisScar>): CrisisScar => ({

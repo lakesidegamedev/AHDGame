@@ -1,4 +1,15 @@
-import { describe, it, expect } from "vitest";
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: async (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
+import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import {
   chargeOrganizationDues,
@@ -101,6 +112,22 @@ describe("chargeOrganizationDues — credits only what it debited", () => {
     const collection = (name: string) => {
       if (name === "federalBudget") {
         return {
+          find: () => ({ toArray: async () => withTreasury.map((countryId) => ({ countryId })) }),
+          bulkWrite: async (
+            operations: {
+              updateOne: {
+                filter: { countryId: string };
+                update: { $inc?: { treasuryBalance?: number } };
+              };
+            }[]
+          ) => {
+            for (const { updateOne } of operations)
+              debits.push({
+                countryId: updateOne.filter.countryId,
+                delta: updateOne.update.$inc?.treasuryBalance ?? 0,
+              });
+            return { matchedCount: operations.length, modifiedCount: operations.length };
+          },
           updateOne: async (
             filter: { countryId: string },
             update: { $inc?: { treasuryBalance?: number } }

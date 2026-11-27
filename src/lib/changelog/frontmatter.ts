@@ -60,7 +60,7 @@ export function parseFrontmatter(raw: string): {
   }
 
   const data: Record<string, string | string[]> = {};
-  const lines = match[1].split("\n");
+  const lines = match[1].split(/\r?\n/);
   let i = 0;
 
   while (i < lines.length) {

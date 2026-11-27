@@ -1,3 +1,5 @@
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { logger } from "@/lib/observability/logger";
 import type { Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import type { CountryId } from "@/lib/constants/countries";
@@ -49,20 +51,26 @@ export async function resolveConflict(
 
   const attackerNation = analytics?.attackerNation ?? conflict.sideA.countries[0];
   const defenderNation = analytics?.defenderNation ?? conflict.sideB.countries[0];
-  await captureServerGameEvent({
-    db,
-    event: "war_ended",
-    distinctId: "system:conflict-lifecycle",
-    insertId: `war-ended:${conflict._id.toString()}`,
-    nationId: attackerNation,
-    turn: currentTurn,
-    properties: {
-      attacker_nation: attackerNation ?? "unknown",
-      defender_nation: defenderNation ?? "unknown",
-      outcome:
-        analytics?.endingType ??
-        (conflict.settlement || winner === "stalemate" ? "peace" : "victory"),
-    },
+  await afterCommit(db, async () => {
+    try {
+      await captureServerGameEvent({
+        db: unboundDb(db),
+        event: "war_ended",
+        distinctId: "system:conflict-lifecycle",
+        insertId: `war-ended:${conflict._id.toString()}`,
+        nationId: attackerNation,
+        turn: currentTurn,
+        properties: {
+          attacker_nation: attackerNation ?? "unknown",
+          defender_nation: defenderNation ?? "unknown",
+          outcome:
+            analytics?.endingType ??
+            (conflict.settlement || winner === "stalemate" ? "peace" : "victory"),
+        },
+      });
+    } catch (error) {
+      logger.error("conflict", "War outcome analytics failed", error);
+    }
   });
 
   for (const countryId of belligerents(conflict)) {

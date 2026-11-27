@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { reanchoredOrder } from "./2026-11-17-linear-build-delivery";
+import { describe, expect, it, vi } from "vitest";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { migration, reanchoredOrder } from "./2026-11-17-linear-build-delivery";
 import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import type { SectorBuildOrder } from "@/lib/db/types";
 
@@ -48,4 +49,24 @@ describe("linear build delivery re-anchor", () => {
     expect(reanchoredOrder(order({ deliveryBaseFraction: 0.2 }), 4)).toBeNull();
     expect(reanchoredOrder(order({ deliveryBaseFraction: 0 }), 4)).toBeNull();
   });
+});
+
+it("does not attach a scanned delivery baseline to a replacement order of the same queue length", async () => {
+  const memory = createInMemoryDb();
+  memory.seed("gameState", [{ _id: "current", currentTurn: 4 }]);
+  memory.seed("corporateSectors", [
+    { _id: "site", buildQueue: [{ unitsOrdered: 100, startTurn: 0, onlineTurn: 10 }] },
+  ]);
+  const sectors = memory.collection("corporateSectors");
+  const bulk = sectors.bulkWrite.bind(sectors);
+  vi.spyOn(sectors, "bulkWrite").mockImplementationOnce(async (operations) => {
+    await sectors.updateOne(
+      { _id: "site" },
+      { $set: { buildQueue: [{ unitsOrdered: 250, startTurn: 4, onlineTurn: 12 }] } }
+    );
+    return bulk(operations);
+  });
+  const result = await migration.execute(memory as never, { dryRun: false });
+  expect(result.documentsUpdated).toBe(0);
+  expect(sectors.docs[0].buildQueue).toEqual([{ unitsOrdered: 250, startTurn: 4, onlineTurn: 12 }]);
 });

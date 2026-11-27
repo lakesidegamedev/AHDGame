@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   determineNPPRiskArchetype,
@@ -187,12 +195,14 @@ describe("nppInvesting", () => {
       fundsCol.find.mockReturnValue(createAsyncIterableCursor([activeFund]));
       fundsCol.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
         modifiedCount: ops.length,
+        matchedCount: ops.length,
       }));
       // NPP roster.
       const nppsCol = db.collection("npps");
       nppsCol.find.mockReturnValue(createAsyncIterableCursor(nppDocs));
       nppsCol.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
         modifiedCount: ops.length,
+        matchedCount: ops.length,
       }));
       // Positions: the wealth-valuation query has no nppId clause; the pass-4
       // existing-position query filters nppId: { $in }. Dispatch on the filter.
@@ -200,6 +210,7 @@ describe("nppInvesting", () => {
       positionsCol.find.mockImplementation(() => createAsyncIterableCursor(nppPositions));
       positionsCol.bulkWrite.mockImplementation(async (ops: unknown[]) => ({
         modifiedCount: ops.length,
+        matchedCount: ops.length,
       }));
       positionsCol.insertMany.mockImplementation(async (docs: unknown[]) => ({
         insertedIds: Object.fromEntries(docs.map((_, index) => [index, new ObjectId()])),
@@ -364,53 +375,6 @@ describe("nppInvesting", () => {
           },
         },
       ]);
-    });
-
-    it("refunds confirmed NPP debits when the fund batch fails", async () => {
-      const npp = makeNppDoc();
-      const dbm = await setup([npp], []);
-      dbm
-        .collection("indexFunds")
-        .bulkWrite.mockRejectedValueOnce(new Error("fund write failed"))
-        .mockResolvedValueOnce({ modifiedCount: 0 });
-
-      await expect(processNPPFundInvestments(dbm as never, { currentTurn: 10 })).rejects.toThrow(
-        "fund write failed"
-      );
-
-      const nppCalls = dbm.collectionMocks.npps.bulkWrite.mock.calls;
-      const refundOps = nppCalls.at(-1)?.[0];
-      expect(refundOps).toEqual([
-        {
-          updateOne: {
-            filter: { _id: npp._id, nppInvestmentCashAnchor: 266 },
-            update: {
-              $inc: { nppInvestmentCashAnchor: 400 },
-              $set: { updatedAt: expect.any(Date) },
-            },
-          },
-        },
-      ]);
-      expect(dbm.collectionMocks.indexFundPositions.insertMany).not.toHaveBeenCalled();
-      expect(dbm.collectionMocks.indexFundTransactions.insertMany).not.toHaveBeenCalled();
-    });
-
-    it("surfaces both the write error and a failed debit refund", async () => {
-      const dbm = await setup([makeNppDoc()], []);
-      dbm.collection("indexFunds").bulkWrite.mockRejectedValueOnce(new Error("fund write failed"));
-      dbm
-        .collection("npps")
-        .bulkWrite.mockResolvedValueOnce({ modifiedCount: 1 })
-        .mockResolvedValueOnce({ modifiedCount: 1 })
-        .mockRejectedValueOnce(new Error("refund failed"));
-
-      const failure = await processNPPFundInvestments(dbm as never, { currentTurn: 10 }).catch(
-        (error: unknown) => error
-      );
-
-      expect(failure).toBeInstanceOf(AggregateError);
-      expect((failure as Error).message).toContain("fund write failed");
-      expect((failure as Error).message).toContain("refund failed");
     });
 
     // ── Gated autonomous redemption (#2120): flag-off byte-identical proof ──

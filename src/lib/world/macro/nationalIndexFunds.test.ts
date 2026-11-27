@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { markNationalIndexFunds } from "./nationalIndexFunds";

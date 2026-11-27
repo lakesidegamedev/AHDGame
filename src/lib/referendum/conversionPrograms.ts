@@ -1,14 +1,15 @@
+import type { CountryId } from "@/lib/constants/countries";
 /** Boundary changes preserve enacted regional law choices and each successor's funded national programs. */
 import type { Db } from "mongodb";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
-import type { State } from "@/lib/db/types/state";
+
 import { planConvertedLawPrograms } from "./rules/conversionPrograms";
 import { resetLawFamilies } from "@/lib/resetLegislation/catalog";
 import { fundingSeatForLaw } from "@/lib/resetLegislation/fundingOwner";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
+
 import { releasePromotedRegionalClaims } from "./secede/rules/lawSuccession";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
@@ -18,22 +19,37 @@ import { resetLawOpeningBoardsCollection } from "@/lib/db/repositories/resetLawO
 
 export async function convertLawPrograms(
   db: Db,
-  input: { regionId: string; countryId: ResetCountry; scale?: number; independent?: boolean }
+  input: {
+    regionId: string;
+    countryId: CountryId;
+    fromCountryId?: CountryId;
+    scale?: number;
+    independent?: boolean;
+  }
 ) {
-  const { regionId, countryId, scale = 1, independent = false } = input;
+  const {
+    regionId,
+    countryId: targetCountryId,
+    fromCountryId = "UK",
+    scale = 1,
+    independent = false,
+  } = input;
   const nationalBoard = independent
     ? await resetLawOpeningBoardsCollection<ResetLawOpeningBoard>(db).findOne({
-        _id: `${countryId}:national`,
+        _id: `${targetCountryId}:national`,
       })
     : null;
   const programs = await resetLawProgramsCollection<ResetLawProgramDocument>(db)
     .find({
-      country: "UK",
+      country: fromCountryId as ResetCountry,
       ...(nationalBoard ? { worldId: nationalBoard.worldId } : {}),
       $or: [{ regionId }, ...(independent ? [{ scope: "national" as const }] : [])],
     })
     .toArray();
   if (!programs.length) return;
+  if (!["US", "UK", "JP", "IE", "SCO", "WAL", "CA"].includes(targetCountryId))
+    throw new Error("Successor country cannot preserve the regional law funding programs");
+  const countryId = targetCountryId as ResetCountry;
   const regions = await statesCollection(db)
     .find(independent ? { countryId } : { _id: regionId }, {
       projection: { _id: 1, population: 1, gdp: 1 },
@@ -41,7 +57,7 @@ export async function convertLawPrograms(
     .toArray();
   const rump = independent
     ? await statesCollection(db)
-        .find({ countryId: "UK" }, { projection: { gdp: 1 } })
+        .find({ countryId: fromCountryId }, { projection: { gdp: 1 } })
         .toArray()
     : [];
   const accounts = await resetDepartmentAccountsCollection<ResetDepartmentAccountSnapshot>(db)

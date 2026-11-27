@@ -20,6 +20,21 @@ import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPos
  * column. Price resolves the market-facing way via `getPublicShareQuote`.
  */
 
+/** Every wealth reader must supply the same wallet and debt inputs. */
+export const CHARACTER_WEALTH_PROJECTION = {
+  _id: 1,
+  userId: 1,
+  name: 1,
+  avatarUrl: 1,
+  homeState: 1,
+  countryId: 1,
+  cashOnHand: 1,
+  savingsOnHand: 1,
+  currencyBalances: 1,
+  lineOfCredit: 1,
+  sequentialId: 1,
+} as const;
+
 /** Per-character valuation components, all in ₳. */
 export interface CharacterWealth {
   stockValue: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSavingsRequest } from "@/lib/savings/useSavingsRequest";
 import Link from "next/link";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatRatePercent } from "@/components/banking/formatBankMoney";
@@ -34,6 +35,7 @@ export function CustomerBankPanel({
 }) {
   const [depositAmount, setDepositAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const savingsRequest = useSavingsRequest();
 
   const deposit = async () => {
     const amount = Number(depositAmount);
@@ -54,12 +56,11 @@ export function CustomerBankPanel({
       } catch {
         // Non-fatal: the deposit below reports the real error if the bucket is missing.
       }
-      const res = await fetch("/api/character/savings/deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency, amount, holder: corporationId }),
+      const { response: res, json } = await savingsRequest("/api/character/savings/deposit", {
+        currency,
+        amount,
+        holder: corporationId,
       });
-      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         showToast(apiErrorText(json, "Deposit failed"), "error");
         return;
@@ -121,7 +122,7 @@ export function CustomerBankPanel({
                 className="h-8 w-48 rounded-md border border-card-border bg-background px-2 font-mono text-body-sm text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
               />
               <SmallButton tone="primary" disabled={busy} onClick={() => void deposit()}>
-                {busy ? "…" : "Deposit"}
+                {busy ? "â€¦" : "Deposit"}
               </SmallButton>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { PlantView } from "../../useCabinetOffice";
 import { ENERGY_SOURCES } from "@/lib/constants/cabinetEnergy";
 import { AggTile, EnergyIcon, fmtMoneyM, fmtCapacity } from "./energyUi";
@@ -38,16 +38,27 @@ export function PlantsTab({
 
   const groupPlants = useMemo(() => plants.filter((p) => p.source === source), [plants, source]);
 
+  const requestIntent = useRef<{ fingerprint: string; key: string } | null>(null);
+
   async function act(method: "POST" | "DELETE", path: string, body?: unknown) {
     if (busy) return;
+    const fingerprint = JSON.stringify([method, path, body]);
+    if (requestIntent.current?.fingerprint !== fingerprint)
+      requestIntent.current = { fingerprint, key: crypto.randomUUID() };
     setBusy(true);
     try {
       const res = await fetch(path, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": requestIntent.current.key,
+        },
         body: body ? JSON.stringify(body) : undefined,
       });
-      if (res.ok) onUpdate();
+      if (res.ok) {
+        requestIntent.current = null;
+        onUpdate();
+      }
     } finally {
       setBusy(false);
     }

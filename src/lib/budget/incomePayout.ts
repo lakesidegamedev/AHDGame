@@ -1,3 +1,4 @@
+import { creditRegionalCash } from "./regionalCash";
 import { taxableEarningsAnchor } from "./rules/taxableEarningsAnchor";
 /** Atomic source credit: current tax, old arrears, then spendable income. */
 import { createHash } from "node:crypto";
@@ -6,7 +7,7 @@ import type { Character } from "@/lib/db/types";
 import type { PlayerIncomeTaxAssessment as Assessment } from "@/lib/db/types/incomeTax";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
-import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { computeExpiresAtSync } from "@/lib/financialTxLog/expiresAt";
 import { loadStockWithholdingContexts, stockSellerKey } from "./stockSaleWithholding";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -32,7 +33,6 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { savingsAccountsCollection } from "@/lib/db/repositories/savingsAccounts";
 import { ledgerEntriesCollection } from "@/lib/db/repositories/ledgerEntries";
-import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { imperialCharactersCollection } from "@/lib/db/repositories/imperialCharacters";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
@@ -95,7 +95,8 @@ export async function creditIncomeAfterTax(
 ): Promise<PayoutReceipt["credits"]> {
   if (!credits.length) return [];
   const fingerprint = hash(JSON.stringify(credits));
-  return runRequiredTransaction(
+  return runWithDbSession(
+    db,
     async (session) => {
       const state = await gameStateCollection(db).findOne(
         { _id: "current" },
@@ -650,21 +651,11 @@ export async function creditIncomeAfterTax(
         if (saved.matchedCount !== nationalOps.length)
           throw new Error("Income tax national treasury unavailable");
       }
-      const regionalOps = [...regional]
-        .filter(([, row]) => row.amount > 0)
-        .map(([id, row]) => ({
-          updateOne: {
-            filter: { _id: id as never, countryId: row.countryId },
-            update: { $inc: { balance: row.amount } },
-          },
-        }));
-      if (regionalOps.length) {
-        const saved = await stateBudgetsCollection<Document>(db).bulkWrite(regionalOps, {
-          session,
-        });
-        if (saved.matchedCount !== regionalOps.length)
-          throw new Error("Income tax regional treasury unavailable");
-      }
+      await creditRegionalCash(
+        db,
+        [...regional].map(([stateId, row]) => ({ stateId, ...row })),
+        { session }
+      );
       if (logs.length)
         await financialTxLogCollection<Document>(db).bulkWrite(
           logs.map((document) => ({ insertOne: { document } })),

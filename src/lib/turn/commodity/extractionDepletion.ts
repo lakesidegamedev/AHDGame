@@ -26,6 +26,7 @@ export async function bookExtractionDepletion(
   inputs: ReadonlyArray<ExtractionSectorInput>,
   multipliers: Map<string, Partial<Record<ExtractableResource, number>>>,
   now: Date,
+  turn: number,
   /**
    * sectorId → realized ÷ nameplate output. 1 (or absent) means "no realized
    * measurement for this sector", which is the pre-plants case and keeps the
@@ -51,7 +52,24 @@ export async function bookExtractionDepletion(
     const inc = buildDepletionInc(produced);
     if (Object.keys(inc).length === 0) continue;
     ops.push({
-      updateOne: { filter: { stateId }, update: { $inc: inc, $set: { updatedAt: now } } },
+      updateOne: {
+        filter: { stateId, extractionDepletionTurn: { $ne: turn } },
+        update: [
+          {
+            $set: {
+              extractionOpeningUnits: { $ifNull: ["$extractedUnits", {}] },
+              extractionDepletionTurn: turn,
+              updatedAt: now,
+              ...Object.fromEntries(
+                Object.entries(inc).map(([path, amount]) => [
+                  path,
+                  { $add: [{ $ifNull: [`$${path}`, 0] }, amount] },
+                ])
+              ),
+            },
+          },
+        ],
+      },
     });
   }
   if (ops.length === 0) return;

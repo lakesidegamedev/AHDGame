@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 /**
  * POST /api/corporation/[id]/tech/unlock — CEO unlocks a sector tech-tree node.
  *
@@ -15,7 +16,6 @@ import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQu
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { unlockTechNode } from "@/lib/corporations/commands/techTree/unlockTechNode";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import type { GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 
 const unlockSchema = z.object({
@@ -44,39 +44,40 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(parsed.status, parsed.error);
     }
 
-    const db = await getDb();
-    const gameState = await gameStateCollection(db).findOne({ _id: "current" });
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      const gameState = await gameStateCollection(db).findOne({ _id: "current" });
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    const currentTurn = gameState?.currentTurn ?? 1;
-    const startingYear = gameState?.startingYear ?? STARTING_YEAR;
-    const currentYear =
-      gameState?.currentYear ?? startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);
+      const currentTurn = gameState?.currentTurn ?? 1;
+      const startingYear = gameState?.startingYear ?? STARTING_YEAR;
+      const currentYear =
+        gameState?.currentYear ?? startingYear + Math.floor((currentTurn - 1) / TURNS_PER_YEAR);
 
-    const result = await unlockTechNode(
-      db,
-      corporation,
-      parsed.data.nodeId,
-      currentYear,
-      currentTurn
-    );
+      const result = await unlockTechNode(
+        db,
+        corporation,
+        parsed.data.nodeId,
+        currentYear,
+        currentTurn
+      );
 
-    if (!result.ok) {
-      return errorResponse(result.status, result.error, { extra: { reason: result.reason } });
-    }
+      if (!result.ok) {
+        return errorResponse(result.status, result.error, { extra: { reason: result.reason } });
+      }
 
-    return NextResponse.json({
-      success: true,
-      nodeId: result.nodeId,
-      rdScoreRemaining: result.rdScoreRemaining,
-      cashSpent: result.cashSpent,
-      cashRemaining: result.cashRemaining,
+      return NextResponse.json({
+        success: true,
+        nodeId: result.nodeId,
+        rdScoreRemaining: result.rdScoreRemaining,
+        cashSpent: result.cashSpent,
+        cashRemaining: result.cashRemaining,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

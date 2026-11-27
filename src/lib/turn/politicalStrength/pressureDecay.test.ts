@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { processPressureDecay } from "./pressureDecay";
 import { PRESSURE_DECAY_PER_TURN } from "./strengthConstants";
 
@@ -92,3 +92,13 @@ describe("processPressureDecay", () => {
     expect(result.rowsDecayed).toBe(0);
   });
 });
+
+// Formula/transport fixture; the recurrence atomic suite uses the real boundary.
+vi.mock("../withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

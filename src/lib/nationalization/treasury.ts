@@ -1,3 +1,16 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import {
+  loadFxRatesByCurrency,
+  requireCurrencyRate,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
+import { computeDrawAllowance } from "./ceoFinance";
+import { DEFAULT_TREASURY_DRAW_CAP } from "./constants";
+import { buildTxDocs, loadTxThresholds } from "@/lib/financialTxLog/emit";
+import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
+import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 export { settleFundedTreasuryCompensation } from "@/lib/nationalization/treasuryCompensation";
 import type { Db, ObjectId } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types";
@@ -6,7 +19,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { resolveCountryCurrencyCode, writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 import { getCurrencyFxRate } from "@/lib/currency/corporationCapital";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 
 import {
@@ -714,23 +727,151 @@ export async function settleFundedSoeCapexGrant(
  */
 export async function drawFromTreasury(
   db: Db,
-  input: TreasuryTransferInput,
+  input: TreasuryTransferInput & { actorId?: ObjectId },
   now: Date,
   ledger?: TreasuryCashOptions
-): Promise<{ ok: true; amount: number }> {
+): Promise<{ ok: true; amount: number; corporationAmount: number } | { ok: false; error: string }> {
   const amount = Math.round(input.amountLocal);
-  if (amount <= 0) return { ok: true, amount: 0 };
+  if (!Number.isFinite(amount) || amount <= 0)
+    return { ok: false, error: "Draw must be a positive finite amount." };
+  return withAtomicResult(db, async (db) => {
+    const blocked = await fenceEconomicTurn(db);
+    if (blocked) return { ok: false as const, error: blocked.error };
+    const [corp, budget, state, options, rates] = await Promise.all([
+      corporationsCollection(db).findOne(
+        { _id: input.corpId, countryOwnerId: input.countryId },
+        {
+          projection: {
+            name: 1,
+            countryId: 1,
+            countryOwnerId: 1,
+            liquidCurrencyCode: 1,
+            ceoId: 1,
+            ceoVacant: 1,
+            treasuryDrawCap: 1,
+            treasuryDrawTurn: 1,
+            treasuryDrawnThisTurn: 1,
+          },
+        }
+      ),
+      federalBudgetCollection(db).findOne(
+        { countryId: input.countryId },
+        { projection: { countryId: 1, currencyCode: 1, treasuryBalance: 1, treasuryCashLocal: 1 } }
+      ),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }),
+      resolveTreasuryCashOptions(db, ledger),
+      loadFxRatesByCurrency(db),
+    ]);
+    if (
+      !corp ||
+      !budget ||
+      !state ||
+      (input.actorId && (corp.ceoVacant || !corp.ceoId?.equals(input.actorId)))
+    )
+      return {
+        ok: false as const,
+        error: "Treasury, corporation or seated CEO changed. Refresh and try again.",
+      };
+    const turn = state.currentTurn;
+    const allowance = computeDrawAllowance({
+      cap: corp.treasuryDrawCap ?? DEFAULT_TREASURY_DRAW_CAP,
+      drawnThisTurn: corp.treasuryDrawnThisTurn ?? 0,
+      sameTurn: corp.treasuryDrawTurn === turn,
+    });
+    if (amount > allowance)
+      return {
+        ok: false as const,
+        error: `Draw exceeds this turn's remaining allowance (${allowance}).`,
+      };
+    const treasuryCurrency = resolveCountryCurrencyCode(budget);
+    const corporationCurrency = resolveCorpLiquidCurrencyCode(corp);
+    if (!treasuryCurrency || !corporationCurrency || corporationCurrency !== input.corpCurrency)
+      return { ok: false as const, error: "Treasury draw denomination is unavailable or changed." };
+    const sourceRate = requireCurrencyRate(treasuryCurrency, rates.get(treasuryCurrency));
+    const destinationRate = requireCurrencyRate(
+      corporationCurrency,
+      rates.get(corporationCurrency)
+    );
+    const anchor = amount / sourceRate;
+    const corporationAmount = anchor * destinationRate;
+    if (!Number.isFinite(corporationAmount) || corporationAmount <= 0)
+      return { ok: false as const, error: "Draw conversion is outside the supported range." };
+    const funded = options.context?.treasuryCashLedgerEnabled === true;
+    const debit = await federalBudgetCollection(db).updateOne(
+      { _id: budget._id, ...(funded ? { treasuryCashLocal: { $gte: amount } } : {}) },
+      {
+        $inc: { treasuryBalance: -amount, ...(funded ? { treasuryCashLocal: -amount } : {}) },
+        $set: { updatedAt: now },
+      }
+    );
+    if (debit.matchedCount !== 1)
+      return {
+        ok: false as const,
+        error: "Treasury has insufficient spendable cash for this draw.",
+      };
+    const credit = await corporationsCollection(db).updateOne(
+      { _id: corp._id },
+      {
+        $inc: { liquidCapital: corporationAmount },
+        $set: {
+          treasuryDrawnThisTurn:
+            (corp.treasuryDrawTurn === turn ? (corp.treasuryDrawnThisTurn ?? 0) : 0) + amount,
+          treasuryDrawTurn: turn,
+          updatedAt: now,
+        },
+      }
+    );
+    if (credit.matchedCount !== 1) throw new Error("Treasury draw recipient disappeared");
+    const [thresholds, turnLengthMinutes] = await Promise.all([
+      loadTxThresholds(db),
+      loadTurnLengthMinutes(db),
+    ]);
+    const rows = buildTxDocs(
+      [
+        {
+          type: "soe_treasury_draw",
+          turn,
+          createdAt: now,
+          subjectType: "government",
+          countryId: input.countryId,
+          subjectName: input.countryId,
+          amount: -amount,
+          anchorAmount: -anchor,
+          currencyCode: treasuryCurrency,
+          counterpartyType: "corporation",
+          counterpartyId: corp._id,
+          meta: { countryId: input.countryId },
+        },
+        {
+          type: "soe_treasury_draw",
+          turn,
+          createdAt: now,
+          subjectType: "corporation",
+          subjectId: corp._id,
+          subjectName: corp.name,
+          amount: corporationAmount,
+          anchorAmount: anchor,
+          currencyCode: corporationCurrency,
+          counterpartyType: "government",
 
-  const debited = await incTreasuryBalance(db, input.countryId, -amount, now);
-  const credited = await corporationsCollection(db).updateOne(
-    { _id: input.corpId },
-    { $inc: { liquidCapital: amount }, $set: { updatedAt: now } }
-  );
-  await witnessTreasuryTransfer(db, ledger, "soe_treasury_draw", input, now, {
-    treasury: debited ? -amount : 0,
-    corporation: (credited?.matchedCount ?? 0) > 0 ? amount : 0,
+          meta: { countryId: input.countryId },
+        },
+      ],
+      thresholds,
+      turnLengthMinutes,
+      rates
+    );
+    if (rows.length) await financialTxLogCollection(db).insertMany(rows);
+    await witnessTreasuryTransfer(
+      db,
+      { context: options.context ? { ...options.context, pending: undefined } : null },
+      "soe_treasury_draw",
+      input,
+      now,
+      { treasury: -amount, corporation: corporationAmount }
+    );
+    return { ok: true as const, amount, corporationAmount };
   });
-  return { ok: true, amount };
 }
 
 /**

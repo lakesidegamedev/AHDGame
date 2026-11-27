@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import {
   HIGHLOW_MAX_STEPS,
@@ -6,7 +7,7 @@ import {
   resolveHighLowStep,
   type HighLowGuess,
 } from "./games/highlow";
-import { cryptoRng, type Rng } from "./rng";
+import { cryptoRng, replayRng, type Rng } from "./rng";
 import {
   applyHouseResult,
   capPayout,
@@ -82,6 +83,16 @@ export async function startHighLow(
   stake: number,
   rng: Rng = cryptoRng
 ): Promise<{ ok: true; session: HighLowSession } | Fail> {
+  const draws = replayRng(rng);
+  return withSessionDb(db, (db) => startHighLowWork(db, player, stake, draws()));
+}
+
+async function startHighLowWork(
+  db: Db,
+  player: CasinoPlayer,
+  stake: number,
+  rng: Rng
+): Promise<{ ok: true; session: HighLowSession } | Fail> {
   const existing = await sessions(db).findOne({ discordId: player.discordId, status: "active" });
   if (existing) {
     return {
@@ -126,6 +137,20 @@ async function cashOut(
   db: Db,
   s: HighLowSession
 ): Promise<{ ok: true; session: HighLowSession } | Fail> {
+  return withSessionDb(db, async (db) => {
+    const fresh = await sessions(db).findOne({ _id: s._id });
+    if (!fresh) return { ok: false as const, status: 404, error: "High-low hand not found" };
+    if (fresh.status !== "active") return { ok: true as const, session: fresh };
+    if (fresh.steps !== s.steps)
+      return { ok: false as const, status: 409, error: "That hand moved on. Try again." };
+    return cashOutWork(db, fresh);
+  });
+}
+
+async function cashOutWork(
+  db: Db,
+  s: HighLowSession
+): Promise<{ ok: true; session: HighLowSession } | Fail> {
   const limits = houseLimits((await loadHouse(db)).anchorBalance);
   const { payout, capped } = capPayout(s, s.stake * s.multiplier, limits);
   const stakeAnchor = toAnchor(s.stake, s.rate);
@@ -154,7 +179,7 @@ async function cashOut(
     );
     return { ok: false, status: 500, error: "Failed to credit winnings" };
   }
-  recordCasinoTx(db, s, "highlow", s.stake, payout, {
+  await recordCasinoTx(db, s, "highlow", s.stake, payout, {
     sessionId: s._id.toString(),
     steps: s.steps,
   });
@@ -163,11 +188,16 @@ async function cashOut(
 
 /** Return the stake of a session that never made a call. */
 async function voidSession(db: Db, s: HighLowSession): Promise<void> {
+  return withSessionDb(db, (db) => voidSessionWork(db, s));
+}
+
+async function voidSessionWork(db: Db, s: HighLowSession): Promise<void> {
   const closed = await sessions(db).findOneAndUpdate(
     { _id: s._id, status: "active", steps: 0 },
     { $set: { status: "cashed", payout: s.stake, updatedAt: new Date() } }
   );
-  if (closed) await returnStake(db, s, s.stake);
+  if (closed && !(await returnStake(db, s, s.stake)))
+    throw new Error("Casino refund recipient unavailable");
 }
 
 export async function actHighLow(
@@ -177,10 +207,29 @@ export async function actHighLow(
   action: HighLowGuess | "cashout",
   rng: Rng = cryptoRng
 ): Promise<{ ok: true; session: HighLowSession } | Fail> {
+  const draws = replayRng(rng);
+  const observed = ObjectId.isValid(sessionId)
+    ? await sessions(db).findOne({ _id: new ObjectId(sessionId), discordId })
+    : null;
+  return withSessionDb(db, (db) =>
+    actHighLowWork(db, discordId, sessionId, action, draws(), observed?.steps)
+  );
+}
+
+async function actHighLowWork(
+  db: Db,
+  discordId: string,
+  sessionId: string,
+  action: HighLowGuess | "cashout",
+  rng: Rng,
+  expectedSteps?: number
+): Promise<{ ok: true; session: HighLowSession } | Fail> {
   if (!ObjectId.isValid(sessionId)) return { ok: false, status: 400, error: "Invalid sessionId" };
   const s = await sessions(db).findOne({ _id: new ObjectId(sessionId), discordId });
   if (!s) return { ok: false, status: 404, error: "High-low hand not found" };
   if (s.status !== "active") return { ok: true, session: s };
+  if (expectedSteps !== undefined && s.steps !== expectedSteps)
+    return { ok: false, status: 409, error: "That hand moved on. Try again." };
 
   if (action === "cashout") {
     if (s.steps === 0) {
@@ -210,8 +259,9 @@ export async function actHighLow(
       { returnDocument: "after" }
     );
     if (!lost) return { ok: false, status: 409, error: "That hand moved on. Try again." };
-    await applyHouseResult(db, "highlow", toAnchor(s.stake, s.rate), 0);
-    recordCasinoTx(db, s, "highlow", s.stake, 0, {
+    if (!(await applyHouseResult(db, "highlow", toAnchor(s.stake, s.rate), 0)))
+      throw new Error("Casino house unavailable during loss settlement");
+    await recordCasinoTx(db, s, "highlow", s.stake, 0, {
       sessionId: s._id.toString(),
       steps: s.steps + 1,
     });

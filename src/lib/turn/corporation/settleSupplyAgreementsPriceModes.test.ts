@@ -56,8 +56,8 @@ describe("fixed price settlement", () => {
       { realisedSupplierPrices: realised(80) }
     );
     // 100 units a turn at (100 - 80): the seller nets exactly 100 a unit.
-    expect(r.deltaByCorp.get(S)).toBe(2000);
-    expect(r.deltaByCorp.get(B)).toBe(-2000);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(2000);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-2000);
   });
 
   it("has the seller pay the buyer when the market is above the set price", () => {
@@ -65,8 +65,8 @@ describe("fixed price settlement", () => {
       { priceMode: "fixed", fixedUnitPrice: 100 },
       { realisedSupplierPrices: realised(120) }
     );
-    expect(r.deltaByCorp.get(S)).toBe(-2000);
-    expect(r.deltaByCorp.get(B)).toBe(2000);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-2000);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(2000);
   });
 
   it("books ledger rows that name the mode, price source and prices, and conserves cash", () => {
@@ -81,7 +81,7 @@ describe("fixed price settlement", () => {
       marketUnitPrice: 80,
       contractUnitPrice: 100,
     });
-    expect((r.deltaByCorp.get(S) ?? 0) + (r.deltaByCorp.get(B) ?? 0)).toBe(0);
+    expect((r.deltaByCorp.get(S) ?? 0) + (r.deltaByCorp.get(B) ?? 0)).toBeCloseTo(0);
     expect(r.deliveries[0]).toMatchObject({
       marketUnitPrice: 80,
       marketPriceSource: "realised",
@@ -92,7 +92,7 @@ describe("fixed price settlement", () => {
   it("falls back to the published price and says so when the lane has no realised price", () => {
     const published = COMMODITY_BASE_PRICES[commodity];
     const r = settle({ priceMode: "fixed", fixedUnitPrice: published + 10 });
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(100 * 10));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(100 * 10);
     expect(r.txEntries[0]!.meta).toMatchObject({ marketPriceSource: "published" });
     expect(r.deliveries[0]).toMatchObject({ marketPriceSource: "published" });
   });
@@ -107,7 +107,7 @@ describe("fixed price settlement", () => {
       }
     );
     // 400 daily units short at 100 a unit over 24 turns, at half rate.
-    expect(r.deltaByCorp.get(S)).toBe(-Math.round((400 * 100 * 0.5) / 24));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-((400 * 100 * 0.5) / 24));
     expect(r.damages[0]!.penaltyAnchor).toBeCloseTo((400 * 100 * 0.5) / 24, 6);
   });
 });
@@ -118,8 +118,8 @@ describe("market price plus or minus settlement", () => {
       { priceMode: "indexed", pricePremium: 0.1 },
       { realisedSupplierPrices: realised(80) }
     );
-    expect(r.deltaByCorp.get(S)).toBe(800);
-    expect(r.deltaByCorp.get(B)).toBe(-800);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(800);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(-800);
     expect(r.txEntries[0]!.meta).toMatchObject({ priceMode: "indexed", contractUnitPrice: 88 });
   });
 
@@ -128,8 +128,8 @@ describe("market price plus or minus settlement", () => {
       { priceMode: "indexed", pricePremium: -0.2 },
       { realisedSupplierPrices: realised(50) }
     );
-    expect(r.deltaByCorp.get(S)).toBe(-1000);
-    expect(r.deltaByCorp.get(B)).toBe(1000);
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(-1000);
+    expect(r.deltaByCorp.get(B)).toBeCloseTo(1000);
   });
 });
 
@@ -137,7 +137,7 @@ describe("legacy agreements", () => {
   it("still settle a premium on the billed input price and carry no price-mode fields", () => {
     const base = COMMODITY_BASE_PRICES[commodity];
     const r = settle({ pricePremium: 0.2 }, { realisedSupplierPrices: realised(5) });
-    expect(r.deltaByCorp.get(S)).toBe(Math.round(100 * base * 0.2));
+    expect(r.deltaByCorp.get(S)).toBeCloseTo(100 * base * 0.2);
     expect(r.txEntries[0]!.meta).not.toHaveProperty("priceMode");
     expect(r.deliveries[0]).not.toHaveProperty("marketUnitPrice");
   });

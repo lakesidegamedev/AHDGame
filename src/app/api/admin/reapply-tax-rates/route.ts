@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 /**
  * POST /api/admin/reapply-tax-rates
  * Retroactively applies tax rate changes from signed tax bills.
@@ -11,7 +12,6 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { Bill, LegislationType } from "@/lib/db/types";
 import { isPolicyProvision } from "@/lib/db/types/legislation";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { calculateFederalRevenue, normalizeFederalTaxRates } from "@/lib/budget/revenue";
@@ -26,90 +26,95 @@ export async function POST() {
 
     const db = await getDb();
 
-    // Find all signed federal tax bills
-    const signedBills = await billsCollection(db).find({ status: "signed" }).toArray();
+    return await withAtomicEconomicCommand(db, async (db) => {
+      // Only this country's enacted laws may update its budget.
+      const signedBills = await billsCollection(db)
+        .find({ status: "signed", $or: [{ countryId: "US" }, { countryId: { $exists: false } }] })
+        .sort({ enactedAt: 1, createdAt: 1, _id: 1 })
+        .toArray();
 
-    // Get all legislation types with taxRateChange
-    const taxLegTypes = await legislationTypesCollection(db)
-      .find({ taxRateChange: { $exists: true } })
-      .toArray();
-    const taxLegTypeMap = new Map(taxLegTypes.map((lt) => [lt._id, lt]));
+      // Get all legislation types with taxRateChange
+      const taxLegTypes = await legislationTypesCollection(db)
+        .find({ taxRateChange: { $exists: true } })
+        .toArray();
+      const taxLegTypeMap = new Map(taxLegTypes.map((lt) => [lt._id, lt]));
 
-    // Get current federal budget
-    const budget = await federalBudgetCollection(db).findOne({ _id: "federal" });
-    if (!budget) {
-      return errorResponse(404, "Federal budget not found");
-    }
+      // Get current federal budget
+      const budget = await federalBudgetCollection(db).findOne({ _id: "federal" });
+      if (!budget) {
+        return errorResponse(404, "Federal budget not found");
+      }
 
-    const normalizedTaxRates = normalizeFederalTaxRates(budget.taxRates);
-    if (!normalizedTaxRates) {
-      return errorResponse(409, "Federal budget tax rates are missing");
-    }
+      const normalizedTaxRates = normalizeFederalTaxRates(budget.taxRates);
+      if (!normalizedTaxRates) {
+        return errorResponse(409, "Federal budget tax rates are missing");
+      }
 
-    const newTaxRates: FederalTaxRates = { ...normalizedTaxRates };
-    const appliedChanges: string[] = [];
+      const newTaxRates: FederalTaxRates = { ...normalizedTaxRates };
+      const appliedChanges: string[] = [];
 
-    // Process each signed bill
-    for (const bill of signedBills) {
-      if (!bill.provisions?.length) continue;
+      // Process each signed bill
+      for (const bill of signedBills) {
+        if (!bill.provisions?.length) continue;
 
-      for (const provision of bill.provisions) {
-        if (!isPolicyProvision(provision)) continue;
-        const lt = taxLegTypeMap.get(provision.legislationTypeId);
-        if (!lt?.taxRateChange || lt.taxRateChange.scope !== "federal") continue;
+        for (const provision of bill.provisions) {
+          if (!isPolicyProvision(provision)) continue;
+          const lt = taxLegTypeMap.get(provision.legislationTypeId);
+          if (!lt?.taxRateChange || lt.taxRateChange.scope !== "federal") continue;
 
-        // Find the selected option
-        const prov = provision;
+          // Find the selected option
+          const prov = provision;
 
-        let selectedOption = prov.policyOptionId
-          ? lt.policyOptions?.find((opt) => opt.id === prov.policyOptionId)
-          : undefined;
+          let selectedOption = prov.policyOptionId
+            ? lt.policyOptions?.find((opt) => opt.id === prov.policyOptionId)
+            : undefined;
 
-        if (!selectedOption) {
-          selectedOption = lt.policyOptions?.find(
-            (opt) => opt.economic === prov.economic && opt.social === prov.social
-          );
-        }
+          if (!selectedOption) {
+            selectedOption = lt.policyOptions?.find(
+              (opt) => opt.economic === prov.economic && opt.social === prov.social
+            );
+          }
 
-        if (selectedOption?.rate !== undefined) {
-          const { taxType } = lt.taxRateChange;
-          const oldRate = newTaxRates[taxType as keyof FederalTaxRates];
-          newTaxRates[taxType as keyof FederalTaxRates] = selectedOption.rate;
-          appliedChanges.push(
-            `${lt.name}: ${oldRate}% → ${selectedOption.rate}% (Bill: ${bill.title})`
-          );
+          if (selectedOption?.rate !== undefined) {
+            const { taxType } = lt.taxRateChange;
+            const oldRate = newTaxRates[taxType as keyof FederalTaxRates];
+            newTaxRates[taxType as keyof FederalTaxRates] = selectedOption.rate;
+            appliedChanges.push(
+              `${lt.name}: ${oldRate}% → ${selectedOption.rate}% (Bill: ${bill.title})`
+            );
+          }
         }
       }
-    }
 
-    if (appliedChanges.length === 0) {
+      if (appliedChanges.length === 0) {
+        return NextResponse.json({
+          message: "No tax rate changes found in signed bills",
+          changes: [],
+        });
+      }
+
+      // Calculate new revenue with updated rates
+      const newRevenue = await calculateFederalRevenue(db, newTaxRates);
+      const newSurplus = newRevenue.total - budget.spending.total;
+
+      // Update the budget
+      await federalBudgetCollection(db).updateOne(
+        { _id: "federal" },
+        {
+          $set: {
+            taxRates: newTaxRates,
+            revenue: newRevenue,
+            surplus: newSurplus,
+            updatedAt: new Date(),
+          },
+        }
+      );
+
       return NextResponse.json({
-        message: "No tax rate changes found in signed bills",
-        changes: [],
+        message: `Applied ${appliedChanges.length} tax rate changes`,
+        changes: appliedChanges,
+        newRates: newTaxRates,
       });
-    }
-
-    // Calculate new revenue with updated rates
-    const newRevenue = await calculateFederalRevenue(db, newTaxRates);
-    const newSurplus = newRevenue.total - budget.spending.total;
-
-    // Update the budget
-    await federalBudgetCollection(db).updateOne(
-      { _id: "federal" },
-      {
-        $set: {
-          taxRates: newTaxRates,
-          revenue: newRevenue,
-          surplus: newSurplus,
-          updatedAt: new Date(),
-        },
-      }
-    );
-
-    return NextResponse.json({
-      message: `Applied ${appliedChanges.length} tax rate changes`,
-      changes: appliedChanges,
-      newRates: newTaxRates,
     });
   } catch (error) {
     return handleRouteError(error);

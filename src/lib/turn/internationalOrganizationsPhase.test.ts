@@ -1,3 +1,13 @@
+vi.mock("@/lib/internationalOrganizations/resolvePendingResolution", () => ({
+  withPendingOrganizationResolution: async (
+    db: unknown,
+    item: unknown,
+    work: (db: unknown, item: unknown) => Promise<void>
+  ) => {
+    await work(db, item);
+    return true;
+  },
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { processInternationalOrganizationsTurn } from "./internationalOrganizationsPhase";
@@ -8,12 +18,12 @@ import { processInternationalOrganizationsTurn } from "./internationalOrganizati
  * (refs #3778). Everything else in this suite is mocked at the collections
  * layer, so the db stub only has to answer that one read.
  */
-const stubDb = () =>
+const stubDb = (preset = "2019-default") =>
   ({
     collection: () => ({
       findOne: async () => ({
         _id: "current",
-        preset: "2019-default",
+        preset,
         nppForeignPolicyMode: "shadow",
       }),
     }),
@@ -811,7 +821,7 @@ describe("internationalOrganizationsPhase", () => {
       }),
     } as never);
 
-    await processInternationalOrganizationsTurn({} as Db, 10);
+    await processInternationalOrganizationsTurn(stubDb("1953-default"), 10);
 
     // Dues see only the enabled member — TR and JO are never in this list.
     expect(fund.chargeOrganizationDues).toHaveBeenCalledWith(
@@ -855,7 +865,7 @@ describe("internationalOrganizationsPhase", () => {
       }),
     } as never);
 
-    const result = await processInternationalOrganizationsTurn({} as Db, 10);
+    const result = await processInternationalOrganizationsTurn(stubDb("1953-default"), 10);
 
     expect(fund.chargeOrganizationDues).not.toHaveBeenCalled();
     expect(result.tributeCharged).toBe(1);
@@ -892,7 +902,7 @@ describe("internationalOrganizationsPhase", () => {
       }),
     } as never);
 
-    await processInternationalOrganizationsTurn({} as Db, 10);
+    await processInternationalOrganizationsTurn(stubDb("1953-default"), 10);
 
     // The UN levies no tribute, so BOTH members are assessed dues.
     expect(fund.chargeOrganizationDues).toHaveBeenCalledWith(

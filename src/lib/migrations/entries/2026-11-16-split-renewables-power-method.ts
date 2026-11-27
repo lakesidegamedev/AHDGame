@@ -1,5 +1,6 @@
 import type { Collection, Db, Document, ObjectId } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { billsCollection } from "@/lib/db/repositories/bills";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { stateBillsCollection } from "@/lib/db/repositories/stateBills";
@@ -51,15 +52,19 @@ async function moveSubsidies(db: Db, dryRun: boolean): Promise<[number, number]>
   if (dryRun) return [legacy.length, 0];
   let updated = 0;
   for (const doc of legacy) {
-    const { _id, ...rest } = doc as Document & { _id: ObjectId };
-    const res = await subsidies.updateOne(
-      { _id, targetStrategyId: LEGACY_METHOD },
-      { $set: { targetStrategyId: WIND } }
-    );
-    if (res.modifiedCount === 0) continue;
-    updated += 1;
-    await subsidies.insertOne({ ...rest, targetStrategyId: SOLAR });
-    updated += 1;
+    updated += await withSessionDb(db, async (db) => {
+      const collection = subsidiesCollection<Document>(db);
+      const fresh = await collection.findOne({ _id: doc._id, targetStrategyId: LEGACY_METHOD });
+      if (!fresh) return 0;
+      const { _id, ...rest } = fresh as Document & { _id: ObjectId };
+      const res = await collection.updateOne(
+        { _id, targetStrategyId: LEGACY_METHOD },
+        { $set: { targetStrategyId: WIND } }
+      );
+      if (res.modifiedCount === 0) return 0;
+      await collection.insertOne({ ...rest, targetStrategyId: SOLAR });
+      return 2;
+    });
   }
   return [legacy.length, updated];
 }

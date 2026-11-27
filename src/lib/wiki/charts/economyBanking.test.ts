@@ -3,7 +3,10 @@ import { ECONOMY_BANKING_CHARTS } from "./economyBanking";
 import { ECONOMY_DEBT_CHARTS } from "./economyBankingDebt";
 import { expectValidChart } from "./chartTestUtils";
 import { ARREARS_DEFAULT_TURNS } from "@/lib/banking/rules/loans";
-import { savingsApyPercent, SAVINGS_REAL_RATE_FLOOR_PERCENT } from "@/lib/currency/savingsInterest";
+import {
+  savingsApyPercent,
+  SAVINGS_REAL_RATE_FLOOR_PERCENT,
+} from "@/lib/currency/rules/savingsInterest";
 import {
   spreadPercentPointsFromComposite,
   PRIME_STRESS_BASELINE_PERCENT,

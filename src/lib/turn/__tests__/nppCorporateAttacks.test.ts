@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (_db: Db, work: (db: Db) => Promise<unknown>) => work(_db),
+}));
 import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";

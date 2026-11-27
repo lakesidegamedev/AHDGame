@@ -1,3 +1,19 @@
+vi.mock("@/lib/currentTurn", () => ({ getCurrentTurn: async () => 10 }));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: import("mongodb").Db,
+    _phase: string,
+    _turn: number,
+    work: (db: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+}));
+// Collection-only behavior fixtures; transaction rollback is covered by atomic tests.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  afterCommit: (_db: import("mongodb").Db, effect: () => unknown) => effect(),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 

@@ -1,6 +1,7 @@
+import { withTurnValueSettlement } from "../withTurnValueSettlement";
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { PartyStrengthPressure } from "@/lib/db/types";
+
 import { PRESSURE_DECAY_PER_TURN } from "./strengthConstants";
 import { partyStrengthPressureCollection } from "@/lib/db/repositories/partyStrengthPressure";
 
@@ -29,6 +30,12 @@ export async function processPressureDecay(
   injectedDb?: Db
 ): Promise<PressureDecayResult> {
   const db = injectedDb ?? (await getDb());
+  return withTurnValueSettlement(db, "party-strength-pressure-decay", currentTurn, (db) =>
+    decayPressure(db, currentTurn, now)
+  );
+}
+
+async function decayPressure(db: Db, currentTurn: number, now: Date): Promise<PressureDecayResult> {
   const col = partyStrengthPressureCollection(db);
 
   const result: PressureDecayResult = {

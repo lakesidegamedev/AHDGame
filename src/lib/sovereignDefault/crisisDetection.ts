@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Sovereign auction outcome detection, once per country at fiscal-year close.
  *
@@ -75,6 +77,22 @@ export async function insertSovereignCrisisDecision(
 }
 
 export async function evaluateSovereignAuctionForCountry(
+  db: Db,
+  countryCode: CountryId,
+  currentTurn: number,
+  realtimeMs: number,
+  identity?: { eventKey: string }
+): Promise<EvaluationSummary | null> {
+  return withTurnValueSettlement(
+    db,
+    "sovereign-auction-evaluation",
+    currentTurn,
+    (db) => evaluateSovereignAuctionWork(db, countryCode, currentTurn, realtimeMs),
+    { sourceKey: identity?.eventKey ?? `${countryCode}:${currentTurn}` }
+  );
+}
+
+async function evaluateSovereignAuctionWork(
   db: Db,
   countryCode: CountryId,
   currentTurn: number,
@@ -173,7 +191,7 @@ export async function evaluateSovereignAuctionForCountry(
 
   if (transition.firedThisEvaluation) {
     const decision = await insertSovereignCrisisDecision(db, countryCode, currentTurn, realtimeMs);
-    await emitCrisisFiredNews(countryCode, currentTurn);
+    await afterCommit(db, () => emitCrisisFiredNews(countryCode, currentTurn));
     // Phase 10: NPC-controlled and vacant executives auto-propose immediately —
     // no 12-hour wait. Player executives skip this and use the UI within the
     // existing window. The auto-propose itself transitions the decision to
@@ -194,18 +212,11 @@ export async function evaluateSovereignAuctionForCountry(
       console.error("npcExecutiveAutoPropose threw at crisis-fire", err);
     }
 
-    // Phase 11b: anti-establishment sentiment rises — populist/nationalist
-    // NPPs in the affected country get a temporary favorability bump.
-    // Best-effort.
-    try {
-      await applyPopulistSurgeOnCrisis(db, countryCode);
-    } catch (err) {
-      console.error("applyPopulistSurgeOnCrisis threw at crisis-fire", err);
-    }
+    await applyPopulistSurgeOnCrisis(db, countryCode);
   } else if (classified.outcome === "undersubscribed") {
-    await emitAuctionUndersubscribedNews(countryCode, demand.demandRatio);
+    await afterCommit(db, () => emitAuctionUndersubscribedNews(countryCode, demand.demandRatio));
   } else if (classified.outcome === "failed") {
-    await emitAuctionFailedNews(countryCode, demand.demandRatio, newCount);
+    await afterCommit(db, () => emitAuctionFailedNews(countryCode, demand.demandRatio, newCount));
   }
 
   return {

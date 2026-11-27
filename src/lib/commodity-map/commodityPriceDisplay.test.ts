@@ -23,3 +23,8 @@ describe("commodity currency evidence", () => {
     expect(priceColor(100, null, 20)).toBe("rgba(148, 163, 184, 0.15)");
   });
 });
+
+it("does not treat unknown FX status as disabled", () => {
+  expect(convertCommodityPrice(100, "JPY", null)).toBeNull();
+  expect(formatCommodityPrice(100, "JPY", null)).toBe("Price unavailable");
+});

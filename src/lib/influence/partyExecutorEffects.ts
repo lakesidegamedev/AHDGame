@@ -1,6 +1,6 @@
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Election, NPP, ElectionCandidate, PoliticalParty, State } from "@/lib/db/types";
+import type { NPP, PoliticalParty } from "@/lib/db/types";
 import type { InfluenceType } from "@/lib/db/types";
 import type { ExecutePartyInfluenceInput } from "./partyExecutorTypes";
 import { removeWithdrawnCandidateFromTally } from "@/lib/elections/engine/tallyCleaner";
@@ -27,10 +27,10 @@ const STAT_CHANGE_AMOUNTS: Record<string, { min: number; max: number }> = {
   reduce_stubbornness: { min: 1, max: 3 },
 };
 
-function calculateStatChange(influenceType: InfluenceType): number {
+function calculateStatChange(influenceType: InfluenceType, sample: number): number {
   const range = STAT_CHANGE_AMOUNTS[influenceType];
   if (!range) return 0;
-  return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+  return Math.floor(sample * (range.max - range.min + 1)) + range.min;
 }
 
 /** Round a stat delta to the 0.1 grid so boost messages/values stay clean. */
@@ -47,9 +47,11 @@ export interface ApplyPartyInfluenceEffectsResult {
 export async function applyPartyInfluenceEffects(
   input: ExecutePartyInfluenceInput,
   npp: NPP,
-  party: PoliticalParty
+  party: PoliticalParty,
+  existingDb?: Db,
+  randomSample = Math.random()
 ): Promise<ApplyPartyInfluenceEffectsResult> {
-  const db = await getDb();
+  const db = existingDb ?? (await getDb());
   const now = new Date();
 
   switch (input.influenceType) {
@@ -59,10 +61,11 @@ export async function applyPartyInfluenceEffects(
       // (favorability decays by (fav-60)*0.05/turn in actionRefresh).
       const change = round1(advertiseFavorabilityGain(npp.favorability ?? 0));
       const newValue = Math.min(100, (npp.favorability ?? 0) + change);
-      await nppsCollection(db).updateOne(
+      const changed = await nppsCollection(db).updateOne(
         { _id: npp._id },
         { $set: { favorability: newValue, updatedAt: now } }
       );
+      if (changed.matchedCount !== 1) throw new Error("Influence target changed");
       return { statChange: change };
     }
     case "boost_influence": {
@@ -70,28 +73,31 @@ export async function applyPartyInfluenceEffects(
       // chair boost cannot out-run the 0.75%/turn PI decay and pin an NPP at 100.
       const change = round1(campaignInfluenceGain(npp.politicalInfluence ?? 0));
       const newValue = Math.min(100, (npp.politicalInfluence ?? 0) + change);
-      await nppsCollection(db).updateOne(
+      const changed = await nppsCollection(db).updateOne(
         { _id: npp._id },
         { $set: { politicalInfluence: newValue, updatedAt: now } }
       );
+      if (changed.matchedCount !== 1) throw new Error("Influence target changed");
       return { statChange: change };
     }
     case "boost_loyalty": {
-      const change = calculateStatChange("boost_loyalty");
+      const change = calculateStatChange("boost_loyalty", randomSample);
       const newValue = Math.min(100, npp.personality.loyalty + change);
-      await nppsCollection(db).updateOne(
+      const changed = await nppsCollection(db).updateOne(
         { _id: npp._id },
         { $set: { "personality.loyalty": newValue, updatedAt: now } }
       );
+      if (changed.matchedCount !== 1) throw new Error("Influence target changed");
       return { statChange: change };
     }
     case "reduce_stubbornness": {
-      const change = calculateStatChange("reduce_stubbornness");
+      const change = calculateStatChange("reduce_stubbornness", randomSample);
       const newValue = Math.max(0, npp.personality.stubbornness - change);
-      await nppsCollection(db).updateOne(
+      const changed = await nppsCollection(db).updateOne(
         { _id: npp._id },
         { $set: { "personality.stubbornness": newValue, updatedAt: now } }
       );
+      if (changed.matchedCount !== 1) throw new Error("Influence target changed");
       return { statChange: change };
     }
     case "relocate_state": {

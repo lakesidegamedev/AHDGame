@@ -19,29 +19,21 @@ export async function refundVentureReceipt(
 ): Promise<boolean> {
   const collection = corporationsCollection(db);
   const key = `productVentureDebitsV1.${ventureId}`;
-  let receiptTurn = turn;
-  let local: number | undefined;
-  if (turn === undefined) {
-    const row = (await collection.findOne(
-      { _id: corporationId },
-      { projection: { productVentureDebitsV1: 1 } }
-    )) as { productVentureDebitsV1?: Corporation["productVentureDebitsV1"] } | null;
-    const receipt = row?.productVentureDebitsV1?.[ventureId];
-    if (!receipt) return false;
-    receiptTurn = receipt.turn;
-    local = receipt.localAmount;
-  } else {
-    const row = (await collection.findOne(
-      { _id: corporationId },
-      { projection: { productVentureDebitsV1: 1 } }
-    )) as { productVentureDebitsV1?: Corporation["productVentureDebitsV1"] } | null;
-    local = row?.productVentureDebitsV1?.[ventureId]?.localAmount;
-  }
-  if (local === undefined || !(local > 0)) return false;
-  const result = await collection.updateOne({ _id: corporationId, [`${key}.turn`]: receiptTurn }, {
-    $inc: { liquidCapital: local },
-    $unset: { [key]: "" },
-  } as never);
+  const result = await collection.updateOne(
+    {
+      _id: corporationId,
+      ...(turn !== undefined ? { [`${key}.turn`]: turn } : {}),
+      [`${key}.localAmount`]: { $gt: 0 },
+    },
+    [
+      {
+        $set: {
+          liquidCapital: { $add: [{ $ifNull: ["$liquidCapital", 0] }, `$${key}.localAmount`] },
+        },
+      },
+      { $unset: key },
+    ]
+  );
   return result.matchedCount === 1;
 }
 

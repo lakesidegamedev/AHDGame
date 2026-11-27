@@ -16,6 +16,7 @@ type Plant = Pick<CorporateSector, "strategyId" | "revenue" | "sectorType" | "st
 export function hasTenderOpportunity(input: {
   terms: TenderTerms;
   countryId: string;
+  paymentCurrency?: string | null;
   corporation: Supplier;
   sectors: Plant[];
   year: number;
@@ -43,6 +44,7 @@ export function hasTenderOpportunity(input: {
       corp,
       sector,
       countryId: input.countryId,
+      paymentCurrency: input.paymentCurrency,
       currentYear: input.year,
       component: terms.component,
     });

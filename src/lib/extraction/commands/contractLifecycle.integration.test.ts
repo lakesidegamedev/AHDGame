@@ -1,3 +1,11 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -20,7 +28,9 @@ vi.mock("@/lib/currency/corporationCapital", () => ({
 }));
 vi.mock("@/lib/budget/treasurySpend", () => ({ creditTreasury: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn() }));
-vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
+vi.mock("@/lib/notifications", () => ({
+  createNotifications: vi.fn().mockResolvedValue(undefined),
+}));
 
 const TURN = 100;
 const NOW = new Date("2026-07-09T00:00:00Z");
@@ -68,6 +78,8 @@ describe("issueContractOffer", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: TURN });
     db.collection("stateResourceCapacity");
     db.collection("corporations");
     db.collection("corporateSectors");
@@ -173,6 +185,8 @@ describe("acceptContractOffer", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: TURN });
     db.collection("extractionContracts");
     db.collection("corporations");
     db.collectionMocks.extractionContracts.updateOne.mockResolvedValue({
@@ -188,6 +202,8 @@ describe("acceptContractOffer", () => {
 
   async function run(contract: ExtractionContract, corp = makeCorp()) {
     const { acceptContractOffer } = await import("./acceptContractOffer");
+    db.collectionMocks.extractionContracts.findOne.mockResolvedValue(contract);
+    db.collectionMocks.corporations.findOne.mockResolvedValue(corp);
     return acceptContractOffer(db as unknown as Db, contract, corp, TURN, NOW);
   }
 
@@ -237,6 +253,8 @@ describe("acceptContractOffer", () => {
 
   it("credits the state budget without a government receipt when the doc exists", async () => {
     db.collection("stateBudgets");
+    db.collectionMocks.stateBudgets.findOne.mockResolvedValue({ _id: "TX", countryId: "US" });
+    db.collectionMocks.stateBudgets.bulkWrite.mockResolvedValue({ matchedCount: 1 });
     db.collectionMocks.stateBudgets.updateOne.mockResolvedValue({
       modifiedCount: 1,
       matchedCount: 1,
@@ -315,6 +333,8 @@ describe("declineContractOffer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: TURN });
     db.collection("extractionContracts");
     db.collectionMocks.extractionContracts.updateOne.mockResolvedValue({
       modifiedCount: 1,
@@ -351,6 +371,8 @@ describe("revokeContract", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: TURN });
     db.collection("extractionContracts");
     db.collectionMocks.extractionContracts.updateOne.mockResolvedValue({
       modifiedCount: 1,

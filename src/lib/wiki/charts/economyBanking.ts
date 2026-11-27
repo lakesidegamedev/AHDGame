@@ -15,7 +15,7 @@ import {
   SAVINGS_REAL_RATE_FLOOR_PERCENT,
   computeSavingsInterestForTurn,
   savingsApyPercent,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 import {
   PRIME_STRESS_BASELINE_PERCENT,
   applyPrimeEnvironmentToComposite,

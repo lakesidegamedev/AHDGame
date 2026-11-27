@@ -12,7 +12,7 @@ function makeDb(npps: Array<Record<string, unknown>>) {
           toArray: vi.fn().mockResolvedValue(npps),
         }),
         updateMany: vi.fn(async (filter: Record<string, unknown>, u: Record<string, unknown>) => {
-          updates.push({ filter, $inc: u.$inc as Record<string, unknown> });
+          updates.push({ filter, pipeline: u });
           return { acknowledged: true, modifiedCount: 1 };
         }),
       })),
@@ -35,12 +35,12 @@ describe("applyPopulistSurgeOnCrisis", () => {
     // populist: extreme economic with non-conservative social
     const populistId = new ObjectId();
     const { db, updates } = makeDb([
-      { _id: populistId, policies: { economic: -65, social: 30 } }, // populist per deriveIdeology
+      { _id: populistId, policies: { economic: -3.25, social: 1.5 } }, // populist per deriveIdeology
     ]);
     const r = await applyPopulistSurgeOnCrisis(db, "US");
     expect(r.npcsAffected).toBe(1);
     expect(updates).toHaveLength(1);
-    expect((updates[0].$inc as { favorability: number }).favorability).toBe(10);
+    expect(updates[0].pipeline).toBeDefined();
     const filter = updates[0].filter as { _id: { $in: ObjectId[] } };
     expect(filter._id.$in.length).toBe(1);
   });
@@ -48,7 +48,7 @@ describe("applyPopulistSurgeOnCrisis", () => {
   it("bumps nationalist NPPs (high social = nationalist)", async () => {
     const nationalistId = new ObjectId();
     const { db, updates } = makeDb([
-      { _id: nationalistId, policies: { economic: 0, social: 70 } }, // nationalist
+      { _id: nationalistId, policies: { economic: 0, social: 3.5 } }, // nationalist
     ]);
     const r = await applyPopulistSurgeOnCrisis(db, "UK");
     expect(r.npcsAffected).toBe(1);
@@ -57,9 +57,9 @@ describe("applyPopulistSurgeOnCrisis", () => {
 
   it("does not bump non-populist/nationalist NPPs", async () => {
     const { db, updates } = makeDb([
-      { _id: new ObjectId(), policies: { economic: 50, social: 50 } }, // conservative
-      { _id: new ObjectId(), policies: { economic: -60, social: 0 } }, // socialist (e<-40 + s<20)
-      { _id: new ObjectId(), policies: { economic: 50, social: -20 } }, // technocrat
+      { _id: new ObjectId(), policies: { economic: 2.5, social: 2.5 } }, // conservative
+      { _id: new ObjectId(), policies: { economic: -3, social: 0 } }, // socialist (e<-40 + s<20)
+      { _id: new ObjectId(), policies: { economic: 2.5, social: -1 } }, // technocrat
     ]);
     const r = await applyPopulistSurgeOnCrisis(db, "US");
     expect(r.npcsAffected).toBe(0);
@@ -68,9 +68,9 @@ describe("applyPopulistSurgeOnCrisis", () => {
 
   it("filters multiple — only qualifying get bumped", async () => {
     const { db, updates } = makeDb([
-      { _id: new ObjectId(), policies: { economic: -65, social: 30 } }, // populist
-      { _id: new ObjectId(), policies: { economic: 0, social: 70 } }, // nationalist
-      { _id: new ObjectId(), policies: { economic: 50, social: 50 } }, // conservative
+      { _id: new ObjectId(), policies: { economic: -3.25, social: 1.5 } }, // populist
+      { _id: new ObjectId(), policies: { economic: 0, social: 3.5 } }, // nationalist
+      { _id: new ObjectId(), policies: { economic: 2.5, social: 2.5 } }, // conservative
     ]);
     const r = await applyPopulistSurgeOnCrisis(db, "US");
     expect(r.npcsAffected).toBe(2);

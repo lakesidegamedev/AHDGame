@@ -1,3 +1,6 @@
+import { dividendRemainder, cappedUnitDividend } from "./rules/dividendRemainder";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { createHash } from "node:crypto";
 import { creditIncomeAfterTax, type IncomeCredit } from "@/lib/budget/incomePayout";
 /**
  * Dividend pass-through for index funds.
@@ -104,6 +107,27 @@ export async function processIndexFundDividend(
     prefetch?: { fund: IndexFund; positions: IndexFundPosition[] };
   }
 ): Promise<DividendPassThroughResult> {
+  const turn = options?.turn ?? (await getCurrentTurn(db));
+  const identity = createHash("sha256")
+    .update(`${fundId}:${corporationId}:${options?.payoutKey ?? "default"}`)
+    .digest("hex");
+  return withTurnValueSettlement(db, `fund-dividend-${identity}`, turn, (db) =>
+    processIndexFundDividendWork(db, fundId, grossDividendAnchor, corporationId, sharesHeld, {
+      ...options,
+      turn,
+      prefetch: undefined,
+    })
+  );
+}
+
+async function processIndexFundDividendWork(
+  db: Db,
+  fundId: ObjectId,
+  grossDividendAnchor: number,
+  corporationId: ObjectId,
+  sharesHeld: number,
+  options: Parameters<typeof processIndexFundDividend>[5]
+): Promise<DividendPassThroughResult> {
   const fund = options?.prefetch?.fund ?? (await getFundById(db, fundId));
   if (!fund) {
     throw new Error(`Index fund ${fundId} not found for dividend processing`);
@@ -111,7 +135,7 @@ export async function processIndexFundDividend(
 
   const split = splitIndexFundDividend(grossDividendAnchor);
 
-  if (split.grossAnchor <= 0 || fund.unitSupply <= 0) {
+  if (split.grossAnchor <= 0) {
     return {
       fundId,
       totalGrossAnchor: split.grossAnchor,
@@ -122,7 +146,7 @@ export async function processIndexFundDividend(
   }
 
   // Credit the reinvestment portion (75%) to fund cash.
-  await indexFundsCollection<Document>(db).updateOne(
+  const retained = await indexFundsCollection<Document>(db).updateOne(
     { _id: fundId },
     {
       $inc: { cashAnchor: split.reinvestAnchor },
@@ -131,13 +155,14 @@ export async function processIndexFundDividend(
   );
 
   // Distribute the pass-through portion (25%) to unit holders proportionally.
+  if (retained.matchedCount !== 1) throw new Error("Dividend fund disappeared before settlement");
   const forexEnabled = await isForexEnabled();
   // Holder dividends are computed in ₳ and credited into the fund-currency
   // wallet bucket, so they need the same ₳ → native conversion redeem applies.
   // Without it a JPY fund paid a yen-labelled balance a raw ₳ figure.
   const fundFxRate = await loadFundPayoutFxRate(db, fund.anchorCurrencyCode, forexEnabled);
   const positions = options?.prefetch?.positions ?? (await listFundPositions(db, fundId));
-  const perUnitDividend = split.passThroughAnchor / fund.unitSupply;
+  const perUnitDividend = fund.unitSupply > 0 ? split.passThroughAnchor / fund.unitSupply : 0;
   const turn = options?.turn ?? (await getCurrentTurn(db));
   const now = new Date();
 
@@ -216,7 +241,12 @@ export async function processIndexFundDividend(
     if (position.holderKind === "fund_reserve") continue;
     if (position.units <= 0) continue;
 
-    const holderDividend = Math.floor(position.units * perUnitDividend * 100) / 100;
+    const holderDividend = cappedUnitDividend(
+      split.passThroughAnchor,
+      distributedAnchor,
+      position.units,
+      perUnitDividend
+    );
     if (holderDividend <= 0) continue;
 
     if (position.holderKind === "character" && position.characterId) {
@@ -357,7 +387,11 @@ export async function processIndexFundDividend(
     }
   }
 
-  if (corpOps.length > 0) await corporationsCollection(db).bulkWrite(corpOps);
+  if (
+    corpOps.length > 0 &&
+    (await corporationsCollection(db).bulkWrite(corpOps)).matchedCount !== corpOps.length
+  )
+    throw new Error("Dividend corporate recipient changed");
   await payFundHolderIncome(
     db,
     `fund:${fundId}:${corporationId}:${options?.payoutKey ?? "default"}`,
@@ -367,20 +401,21 @@ export async function processIndexFundDividend(
     forexEnabled
   );
   if (nppOps.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await nppsCollection<Document>(db).bulkWrite(nppOps as any);
+    if ((await nppsCollection<Document>(db).bulkWrite(nppOps)).matchedCount !== nppOps.length)
+      throw new Error("Dividend NPP recipient changed");
   }
 
-  const undistributedPassThrough =
-    Math.round(Math.max(0, split.passThroughAnchor - distributedAnchor) * 100) / 100;
+  const undistributedPassThrough = dividendRemainder(split.passThroughAnchor, distributedAnchor);
   if (undistributedPassThrough > 0) {
-    await indexFundsCollection<Document>(db).updateOne(
+    const remainder = await indexFundsCollection<Document>(db).updateOne(
       { _id: fundId },
       {
         $inc: { cashAnchor: undistributedPassThrough },
         $set: { updatedAt: new Date() },
       }
     );
+    if (remainder.matchedCount !== 1)
+      throw new Error("Dividend fund disappeared before retaining remainder");
   }
 
   // Log the dividend transaction on the fund.
@@ -458,6 +493,17 @@ export async function processIndexFundDividendsBatch(
   db: Db,
   accruals: readonly FundDividendAccrualInput[],
   options?: { turn?: number }
+): Promise<void> {
+  if (accruals.length === 0) return;
+  const turn = options?.turn ?? (await getCurrentTurn(db));
+  return withTurnValueSettlement(db, "fund-dividends-batch", turn, (db) =>
+    processIndexFundDividendsBatchWork(db, accruals, { turn })
+  );
+}
+async function processIndexFundDividendsBatchWork(
+  db: Db,
+  accruals: readonly FundDividendAccrualInput[],
+  options: { turn: number }
 ): Promise<void> {
   const valid = accruals.filter((a) => Number.isFinite(a.amountAnchor) && a.amountAnchor > 0);
   if (valid.length === 0) return;
@@ -588,10 +634,10 @@ export async function processIndexFundDividendsBatch(
     const fund = fundById.get(accrual.fundId.toString());
     if (!fund) continue;
     const split = splitIndexFundDividend(accrual.amountAnchor);
-    if (split.grossAnchor <= 0 || fund.unitSupply <= 0) continue;
+    if (split.grossAnchor <= 0) continue;
 
     const positions = positionsByFund.get(accrual.fundId.toString()) ?? [];
-    const perUnitDividend = split.passThroughAnchor / fund.unitSupply;
+    const perUnitDividend = fund.unitSupply > 0 ? split.passThroughAnchor / fund.unitSupply : 0;
     const fundFxRate = await fundFxRateFor(fund.anchorCurrencyCode);
     const corporationName = corpNameById.get(accrual.corporationId.toString());
     let holdersPaid = 0;
@@ -599,7 +645,12 @@ export async function processIndexFundDividendsBatch(
 
     for (const position of positions) {
       if (position.holderKind === "fund_reserve" || position.units <= 0) continue;
-      const holderDividend = Math.floor(position.units * perUnitDividend * 100) / 100;
+      const holderDividend = cappedUnitDividend(
+        split.passThroughAnchor,
+        distributedAnchor,
+        position.units,
+        perUnitDividend
+      );
       if (holderDividend <= 0) continue;
 
       if (position.holderKind === "character" && position.characterId) {
@@ -718,8 +769,7 @@ export async function processIndexFundDividendsBatch(
       }
     }
 
-    const undistributedPassThrough =
-      Math.round(Math.max(0, split.passThroughAnchor - distributedAnchor) * 100) / 100;
+    const undistributedPassThrough = dividendRemainder(split.passThroughAnchor, distributedAnchor);
     const retainedAnchor = split.reinvestAnchor + undistributedPassThrough;
     addAmt(fundCashInc, accrual.fundId, retainedAnchor);
     if (retainedAnchor > 0)
@@ -796,15 +846,21 @@ export async function processIndexFundDividendsBatch(
     },
   }));
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  await Promise.all([
-    corporateOps.length ? corporationsCollection(db).bulkWrite(corporateOps) : Promise.resolve(),
-    fundOps.length
-      ? indexFundsCollection<Document>(db).bulkWrite(fundOps as any[])
-      : Promise.resolve(),
-    nppOps.length ? nppsCollection<Document>(db).bulkWrite(nppOps as any[]) : Promise.resolve(),
-  ]);
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  if (
+    corporateOps.length &&
+    (await corporationsCollection(db).bulkWrite(corporateOps)).matchedCount !== corporateOps.length
+  )
+    throw new Error("Dividend corporate recipients changed");
+  if (
+    fundOps.length &&
+    (await indexFundsCollection<Document>(db).bulkWrite(fundOps)).matchedCount !== fundOps.length
+  )
+    throw new Error("Dividend fund recipients changed");
+  if (
+    nppOps.length &&
+    (await nppsCollection<Document>(db).bulkWrite(nppOps)).matchedCount !== nppOps.length
+  )
+    throw new Error("Dividend NPP recipients changed");
   await logIndexFundDividendBulk(db, holderTxEntries);
   await insertFundTransactionsBulk(db, fundTxDocs);
 }

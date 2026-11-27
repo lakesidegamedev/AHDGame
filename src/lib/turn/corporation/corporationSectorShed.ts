@@ -1,8 +1,10 @@
+import { withTurnValueSettlement } from "../withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Db } from "mongodb";
 import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
 import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { ObjectId } from "mongodb";
-import type { Corporation } from "@/lib/db/types";
+import type { CorporateSector, Corporation } from "@/lib/db/types";
 import type { CorporationLookups } from "./types";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -43,7 +45,78 @@ export async function shedSectorsForCorps(
   now: Date,
   reasonLabel: string,
   /** `marketSystemMode >= "plants"`. Defaults false — legacy revenue shed. */
-  plantsEnabled: boolean = false
+  plantsEnabled: boolean = false,
+  currentTurn?: number
+): Promise<SectorShedResult> {
+  if (sheddingCorps.length === 0)
+    return { corporateSectorsUpdated: 0, totalRevenueShed: 0, totalCapacityUnitsShed: 0 };
+  const turn =
+    currentTurn ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ??
+    0;
+  const outcome = await withTurnValueSettlement(
+    db,
+    reasonLabel === "Vacant CEO" ? "vacant-ceo-shed" : "inactive-ceo-shed",
+    turn,
+    async (db) => {
+      const ids = sheddingCorps.flatMap((c) =>
+        (lookups.sectorsByCorp.get(String(c._id)) ?? []).map((s) => s._id)
+      );
+      const sectors = await corporateSectorsCollection<CorporateSector>(db)
+        .find(
+          { _id: { $in: ids } },
+          {
+            projection: {
+              corporationId: 1,
+              sectorType: 1,
+              strategyId: 1,
+              revenue: 1,
+              workers: 1,
+              capitalStock: 1,
+              plantsStartTurn: 1,
+              capacityBookAnchor: 1,
+              plantUnitRemainder: 1,
+              plantWearUnits: 1,
+              plantCount: 1,
+            },
+          }
+        )
+        .toArray();
+      const sectorsByCorp = new Map<string, CorporateSector[]>();
+      for (const sector of sectors) {
+        const key = String(sector.corporationId);
+        sectorsByCorp.set(key, [...(sectorsByCorp.get(key) ?? []), sector]);
+      }
+      const result = await applySectorShed(
+        db,
+        { ...lookups, sectorsByCorp },
+        sheddingCorps,
+        rate,
+        now,
+        reasonLabel,
+        plantsEnabled
+      );
+      return { result, sectors };
+    }
+  );
+  const byId = new Map(outcome.sectors.map((s) => [String(s._id), s]));
+  for (const sectors of lookups.sectorsByCorp.values())
+    for (const sector of sectors) {
+      const settled = byId.get(String(sector._id));
+      if (settled) Object.assign(sector, settled);
+    }
+  return outcome.result;
+}
+
+async function applySectorShed(
+  db: Db,
+  lookups: CorporationLookups,
+  sheddingCorps: Corporation[],
+  rate: number,
+  now: Date,
+  reasonLabel: string,
+  plantsEnabled: boolean
 ): Promise<SectorShedResult> {
   if (sheddingCorps.length === 0) {
     return {

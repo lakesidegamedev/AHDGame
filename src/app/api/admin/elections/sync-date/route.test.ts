@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (_db: Db, work: (db: Db) => Promise<Response>) => work(_db),
+}));
 /**
  * sync-date route — RU (Soviet) bootstrap section.
  *
@@ -36,7 +39,7 @@ const RU_STATES = [
 async function setup(db: MockDb, opts: { preset: string; startingYear: number; ruStatus: string }) {
   db.collectionMocks.gameState!.findOne.mockResolvedValue({
     _id: "current",
-    currentTurn: 500,
+    currentTurn: 1,
     startingYear: opts.startingYear,
     preset: opts.preset,
   });

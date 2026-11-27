@@ -1,3 +1,12 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+import { historyAppendInfo } from "@/lib/test-utils/historyAppendInfo";
 import type { Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -54,12 +63,7 @@ function equilibriumResiduals(values: Record<string, number>) {
 type HistoryOp = {
   updateOne: {
     filter: { _id: string };
-    update: {
-      $push: {
-        entries: { $each: Array<{ turn: number; values: Record<string, number> }>; $slice: number };
-      };
-      $set: { countryId: string; updatedAt: Date };
-    };
+    update: Array<{ $set: { entries: unknown; countryId: string; updatedAt: Date } }>;
     upsert: boolean;
   };
 };
@@ -130,9 +134,13 @@ describe("processPoliticalMetricsDynamics — per-region history (#1322)", () =>
     expect(ops.map((o) => o.updateOne.filter._id).sort()).toEqual(["R1", "R2"]);
     for (const op of ops) {
       expect(op.updateOne.upsert).toBe(true);
-      expect(op.updateOne.update.$push.entries.$slice).toBe(-REGION_HISTORY_MAX_ENTRIES);
-      expect(op.updateOne.update.$push.entries.$each[0].turn).toBe(HISTORY_CADENCE_TURNS);
-      expect(op.updateOne.update.$set.countryId).toBe("UK");
+      expect(historyAppendInfo(op.updateOne.update[0].$set.entries).cap).toBe(
+        REGION_HISTORY_MAX_ENTRIES
+      );
+      expect(
+        historyAppendInfo<{ turn: number }>(op.updateOne.update[0].$set.entries).point.turn
+      ).toBe(HISTORY_CADENCE_TURNS);
+      expect(op.updateOne.update[0].$set.countryId).toBe("UK");
     }
   });
 
@@ -150,7 +158,9 @@ describe("processPoliticalMetricsDynamics — per-region history (#1322)", () =>
     wire([{ _id: "R1", values: displaced }]);
     await processPoliticalMetricsDynamics(db as unknown as Db, HISTORY_CADENCE_TURNS);
 
-    const entry = historyOps()[0].updateOne.update.$push.entries.$each[0];
+    const entry = historyAppendInfo<{ turn: number; values: Record<string, number> }>(
+      historyOps()[0].updateOne.update[0].$set.entries
+    ).point;
     const sampleId = Object.keys(displaced)[0];
     expect(entry.values[sampleId]).not.toBe(20);
     expect(entry.values[sampleId]).toBeGreaterThan(20);

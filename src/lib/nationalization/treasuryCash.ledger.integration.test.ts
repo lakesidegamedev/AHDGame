@@ -2,7 +2,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { MongoClient, ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { getDb } from "@/lib/mongodb";
 import { resetLedgerShadowFlagCache } from "@/lib/ledger/featureFlag";
 import { writeBalanceSnapshot, writePreForexBalanceCheckpoint } from "@/lib/ledger/balanceSnapshot";
@@ -55,7 +55,7 @@ async function world(
       throw new Error("Native treasury fixtures require a local sandbox endpoint");
     client ??= await MongoClient.connect(uri.toString(), { maxPoolSize: 1 });
     db = client.db(`ahd_sim_fixture_treasury_${randomUUID().replaceAll("-", "").slice(0, 24)}`);
-  } else db = createInMemoryDb() as unknown as Db;
+  } else db = createTransactionalMemoryDb().db;
   await db
     .collection<{ _id: string; ledgerShadow: boolean }>("gameConfig")
     .insertOne({ _id: "default", ledgerShadow: options.shadow ?? true });
@@ -149,14 +149,14 @@ for (const native of [false, true]) {
           { countryId: "UK", corpId, amountLocal: 1_000, corpCurrency: "USD" },
           NOW
         );
-        expect(await cash(db, corpId)).toEqual({ corp: 201_000, treasury: 999_000 });
+        expect(await cash(db, corpId)).toEqual({ corp: 202_000, treasury: 999_000 });
         await close(db, 2);
         const legs = (await db.collection<LedgerEntry>("ledgerEntries").find({}).toArray()).map(
           (entry) => entry.legs[0]
         );
         expect(legs.map((leg) => [leg.account, leg.anchorAmount]).sort()).toEqual(
           [
-            [`corporation:${corpId.toString()}:USD`, 1_000],
+            [`corporation:${corpId.toString()}:USD`, 2_000],
             ["government:UK:GBP", -2_000],
           ].sort()
         );
@@ -198,8 +198,8 @@ for (const native of [false, true]) {
           { countryId: "FR", corpId, amountLocal: 700, corpCurrency: "GBP" },
           NOW
         );
-        expect(await cash(db, corpId)).toEqual({ corp: 199_300, treasury: 999_500 });
-        await close(db, 2);
+        expect(await cash(db, corpId)).toEqual({ corp: 199_300, treasury: 1_000_000 });
+        await close(db, 1);
         expect(await ledgerAccounts(db)).not.toContain(`corporation:${missingCorp.toString()}:GBP`);
       });
 

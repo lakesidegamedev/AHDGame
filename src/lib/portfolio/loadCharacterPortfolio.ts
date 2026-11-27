@@ -27,7 +27,7 @@ import { loadSavingsApyForCharacter } from "@/lib/api/savings/savingsApy";
 import {
   estimateSavingsAccrualFromApy,
   turnsUntilSavingsCredit,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 import { getPublicShareQuote } from "@/lib/corporations/marketQuote";
 import {
   corpLiquidCapitalToAnchor,

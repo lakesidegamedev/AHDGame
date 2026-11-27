@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { FederalBudget } from "@/lib/db/types/budget";
@@ -25,6 +25,12 @@ import {
 } from "./sovereign";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { getBankId } from "@/lib/centralBank/helpers";
+
+// Formula fixtures omit a Mongo session; rollback is covered by sovereignReconcile.atomic.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 
 function createMockDb() {
   const db = createEmptyMockDb();
@@ -649,7 +655,7 @@ describe("reconcileSovereignDebt", () => {
     expect(result!.newPrincipal).toBeLessThanOrEqual(10_000_000_000);
   });
 
-  it("converges on retry after a crash between insert and budget write without issuing twice", async () => {
+  it("repoints a legacy partial ledger without duplicating its existing face", async () => {
     // Stateful ledger: inserts persist, so a retry sees its own tranches.
     const db = createMockDb();
     const budget = { ...baseBudget };

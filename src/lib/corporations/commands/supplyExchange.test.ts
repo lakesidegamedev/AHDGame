@@ -1,7 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { createAsyncIterableCursor, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+// Guard/quote fixtures omit settlement persistence; supplyListingTake.atomic covers rollback and replay.
+vi.mock("@/lib/api/withRecordedEconomicCommand", () => ({
+  withRecordedEconomicCommand: (
+    db: Db,
+    _name: string,
+    _actor: string,
+    _request: string,
+    _input: unknown,
+    work: (db: Db) => Promise<Response>
+  ) => work(db),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({
@@ -66,7 +78,7 @@ async function takeRequest(body: Record<string, unknown>, as = taker()) {
     new Request("http://localhost/api/corporations/x/supply-listings/take", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ requestId: "64bbca8a-c752-4c86-8554-48816c02da09", ...body }),
     }),
     as._id.toString()
   );
@@ -193,14 +205,13 @@ describe("takeSupplyListing", () => {
     expect(db.collectionMocks.supplyAgreements.insertOne).not.toHaveBeenCalled();
   });
 
-  it("restores the claimed volume when the agreement write fails", async () => {
+  it("reports an aborted agreement write without a blind compensation increment", async () => {
     db.collection("supplyAgreements").insertOne.mockRejectedValue(new Error("boom"));
     const response = await takeRequest({ listingId: `${publisherId}:0`, volume: 30 });
     expect(response.status).toBe(500);
-    expect(db.collectionMocks.supplyListings.updateOne).toHaveBeenLastCalledWith(
-      { _id: `${publisherId}:0` },
-      { $inc: { volumeCap: 30 } }
-    );
+    expect(
+      db.collectionMocks.supplyListings.updateOne.mock.calls.every((call) => !call[1].$inc)
+    ).toBe(true);
   });
 
   it("lets a player take an AI-posted offer, which has no publishing user (ticket 1418)", async () => {
@@ -440,6 +451,39 @@ describe("amend and accept on a pending offer", () => {
     expect((await patch({ action: "counter", ...terms }, taker())).status).toBe(403);
   });
 
+  it("cannot accept an offer amended by the same author after the read", async () => {
+    const original = pending(takerId);
+    const memory = createInMemoryDb();
+    memory.seed("supplyAgreements", [
+      {
+        ...original,
+        volumeCap: 80,
+        currentOffer: { ...original.currentOffer, revision: 2, volumeCap: 80 },
+      },
+    ]);
+    db.collectionMocks.supplyAgreements.findOne.mockResolvedValue(original);
+    db.collectionMocks.supplyAgreements.updateOne.mockImplementation((filter, update) =>
+      memory.collection("supplyAgreements").updateOne(filter, update)
+    );
+    const response = await patch({ action: "accept" }, publisher());
+    expect(response.status).toBe(409);
+    expect(memory.collection("supplyAgreements").docs[0]).toMatchObject({
+      status: "pending",
+      volumeCap: 80,
+      currentOffer: { revision: 2 },
+    });
+  });
+  it("does not report cancellation after losing its status claim to activation", async () => {
+    const original = pending(takerId);
+    const memory = createInMemoryDb();
+    memory.seed("supplyAgreements", [{ ...original, status: "active" }]);
+    db.collectionMocks.supplyAgreements.findOne.mockResolvedValue(original);
+    db.collectionMocks.supplyAgreements.updateOne.mockImplementation((filter, update) =>
+      memory.collection("supplyAgreements").updateOne(filter, update)
+    );
+    expect((await patch({ action: "cancel" }, taker())).status).toBe(409);
+    expect(memory.collection("supplyAgreements").docs[0].status).toBe("active");
+  });
   it("notifies the offer author on accept and blocks related parties", async () => {
     db.collection("supplyAgreements").findOne.mockResolvedValue(pending(takerId));
     const accepted = await patch({ action: "accept" }, publisher() as never);

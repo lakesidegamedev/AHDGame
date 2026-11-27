@@ -17,6 +17,9 @@ vi.mock("@/lib/nationalization/billTargetPreview", () => ({
 vi.mock("@/lib/turn/currentTurn", () => ({
   getCurrentTurn: vi.fn().mockResolvedValue(42),
 }));
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 const allianceBarSpy = vi.fn().mockResolvedValue(null);
 vi.mock("@/lib/military/allianceBar", () => ({
   allianceBarBetween: (...a: unknown[]) => allianceBarSpy(...a),

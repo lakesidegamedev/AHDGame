@@ -1,204 +1,119 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ObjectId, type Db } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
-
+import { ObjectId } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
+import { getDb } from "@/lib/mongodb";
+import { getAuthUserWithCharacter } from "@/lib/auth";
+import { POST } from "./route";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getAuthUserWithCharacter: vi.fn() }));
-vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn(async () => false) }));
-// Forex is disabled in these compensation tests; avoid importing its unrelated graph.
-vi.mock("@/lib/currency/autoConvert", () => ({
-  autoConvertForPurchase: vi.fn(),
-  convertForExplicitPay: vi.fn(),
-}));
-// Force the standalone/sequential path so the route's own compensation runs.
-vi.mock("@/lib/db/transactionWithRetry", () => ({
-  runTransactionWithSessionRetry: vi.fn(
-    (_getClient: unknown, run: (session?: undefined) => Promise<unknown>) => run(undefined)
-  ),
-}));
-vi.mock("@/lib/api/rateLimit", () => ({
-  checkRateLimit: vi.fn(() => ({ ok: true })),
-  rateLimitResponse: vi.fn(
-    (retryAfter: number) =>
-      new Response(JSON.stringify({ error: "Too many requests" }), {
-        status: 429,
-        headers: { "Retry-After": String(retryAfter) },
-      })
-  ),
-}));
+vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: async () => false }));
+vi.mock("@/lib/api/rateLimit", () => ({ checkRateLimit: () => ({ ok: true }) }));
 vi.mock("@/lib/indexFunds/fundTxLog", () => ({ logIndexFundSubscribeActivity: vi.fn() }));
+vi.mock("@/lib/indexFunds/playerCommandAudit", () => ({ resumeFundCommandAudit: vi.fn() }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
-vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn(async () => 1) }));
-vi.mock("@/lib/indexFunds/fundQueries", () => ({
-  resolveFundBySlugOrId: vi.fn(),
-  creditFundPosition: vi.fn(),
-  getPosition: vi.fn(),
-  insertFundTransaction: vi.fn(),
-}));
-
-function makeRequest(units: number) {
-  return new Request("http://localhost/api/investment-funds/test/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ units, operationId: crypto.randomUUID() }),
-  });
-}
-
-describe("POST /api/investment-funds/[slug]/subscribe", () => {
-  let db: MockDb;
-  const characterId = new ObjectId();
-  const fundId = new ObjectId();
-
-  beforeEach(async () => {
-    vi.resetModules();
-    vi.clearAllMocks();
-    db = createMockDb();
-    db.collection("characters");
-    db.collection("indexFunds");
-    db.collection("indexFundPositions");
-
-    const { getDb } = await import("@/lib/mongodb");
-    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
-
-    const { getAuthUserWithCharacter } = await import("@/lib/auth");
-    vi.mocked(getAuthUserWithCharacter).mockResolvedValue({
-      userId: new ObjectId().toString(),
-      username: "investor",
-      character: { _id: characterId, name: "Investor", countryId: "US" },
-    } as never);
-
-    const { resolveFundBySlugOrId, creditFundPosition, getPosition, insertFundTransaction } =
-      await import("@/lib/indexFunds/fundQueries");
-    vi.mocked(resolveFundBySlugOrId).mockResolvedValue({
+vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: async () => 1 }));
+beforeEach(() => vi.clearAllMocks());
+function setup() {
+  const f = createTransactionalMemoryDb(),
+    characterId = new ObjectId(),
+    fundId = new ObjectId();
+  f.memory.seed("gameState", [{ _id: "current", currentTurn: 1, isProcessing: false }]);
+  f.memory.seed("characters", [
+    { _id: characterId, name: "Synthetic investor", countryId: "US", cashOnHand: 100 },
+  ]);
+  f.memory.seed("indexFunds", [
+    {
       _id: fundId,
       slug: "test",
-      name: "Test Fund",
+      name: "Synthetic fund",
       status: "active",
       quotedNav: 1,
       anchorCurrencyCode: "USD",
-      unitSupply: 0,
-      cashAnchor: 0,
-    } as never);
-    vi.mocked(creditFundPosition).mockResolvedValue({} as never);
-    vi.mocked(getPosition).mockResolvedValue(null);
-    vi.mocked(insertFundTransaction).mockResolvedValue(new ObjectId());
-  });
-
-  function subscribe(units: number) {
-    return import("./route").then(({ POST }) =>
-      POST(makeRequest(units), { params: Promise.resolve({ slug: "test" }) })
-    );
-  }
-
-  /**
-   * The cash amount debited by atomicallyDebitCharacterCash in call order.
-   * forex is disabled in these tests, so the legacy `cashOnHand` field is used.
-   */
-  function debitedCash(): number {
-    const call = db.collectionMocks["characters"]!.findOneAndUpdate.mock.calls[0]![1] as {
-      $inc: Record<string, number>;
-    };
-    return -(call.$inc["cashOnHand"] ?? 0);
-  }
-
-  it("refunds the character when the position credit throws after the cash debit", async () => {
-    db.collectionMocks["characters"]!.findOneAndUpdate.mockResolvedValue({
-      currencyBalances: { personal: { USD: 100 } },
-    });
-    const { creditFundPosition } = await import("@/lib/indexFunds/fundQueries");
-    vi.mocked(creditFundPosition).mockRejectedValueOnce(new Error("position credit down"));
-
-    const response = await subscribe(10);
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ pending: true });
-    const debited = debitedCash();
-    expect(debited).toBeGreaterThan(0);
-    // Cash is put back exactly once; no units are minted and no fund cash moves.
-    expect(db.collectionMocks["characters"]!.updateOne).toHaveBeenCalledTimes(1);
-    const refund = db.collectionMocks["characters"]!.updateOne.mock.calls[0]![1] as {
-      $inc: Record<string, number>;
-    };
-    expect(refund.$inc["cashOnHand"]).toBe(debited);
-    expect(db.collectionMocks["indexFunds"]!.updateOne).not.toHaveBeenCalled();
-  });
-
-  it("reverses every applied leg when the subscription transaction insert throws", async () => {
-    db.collectionMocks["characters"]!.findOneAndUpdate.mockResolvedValue({
-      currencyBalances: { personal: { USD: 100 } },
-    });
-    const { insertFundTransaction } = await import("@/lib/indexFunds/fundQueries");
-    vi.mocked(insertFundTransaction).mockRejectedValueOnce(new Error("tx insert down"));
-
-    const response = await subscribe(10);
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ pending: true });
-    // Fund supply/cash incremented then reversed.
-    expect(db.collectionMocks["indexFunds"]!.updateOne).toHaveBeenCalledTimes(2);
-    const forward = db.collectionMocks["indexFunds"]!.updateOne.mock.calls[0]![1] as {
-      $inc: Record<string, number>;
-    };
-    const reverse = db.collectionMocks["indexFunds"]!.updateOne.mock.calls[1]![1] as {
-      $inc: Record<string, number>;
-    };
-    expect(forward.$inc).toMatchObject({ unitSupply: 10, cashAnchor: 10 });
-    expect(reverse.$inc).toMatchObject({ unitSupply: -10, cashAnchor: -10 });
-    // Newly-created position deleted, character refunded.
-    expect(db.collectionMocks["indexFundPositions"]!.deleteOne).toHaveBeenCalledWith({
-      fundId,
-      holderKind: "character",
-      characterId,
-    });
-    expect(db.collectionMocks["characters"]!.updateOne).toHaveBeenCalledTimes(1);
-    const refund = db.collectionMocks["characters"]!.updateOne.mock.calls[0]![1] as {
-      $inc: Record<string, number>;
-    };
-    expect(refund.$inc["cashOnHand"]).toBe(debitedCash());
-  });
-
-  it("restores the exact prior position including average NAV", async () => {
-    db.collectionMocks["characters"]!.findOneAndUpdate.mockResolvedValue({
-      currencyBalances: { personal: { USD: 100 } },
-    });
-    const prior = {
+      unitSupply: 7,
+      cashAnchor: 7,
+    },
+  ]);
+  f.memory.seed("indexFundPositions", [
+    {
       _id: new ObjectId(),
       fundId,
-      holderKind: "character" as const,
+      holderKind: "character",
       characterId,
       units: 7,
       avgNavAnchor: 4.25,
       legacyUnits: 3,
       createdAt: new Date(1),
       updatedAt: new Date(2),
-    };
-    const { getPosition, insertFundTransaction } = await import("@/lib/indexFunds/fundQueries");
-    vi.mocked(getPosition).mockResolvedValue(prior);
-    vi.mocked(insertFundTransaction).mockRejectedValueOnce(new Error("tx insert down"));
-
-    const response = await subscribe(10);
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ pending: true });
-    expect(db.collectionMocks["indexFundPositions"]!.replaceOne).toHaveBeenCalledWith(
-      { _id: prior._id },
-      prior,
-      { upsert: true }
+    },
+  ]);
+  vi.mocked(getDb).mockResolvedValue(f.db);
+  vi.mocked(getAuthUserWithCharacter).mockResolvedValue({
+    userId: new ObjectId().toString(),
+    username: "synthetic",
+    character: { _id: characterId, name: "Synthetic investor", countryId: "US", cashOnHand: 100 },
+  } as never);
+  const run = (operationId = crypto.randomUUID()) =>
+    POST(
+      new Request("http://localhost/api/investment-funds/test/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ units: 10, operationId }),
+      }),
+      { params: Promise.resolve({ slug: "test" }) }
     );
-    expect(db.collectionMocks["indexFundPositions"]!.deleteOne).not.toHaveBeenCalled();
-  });
-
-  it("mints units and credits fund cash on success", async () => {
-    db.collectionMocks["characters"]!.findOneAndUpdate.mockResolvedValue({
-      currencyBalances: { personal: { USD: 100 } },
-    });
-
-    const response = await subscribe(10);
-
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.success).toBe(true);
-    expect(body.units).toBe(10);
-    expect(db.collectionMocks["indexFunds"]!.updateOne).toHaveBeenCalledTimes(1);
+  return { ...f, characterId, fundId, run };
+}
+describe("subscription transaction and replay", () => {
+  it.each([
+    { collection: "characters", op: "findOneAndUpdate" },
+    { collection: "indexFundPositions", op: "findOneAndUpdate" },
+    { collection: "indexFundTransactions", op: "insertOne" },
+  ] as const)(
+    "rolls back a landed $collection write and permits the same request retry",
+    async ({ collection, op }) => {
+      const f = setup(),
+        operation = crypto.randomUUID();
+      const before = await f.db.collection("indexFundPositions").findOne({});
+      const fault = withInjectedCrash(f.memory, { collection, op, onCall: 1, afterWrite: true });
+      vi.mocked(getDb).mockResolvedValue(fault.db);
+      expect((await f.run(operation)).status).toBe(409);
+      expect(fault.crashed).toBe(true);
+      expect(
+        (await f.db.collection("characters").findOne({ _id: f.characterId }))?.cashOnHand
+      ).toBe(100);
+      expect(await f.db.collection("indexFundPositions").findOne({})).toEqual(before);
+      expect(await f.db.collection("indexFunds").findOne({})).toMatchObject({
+        unitSupply: 7,
+        cashAnchor: 7,
+      });
+      vi.mocked(getDb).mockResolvedValue(f.db);
+      expect((await f.run(operation)).status).toBe(200);
+      expect((await f.run(operation)).status).toBe(200);
+      expect(
+        (await f.db.collection("characters").findOne({ _id: f.characterId }))?.cashOnHand
+      ).toBe(90);
+      expect(await f.db.collection("indexFunds").findOne({})).toMatchObject({
+        unitSupply: 17,
+        cashAnchor: 17,
+      });
+    }
+  );
+  it("overlapping identical requests mint and charge once, and turn processing refuses a fresh order", async () => {
+    const f = setup(),
+      operation = crypto.randomUUID();
+    const replies = await Promise.all([f.run(operation), f.run(operation)]);
+    expect(replies.some((r) => r.status === 200)).toBe(true);
+    expect((await f.db.collection("characters").findOne({ _id: f.characterId }))?.cashOnHand).toBe(
+      90
+    );
+    expect((await f.db.collection("indexFundPositions").findOne({}))?.units).toBe(17);
+    await f.db
+      .collection<{ _id: string; isProcessing: boolean }>("gameState")
+      .updateOne({ _id: "current" }, { $set: { isProcessing: true } });
+    expect((await f.run()).ok).toBe(false);
+    expect((await f.db.collection("characters").findOne({ _id: f.characterId }))?.cashOnHand).toBe(
+      90
+    );
   });
 });

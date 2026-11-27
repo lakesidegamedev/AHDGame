@@ -1,3 +1,4 @@
+import { authoritativeCurrencyRates } from "@/lib/currency/rules/authoritativeCurrencyRates";
 import { effectiveInterventionPolicy } from "@/lib/currency/intervention/rules";
 import {
   reserveDefenceSettlement,
@@ -181,7 +182,7 @@ export async function processForexTurn(
     .toArray();
   const rateMap = new Map(existingRateDocs.map((r) => [r._id, r]));
   const ratesByCurrency: Partial<Record<CurrencyCode, number>> = Object.fromEntries(
-    existingRateDocs.map((rate) => [rate.currencyCode, rate.rate])
+    authoritativeCurrencyRates(existingRateDocs)
   ) as Partial<Record<CurrencyCode, number>>;
 
   // The top reserve currencies (most-held across all CB reserves) get a

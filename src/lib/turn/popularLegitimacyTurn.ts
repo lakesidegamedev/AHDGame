@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * Per-turn aggregator for popularLegitimacy drift.
  *
@@ -137,6 +138,16 @@ export interface PopularTurnContext {
 export async function processPopularLegitimacyTurn(
   ctx: PopularTurnContext
 ): Promise<PopularTurnDrift | null> {
+  return withTurnValueSettlement(
+    ctx.db,
+    "popular-legitimacy-drift",
+    ctx.currentTurn,
+    (db) => applyPopularDrift({ ...ctx, db }),
+    { sourceKey: `${ctx.countryId}:${ctx.currentTurn}` }
+  );
+}
+
+async function applyPopularDrift(ctx: PopularTurnContext): Promise<PopularTurnDrift | null> {
   const cfg = COUNTRY_CONFIGS[ctx.countryId];
   const moodProfile = cfg?.popularMoodProfile;
   if (!moodProfile) return null;
@@ -148,16 +159,8 @@ export async function processPopularLegitimacyTurn(
   });
   if (!leaderState) return null;
 
-  // Read Phase-5 boost modifiers from countryState. Wrapped in try/catch
-  // so MockDb-shaped tests that don't stub countryState still get
-  // []-default behavior rather than throwing.
-  let boosts: PopularBoostModifier[] = [];
-  try {
-    const countryState = await getCountryState(ctx.db, ctx.countryId);
-    boosts = countryState.popularBoostModifiers ?? [];
-  } catch {
-    boosts = [];
-  }
+  const countryState = await getCountryState(ctx.db, ctx.countryId);
+  const boosts: PopularBoostModifier[] = countryState.popularBoostModifiers ?? [];
 
   const drift = computePopularTurnDrift({
     currentLegitimacy: leaderState.popularLegitimacy ?? INITIAL_POPULAR_LEGITIMACY,

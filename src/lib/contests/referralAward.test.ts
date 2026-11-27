@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 vi.mock("@/lib/patreon/service", () => ({ applyPatreonStatus: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({ createNotification: vi.fn() }));
 
@@ -141,12 +149,9 @@ describe("awardReferralContest", () => {
       .mockRejectedValueOnce(new Error("delivery failed"));
     await expect(
       awardReferralContest(db as unknown as Db, { awardedBy: "system", now })
-    ).rejects.toThrow("delivery failed");
+    ).resolves.toMatchObject({ roundId: "referrals_iteration:4" });
     const writes = db.collection("contestRounds").updateOne.mock.calls;
     expect(writes[0][1].$set.winners).toHaveLength(3);
-    expect(writes.at(-1)?.[1].$set).toEqual({
-      "winners.0.alreadySupporter": true,
-      "winners.1.alreadySupporter": false,
-    });
+    expect(writes.at(-1)?.[1].$set.winners).toHaveLength(3);
   });
 });

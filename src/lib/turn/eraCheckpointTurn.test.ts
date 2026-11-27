@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CensusGroupView } from "@/lib/db/types/demographics";
@@ -851,3 +851,13 @@ describe("processEraCheckpointsTurn in a 2027 world", () => {
     expect(overlay(al, "education", "graduate", "socialLean")).toBe(0);
   });
 });
+
+// Formula/transport fixture; atomic monetary tests exercise the real settlement.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

@@ -13,7 +13,6 @@ import {
   loadRegionalHealContext,
   regionalSpendingForHeal,
 } from "@/lib/budget/healRegionalSpending";
-import { POLITICAL_LEGISLATION_EXCLUDED_SCOPES } from "@/lib/politicalMetrics/pipelinePreset";
 import { loadSovereignCouponBooks } from "@/lib/bonds/sovereignCouponBook";
 import { sovereignStockAnnualService } from "@/lib/budget/rules/sovereignDebtService";
 import { calculateEnactedLawAnnualCost } from "@/lib/budget/costs";
@@ -25,7 +24,6 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { FederalTaxRates } from "@/lib/db/types/budget";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
-import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { stateBudgetsCollection } from "@/lib/db/repositories/stateBudgets";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
@@ -272,64 +270,19 @@ export async function POST() {
     const couponBooks = await loadSovereignCouponBooks(db);
     const now = new Date();
 
-    // ── Step 1: Re-seed enacted laws from current legislation type definitions ──
-    // Fixes stale cost fields left by previous seeds
-    const { generateDefaultEnactedLaws } = await import("@/lib/seeds/reference/budgets");
-    const gameState = await gameStateCollection(db).findOne(
-      { _id: "current" },
-      { projection: { preset: 1, startingYear: 1 } }
-    );
-    const preset =
-      gameState?.preset ??
-      ((gameState?.startingYear ?? 2019) <= 1991 ? "1991-default" : "2019-default");
-    const defaultLaws = generateDefaultEnactedLaws(preset).filter(
-      (law) => !POLITICAL_LEGISLATION_EXCLUDED_SCOPES.has(law.countryId?.toLowerCase() ?? "us")
-    );
+    // Repair costs only for the recorded choice; budget healing cannot enact policy.
     let lawsUpdated = 0;
-    for (const law of defaultLaws) {
-      const { _id, ...lawWithoutId } = law;
-
-      const unsetFields: Record<string, ""> = {};
-      if (law.gdpPerCapitaMultiplier === undefined) unsetFields.gdpPerCapitaMultiplier = "";
-      if (law.annualCostPerCapita === undefined) unsetFields.annualCostPerCapita = "";
-      if (law.annualCostUsd === undefined) unsetFields.annualCostUsd = "";
-
-      const update: Record<string, unknown> = {
-        $set: lawWithoutId,
-        $setOnInsert: { _id },
-      };
-      if (Object.keys(unsetFields).length > 0) {
-        update.$unset = unsetFields;
-      }
-
-      const result = await enactedLawsCollection(db).updateOne(
-        {
-          legislationTypeId: law.legislationTypeId,
-          scope: law.scope,
-          countryId: law.countryId,
-          repealedAt: { $exists: false },
-        },
-        update,
-        { upsert: true }
-      );
-      if (result.modifiedCount > 0 || result.upsertedCount > 0) lawsUpdated++;
-    }
-
-    // Fix enacted laws NOT covered by the seed — look up each law's legislation type
-    // and correct cost fields from the matching policy option
-    const { legislationTypes } = await import("@/lib/seeds/reference/legislationTypes");
-    const ltMap = new Map(legislationTypes.map((lt: { _id: string }) => [lt._id, lt]));
+    const currentTypes = await legislationTypesCollection(db)
+      .find({}, { projection: { policyOptions: 1 } })
+      .toArray();
+    const ltMap = new Map(currentTypes.map((lt) => [lt._id, lt]));
 
     const allEnactedLaws = await enactedLawsCollection(db)
       .find({ repealedAt: { $exists: false } })
       .toArray();
 
-    const seededLtIds = new Set(
-      defaultLaws.map((l: { legislationTypeId: string }) => l.legislationTypeId)
-    );
-
     for (const law of allEnactedLaws) {
-      if (seededLtIds.has(law.legislationTypeId)) continue;
+      if (law.costModelV2 != null) continue;
 
       const lt = ltMap.get(law.legislationTypeId) as
         | {
@@ -354,20 +307,32 @@ export async function POST() {
       const setFields: Record<string, unknown> = {};
       const unsetFields: Record<string, ""> = {};
 
-      if (option.annualCostPerCapita !== undefined) {
-        setFields.annualCostPerCapita = option.annualCostPerCapita;
-        unsetFields.gdpPerCapitaMultiplier = "";
-        unsetFields.annualCostUsd = "";
-      } else if (option.gdpPerCapitaMultiplier !== undefined) {
+      if (option.gdpPerCapitaMultiplier !== undefined) {
         setFields.gdpPerCapitaMultiplier = option.gdpPerCapitaMultiplier;
         unsetFields.annualCostPerCapita = "";
         unsetFields.annualCostUsd = "";
+      } else if (option.annualCostPerCapita !== undefined) {
+        setFields.annualCostPerCapita = option.annualCostPerCapita;
+        unsetFields.gdpPerCapitaMultiplier = "";
+        unsetFields.annualCostUsd = "";
+      } else if (option.annualCostUsd !== undefined) {
+        setFields.annualCostUsd = option.annualCostUsd;
+        unsetFields.gdpPerCapitaMultiplier = "";
+        unsetFields.annualCostPerCapita = "";
       }
 
       if (Object.keys(setFields).length > 0) {
         const update: Record<string, unknown> = { $set: setFields };
         if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
-        const result = await enactedLawsCollection(db).updateOne({ _id: law._id }, update);
+        const result = await enactedLawsCollection(db).updateOne(
+          {
+            _id: law._id,
+            policyOptionIndex: law.policyOptionIndex,
+            costModelV2: { $exists: false },
+            repealedAt: { $exists: false },
+          },
+          update
+        );
         if (result.modifiedCount > 0) lawsUpdated++;
       }
     }

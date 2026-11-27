@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { processGovernorAddressExpiry } from "./governorAddressExpiry";
 
+// Projection fixtures exercise expiry math; atomic rollback has its own fixture.
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
+
 interface MockAddress {
   _id: ObjectId;
   countryId: string;
@@ -36,7 +41,7 @@ function makeMockDb(seed: { candidates: MockAddress[]; turnoutDocs: MockTurnout[
       updateOne: vi.fn(
         async (filter: { _id: ObjectId }, update: { $set: Record<string, unknown> }) => {
           captured.addressUpdates.push({ id: filter._id, set: update.$set });
-          return { modifiedCount: 1 };
+          return { matchedCount: 1, modifiedCount: 1 };
         }
       ),
     },
@@ -79,7 +84,7 @@ function makeMockDb(seed: { candidates: MockAddress[]; turnoutDocs: MockTurnout[
               setVal: val,
             });
           }
-          return { modifiedCount: 1 };
+          return { matchedCount: 1, modifiedCount: 1 };
         }
       ),
     },

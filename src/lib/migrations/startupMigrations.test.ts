@@ -64,6 +64,8 @@ describe("runRequiredStartupMigrations", () => {
       "2026-10-15-live-world-npp-autonomy-v6",
       "2026-10-16-scotus-career-achievements",
       "2026-10-23-bank-money-move-unprojected-index",
+      "2026-11-26-supply-agreement-plan-index",
+      "2026-11-26-cn-wiki-purge-availability",
       "2026-10-23-drop-log-text-indexes",
       "2026-11-09-jp-law-lean-effects",
       "2026-11-11-bucket-approvals-rename",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ProjectView } from "../../useCabinetOffice";
 import { AggTile, fmtMoneyM } from "./infraUi";
 import { ProjectCard } from "./ProjectCard";
@@ -36,16 +36,27 @@ export function PipelineTab({
   const [busy, setBusy] = useState(false);
   const basePath = `/api/country/${countryCode}/executive/cabinet/${positionId}/infra`;
 
+  const requestIntent = useRef<{ fingerprint: string; key: string } | null>(null);
+
   async function act(method: "POST" | "DELETE", path: string, body?: unknown) {
     if (busy) return;
+    const fingerprint = JSON.stringify([method, path, body]);
+    if (requestIntent.current?.fingerprint !== fingerprint)
+      requestIntent.current = { fingerprint, key: crypto.randomUUID() };
     setBusy(true);
     try {
       const res = await fetch(path, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": requestIntent.current.key,
+        },
         body: body ? JSON.stringify(body) : undefined,
       });
-      if (res.ok) onUpdate();
+      if (res.ok) {
+        requestIntent.current = null;
+        onUpdate();
+      }
     } finally {
       setBusy(false);
     }

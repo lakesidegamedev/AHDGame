@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/executive/cabinet/[positionId]/estates/open
 // Auth: requireAuth — must be the seat holder or admin. Costs 1 ministerial action.
 // Errors: 400, 401, 403, 404, 409
@@ -63,103 +67,112 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const isForeign = isAbroadSited(portfolioKey);
-    const siteScope: "region" | "country" = isForeign ? "country" : "region";
+    return await withRecordedEconomicCommand(
+      db,
+      "minister-estate-open",
+      String(auth.user.userId),
+      economicRequestId(request),
+      { countryId, positionId, ...parsed.data },
+      async (db) => {
+        const isForeign = isAbroadSited(portfolioKey);
+        const siteScope: "region" | "country" = isForeign ? "country" : "region";
 
-    // Validate the site by scope.
-    if (isForeign) {
-      if (parsed.data.siteId === countryId) {
-        return errorResponse(400, "This portfolio's estates must be sited in another country");
+        // Validate the site by scope.
+        if (isForeign) {
+          if (parsed.data.siteId === countryId) {
+            return errorResponse(400, "This portfolio's estates must be sited in another country");
+          }
+          const enabled = await getEnabledCountryIds();
+          if (!enabled.includes(parsed.data.siteId as CountryId)) {
+            return errorResponse(400, "Invalid host country");
+          }
+        } else {
+          const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
+            { _id: parsed.data.siteId, countryId },
+            { projection: { _id: 1 } }
+          );
+          if (!region) {
+            return errorResponse(400, "Invalid region for this country");
+          }
+        }
+
+        const membersCol = getCabinetMembersCollection(db);
+        const member = await membersCol.findOne({ countryId, positionId });
+        const isHolder =
+          member &&
+          member.characterId &&
+          auth.user.character &&
+          member.characterId.toString() === auth.user.character._id.toString();
+        if (!isHolder && !auth.user.isAdmin) {
+          return errorResponse(403, "Only the seat holder or admin can open estates");
+        }
+
+        // Opening an estate commits the department to running it after this tenure.
+        const actingDenied = requireConfirmedSecretary(member, "assets", !!auth.user.isAdmin);
+        if (actingDenied) return actingDenied;
+
+        // Backfill legacy members missing the action fields (mirrors the order route).
+        // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
+        const actions = await resolveMinisterialRemaining(db, countryId, member!);
+        if (actions < 1) {
+          return errorResponse(
+            400,
+            `No ministerial actions remaining. ${MINISTERIAL_ACTION_RESET_HINT}`
+          );
+        }
+
+        const estatesCol = getCabinetEstatesCollection(db);
+        // Foreign: enforce one-of-archetype-per-host BEFORE spending the action.
+        if (isForeign) {
+          const dup = await estatesCol.findOne({
+            countryId,
+            positionId,
+            archetypeId: archetype.id,
+            siteScope: "country",
+            siteId: parsed.data.siteId,
+          });
+          if (dup) {
+            return errorResponse(409, "This country already hosts that installation");
+          }
+        }
+
+        const gameState = await getGameState(db);
+        const currentTurn = gameState?.currentTurn ?? 1;
+
+        const spend = await spendMinisterialAction(db, countryId, member!);
+        if (!spend.ok) {
+          return errorResponse(
+            409,
+            `No ministerial actions remaining. ${MINISTERIAL_ACTION_RESET_HINT}`
+          );
+        }
+
+        try {
+          await estatesCol.insertOne({
+            _id: new ObjectId(),
+            countryId,
+            portfolioKey,
+            positionId,
+            archetypeId: archetype.id,
+            name: parsed.data.name.trim(),
+            icon: archetype.icon,
+            fundingLevel: "standard",
+            tier: 0,
+            condition: 100,
+            outputBase: archetype.outputBase,
+            upkeepBase: archetype.upkeepBase,
+            siteScope,
+            siteId: parsed.data.siteId,
+            createdTurn: currentTurn,
+          });
+        } catch (error) {
+          await refundMinisterialAction(db, countryId, member!);
+          throw error;
+        }
+
+        return NextResponse.json({ success: true, actionsRemaining: spend.remaining });
       }
-      const enabled = await getEnabledCountryIds();
-      if (!enabled.includes(parsed.data.siteId as CountryId)) {
-        return errorResponse(400, "Invalid host country");
-      }
-    } else {
-      const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
-        { _id: parsed.data.siteId, countryId },
-        { projection: { _id: 1 } }
-      );
-      if (!region) {
-        return errorResponse(400, "Invalid region for this country");
-      }
-    }
-
-    const membersCol = getCabinetMembersCollection(db);
-    const member = await membersCol.findOne({ countryId, positionId });
-    const isHolder =
-      member &&
-      member.characterId &&
-      auth.user.character &&
-      member.characterId.toString() === auth.user.character._id.toString();
-    if (!isHolder && !auth.user.isAdmin) {
-      return errorResponse(403, "Only the seat holder or admin can open estates");
-    }
-
-    // Opening an estate commits the department to running it after this tenure.
-    const actingDenied = requireConfirmedSecretary(member, "assets", !!auth.user.isAdmin);
-    if (actingDenied) return actingDenied;
-
-    // Backfill legacy members missing the action fields (mirrors the order route).
-    // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
-    if (actions < 1) {
-      return errorResponse(
-        400,
-        `No ministerial actions remaining. ${MINISTERIAL_ACTION_RESET_HINT}`
-      );
-    }
-
-    const estatesCol = getCabinetEstatesCollection(db);
-    // Foreign: enforce one-of-archetype-per-host BEFORE spending the action.
-    if (isForeign) {
-      const dup = await estatesCol.findOne({
-        countryId,
-        positionId,
-        archetypeId: archetype.id,
-        siteScope: "country",
-        siteId: parsed.data.siteId,
-      });
-      if (dup) {
-        return errorResponse(409, "This country already hosts that installation");
-      }
-    }
-
-    const gameState = await getGameState();
-    const currentTurn = gameState?.currentTurn ?? 1;
-
-    const spend = await spendMinisterialAction(db, countryId, member!);
-    if (!spend.ok) {
-      return errorResponse(
-        409,
-        `No ministerial actions remaining. ${MINISTERIAL_ACTION_RESET_HINT}`
-      );
-    }
-
-    try {
-      await estatesCol.insertOne({
-        _id: new ObjectId(),
-        countryId,
-        portfolioKey,
-        positionId,
-        archetypeId: archetype.id,
-        name: parsed.data.name.trim(),
-        icon: archetype.icon,
-        fundingLevel: "standard",
-        tier: 0,
-        condition: 100,
-        outputBase: archetype.outputBase,
-        upkeepBase: archetype.upkeepBase,
-        siteScope,
-        siteId: parsed.data.siteId,
-        createdTurn: currentTurn,
-      });
-    } catch (error) {
-      await refundMinisterialAction(db, countryId, member!);
-      throw error;
-    }
-
-    return NextResponse.json({ success: true, actionsRemaining: spend.remaining });
+    );
   } catch (error) {
     return handleRouteError(error);
   }

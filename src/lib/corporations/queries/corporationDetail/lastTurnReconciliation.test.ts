@@ -15,6 +15,9 @@ function fixture(overrides: Record<string, unknown> = {}) {
     fxRateAtWrite: 2,
     perTurnBondCouponIncome: 30,
     perTurnBondDragOnNetIncome: 100,
+    settledBondCouponIncome: 30,
+    settledBondInterestPaid: 100,
+    settledBankLoanInterestPaid: 0,
     dividendIncomeReceived: 10,
     cashSnapshotAt: new Date("2030-01-01T11:12:00Z"),
     ...overrides,
@@ -91,4 +94,10 @@ describe("last-turn evidence loader", () => {
     const r = await loadLastTurnReconciliation(db, { _id: id });
     expect(r?.cash.evidence?.unconvertedMovements).toBe(3);
   });
+});
+
+it("does not present a complete recorded cash reconciliation before financing evidence is published", async () => {
+  const { id, db, aggregate } = fixture({ settledBankLoanInterestPaid: undefined });
+  expect(await loadLastTurnReconciliation(db, { _id: id })).toBeNull();
+  expect(aggregate).not.toHaveBeenCalled();
 });

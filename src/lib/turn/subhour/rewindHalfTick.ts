@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { AnyBulkWriteOperation, Db, Document } from "mongodb";
 import { restoreAdditive, restoreMultiplicative, type SubhourBaseValue } from "./stepBase";
 
@@ -86,16 +87,18 @@ export interface RewindHalfTickResult {
  * the same way, from their own stored start values.
  */
 export async function rewindHalfTick(db: Db, turn: number): Promise<RewindHalfTickResult> {
-  const specsFor = (collection: string) =>
-    HALF_TICK_REWIND_SPECS.filter((spec) => spec.collection === collection);
-  // One projected read and one unordered bulk write per collection.
-  const [states, macroMetrics, federalBudget, exchangeRates] = await Promise.all([
-    rewindCollection(db, "states", specsFor("states"), turn),
-    rewindCollection(db, "macroMetrics", specsFor("macroMetrics"), turn),
-    rewindCollection(db, "federalBudget", specsFor("federalBudget"), turn),
-    rewindCollection(db, "exchangeRates", specsFor("exchangeRates"), turn),
-  ]);
-  return { rewound: { states, macroMetrics, federalBudget, exchangeRates } };
+  return withSessionDb(db, async (db) => {
+    const specsFor = (collection: string) =>
+      HALF_TICK_REWIND_SPECS.filter((spec) => spec.collection === collection);
+    // One projected read and one unordered bulk write per collection.
+    const [states, macroMetrics, federalBudget, exchangeRates] = await Promise.all([
+      rewindCollection(db, "states", specsFor("states"), turn),
+      rewindCollection(db, "macroMetrics", specsFor("macroMetrics"), turn),
+      rewindCollection(db, "federalBudget", specsFor("federalBudget"), turn),
+      rewindCollection(db, "exchangeRates", specsFor("exchangeRates"), turn),
+    ]);
+    return { rewound: { states, macroMetrics, federalBudget, exchangeRates } };
+  });
 }
 
 async function rewindCollection(
@@ -108,10 +111,23 @@ async function rewindCollection(
   for (const spec of specs) for (const [path] of Object.values(spec.fields)) projection[path] = 1;
   const docs = await db
     .collection(collection)
-    .find({ subhourStep: { $exists: true } }, { projection })
+    .find(
+      {
+        subhourStep: { $exists: true },
+        $or: [{ "subhourStep.turn": { $lte: turn } }, { "subhourStep.turn": { $exists: false } }],
+      },
+      { projection }
+    )
     .toArray();
   const ops: AnyBulkWriteOperation<Document>[] = [];
   for (const doc of docs) {
+    if (
+      specs.some((spec) => {
+        const base = readPath(doc, `subhourBase.${spec.system}`) as { turn?: number } | undefined;
+        return typeof base?.turn === "number" && base.turn > turn;
+      })
+    )
+      continue;
     const set: Record<string, number> = {};
     for (const spec of specs) {
       const base = readPath(doc, `subhourBase.${spec.system}`) as

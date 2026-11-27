@@ -1,43 +1,46 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ObjectId, type Db } from "mongodb";
-import type { IndexFund } from "@/lib/db/types";
-
-const mocks = vi.hoisted(() => ({
-  creditSharesToFund: vi.fn(),
-  debitSharesFromFund: vi.fn(),
-  getFundById: vi.fn(),
-  insertFundTransaction: vi.fn(),
-  updateFundHoldings: vi.fn(),
-}));
-
-vi.mock("@/lib/corporations/shareholderOps", () => ({
-  creditSharesToFund: mocks.creditSharesToFund,
-  debitSharesFromFund: mocks.debitSharesFromFund,
-}));
-vi.mock("@/lib/indexFunds/fundQueries", () => ({
-  getFundById: mocks.getFundById,
-  insertFundTransaction: mocks.insertFundTransaction,
-  updateFundHoldings: mocks.updateFundHoldings,
-}));
-vi.mock("@/lib/db/runWithOptionalTransaction", () => ({
-  runWithOptionalTransaction: vi.fn(
-    async (_withTransaction: unknown, withoutTransaction: () => Promise<unknown>) =>
-      withoutTransaction()
-  ),
-}));
-vi.mock("@/lib/corporations/shareTradeHistory", () => ({ recordShareTrade: vi.fn() }));
-
-import { executeFundCrossRebalancing, type PlannedCrossTransfer } from "./fundCrossRebalancing";
-
-describe("executeFundCrossRebalancing standalone compensation", () => {
-  const corporationId = new ObjectId();
-  const sellerFundId = new ObjectId();
-  const buyerFundId = new ObjectId();
-  const originalSellerHoldings = [
-    { corporationId, shares: 20, avgCostPerShareAnchor: 4, lastValueAnchor: 80 },
-  ];
-  const originalBuyerHoldings: IndexFund["holdings"] = [];
-  const plan: PlannedCrossTransfer = {
+import { expect, it, vi } from "vitest";
+import { ObjectId } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
+import { executeFundCrossRebalancing } from "./fundCrossRebalancing";
+vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+function world() {
+  const { db, memory } = createTransactionalMemoryDb();
+  const corporationId = new ObjectId(),
+    sellerFundId = new ObjectId(),
+    buyerFundId = new ObjectId();
+  memory.seed("gameState", [{ _id: "current", currentTurn: 7 }]);
+  memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
+  memory.seed("indexFunds", [
+    {
+      _id: sellerFundId,
+      name: "Seller",
+      status: "active",
+      anchorCurrencyCode: "USD",
+      cashAnchor: 10,
+      holdings: [{ corporationId, shares: 20, avgCostPerShareAnchor: 2, lastValueAnchor: 80 }],
+    },
+    {
+      _id: buyerFundId,
+      name: "Buyer",
+      status: "active",
+      anchorCurrencyCode: "USD",
+      cashAnchor: 100,
+      holdings: [],
+    },
+  ]);
+  memory.seed("corporations", [
+    {
+      _id: corporationId,
+      sharePrice: 4,
+      fundamentalSharePrice: 4,
+      totalShares: 100,
+      publicFloat: 0,
+      liquidCurrencyCode: "USD",
+      shareholders: [{ fundId: sellerFundId, shares: 20, avgCostPerShare: 2 }],
+    },
+  ]);
+  const plan = {
     corporationId,
     sellerFundId,
     buyerFundId,
@@ -45,128 +48,48 @@ describe("executeFundCrossRebalancing standalone compensation", () => {
     pricePerShareAnchor: 4,
     valueAnchor: 20,
   };
-
-  let cashUpdates: Array<{ filter: unknown; update: unknown }>;
-  let capTableUpdates: Array<{ filter: unknown; update: unknown }>;
-  let failBuyerHoldingsRestore: boolean;
-  let db: Db;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    cashUpdates = [];
-    capTableUpdates = [];
-    failBuyerHoldingsRestore = false;
-    const seller = {
-      _id: sellerFundId,
-      name: "Seller",
-      cashAnchor: 10,
-      holdings: originalSellerHoldings,
-    } as IndexFund;
-    const buyer = {
-      _id: buyerFundId,
-      name: "Buyer",
-      cashAnchor: 100,
-      holdings: originalBuyerHoldings,
-    } as IndexFund;
-    mocks.getFundById.mockImplementation(async (_db: Db, id: ObjectId) =>
-      id.equals(sellerFundId) ? seller : buyer
+  return { db, memory, plan };
+}
+it.each(["indexFundTransactions", "financialTxLog", "shareTradeHistory"])(
+  "rolls back every leg after interrupted %s then replays once",
+  async (collection) => {
+    const { db, memory, plan } = world();
+    const fault = withInjectedCrash(memory, {
+      collection,
+      op: "insertOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    Object.assign(fault.db, { client: db.client });
+    const failed = await executeFundCrossRebalancing(fault.db, [plan], 7);
+    expect(failed.transfers).toBe(0);
+    expect(failed.errors).toHaveLength(1);
+    expect(memory.collection("indexFunds").docs.map((f) => f.cashAnchor)).toEqual([10, 100]);
+    expect(memory.collection("corporations").docs[0].shareholders).toHaveLength(1);
+    expect(memory.collection("indexFundTransactions").docs).toHaveLength(0);
+    fault.disarm();
+    const results = await Promise.all([
+      executeFundCrossRebalancing(db, [plan], 7),
+      executeFundCrossRebalancing(db, [plan], 7),
+    ]);
+    expect(results.every((r) => r.transfers === 1 && r.errors.length === 0)).toBe(true);
+    expect(memory.collection("indexFunds").docs.map((f) => f.cashAnchor)).toEqual([30, 80]);
+    expect(memory.collection("indexFundTransactions").docs).toHaveLength(2);
+    expect(memory.collection("corporations").docs[0].shareholders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fundId: plan.sellerFundId, shares: 15 }),
+        expect.objectContaining({ fundId: plan.buyerFundId, shares: 5, avgCostPerShare: 4 }),
+      ])
     );
-    mocks.debitSharesFromFund.mockResolvedValue(15);
-    mocks.creditSharesToFund.mockResolvedValue(true);
-    mocks.updateFundHoldings.mockResolvedValue(undefined);
-    mocks.insertFundTransaction
-      .mockResolvedValueOnce(new ObjectId())
-      .mockRejectedValueOnce(new Error("buyer log failed"));
-
-    db = {
-      collection: vi.fn((name: string) => {
-        if (name === "corporations") {
-          return {
-            findOne: vi.fn().mockResolvedValue({
-              _id: corporationId,
-              sharePrice: 4,
-              fundamentalSharePrice: 4,
-              totalShares: 100,
-              publicFloat: 0,
-              liquidCurrencyCode: "USD",
-              shareholders: [
-                { fundId: sellerFundId, shares: 20, avgCostPerShare: 2 },
-                { fundId: buyerFundId, shares: 10, avgCostPerShare: 9 },
-              ],
-            }),
-            updateOne: vi.fn(async (filter, update) => {
-              capTableUpdates.push({ filter, update });
-              return { matchedCount: 1 };
-            }),
-          };
-        }
-        if (name === "indexFunds") {
-          return {
-            updateOne: vi.fn(async (filter, update) => {
-              cashUpdates.push({ filter, update });
-              if (
-                failBuyerHoldingsRestore &&
-                (filter as { _id?: ObjectId; holdings?: unknown })._id?.equals(buyerFundId) &&
-                "holdings" in (filter as object)
-              ) {
-                throw new Error("buyer restore failed");
-              }
-              return { matchedCount: 1 };
-            }),
-          };
-        }
-        if (name === "indexFundTransactions") {
-          return { deleteOne: vi.fn().mockResolvedValue({ deletedCount: 1 }) };
-        }
-        throw new Error(`Unexpected collection ${name}`);
-      }),
-    } as unknown as Db;
-  });
-
-  it("reverses every completed write after a late transaction-log failure", async () => {
-    const result = await executeFundCrossRebalancing(db, [plan], 7);
-
-    expect(result.transfers).toBe(0);
-    expect(result.errors).toEqual([expect.stringContaining("buyer log failed")]);
-    expect(mocks.updateFundHoldings).toHaveBeenCalledTimes(2);
-    expect(cashUpdates).toHaveLength(6);
-    expect(cashUpdates[2]).toMatchObject({
-      filter: { _id: buyerFundId, holdings: expect.any(Array) },
-      update: { $set: { holdings: originalBuyerHoldings } },
-    });
-    expect(cashUpdates[3]).toMatchObject({
-      filter: { _id: sellerFundId, holdings: expect.any(Array) },
-      update: { $set: { holdings: originalSellerHoldings } },
-    });
-    expect(capTableUpdates).toHaveLength(2);
-    expect(capTableUpdates[0]).toMatchObject({
-      filter: { shareholders: { $elemMatch: { fundId: buyerFundId, shares: 15 } } },
-      update: {
-        $set: {
-          "shareholders.$.shares": 10,
-          "shareholders.$.avgCostPerShare": 9,
-        },
-      },
-    });
-    expect(capTableUpdates[1]).toMatchObject({
-      filter: { shareholders: { $elemMatch: { fundId: sellerFundId, shares: 15 } } },
-      update: {
-        $set: {
-          "shareholders.$.shares": 20,
-          "shareholders.$.avgCostPerShare": 2,
-        },
-      },
-    });
-  });
-
-  it("attempts all reversals and reports aggregate failure when compensation is incomplete", async () => {
-    failBuyerHoldingsRestore = true;
-
-    const result = await executeFundCrossRebalancing(db, [plan], 7);
-
-    expect(result.errors[0]).toContain("buyer log failed");
-    expect(result.errors[0]).toContain("buyer restore failed");
-    expect(cashUpdates).toHaveLength(6);
-    expect(capTableUpdates).toHaveLength(2);
-  });
+  }
+);
+it("preserves unrelated holdings accepted before a transfer and refuses a changed mandate", async () => {
+  const { db, memory, plan } = world();
+  const other = { corporationId: new ObjectId(), shares: 3, avgCostPerShareAnchor: 7 };
+  memory.collection("indexFunds").docs[1].holdings = [other];
+  expect((await executeFundCrossRebalancing(db, [plan], 7)).errors).toEqual([]);
+  expect(memory.collection("indexFunds").docs[1].holdings).toContainEqual(other);
+  memory.collection("indexFunds").docs[1].mandate = { mode: "picked_stocks" };
+  expect((await executeFundCrossRebalancing(db, [plan], 8)).transfers).toBe(0);
+  expect(memory.collection("indexFunds").docs.map((f) => f.cashAnchor)).toEqual([30, 80]);
 });

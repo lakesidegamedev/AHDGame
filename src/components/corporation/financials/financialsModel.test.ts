@@ -31,8 +31,8 @@ const baseFinancials: Financials = {
   bondCouponIncome: 0,
   dividendIncomeReceived: 0,
   governmentBondSubsidy: 0,
-  imfFacilityPaymentDaily: 0,
-  imfFacilityReceiptsDaily: 0,
+  imfFacilityInterestPaidDaily: 0,
+  imfFacilityInterestReceivedDaily: 0,
   totalCosts: 1200,
   income: 1200,
   dividendRate: 0,
@@ -83,7 +83,7 @@ describe("netMarginPct", () => {
         dividendDistribution: 0,
         totalRevenue: 2400,
         bondCouponIncome: 0,
-        imfFacilityReceiptsDaily: 0,
+        imfFacilityInterestReceivedDaily: 0,
       })
     ).toBe(50);
   });
@@ -100,7 +100,7 @@ describe("netMarginPct", () => {
         dividendDistribution: 0,
         totalRevenue: 138_000,
         bondCouponIncome: 0,
-        imfFacilityReceiptsDaily: 0,
+        imfFacilityInterestReceivedDaily: 0,
       })
     ).toBeCloseTo(-11.45, 1);
   });
@@ -111,7 +111,7 @@ describe("netMarginPct", () => {
         dividendDistribution: 0,
         totalRevenue: 0,
         bondCouponIncome: 0,
-        imfFacilityReceiptsDaily: 0,
+        imfFacilityInterestReceivedDaily: 0,
       })
     ).toBeNull();
   });
@@ -125,7 +125,7 @@ describe("netMarginPct", () => {
         dividendDistribution: 0,
         totalRevenue: 1_700_000,
         bondCouponIncome: 3_100_000,
-        imfFacilityReceiptsDaily: 0,
+        imfFacilityInterestReceivedDaily: 0,
       })
     ).toBeCloseTo(68.75, 1);
   });
@@ -300,7 +300,7 @@ it("includes received dividends in a forecast denominator", () => {
       totalRevenue: 0,
       income: 50,
       bondCouponIncome: 0,
-      imfFacilityReceiptsDaily: 0,
+      imfFacilityInterestReceivedDaily: 0,
       dividendIncomeReceived: 50,
     })
   ).toBe(100);

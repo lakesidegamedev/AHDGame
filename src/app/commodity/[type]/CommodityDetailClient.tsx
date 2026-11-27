@@ -79,7 +79,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
   const [drillDownState, setDrillDownState] = useState<string | null>(null);
   const [showAdvancedSections, setShowAdvancedSections] = useState(false);
   const [heavyLoaded, setHeavyLoaded] = useState(false);
-  const [forexEnabled, setForexEnabled] = useState(false);
+  const [forexEnabled, setForexEnabled] = useState<boolean | null>(null);
   const [exchangeRates, setExchangeRates] = useState<Partial<Record<CurrencyCode, number>>>({});
 
   useEffect(() => {
@@ -124,7 +124,9 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
         const status = (await statusRes.json()) as { forexEnabled?: boolean };
         if (cancelled) return;
 
-        const enabled = statusRes.ok && status.forexEnabled === true;
+        if (!statusRes.ok || typeof status.forexEnabled !== "boolean")
+          throw new Error("Exchange status unavailable");
+        const enabled = status.forexEnabled;
         setForexEnabled(enabled);
         if (!enabled) return;
 
@@ -138,7 +140,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
         }
       } catch {
         if (!cancelled) {
-          setForexEnabled(false);
+          setForexEnabled(null);
           setExchangeRates({});
         }
       }
@@ -339,6 +341,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
                 statePrices={marketScope.statePrices}
                 nationalSupply={data.nationalSupply}
                 nationalDemand={data.nationalDemand}
+                nationalPrices={data.nationalPrices}
                 reachableBooks={data.reachableBooks}
                 fundedCountryBooks={
                   data.nationalBalanceSource === "funded_book" ? data.fundedCountryBooks : undefined

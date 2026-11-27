@@ -1,3 +1,16 @@
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  fenceEconomicTurn: async (db: Db) => {
+    const state = await db
+      .collection<{ _id: string; isProcessing?: boolean }>("gameState")
+      .findOne({ _id: "current" });
+    return state?.isProcessing
+      ? { ok: false, status: 409, error: "The game is processing this turn, try again shortly." }
+      : null;
+  },
+}));
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/unions/unionProsecutionBar", () => ({

@@ -1,3 +1,4 @@
+import { afterCommit, boundSession } from "@/lib/db/sessionDb";
 import { taxablePlayerIncome } from "@/lib/budget/rules/incomeTaxTiers";
 import * as Sentry from "@sentry/nextjs";
 import { ObjectId, type Db } from "mongodb";
@@ -191,6 +192,7 @@ const TX_TYPE_TO_AUDIT_ACTION: Partial<Record<FinancialTxType, string>> = {
 
   // Admin / system
   admin_transfer: "admin.transfer",
+  referral_reward: "money.referral_reward",
   onboarding_reward: "money.onboarding_reward",
   starting_capital: "money.starting_capital",
   contest_prize: "money.contest_prize",
@@ -310,10 +312,11 @@ export async function emitTx(
       throw insertErr;
     }
     await shadowLedgerFromTx(db, [doc]);
-    recordAudit(buildAuditEnvelope(doc));
+    await afterCommit(db, () => recordAudit(buildAuditEnvelope(doc)));
     return "applied";
   } catch (err) {
     Sentry.captureException(err, { extra: { phase: "emitTx", type: entry.type } });
+    if (boundSession(db)) throw err;
     return "failed";
   }
 }
@@ -360,9 +363,10 @@ export async function emitTxBulk(
     // entries/turn) pays one insertMany at flush time, not one per row. The
     // mirror is narrowed by moneyMirrorPolicy: system settlement legs live in
     // financialTxLog only.
-    recordAuditBulk(docs.map(buildAuditEnvelope));
+    await afterCommit(db, () => recordAuditBulk(docs.map(buildAuditEnvelope)));
   } catch (err) {
     Sentry.captureException(err, { extra: { phase: "emitTxBulk", count: entries.length } });
+    if (boundSession(db)) throw err;
     if (
       entries.some((entry) => entry.subjectType === "character" && taxablePlayerIncome(entry.type))
     )
@@ -398,7 +402,7 @@ export async function emitTxStrict(
     try {
       await financialTxLogCollection(db).insertOne(doc);
       await shadowLedgerFromTx(db, [doc]);
-      recordAudit(buildAuditEnvelope(doc));
+      await afterCommit(db, () => recordAudit(buildAuditEnvelope(doc)));
       return doc;
     } catch (err) {
       lastError = err;
@@ -412,7 +416,7 @@ export async function emitTxStrict(
         const existing = await findTxById(db, doc._id);
         if (existing && isSameTxRow(existing, doc)) {
           await shadowLedgerFromTx(db, [existing]);
-          recordAudit(buildAuditEnvelope(existing));
+          await afterCommit(db, () => recordAudit(buildAuditEnvelope(existing)));
           return existing;
         }
         if (existing) {

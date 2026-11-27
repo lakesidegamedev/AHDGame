@@ -44,11 +44,11 @@ describe("applyPassedVoteEffects relocation", () => {
       corporation,
       currentTurn: 1306,
     });
-    expect(commandEconomyRelocationBlock).toHaveBeenCalledWith(db, corporation, "UK", "DD");
+    expect(commandEconomyRelocationBlock).not.toHaveBeenCalled();
     expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
   });
 
-  it("moves it when the destination permits private enterprise", async () => {
+  it("keeps headquarters unchanged until the CEO completes the paid relocation", async () => {
     const db = createMockDb();
     commandEconomyRelocationBlock.mockResolvedValue(null);
     await applyPassedVoteEffects({
@@ -57,9 +57,7 @@ describe("applyPassedVoteEffects relocation", () => {
       corporation,
       currentTurn: 1306,
     });
-    const update = db.collection("corporations").updateOne.mock.calls[0];
-    expect(update?.[1]).toMatchObject({
-      $set: { countryId: "US", headquartersState: "TX" },
-    });
+    expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
+    expect(db.collection("corporationVotes").updateMany).not.toHaveBeenCalled();
   });
 });

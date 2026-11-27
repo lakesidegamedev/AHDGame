@@ -1,3 +1,4 @@
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 /**
  * The political registry at REGION scope.
  *
@@ -13,13 +14,9 @@
 
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { State } from "@/lib/db/types/state";
+
 import type { StatePolicy } from "@/lib/db/types/statePolicy";
-import type {
-  PoliticalMetricsDoc,
-  PoliticalMetricsRegionHistoryDoc,
-} from "@/lib/db/types/politicalMetrics";
+
 import { resolveGameYear } from "@/lib/era/era";
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 import { loadDemocraticCompetition } from "@/lib/governanceStyle/loadCompetition";
@@ -334,7 +331,7 @@ export async function loadRegionPoliticalMetrics(
           national: round1(national[f.id]),
           status: statusFor(value),
           legislation: legislationByMetric.get(f.id) ?? null,
-          history: (historyDoc?.entries ?? []).map((entry) => ({
+          history: uniqueTurnHistory(historyDoc?.entries ?? []).map((entry) => ({
             turn: entry.turn,
             value: round1(entry.values[f.id] ?? 0),
           })),

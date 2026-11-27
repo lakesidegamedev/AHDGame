@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { hostname } from "os";
 import type { Db } from "mongodb";
+import type { GameState } from "@/lib/db/types";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { shouldFastTakeOverStaleLock } from "@/lib/turn/rules/staleLock";
 import { workerConfig } from "@/lib/config/worker";
@@ -23,6 +24,7 @@ function pidAlive(pid: number): boolean {
 }
 
 let fencedHolderId: string | null = null;
+let fencedGeneration: Record<string, unknown> = {};
 let lockLost = false;
 
 /** Raised when this process no longer holds the turn lock. Never retried. */
@@ -42,8 +44,19 @@ export function isTurnLockLost(): boolean {
 }
 
 /** While set, this process's lock writes only apply if it still holds the lock. */
-export function setTurnLockFence(holderId: string | null): void {
+export function setTurnLockFence(
+  holderId: string | null,
+  generation?: Pick<GameState, "currentTurn" | "resetWorldId" | "worldEpochId">
+): void {
   fencedHolderId = holderId;
+  fencedGeneration =
+    holderId && generation
+      ? {
+          currentTurn: generation.currentTurn,
+          resetWorldId: generation.resetWorldId ?? null,
+          worldEpochId: generation.worldEpochId ?? null,
+        }
+      : {};
   lockLost = false;
 }
 
@@ -52,11 +65,10 @@ export function turnLockFenceActive(): boolean {
 }
 
 /** Extra filter fields for any gameState write that belongs to the lock holder. */
-export function turnLockFenceFilter(): {
-  processingHolderId?: string;
-  processingAbandonedAt?: null;
-} {
-  return fencedHolderId ? { processingHolderId: fencedHolderId, processingAbandonedAt: null } : {};
+export function turnLockFenceFilter(): Record<string, unknown> {
+  return fencedHolderId
+    ? { processingHolderId: fencedHolderId, processingAbandonedAt: null, ...fencedGeneration }
+    : {};
 }
 
 /**

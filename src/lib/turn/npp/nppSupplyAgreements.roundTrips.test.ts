@@ -8,7 +8,7 @@
  */
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { countRoundTrips } from "@/lib/test-utils/roundTripCounter";
 import { processNppSupplyAgreements } from "./nppSupplyAgreements";
@@ -139,11 +139,56 @@ function fixture() {
 }
 
 describe("processNppSupplyAgreements round trips", () => {
+  it("does not activate proposals whose reviewed terms changed before publication", async () => {
+    const db = fixture(),
+      collection = db.collection("supplyAgreements");
+    const write = collection.bulkWrite.bind(collection);
+    const revised = new Set<string>();
+    vi.spyOn(collection, "bulkWrite").mockImplementation(async (...args) => {
+      for (const op of args[0]) {
+        const update = op as {
+          updateOne?: {
+            filter: Record<string, unknown>;
+            update: { $set?: Record<string, unknown> };
+          };
+        };
+        if (update.updateOne?.update.$set?.status !== "active") continue;
+        const row = collection.docs.find(
+          (candidate) => String(candidate._id) === String(update.updateOne!.filter._id)
+        );
+        if (!row) continue;
+        row.pricePremium = Number(row.pricePremium ?? 0) + 0.01;
+        revised.add(String(row._id));
+      }
+      return write(...args);
+    });
+    await processNppSupplyAgreements(db as unknown as Db, TURN, new Date(), true);
+    expect(revised.size).toBeGreaterThan(0);
+    expect(
+      collection.docs
+        .filter((row) => revised.has(String(row._id)))
+        .every((row) => row.status === "pending")
+    ).toBe(true);
+  });
+
   it("stays inside a fixed budget for a large NPP cohort", async () => {
     const db = fixture();
     const counter = countRoundTrips(db);
     const startedAt = performance.now();
-    await processNppSupplyAgreements(db as unknown as Db, TURN, new Date(), true);
+    const before = new Map(
+      db.collection("supplyAgreements").docs.map((row) => [String(row._id), row.status])
+    );
+    const result = await processNppSupplyAgreements(db as unknown as Db, TURN, new Date(), true);
+    const after = db.collection("supplyAgreements").docs;
+    expect(result.accepted).toBe(
+      after.filter((row) => before.get(String(row._id)) === "pending" && row.status === "active")
+        .length
+    );
+    expect(result.cancelled).toBe(
+      after.filter((row) => before.get(String(row._id)) === "active" && row.status === "cancelling")
+        .length
+    );
+    expect(result.accepted).toBeGreaterThan(0);
     const ms = performance.now() - startedAt;
     // The pass reads its cohorts once and writes them in bulk: the count must
     // not move with the number of corporations or agreements.

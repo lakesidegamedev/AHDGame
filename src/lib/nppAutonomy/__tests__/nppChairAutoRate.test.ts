@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ObjectId } from "mongodb";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import {
   computeNppChairRateTarget,
   computeNppChairRateStep,
@@ -239,6 +240,15 @@ describe("processNppChairAutoRate", () => {
     const op = callArgs[1];
     expect(op.$set.primeRate).toBeGreaterThan(4.0);
     expect(op.$set.lastRateChangeTurn).toBe(50);
+    expect(callArgs[0]).toEqual({
+      _id: "b",
+      primeRate: 4,
+      chairMode: "npp",
+      chairNppId: null,
+      governmentControlled: null,
+      lastRateChangeTurn: null,
+      lastStandingAdviceTurn: null,
+    });
   });
 
   it("hikes by more than the ordinary cap when inflation is far over target", async () => {
@@ -679,5 +689,29 @@ describe("processNppCurrencyDefence — engine 6.13 (v6)", () => {
     });
     expect(await processNppCurrencyDefence(theirs.db, bank, "US" as any, 50, 2019)).toBe("none");
     expect(theirs.updateOne).not.toHaveBeenCalled();
+  });
+});
+
+describe("autonomous rate stale-input guards", () => {
+  it.each([
+    { primeRate: 7 },
+    { chairMode: "player" },
+    { lastRateChangeTurn: 49 },
+    { governmentControlled: true },
+  ])("preserves newer bank state %j", async (change) => {
+    const context = mockRateDb(
+      { economicFactors: { inflationRate: 5 } },
+      { economic: { gdpGrowth: { value: 2 } } }
+    );
+    const memory = createInMemoryDb();
+    const bank = { _id: "b", primeRate: 4, lastRateChangeTurn: null, chairMode: "npp" as const };
+    memory.seed("centralBanks", [{ ...bank, ...change }]);
+    const original = context.db.collection.bind(context.db);
+    context.db.collection = ((name: string) =>
+      name === "centralBanks"
+        ? memory.collection(name)
+        : original(name)) as typeof context.db.collection;
+    await processNppChairAutoRate(context.db, bank as never, "US", 50, null, false, 2019);
+    expect(memory.collection("centralBanks").docs[0]).toEqual({ ...bank, ...change });
   });
 });

@@ -1,3 +1,12 @@
+import type { Collection } from "mongodb";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import {
+  mergeRegionFiscalStocks,
+  mergeNumericStocks,
+  mergedRegionCapital,
+  mergeConflictCapacityApplied,
+} from "./rules/mergeRegionStocks";
 /**
  * Fuse one region into another INSIDE the same country, then remove the source.
  *
@@ -14,7 +23,7 @@
  * names Berlin.
  */
 import type { Db } from "mongodb";
-import type { State } from "@/lib/db/types";
+
 import type { CountryId } from "@/lib/constants/countries";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
 import { REGION_SCOPED_COLLECTIONS } from "@/lib/referendum/transfer/regionScopedCollections";
@@ -92,6 +101,7 @@ async function fuseRegionKeyedCollection(
   now: Date
 ): Promise<number> {
   const coll = db.collection<Record<string, unknown>>(collection);
+  const mergedStocks = new Map<string, { id: unknown; fields: Record<string, unknown> }>();
   for (const { keys, partial } of await uniqueIndexesOver(db, collection, field)) {
     const others = keys.filter((key) => key !== field);
     // A PARTIAL index only constrains rows matching its filter, so only those
@@ -111,11 +121,50 @@ async function fuseRegionKeyedCollection(
       for (const key of others) wouldBecome[key] = row[key] ?? null;
       // Filter first, key values second: an explicit equality on a key must not
       // be overwritten by the filter's own condition on that same field.
-      if (await coll.findOne({ ...(partial ?? {}), ...wouldBecome })) {
+      const existing = await coll.findOne({ ...(partial ?? {}), ...wouldBecome });
+      if (existing) {
+        if (collection === "stateResourceCapacity") {
+          const prior = mergedStocks.get(String(existing._id))?.fields ?? existing;
+          const stocks: Record<string, unknown> = {};
+          for (const property of ["resources", "extractedUnits", "extractionOpeningUnits"])
+            if (row[property])
+              stocks[property] = mergeNumericStocks(
+                prior[property] as Record<string, number> | undefined,
+                row[property] as Record<string, number>
+              );
+          mergedStocks.set(String(existing._id), {
+            id: existing._id,
+            fields: { ...prior, ...stocks },
+          });
+        } else if (
+          [
+            "energyPlants",
+            "infraProjects",
+            "extractionContracts",
+            "corporateSectors",
+            "subsidies",
+            "prospectingSurveys",
+            "characterStateOrg",
+          ].includes(collection)
+        ) {
+          throw new Error(`Region fusion requires an explicit collision plan for ${collection}`);
+        }
         await coll.deleteOne({ _id: row._id } as Record<string, unknown>);
       }
     }
   }
+  if (mergedStocks.size)
+    await coll.bulkWrite(
+      [...mergedStocks.values()].map(({ id, fields }) => {
+        const { _id, ...stocks } = fields;
+        return {
+          updateOne: {
+            filter: { _id: id } as Record<string, unknown>,
+            update: { $set: { ...stocks, updatedAt: now } },
+          },
+        };
+      })
+    );
   const res = await coll.updateMany(
     { [field]: fromRegionId },
     { $set: { [field]: toRegionId, updatedAt: now } }
@@ -145,9 +194,12 @@ export interface MergeRegionResult {
  * `computeNationalMetrics` recomputes the derived figures from the merged
  * population anyway.
  */
-const ADDITIVE_STATE_FIELDS = ["population", "houseDistricts", "stateSenateSeats"] as const;
+const ADDITIVE_STATE_FIELDS = ["population", "gdp", "houseDistricts", "stateSenateSeats"] as const;
 
-export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeRegionResult> {
+async function mergeRegionAtomic(db: Db, args: MergeRegionArgs): Promise<MergeRegionResult> {
+  return withAtomicResult(db, (tx) => mergeRegion(tx, args));
+}
+async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeRegionResult> {
   const { fromRegionId, toRegionId, currentTurn } = args;
   const now = new Date();
   const empty = { retired: false, documentsMoved: 0 };
@@ -191,23 +243,48 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
   if (Object.keys(inc).length > 0) {
     await statesCollection(db).updateOne(
       { _id: toRegionId },
-      { $inc: inc, $set: { updatedAt: now } }
+      {
+        $inc: inc,
+        $unset: { subhourBase: "", subhourStep: "" },
+        $set: {
+          capitalStock: mergedRegionCapital(source, target),
+          conflictCapacityApplied: mergeConflictCapacityApplied(
+            source.conflictCapacityApplied,
+            target.conflictCapacityApplied
+          ),
+          updatedAt: now,
+        },
+      }
     );
   }
 
   // Re-point every region-keyed document at the surviving region. The key
   // VARIANTS come from the shared table, so a collection registered there for the
   // cross-border transfer is covered here too.
+  await mergeRegionBudgetStocks(
+    stateBudgetsCollection<RegionFinancialDoc>(db),
+    fromRegionId,
+    toRegionId,
+    now
+  );
+  await mergeRegionBudgetStocks(
+    regionalBudgetsCollection<RegionFinancialDoc>(db),
+    fromRegionId,
+    toRegionId,
+    now
+  );
   let documentsMoved = 0;
   for (const scope of REGION_SCOPED_COLLECTIONS) {
     const field =
-      scope.key === "stateIdField"
-        ? "stateId"
-        : scope.key === "stateField"
-          ? "state"
-          : scope.key === "homeStateField"
-            ? "homeState"
-            : null;
+      scope.key === "regionIdField"
+        ? "regionId"
+        : scope.key === "stateIdField"
+          ? "stateId"
+          : scope.key === "stateField"
+            ? "state"
+            : scope.key === "homeStateField"
+              ? "homeState"
+              : null;
     // `idIsState` and `compositeCountryState` documents are keyed BY the region,
     // so there is exactly one per region and fusing them would mean merging their
     // CONTENTS rather than re-pointing a field. The target already has its own,
@@ -432,3 +509,26 @@ export async function mergeRegion(db: Db, args: MergeRegionArgs): Promise<MergeR
 
   return { ok: true, retired: true, documentsMoved };
 }
+
+type RegionFinancialDoc = Record<string, unknown> & { _id: string };
+async function mergeRegionBudgetStocks(
+  budgets: Collection<RegionFinancialDoc>,
+  fromId: string,
+  toId: string,
+  now: Date
+): Promise<void> {
+  const fromBudget = await budgets.findOne({ _id: fromId });
+  if (!fromBudget) return;
+  const toBudget = await budgets.findOne({ _id: toId });
+  if (toBudget)
+    await budgets.updateOne(
+      { _id: toId },
+      { $set: { ...mergeRegionFiscalStocks(fromBudget, toBudget, fromId), updatedAt: now } }
+    );
+  else {
+    const { _id, ...body } = fromBudget;
+    await budgets.insertOne({ ...body, _id: toId, updatedAt: now });
+  }
+}
+
+export { mergeRegionAtomic as mergeRegion };

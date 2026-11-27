@@ -418,7 +418,7 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const priceHistory = await bondHistoryCollection(db)
       .find({ bondId: bond._id })
       .sort({ turn: 1 })
-      .project({ _id: 0, turn: 1, marketPrice: 1, totalInterestPaid: 1 })
+      .project({ _id: 0, turn: 1, marketPrice: 1, totalInterestPaid: 1, interestPaidSource: 1 })
       .toArray();
 
     const turnsRemaining = Math.max(0, bond.maturityTurn - currentTurn);
@@ -427,10 +427,13 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const annualCouponPerUnit = (bond.couponRate / 100) * BOND_UNIT_FACE_VALUE;
     const perTurnCoupon = annualCouponPerUnit / TURNS_PER_YEAR;
 
-    // Total interest paid = cumulative from history, or calculate from turns elapsed
+    // History records settled anchor payments; legacy estimates are not payment evidence.
     const turnsElapsed = currentTurn - bond.issuedAtTurn;
     const latestHistory = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : null;
-    const totalInterestPaid = latestHistory?.totalInterestPaid ?? 0;
+    const totalInterestPaid =
+      latestHistory?.interestPaidSource === "settlement"
+        ? (latestHistory.totalInterestPaid ?? 0)
+        : 0;
 
     const quote = await loadBondQuote(db, bond);
     const sovereignRisks = await loadSovereignRiskDisclosures(

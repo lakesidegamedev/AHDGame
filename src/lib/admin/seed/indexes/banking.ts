@@ -1,3 +1,4 @@
+import { SUPPLY_CASH_PLAN_INDEX } from "@/lib/corporations/supplyExchange/planIndexes";
 import { INCOME_TAX_INDEXES } from "@/lib/budget/incomeTaxIndexes";
 import { BANKING_TURN_READ_INDEXES } from "@/lib/banking/turnReadIndexes";
 import type { Db } from "mongodb";
@@ -93,6 +94,14 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
       name: "bankMoneyMoves_unprojected_applied",
       partialFilterExpression: { status: "applied", "projections.0": { $exists: true } },
     },
+    log
+  );
+
+  await ensureIndex(
+    db,
+    MONEY_MOVE_COLLECTION,
+    SUPPLY_CASH_PLAN_INDEX.keys,
+    SUPPLY_CASH_PLAN_INDEX.options,
     log
   );
 

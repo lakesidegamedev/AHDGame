@@ -1,3 +1,15 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 
@@ -93,7 +105,7 @@ describe("nppFoundCorporation", () => {
     );
     // reassignment: renames the shareholder entry + flips ceoId
     expect(corpUpdateOne).toHaveBeenCalledWith(
-      { _id: corpId, "shareholders.nppId": autoCeoId },
+      { _id: corpId, ceoId: autoCeoId, "shareholders.nppId": autoCeoId },
       expect.objectContaining({
         $set: expect.objectContaining({
           "shareholders.$.nppId": founderId,
@@ -175,17 +187,14 @@ describe("nppFoundCorporation", () => {
     expect(witnessNppFoundingCash).not.toHaveBeenCalled();
   });
 
-  it("refunds the founding fee if spawnNppCorporation throws", async () => {
+  it("returns a failure without an out-of-transaction refund if spawning throws", async () => {
     vi.mocked(spawnNppCorporation).mockRejectedValue(new Error("No capital state configured"));
     const res = await nppFoundCorporation(db, founder, "technology", FOUNDING_FEE, CURRENT_TURN, 1);
 
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("No capital state configured");
     expect(witnessNppFoundingCash).not.toHaveBeenCalled();
-    expect(nppUpdateOne).toHaveBeenCalledWith(
-      { _id: founderId },
-      expect.objectContaining({ $inc: { nppInvestmentCashAnchor: FOUNDING_FEE } })
-    );
+    expect(nppUpdateOne).not.toHaveBeenCalled();
   });
 
   it("rejects an NPP with no home state", async () => {

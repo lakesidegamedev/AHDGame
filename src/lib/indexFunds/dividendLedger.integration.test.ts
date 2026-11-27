@@ -1,7 +1,7 @@
 /** Dividend cash ownership must be witnessed for funds and every real holder. */
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { getDb } from "@/lib/mongodb";
 import { resetLedgerShadowFlagCache } from "@/lib/ledger/featureFlag";
 import { reconcileLedger } from "@/lib/ledger/reconcile";
@@ -20,7 +20,7 @@ describe("fund dividend stock-flow witnesses", () => {
   ])(
     "reconciles $mode, missing NPP $missingNpp, gross $gross",
     async ({ mode, missingNpp, gross }) => {
-      const memory = createInMemoryDb();
+      const { memory } = createTransactionalMemoryDb();
       const db = memory as unknown as Db;
       vi.mocked(getDb).mockResolvedValue(db);
       resetLedgerShadowFlagCache();

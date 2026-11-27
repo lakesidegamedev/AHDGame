@@ -50,6 +50,8 @@ export interface IndexFundBondAllocation {
 }
 
 export interface IndexFund {
+  /** Revision fencing resting-order reservations against fills and currency changes. */
+  shareOrderRevision?: number;
   _id: ObjectId;
   slug: string;
   name: string;
@@ -71,6 +73,8 @@ export interface IndexFund {
   unitSupply: number;
   reserveUnits: number;
   cashAnchor: number;
+  /** Latest acknowledged scheme subscription turn for each pension holder. */
+  pensionSubscriptionTurns?: Record<string, number>;
   targetConstituents: IndexFundTargetConstituent[];
   holdings: IndexFundHolding[];
   bondAllocations?: IndexFundBondAllocation[];

@@ -6,7 +6,6 @@
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { BankLoan } from "@/lib/db/types/bank";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -76,6 +75,7 @@ const BASIS_CORP_PROJECTION = {
   federalTaxArrearsAnchorByCountry: 1,
   countryOwnerId: 1,
   primaryPoolPlacements: 1,
+  producerPayables: 1,
 } as const;
 
 type BasisCorp = Pick<
@@ -91,6 +91,7 @@ type BasisCorp = Pick<
   | "federalTaxArrearsAnchorByCountry"
   | "countryOwnerId"
   | "primaryPoolPlacements"
+  | "producerPayables"
 >;
 
 const LIVE_LOAN_STATUSES: BankLoan["status"][] = ["current", "arrears", "defaulted"];
@@ -142,7 +143,6 @@ export async function loadCorpBookBasisById(
         {
           borrowerType: "corporation",
           borrowerId: { $in: ids },
-          constructionCollateral: { $exists: true },
           status: { $in: LIVE_LOAN_STATUSES },
         },
         { projection: { borrowerId: 1, outstanding: 1, currency: 1 } }
@@ -201,6 +201,7 @@ export async function loadCorpBookBasisById(
       debt:
         (debtByCorp.get(key) ?? 0) +
         corporateCashArrearsAnchor({
+          producerPayables: corp.producerPayables?.claims,
           operatingByCurrency: corp.operatingCashArrearsByCurrency,
           federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
           fxByCurrency: fx,

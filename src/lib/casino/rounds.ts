@@ -1,10 +1,10 @@
-import * as Sentry from "@sentry/nextjs";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { RACER_IDS, runRace, type RacerId } from "./games/race";
 import { settleByChips, splitPot, type PotShare } from "./games/pool";
-import { cryptoRng, pickWeighted, type Rng } from "./rng";
+import { cryptoRng, pickWeighted, replayRng, type Rng } from "./rng";
 import {
   applyHouseResult,
   creditPlayer,
@@ -271,6 +271,15 @@ export async function enterRound(
   player: CasinoPlayer,
   input: EnterInput
 ): Promise<Ok<{ round: CasinoRound; stake: number }> | Fail> {
+  return withSessionDb(db, (db) => enterRoundWork(db, roundId, player, input));
+}
+
+async function enterRoundWork(
+  db: Db,
+  roundId: string,
+  player: CasinoPlayer,
+  input: EnterInput
+): Promise<Ok<{ round: CasinoRound; stake: number }> | Fail> {
   const round = await getRound(db, roundId);
   if (!round) return { ok: false, status: 404, error: "Round not found" };
   if (round.status !== "open") return { ok: false, status: 409, error: "This round is closed" };
@@ -373,7 +382,7 @@ export async function enterRound(
           : "You already have a bet on this race";
     return { ok: false, status: 409, error: reason };
   }
-  recordCasinoTx(db, player, round.game, stake, 0, {
+  await recordCasinoTx(db, player, round.game, stake, 0, {
     roundId: round._id.toString(),
     selection,
     tickets,
@@ -450,6 +459,14 @@ function winPlan(
 
 /** Pay every unpaid line of a settling round. Each line is claimed before it is credited, so a retry never pays twice. */
 async function payOutstanding(db: Db, round: CasinoRound): Promise<CasinoRound | null> {
+  return withSessionDb(db, async (db) => {
+    const fresh = await rounds(db).findOne({ _id: round._id });
+    if (!fresh || fresh.status !== "settling") return fresh;
+    return payOutstandingWork(db, fresh);
+  });
+}
+
+async function payOutstandingWork(db: Db, round: CasinoRound): Promise<CasinoRound | null> {
   const payouts = round.payouts ?? [];
   for (let i = 0; i < payouts.length; i++) {
     const p = payouts[i];
@@ -460,18 +477,12 @@ async function payOutstanding(db: Db, round: CasinoRound): Promise<CasinoRound |
     );
     if (claim.modifiedCount === 0) continue;
     const credited = await creditPlayer(db, p, p.amount);
-    if (!credited) {
-      Sentry.captureMessage("casino round payout to a missing character", {
-        extra: {
-          roundId: round._id.toString(),
-          discordId: p.discordId,
-          amount: p.amount,
-          currency: p.currency,
-        },
-      });
-      continue;
-    }
-    recordCasinoTx(db, p, round.game, 0, p.amount, { roundId: round._id.toString(), kind: p.kind });
+    if (!credited)
+      throw new Error("Casino round payout recipient unavailable; claim retained for retry");
+    await recordCasinoTx(db, p, round.game, 0, p.amount, {
+      roundId: round._id.toString(),
+      kind: p.kind,
+    });
   }
   return rounds(db).findOneAndUpdate(
     { _id: round._id, status: "settling" },
@@ -494,6 +505,16 @@ async function commitSettlement(
   payouts: RoundPayout[],
   rakeAnchor: number
 ): Promise<Ok<{ round: CasinoRound }> | Fail> {
+  return withSessionDb(db, (db) => commitSettlementWork(db, round, outcome, payouts, rakeAnchor));
+}
+
+async function commitSettlementWork(
+  db: Db,
+  round: CasinoRound,
+  outcome: NonNullable<CasinoRound["outcome"]>,
+  payouts: RoundPayout[],
+  rakeAnchor: number
+): Promise<Ok<{ round: CasinoRound }> | Fail> {
   const claimed = await rounds(db).findOneAndUpdate(
     { _id: round._id, status: round.status },
     { $set: { status: "settling", outcome, payouts, rakeAnchor, updatedAt: new Date() } },
@@ -506,13 +527,26 @@ async function commitSettlement(
       : { ok: false, status: 404, error: "Round not found" };
   }
   if (!outcome.refunded) {
-    await applyHouseResult(db, round.game, round.potAnchor, round.potAnchor - rakeAnchor);
+    if (!(await applyHouseResult(db, round.game, round.potAnchor, round.potAnchor - rakeAnchor)))
+      throw new Error("Casino house unavailable during round settlement");
   }
   const done = await payOutstanding(db, claimed);
   return { ok: true, round: done ?? claimed };
 }
 
 export async function cancelRound(
+  db: Db,
+  round: CasinoRound,
+  reason: string
+): Promise<Ok<{ round: CasinoRound }> | Fail> {
+  return withSessionDb(db, async (db) => {
+    const fresh = await rounds(db).findOne({ _id: round._id });
+    if (!fresh) return { ok: false as const, status: 404, error: "Round not found" };
+    return cancelRoundWork(db, fresh, reason);
+  });
+}
+
+async function cancelRoundWork(
   db: Db,
   round: CasinoRound,
   reason: string
@@ -528,6 +562,16 @@ export async function settleRound(
   roundId: string,
   input: { chips?: Record<string, number> },
   rng: Rng = cryptoRng
+): Promise<Ok<{ round: CasinoRound }> | Fail> {
+  const draws = replayRng(rng);
+  return withSessionDb(db, (db) => settleRoundWork(db, roundId, input, draws()));
+}
+
+async function settleRoundWork(
+  db: Db,
+  roundId: string,
+  input: { chips?: Record<string, number> },
+  rng: Rng
 ): Promise<Ok<{ round: CasinoRound }> | Fail> {
   const round = await getRound(db, roundId);
   if (!round) return { ok: false, status: 404, error: "Round not found" };

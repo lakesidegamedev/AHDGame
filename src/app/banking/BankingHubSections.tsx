@@ -1,6 +1,7 @@
 "use client";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
+import { useSavingsRequest } from "@/lib/savings/useSavingsRequest";
 import Link from "next/link";
 import { ArrowRight, Landmark, PiggyBank, Wallet, WalletCards } from "lucide-react";
 import { CountryFlag } from "@/components/CountryFlag";
@@ -157,7 +158,7 @@ export function BankingHero({
                     {primary.bankName}
                   </p>
                   <p className="text-body-sm text-muted">
-                    {primary.countryName} · {primary.currency}
+                    {primary.countryName} Â· {primary.currency}
                   </p>
                 </div>
               </div>
@@ -213,7 +214,7 @@ export function HeroRate({
   );
 }
 
-export // ── Hero "Your balances" panel ─────────────────────────────────────────
+export // â”€â”€ Hero "Your balances" panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function nonzeroBalances(
   balances: Partial<Record<CurrencyCode, number>>
@@ -356,7 +357,7 @@ export function PrivateBankRow({
               {bank.name}
             </span>
             <span className="block truncate text-body-sm text-muted">
-              {bank.countryName} · <span className="font-mono">{bank.currency}</span>
+              {bank.countryName} Â· <span className="font-mono">{bank.currency}</span>
             </span>
             <span className="mt-1 flex min-w-0 items-center gap-1.5 text-body-sm text-muted">
               <Avatar
@@ -480,7 +481,7 @@ export function BankHealthCell({
         </span>
       )}
       <span className="w-7 text-right font-mono text-body font-bold tabular-nums text-foreground">
-        {score ?? "—"}
+        {score ?? "â€”"}
       </span>
       <WarningBandBadge band={band} />
     </div>
@@ -497,6 +498,7 @@ export function YourSavingsSection({
   showToast: (msg: string, type?: "success" | "error" | "info" | "warning") => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const savingsRequest = useSavingsRequest();
   const [withdrawAmounts, setWithdrawAmounts] = useState<Partial<Record<CurrencyCode, string>>>({});
 
   const setHolder = async (currency: CurrencyCode, holder: string) => {
@@ -530,12 +532,10 @@ export function YourSavingsSection({
 
     setBusy(`withdraw:${currency}`);
     try {
-      const res = await fetch("/api/character/savings/withdraw", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency, amount }),
+      const { response: res, json } = await savingsRequest("/api/character/savings/withdraw", {
+        currency,
+        amount,
       });
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         showToast(apiErrorText(json, "Withdrawal failed"), "error");
         return;
@@ -602,7 +602,7 @@ export function YourSavingsSection({
                 >
                   {row.options.map((opt) => (
                     <option key={opt.holder} value={opt.holder}>
-                      {opt.label} · {formatRatePercent(opt.depositRatePercent)}
+                      {opt.label} Â· {formatRatePercent(opt.depositRatePercent)}
                     </option>
                   ))}
                 </select>
@@ -638,7 +638,7 @@ export function YourSavingsSection({
                   onClick={() => void withdraw(row.currency, row.balance)}
                   className="h-10 rounded-lg border border-card-border bg-card px-4 text-body font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {busy === `withdraw:${row.currency}` ? "…" : "Withdraw"}
+                  {busy === `withdraw:${row.currency}` ? "â€¦" : "Withdraw"}
                 </button>
               </div>
             </div>

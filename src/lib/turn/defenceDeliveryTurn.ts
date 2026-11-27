@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { loadDefencePaymentCurrency } from "@/lib/military/defencePaymentCurrency";
 import type { Db, ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types/corporation";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -65,7 +67,7 @@ export { canSupply };
 export interface DeliveryResult {
   lots: number;
   paid: number;
-  /** Contracts that could not deliver — retooled plant, foreign supplier, currency mismatch. */
+  /** Contracts that could not deliver â€” retooled plant, foreign supplier, currency mismatch. */
   stalled: number;
   /** Production cost the suppliers bore on what they delivered. */
   productionCost: number;
@@ -98,6 +100,23 @@ export async function applyDefenceDeliveries(
   const contracts = await listActiveContracts(db, countryId);
   if (contracts.length === 0) return { lots: 0, paid: 0, stalled: 0, productionCost: 0 };
 
+  return withTurnValueSettlement(
+    db,
+    "defence-deliveries",
+    currentTurn,
+    (db) => applyDefenceDeliveriesInner(db, countryId, currentYear, maxGrade, currentTurn),
+    { sourceKey: `${countryId}:${currentTurn}` }
+  );
+}
+
+async function applyDefenceDeliveriesInner(
+  db: Db,
+  countryId: string,
+  currentYear: number,
+  maxGrade: number,
+  currentTurn: number
+): Promise<DeliveryResult> {
+  const contracts = await listActiveContracts(db, countryId);
   // ONE read of each per country per turn, replacing a read inside the per-contract loop.
   //
   // Safe precisely because the read is only used to PLAN. Every debit is guarded inside its own
@@ -105,6 +124,7 @@ export async function applyDefenceDeliveries(
   // asked at the moment of payment; the projection below just keeps the plan honest as the
   // sweep spends, so a country with ten contracts does not plan all ten against the same
   // opening balance and then have nine of them refused into the repair queue.
+  const paymentCurrency = await loadDefencePaymentCurrency(db, countryId);
   const opening = await getDefenseAppropriation(db, countryId);
   const priceRatios = await loadDefencePriceRatios(db);
   // The payout speed limit. ONE read of the defence line per country per turn, alongside the
@@ -119,6 +139,33 @@ export async function applyDefenceDeliveries(
   let projectedBalance = opening.balance;
   let projectedEncumbered = opening.encumbered ?? 0;
   const moveRecords = bankMoneyMovesCollection<{ _id: string }>(db);
+  const [sectors, corporations, previousMoves] = await Promise.all([
+    // full-read(corporateSectors): Eligibility, production cost and diversion preserve the complete operating plant.
+    corporateSectorsCollection(db)
+      .find({ _id: { $in: contracts.map((contract) => contract.sectorId) } })
+      .toArray(),
+    corporationsCollection(db)
+      .find(
+        { _id: { $in: contracts.map((contract) => contract.corporationId) } },
+        { projection: SETTLEMENT_HISTORY_EXCLUDED }
+      )
+      .toArray(),
+    moveRecords
+      .find(
+        {
+          _id: {
+            $in: contracts.map((contract) =>
+              defenceDeliveryMoveKey(contract._id.toString(), currentTurn)
+            ),
+          },
+        },
+        { projection: { _id: 1 } }
+      )
+      .toArray(),
+  ]);
+  const sectorsById = new Map(sectors.map((sector) => [sector._id.toString(), sector]));
+  const corporationsById = new Map(corporations.map((corp) => [corp._id.toString(), corp]));
+  const previousMoveIds = new Set(previousMoves.map((move) => move._id));
 
   let lots = 0;
   let paid = 0;
@@ -128,15 +175,8 @@ export async function applyDefenceDeliveries(
   const divertedBySector = new Map<string, { sector: CorporateSector; lots: number }>();
 
   for (const contract of contracts) {
-    const [sector, corp] = await Promise.all([
-      corporateSectorsCollection(db).findOne({ _id: contract.sectorId }),
-      // Eligibility and payment read the corp's country, currency and cash; its
-      // settlement stamps are never read on this path and are most of the doc.
-      corporationsCollection(db).findOne(
-        { _id: contract.corporationId },
-        { projection: SETTLEMENT_HISTORY_EXCLUDED }
-      ),
-    ]);
+    const sector = sectorsById.get(contract.sectorId.toString());
+    const corp = corporationsById.get(contract.corporationId.toString());
     if (!sector || !corp) {
       // The supplier plant or corp is gone, so the order can never deliver and
       // would hold its encumbrance and window quota forever. Tear it up for
@@ -162,6 +202,7 @@ export async function applyDefenceDeliveries(
       corp,
       sector,
       countryId,
+      paymentCurrency,
       currentYear,
       component: contract.component,
       assignedFactories: contract.assignedFactories,
@@ -248,19 +289,9 @@ export async function applyDefenceDeliveries(
     }
 
     const moveKey = defenceDeliveryMoveKey(contract._id.toString(), currentTurn);
-    // Cheap pre-check on the claim record. `applyMoneyMove` is authoritative and will replay a
-    // known key without moving a penny, but it claims the key INSIDE itself, and by then the
-    // lot record has already been written. Reading first catches the ordinary re-run turn
-    // before any work is done; a genuine race still loses the insert below and unwinds.
-    if (await moveRecords.findOne({ _id: moveKey }, { projection: { _id: 1 } })) {
-      await stampDeliveryCarry(
-        db,
-        contract._id as ObjectId,
-        carried,
-        "already_settled_this_turn",
-        currentTurn
-      );
-      continue;
+    // Cash-only receipts do not establish whether legacy physical fulfilment landed.
+    if (previousMoveIds.has(moveKey)) {
+      throw new Error("Legacy defence delivery receipt requires physical reconciliation");
     }
 
     await stampDeliveryCarry(
@@ -388,45 +419,17 @@ export async function applyDefenceDeliveries(
       },
     ];
 
-    // A throwing collection must stall ONE contract, not the country. `applyMoneyMove` leaves
-    // its record at `partial` when a leg throws mid-move, which is exactly the visible,
-    // finishable state the repair queue exists for, so the throw is caught rather than allowed
-    // to abort every remaining contract in the sweep.
+    // Cash, counters, arsenal stock and production diversion share the country transaction.
     const move = await applyMoneyMove(db, {
       key: moveKey,
       kind: "defence_contract_delivery",
       turn: currentTurn,
       legs,
-    }).catch(
-      () =>
-        ({
-          status: "partial",
-          applied: [],
-          error: "a leg threw mid-move",
-        }) as Awaited<ReturnType<typeof applyMoneyMove>>
-    );
+    });
+    if (move.status !== "applied")
+      throw new Error("Defence delivery could not settle all cash legs");
 
-    if (move.status !== "applied") {
-      // Nothing to reclaim from the arsenal: the lots have not been deposited yet. The one
-      // thing written is the lot record, and it comes straight back off.
-      //
-      // A `partial` means the appropriation leg landed and the supplier's did not. That is
-      // recorded in the repair queue with the legs that applied, which is the whole reason the
-      // shared primitive exists - a half-applied move is visible and finishable rather than
-      // silent money loss. The lot record still reverses either way: the country has not
-      // received the materiel.
-      await reverseContractDelivery(db, contract._id as ObjectId, recorded);
-      await stampDeliveryCarry(
-        db,
-        contract._id as ObjectId,
-        bankFor(0),
-        move.status === "replayed" ? "already_settled_this_turn" : "appropriation_short",
-        currentTurn
-      );
-      if (move.status === "partial") stalled++;
-      continue;
-    }
-
+    corp.liquidCapital = (corp.liquidCapital ?? 0) + margin;
     projectedBalance -= actualCost;
     countryPaidThisTurn += actualCost;
     supplierPaidThisTurn.set(
@@ -454,70 +457,7 @@ export async function applyDefenceDeliveries(
       projectedEncumbered = Math.max(0, projectedEncumbered - released);
     }
 
-    // The money is settled and the lots are recorded; the arsenal deposit is the last step and
-    // the only one left that can fail. It is retried by nothing, so a failure reverses the lot
-    // record and refunds through a paired money move rather than being swallowed.
-    try {
-      await depositLots(db, countryId, contract.component, recorded, grade);
-    } catch {
-      // depositLots is a single atomic $inc, so a throw means nothing landed. Drawing lots
-      // back out here reclaimed from whatever the arsenal ALREADY held of this component:
-      // a country with pre-existing stock lost `recorded` lots of it and was refunded the
-      // contract on top. Nothing was deposited, so nothing is drawn; the reversal and the
-      // paired refund below fully unwind the delivery.
-      await reverseContractDelivery(db, contract._id as ObjectId, recorded);
-      await recordContractPayment(db, contract._id as ObjectId, -actualCost, -buildCost);
-      await applyMoneyMove(db, {
-        key: `${moveKey}:refund`,
-        kind: "defence_contract_delivery_refund",
-        turn: currentTurn,
-        legs: [
-          // The exact mirror of the forward move's supplier leg, whichever way it ran. A refund
-          // that always debited would credit a loss-making supplier twice.
-          margin >= 0
-            ? {
-                kind: "debit" as const,
-                amount: margin,
-                collection: "corporations",
-                filter: { _id: corp._id },
-                path: "liquidCapital",
-                note: "supplier returns the margin on materiel that never landed",
-              }
-            : {
-                kind: "credit" as const,
-                amount: -margin,
-                collection: "corporations",
-                filter: { _id: corp._id },
-                path: "liquidCapital",
-                note: "supplier is made whole for a loss on materiel that never landed",
-              },
-          {
-            kind: "credit",
-            amount: actualCost,
-            collection: "federalBudget",
-            filter: { countryId },
-            path: "defenseAppropriation.balance",
-            note: `${countryId} defence appropriation refunded`,
-          },
-          {
-            kind: "mint",
-            amount: buildCost,
-            note: "inputs the supplier is no longer out of pocket for",
-          },
-        ],
-      });
-      projectedBalance += actualCost;
-      // The refund gives the turn allowance back too, or a delivery that never landed would
-      // still count against every later contract in the same sweep.
-      countryPaidThisTurn = Math.max(0, countryPaidThisTurn - actualCost);
-      supplierPaidThisTurn.set(
-        supplierKey,
-        Math.max(0, (supplierPaidThisTurn.get(supplierKey) ?? 0) - actualCost)
-      );
-      // One broken contract must not take down the sweep for every other country.
-      stalled++;
-      continue;
-    }
+    await depositLots(db, countryId, contract.component, recorded, grade);
 
     const currencyCode = resolveCorpLiquidCurrencyCode(corp);
     if (currencyCode) {
@@ -561,7 +501,7 @@ export async function applyDefenceDeliveries(
   // Stamp what left the market. Output shipped to an arsenal must not also be sold to the
   // world, so this share is deducted from both the plant's revenue and its supply
   // contribution next turn. The turn stamp is what makes it expire on its own when a
-  // contract completes or is cancelled — no sweep has to go and clear it.
+  // contract completes or is cancelled â€” no sweep has to go and clear it.
   if (divertedBySector.size > 0) {
     await (
       await getCorporateSectorsCollection(db)

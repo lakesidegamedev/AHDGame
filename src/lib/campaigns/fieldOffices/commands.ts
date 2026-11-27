@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
@@ -100,7 +101,11 @@ export interface OpenFieldOfficeResult {
   actions: number;
 }
 
-export async function openFieldOffice(params: {
+export async function openFieldOffice(params: Parameters<typeof openFieldOfficeInTransaction>[0]) {
+  return withSessionDb(params.db, (db) => openFieldOfficeInTransaction({ ...params, db }));
+}
+
+async function openFieldOfficeInTransaction(params: {
   db: Db;
   campaignId: ObjectId;
   user: Actor;

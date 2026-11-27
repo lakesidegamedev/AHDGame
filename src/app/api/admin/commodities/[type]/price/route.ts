@@ -7,10 +7,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { CommodityPrice, GameState } from "@/lib/db/types";
+
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { commodityPricesCollection } from "@/lib/db/repositories/commodityPrices";
 
@@ -26,29 +27,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ty
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
     const db = await getDb();
-    const gameState = await gameStateCollection(db).findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1 } }
-    );
-    const currentTurn = gameState?.currentTurn ?? 0;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const gameState = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
+      const currentTurn = gameState?.currentTurn ?? 0;
 
-    // Update the most recent document for this commodity.
-    // Cast filter to Record<string, unknown> because CommodityType is a union
-    // and `type` is a plain string from the URL parameter.
-    const result = await commodityPricesCollection(db).updateOne(
-      { commodity: type } as Record<string, unknown>,
-      {
-        $set: {
-          nudgePrice: parsed.data.price,
-          nudgeTurn: currentTurn,
-          updatedAt: new Date(),
-        },
-      }
-    );
+      // Update the most recent document for this commodity.
+      // Cast filter to Record<string, unknown> because CommodityType is a union
+      // and `type` is a plain string from the URL parameter.
+      const result = await commodityPricesCollection(db).updateOne(
+        { commodity: type } as Record<string, unknown>,
+        {
+          $set: {
+            nudgePrice: parsed.data.price,
+            nudgeTurn: currentTurn + 1,
+            updatedAt: new Date(),
+          },
+        }
+      );
 
-    if (result.matchedCount === 0) return errorResponse(404, "Commodity not found");
+      if (result.matchedCount === 0) return errorResponse(404, "Commodity not found");
 
-    return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

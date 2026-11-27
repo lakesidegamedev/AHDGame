@@ -1,3 +1,5 @@
+import { loadFxRatesByCurrency, requireCurrencyRate } from "@/lib/currency/corporationCapital";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * A8 phase 2, part A: benefits in payment.
  *
@@ -15,8 +17,6 @@
 
 import type { Db } from "mongodb";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
-import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import {
   pensionBenefitPayment,
@@ -47,8 +47,7 @@ export interface PensionBenefitsResult {
 export async function runPensionBenefitsTurn(
   db: Db,
   currentTurn: number,
-  /** Turn resilience stage 2 and above: a scheme is paid at most once per turn. */
-  rerunSafe = false
+  _rerunSafe = false
 ): Promise<PensionBenefitsResult> {
   const result: PensionBenefitsResult = {
     schemesPaying: 0,
@@ -62,77 +61,109 @@ export async function runPensionBenefitsTurn(
   const schemes = await pensionSchemesCollection<PensionScheme>(db)
     .find({
       liabilitiesAnchor: { $gt: 0 },
-      ...(rerunSafe ? { lastBenefitTurn: { $ne: currentTurn } } : {}),
+      $or: [{ lastBenefitTurn: { $lt: currentTurn } }, { lastBenefitTurn: { $exists: false } }],
     })
     .toArray();
   if (schemes.length === 0) return result;
+  const receiptRate = (await loadFxRatesByCurrency(db)).get("USD");
 
-  for (const scheme of schemes) {
+  for (const candidate of schemes) {
     try {
-      const inPaymentBefore = scheme.benefitsInPaymentAnchor ?? 0;
+      const accepted = await withTurnValueSettlement(
+        db,
+        "pension-benefits",
+        currentTurn,
+        async (db) => {
+          const scheme = await pensionSchemesCollection<PensionScheme>(db).findOne({
+            _id: candidate._id,
+          });
+          if (
+            !scheme ||
+            (scheme.lastBenefitTurn ?? -1) >= currentTurn ||
+            scheme.liabilitiesAnchor <= 0
+          )
+            return null;
+          const inPaymentBefore = scheme.benefitsInPaymentAnchor ?? 0;
 
-      const retirements = pensionRetirementsForTurn({
-        liabilitiesAnchor: scheme.liabilitiesAnchor,
-        benefitsInPaymentAnchor: inPaymentBefore,
-      });
-      const inPayment = inPaymentBefore + retirements;
+          const retirements = pensionRetirementsForTurn({
+            liabilitiesAnchor: scheme.liabilitiesAnchor,
+            benefitsInPaymentAnchor: inPaymentBefore,
+          });
+          const inPayment = inPaymentBefore + retirements;
 
-      const due = pensionBenefitsDueForTurn(inPayment);
-      const payment = pensionBenefitPayment({
-        benefitsDueAnchor: due,
-        cashAnchor: scheme.assetsAnchor,
-      });
+          const due = pensionBenefitsDueForTurn(inPayment);
+          const payment = pensionBenefitPayment({
+            benefitsDueAnchor: due,
+            cashAnchor: scheme.assetsAnchor,
+          });
 
-      const now = new Date();
-      // A guarded update. `assetsAnchor: { $gte: paid }` is the belt to the
-      // pure function's braces: if anything else moved this scheme's cash
-      // between the read and the write, the payment simply does not happen
-      // rather than driving the balance negative. A pension scheme with
-      // negative assets would be a mint wearing a disguise.
-      const update = await pensionSchemesCollection<PensionScheme>(db).updateOne(
-        {
-          _id: scheme._id,
-          assetsAnchor: { $gte: payment.paidAnchor },
-          // Paid at most once per turn: the stamp below lands in this same update.
-          ...(rerunSafe ? { lastBenefitTurn: { $ne: currentTurn } } : {}),
+          const now = new Date();
+          // A guarded update. `assetsAnchor: { $gte: paid }` is the belt to the
+          // pure function's braces: if anything else moved this scheme's cash
+          // between the read and the write, the payment simply does not happen
+          // rather than driving the balance negative. A pension scheme with
+          // negative assets would be a mint wearing a disguise.
+          const update = await pensionSchemesCollection<PensionScheme>(db).updateOne(
+            {
+              _id: scheme._id,
+              assetsAnchor: { $gte: payment.paidAnchor },
+              // Paid at most once per turn: the stamp below lands in this same update.
+              $or: [
+                { lastBenefitTurn: { $lt: currentTurn } },
+                { lastBenefitTurn: { $exists: false } },
+              ],
+            },
+            {
+              $inc: {
+                assetsAnchor: -payment.paidAnchor,
+                // Paying a benefit discharges the claim. Without this the funding
+                // ratio would never improve no matter how much a scheme paid out,
+                // and the whole measure would be meaningless.
+                liabilitiesAnchor: -payment.paidAnchor,
+                benefitsInPaymentAnchor: retirements - payment.paidAnchor,
+                totalBenefitsPaidAnchor: payment.paidAnchor,
+                totalBenefitsUnpaidAnchor: payment.unpaidAnchor,
+              },
+              $set: {
+                lastBenefitTurn: currentTurn,
+                lastBenefitCutFraction: payment.cutFraction,
+                updatedAt: now,
+              },
+            }
+          );
+          if (update.matchedCount !== 1)
+            throw new Error("Pension scheme changed before its benefit settled");
+
+          if (payment.paidAnchor > 0) {
+            await emitBenefitTx(
+              db,
+              scheme,
+              currentTurn,
+              now,
+              payment.paidAnchor,
+              payment.cutFraction,
+              requireCurrencyRate("USD", receiptRate)
+            );
+          }
+          return {
+            retirements,
+            paid: payment.paidAnchor,
+            unpaid: payment.unpaidAnchor,
+            cutting: payment.cutFraction > 0,
+          };
         },
-        {
-          $inc: {
-            assetsAnchor: -payment.paidAnchor,
-            // Paying a benefit discharges the claim. Without this the funding
-            // ratio would never improve no matter how much a scheme paid out,
-            // and the whole measure would be meaningless.
-            liabilitiesAnchor: -payment.paidAnchor,
-            benefitsInPaymentAnchor: retirements - payment.paidAnchor,
-            totalBenefitsPaidAnchor: payment.paidAnchor,
-            totalBenefitsUnpaidAnchor: payment.unpaidAnchor,
-          },
-          $set: {
-            lastBenefitTurn: currentTurn,
-            lastBenefitCutFraction: payment.cutFraction,
-            updatedAt: now,
-          },
-        }
+        { sourceKey: `${candidate._id}:${currentTurn}` }
       );
-      if (update.matchedCount === 0) {
-        result.errors.push(
-          `Scheme ${scheme._id.toString()}: cash moved under the benefit payment; skipped`
-        );
-        continue;
-      }
-
-      result.schemesPaying += 1;
-      result.retirementsAnchor += retirements;
-      result.benefitsPaidAnchor += payment.paidAnchor;
-      result.benefitsUnpaidAnchor += payment.unpaidAnchor;
-      if (payment.cutFraction > 0) result.schemesCutting += 1;
-
-      if (payment.paidAnchor > 0) {
-        await emitBenefitTx(db, scheme, currentTurn, now, payment.paidAnchor, payment.cutFraction);
+      if (accepted) {
+        result.schemesPaying += 1;
+        result.retirementsAnchor += accepted.retirements;
+        result.benefitsPaidAnchor += accepted.paid;
+        result.benefitsUnpaidAnchor += accepted.unpaid;
+        if (accepted.cutting) result.schemesCutting += 1;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      result.errors.push(`Scheme ${scheme._id.toString()}: ${message}`);
+      result.errors.push(`Scheme ${candidate._id.toString()}: ${message}`);
     }
   }
 
@@ -145,7 +176,8 @@ async function emitBenefitTx(
   turn: number,
   now: Date,
   paidAnchor: number,
-  cutFraction: number
+  cutFraction: number,
+  receiptRate: number
 ): Promise<void> {
   await emitTx(db, {
     type: "pension_benefit",
@@ -154,11 +186,9 @@ async function emitBenefitTx(
     subjectType: "pension_scheme",
     subjectId: scheme._id,
     subjectName: `${scheme.unionName} pension scheme`,
-    amount: -paidAnchor,
+    amount: -paidAnchor * receiptRate,
     anchorAmount: -paidAnchor,
-    // The scheme's own country currency, matching how the phase 1 contribution
-    // rows are denominated. Amounts are ₳, stated outright as `anchorAmount`.
-    currencyCode: (COUNTRY_CURRENCY_MAP[scheme.countryId] ?? "USD") as CurrencyCode,
+    currencyCode: "USD",
     // Pensioners are modelled workforce, not documents. The other leg leaves
     // the instrumented perimeter, so it derives to a sink rather than to an
     // account that does not exist.
@@ -168,6 +198,8 @@ async function emitBenefitTx(
       schemeId: scheme._id.toString(),
       unionId: scheme.unionId.toString(),
       cutFraction,
+      receiptValuationRate: receiptRate,
+      bookCurrency: "anchor",
     },
   });
 }

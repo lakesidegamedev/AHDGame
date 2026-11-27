@@ -1,5 +1,41 @@
-import { describe, expect, it, vi } from "vitest";
-import { TURN_HOLDER_ID, tryFastStaleLockTakeover } from "./turnLockHolder";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  TURN_HOLDER_ID,
+  tryFastStaleLockTakeover,
+  setTurnLockFence,
+  turnLockFenceFilter,
+} from "./turnLockHolder";
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+
+afterEach(() => setTurnLockFence(null));
+it("an outgoing holder cannot complete or record failure into a reset world", async () => {
+  const memory = createInMemoryDb();
+  setTurnLockFence("holder", { currentTurn: 209, resetWorldId: "old", worldEpochId: "old-epoch" });
+  memory.seed("gameState", [
+    {
+      _id: "current",
+      currentTurn: 1,
+      resetWorldId: "new",
+      worldEpochId: "new-epoch",
+      processingHolderId: "holder",
+      processingAbandonedAt: null,
+    },
+  ]);
+  const filter = { _id: "current", ...turnLockFenceFilter() };
+  expect(
+    (await memory.collection("gameState").updateOne(filter, { $set: { currentTurn: 210 } }))
+      .matchedCount
+  ).toBe(0);
+  expect(
+    (
+      await memory
+        .collection("gameState")
+        .updateOne(filter, { $set: { lastTurnFailure: { turn: 210 } } })
+    ).matchedCount
+  ).toBe(0);
+  expect(memory.collection("gameState").docs[0].currentTurn).toBe(1);
+  expect(memory.collection("gameState").docs[0].lastTurnFailure).toBeUndefined();
+});
 
 // A pid that is certainly not running: above any pid_max.
 const deadPid = 4_194_999;

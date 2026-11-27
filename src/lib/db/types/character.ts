@@ -189,6 +189,8 @@ export interface CareerEvent {
 }
 
 export interface Character {
+  /** Write fence shared by concurrent news publications and their cooldown checks. */
+  newsPublicationRevision?: number;
   /** Atomic stock-credit evidence, retained until an immutable tax plan is published. */
   pendingStockTaxReceipts?: import("@/lib/budget/rules/capitalGainsTax").PendingStockTaxReceipt[];
   /** Monotonic tax-collection proof, reset with the owning world balance. */

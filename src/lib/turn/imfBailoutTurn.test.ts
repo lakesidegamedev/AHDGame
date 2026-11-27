@@ -74,11 +74,11 @@ it("pays equal anchor value, advances anchor principal, and replays without anot
   await run();
   await run();
   expect(memory.collection("corporations").docs[0].liquidCapital).toBe(2000);
-  expect(memory.collection("financialTxLog").docs).toHaveLength(1);
+  expect(memory.collection("financialTxLog").docs).toHaveLength(2);
 });
 it.each(
   [false, true].flatMap((afterWrite) =>
-    Array.from({ length: 14 }, (_, i) => i + 1).map((onCall) => ({ afterWrite, onCall }))
+    Array.from({ length: 18 }, (_, i) => i + 1).map((onCall) => ({ afterWrite, onCall }))
   )
 )(
   "resumes a frozen payment across write $onCall (after=$afterWrite)",
@@ -98,7 +98,7 @@ it.each(
       imfFacilityPrincipalOutstanding: 500,
     });
     expect(memory.collection("corporations").docs[1].liquidCapital).toBe(10500);
-    expect(memory.collection("financialTxLog").docs).toHaveLength(1);
+    expect(memory.collection("financialTxLog").docs).toHaveLength(2);
   }
 );
 it("defers an unavailable currency without changing debt or blocking other turn work", async () => {
@@ -176,4 +176,34 @@ it("journals an unfunded interest accrual without moving cash or repeating the a
     liquidCapital: 3000,
     imfFacilityPrincipalOutstanding: principal,
   });
+});
+
+it("freezes interest separately from principal and republishes that split after retries", async () => {
+  borrower.imfFacilityAnnualRate = 12;
+  memory.seed("corporations", [borrower, lender] as unknown as Record<string, unknown>[]);
+  const first = snapshots();
+  await processImfBailoutPayments(memory as unknown as Db, 12, first, [borrower, lender]);
+  expect(first[0].settledImfInterestPaid).toBeGreaterThan(0);
+  expect(first[0].settledImfPrincipalPaid).toBeGreaterThan(first[0].settledImfInterestPaid!);
+  expect(first[1].settledImfInterestReceived).toBe(first[0].settledImfInterestPaid);
+  const balance = memory.collection("corporations").docs[0].liquidCapital;
+  const retry = snapshots();
+  retry[0].income = 1e12;
+  vi.mocked(loadFxRatesByCurrency).mockResolvedValue(
+    new Map([
+      ["CAD", 200],
+      ["USD", 50],
+    ])
+  );
+  await processImfBailoutPayments(
+    memory as unknown as Db,
+    12,
+    retry,
+    memory.collection("corporations").docs as unknown as Corporation[]
+  );
+  expect(retry[0].settledImfInterestPaid).toBe(first[0].settledImfInterestPaid);
+  expect(retry[0].settledImfPrincipalPaid).toBe(first[0].settledImfPrincipalPaid);
+  expect(retry[0].imfSettlementUnavailable).toBe(false);
+  expect(memory.collection("corporations").docs[0].liquidCapital).toBe(balance);
+  expect(memory.collection("financialTxLog").docs).toHaveLength(2);
 });

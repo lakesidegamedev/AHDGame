@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import { settleMetricStates } from "@/lib/metricEngine/settleMetricStates";
 import { loadBankFailureEffects } from "@/lib/banking/failurePolitics";
 import { type ProductivityState } from "@/lib/resetMetrics/rules/productivity";
@@ -764,9 +765,12 @@ export type RunMetricEngineStageContext = Extract<
 export async function runMetricEngine(
   ...args: Parameters<typeof prepareRunMetricEngine>
 ): Promise<number> {
-  const prepared = await prepareRunMetricEngine(...args);
-  if (prepared.kind === "early") return prepared.value;
-  return settleMetricStates(prepared.context);
+  const [db, turn] = args;
+  return withTurnValueSettlement(db, "macro-metric-engine", turn, async (db) => {
+    const prepared = await prepareRunMetricEngine(db, turn);
+    if (prepared.kind === "early") return prepared.value;
+    return settleMetricStates(prepared.context);
+  });
 }
 
 /**

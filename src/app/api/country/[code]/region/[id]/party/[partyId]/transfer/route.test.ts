@@ -2,6 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: async (db: Db, work: (db: Db) => Promise<Response>) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", () => ({
+  runWithDbSession: async (_db: Db, work: (session: object) => Promise<unknown>) => work({}),
+  boundSession: () => undefined,
+  afterCommit: (_db: Db, work: () => unknown) => work(),
+}));
+vi.mock("@/lib/gameState", () => ({
+  getGameStateCore: async () => ({ currentTurn: 100 }),
+  getGameState: async () => ({ currentTurn: 100 }),
+}));
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
   getMongoClient: vi.fn(async () => ({
@@ -115,7 +127,7 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/transfer", () => 
     expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledTimes(1);
   });
 
-  it("refunds the state treasury when the national credit throws after the debit", async () => {
+  it("aborts without a compensating credit when the national credit throws after the debit", async () => {
     db.collectionMocks["politicalParties"]!.updateOne.mockRejectedValueOnce(
       new Error("credit down")
     );
@@ -123,20 +135,15 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/transfer", () => 
     const response = await transfer(2_500);
 
     expect(response.status).toBeGreaterThanOrEqual(500);
-    // Debit then refund, both against the same state treasury.
-    expect(db.collectionMocks["statePartyOrg"]!.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks["statePartyOrg"]!.updateOne).toHaveBeenCalledTimes(1);
     const debit = db.collectionMocks["statePartyOrg"]!.updateOne.mock.calls[0]![1] as {
       $inc: Record<string, number>;
     };
-    const refund = db.collectionMocks["statePartyOrg"]!.updateOne.mock.calls[1]![1] as {
-      $inc: Record<string, number>;
-    };
     expect(debit.$inc).toMatchObject({ treasury: -2_500 });
-    expect(refund.$inc).toMatchObject({ treasury: 2_500 });
     expect(db.collectionMocks["adminLogs"]!.insertOne).not.toHaveBeenCalled();
   });
 
-  it("refunds the state treasury and returns 404 when the national party disappears", async () => {
+  it("aborts with 404 when the national party disappears", async () => {
     db.collectionMocks["politicalParties"]!.updateOne.mockResolvedValue({
       matchedCount: 0,
       modifiedCount: 0,
@@ -145,10 +152,6 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/transfer", () => 
     const response = await transfer(2_500);
 
     expect(response.status).toBe(404);
-    expect(db.collectionMocks["statePartyOrg"]!.updateOne).toHaveBeenCalledTimes(2);
-    const refund = db.collectionMocks["statePartyOrg"]!.updateOne.mock.calls[1]![1] as {
-      $inc: Record<string, number>;
-    };
-    expect(refund.$inc).toMatchObject({ treasury: 2_500 });
+    expect(db.collectionMocks["statePartyOrg"]!.updateOne).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,3 +1,5 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Forced sale under the Subsidiary Limits and Foreign Investment Acts: when a
  * group misses its compliance deadline, its controlling stake in the
@@ -12,11 +14,7 @@
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import {
-  debitEquityPoolGated,
-  readEquityPool,
-  refundEquityPoolDebit,
-} from "@/lib/equities/marketPool";
+import { debitEquityPoolGated, readEquityPool } from "@/lib/equities/marketPool";
 import { debitSharesFromCorp } from "@/lib/corporations/shareholderOps";
 import {
   anchorToCorpLiquidCapital,
@@ -56,6 +54,44 @@ export async function executeForcedDivestiture(
     now: Date;
   }
 ): Promise<ForcedSaleOutcome> {
+  const result = await withAtomicResult(db, async (db) => {
+    const outcome = await withTurnValueSettlement(
+      db,
+      `forced-divestiture-${args.target._id}-${args.parent._id}`,
+      args.turn,
+      async (db) => {
+        const [target, parent] = await Promise.all([
+          corporationsCollection(db).findOne(
+            { _id: args.target._id },
+            {
+              projection: {
+                shareholders: 1,
+                totalShares: 1,
+                fundamentalSharePrice: 1,
+                name: 1,
+                countryId: 1,
+                liquidCurrencyCode: 1,
+              },
+            }
+          ),
+          corporationsCollection(db).findOne(
+            { _id: args.parent._id },
+            { projection: { name: 1, countryId: 1, liquidCurrencyCode: 1 } }
+          ),
+        ]);
+        if (!target || !parent)
+          return { status: "deferred", why: "sharesMoved" } as ForcedSaleOutcome;
+        return executeForcedDivestitureWork(db, { ...args, target, parent });
+      }
+    );
+    return { ok: outcome.status === "sold" || outcome.status === "noControl", outcome };
+  });
+  return result.outcome;
+}
+async function executeForcedDivestitureWork(
+  db: Db,
+  args: Parameters<typeof executeForcedDivestiture>[1]
+): Promise<ForcedSaleOutcome> {
   const { target, parent, exchangeRatesByCurrency, turn, now } = args;
   const holding = target.shareholders?.find((s) => s.corporationId?.equals(parent._id));
   const shares = holding ? sharesToDropControl(target.totalShares ?? 0, holding.shares) : 0;
@@ -84,7 +120,6 @@ export async function executeForcedDivestiture(
     { requireSufficient: true }
   );
   if (remaining < 0) {
-    await refundEquityPoolDebit(db, currency, proceedsLocal, "salesOut", now);
     return { status: "deferred", why: "sharesMoved" };
   }
 
@@ -93,12 +128,13 @@ export async function executeForcedDivestiture(
     exchangeRatesByCurrency as Map<CurrencyCode, number>
   );
   const credit = anchorToCorpLiquidCapital(proceedsAnchor, parent, parentFx);
-  await corporationsCollection(db).updateOne(
+  const paid = await corporationsCollection(db).updateOne(
     { _id: parent._id },
     { $inc: { liquidCapital: credit }, $set: { updatedAt: now } }
   );
 
-  void emitTx(db, {
+  if (paid.matchedCount !== 1) throw new Error("Forced sale recipient changed");
+  await emitTx(db, {
     type: "stock_trade_sell",
     turn,
     createdAt: now,
@@ -106,6 +142,7 @@ export async function executeForcedDivestiture(
     subjectId: parent._id,
     subjectName: parent.name,
     amount: credit,
+    anchorAmount: proceedsAnchor,
     currencyCode: resolveCorpLiquidCurrencyCode(parent) ?? "USD",
     counterpartyType: "corporation",
     counterpartyId: target._id,

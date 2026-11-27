@@ -1,3 +1,5 @@
+import { afterCommit } from "@/lib/db/sessionDb";
+import { withAtomicStatusResult } from "@/lib/api/withAtomicStatusResult";
 /**
  * Seated deputies propose bills in their active national legislature.
  * proposeNationalBill resolves current offices, preserves proposal costs and rejects a dissolved chamber.
@@ -24,13 +26,7 @@ import {
   type BillProposalOriginChamber,
 } from "@/lib/legislature/billAutoFailWarning";
 import { buildActiveNationalBillFilter } from "@/lib/legislature/nationalBillScope";
-import type {
-  Bill,
-  BillChamber,
-  BillStatus,
-  ElectedOfficial,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { Bill, BillChamber, BillStatus } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import {
@@ -75,6 +71,17 @@ export interface ProposeNationalBillInput {
 }
 
 export async function proposeNationalBill(
+  db: Db,
+  countryId: CountryId,
+  authUser: AuthUser,
+  input: ProposeNationalBillInput
+): Promise<LegislatureCommandResult> {
+  return withAtomicStatusResult(db, (db) =>
+    proposeNationalBillInTransaction(db, countryId, authUser, input)
+  );
+}
+
+async function proposeNationalBillInTransaction(
   db: Db,
   countryId: CountryId,
   authUser: AuthUser,
@@ -411,7 +418,7 @@ export async function proposeNationalBill(
     try {
       const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(natBill);
       if (!partySponsor && !usingAdminOverride)
-        await awardBillSponsored(authUser.userId, character._id);
+        await afterCommit(db, () => awardBillSponsored(authUser.userId, character._id));
       if (usingSovereignOverride) {
         await enactSingleplayerDecree(db, { ...natBill, _id: result.insertedId } as Bill);
       }
@@ -737,7 +744,7 @@ export async function proposeNationalBill(
   try {
     const result = await billsCollection<Omit<Bill, "_id">>(db).insertOne(bill);
     if (!partySponsor && !usingAdminOverride)
-      await awardBillSponsored(authUser.userId, character._id);
+      await afterCommit(db, () => awardBillSponsored(authUser.userId, character._id));
     if (usingSovereignOverride) {
       await enactSingleplayerDecree(db, { ...bill, _id: result.insertedId } as Bill);
     }

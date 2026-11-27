@@ -14,6 +14,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import {
   computeCharacterWealth,
+  CHARACTER_WEALTH_PROJECTION,
   sumBondValueByCharacter,
   sumStockValueByCharacter,
   withHeldStakeIssuers,
@@ -68,20 +69,12 @@ async function computeWealthListFallback(
         | "homeState"
         | "countryId"
         | "cashOnHand"
+        | "savingsOnHand"
+        | "lineOfCredit"
         | "sequentialId"
         | "currencyBalances"
       >
-    >({
-      _id: 1,
-      userId: 1,
-      name: 1,
-      avatarUrl: 1,
-      homeState: 1,
-      countryId: 1,
-      cashOnHand: 1,
-      sequentialId: 1,
-      currencyBalances: 1,
-    })
+    >({ ...CHARACTER_WEALTH_PROJECTION })
     .toArray();
 
   if (characters.length === 0) return [];

@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 import type { Db, Filter } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
@@ -33,6 +34,12 @@ export async function resolveColdWarHolds(
   db: Db,
   currentTurn: number
 ): Promise<{ resolved: number }> {
+  return withTurnValueSettlement(db, "cold-war-hold-resolution", currentTurn, (db) =>
+    settleColdWarHolds(db, currentTurn)
+  );
+}
+
+async function settleColdWarHolds(db: Db, currentTurn: number): Promise<{ resolved: number }> {
   const gameState = await getGameStateCollection(db).then((col) =>
     col.findOne(
       { _id: "current" },
@@ -66,20 +73,6 @@ export async function resolveColdWarHolds(
     // that no longer holds it.
     if (!conflict.poleSide || conflict.poleSinceTurn == null) continue;
     if (conflict.poleSinceTurn > currentTurn - POLE_HOLD_TURNS) continue;
-
-    // CLAIM the war before resolving it. The find above and the writes below are not
-    // atomic, and this project has had overlapping turn runs before (a rolling
-    // deploy). Admission is idempotent and `resolveConflict` is effectively so, but
-    // the ALIGNMENT SWING is not — a double run would move both hosts twice, which
-    // is the one effect here that cannot be replayed safely.
-    //
-    // Claiming on `status` is what makes the second runner's update match nothing:
-    // it is the same field `resolveConflict` sets, so the two cannot interleave.
-    const claim = await getConflictsCollection(db).updateOne(
-      { _id: conflict._id, status: { $ne: "resolved" } } as Filter<ConflictDoc>,
-      { $set: { status: "resolved" } }
-    );
-    if (claim.modifiedCount !== 1) continue;
 
     await resolveConflict(db, conflict, conflict.poleSide, currentTurn, { endingType: "victory" });
     await admitHostsToWinningBloc(db, conflict, conflict.poleSide, currentTurn, preset);

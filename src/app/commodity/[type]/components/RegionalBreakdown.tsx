@@ -22,7 +22,7 @@ interface RegionalBreakdownProps {
   statePrices: Record<string, number>;
   stateCountryMap: Record<string, string>;
   globalPrice: number;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   unit: string;
   /** National totals; countries with no regions on the map are listed from these. */

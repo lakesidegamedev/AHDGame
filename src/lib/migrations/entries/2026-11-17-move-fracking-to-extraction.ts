@@ -1,3 +1,12 @@
+import type { CorpCapitalCurrencyInfo } from "@/lib/currency/corporationCapital";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import {
+  loadFxRatesByCurrency,
+  resolveCorpLiquidCurrencyCode,
+  corpCapitalToAnchor,
+  anchorToCorpCapital,
+} from "@/lib/currency/corporationCapital";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { ObjectId, type Db, type Document } from "mongodb";
 import type { Migration, MigrationContext, MigrationResult } from "../types";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -76,7 +85,7 @@ export function conventionalPatch(sector: SectorLike, ratio: number): Document {
 async function refundRetoolFee(
   db: Db,
   sector: SectorLike
-): Promise<{ refunded: boolean; amount: number }> {
+): Promise<{ refunded: boolean; amount: number; reconciliationRequired?: boolean }> {
   const fees = await financialTxLogCollection<Document>(db)
     .find({
       type: "corp_sector_retool",
@@ -85,11 +94,47 @@ async function refundRetoolFee(
       "meta.toStrategyId": LEGACY_METHOD,
     })
     .toArray();
-  const amount = fees.reduce((sum, f) => sum + (typeof f.amount === "number" ? -f.amount : 0), 0);
-  if (!(amount > 0)) return { refunded: false, amount: 0 };
-  const currencyCode = fees[0]?.currencyCode;
-  const corp = await corporationsCollection<Document>(db).findOne({ _id: sector.corporationId });
+  if (fees.length === 0) return { refunded: false, amount: 0 };
+  const corp = await corporationsCollection<Document & CorpCapitalCurrencyInfo>(db).findOne({
+    _id: sector.corporationId,
+  });
   if (!corp) return { refunded: false, amount: 0 };
+  const currencyCode = resolveCorpLiquidCurrencyCode(corp);
+  if (!currencyCode) throw new Error("Retool refund requires the corporation's currency");
+  const needsConversion = fees.some((fee) => fee.currencyCode !== currencyCode);
+  const rates = needsConversion ? await loadFxRatesByCurrency(db) : new Map<string, number>();
+  let amount = 0;
+  for (const fee of fees) {
+    if (
+      typeof fee.amount !== "number" ||
+      !Number.isFinite(fee.amount) ||
+      fee.amount > 0 ||
+      typeof fee.currencyCode !== "string"
+    )
+      throw new Error("Retool refund requires a valid original fee receipt");
+    const native = -fee.amount;
+    if (fee.currencyCode === currencyCode) amount += native;
+    else {
+      const from = rates.get(fee.currencyCode),
+        to = rates.get(currencyCode);
+      if (!(
+        typeof from === "number" &&
+        Number.isFinite(from) &&
+        from > 0 &&
+        typeof to === "number" &&
+        Number.isFinite(to) &&
+        to > 0
+      ))
+        throw new Error("Retool refund requires current currency quotes");
+      amount += anchorToCorpCapital(
+        corpCapitalToAnchor(native, fee.currencyCode as CurrencyCode, from),
+        currencyCode,
+        to
+      );
+    }
+  }
+  if (!Number.isFinite(amount) || amount < 0) throw new Error("Invalid retool refund total");
+  if (amount === 0) return { refunded: false, amount: 0 };
   // The sector id doubles as the refund row id, so a rerun converges instead of paying twice.
   const outcome = await emitTx(
     db,
@@ -114,11 +159,14 @@ async function refundRetoolFee(
     undefined,
     { _id: sector._id }
   );
-  if (outcome !== "applied") return { refunded: false, amount: 0 };
-  await corporationsCollection<Document>(db).updateOne(
+  if (outcome === "already-applied")
+    return { refunded: false, amount: 0, reconciliationRequired: true };
+  if (outcome !== "applied") throw new Error("Retool refund receipt could not be published");
+  const credited = await corporationsCollection<Document>(db).updateOne(
     { _id: sector.corporationId },
     { $inc: { liquidCapital: amount }, $set: { updatedAt: new Date() } }
   );
+  if (credited.matchedCount !== 1) throw new Error("Retool refund recipient changed");
   return { refunded: true, amount };
 }
 
@@ -159,33 +207,38 @@ export const migration: Migration = {
     "Return energy sectors on the removed fracking method to Conventional, keeping capacity and refunding the retool fee.",
   idempotent: true,
   async execute(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
-    const sectors = corporateSectorsCollection<Document>(db);
-    const onMethod = await corporateSectorsCollection<SectorLike & Document>(db)
-      .find({ strategyId: LEGACY_METHOD })
-      .toArray();
-    const ratio = legacyToConventionalRatio();
-    let moved = 0;
-    let refunds = 0;
-    if (!ctx.dryRun) {
-      for (const sector of onMethod) {
-        const fee = await refundRetoolFee(db, sector);
-        if (fee.refunded) refunds += 1;
-        const res = await sectors.updateOne(
-          { _id: sector._id, strategyId: LEGACY_METHOD },
-          conventionalPatch(sector, ratio)
-        );
-        moved += res.modifiedCount;
+    return withSessionDb(db, async (db) => {
+      const sectors = corporateSectorsCollection<Document>(db);
+      const onMethod = await corporateSectorsCollection<SectorLike & Document>(db)
+        .find({ strategyId: LEGACY_METHOD })
+        .toArray();
+      const ratio = legacyToConventionalRatio();
+      let moved = 0;
+      let refunds = 0;
+      let ambiguousRefunds = 0;
+      if (!ctx.dryRun) {
+        for (const sector of onMethod) {
+          const fee = await refundRetoolFee(db, sector);
+          if (fee.refunded) refunds += 1;
+          if (fee.reconciliationRequired) ambiguousRefunds += 1;
+          const res = await sectors.updateOne(
+            { _id: sector._id, strategyId: LEGACY_METHOD },
+            conventionalPatch(sector, ratio)
+          );
+          moved += res.modifiedCount;
+        }
       }
-    }
-    const leftovers = await relabelLeftovers(db, ctx.dryRun);
-    return {
-      documentsScanned: onMethod.length,
-      documentsUpdated: moved + leftovers,
-      notes: [
-        `sectors on fracking: ${onMethod.length}, moved to ${ENERGY_DEFAULT}: ${moved}`,
-        `retool fees refunded: ${refunds}`,
-        `stray references relabelled: ${leftovers}`,
-      ],
-    };
+      const leftovers = await relabelLeftovers(db, ctx.dryRun);
+      return {
+        documentsScanned: onMethod.length,
+        documentsUpdated: moved + leftovers,
+        notes: [
+          `sectors on fracking: ${onMethod.length}, moved to ${ENERGY_DEFAULT}: ${moved}`,
+          `retool fees refunded: ${refunds}`,
+          `stray references relabelled: ${leftovers}`,
+          `existing refund receipts requiring payment verification: ${ambiguousRefunds}`,
+        ],
+      };
+    });
   },
 };

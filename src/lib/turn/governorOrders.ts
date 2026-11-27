@@ -1,79 +1,105 @@
-import type { Db } from "mongodb";
-import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib/db/types";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
+import type { GovernorExecutiveOrder, StatePolicy } from "@/lib/db/types";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { buildOrderRevertPolicyFields } from "@/lib/governorOffice/orders/revertPolicy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { statePoliciesCollection } from "@/lib/db/repositories/statePolicies";
 import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governorExecutiveOrders";
 
-/**
- * Turn phase: process active executive orders.
- * - If the StatePolicy no longer points at this order (a bill superseded it),
- *   mark the order as superseded. Don't touch the policy.
- * - If currentTurn >= expiresAtTurn AND the policy still points at this order,
- *   revert the policy to the snapshot and mark the order as expired.
- *
- * Must run AFTER processBillEnactment so any same-turn bill that overwrote the
- * policy is observed here and wins.
- */
+/** Policy restoration and order completion must publish together after bill enactment. */
 export async function processGovernorExecutiveOrders(
   db: Db,
   currentTurn: number
 ): Promise<{ expired: number; superseded: number }> {
-  const active = await governorExecutiveOrdersCollection(db).find({ status: "active" }).toArray();
-  const now = new Date();
-  let expired = 0;
-  let superseded = 0;
-
-  for (const order of active) {
-    if (!order._id) continue;
-    const policy = await statePoliciesCollection(db).findOne({
-      stateId: order.stateId,
-      legislationTypeId: order.legislationTypeId,
-    });
-    const policyMatchesOrder =
-      policy?.enactedBy?.kind === "order" &&
-      policy.enactedBy.id.toString() === order._id.toString();
-
-    if (!policyMatchesOrder) {
-      const supersedingBillId =
-        policy?.enactedBy?.kind === "bill" ? policy.enactedBy.id : undefined;
-      await governorExecutiveOrdersCollection(db).updateOne(
-        { _id: order._id },
-        {
-          $set: {
-            status: "superseded",
-            ...(supersedingBillId ? { supersededByBillId: supersedingBillId } : {}),
-            updatedAt: now,
+  return withSessionDb(db, async (db) => {
+    const active = await governorExecutiveOrdersCollection(db).find({ status: "active" }).toArray();
+    if (!active.length) return { expired: 0, superseded: 0 };
+    const [policies, types] = await Promise.all([
+      statePoliciesCollection(db)
+        .find({
+          $or: active.map((order) => ({
+            stateId: order.stateId,
+            legislationTypeId: order.legislationTypeId,
+            $or: [{ countryId: order.countryId.toUpperCase() }, { countryId: { $exists: false } }],
+          })),
+        })
+        .toArray(),
+      legislationTypesCollection(db)
+        .find(
+          { _id: { $in: [...new Set(active.map((order) => order.legislationTypeId))] } },
+          { projection: { policyOptions: 1 } }
+        )
+        .toArray(),
+    ]);
+    const typeById = new Map(types.map((type) => [type._id, type]));
+    const policyKey = (country: string, state: string, type: string) =>
+      `${country.toUpperCase()}:${state}:${type}`;
+    const policyByKey = new Map(
+      policies.map((policy) => [
+        policyKey(policy.countryId ?? "", policy.stateId, policy.legislationTypeId),
+        policy,
+      ])
+    );
+    const policyOps: AnyBulkWriteOperation<StatePolicy>[] = [];
+    const orderOps: AnyBulkWriteOperation<GovernorExecutiveOrder>[] = [];
+    let expired = 0,
+      superseded = 0;
+    const now = new Date();
+    for (const order of active) {
+      if (!order._id) continue;
+      const policy =
+        policyByKey.get(policyKey(order.countryId, order.stateId, order.legislationTypeId)) ??
+        policyByKey.get(policyKey("", order.stateId, order.legislationTypeId));
+      const matches =
+        policy?.enactedBy?.kind === "order" && String(policy.enactedBy.id) === String(order._id);
+      if (!matches) {
+        orderOps.push({
+          updateOne: {
+            filter: { _id: order._id, status: "active" },
+            update: {
+              $set: {
+                status: "superseded",
+                ...(policy?.enactedBy?.kind === "bill"
+                  ? { supersededByBillId: policy.enactedBy.id }
+                  : {}),
+                updatedAt: now,
+              },
+            },
           },
-        }
-      );
-      superseded++;
-      continue;
-    }
-
-    if (currentTurn >= order.expiresAtTurn) {
-      // effectDirection from the type's own ladder — 5-level new-generation
-      // ladders center at 2; the old hardcoded center-3 misdirects them
-      // (political-legislation spec §10 option-count sweep).
-      const legislationType = await legislationTypesCollection(db).findOne(
-        { _id: order.legislationTypeId },
-        { projection: { policyOptions: 1 } }
-      );
-      await statePoliciesCollection(db).updateOne(
-        { stateId: order.stateId, legislationTypeId: order.legislationTypeId },
-        {
-          $set: {
-            ...buildOrderRevertPolicyFields(order, legislationType, currentTurn),
+        });
+        superseded++;
+      } else if (currentTurn >= order.expiresAtTurn) {
+        policyOps.push({
+          updateOne: {
+            filter: { _id: policy!._id, "enactedBy.kind": "order", "enactedBy.id": order._id },
+            update: {
+              $set: buildOrderRevertPolicyFields(
+                order,
+                typeById.get(order.legislationTypeId) ?? null,
+                currentTurn
+              ),
+            },
           },
-        }
-      );
-      await governorExecutiveOrdersCollection(db).updateOne(
-        { _id: order._id },
-        { $set: { status: "expired", updatedAt: now } }
-      );
-      expired++;
+        });
+        orderOps.push({
+          updateOne: {
+            filter: { _id: order._id, status: "active" },
+            update: { $set: { status: "expired", updatedAt: now } },
+          },
+        });
+        expired++;
+      }
     }
-  }
-
-  return { expired, superseded };
+    if (policyOps.length) {
+      const result = await statePoliciesCollection(db).bulkWrite(policyOps);
+      if (result.matchedCount !== policyOps.length)
+        throw new Error("Executive order policies changed during expiry");
+    }
+    if (orderOps.length) {
+      const result = await governorExecutiveOrdersCollection(db).bulkWrite(orderOps);
+      if (result.matchedCount !== orderOps.length)
+        throw new Error("Executive orders changed during expiry");
+    }
+    return { expired, superseded };
+  });
 }

@@ -1,3 +1,4 @@
+import { withSessionDb, boundSession } from "@/lib/db/sessionDb";
 import { transferFundedSite } from "./fundedSiteTransfer";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -62,8 +63,24 @@ export async function reverseNationalizationTaking(
   };
   for (const sectorId of params.sectorIds) {
     try {
-      await reverseSector(db, params, sectorId, now, result);
+      const committed = await withSessionDb(db, async (transactionDb) => {
+        const local: ReverseNationalizationResult = {
+          restoredToPriorOwner: 0,
+          spunOut: 0,
+          skipped: 0,
+          compensationRecoveredAnchor: 0,
+          compensationOwedAnchor: 0,
+        };
+        await reverseSector(transactionDb, params, sectorId, now, local);
+        return local;
+      });
+      result.restoredToPriorOwner += committed.restoredToPriorOwner;
+      result.spunOut += committed.spunOut;
+      result.skipped += committed.skipped;
+      result.compensationRecoveredAnchor += committed.compensationRecoveredAnchor;
+      result.compensationOwedAnchor += committed.compensationOwedAnchor;
     } catch (err) {
+      if (boundSession(db)) throw err;
       console.error(
         `[reverseNationalization] failed to return sector ${sectorId.toString()}:`,
         err
@@ -115,6 +132,8 @@ async function reverseNextTaking(
     }
 
     const prov = sector.nationalizationProvenance;
+    // A surviving state site without a taking is not another asset to privatize on retry.
+    if (!prov) return false;
     const priorOwner = prov?.formerCorporationId
       ? await corps.findOne({ _id: prov.formerCorporationId })
       : null;

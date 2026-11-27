@@ -1,3 +1,5 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { loadChamberSeatWeights } from "../legislative/loadChamberSeatWeights";
 /**
  * NPC legislator auto-vote for sovereign-crisis legislative ratification.
  *
@@ -16,11 +18,9 @@
  * existing, so re-runs are safe.
  */
 
-import type { Db, ObjectId } from "mongodb";
+import { ObjectId as MongoObjectId, type Db, type ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { SovereignResolutionChoice } from "@/lib/db/types/budget";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
-import type { NPP } from "@/lib/db/types/npp";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { sovereignCrisisDecisionsCollection } from "@/lib/db/repositories/sovereignCrisisDecisions";
 
@@ -51,33 +51,8 @@ const SUPPORT_THRESHOLD = 0.5;
  *   - Far-left (e<-50): support repudiate/monetize
  *   - Loyalist (loyalty high): defaults to "for" with mild bias
  */
-export function computeNpcSupportScore(
-  npp: Pick<NPP, "policies" | "personality">,
-  choice: SovereignResolutionChoice
-): number {
-  const e = npp.policies?.economic ?? 0;
-  const s = npp.policies?.social ?? 0;
-  const loyalty = (npp.personality?.loyalty ?? 50) / 100;
-
-  // Base: loyalty pulls support toward 0.55 (slight default-for bias).
-  let score = 0.5 + (loyalty - 0.5) * 0.1;
-
-  if (choice === "bailout") {
-    if (e > 30) score += 0.15; // free-market backs bailout
-    if (e < -50) score -= 0.15; // far-left opposes
-  } else if (choice === "restructure") {
-    if (e > 0) score += 0.1;
-    if (e < -50 && s > 0) score -= 0.1;
-  } else if (choice === "monetize") {
-    if (e < -30 || s < -50) score += 0.15; // populist/socialist favor
-    if (e > 50) score -= 0.15; // conservatives oppose
-  } else if (choice === "repudiate") {
-    if (e < -50 || s > 60) score += 0.2; // populist/nationalist back
-    if (e > 30 && s < 30) score -= 0.15; // technocrats oppose
-  }
-
-  return Math.max(0, Math.min(1, score));
-}
+export { computeNpcSupportScore } from "./rules/supportScore";
+import { computeNpcSupportScore } from "./rules/supportScore";
 
 /**
  * Deterministic 0..1 derived from the NPP and decision IDs — stable across
@@ -97,6 +72,13 @@ export async function runNpcLegislatorAutoVote(
   db: Db,
   input: NpcLegislatorAutoVoteInput
 ): Promise<NpcLegislatorAutoVoteReport> {
+  return withSessionDb(db, (db) => runNpcLegislatorAutoVoteInTransaction(db, input));
+}
+
+async function runNpcLegislatorAutoVoteInTransaction(
+  db: Db,
+  input: NpcLegislatorAutoVoteInput
+): Promise<NpcLegislatorAutoVoteReport> {
   const { decision, chamberIndex } = input;
   const phase = decision.legislativePhases?.[chamberIndex];
   if (!phase || phase.outcome !== "pending") {
@@ -108,12 +90,16 @@ export async function runNpcLegislatorAutoVote(
   // Find NPPs holding seats in the active chamber for this country, who
   // have NOT already voted on this phase.
   const alreadyVotedIds = Object.keys(phase.votes ?? {});
+  const weights = await loadChamberSeatWeights(db, input.countryCode, phase.chamberKey);
   const npps = await nppsCollection(db)
-    .find({
-      countryId: input.countryCode,
-      "currentOffice.type": phase.chamberKey,
-      retiredAt: null,
-    } as never)
+    .find(
+      {
+        countryId: input.countryCode,
+        _id: { $in: [...weights.keys()].map((id) => new MongoObjectId(id)) },
+        retiredAt: null,
+      } as never,
+      { projection: { _id: 1, policies: { economic: 1, social: 1 }, personality: { loyalty: 1 } } }
+    )
     .toArray();
 
   const report: NpcLegislatorAutoVoteReport = {
@@ -122,9 +108,12 @@ export async function runNpcLegislatorAutoVote(
     votesAgainst: 0,
   };
 
+  const voteUpdates: Record<string, "for" | "against"> = {};
+  const absentVotes: Record<string, { $exists: false }> = {};
   for (const npp of npps) {
     const nppKey = npp._id.toString();
-    if (alreadyVotedIds.includes(nppKey)) continue;
+    const weight = weights.get(nppKey) ?? 0;
+    if (!weight || alreadyVotedIds.includes(nppKey)) continue;
 
     const support = computeNpcSupportScore(npp, choice);
     const jitter = deterministicJitter(npp._id, decision._id);
@@ -132,20 +121,32 @@ export async function runNpcLegislatorAutoVote(
       support + (jitter - 0.5) * 0.1 >= SUPPORT_THRESHOLD ? "for" : "against";
 
     const voteFieldKey = `legislativePhases.${chamberIndex}.votes.${nppKey}`;
-    const counterField = vote === "for" ? "votesFor" : "votesAgainst";
-    const result = await sovereignCrisisDecisionsCollection(db).updateOne(
-      { _id: decision._id, [voteFieldKey]: { $exists: false } },
-      {
-        $set: { [voteFieldKey]: vote },
-        $inc: { [`legislativePhases.${chamberIndex}.${counterField}`]: 1 },
-      }
-    );
-    if (result.modifiedCount === 1) {
-      report.npcsVoted += 1;
-      if (vote === "for") report.votesFor += 1;
-      else report.votesAgainst += 1;
-    }
+    voteUpdates[voteFieldKey] = vote;
+    absentVotes[voteFieldKey] = { $exists: false };
+    report.npcsVoted++;
+    if (vote === "for") report.votesFor += weight;
+    else report.votesAgainst += weight;
   }
+  if (!report.npcsVoted) return report;
+  const result = await sovereignCrisisDecisionsCollection(db).updateOne(
+    {
+      _id: decision._id,
+      state: "executiveProposed",
+      currentChamberIndex: chamberIndex,
+      executiveChoice: choice,
+      [`legislativePhases.${chamberIndex}.chamberKey`]: phase.chamberKey,
+      [`legislativePhases.${chamberIndex}.outcome`]: "pending",
+      ...absentVotes,
+    },
+    {
+      $set: voteUpdates,
+      $inc: {
+        [`legislativePhases.${chamberIndex}.votesFor`]: report.votesFor,
+        [`legislativePhases.${chamberIndex}.votesAgainst`]: report.votesAgainst,
+      },
+    }
+  );
+  if (result.modifiedCount !== 1) return { npcsVoted: 0, votesFor: 0, votesAgainst: 0 };
 
   return report;
 }

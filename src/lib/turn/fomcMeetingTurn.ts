@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * Committee meetings collect ballots and execute carried motions only while
  * current monetary policy permits the move. processFomcMeetings advances the
@@ -5,8 +6,8 @@
  */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CentralBank, FomcSeat, FomcBallot, FomcNomination } from "@/lib/db/types/centralBank";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+import type { CentralBank, FomcSeat, FomcBallot } from "@/lib/db/types/centralBank";
+
 import type { Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
@@ -359,7 +360,7 @@ export async function processFomcMeetings(
   // dormant/government-controlled ones the meeting loop below skips. The
   // share-price formula reads primeRateSmoothed; leaving a bank out would pin
   // its market's discount rate at whatever the EMA last was.
-  {
+  await withTurnValueSettlement(db, "central-bank-rate-smoothing", currentTurn, async (db) => {
     const allBanks = await centralBanksCollection(db)
       .find({}, { projection: { primeRate: 1, primeRateSmoothed: 1 } })
       .toArray();
@@ -381,7 +382,7 @@ export async function processFomcMeetings(
     if (emaOps.length > 0) {
       await centralBanksCollection(db).bulkWrite(emaOps);
     }
-  }
+  });
 
   const candidates = await centralBanksCollection(db)
     .find({ fomcBoard: { $exists: true, $ne: [] } })

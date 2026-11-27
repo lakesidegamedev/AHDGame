@@ -1,4 +1,10 @@
-import { ObjectId, type Db } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import {
+  resolveCorpLiquidCurrencyCode,
+  loadValuationFxRates,
+} from "@/lib/currency/corporationCapital";
+import { restitutionQuote } from "@/lib/currency/rules/restitutionQuote";
+import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
@@ -64,6 +70,7 @@ interface CorporationDoc {
   _id: ObjectId;
   name?: string;
   liquidCurrencyCode?: CurrencyCode | string | null;
+  countryId?: import("@/lib/constants/countries").CountryId;
   remediation?: Record<string, unknown>;
 }
 
@@ -83,6 +90,8 @@ interface PlannedRestitution {
   amount: number;
   currencyCode: CurrencyCode;
   balanceField: string;
+  sourceAmountUsd?: number;
+  anchorAmount?: number;
 }
 
 interface Payload {
@@ -207,6 +216,10 @@ async function plan(db: Db): Promise<HealPlan> {
 }
 
 async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
+  return withSessionDb(db, (db) => applyRestitution(db, healPlan, ctx));
+}
+
+async function applyRestitution(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
   const payload = healPlan.payload as Payload | undefined;
   const restitutions = payload?.restitutions ?? [];
   if (restitutions.length === 0) {
@@ -214,7 +227,26 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   const applied: PlannedRestitution[] = [];
-  for (const row of restitutions) {
+  const corpOps: AnyBulkWriteOperation<CorporationDoc>[] = [];
+  const bankOps: AnyBulkWriteOperation<CentralBankDoc>[] = [];
+  const [current, rates] = await Promise.all([loadDocs(db), loadValuationFxRates(db)]);
+  for (const original of restitutions) {
+    let row = original;
+    if (original.collection === "centralBanks" && (!current.usCb || hasMarker(current.usCb)))
+      continue;
+    if (original.collection === "corporations") {
+      if (!current.hunt || hasMarker(current.hunt)) continue;
+      const currencyCode = resolveCorpLiquidCurrencyCode(current.hunt) ?? "USD";
+      const quote = restitutionQuote(original.amount, "USD", currencyCode, rates);
+      row = {
+        ...original,
+        currencyCode,
+        sourceAmountUsd: original.amount,
+        anchorAmount: quote.anchorAmount,
+        amount: quote.amountLocal,
+      };
+    }
+
     // The marker is written in the SAME update as the increment, under a
     // filter that demands its absence. Two concurrent runs cannot both
     // credit: the second matches nothing.
@@ -227,6 +259,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
           kind: row.kind,
           amount: row.amount,
           currencyCode: row.currencyCode,
+          sourceAmountUsd: row.sourceAmountUsd ?? row.amount,
           destroyedCharterOwner: VERMONT_FINANCE_ID,
           sourceTurn: MERGE_TURN,
           runId: ctx.runId ?? null,
@@ -234,18 +267,34 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         updatedAt: ctx.now,
       },
     };
-    const res =
-      row.collection === "corporations"
-        ? await corporationsCollection<CorporationDoc>(db).updateOne(
-            { _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } },
-            update
-          )
-        : await centralBanksCollection<CentralBankDoc>(db).updateOne(
-            { _id: row.docId, [MARKER_PATH]: { $exists: false } },
-            update
-          );
-    if (res.modifiedCount === 1) applied.push(row);
+    if (row.collection === "corporations")
+      corpOps.push({
+        updateOne: {
+          filter: { _id: new ObjectId(row.docId), [MARKER_PATH]: { $exists: false } },
+          update,
+        },
+      });
+    else
+      bankOps.push({
+        updateOne: {
+          filter: { _id: row.docId, [MARKER_PATH]: { $exists: false } },
+          update,
+        },
+      });
+    applied.push(row);
   }
+  if (
+    corpOps.length &&
+    (await corporationsCollection<CorporationDoc>(db).bulkWrite(corpOps)).modifiedCount !==
+      corpOps.length
+  )
+    throw new Error("Restitution recipient changed before credit");
+  if (
+    bankOps.length &&
+    (await centralBanksCollection<CentralBankDoc>(db).bulkWrite(bankOps)).modifiedCount !==
+      bankOps.length
+  )
+    throw new Error("Restitution household pool changed before credit");
 
   if (applied.length > 0) {
     const thresholds = await loadTxThresholds(db);
@@ -261,12 +310,13 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
               subjectName: row.subjectName,
               amount: row.amount,
               currencyCode: row.currencyCode,
-              anchorAmount: row.amount,
+              anchorAmount: row.anchorAmount ?? row.amount,
               meta: {
                 ticket: 1267,
                 defectId: DEFECT_ID,
                 runId: ctx.runId ?? null,
                 kind: "owner_residual",
+                sourceAmountUsd: row.sourceAmountUsd ?? row.amount,
                 destroyedCharterOwner: VERMONT_FINANCE_ID,
                 sourceTurn: MERGE_TURN,
               },

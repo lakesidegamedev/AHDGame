@@ -1,6 +1,6 @@
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { NPP, StatePartyOrg, PoliticalParty, State, ElectionCandidate } from "@/lib/db/types";
+import type { NPP, StatePartyOrg, PoliticalParty } from "@/lib/db/types";
 import type { InfluenceType } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isNationalCampaigner } from "@/lib/parties/access";
@@ -97,9 +97,10 @@ export async function validateStatePartyInfluence(
   influenceType: InfluenceType,
   _fundAmount: number,
   actorCharacterId: ObjectId,
-  context?: { electionId?: string; candidateId?: string; targetStateId?: string }
+  context?: { electionId?: string; candidateId?: string; targetStateId?: string },
+  existingDb?: Db
 ): Promise<{ valid: boolean; error?: string }> {
-  const db = await getDb();
+  const db = existingDb ?? (await getDb());
 
   const isChair = statePartyOrg.chairId?.equals(actorCharacterId);
   const isViceChair = statePartyOrg.viceChairId?.equals(actorCharacterId);
@@ -162,9 +163,10 @@ export async function validateNationalPartyInfluence(
   influenceType: InfluenceType,
   _fundAmount: number,
   actorCharacterId: ObjectId,
-  context?: { electionId?: string; candidateId?: string; targetStateId?: string }
+  context?: { electionId?: string; candidateId?: string; targetStateId?: string },
+  existingDb?: Db
 ): Promise<{ valid: boolean; error?: string }> {
-  const db = await getDb();
+  const db = existingDb ?? (await getDb());
 
   const isChair = party.chairId?.equals(actorCharacterId);
   const isViceChair = party.viceChairId?.equals(actorCharacterId);

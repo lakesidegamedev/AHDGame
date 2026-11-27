@@ -1,5 +1,5 @@
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
-import * as Sentry from "@sentry/nextjs";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -7,11 +7,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpDailyGrossRevenuePricingLocal } from "@/lib/corporations/dailyGrossRevenue";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { emitTxStrict } from "@/lib/financialTxLog/emit";
-import {
-  buildTechUnlockRefundUpdate,
-  buildTechUnlockTxEntry,
-  refundSpecForNode,
-} from "@/lib/corporations/techTree/techUnlockLedger";
+import { buildTechUnlockTxEntry } from "@/lib/corporations/techTree/techUnlockLedger";
 import { frontierResearchInc } from "@/lib/corporations/techTree/frontierResearch";
 import {
   canUnlock,
@@ -78,6 +74,18 @@ const REASON_MESSAGE: Record<UnlockBlockReason, string> = {
  * Caller handles auth (CEO), the feature gate, and resolving the corporation.
  */
 export async function unlockTechNode(
+  db: Db,
+  corporation: Corporation,
+  nodeId: string,
+  currentYear: number,
+  turn: number
+): Promise<UnlockTechNodeResult> {
+  return withSessionDb(db, (transactionDb) =>
+    unlockInTransaction(transactionDb, corporation, nodeId, currentYear, turn)
+  );
+}
+
+async function unlockInTransaction(
   db: Db,
   corporation: Corporation,
   nodeId: string,
@@ -162,6 +170,8 @@ export async function unlockTechNode(
   const updateResult = await corporationsCollection(db).updateOne(
     {
       _id: corporation._id,
+      liquidCurrencyCode: corporation.liquidCurrencyCode ?? { $exists: false },
+      countryId: corporation.countryId,
       rdScore: { $gte: node.cost },
       liquidCapital: { $gte: cashCost },
       ...corporateDiscretionaryCashGuard(),
@@ -190,62 +200,26 @@ export async function unlockTechNode(
     };
   }
 
-  // The cash debit above committed: record the matching finance-history debit
-  // in the same turn and currency. The strict emit retries
-  // transient insert failures and adopts an applied-but-unacknowledged row;
-  // a persistent failure rolls the unlock back so a successful debit can
-  // never be left with no visible entry.
   const currencyCode: CurrencyCode = resolveCorpLiquidCurrencyCode(corporation) ?? "USD";
-  try {
-    await emitTxStrict(
-      db,
-      buildTechUnlockTxEntry({
-        corporationId: corporation._id,
-        corporationName: corporation.name ?? "Corporation",
-        corporationSequentialId: corporation.sequentialId,
-        nodeId: node.id,
-        nodeName: node.name,
-        decadeId: node.decadeId,
-        lane: node.lane,
-        slot: node.slot,
-        rdCost: node.cost,
-        cashCost,
-        currencyCode,
-        turn,
-        createdAt: new Date(),
-        alreadyOwned: [...(corporation.unlockedTechNodeIds ?? [])],
-      })
-    );
-  } catch (err) {
-    Sentry.captureException(err, {
-      extra: {
-        phase: "unlockTechNode.ledger",
-        corpId: corporation._id.toString(),
-        nodeId: node.id,
-        turn,
-      },
-    });
-    try {
-      await corporationsCollection(db).updateOne(
-        { _id: corporation._id },
-        buildTechUnlockRefundUpdate(refundSpecForNode(node, cashCost, committing))
-      );
-    } catch (refundErr) {
-      Sentry.captureException(refundErr, {
-        extra: {
-          phase: "unlockTechNode.ledgerRefund",
-          corpId: corporation._id.toString(),
-          nodeId: node.id,
-          turn,
-        },
-      });
-    }
-    return {
-      ok: false,
-      status: 500,
-      error: "Unlock could not be recorded - no cash was charged. Please retry.",
-    };
-  }
+  await emitTxStrict(
+    db,
+    buildTechUnlockTxEntry({
+      corporationId: corporation._id,
+      corporationName: corporation.name ?? "Corporation",
+      corporationSequentialId: corporation.sequentialId,
+      nodeId: node.id,
+      nodeName: node.name,
+      decadeId: node.decadeId,
+      lane: node.lane,
+      slot: node.slot,
+      rdCost: node.cost,
+      cashCost,
+      currencyCode,
+      turn,
+      createdAt: new Date(),
+      alreadyOwned: [...(corporation.unlockedTechNodeIds ?? [])],
+    })
+  );
 
   return {
     ok: true,

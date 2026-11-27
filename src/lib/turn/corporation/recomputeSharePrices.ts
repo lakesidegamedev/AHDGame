@@ -312,8 +312,9 @@ export async function recomputeSharePricesAfterBondTurn(
       sectorNPVAnchor,
       issuedBondDebt:
         (lookups.issuedBondDebtByCorpId.get(id) ?? 0) +
-        (lookups.constructionLoanDebtByCorpId?.get(id) ?? 0) +
+        (lookups.corporateLoanDebtByCorpId?.get(id) ?? 0) +
         corporateCashArrearsAnchor({
+          producerPayables: corp.producerPayables?.claims,
           operatingByCurrency: corp.operatingCashArrearsByCurrency,
           federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
           fxByCurrency: lookups.exchangeRatesByCurrency,

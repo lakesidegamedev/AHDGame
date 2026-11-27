@@ -2,6 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: async (db: Db, work: (db: Db) => Promise<Response>) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", () => ({
+  runWithDbSession: async (_db: Db, work: (session: object) => Promise<unknown>) => work({}),
+  boundSession: () => undefined,
+  afterCommit: (_db: Db, work: () => unknown) => work(),
+}));
+vi.mock("@/lib/gameState", () => ({
+  getGameStateCore: async () => ({ currentTurn: 100 }),
+  getGameState: async () => ({ currentTurn: 100 }),
+}));
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
   getMongoClient: vi.fn(async () => ({
@@ -140,7 +152,7 @@ describe("POST /api/country/[code]/parties/[id]/caucuses/[slug]/send", () => {
     expect(db.collectionMocks["caucuses"]!.updateOne).not.toHaveBeenCalled();
   });
 
-  it("refunds the caucus treasury when the recipient credit throws after the debit", async () => {
+  it("aborts without a compensating credit when the recipient credit throws after the debit", async () => {
     // Force the standalone (non-transactional) fallback so the route's own
     // compensation runs.
     const { getMongoClient } = await import("@/lib/mongodb");
@@ -160,15 +172,11 @@ describe("POST /api/country/[code]/parties/[id]/caucuses/[slug]/send", () => {
     const response = await call(100_000);
 
     expect(response.status).toBeGreaterThanOrEqual(500);
-    expect(db.collectionMocks["caucuses"]!.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks["caucuses"]!.updateOne).toHaveBeenCalledTimes(1);
     const debit = db.collectionMocks["caucuses"]!.updateOne.mock.calls[0]![1] as {
       $inc: Record<string, number>;
     };
-    const refund = db.collectionMocks["caucuses"]!.updateOne.mock.calls[1]![1] as {
-      $inc: Record<string, number>;
-    };
     expect(debit.$inc).toMatchObject({ treasury: -100_000 });
-    expect(refund.$inc).toMatchObject({ treasury: 100_000 });
     expect(db.collectionMocks["adminLogs"]!.insertOne).not.toHaveBeenCalled();
   });
 });

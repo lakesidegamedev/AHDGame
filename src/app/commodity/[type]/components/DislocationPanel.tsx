@@ -28,7 +28,7 @@ interface DislocationPanelProps {
   /** Imports attributed to each state; empty or absent when imports are unknown. */
   stateImports?: Record<string, number>;
   unit: string;
-  forexEnabled?: boolean;
+  forexEnabled?: boolean | null;
   exchangeRates?: Partial<Record<CurrencyCode, number>>;
 }
 

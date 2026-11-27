@@ -789,8 +789,11 @@ describe("recalculateInflationPerTurn", () => {
       const { recalculateInflationPerTurn } = await import("./inflationRecalc");
       await recalculateInflationPerTurn(db as unknown as Db, 100);
 
-      const bankUpdateIds = db.collectionMocks["centralBanks"]!.updateOne.mock.calls.map(
-        (c: unknown[]) => (c[0] as { _id: string })._id
+      const bankUpdateIds = db.collectionMocks["centralBanks"]!.bulkWrite.mock.calls.flatMap(
+        (c: unknown[]) =>
+          (c[0] as { updateOne: { filter: { _id: string } } }[]).map(
+            (op) => op.updateOne.filter._id
+          )
       );
       expect(bankUpdateIds).toContain("ECB");
       expect(bankUpdateIds).not.toContain("DE");
@@ -872,3 +875,13 @@ describe("recalculateInflationPerTurn", () => {
     expect(mockCalculateCountryInflation).toHaveBeenCalledTimes(1);
   });
 });
+
+// Formula/transport fixture; atomic monetary tests exercise the real settlement.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

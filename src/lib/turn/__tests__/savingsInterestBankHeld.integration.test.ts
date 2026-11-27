@@ -1,3 +1,4 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 /**
  * Bank-held savings earn the CB base APY in savingsInterestTurn unless their
  * currency reads authoritative (the bank pays the full rate there).
@@ -11,9 +12,9 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { processSavingsInterestTurn } from "@/lib/turn/savingsInterestTurn";
-import { computeSavingsInterestForTurn } from "@/lib/currency/savingsInterest";
+import { computeSavingsInterestForTurn } from "@/lib/currency/rules/savingsInterest";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
@@ -30,7 +31,7 @@ const ACCRUAL_TURN = 500;
 const FLUSH_TURN = 504;
 
 function world(savingsAccountsMode: string, readCurrencies: string[]): InMemoryDb {
-  const db = createInMemoryDb();
+  const { memory: db } = createTransactionalMemoryDb();
   db.seed("gameConfig", [
     {
       _id: "default",

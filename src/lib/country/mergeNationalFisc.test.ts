@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -55,11 +59,11 @@ describe("mergeNationalFisc", () => {
     // Cash crosses as cash; the bond ledger owns principal, so neither write
     // carries a balance-derived mirror (refs #1975).
     expect(deSet.$set).not.toHaveProperty("debt.principal");
-    expect(deSet.$inc["defenseAppropriation.balance"]).toBe(100); // 50 × 2
+    expect(deSet.$set.defenseAppropriation.balance).toBe(100); // 50 × 2
     const ddSet = calls.find((c) => c[0]._id === "DD")![1].$set;
     expect(ddSet.treasuryBalance).toBe(0);
     expect(ddSet).not.toHaveProperty("debt.principal");
-    expect(ddSet["defenseAppropriation.balance"]).toBe(0);
+    expect(ddSet.defenseAppropriation.balance).toBe(0);
     expect(ddSet.mergedInto).toEqual({ countryId: "DE", turn: 510 });
   });
 

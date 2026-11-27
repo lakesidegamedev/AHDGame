@@ -22,3 +22,15 @@ describe("strategyRetoolPricing", () => {
     expect(strategyRetoolPricing(input, [], "humanoid_robotics").retoolCost).toBe(550);
   });
 });
+
+it("uses the host denomination and actual corporation currency for the foreign spread", () => {
+  const quote = strategyRetoolPricing(
+    { ...input, sectorHostLiquidCode: "JPY", sectorHostFxRate: 100, corporationLiquidCode: "USD" },
+    [],
+    "humanoid_robotics"
+  );
+  expect(quote.baseRetoolCost).toBe(2.5);
+  expect(quote.downsideCharge).toBe(3);
+  expect(quote.foreignSpread).toBeGreaterThan(0);
+  expect(quote.retoolCost).toBeCloseTo(5.5 + quote.foreignSpread);
+});

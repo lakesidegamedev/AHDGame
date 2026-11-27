@@ -30,8 +30,10 @@ export interface StockExchangeListing {
   sharePrice: number;
   totalShares: number;
   marketCap: number;
-  totalRevenue: number;
-  income: number;
+  totalRevenue: number | null;
+  income: number | null;
+  incomeBasis?: "settled" | "estimate" | "unavailable";
+  incomeTurn?: number;
   /**
    * Currency that `sharePrice` / `marketCap` / `totalRevenue` / `income`
    * are denominated in. Missing on pre-forex listings; UI treats that
@@ -41,8 +43,8 @@ export interface StockExchangeListing {
   /** Anchor (₳) mirrors for cross-corp sort + aggregation. */
   sharePriceAnchor?: number;
   marketCapAnchor?: number;
-  totalRevenueAnchor?: number;
-  incomeAnchor?: number;
+  totalRevenueAnchor?: number | null;
+  incomeAnchor?: number | null;
   priceChange1h: number;
   priceChange24h: number;
   priceChange48h: number;

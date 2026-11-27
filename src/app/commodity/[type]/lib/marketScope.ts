@@ -225,7 +225,8 @@ export function buildCommodityMarketScope(
     data.basePrice,
     data.globalPrice,
     data.nationalSupply,
-    data.nationalDemand
+    data.nationalDemand,
+    data.nationalPrices
   );
   const countryRollup = countryRollups[activeCountry];
   // A funded book covers every country that traded; one absent from it had no

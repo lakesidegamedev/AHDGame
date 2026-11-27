@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 // DELETE /api/country/[code]/executive/cabinet/[positionId]/military/[unitId]
 // Disband a unit. Auth: defense holder or admin. Free. Errors: 400, 401, 403, 404
 import { NextResponse } from "next/server";
@@ -33,46 +34,32 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const member = await getCabinetMembersCollection(db).findOne({ countryId, positionId });
-    const isHolder =
-      member &&
-      member.characterId &&
-      auth.user.character &&
-      member.characterId.toString() === auth.user.character._id.toString();
-    if (!isHolder && !auth.user.isAdmin) {
-      return errorResponse(403, "Only the defence minister may disband units.");
-    }
-
-    const unitsCol = getMilitaryUnitsCollection(db);
-    const unit = await unitsCol.findOne({ _id: new ObjectId(unitId), countryId });
-    if (!unit) {
-      return errorResponse(404, "Unit not found");
-    }
-
-    const result = await unitsCol.deleteOne({ _id: new ObjectId(unitId), countryId });
-    if (result.deletedCount === 0) {
-      return errorResponse(404, "Unit not found");
-    }
-
-    // Demobilised men go home. No cash refund — the unrefunded purchase price is
-    // what keeps unit churn expensive.
-    //
-    // The unit is already deleted and cannot be restored, so a manpower failure
-    // must not turn a successful disband into a 500 the client retries: log and
-    // return success. The men are lost, which is strictly better than the caller
-    // believing the unit still exists.
-    if (unit.personnel > 0) {
-      try {
-        await returnManpower(db, countryId, unit.personnel);
-      } catch (error) {
-        console.error(
-          `[disband] ${countryId}: unit ${unitId} deleted but ${unit.personnel} manpower not returned`,
-          error
-        );
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const member = await getCabinetMembersCollection(db).findOne({ countryId, positionId });
+      const isHolder =
+        member &&
+        member.characterId &&
+        auth.user.character &&
+        member.characterId.toString() === auth.user.character._id.toString();
+      if (!isHolder && !auth.user.isAdmin) {
+        return errorResponse(403, "Only the defence minister may disband units.");
       }
-    }
 
-    return NextResponse.json({ success: true });
+      const unitsCol = getMilitaryUnitsCollection(db);
+      const unit = await unitsCol.findOne({ _id: new ObjectId(unitId), countryId });
+      if (!unit) {
+        return errorResponse(404, "Unit not found");
+      }
+
+      const result = await unitsCol.deleteOne({ _id: new ObjectId(unitId), countryId });
+      if (result.deletedCount === 0) {
+        return errorResponse(404, "Unit not found");
+      }
+
+      if (unit.personnel > 0) await returnManpower(db, countryId, unit.personnel);
+
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { ObjectId, type Db } from "mongodb";
 import { describe, expect, it, vi } from "vitest";
 import { createMockDb } from "@/lib/test-utils/mockDb";
@@ -44,6 +47,23 @@ function setup(interactionExtra: Record<string, unknown> = {}) {
       { _id: "YU_CRO", name: "Croatia", countryId: "YU", gdp: 1000, capitalStock: 3000 },
       { _id: "YU_BIH", name: "Bosnia", countryId: "YU", gdp: 400, capitalStock: 1200 },
     ]);
+  db.collection("conflictCapacityObligations").bulkWrite.mockImplementation(
+    async (
+      operations: {
+        updateOne: { update: { $setOnInsert: Record<string, unknown> }; filter: { _id: string } };
+      }[]
+    ) => {
+      db.collection("conflictCapacityObligations")
+        .find()
+        .toArray.mockResolvedValue(
+          operations.map(({ updateOne }) => ({
+            _id: updateOne.filter._id,
+            ...updateOne.update.$setOnInsert,
+          }))
+        );
+      return { matchedCount: 0, upsertedCount: operations.length };
+    }
+  );
   return { db, crisisId, interactionId };
 }
 
@@ -80,7 +100,7 @@ describe("capacity destruction at resolution", () => {
       },
     });
     await resolveGlobalResponse(db as unknown as Db, crisisId);
-    expect(db.collectionMocks.conflictCapacityObligations).toBeUndefined();
+    expect(db.collectionMocks.conflictCapacityObligations.bulkWrite).not.toHaveBeenCalled();
   });
 
   it("finishes destruction a crash left unwritten, without a second claim", async () => {

@@ -3,9 +3,10 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBotToken } from "@/lib/api/requireBotToken";
 import { checkRateLimit, rateLimitResponse, BOT_FINANCIAL_LIMITS } from "@/lib/api/rateLimit";
-import type { User } from "@/lib/db/types";
+
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
+import { getPersonalBalance, getHomeCurrency } from "@/lib/currency/characterFunds";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { usersCollection } from "@/lib/db/repositories/users";
 
@@ -41,9 +42,13 @@ export async function GET(request: Request) {
       return errorResponse(404, "No user found with that Discord ID", { extra: { discordId } });
     }
 
-    const [character, forexEnabled] = await Promise.all([
-      charactersCollection(db).findOne({ userId: user._id }),
+    const [character, forexEnabled, state] = await Promise.all([
+      charactersCollection(db).findOne({
+        userId: user._id,
+        ...(user.activeCharacterId ? { _id: user.activeCharacterId } : {}),
+      }),
       isForexEnabled(),
+      gameStateCollection(db).findOne({ _id: "current" }, { projection: { preset: 1 } }),
     ]);
 
     if (!character) {
@@ -58,7 +63,12 @@ export async function GET(request: Request) {
       characterId: character._id.toString(),
       characterName: character.name,
       countryId: character.countryId,
-      cashOnHand: getTotalPersonalWealth(character, forexEnabled),
+      currency: getHomeCurrency(character, state?.preset),
+      cashOnHand: getPersonalBalance(
+        character,
+        getHomeCurrency(character, state?.preset),
+        forexEnabled
+      ),
     });
   } catch (error) {
     return handleRouteError(error);

@@ -97,10 +97,14 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
     });
     if (Object.keys(set).length === 0) continue;
     updated += 1;
-    // Guard on the queue length so a concurrent edit cannot land on a shifted index.
+    // Match the exact orders when committing their delivery baseline.
     ops.push({
       updateOne: {
-        filter: { _id: sector._id, buildQueue: { $size: queue.length } },
+        filter: {
+          _id: sector._id,
+          buildQueue: queue,
+          buildDeliverySettledTurn: sector.buildDeliverySettledTurn,
+        },
         update: { $set: set },
       },
     });
@@ -112,7 +116,10 @@ async function run(db: Db, ctx: MigrationContext): Promise<MigrationResult> {
       notes: [`dry run: would re-anchor in-flight build orders in ${updated} sectors`],
     };
   }
-  if (ops.length > 0) await sectors.bulkWrite(ops as never, { ordered: false });
+  if (ops.length > 0) {
+    const result = await sectors.bulkWrite(ops as never, { ordered: false });
+    updated = result.modifiedCount;
+  }
   return {
     documentsScanned: scanned,
     documentsUpdated: updated,

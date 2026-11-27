@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { buyPublicShares } from "./buyPublicShares";
+import { sellPublicShares } from "./sellPublicShares";
 import { placeShareOrder } from "./placeShareOrder";
 import { trimCorporateBuyOrdersToReserve } from "@/lib/turn/corporation/shareOrderReserveTrim";
 
@@ -24,7 +25,7 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 const TURN = 20;
 
 async function fixture(opts: { cash: number; billsPerTurn: number }) {
-  const memory = createInMemoryDb();
+  const { memory } = createTransactionalMemoryDb();
   const db = memory as unknown as Db;
   const userId = new ObjectId();
   const ceoId = new ObjectId();
@@ -283,5 +284,156 @@ describe("corporate resting buy orders and the operating reserve", () => {
       ordersReleased: 0,
     });
     expect(await cashOf(db, buyerId)).toBe(500_000);
+  });
+});
+
+describe("public share settlement interruption and overlap", () => {
+  it.each(["market", "immediate-order"])(
+    "rolls back cash and shares if the issuer credit fails: %s",
+    async (kind) => {
+      const { memory, db, buyerId, targetId } = await fixture({ cash: 1_000_000, billsPerTurn: 0 });
+      const corporations = memory.collection("corporations");
+      const update = corporations.findOneAndUpdate.bind(corporations);
+      let interrupt = true;
+      vi.spyOn(corporations, "findOneAndUpdate").mockImplementation(
+        async (filter, operation, options) => {
+          if (
+            interrupt &&
+            String(filter._id) === String(targetId) &&
+            Number((operation as { $inc?: { liquidCapital?: number } }).$inc?.liquidCapital) > 0
+          ) {
+            interrupt = false;
+            throw new Error("interrupted issuer credit");
+          }
+          return update(filter, operation, options);
+        }
+      );
+      const submit = () =>
+        kind === "market"
+          ? buy(targetId, { shares: 100_000 })
+          : placeOrder(targetId, { shares: 100_000, pricePerShare: 1.1 });
+      expect((await submit()).status).toBe(500);
+      expect(await cashOf(db, buyerId)).toBe(1_000_000);
+      expect(await cashOf(db, targetId)).toBe(0);
+      expect((await db.collection("corporations").findOne({ _id: targetId }))?.publicFloat).toBe(
+        5_000_000
+      );
+      expect((await submit()).status).toBe(200);
+      expect((await cashOf(db, buyerId)) + (await cashOf(db, targetId))).toBe(1_000_000);
+      const target = await db.collection("corporations").findOne({ _id: targetId });
+      expect(target?.publicFloat).toBe(4_900_000);
+      expect(
+        (target?.shareholders as { corporationId: ObjectId; shares: number }[]).find((holder) =>
+          holder.corporationId?.equals(buyerId)
+        )?.shares
+      ).toBe(100_000);
+    }
+  );
+  it("restores a resting order's reserved cash when insertion is interrupted", async () => {
+    const { memory, db, buyerId, targetId } = await fixture({ cash: 1_000_000, billsPerTurn: 0 });
+    vi.spyOn(memory.collection("shareOrders"), "insertOne").mockRejectedValueOnce(
+      new Error("interrupted escrow order")
+    );
+    expect((await placeOrder(targetId, { shares: 100_000, pricePerShare: 0.9 })).status).toBe(500);
+    expect(await cashOf(db, buyerId)).toBe(1_000_000);
+    expect(await db.collection("shareOrders").countDocuments({})).toBe(0);
+    expect((await placeOrder(targetId, { shares: 100_000, pricePerShare: 0.9 })).status).toBe(200);
+    expect(await cashOf(db, buyerId)).toBe(910_000);
+    expect(await db.collection("shareOrders").countDocuments({})).toBe(1);
+  });
+  it("does not oversell a shared public float when two purchases overlap", async () => {
+    const { db, buyerId, targetId } = await fixture({ cash: 10_000_000, billsPerTurn: 0 });
+    const results = await Promise.all([
+      buy(targetId, { shares: 3_000_000 }),
+      buy(targetId, { shares: 3_000_000 }),
+    ]);
+    expect(results.filter((response) => response.status === 200)).toHaveLength(1);
+    expect((await db.collection("corporations").findOne({ _id: targetId }))?.publicFloat).toBe(
+      2_000_000
+    );
+    expect((await cashOf(db, buyerId)) + (await cashOf(db, targetId))).toBe(10_000_000);
+  });
+  it("restores issuer cash and the holding when seller credit is interrupted", async () => {
+    const { memory, db, buyerId, targetId } = await fixture({ cash: 1_000_000, billsPerTurn: 0 });
+    expect((await buy(targetId, { shares: 100_000 })).status).toBe(200);
+    const corporations = memory.collection("corporations");
+    const update = corporations.updateOne.bind(corporations);
+    let interrupt = true;
+    vi.spyOn(corporations, "updateOne").mockImplementation(async (filter, operation, options) => {
+      if (
+        interrupt &&
+        String(filter._id) === String(buyerId) &&
+        Number((operation as { $inc?: { liquidCapital?: number } }).$inc?.liquidCapital) > 0
+      ) {
+        interrupt = false;
+        throw new Error("interrupted seller credit");
+      }
+      return update(filter, operation, options);
+    });
+    const sell = () =>
+      sellPublicShares(
+        new Request("http://localhost/x", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shares: 100_000, sellAsCorporation: true }),
+        }),
+        { params: Promise.resolve({ id: String(targetId) }) }
+      );
+    expect((await sell()).status).toBe(500);
+    expect(await cashOf(db, buyerId)).toBe(900_000);
+    expect(await cashOf(db, targetId)).toBe(100_000);
+    expect((await db.collection("corporations").findOne({ _id: targetId }))?.publicFloat).toBe(
+      4_900_000
+    );
+    expect((await sell()).status).toBe(200);
+    expect((await cashOf(db, buyerId)) + (await cashOf(db, targetId))).toBe(1_000_000);
+    expect((await db.collection("corporations").findOne({ _id: targetId }))?.publicFloat).toBe(
+      5_000_000
+    );
+  });
+});
+
+describe("reserve trim atomic refunds", () => {
+  it("restores escrow after a failed refund and overlapping retries refund once", async () => {
+    const { memory, db, buyerId, targetId } = await fixture({
+      cash: 50_000,
+      billsPerTurn: 100_000,
+    });
+    const orderId = new ObjectId();
+    memory.seed("shareOrders", [
+      {
+        _id: orderId,
+        corporationId: targetId,
+        placerCorporationId: buyerId,
+        type: "buy",
+        status: "open",
+        sharesRemaining: 400_000,
+        escrowAmount: 400_000,
+        pricePerShare: 1,
+        createdAt: new Date(),
+      },
+    ]);
+    vi.spyOn(memory.collection("corporations"), "bulkWrite").mockRejectedValueOnce(
+      new Error("interrupted reserve refund")
+    );
+    await expect(trimCorporateBuyOrdersToReserve(db, new Date(), TURN)).rejects.toThrow(
+      "interrupted reserve refund"
+    );
+    expect((await db.collection("shareOrders").findOne({ _id: orderId }))?.escrowAmount).toBe(
+      400_000
+    );
+    expect(await cashOf(db, buyerId)).toBe(50_000);
+    await Promise.all([
+      trimCorporateBuyOrdersToReserve(db, new Date(), TURN),
+      trimCorporateBuyOrdersToReserve(db, new Date(), TURN),
+    ]);
+    expect(await cashOf(db, buyerId)).toBe(300_000);
+    expect((await db.collection("shareOrders").findOne({ _id: orderId }))?.escrowAmount).toBe(
+      150_000
+    );
+    expect(await trimCorporateBuyOrdersToReserve(db, new Date(), TURN)).toEqual({
+      ordersTrimmed: 0,
+      ordersReleased: 0,
+    });
   });
 });

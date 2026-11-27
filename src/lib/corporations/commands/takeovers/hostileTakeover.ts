@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { assumeExtractionContracts } from "@/lib/extraction/assumeExtractionContracts";
 import {
   checkCorpPurchaseReserve,
@@ -30,9 +31,8 @@ import {
   resolveCorporation,
   requireCeo,
 } from "@/lib/api/corporations/resolveQuery";
-import type { CorporateSector, ImperialCharacter, State } from "@/lib/db/types";
-import type { ShareListing } from "@/lib/db/types/shareListings";
-import type { ShareOrder } from "@/lib/db/types/corporation";
+import type { CorporateSector } from "@/lib/db/types";
+
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
@@ -185,974 +185,983 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     }
 
     const db = await getDb();
-    const turnGuard = await rejectDuringTurn(db);
-    if (turnGuard) return turnGuard;
-    const stockTaxState = await gameStateCollection<{
-      _id: string;
-      stockHoldingTaxStartTurn?: number;
-    }>(db).findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
-    const corpGuard = await requireCorporationActionsEnabled(db);
-    if (corpGuard) return corpGuard;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const turnGuard = await rejectDuringTurn(db);
+      if (turnGuard) return turnGuard;
+      const stockTaxState = await gameStateCollection<{
+        _id: string;
+        stockHoldingTaxStartTurn?: number;
+      }>(db).findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } });
+      const corpGuard = await requireCorporationActionsEnabled(db);
+      if (corpGuard) return corpGuard;
 
-    const resolvedTarget = await resolveCorporation(db, id);
-    if (!resolvedTarget.ok) return resolvedTarget.response;
-    const target = resolvedTarget.corporation;
+      const resolvedTarget = await resolveCorporation(db, id);
+      if (!resolvedTarget.ok) return resolvedTarget.response;
+      const target = resolvedTarget.corporation;
 
-    const parentQuery = corporationQueryFromParamId(parsed.data.parentCorporationId);
-    if (!parentQuery) {
-      return errorResponse(400, "Invalid parent corporation ID");
-    }
-    const parent = await corporationsCollection(db).findOne(parentQuery);
-    if (!parent) {
-      return errorResponse(404, "Parent corporation not found");
-    }
-
-    const ceoCheck = requireCeo(parent, auth.user);
-    if (ceoCheck) return ceoCheck;
-
-    if (parent._id.equals(target._id)) {
-      return errorResponse(400, "Invalid takeover target");
-    }
-
-    if (target.countryOwnerId) {
-      return errorResponse(400, "National corporations cannot be merged via hostile takeover.");
-    }
-
-    const pct = acquirerOwnershipPercent(parent._id, target);
-    if (pct <= HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT) {
-      return errorResponse(
-        400,
-        `Your corporation must hold more than ${HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT}% of outstanding shares (${pct.toFixed(2)}% currently).`
-      );
-    }
-
-    const unplacedFloat = unplacedIpoShares(target);
-    if ((target.publicFloat ?? 0) > unplacedFloat) {
-      return errorResponse(
-        400,
-        "Buy the outstanding public float before merging, or use an agreed acquisition that pays public investors."
-      );
-    }
-
-    if ((target.imfFacilityPrincipalOutstanding ?? 0) > 0 || (target.liquidCapital ?? 0) < 0) {
-      return errorResponse(
-        400,
-        "Repay the subsidiary's financing liabilities before merging so those obligations remain accounted for."
-      );
-    }
-
-    // Merger review (C3). The squeeze-out is the moment the two firms become
-    // one, so it is the moment competition policy gets a say. Checked before
-    // any money moves; a referral leaves both corporations untouched and the
-    // player retries once the authority clears it (clearance is durable per
-    // pair, so the retry sails straight through).
-    const reviewTurn = await getCurrentTurn(db);
-    const transferRestriction = await controllerTransferBarrierError(
-      db,
-      parent,
-      reviewTurn,
-      new Date()
-    );
-    if (transferRestriction) return errorResponse(403, transferRestriction);
-
-    const barred = acquisitionsBarredByDivestiture(parent, reviewTurn);
-    if (barred) return errorResponse(403, barred);
-    const clearance = await assertMergerClearance(
-      db,
-      parent,
-      target,
-      "hostileTakeover",
-      reviewTurn
-    );
-    if (!clearance.ok) {
-      return errorResponse(clearance.status, clearance.error);
-    }
-    const foreignRejection = await assertForeignControlAllowed(db, parent, target);
-    if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
-
-    // Banked subsidiary (ticket-1267): the charter is a sub-document on the
-    // target, so absorbing the shell would delete its bank with it. The
-    // transfer inside the lock re-parents it — but a corporation holds a
-    // single charter, so when the parent already operates a bank there is
-    // nowhere to put the target's live bank. Refuse up front, before any
-    // money moves.
-    const bankConflict = bankTransferConflict(target, parent);
-    if (bankConflict) {
-      return errorResponse(400, bankConflict);
-    }
-
-    // Outstanding bonds transfer to the parent automatically (see bond
-    // reassignment below). The parent assumes the debt; bondholders keep
-    // their position with the new issuer. No blocker needed.
-
-    // Target insolvency (negative net liquid capital after buyback escrow)
-    // is not a blocker either. The cash-transfer clamp below floors the
-    // target→parent cash at zero, so the parent can never be drained by a
-    // negative-balance target. The parent shoulders the debt by absorbing
-    // the shell; if the parent can still afford the minority squeeze-out,
-    // the takeover proceeds.
-
-    // The buyback escrow only ADDS to the transfer when it holds real collected
-    // cash (positive). A negative escrow is phantom debt never debited from
-    // liquidCapital; folding it in would net the target's real liquidCapital
-    // down and destroy value for the acquirer. Floor escrow at 0 so the
-    // acquirer always inherits the target's real liquid capital.
-    const targetNetLiquidLocal =
-      (target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0);
-
-    const forexEnabled = await isForexEnabled();
-    // `target.sharePrice` is in the TARGET corp's home currency post-v0.2.6
-    // (Task 18A). Normalize to ₳ before any cross-entity payout math so the
-    // downstream conversions to parent/character/holder-corp currencies are
-    // applying the right rate. Using target-local directly would mis-scale
-    // every payout by (targetFxRate / recipientFxRate).
-    const fxByCurrency = await loadFxRatesByCurrency(db);
-    const targetFxPre = fxRateForCorpFromMap(target, fxByCurrency);
-    const pricePerShareLocal = target.sharePrice * (1 + HOSTILE_TAKEOVER_PREMIUM_RATE);
-    const marketPricePerShareAnchor = corpLiquidCapitalToAnchor(
-      pricePerShareLocal,
-      target,
-      targetFxPre
-    );
-
-    // Bank-NAV floor: the quoted share price recognizes only a
-    // haircut of a subsidiary bank's book equity, so a bank-heavy target can
-    // otherwise be squeezed out for less than the realizable bank net assets
-    // the acquirer inherits (ring-fenced cash plus loans plus the marked
-    // bond/prop book, net of cash-backed deposits and borrowings). Floor the
-    // per-share consideration at full realizable NAV per share, so the implied
-    // whole-corp value can never underprice the bank the deal delivers. Inert
-    // for targets without an active charter.
-    const activeTakeoverCharter =
-      target.bankCharter?.status === "active" ? target.bankCharter : null;
-    let bankNavFloorApplied = false;
-    let pricePerShareAnchor = marketPricePerShareAnchor;
-    if (activeTakeoverCharter) {
-      const takeoverBankCurrency = activeTakeoverCharter.currency;
-      const takeoverBankFxRate = takeoverBankCurrency
-        ? (fxByCurrency.get(takeoverBankCurrency) ?? 1)
-        : 1;
-      let playerDepositsAreLiabilities = false;
-      try {
-        const takeoverBankingPolicy = await loadBankingPolicy(db);
-        playerDepositsAreLiabilities = takeoverBankCurrency
-          ? savingsReadsAuthoritative(takeoverBankingPolicy, takeoverBankCurrency)
-          : false;
-      } catch {
-        playerDepositsAreLiabilities = false;
+      const parentQuery = corporationQueryFromParamId(parsed.data.parentCorporationId);
+      if (!parentQuery) {
+        return errorResponse(400, "Invalid parent corporation ID");
       }
-      const takeoverBankNavAnchor = corpCapitalToAnchor(
-        takeoverBankNav(activeTakeoverCharter, { playerDepositsAreLiabilities }),
-        takeoverBankCurrency,
-        takeoverBankFxRate
-      );
-      const floored = applyBankNavFloor(
-        marketPricePerShareAnchor,
-        bankNavFloorPerShareAnchor({
-          bankNavAnchor: takeoverBankNavAnchor,
-          totalShares: target.totalShares ?? 0,
-        })
-      );
-      pricePerShareAnchor = floored.pricePerShareAnchor;
-      bankNavFloorApplied = floored.floorApplied;
-    }
-
-    const balanceSheetFloor = await referenceValuation(db, target);
-    if (balanceSheetFloor.portfolioAnchor > 0) {
-      return errorResponse(
-        400,
-        "Sell or transfer the subsidiary's investment holdings before merging so those assets are not discarded."
-      );
-    }
-    pricePerShareAnchor = Math.max(
-      pricePerShareAnchor,
-      (target.totalShares ?? 0) > 0 ? balanceSheetFloor.minimumPriceAnchor / target.totalShares : 0
-    );
-
-    const fundHeld = (target.shareholders ?? []).filter((sh) => sh.fundId && (sh.shares ?? 0) > 0);
-
-    const minority = (target.shareholders ?? []).filter((sh) => {
-      if (!sh.shares || sh.shares <= 0) return false;
-      if (sh.corporationId?.equals(parent._id)) return false;
-      if (sh.fundId) return false; // fund-held shares handled separately below
-      return true;
-    });
-
-    let totalAnchor = 0;
-    for (const sh of minority) {
-      totalAnchor += sh.shares * pricePerShareAnchor;
-    }
-    let fundPayoutAnchor = 0;
-    for (const fh of fundHeld) {
-      fundPayoutAnchor += (fh.shares ?? 0) * pricePerShareAnchor;
-    }
-    totalAnchor += fundPayoutAnchor;
-
-    const parentFxPre = fxRateForCorpFromMap(parent, fxByCurrency);
-    // Cross-currency takeover: the acquirer pays the reduced sector FX spread on
-    // the buyout cost when it and the target use different currencies. Routed
-    // after the squeeze-out commits.
-    const takeoverSpread = sectorFxSpreadBetween(
-      resolveCorpLiquidCurrencyCode(parent) as CurrencyCode | null,
-      resolveCorpLiquidCurrencyCode(target) as CurrencyCode | null,
-      totalAnchor
-    );
-    const totalInParentCapital = anchorToCorpLiquidCapital(
-      totalAnchor + takeoverSpread.spreadAnchor,
-      parent,
-      parentFxPre
-    );
-
-    // Compute the target→parent cash transfer up front so the catch handler
-    // below can properly reverse it if we crash after applying it. Uses the net
-    // position (liquidCapital + buyback escrow) so the parent absorbs the target's
-    // escrow reserve/debt wholesale. Negative net is floored at 0 — the insolvency
-    // guard above already rejects such targets; this clamp is the last line of
-    // defence against a future refactor that reorders the checks.
-    const targetCashAnchor = Math.max(
-      0,
-      corpLiquidCapitalToAnchor(targetNetLiquidLocal, target, targetFxPre)
-    );
-    const cashToParentLocal = anchorToCorpLiquidCapital(targetCashAnchor, parent, parentFxPre);
-
-    if ((parent.liquidCapital ?? 0) + 1e-9 < totalInParentCapital) {
-      return errorResponse(
-        400,
-        `Insufficient liquid capital on the parent corporation to fund the squeeze-out (need ${Math.round(totalInParentCapital).toLocaleString()} in the parent’s operating currency).`
-      );
-    }
-
-    // Operating reserve: the parent pays the squeeze-out, takes in the target's
-    // cash, and takes on the target's plants, so their bills join the reserve.
-    // Below the reserve needs the CEO's confirm.
-    const reserveCheck = await checkCorpPurchaseReserve(db, {
-      corporation: parent,
-      costLocal: totalInParentCapital,
-      cashInLocal: cashToParentLocal,
-      extraCorporationIds: [target._id],
-      confirmed: parsed.data.overrideOperatingReserve === true,
-    });
-    if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
-
-    // Serialize the whole squeeze-debit to cash-transfer sequence against other
-    // same-corp money ops on the parent (e.g. concurrent bond issuance) so a
-    // read-then-write cannot clobber a balance write and lose money.
-    return await withCorpLock(parent._id, async () => {
-      const now = new Date();
-      // The target was loaded before the lock; a retried request reaches this
-      // point after the first takeover already deleted it, and every payout
-      // below would run a second time off the stale snapshot.
-      const freshTarget = await (
-        await getCorporationsCollection(db)
-      ).findOne({ _id: target._id }, { projection: { _id: 1 } });
-      if (!freshTarget) {
-        return errorResponse(409, "The target corporation no longer exists.");
+      const parent = await corporationsCollection(db).findOne(parentQuery);
+      if (!parent) {
+        return errorResponse(404, "Parent corporation not found");
       }
-      const targetSectors = await corporateSectorsCollection(db)
-        .find({ corporationId: target._id })
-        .toArray();
-      const takeoverTurn = await getCurrentTurn(db);
-      const withholdingContexts = await loadStockWithholdingContexts(
+
+      const ceoCheck = requireCeo(parent, auth.user);
+      if (ceoCheck) return ceoCheck;
+
+      if (parent._id.equals(target._id)) {
+        return errorResponse(400, "Invalid takeover target");
+      }
+
+      if (target.countryOwnerId) {
+        return errorResponse(400, "National corporations cannot be merged via hostile takeover.");
+      }
+
+      const pct = acquirerOwnershipPercent(parent._id, target);
+      if (pct <= HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT) {
+        return errorResponse(
+          400,
+          `Your corporation must hold more than ${HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT}% of outstanding shares (${pct.toFixed(2)}% currently).`
+        );
+      }
+
+      const unplacedFloat = unplacedIpoShares(target);
+      if ((target.publicFloat ?? 0) > unplacedFloat) {
+        return errorResponse(
+          400,
+          "Buy the outstanding public float before merging, or use an agreed acquisition that pays public investors."
+        );
+      }
+
+      if ((target.imfFacilityPrincipalOutstanding ?? 0) > 0 || (target.liquidCapital ?? 0) < 0) {
+        return errorResponse(
+          400,
+          "Repay the subsidiary's financing liabilities before merging so those obligations remain accounted for."
+        );
+      }
+
+      // Merger review (C3). The squeeze-out is the moment the two firms become
+      // one, so it is the moment competition policy gets a say. Checked before
+      // any money moves; a referral leaves both corporations untouched and the
+      // player retries once the authority clears it (clearance is durable per
+      // pair, so the retry sails straight through).
+      const reviewTurn = await getCurrentTurn(db);
+      const transferRestriction = await controllerTransferBarrierError(
         db,
-        minority.flatMap<StockSeller>((sh) =>
-          sh.characterId
-            ? [{ id: sh.characterId, collection: "characters" as const }]
-            : sh.imperialCharacterId
-              ? [{ id: sh.imperialCharacterId, collection: "imperialCharacters" as const }]
-              : []
-        ),
-        takeoverTurn
+        parent,
+        reviewTurn,
+        new Date()
       );
+      if (transferRestriction) return errorResponse(403, transferRestriction);
 
-      // The target is absorbed and deleted, so a secured construction loan
-      // moves with its site and the parent becomes the borrower, the same way
-      // the target's bonds are re-keyed below. Checked and locked before the
-      // debit; a financed site cannot fold into a parent site of the same market.
-      const mergeRefusal = await securedSiteMergeRefusal(
+      const barred = acquisitionsBarredByDivestiture(parent, reviewTurn);
+      if (barred) return errorResponse(403, barred);
+      const clearance = await assertMergerClearance(
         db,
-        targetSectors,
-        parent._id,
-        (s) => `${s.stateId}:${s.sectorType}`
+        parent,
+        target,
+        "hostileTakeover",
+        reviewTurn
       );
-      if (mergeRefusal) return errorResponse(409, mergeRefusal);
-      // Its ordinary bank loans become the parent's debt as well.
-      const loanRefusal = await corporateLoanAssumptionCheck(db, {
-        fromId: target._id,
-        toCurrency: resolveCorpLiquidCurrencyCode(parent) ?? undefined,
-      });
-      if (loanRefusal) return errorResponse(409, loanRefusal);
-      const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
-        sectors: targetSectors,
-        toId: parent._id,
-        toCurrency: resolveCorpLiquidCurrencyCode(parent) ?? undefined,
-        operationKey: `takeover:${target._id.toHexString()}`,
-        turn: takeoverTurn,
-      });
-      if (!preparedTransfers.ok) return errorResponse(409, preparedTransfers.error);
-      const constructionTransfers = preparedTransfers.plan;
-      const debitResult = await corporationsCollection(db).updateOne(
-        {
-          _id: parent._id,
-          liquidCapital: { $gte: totalInParentCapital },
-          ...corporateDiscretionaryCashGuard(),
-        },
-        {
-          $inc: { liquidCapital: -totalInParentCapital },
-          $set: { updatedAt: now },
-        }
-      );
-      if (debitResult.modifiedCount === 0) {
-        // No refund owed: the $gte-gated debit did not apply, so no money
-        // moved. This early return is before every mutation by construction;
-        // keep it that way — anything added after the debit below must run
-        // inside the try so the catch refund covers it.
-        await settleConstructionBorrowerTransfers(db, constructionTransfers);
-        return errorResponse(400, "Insufficient liquid capital (race with another transaction).");
+      if (!clearance.ok) {
+        return errorResponse(clearance.status, clearance.error);
+      }
+      const foreignRejection = await assertForeignControlAllowed(db, parent, target);
+      if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
+
+      // Banked subsidiary (ticket-1267): the charter is a sub-document on the
+      // target, so absorbing the shell would delete its bank with it. The
+      // transfer inside the lock re-parents it — but a corporation holds a
+      // single charter, so when the parent already operates a bank there is
+      // nowhere to put the target's live bank. Refuse up front, before any
+      // money moves.
+      const bankConflict = bankTransferConflict(target, parent);
+      if (bankConflict) {
+        return errorResponse(400, bankConflict);
       }
 
-      // Track whether the target→parent cash transfer has landed. On rollback
-      // the catch block needs to reverse both the minority-payout debit (always
-      // applied before the try) and the cash transfer (applied partway through).
-      let cashTransferApplied = false;
-      // Ordinary bank loans moved to the parent, handed back if the target survives a failure.
-      let assumedLoanIds: ObjectId[] = [];
+      // Outstanding bonds transfer to the parent automatically (see bond
+      // reassignment below). The parent assumes the debt; bondholders keep
+      // their position with the new issuer. No blocker needed.
 
-      // Ledger legs for every money move in this takeover. Collected as we go and
-      // flushed only once the merge has fully committed, so the rollback path
-      // below never leaves logged money that was actually reversed.
-      const ledgerLegs: TakeoverTxInput[] = [];
-      const parentLedgerCurrency = (resolveCorpLiquidCurrencyCode(parent) ?? "USD") as CurrencyCode;
+      // Target insolvency (negative net liquid capital after buyback escrow)
+      // is not a blocker either. The cash-transfer clamp below floors the
+      // target→parent cash at zero, so the parent can never be drained by a
+      // negative-balance target. The parent shoulders the debt by absorbing
+      // the shell; if the parent can still afford the minority squeeze-out,
+      // the takeover proceeds.
 
-      try {
-        // Move the banked subsidiary's charter and re-key its loan book,
-        // interbank sides, savings and depositor pointers to the parent BEFORE the
-        // shell is deleted below. Runs INSIDE this try after the debit and before any
-        // payout, so a mid-merge conflict throws into the catch refund instead of
-        // returning past it with the debit unrefunded. The transfer helper leaves no
-        // partial charter on its !ok paths, so refunding restores everything.
-        const bankTransfer = await transferBankCharterToAcquirer(db, target._id, parent._id, now);
-        if (!bankTransfer.ok) {
-          throw new BankCharterRaceError(bankTransfer.error);
+      // The buyback escrow only ADDS to the transfer when it holds real collected
+      // cash (positive). A negative escrow is phantom debt never debited from
+      // liquidCapital; folding it in would net the target's real liquidCapital
+      // down and destroy value for the acquirer. Floor escrow at 0 so the
+      // acquirer always inherits the target's real liquid capital.
+      const targetNetLiquidLocal =
+        (target.liquidCapital ?? 0) + Math.max(0, target.shareEscrowBalance ?? 0);
+
+      const forexEnabled = await isForexEnabled();
+      // `target.sharePrice` is in the TARGET corp's home currency post-v0.2.6
+      // (Task 18A). Normalize to ₳ before any cross-entity payout math so the
+      // downstream conversions to parent/character/holder-corp currencies are
+      // applying the right rate. Using target-local directly would mis-scale
+      // every payout by (targetFxRate / recipientFxRate).
+      const fxByCurrency = await loadFxRatesByCurrency(db);
+      const targetFxPre = fxRateForCorpFromMap(target, fxByCurrency);
+      const pricePerShareLocal = target.sharePrice * (1 + HOSTILE_TAKEOVER_PREMIUM_RATE);
+      const marketPricePerShareAnchor = corpLiquidCapitalToAnchor(
+        pricePerShareLocal,
+        target,
+        targetFxPre
+      );
+
+      // Bank-NAV floor: the quoted share price recognizes only a
+      // haircut of a subsidiary bank's book equity, so a bank-heavy target can
+      // otherwise be squeezed out for less than the realizable bank net assets
+      // the acquirer inherits (ring-fenced cash plus loans plus the marked
+      // bond/prop book, net of cash-backed deposits and borrowings). Floor the
+      // per-share consideration at full realizable NAV per share, so the implied
+      // whole-corp value can never underprice the bank the deal delivers. Inert
+      // for targets without an active charter.
+      const activeTakeoverCharter =
+        target.bankCharter?.status === "active" ? target.bankCharter : null;
+      let bankNavFloorApplied = false;
+      let pricePerShareAnchor = marketPricePerShareAnchor;
+      if (activeTakeoverCharter) {
+        const takeoverBankCurrency = activeTakeoverCharter.currency;
+        const takeoverBankFxRate = takeoverBankCurrency
+          ? (fxByCurrency.get(takeoverBankCurrency) ?? 1)
+          : 1;
+        let playerDepositsAreLiabilities = false;
+        try {
+          const takeoverBankingPolicy = await loadBankingPolicy(db);
+          playerDepositsAreLiabilities = takeoverBankCurrency
+            ? savingsReadsAuthoritative(takeoverBankingPolicy, takeoverBankCurrency)
+            : false;
+        } catch {
+          playerDepositsAreLiabilities = false;
         }
+        const takeoverBankNavAnchor = corpCapitalToAnchor(
+          takeoverBankNav(activeTakeoverCharter, { playerDepositsAreLiabilities }),
+          takeoverBankCurrency,
+          takeoverBankFxRate
+        );
+        const floored = applyBankNavFloor(
+          marketPricePerShareAnchor,
+          bankNavFloorPerShareAnchor({
+            bankNavAnchor: takeoverBankNavAnchor,
+            totalShares: target.totalShares ?? 0,
+          })
+        );
+        pricePerShareAnchor = floored.pricePerShareAnchor;
+        bankNavFloorApplied = floored.floorApplied;
+      }
 
-        const parentParty: ShareTradeParty = { corporationId: parent._id, name: parent.name };
-        for (const sh of minority) {
-          const payoutAnchor = sh.shares * pricePerShareAnchor;
-          if (payoutAnchor <= 0) continue;
+      const balanceSheetFloor = await referenceValuation(db, target);
+      if (balanceSheetFloor.portfolioAnchor > 0) {
+        return errorResponse(
+          400,
+          "Sell or transfer the subsidiary's investment holdings before merging so those assets are not discarded."
+        );
+      }
+      pricePerShareAnchor = Math.max(
+        pricePerShareAnchor,
+        (target.totalShares ?? 0) > 0
+          ? balanceSheetFloor.minimumPriceAnchor / target.totalShares
+          : 0
+      );
 
-          let holderParty: ShareTradeParty | null = null;
-          if (sh.characterId) {
-            const ch = await charactersCollection(db).findOne({ _id: sh.characterId });
-            if (!ch) continue;
-            const home =
-              (withholdingContexts.get("characters:" + sh.characterId.toHexString())?.currency as
-                CurrencyCode | undefined) ?? getHomeCurrency(ch);
-            let amountLocal = payoutAnchor;
-            if (forexEnabled) {
-              const fx = await loadCharacterFxRate(db, home);
-              if (!fx.ok) throw new Error("RATE_UNAVAILABLE");
-              amountLocal = payoutAnchor * fx.rate;
-            }
-            const grossStockTax =
-              stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
-              takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
-                ? pendingStockTaxReceipt({
-                    id:
-                      target._id.toHexString() +
-                      ":" +
-                      takeoverTurn +
-                      ":" +
-                      sh.characterId.toHexString(),
-                    currencyCode: home,
-                    holdingTerms: positionHoldingTerms(
-                      anchorHoldingPosition(sh, targetFxPre),
-                      takeoverTurn,
-                      pricePerShareAnchor
-                    ),
-                    proceedsAnchor: payoutAnchor,
-                    proceedsCredited: amountLocal,
-                    saleTurn: takeoverTurn,
-                    assessmentTurn: takeoverTurn + 1,
-                  })
-                : undefined;
-            const stockTax = grossStockTax
-              ? withholdStockReceipt(
-                  grossStockTax,
-                  withholdingContexts.get("characters:" + sh.characterId!.toHexString())
-                )
-              : undefined;
-            await charactersCollection(db).updateOne(
-              { _id: sh.characterId },
-              {
-                $inc: buildPersonalBalanceInc(
-                  netStockProceeds(amountLocal, stockTax),
-                  home,
-                  forexEnabled
-                ),
-                $set: { updatedAt: now },
-                ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
-              }
-            );
-            holderParty = { characterId: sh.characterId, name: ch.name };
-            ledgerLegs.push(
-              takeoverPayoutLeg(
-                takeoverTurn,
-                now,
-                target,
-                "character",
-                sh.characterId,
-                amountLocal,
-                home
-              )
-            );
-          } else if (sh.imperialCharacterId) {
-            const ich = await imperialCharactersCollection(db).findOne({
-              _id: sh.imperialCharacterId,
-            });
-            if (!ich) continue;
-            const home =
-              (withholdingContexts.get("imperialCharacters:" + sh.imperialCharacterId.toHexString())
-                ?.currency as CurrencyCode | undefined) ??
-              getHomeCurrency(ich as PersonalWealthHolder);
-            let amountLocal = payoutAnchor;
-            if (forexEnabled) {
-              const fx = await loadCharacterFxRate(db, home);
-              if (!fx.ok) throw new Error("RATE_UNAVAILABLE");
-              amountLocal = payoutAnchor * fx.rate;
-            }
-            const grossStockTax =
-              stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
-              takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
-                ? pendingStockTaxReceipt({
-                    id:
-                      target._id.toHexString() +
-                      ":" +
-                      takeoverTurn +
-                      ":" +
-                      sh.imperialCharacterId.toHexString(),
-                    currencyCode: home,
-                    holdingTerms: positionHoldingTerms(
-                      anchorHoldingPosition(sh, targetFxPre),
-                      takeoverTurn,
-                      pricePerShareAnchor
-                    ),
-                    proceedsAnchor: payoutAnchor,
-                    proceedsCredited: amountLocal,
-                    saleTurn: takeoverTurn,
-                    assessmentTurn: takeoverTurn + 1,
-                  })
-                : undefined;
-            const stockTax = grossStockTax
-              ? withholdStockReceipt(
-                  grossStockTax,
-                  withholdingContexts.get(
-                    "imperialCharacters:" + sh.imperialCharacterId!.toHexString()
-                  )
-                )
-              : undefined;
-            await imperialCharactersCollection(db).updateOne(
-              { _id: sh.imperialCharacterId },
-              {
-                $inc: buildPersonalBalanceInc(
-                  netStockProceeds(amountLocal, stockTax),
-                  home,
-                  forexEnabled
-                ),
-                $set: { updatedAt: now },
-                ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
-              }
-            );
-            holderParty = { imperialCharacterId: sh.imperialCharacterId, name: ich.name };
-            ledgerLegs.push(
-              takeoverPayoutLeg(
-                takeoverTurn,
-                now,
-                target,
-                "character",
-                sh.imperialCharacterId,
-                amountLocal,
-                home,
-                { imperial: true }
-              )
-            );
-          } else if (sh.corporationId && !sh.corporationId.equals(parent._id)) {
-            const holder = await corporationsCollection(db).findOne({ _id: sh.corporationId });
-            if (!holder) continue;
-            const hFx = fxRateForCorpFromMap(holder, fxByCurrency);
-            const payoutLocal = anchorToCorpLiquidCapital(payoutAnchor, holder, hFx);
-            await corporationsCollection(db).updateOne(
-              { _id: holder._id },
-              { $inc: { liquidCapital: payoutLocal }, $set: { updatedAt: now } }
-            );
-            holderParty = { corporationId: sh.corporationId, name: holder.name };
-            ledgerLegs.push(
-              takeoverPayoutLeg(
-                takeoverTurn,
-                now,
-                target,
-                "corporation",
-                holder._id,
-                payoutLocal,
-                (resolveCorpLiquidCurrencyCode(holder) ?? "USD") as CurrencyCode
-              )
-            );
-          } else if (sh.nppId) {
-            // NPP shares are in the squeeze-out total the parent was debited
-            // for, so they must be paid or that slice leaves the parent and
-            // reaches no one.
-            await payNppSqueezeOut(db, sh.nppId, payoutAnchor, now);
-          }
+      const fundHeld = (target.shareholders ?? []).filter(
+        (sh) => sh.fundId && (sh.shares ?? 0) > 0
+      );
 
-          if (holderParty) {
-            void recordShareTrade(db, {
-              corporationId: target._id,
-              kind: "takeover_buyout",
-              turn: takeoverTurn,
-              shares: sh.shares,
-              pricePerShareAnchor,
-              from: holderParty,
-              to: parentParty,
-              corpCurrencyCode: target.liquidCurrencyCode,
-              note: `Hostile takeover by ${parent.name} — minority squeeze-out at 125% premium`,
-            });
-          }
+      const minority = (target.shareholders ?? []).filter((sh) => {
+        if (!sh.shares || sh.shares <= 0) return false;
+        if (sh.corporationId?.equals(parent._id)) return false;
+        if (sh.fundId) return false; // fund-held shares handled separately below
+        return true;
+      });
+
+      let totalAnchor = 0;
+      for (const sh of minority) {
+        totalAnchor += sh.shares * pricePerShareAnchor;
+      }
+      let fundPayoutAnchor = 0;
+      for (const fh of fundHeld) {
+        fundPayoutAnchor += (fh.shares ?? 0) * pricePerShareAnchor;
+      }
+      totalAnchor += fundPayoutAnchor;
+
+      const parentFxPre = fxRateForCorpFromMap(parent, fxByCurrency);
+      // Cross-currency takeover: the acquirer pays the reduced sector FX spread on
+      // the buyout cost when it and the target use different currencies. Routed
+      // after the squeeze-out commits.
+      const takeoverSpread = sectorFxSpreadBetween(
+        resolveCorpLiquidCurrencyCode(parent) as CurrencyCode | null,
+        resolveCorpLiquidCurrencyCode(target) as CurrencyCode | null,
+        totalAnchor
+      );
+      const totalInParentCapital = anchorToCorpLiquidCapital(
+        totalAnchor + takeoverSpread.spreadAnchor,
+        parent,
+        parentFxPre
+      );
+
+      // Compute the target→parent cash transfer up front so the catch handler
+      // below can properly reverse it if we crash after applying it. Uses the net
+      // position (liquidCapital + buyback escrow) so the parent absorbs the target's
+      // escrow reserve/debt wholesale. Negative net is floored at 0 — the insolvency
+      // guard above already rejects such targets; this clamp is the last line of
+      // defence against a future refactor that reorders the checks.
+      const targetCashAnchor = Math.max(
+        0,
+        corpLiquidCapitalToAnchor(targetNetLiquidLocal, target, targetFxPre)
+      );
+      const cashToParentLocal = anchorToCorpLiquidCapital(targetCashAnchor, parent, parentFxPre);
+
+      if ((parent.liquidCapital ?? 0) + 1e-9 < totalInParentCapital) {
+        return errorResponse(
+          400,
+          `Insufficient liquid capital on the parent corporation to fund the squeeze-out (need ${Math.round(totalInParentCapital).toLocaleString()} in the parent’s operating currency).`
+        );
+      }
+
+      // Operating reserve: the parent pays the squeeze-out, takes in the target's
+      // cash, and takes on the target's plants, so their bills join the reserve.
+      // Below the reserve needs the CEO's confirm.
+      const reserveCheck = await checkCorpPurchaseReserve(db, {
+        corporation: parent,
+        costLocal: totalInParentCapital,
+        cashInLocal: cashToParentLocal,
+        extraCorporationIds: [target._id],
+        confirmed: parsed.data.overrideOperatingReserve === true,
+      });
+      if (!reserveCheck.ok) return corpPurchaseReserveResponse(reserveCheck);
+
+      // Serialize the whole squeeze-debit to cash-transfer sequence against other
+      // same-corp money ops on the parent (e.g. concurrent bond issuance) so a
+      // read-then-write cannot clobber a balance write and lose money.
+      return await withCorpLock(parent._id, async () => {
+        const now = new Date();
+        // The target was loaded before the lock; a retried request reaches this
+        // point after the first takeover already deleted it, and every payout
+        // below would run a second time off the stale snapshot.
+        const freshTarget = await (
+          await getCorporationsCollection(db)
+        ).findOne({ _id: target._id }, { projection: { _id: 1 } });
+        if (!freshTarget) {
+          return errorResponse(409, "The target corporation no longer exists.");
         }
+        const targetSectors = await corporateSectorsCollection(db)
+          .find({ corporationId: target._id })
+          .toArray();
+        const takeoverTurn = await getCurrentTurn(db);
+        const withholdingContexts = await loadStockWithholdingContexts(
+          db,
+          minority.flatMap<StockSeller>((sh) =>
+            sh.characterId
+              ? [{ id: sh.characterId, collection: "characters" as const }]
+              : sh.imperialCharacterId
+                ? [{ id: sh.imperialCharacterId, collection: "imperialCharacters" as const }]
+                : []
+          ),
+          takeoverTurn
+        );
 
-        // Pay out index fund shareholders — funds receive the takeover premium
-        // as deployable cash (cashAnchor) and their positions are liquidated.
-        for (const fh of fundHeld) {
-          const fundId = fh.fundId!;
-          const fundShares = fh.shares ?? 0;
-          const fundPayout = fundShares * pricePerShareAnchor;
-          if (fundPayout <= 0) continue;
-
-          // Credit fund's cashAnchor with the takeover payout
-          await indexFundsCollection<Document>(db).updateOne(
-            { _id: fundId },
-            { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
-          );
-
-          // Debit the fund's shares from the target's cap table
-          await debitSharesFromFund(db, target._id, fundId, fundShares, {
+        // The target is absorbed and deleted, so a secured construction loan
+        // moves with its site and the parent becomes the borrower, the same way
+        // the target's bonds are re-keyed below. Checked and locked before the
+        // debit; a financed site cannot fold into a parent site of the same market.
+        const mergeRefusal = await securedSiteMergeRefusal(
+          db,
+          targetSectors,
+          parent._id,
+          (s) => `${s.stateId}:${s.sectorType}`
+        );
+        if (mergeRefusal) return errorResponse(409, mergeRefusal);
+        // Its ordinary bank loans become the parent's debt as well.
+        const loanRefusal = await corporateLoanAssumptionCheck(db, {
+          fromId: target._id,
+          toCurrency: resolveCorpLiquidCurrencyCode(parent) ?? undefined,
+        });
+        if (loanRefusal) return errorResponse(409, loanRefusal);
+        const preparedTransfers = await prepareConstructionBorrowerTransfers(db, {
+          sectors: targetSectors,
+          toId: parent._id,
+          toCurrency: resolveCorpLiquidCurrencyCode(parent) ?? undefined,
+          operationKey: `takeover:${target._id.toHexString()}`,
+          turn: takeoverTurn,
+        });
+        if (!preparedTransfers.ok) return errorResponse(409, preparedTransfers.error);
+        const constructionTransfers = preparedTransfers.plan;
+        const debitResult = await corporationsCollection(db).updateOne(
+          {
+            _id: parent._id,
+            liquidCapital: { $gte: totalInParentCapital },
+            ...corporateDiscretionaryCashGuard(),
+          },
+          {
+            $inc: { liquidCapital: -totalInParentCapital },
             $set: { updatedAt: now },
-          });
-
-          // Remove the target corp from the fund's holdings ledger
-          await indexFundsCollection<Document>(db).updateOne(
-            { _id: fundId, "holdings.corporationId": target._id },
-            [
-              {
-                $set: {
-                  holdings: {
-                    $filter: {
-                      input: "$holdings",
-                      as: "h",
-                      cond: { $ne: ["$$h.corporationId", target._id] },
-                    },
-                  },
-                  updatedAt: now,
-                },
-              },
-            ]
-          );
+          }
+        );
+        if (debitResult.modifiedCount === 0) {
+          // No refund owed: the $gte-gated debit did not apply, so no money
+          // moved. This early return is before every mutation by construction;
+          // keep it that way — anything added after the debit below must run
+          // inside the try so the catch refund covers it.
+          await settleConstructionBorrowerTransfers(db, constructionTransfers);
+          return errorResponse(400, "Insufficient liquid capital (race with another transaction).");
         }
 
-        await shareOrdersCollection(db).updateMany(
-          { corporationId: target._id, status: "open" },
-          { $set: { status: "cancelled", updatedAt: now } }
-        );
+        // Track whether the target→parent cash transfer has landed. On rollback
+        // the catch block needs to reverse both the minority-payout debit (always
+        // applied before the try) and the cash transfer (applied partway through).
+        let cashTransferApplied = false;
+        // Ordinary bank loans moved to the parent, handed back if the target survives a failure.
+        let assumedLoanIds: ObjectId[] = [];
 
-        await shareListingsCollection(db).updateMany(
-          { corporationId: target._id, status: "open" },
-          { $set: { status: "cancelled" } }
-        );
+        // Ledger legs for every money move in this takeover. Collected as we go and
+        // flushed only once the merge has fully committed, so the rollback path
+        // below never leaves logged money that was actually reversed.
+        const ledgerLegs: TakeoverTxInput[] = [];
+        const parentLedgerCurrency = (resolveCorpLiquidCurrencyCode(parent) ??
+          "USD") as CurrencyCode;
 
-        const parentShareRow = (target.shareholders ?? []).find((s) =>
-          s.corporationId?.equals(parent._id)
-        );
-        const parentShares = parentShareRow?.shares ?? 0;
+        try {
+          // Move the banked subsidiary's charter and re-key its loan book,
+          // interbank sides, savings and depositor pointers to the parent BEFORE the
+          // shell is deleted below. Runs INSIDE this try after the debit and before any
+          // payout, so a mid-merge conflict throws into the catch refund instead of
+          // returning past it with the debit unrefunded. The transfer helper leaves no
+          // partial charter on its !ok paths, so refunding restores everything.
+          const bankTransfer = await transferBankCharterToAcquirer(db, target._id, parent._id, now);
+          if (!bankTransfer.ok) {
+            throw new BankCharterRaceError(bankTransfer.error);
+          }
 
-        // Brand facility-loss (Boeing rule): the acquired target loses all of its
-        // sectors to the parent, so dent its brand for the loss before the sectors
-        // are reassigned (the aggregate still includes them). No-op when the target
-        // has no loyalty. Best-effort — loyalty recomputes each turn.
-        await applyBrandFacilityLoss(db, target._id, targetSectors);
+          const parentParty: ShareTradeParty = { corporationId: parent._id, name: parent.name };
+          for (const sh of minority) {
+            const payoutAnchor = sh.shares * pricePerShareAnchor;
+            if (payoutAnchor <= 0) continue;
 
-        const parentSectors = await corporateSectorsCollection(db)
-          .find({ corporationId: parent._id })
-          .toArray();
-
-        // Build lookup: "countryId:stateId:sectorType" → parent sector _id
-        const sectorStateIds = [
-          ...new Set([...targetSectors, ...parentSectors].map((s) => s.stateId)),
-        ];
-        const sectorStates = await statesCollection(db)
-          .find({ _id: { $in: sectorStateIds } }, { projection: { _id: 1, countryId: 1 } })
-          .toArray();
-        const stateCountryByStateId = buildSectorStateCountryMap(sectorStates);
-        const parentSectorKey = (s: CorporateSector) =>
-          `${getSectorOperatingCountryId(s, stateCountryByStateId)}:${s.stateId}:${s.sectorType}`;
-        const parentSectorMap = new Map(parentSectors.map((s) => [parentSectorKey(s), s]));
-
-        // Sector.revenue is denominated in the OWNING corp's liquidCurrencyCode
-        // (Task-18A). When merging/reassigning sectors from target → parent across
-        // a currency boundary (e.g. UK corp takes over a JP corp), target-LOCAL
-        // must be converted to parent-LOCAL via ₳; otherwise downstream turn
-        // processors read the raw value with parent's FX rate and produce
-        // order-of-magnitude wrong revenue.
-        const tsRevenueInParent = (tsRevenue: number): number => {
-          const anchor = corpLiquidCapitalToAnchor(tsRevenue, target, targetFxPre);
-          return anchorToCorpLiquidCapital(anchor, parent, parentFxPre);
-        };
-
-        // Plant state only exists at/above the plants tier. Below it, spreading
-        // the fold wrote `buildQueue: []` / `constructionInProgressAnchor: 0` /
-        // `mothballed: false` / `plantsStartTurn: null` onto rows with no such
-        // fields and SUMMED `capitalStock`, which capital mode owns and
-        // re-derives from revenue every turn (see sectorTurn's capital block).
-        const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sectorMergeOps: any[] = [];
-        const sectorDeleteIds: ObjectId[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sectorReassignOps: any[] = [];
-
-        for (const ts of targetSectors) {
-          const existing = parentSectorMap.get(parentSectorKey(ts));
-          if (existing) {
-            // Merge: combine revenue and workers; weight-average profit margin,
-            // production policy level, and sustained-negative-production counter by revenue
-            const tsRevenueParent = tsRevenueInParent(ts.revenue);
-            const combinedRevenue = existing.revenue + tsRevenueParent;
-            const combinedWorkers = existing.workers + ts.workers;
-            const weightedMargin =
-              combinedRevenue > 0
-                ? (existing.profitMargin * existing.revenue + ts.profitMargin * tsRevenueParent) /
-                  combinedRevenue
-                : existing.profitMargin;
-            const weightedProductionPolicyLevel =
-              combinedRevenue > 0
-                ? clampProductionPolicy(
-                    Math.round(
-                      ((existing.productionPolicyLevel ?? 0) * existing.revenue +
-                        (ts.productionPolicyLevel ?? 0) * tsRevenueParent) /
-                        combinedRevenue
+            let holderParty: ShareTradeParty | null = null;
+            if (sh.characterId) {
+              const ch = await charactersCollection(db).findOne({ _id: sh.characterId });
+              if (!ch) continue;
+              const home =
+                (withholdingContexts.get("characters:" + sh.characterId.toHexString())?.currency as
+                  CurrencyCode | undefined) ?? getHomeCurrency(ch);
+              let amountLocal = payoutAnchor;
+              if (forexEnabled) {
+                const fx = await loadCharacterFxRate(db, home);
+                if (!fx.ok) throw new Error("RATE_UNAVAILABLE");
+                amountLocal = payoutAnchor * fx.rate;
+              }
+              const grossStockTax =
+                stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
+                takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
+                  ? pendingStockTaxReceipt({
+                      id:
+                        target._id.toHexString() +
+                        ":" +
+                        takeoverTurn +
+                        ":" +
+                        sh.characterId.toHexString(),
+                      currencyCode: home,
+                      holdingTerms: positionHoldingTerms(
+                        anchorHoldingPosition(sh, targetFxPre),
+                        takeoverTurn,
+                        pricePerShareAnchor
+                      ),
+                      proceedsAnchor: payoutAnchor,
+                      proceedsCredited: amountLocal,
+                      saleTurn: takeoverTurn,
+                      assessmentTurn: takeoverTurn + 1,
+                    })
+                  : undefined;
+              const stockTax = grossStockTax
+                ? withholdStockReceipt(
+                    grossStockTax,
+                    withholdingContexts.get("characters:" + sh.characterId!.toHexString())
+                  )
+                : undefined;
+              await charactersCollection(db).updateOne(
+                { _id: sh.characterId },
+                {
+                  $inc: buildPersonalBalanceInc(
+                    netStockProceeds(amountLocal, stockTax),
+                    home,
+                    forexEnabled
+                  ),
+                  $set: { updatedAt: now },
+                  ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
+                }
+              );
+              holderParty = { characterId: sh.characterId, name: ch.name };
+              ledgerLegs.push(
+                takeoverPayoutLeg(
+                  takeoverTurn,
+                  now,
+                  target,
+                  "character",
+                  sh.characterId,
+                  amountLocal,
+                  home
+                )
+              );
+            } else if (sh.imperialCharacterId) {
+              const ich = await imperialCharactersCollection(db).findOne({
+                _id: sh.imperialCharacterId,
+              });
+              if (!ich) continue;
+              const home =
+                (withholdingContexts.get(
+                  "imperialCharacters:" + sh.imperialCharacterId.toHexString()
+                )?.currency as CurrencyCode | undefined) ??
+                getHomeCurrency(ich as PersonalWealthHolder);
+              let amountLocal = payoutAnchor;
+              if (forexEnabled) {
+                const fx = await loadCharacterFxRate(db, home);
+                if (!fx.ok) throw new Error("RATE_UNAVAILABLE");
+                amountLocal = payoutAnchor * fx.rate;
+              }
+              const grossStockTax =
+                stockTaxState?.stockHoldingTaxStartTurn !== undefined &&
+                takeoverTurn >= stockTaxState.stockHoldingTaxStartTurn
+                  ? pendingStockTaxReceipt({
+                      id:
+                        target._id.toHexString() +
+                        ":" +
+                        takeoverTurn +
+                        ":" +
+                        sh.imperialCharacterId.toHexString(),
+                      currencyCode: home,
+                      holdingTerms: positionHoldingTerms(
+                        anchorHoldingPosition(sh, targetFxPre),
+                        takeoverTurn,
+                        pricePerShareAnchor
+                      ),
+                      proceedsAnchor: payoutAnchor,
+                      proceedsCredited: amountLocal,
+                      saleTurn: takeoverTurn,
+                      assessmentTurn: takeoverTurn + 1,
+                    })
+                  : undefined;
+              const stockTax = grossStockTax
+                ? withholdStockReceipt(
+                    grossStockTax,
+                    withholdingContexts.get(
+                      "imperialCharacters:" + sh.imperialCharacterId!.toHexString()
                     )
                   )
-                : (existing.productionPolicyLevel ?? 0);
-            const weightedNegativeProductionTurns =
-              combinedRevenue > 0
-                ? Math.round(
-                    ((existing.negativeProductionSustainedTurns ?? 0) * existing.revenue +
-                      (ts.negativeProductionSustainedTurns ?? 0) * tsRevenueParent) /
-                      combinedRevenue
-                  )
-                : (existing.negativeProductionSustainedTurns ?? 0);
-            // `ts` is deleted below, so fold its plant state into the survivor
-            // first — same rule as the sector-purchase merge path. The
-            // acquirer paid a share price that capitalized the target's
-            // plants; dropping capacity/queue/CIP on the merge would destroy
-            // exactly the assets it just bought. ₳ fields are summed, never
-            // FX-rescaled (see sectorTransferCapex).
-            const mergedPlant = plantsEnabled ? mergeSectorPlantFields(existing, ts) : {};
-            sectorMergeOps.push({
-              updateOne: {
-                filter: {
-                  _id: existing._id,
-                  ...mergeSurvivorConstructionFilter(existing),
-                },
-                update: {
+                : undefined;
+              await imperialCharactersCollection(db).updateOne(
+                { _id: sh.imperialCharacterId },
+                {
+                  $inc: buildPersonalBalanceInc(
+                    netStockProceeds(amountLocal, stockTax),
+                    home,
+                    forexEnabled
+                  ),
+                  $set: { updatedAt: now },
+                  ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
+                }
+              );
+              holderParty = { imperialCharacterId: sh.imperialCharacterId, name: ich.name };
+              ledgerLegs.push(
+                takeoverPayoutLeg(
+                  takeoverTurn,
+                  now,
+                  target,
+                  "character",
+                  sh.imperialCharacterId,
+                  amountLocal,
+                  home,
+                  { imperial: true }
+                )
+              );
+            } else if (sh.corporationId && !sh.corporationId.equals(parent._id)) {
+              const holder = await corporationsCollection(db).findOne({ _id: sh.corporationId });
+              if (!holder) continue;
+              const hFx = fxRateForCorpFromMap(holder, fxByCurrency);
+              const payoutLocal = anchorToCorpLiquidCapital(payoutAnchor, holder, hFx);
+              await corporationsCollection(db).updateOne(
+                { _id: holder._id },
+                { $inc: { liquidCapital: payoutLocal }, $set: { updatedAt: now } }
+              );
+              holderParty = { corporationId: sh.corporationId, name: holder.name };
+              ledgerLegs.push(
+                takeoverPayoutLeg(
+                  takeoverTurn,
+                  now,
+                  target,
+                  "corporation",
+                  holder._id,
+                  payoutLocal,
+                  (resolveCorpLiquidCurrencyCode(holder) ?? "USD") as CurrencyCode
+                )
+              );
+            } else if (sh.nppId) {
+              // NPP shares are in the squeeze-out total the parent was debited
+              // for, so they must be paid or that slice leaves the parent and
+              // reaches no one.
+              await payNppSqueezeOut(db, sh.nppId, payoutAnchor, now);
+            }
+
+            if (holderParty) {
+              void recordShareTrade(db, {
+                corporationId: target._id,
+                kind: "takeover_buyout",
+                turn: takeoverTurn,
+                shares: sh.shares,
+                pricePerShareAnchor,
+                from: holderParty,
+                to: parentParty,
+                corpCurrencyCode: target.liquidCurrencyCode,
+                note: `Hostile takeover by ${parent.name} — minority squeeze-out at 125% premium`,
+              });
+            }
+          }
+
+          // Pay out index fund shareholders — funds receive the takeover premium
+          // as deployable cash (cashAnchor) and their positions are liquidated.
+          for (const fh of fundHeld) {
+            const fundId = fh.fundId!;
+            const fundShares = fh.shares ?? 0;
+            const fundPayout = fundShares * pricePerShareAnchor;
+            if (fundPayout <= 0) continue;
+
+            // Credit fund's cashAnchor with the takeover payout
+            await indexFundsCollection<Document>(db).updateOne(
+              { _id: fundId },
+              { $inc: { cashAnchor: fundPayout }, $set: { updatedAt: now } }
+            );
+
+            // Debit the fund's shares from the target's cap table
+            await debitSharesFromFund(db, target._id, fundId, fundShares, {
+              $set: { updatedAt: now },
+            });
+
+            // Remove the target corp from the fund's holdings ledger
+            await indexFundsCollection<Document>(db).updateOne(
+              { _id: fundId, "holdings.corporationId": target._id },
+              [
+                {
                   $set: {
-                    countryId: getSectorOperatingCountryId(existing, stateCountryByStateId),
-                    // Under plants `mergedPlant` below carries the real
-                    // value; this nameplate is a one-turn placeholder.
-                    // PLANTS-GATED: restated from `capitalStock` next tick.
-                    revenue: combinedRevenue,
-                    workers: combinedWorkers,
-                    profitMargin: weightedMargin,
-                    productionPolicyLevel: weightedProductionPolicyLevel,
-                    negativeProductionSustainedTurns: weightedNegativeProductionTurns,
-                    ...mergedPlant,
+                    holdings: {
+                      $filter: {
+                        input: "$holdings",
+                        as: "h",
+                        cond: { $ne: ["$$h.corporationId", target._id] },
+                      },
+                    },
                     updatedAt: now,
                   },
                 },
-              },
-            });
-            sectorDeleteIds.push(ts._id);
-          } else {
-            // Reassign: convert revenue into parent's LOCAL currency at transfer time.
-            sectorReassignOps.push({
-              updateOne: {
-                filter: {
-                  _id: ts._id,
-                  ...constructionTransfers.filterFor(ts),
-                },
-                update: {
-                  $set: {
-                    corporationId: parent._id,
-                    ...constructionTransfers.setFor(ts._id),
-                    countryId: getSectorOperatingCountryId(ts, stateCountryByStateId),
-                    // PLANTS-GATED: reassign path — the doc keeps its own
-                    // plant state, and under plants `revenue` is restated from
-                    // that capacity next turn regardless of this value.
-                    revenue: tsRevenueInParent(ts.revenue),
-                    updatedAt: now,
+              ]
+            );
+          }
+
+          await shareOrdersCollection(db).updateMany(
+            { corporationId: target._id, status: "open" },
+            { $set: { status: "cancelled", updatedAt: now } }
+          );
+
+          await shareListingsCollection(db).updateMany(
+            { corporationId: target._id, status: "open" },
+            { $set: { status: "cancelled" } }
+          );
+
+          const parentShareRow = (target.shareholders ?? []).find((s) =>
+            s.corporationId?.equals(parent._id)
+          );
+          const parentShares = parentShareRow?.shares ?? 0;
+
+          // Brand facility-loss (Boeing rule): the acquired target loses all of its
+          // sectors to the parent, so dent its brand for the loss before the sectors
+          // are reassigned (the aggregate still includes them). No-op when the target
+          // has no loyalty. Best-effort — loyalty recomputes each turn.
+          await applyBrandFacilityLoss(db, target._id, targetSectors);
+
+          const parentSectors = await corporateSectorsCollection(db)
+            .find({ corporationId: parent._id })
+            .toArray();
+
+          // Build lookup: "countryId:stateId:sectorType" → parent sector _id
+          const sectorStateIds = [
+            ...new Set([...targetSectors, ...parentSectors].map((s) => s.stateId)),
+          ];
+          const sectorStates = await statesCollection(db)
+            .find({ _id: { $in: sectorStateIds } }, { projection: { _id: 1, countryId: 1 } })
+            .toArray();
+          const stateCountryByStateId = buildSectorStateCountryMap(sectorStates);
+          const parentSectorKey = (s: CorporateSector) =>
+            `${getSectorOperatingCountryId(s, stateCountryByStateId)}:${s.stateId}:${s.sectorType}`;
+          const parentSectorMap = new Map(parentSectors.map((s) => [parentSectorKey(s), s]));
+
+          // Sector.revenue is denominated in the OWNING corp's liquidCurrencyCode
+          // (Task-18A). When merging/reassigning sectors from target → parent across
+          // a currency boundary (e.g. UK corp takes over a JP corp), target-LOCAL
+          // must be converted to parent-LOCAL via ₳; otherwise downstream turn
+          // processors read the raw value with parent's FX rate and produce
+          // order-of-magnitude wrong revenue.
+          const tsRevenueInParent = (tsRevenue: number): number => {
+            const anchor = corpLiquidCapitalToAnchor(tsRevenue, target, targetFxPre);
+            return anchorToCorpLiquidCapital(anchor, parent, parentFxPre);
+          };
+
+          // Plant state only exists at/above the plants tier. Below it, spreading
+          // the fold wrote `buildQueue: []` / `constructionInProgressAnchor: 0` /
+          // `mothballed: false` / `plantsStartTurn: null` onto rows with no such
+          // fields and SUMMED `capitalStock`, which capital mode owns and
+          // re-derives from revenue every turn (see sectorTurn's capital block).
+          const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sectorMergeOps: any[] = [];
+          const sectorDeleteIds: ObjectId[] = [];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sectorReassignOps: any[] = [];
+
+          for (const ts of targetSectors) {
+            const existing = parentSectorMap.get(parentSectorKey(ts));
+            if (existing) {
+              // Merge: combine revenue and workers; weight-average profit margin,
+              // production policy level, and sustained-negative-production counter by revenue
+              const tsRevenueParent = tsRevenueInParent(ts.revenue);
+              const combinedRevenue = existing.revenue + tsRevenueParent;
+              const combinedWorkers = existing.workers + ts.workers;
+              const weightedMargin =
+                combinedRevenue > 0
+                  ? (existing.profitMargin * existing.revenue + ts.profitMargin * tsRevenueParent) /
+                    combinedRevenue
+                  : existing.profitMargin;
+              const weightedProductionPolicyLevel =
+                combinedRevenue > 0
+                  ? clampProductionPolicy(
+                      Math.round(
+                        ((existing.productionPolicyLevel ?? 0) * existing.revenue +
+                          (ts.productionPolicyLevel ?? 0) * tsRevenueParent) /
+                          combinedRevenue
+                      )
+                    )
+                  : (existing.productionPolicyLevel ?? 0);
+              const weightedNegativeProductionTurns =
+                combinedRevenue > 0
+                  ? Math.round(
+                      ((existing.negativeProductionSustainedTurns ?? 0) * existing.revenue +
+                        (ts.negativeProductionSustainedTurns ?? 0) * tsRevenueParent) /
+                        combinedRevenue
+                    )
+                  : (existing.negativeProductionSustainedTurns ?? 0);
+              // `ts` is deleted below, so fold its plant state into the survivor
+              // first — same rule as the sector-purchase merge path. The
+              // acquirer paid a share price that capitalized the target's
+              // plants; dropping capacity/queue/CIP on the merge would destroy
+              // exactly the assets it just bought. ₳ fields are summed, never
+              // FX-rescaled (see sectorTransferCapex).
+              const mergedPlant = plantsEnabled ? mergeSectorPlantFields(existing, ts) : {};
+              sectorMergeOps.push({
+                updateOne: {
+                  filter: {
+                    _id: existing._id,
+                    ...mergeSurvivorConstructionFilter(existing),
+                  },
+                  update: {
+                    $set: {
+                      countryId: getSectorOperatingCountryId(existing, stateCountryByStateId),
+                      // Under plants `mergedPlant` below carries the real
+                      // value; this nameplate is a one-turn placeholder.
+                      // PLANTS-GATED: restated from `capitalStock` next tick.
+                      revenue: combinedRevenue,
+                      workers: combinedWorkers,
+                      profitMargin: weightedMargin,
+                      productionPolicyLevel: weightedProductionPolicyLevel,
+                      negativeProductionSustainedTurns: weightedNegativeProductionTurns,
+                      ...mergedPlant,
+                      updatedAt: now,
+                    },
                   },
                 },
-              },
+              });
+              sectorDeleteIds.push(ts._id);
+            } else {
+              // Reassign: convert revenue into parent's LOCAL currency at transfer time.
+              sectorReassignOps.push({
+                updateOne: {
+                  filter: {
+                    _id: ts._id,
+                    ...constructionTransfers.filterFor(ts),
+                  },
+                  update: {
+                    $set: {
+                      corporationId: parent._id,
+                      ...constructionTransfers.setFor(ts._id),
+                      countryId: getSectorOperatingCountryId(ts, stateCountryByStateId),
+                      // PLANTS-GATED: reassign path — the doc keeps its own
+                      // plant state, and under plants `revenue` is restated from
+                      // that capacity next turn regardless of this value.
+                      revenue: tsRevenueInParent(ts.revenue),
+                      updatedAt: now,
+                    },
+                  },
+                },
+              });
+            }
+          }
+
+          if (sectorMergeOps.length > 0) {
+            const merged = await corporateSectorsCollection(db).bulkWrite(sectorMergeOps);
+            if (merged.matchedCount !== sectorMergeOps.length) {
+              throw new Error("A takeover destination became secured during the sector merge");
+            }
+          }
+          if (sectorDeleteIds.length > 0) {
+            const removed = await corporateSectorsCollection(db).deleteMany({
+              _id: { $in: sectorDeleteIds },
+              ...unprotectedConstructionPropertyFilter(),
             });
+            if (removed.deletedCount !== sectorDeleteIds.length) {
+              throw new Error("A takeover source sector became secured before deletion");
+            }
           }
-        }
+          if (sectorReassignOps.length > 0) {
+            const reassigned = await corporateSectorsCollection(db).bulkWrite(sectorReassignOps);
+            if (reassigned.matchedCount !== sectorReassignOps.length) {
+              throw new Error("A takeover source sector became secured before reassignment");
+            }
+          }
+          await settleConstructionBorrowerTransfers(db, constructionTransfers);
 
-        if (sectorMergeOps.length > 0) {
-          const merged = await corporateSectorsCollection(db).bulkWrite(sectorMergeOps);
-          if (merged.matchedCount !== sectorMergeOps.length) {
-            throw new Error("A takeover destination became secured during the sector merge");
-          }
-        }
-        if (sectorDeleteIds.length > 0) {
-          const removed = await corporateSectorsCollection(db).deleteMany({
-            _id: { $in: sectorDeleteIds },
-            ...unprotectedConstructionPropertyFilter(),
-          });
-          if (removed.deletedCount !== sectorDeleteIds.length) {
-            throw new Error("A takeover source sector became secured before deletion");
-          }
-        }
-        if (sectorReassignOps.length > 0) {
-          const reassigned = await corporateSectorsCollection(db).bulkWrite(sectorReassignOps);
-          if (reassigned.matchedCount !== sectorReassignOps.length) {
-            throw new Error("A takeover source sector became secured before reassignment");
-          }
-        }
-        await settleConstructionBorrowerTransfers(db, constructionTransfers);
-
-        await bondsCollection(db).updateMany(
-          {
-            corporationId: target._id,
-            $or: [{ issuerType: "corporation" }, { issuerType: { $exists: false } }],
-          },
-          {
-            $set: {
-              corporationId: parent._id,
-              issuerName: parent.name,
-              updatedAt: now,
-            },
-          }
-        );
-
-        await corporationsCollection(db).updateOne(
-          { _id: parent._id },
-          {
-            $inc: { liquidCapital: cashToParentLocal },
-            $set: { updatedAt: now },
-          }
-        );
-        cashTransferApplied = true;
-
-        // When `target` held equity in other corporations, pulling it from those
-        // corps' shareholders arrays removes shares that the share-invariant
-        // expects to be accounted for. Fold those stripped shares into each
-        // host corp's publicFloat so totalShares stays balanced.
-        const corpsHoldingTarget = await corporationsCollection(db)
-          .find({ "shareholders.corporationId": target._id })
-          .project<{ _id: ObjectId; shareholders: { corporationId?: ObjectId; shares: number }[] }>(
+          await bondsCollection(db).updateMany(
             {
+              corporationId: target._id,
+              $or: [{ issuerType: "corporation" }, { issuerType: { $exists: false } }],
+            },
+            {
+              $set: {
+                corporationId: parent._id,
+                issuerName: parent.name,
+                updatedAt: now,
+              },
+            }
+          );
+
+          await corporationsCollection(db).updateOne(
+            { _id: parent._id },
+            {
+              $inc: { liquidCapital: cashToParentLocal },
+              $set: { updatedAt: now },
+            }
+          );
+          cashTransferApplied = true;
+
+          // When `target` held equity in other corporations, pulling it from those
+          // corps' shareholders arrays removes shares that the share-invariant
+          // expects to be accounted for. Fold those stripped shares into each
+          // host corp's publicFloat so totalShares stays balanced.
+          const corpsHoldingTarget = await corporationsCollection(db)
+            .find({ "shareholders.corporationId": target._id })
+            .project<{
+              _id: ObjectId;
+              shareholders: { corporationId?: ObjectId; shares: number }[];
+            }>({
               _id: 1,
               "shareholders.$": 1,
-            }
-          )
-          .toArray();
+            })
+            .toArray();
 
-        const rebalanceOps = corpsHoldingTarget
-          .map((c) => {
-            const entry = c.shareholders?.[0];
-            const stripped = entry?.shares ?? 0;
-            if (stripped <= 0) return null;
-            return {
-              updateOne: {
-                filter: { _id: c._id },
-                update: {
-                  $pull: { shareholders: { corporationId: target._id } } as never,
-                  $inc: { publicFloat: stripped },
-                  $set: { updatedAt: now },
+          const rebalanceOps = corpsHoldingTarget
+            .map((c) => {
+              const entry = c.shareholders?.[0];
+              const stripped = entry?.shares ?? 0;
+              if (stripped <= 0) return null;
+              return {
+                updateOne: {
+                  filter: { _id: c._id },
+                  update: {
+                    $pull: { shareholders: { corporationId: target._id } } as never,
+                    $inc: { publicFloat: stripped },
+                    $set: { updatedAt: now },
+                  },
                 },
-              },
-            };
-          })
-          .filter((op): op is NonNullable<typeof op> => op !== null);
+              };
+            })
+            .filter((op): op is NonNullable<typeof op> => op !== null);
 
-        if (rebalanceOps.length > 0) {
-          // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await corporationsCollection(db).bulkWrite(rebalanceOps as any);
-        }
+          if (rebalanceOps.length > 0) {
+            // bulkWrite op array type doesn't satisfy AnyBulkWriteOperation narrowing — runtime shape is valid
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await corporationsCollection(db).bulkWrite(rebalanceOps as any);
+          }
 
-        // Return any corporate bonds the absorbed target HELD as a creditor to
-        // their issuers' public float — mirrors the share rebalance above. Pre-fix
-        // these holder entries were left dangling on surviving issuers (orphaned
-        // bond units pointing at a deleted corp).
-        await releaseCorporationHeldBondsToFloat(db, target._id, now);
+          // Return any corporate bonds the absorbed target HELD as a creditor to
+          // their issuers' public float — mirrors the share rebalance above. Pre-fix
+          // these holder entries were left dangling on surviving issuers (orphaned
+          // bond units pointing at a deleted corp).
+          await releaseCorporationHeldBondsToFloat(db, target._id, now);
 
-        // The parent now owes the target's ordinary bank loans. Moved after
-        // every step that can fail and just before the delete.
-        assumedLoanIds = await assumeCorporateLoans(db, {
-          fromId: target._id,
-          toId: parent._id,
-        });
-        await assumeExtractionContracts(db, { fromId: target._id, toId: parent._id, now });
-
-        // Stamp tx history before deleting the absorbed corp so any
-        // financial-ledger rows referencing the merged target (corp_dividend
-        // it received, stock_trade_buy where it was the target, etc.) keep a
-        // resolvable subjectName/sequentialId after the doc is gone.
-        await stampSubjectDeleted(db, target._id, {
-          sequentialId: target.sequentialId,
-          deletedAt: now,
-        });
-
-        await corporationsCollection(db).deleteOne({ _id: target._id });
-        await recordCorporationExit(db, target, {
-          reason: "hostile_takeover",
-          successorId: parent._id,
-          now,
-        });
-
-        // Takeover fully committed — route the cross-currency acquisition spread
-        // best-effort (the outer catch reverses liquidCapital, so this must never throw).
-        if (takeoverSpread.spreadAnchor > 0 && takeoverSpread.from && takeoverSpread.to) {
-          const feeInParent = Math.round(
-            anchorToCorpLiquidCapital(takeoverSpread.spreadAnchor, parent, parentFxPre)
-          );
-          await safeDistributeConversionSpread(
-            db,
-            feeInParent,
-            takeoverSpread.from,
-            takeoverSpread.to
-          );
-        }
-
-        // Merge is committed: flush the ledger. Parent outflow for the squeeze-out
-        // (price + cross-currency spread), then the absorbed shell's cash as a
-        // matched release/absorb pair so the transfer nets to zero.
-        ledgerLegs.push({
-          type: "share_buyout_outflow",
-          turn: takeoverTurn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: parent._id,
-          subjectName: parent.name,
-          amount: -Math.round(totalInParentCapital),
-          currencyCode: parentLedgerCurrency,
-          counterpartyType: "corporation",
-          counterpartyId: target._id,
-          counterpartyName: target.name,
-          meta: {
-            kind: "hostile_takeover",
-            spreadAnchor: takeoverSpread.spreadAnchor,
-            sharesRetired: parentShares,
-          },
-        });
-        if (cashToParentLocal > 0) {
-          ledgerLegs.push(
-            {
-              type: "corp_dissolution_distribution",
-              turn: takeoverTurn,
-              createdAt: now,
-              subjectType: "corporation",
-              subjectId: parent._id,
-              subjectName: parent.name,
-              amount: Math.round(cashToParentLocal),
-              currencyCode: parentLedgerCurrency,
-              counterpartyType: "corporation",
-              counterpartyId: target._id,
-              counterpartyName: target.name,
-              meta: { kind: "hostile_takeover", side: "shell_cash_absorbed" },
-            },
-            {
-              type: "corp_dissolution_distribution",
-              turn: takeoverTurn,
-              createdAt: now,
-              subjectType: "corporation",
-              subjectId: target._id,
-              subjectName: target.name,
-              amount: -Math.round(cashToParentLocal),
-              currencyCode: parentLedgerCurrency,
-              counterpartyType: "corporation",
-              counterpartyId: parent._id,
-              counterpartyName: parent.name,
-              meta: { kind: "hostile_takeover", side: "shell_cash_released" },
-            }
-          );
-        }
-        await emitTxBulk(db, ledgerLegs, await loadTxThresholds(db));
-
-        // A conditional clearance becomes a live divestiture order only now
-        // that the merger has actually committed.
-        if (clearance.review)
-          await attachMergerRemedy(db, clearance.review, parent._id, takeoverTurn);
-
-        return NextResponse.json({
-          success: true,
-          mergedTargetId: target._id.toString(),
-          parentCorporationId: parent._id.toString(),
-          subsidiarySharesRetired: parentShares,
-          bankCharterTransferred: bankTransfer.transferred,
-          bankCharterCurrency: bankTransfer.currency,
-          minorityPayoutAnchorTotal: Math.round(totalAnchor * 100) / 100,
-          premiumRate: HOSTILE_TAKEOVER_PREMIUM_RATE,
-          bankNavFloorApplied,
-          spreadPaid: Math.round(
-            anchorToCorpLiquidCapital(takeoverSpread.spreadAnchor, parent, parentFxPre)
-          ),
-        });
-      } catch (err) {
-        // Single refund site for every post-debit failure (charter race,
-        // RATE_UNAVAILABLE, payout throw, cash-transfer crash): runs exactly
-        // once per failed attempt, before any error mapping below.
-        // Leg 1 reverses the minority-payout debit via the shared corp-cash
-        // primitive (pure $inc, idempotent, never balance-gated). Leg 2 claws
-        // back the shell-cash credit only when it landed, so the parent ends
-        // at exactly its pre-debit balance in every ordering. A refund write
-        // that itself fails is rethrown with context (never swallowed: silent
-        // success here would report a 400/503 while money is gone).
-        const failureLabel = err instanceof Error ? err.message : String(err);
-        // Loans follow only the sites that actually moved before the failure.
-        await settleConstructionBorrowerTransfers(db, constructionTransfers);
-        if (
-          assumedLoanIds.length > 0 &&
-          (await corporationsCollection(db).countDocuments({ _id: target._id }, { limit: 1 })) > 0
-        )
-          await restoreCorporateLoans(db, {
-            ids: assumedLoanIds,
+          // The parent now owes the target's ordinary bank loans. Moved after
+          // every step that can fail and just before the delete.
+          assumedLoanIds = await assumeCorporateLoans(db, {
             fromId: target._id,
             toId: parent._id,
           });
-        try {
-          await refundCorpLiquidCapital(db, parent._id, totalInParentCapital);
-          if (cashTransferApplied && cashToParentLocal > 0) {
-            await corporationsCollection(db).updateOne(
-              { _id: parent._id },
+          await assumeExtractionContracts(db, { fromId: target._id, toId: parent._id, now });
+
+          // Stamp tx history before deleting the absorbed corp so any
+          // financial-ledger rows referencing the merged target (corp_dividend
+          // it received, stock_trade_buy where it was the target, etc.) keep a
+          // resolvable subjectName/sequentialId after the doc is gone.
+          await stampSubjectDeleted(db, target._id, {
+            sequentialId: target.sequentialId,
+            deletedAt: now,
+          });
+
+          await corporationsCollection(db).deleteOne({ _id: target._id });
+          await recordCorporationExit(db, target, {
+            reason: "hostile_takeover",
+            successorId: parent._id,
+            now,
+          });
+
+          // Takeover fully committed — route the cross-currency acquisition spread
+          // best-effort (the outer catch reverses liquidCapital, so this must never throw).
+          if (takeoverSpread.spreadAnchor > 0 && takeoverSpread.from && takeoverSpread.to) {
+            const feeInParent = Math.round(
+              anchorToCorpLiquidCapital(takeoverSpread.spreadAnchor, parent, parentFxPre)
+            );
+            await safeDistributeConversionSpread(
+              db,
+              feeInParent,
+              takeoverSpread.from,
+              takeoverSpread.to
+            );
+          }
+
+          // Merge is committed: flush the ledger. Parent outflow for the squeeze-out
+          // (price + cross-currency spread), then the absorbed shell's cash as a
+          // matched release/absorb pair so the transfer nets to zero.
+          ledgerLegs.push({
+            type: "share_buyout_outflow",
+            turn: takeoverTurn,
+            createdAt: now,
+            subjectType: "corporation",
+            subjectId: parent._id,
+            subjectName: parent.name,
+            amount: -Math.round(totalInParentCapital),
+            currencyCode: parentLedgerCurrency,
+            counterpartyType: "corporation",
+            counterpartyId: target._id,
+            counterpartyName: target.name,
+            meta: {
+              kind: "hostile_takeover",
+              spreadAnchor: takeoverSpread.spreadAnchor,
+              sharesRetired: parentShares,
+            },
+          });
+          if (cashToParentLocal > 0) {
+            ledgerLegs.push(
               {
-                $inc: { liquidCapital: -cashToParentLocal },
-                $set: { updatedAt: new Date() },
+                type: "corp_dissolution_distribution",
+                turn: takeoverTurn,
+                createdAt: now,
+                subjectType: "corporation",
+                subjectId: parent._id,
+                subjectName: parent.name,
+                amount: Math.round(cashToParentLocal),
+                currencyCode: parentLedgerCurrency,
+                counterpartyType: "corporation",
+                counterpartyId: target._id,
+                counterpartyName: target.name,
+                meta: { kind: "hostile_takeover", side: "shell_cash_absorbed" },
+              },
+              {
+                type: "corp_dissolution_distribution",
+                turn: takeoverTurn,
+                createdAt: now,
+                subjectType: "corporation",
+                subjectId: target._id,
+                subjectName: target.name,
+                amount: -Math.round(cashToParentLocal),
+                currencyCode: parentLedgerCurrency,
+                counterpartyType: "corporation",
+                counterpartyId: parent._id,
+                counterpartyName: parent.name,
+                meta: { kind: "hostile_takeover", side: "shell_cash_released" },
               }
             );
           }
-        } catch (refundError) {
-          throw new Error(
-            `Hostile takeover rollback failed for parent ${parent._id.toString()} after '${failureLabel}': could not restore liquidCapital`,
-            { cause: refundError }
-          );
+          await emitTxBulk(db, ledgerLegs, await loadTxThresholds(db));
+
+          // A conditional clearance becomes a live divestiture order only now
+          // that the merger has actually committed.
+          if (clearance.review)
+            await attachMergerRemedy(db, clearance.review, parent._id, takeoverTurn);
+
+          return NextResponse.json({
+            success: true,
+            mergedTargetId: target._id.toString(),
+            parentCorporationId: parent._id.toString(),
+            subsidiarySharesRetired: parentShares,
+            bankCharterTransferred: bankTransfer.transferred,
+            bankCharterCurrency: bankTransfer.currency,
+            minorityPayoutAnchorTotal: Math.round(totalAnchor * 100) / 100,
+            premiumRate: HOSTILE_TAKEOVER_PREMIUM_RATE,
+            bankNavFloorApplied,
+            spreadPaid: Math.round(
+              anchorToCorpLiquidCapital(takeoverSpread.spreadAnchor, parent, parentFxPre)
+            ),
+          });
+        } catch (err) {
+          // Single refund site for every post-debit failure (charter race,
+          // RATE_UNAVAILABLE, payout throw, cash-transfer crash): runs exactly
+          // once per failed attempt, before any error mapping below.
+          // Leg 1 reverses the minority-payout debit via the shared corp-cash
+          // primitive (pure $inc, idempotent, never balance-gated). Leg 2 claws
+          // back the shell-cash credit only when it landed, so the parent ends
+          // at exactly its pre-debit balance in every ordering. A refund write
+          // that itself fails is rethrown with context (never swallowed: silent
+          // success here would report a 400/503 while money is gone).
+          const failureLabel = err instanceof Error ? err.message : String(err);
+          // Loans follow only the sites that actually moved before the failure.
+          await settleConstructionBorrowerTransfers(db, constructionTransfers);
+          if (
+            assumedLoanIds.length > 0 &&
+            (await corporationsCollection(db).countDocuments({ _id: target._id }, { limit: 1 })) > 0
+          )
+            await restoreCorporateLoans(db, {
+              ids: assumedLoanIds,
+              fromId: target._id,
+              toId: parent._id,
+            });
+          try {
+            await refundCorpLiquidCapital(db, parent._id, totalInParentCapital);
+            if (cashTransferApplied && cashToParentLocal > 0) {
+              await corporationsCollection(db).updateOne(
+                { _id: parent._id },
+                {
+                  $inc: { liquidCapital: -cashToParentLocal },
+                  $set: { updatedAt: new Date() },
+                }
+              );
+            }
+          } catch (refundError) {
+            throw new Error(
+              `Hostile takeover rollback failed for parent ${parent._id.toString()} after '${failureLabel}': could not restore liquidCapital`,
+              { cause: refundError }
+            );
+          }
+          if (err instanceof BankCharterRaceError) {
+            return errorResponse(err.status, err.message);
+          }
+          if (err instanceof Error && err.message === "RATE_UNAVAILABLE") {
+            return errorResponse(503, "Exchange rate unavailable, try again shortly");
+          }
+          throw err;
         }
-        if (err instanceof BankCharterRaceError) {
-          return errorResponse(err.status, err.message);
-        }
-        if (err instanceof Error && err.message === "RATE_UNAVAILABLE") {
-          return errorResponse(503, "Exchange rate unavailable, try again shortly");
-        }
-        throw err;
-      }
+      });
     });
   } catch (error) {
     return handleRouteError(error);

@@ -150,6 +150,8 @@ export interface BillLifecycleConfig {
   skipWhenGovPending?: boolean;
   /** Per-country sponsor notification override; defaults to the US notifier. */
   notifySponsor?: SponsorNotifier;
+  /** Domain outcome writes that must commit with the bill status. */
+  onResolution?: SponsorNotifier;
   /**
    * UK Lords revision flavor: after Commons passage, small chance to hold the
    * bill in `enrolled` for 1–2 turns (wire only — no Lords seats/votes) before

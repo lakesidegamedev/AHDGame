@@ -1,7 +1,8 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { fundedSiteSlice, fundedCarveFitsMarketLimit } from "./rules/fundedSiteSlice";
 import { transferFundedSite } from "./fundedSiteTransfer";
 import { producerDebtAnchor, producerStockBookAnchor } from "./rules/fundedOwnership";
-import type { Db } from "mongodb";
+import type { Db, AnyBulkWriteOperation } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -113,7 +114,13 @@ export async function privatizeAsset(
   // Runs before any collection access so a blocked country costs two reads and
   // touches nothing.
   await assertPrivateEnterprisePermitted(db, params.countryId);
+  return withSessionDb(db, (transactionDb) => privatizeInTransaction(transactionDb, params));
+}
 
+async function privatizeInTransaction(
+  db: Db,
+  params: PrivatizeAssetParams
+): Promise<PrivatizeAssetResult> {
   const now = new Date();
   const corps = corporationsCollection(db);
   const sectors = corporateSectorsCollection(db);
@@ -135,9 +142,13 @@ export async function privatizeAsset(
   // ── 2. Load + validate the selected sectors (fraction, ownership, cooldown). ──
   const selectedBuckets = new Set<string>();
   const selected: { sector: CorporateSector; fraction: number }[] = [];
+  const selectedRows = await sectors
+    .find({ _id: { $in: params.selections.map((selection) => selection.sectorId) } })
+    .toArray();
+  const selectedById = new Map(selectedRows.map((row) => [row._id.toHexString(), row]));
   for (const sel of params.selections) {
     const fraction = sel.carveFraction;
-    const sector = await sectors.findOne({ _id: sel.sectorId });
+    const sector = selectedById.get(sel.sectorId.toHexString());
     if (!sector || !sector.corporationId.equals(source._id)) {
       throw new Error("Sector is not owned by the source National Corporation");
     }
@@ -173,7 +184,7 @@ export async function privatizeAsset(
       throw new Error(
         `Carve fraction for ${sector.sectorType} (${sector.stateId}) must be ${Math.round(
           CARVE_FRACTION_MIN * 100
-        )}%–${Math.round(maxFraction * 100)}% — a spin-out may not exceed ${Math.round(
+        )}% to ${Math.round(maxFraction * 100)}%: a spin-out may not exceed ${Math.round(
           PRIVATIZE_MARKET_CONTROL_CAP * 100
         )}% of the regional market.`
       );
@@ -354,6 +365,9 @@ export async function privatizeAsset(
   //       removed rather than kept at 0 revenue. A partial source row keeps its
   //       `absorbedAtTurn` so the re-privatization cooldown still applies. ──
   let sectorsCarved = 0;
+  const legacyWrites: AnyBulkWriteOperation<CorporateSector>[] = [];
+  let expectedUpdates = 0,
+    expectedDeletes = 0;
   const deletedSourceSectorIds = new Set<string>();
   for (const { sector, fraction } of selected) {
     const transitionKey = transitionKeyBySectorId.get(sector._id.toHexString());
@@ -402,23 +416,27 @@ export async function privatizeAsset(
       sectorsCarved++;
       continue;
     }
-    await sectors.insertOne({
-      _id: new ObjectId(),
-      corporationId: newCorpId,
-      countryId: sector.countryId,
-      stateId: sector.stateId,
-      sectorType: sector.sectorType,
-      targetGrowthRate: sector.targetGrowthRate,
-      currentGrowthRate: sector.currentGrowthRate,
-      currentGrowthCost: Math.round(sector.currentGrowthCost * fraction),
-      revenue: Math.round(sector.revenue * fraction),
-      profitMargin: sector.profitMargin,
-      workers: Math.round(sector.workers * fraction),
-      ...(sector.strategyId ? { strategyId: sector.strategyId } : {}),
-      ...(plantsEnabled ? carvedPlant : {}),
-      createdAt: now,
-      updatedAt: now,
-    } as CorporateSector);
+    legacyWrites.push({
+      insertOne: {
+        document: {
+          _id: new ObjectId(),
+          corporationId: newCorpId,
+          countryId: sector.countryId,
+          stateId: sector.stateId,
+          sectorType: sector.sectorType,
+          targetGrowthRate: sector.targetGrowthRate,
+          currentGrowthRate: sector.currentGrowthRate,
+          currentGrowthCost: Math.round(sector.currentGrowthCost * fraction),
+          revenue: Math.round(sector.revenue * fraction),
+          profitMargin: sector.profitMargin,
+          workers: Math.round(sector.workers * fraction),
+          ...(sector.strategyId ? { strategyId: sector.strategyId } : {}),
+          ...(plantsEnabled ? carvedPlant : {}),
+          createdAt: now,
+          updatedAt: now,
+        } as CorporateSector,
+      },
+    });
     // "Did the carve leave anything behind?" Capacity-aware under plants.
     //
     // Under plants `revenue` is DERIVED from `capitalStock`, so a MOTHBALLED
@@ -429,30 +447,37 @@ export async function privatizeAsset(
     const keptPlantIsEmpty =
       !plantsEnabled || (!(keptPlant.capitalStock > 0) && keptPlant.buildQueue.length === 0);
     if (keptRevenue <= 0 && keptPlantIsEmpty) {
-      const deleted = await sectors.deleteOne({
-        _id: sector._id,
-        "constructionPropertyTransition.key": transitionKey,
+      legacyWrites.push({
+        deleteOne: {
+          filter: { _id: sector._id, "constructionPropertyTransition.key": transitionKey },
+        },
       });
-      if (deleted.deletedCount !== 1)
-        throw new Error("A secured sector changed during the privatization carve");
+      expectedDeletes++;
       deletedSourceSectorIds.add(sector._id.toHexString());
     } else {
-      const updated = await sectors.updateOne(
-        { _id: sector._id, "constructionPropertyTransition.key": transitionKey },
-        {
-          $set: {
-            revenue: keptRevenue,
-            workers: Math.round(sector.workers * keep),
-            currentGrowthCost: Math.round(sector.currentGrowthCost * keep),
-            ...(plantsEnabled ? keptPlant : {}),
-            updatedAt: now,
+      legacyWrites.push({
+        updateOne: {
+          filter: { _id: sector._id, "constructionPropertyTransition.key": transitionKey },
+          update: {
+            $set: {
+              revenue: keptRevenue,
+              workers: Math.round(sector.workers * keep),
+              currentGrowthCost: Math.round(sector.currentGrowthCost * keep),
+              ...(plantsEnabled ? keptPlant : {}),
+              updatedAt: now,
+            },
           },
-        }
-      );
-      if (updated.matchedCount !== 1)
-        throw new Error("A secured sector changed during the privatization carve");
+        },
+      });
+      expectedUpdates++;
     }
     sectorsCarved++;
+  }
+
+  if (legacyWrites.length) {
+    const written = await sectors.bulkWrite(legacyWrites);
+    if (written.matchedCount !== expectedUpdates || written.deletedCount !== expectedDeletes)
+      throw new Error("A secured sector changed during the privatization carve");
   }
 
   // ── 8. Distribute. IPO: book the float proceeds to the treasury now. Auction:
@@ -479,12 +504,14 @@ export async function privatizeAsset(
     });
     // Alert the country's residents (the only eligible bidders) that a state
     // spin-out is up for auction so the market competes for it.
-    await notifyCountryResidents(db, params.countryId, {
-      type: "corp_privatization_offered",
-      title: "State spin-out up for auction",
-      message: `${name} is up for auction — bids close in ${AUCTION_WINDOW_TURNS} turns.`,
-      metadata: { href: `/country/${params.countryId.toLowerCase()}/nationalization` },
-    });
+    await afterCommit(db, () =>
+      notifyCountryResidents(unboundDb(db), params.countryId, {
+        type: "corp_privatization_offered",
+        title: "State spin-out up for auction",
+        message: `${name} is up for auction; bids close in ${AUCTION_WINDOW_TURNS} turns.`,
+        metadata: { href: `/country/${params.countryId.toLowerCase()}/nationalization` },
+      })
+    );
   } else {
     // No buyer pays for the float: the proceeds are an explicit, named mint.
     await creditTreasuryProceedsPaired(db, {
@@ -507,36 +534,35 @@ export async function privatizeAsset(
     });
     // Completion wire fires here for IPO (covers both the executive route and the
     // legislative provision); the auction wire fires at sale in the resolver.
-    logWireEvent("corporation_privatized", wireHeadlineCorpPrivatized(name), {
-      href: `/corporation/${newCorpId.toString()}`,
+    await afterCommit(db, () =>
+      logWireEvent("corporation_privatized", wireHeadlineCorpPrivatized(name), {
+        href: `/corporation/${newCorpId.toString()}`,
+      })
+    );
+    await recordNationalizationLedger(db, {
+      countryId: params.countryId,
+      nationalCorporationId: primary._id,
+      kind: "privatize_ipo",
+      triggers: [],
+      valuationAnchor,
+      compensationAnchor: 0,
+      sectorTypes: [...new Set(selected.map((s) => s.sector.sectorType))],
+      newCorpName: name,
+      foreignOwnerCountryId: null,
+      confidenceBefore: consequence?.confidenceBefore,
+      confidenceAfter: consequence?.confidenceAfter,
+      legitimacyDelta: consequence?.legitimacyDelta,
+      turn: params.turn,
     });
-    // Public State Ownership Register row (best-effort — never abort the spin-out).
-    try {
-      await recordNationalizationLedger(db, {
-        countryId: params.countryId,
-        nationalCorporationId: primary._id,
-        kind: "privatize_ipo",
-        triggers: [],
-        valuationAnchor,
-        compensationAnchor: 0,
-        sectorTypes: [...new Set(selected.map((s) => s.sector.sectorType))],
-        newCorpName: name,
-        foreignOwnerCountryId: null,
-        confidenceBefore: consequence?.confidenceBefore,
-        confidenceAfter: consequence?.confidenceAfter,
-        legitimacyDelta: consequence?.legitimacyDelta,
-        turn: params.turn,
-      });
-    } catch (err) {
-      console.error("[nationalizationLedger] IPO privatization ledger write failed:", err);
-    }
     // Alert the country's residents that fresh shares are on the market.
-    await notifyCountryResidents(db, params.countryId, {
-      type: "corp_privatization_offered",
-      title: "State spin-out now trading",
-      message: `${name} has been privatized and its shares are now available.`,
-      metadata: { href: `/corporation/${newCorpId.toString()}` },
-    });
+    await afterCommit(db, () =>
+      notifyCountryResidents(unboundDb(db), params.countryId, {
+        type: "corp_privatization_offered",
+        title: "State spin-out now trading",
+        message: `${name} has been privatized and its shares are now available.`,
+        metadata: { href: `/corporation/${newCorpId.toString()}` },
+      })
+    );
   }
 
   await corps.updateOne({ _id: source._id }, { $set: { updatedAt: now } });

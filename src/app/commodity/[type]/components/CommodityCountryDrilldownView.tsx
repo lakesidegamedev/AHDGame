@@ -31,7 +31,7 @@ interface CommodityCountryDrilldownViewProps {
   capacityByState?: Record<string, number>;
   /** Imports attributed to each state; empty when imports are unknown. */
   stateImports?: Record<string, number>;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   onBack: () => void;
 }

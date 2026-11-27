@@ -29,6 +29,7 @@ export type FinancialTxType =
   | "peace_indemnity" // indemnity paid between treasuries under a peace term
   // Character / imperial cash
   | "fund_credit" // legacy mixed-source entry — keep for back-compat
+  | "sponsored_post_payment"
   | "fund_debit"
   | "office_income"
   | "fundraise_credit"
@@ -148,6 +149,7 @@ export type FinancialTxType =
 
   // Admin / system
   | "admin_transfer"
+  | "referral_reward"
   | "onboarding_reward" // one-time new-player checklist completion payout
   | "starting_capital" // endowment written onto a newly created character
   | "contest_prize" // weekly contest winner's cash prize
@@ -175,6 +177,8 @@ export type FinancialTxType =
   | "gov_grant_paid"
   | "gov_budget_transfer"
   | "gov_defense_overdraft"
+  | "sovereign_bailout_disbursement"
+  | "sovereign_monetization"
   | "monetary_treasury_advance"
   | "monetary_qe" // central bank buys bonds from the market pool with new money
   | "monetary_qt" // central bank sells bonds to the market pool, withdrawing money

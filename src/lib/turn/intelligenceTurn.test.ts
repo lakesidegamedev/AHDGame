@@ -1,3 +1,11 @@
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, expect, it, vi } from "vitest";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { intelligenceAccrualPerTurn } from "@/lib/intelligence/appropriationLine";

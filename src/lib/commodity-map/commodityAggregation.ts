@@ -1,24 +1,12 @@
-/**
- * Aggregation logic for rolling state-level commodity data up to country level.
- *
- * Prices are aggregated as a simple average (since different states have
- * different economic profiles, and commodity supply/demand-weighted average
- * would require additional context). Supply and demand sum directly.
- *
- * Country avg price uses the same three-leg blend as state prices but collapses
- * the regional leg into national (50% global + 50% national), since at the
- * country-aggregate scale state-level conditions have already been rolled up.
- */
-
+/** Country totals read the published national quote alongside authoritative supply and demand. */
 import type { CountryId } from "@/lib/constants/countries";
-import { blendPrice, computeMarketPrice } from "@/lib/constants/commoditiesCore";
 
 export interface CountryCommodityData {
   countryId: CountryId;
   supply: number;
   demand: number;
   balance: number;
-  /** Simple average of state-level prices. Null if no state prices exist. */
+  /** Published national quote, in anchor units. Null until a quote exists. */
   avgPrice: number | null;
   /** Number of states with data in this country */
   stateCount: number;
@@ -38,10 +26,11 @@ export function aggregateByCountry(
   stateDemand: Record<string, number>,
   _statePrices: Record<string, number>,
   stateCountryMap: Map<string, CountryId>,
-  basePrice: number,
-  globalPrice: number,
+  _basePrice: number,
+  _globalPrice: number,
   nationalSupply?: Record<string, number>,
-  nationalDemand?: Record<string, number>
+  nationalDemand?: Record<string, number>,
+  nationalPrices?: Record<string, number>
 ): Record<CountryId, CountryCommodityData> {
   const acc: Record<string, { supply: number; demand: number; count: number }> = {};
 
@@ -55,6 +44,13 @@ export function aggregateByCountry(
     acc[country].count++;
   }
 
+  for (const country of new Set([
+    ...Object.keys(nationalSupply ?? {}),
+    ...Object.keys(nationalDemand ?? {}),
+    ...Object.keys(nationalPrices ?? {}),
+  ])) {
+    acc[country] ??= { supply: 0, demand: 0, count: 0 };
+  }
   const result: Record<string, CountryCommodityData> = {};
   for (const [countryId, data] of Object.entries(acc)) {
     const authSupply = nationalSupply?.[countryId];
@@ -62,10 +58,9 @@ export function aggregateByCountry(
     const useAuthoritative = authSupply !== undefined || authDemand !== undefined;
     const supply = useAuthoritative ? (authSupply ?? 0) : data.supply;
     const demand = useAuthoritative ? (authDemand ?? 0) : data.demand;
-    const countryRawPrice = computeMarketPrice(basePrice, supply, demand);
-    // Country-level rollup: collapse the regional leg into national so the blend
-    // becomes 50% global + 50% national (state detail is already aggregated).
-    const avgPrice = blendPrice(globalPrice, countryRawPrice, countryRawPrice);
+    const price = nationalPrices?.[countryId];
+    const avgPrice =
+      typeof price === "number" && Number.isFinite(price) && price >= 0 ? price : null;
     result[countryId] = {
       countryId: countryId as CountryId,
       supply,

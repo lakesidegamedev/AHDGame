@@ -1,10 +1,11 @@
+import { recordedCasinoResponse } from "@/lib/casino/recordedResponse";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { errorResponse, handleRouteError } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
+import { getPersonalBalance } from "@/lib/currency/characterFunds";
 import {
   houseLimits,
   loadHouse,
@@ -18,9 +19,9 @@ import { blackjackPendingWagersCollection } from "@/lib/db/repositories/blackjac
 import type { Document } from "mongodb";
 
 const placeWagerSchema = z.object({
-  discordId: z.string().min(1, "discordId is required"),
+  discordId: z.string().min(1, "discordId is required").max(100),
   wagerAmount: z.number().positive("wagerAmount must be a positive number"),
-  gameId: z.string().optional(),
+  gameId: z.string().max(150).optional(),
 });
 
 // POST /api/discord-bot/blackjack/place-wager — Takes the stake from the player's home-currency
@@ -41,48 +42,53 @@ export async function POST(request: Request) {
     const wagerAmount = Math.floor(parsed.data.wagerAmount);
     const gameId = bodyGameId || new ObjectId().toString();
     const db = await getDb();
+    return recordedCasinoResponse(
+      db,
+      `place-wager:${discordId}:${gameId}`,
+      parsed.data,
+      async (db) => {
+        const resolved = await resolveCasinoPlayer(db, discordId);
+        if (!resolved.ok) return casinoFailure(resolved);
+        const { player } = resolved;
 
-    const resolved = await resolveCasinoPlayer(db, discordId);
-    if (!resolved.ok) return casinoFailure(resolved);
-    const { player } = resolved;
+        const limits = houseLimits((await loadHouse(db)).anchorBalance);
+        const taken = await takeStake(db, player, wagerAmount, limits);
+        if (!taken.ok) return casinoFailure(taken);
 
-    const limits = houseLimits((await loadHouse(db)).anchorBalance);
-    const taken = await takeStake(db, player, wagerAmount, limits);
-    if (!taken.ok) return casinoFailure(taken);
+        try {
+          await blackjackPendingWagersCollection<Document>(db).insertOne({
+            gameId,
+            discordId,
+            characterId: player.characterId,
+            wagerAmount,
+            currency: player.currency,
+            rate: player.rate,
+            placedAt: new Date(),
+            status: "pending",
+          });
+        } catch (error) {
+          await returnStake(db, player, wagerAmount);
+          throw error;
+        }
 
-    // If the pending row cannot be written the hand cannot settle, so return the stake.
-    try {
-      await blackjackPendingWagersCollection<Document>(db).insertOne({
-        gameId,
-        discordId,
-        characterId: player.characterId,
-        wagerAmount,
-        currency: player.currency,
-        rate: player.rate,
-        placedAt: new Date(),
-        status: "pending",
-      });
-    } catch (error) {
-      await returnStake(db, player, wagerAmount);
-      throw error;
-    }
+        const character = await charactersCollection(db).findOne({ _id: player.characterId });
+        const newCash = character ? getPersonalBalance(character, player.currency, true) : 0;
 
-    const character = await charactersCollection(db).findOne({ _id: player.characterId });
-    const newCash = character ? getTotalPersonalWealth(character, true) : 0;
-
-    return NextResponse.json({
-      success: true,
-      gameId,
-      discordId,
-      characterId: player.characterId.toString(),
-      characterName: player.characterName,
-      countryId: player.countryId,
-      currency: player.currency,
-      wagerAmount,
-      previousCash: newCash + wagerAmount,
-      newCash,
-      message: `Wager of ${wagerAmount.toLocaleString()} ${player.currency} placed. Good luck!`,
-    });
+        return NextResponse.json({
+          success: true,
+          gameId,
+          discordId,
+          characterId: player.characterId.toString(),
+          characterName: player.characterName,
+          countryId: player.countryId,
+          currency: player.currency,
+          wagerAmount,
+          previousCash: newCash + wagerAmount,
+          newCash,
+          message: `Wager of ${wagerAmount.toLocaleString()} ${player.currency} placed. Good luck!`,
+        });
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

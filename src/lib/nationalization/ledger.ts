@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { NationalizationLedgerEntry } from "@/lib/db/types";
@@ -30,33 +31,35 @@ export async function recordNationalizationLedger(
   };
   await nationalizationLedgerCollection<NationalizationLedgerEntry>(db).insertOne(doc);
 
-  recordAudit({
-    source: "api",
-    action: doc.kind.startsWith("nationalize")
-      ? "nationalization.execute"
-      : "privatization.execute",
-    category: "corp",
-    turn: doc.turn,
-    ts: doc.createdAt,
-    subject: {
-      type: "corporation",
-      id: doc.nationalCorporationId,
-      name: doc.newCorpName ?? doc.formerCorpName,
-    },
-    amount: doc.compensationAnchor || doc.valuationAnchor || undefined,
-    refs: { corporationId: doc.nationalCorporationId },
-    outcome: "ok",
-    meta: {
-      kind: doc.kind,
-      method: doc.method,
-      tier: doc.tier,
-      triggers: doc.triggers,
-      sectorTypes: doc.sectorTypes,
-      countryId: doc.countryId,
-      foreignOwnerCountryId: doc.foreignOwnerCountryId,
-      legitimacyDelta: doc.legitimacyDelta,
-    },
-  });
+  await afterCommit(db, () =>
+    recordAudit({
+      source: "api",
+      action: doc.kind.startsWith("nationalize")
+        ? "nationalization.execute"
+        : "privatization.execute",
+      category: "corp",
+      turn: doc.turn,
+      ts: doc.createdAt,
+      subject: {
+        type: "corporation",
+        id: doc.nationalCorporationId,
+        name: doc.newCorpName ?? doc.formerCorpName,
+      },
+      amount: doc.compensationAnchor || doc.valuationAnchor || undefined,
+      refs: { corporationId: doc.nationalCorporationId },
+      outcome: "ok",
+      meta: {
+        kind: doc.kind,
+        method: doc.method,
+        tier: doc.tier,
+        triggers: doc.triggers,
+        sectorTypes: doc.sectorTypes,
+        countryId: doc.countryId,
+        foreignOwnerCountryId: doc.foreignOwnerCountryId,
+        legitimacyDelta: doc.legitimacyDelta,
+      },
+    })
+  );
 }
 
 /**

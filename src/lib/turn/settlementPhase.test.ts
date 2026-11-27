@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockCollection, type MockDb } from "@/lib/test-utils/mockDb";
@@ -458,7 +461,7 @@ describe("processSettlementTurn", () => {
     await processSettlementTurn(db as unknown as Db, 412);
 
     expect(db.collectionMocks.settlementCrises!.updateOne).toHaveBeenCalledWith(
-      { _id: CRISIS_ID, lastTickedTurn: { $ne: 412 } },
+      { _id: CRISIS_ID, status: "open", lastTickedTurn: { $ne: 412 } },
       { $set: { lastTickedTurn: 412 } }
     );
   });
@@ -796,13 +799,14 @@ describe("processSettlementTurn — war attachment", () => {
     arrange(db, doc, [play()]);
     primeBlocs(db);
     const crises = prime(db, "settlementCrises");
-    crises.updateOne.mockImplementation(async (filter: { status?: string }) =>
-      // The state write restates `status: "open"`; the tick claim does not.
-      filter?.status === "open" ? { matchedCount: 0 } : { matchedCount: 1 }
+    crises.updateOne.mockImplementation(async (_filter, update) =>
+      update?.$set?.institutions ? { matchedCount: 0 } : { matchedCount: 1 }
     );
 
     const { processSettlementTurn } = await import("./settlementPhase");
-    await processSettlementTurn(db as unknown as Db, 412);
+    await expect(processSettlementTurn(db as unknown as Db, 412)).rejects.toThrow(
+      "Settlement changed"
+    );
 
     const stateWrite = crises.updateOne.mock.calls.find(
       (c) => c[1]?.$set?.institutions !== undefined

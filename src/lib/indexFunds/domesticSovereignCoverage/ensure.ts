@@ -1,3 +1,5 @@
+import type { CountryId } from "@/lib/constants/countries";
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Gated domestic sovereign-bond coverage shell.
  *
@@ -13,7 +15,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type { GameConfig, IndexFund, IndexFundPosition } from "@/lib/db/types";
+import type { GameConfig, IndexFund } from "@/lib/db/types";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -43,6 +45,10 @@ export async function ensureDomesticSovereignBondFunds(
 ): Promise<EnsureDomesticCoverageResult> {
   if (options.enabled !== true) return { ensured: [] };
 
+  return withSessionDb(db, (db) => ensureDomesticSovereignBondFundsWork(db));
+}
+
+async function ensureDomesticSovereignBondFundsWork(db: Db): Promise<EnsureDomesticCoverageResult> {
   const registered = await getRegisteredCountryIds(db);
   const budgets = await federalBudgetCollection<{ _id: string }>(db)
     .find(
@@ -61,9 +67,29 @@ export async function ensureDomesticSovereignBondFunds(
   const serviceableFunds = await indexFundsCollection(db)
     .find(
       { $or: [{ status: "active" }, { status: "paused", pauseReason: "backing_ratio" }] },
-      { projection: { countryId: 1, anchorCurrencyCode: 1, scope: 1 } }
+      { projection: { countryId: 1, anchorCurrencyCode: 1, scope: 1, reserveUnits: 1 } }
     )
     .toArray();
+  const repairTime = new Date();
+  const reserveRepairs = serviceableFunds
+    .filter((fund) => Number.isFinite(fund.reserveUnits) && fund.reserveUnits >= 0)
+    .map((fund) => ({
+      updateOne: {
+        filter: { fundId: fund._id, holderKind: "fund_reserve" as const },
+        update: {
+          $setOnInsert: {
+            fundId: fund._id,
+            holderKind: "fund_reserve" as const,
+            units: fund.reserveUnits,
+            avgNavAnchor: INDEX_FUND_INITIAL_NAV,
+            createdAt: repairTime,
+            updatedAt: repairTime,
+          },
+        },
+        upsert: true,
+      },
+    }));
+  if (reserveRepairs.length) await indexFundPositionsCollection(db).bulkWrite(reserveRepairs);
   const coveredHomeCountryIds = serviceableFunds
     .map((fund) => resolveFundBondCountryId(fund))
     .filter((value): value is NonNullable<typeof value> => value !== undefined);
@@ -97,44 +123,43 @@ export async function ensureDomesticSovereignBondFunds(
   if (missing.length === 0) return { ensured: [] };
 
   const now = new Date();
-  const ensured: string[] = [];
-  const funds = indexFundsCollection(db);
-  const positions = indexFundPositionsCollection(db);
-  for (const seed of missing) {
-    const fundId = new ObjectId();
-    await funds.insertOne({
-      _id: fundId,
-      slug: seed.slug,
-      name: seed.name,
-      tickerSymbol: seed.ticker,
-      scope: seed.scope,
-      kind: seed.kind,
-      countryId: seed.countryId,
-      anchorCurrencyCode: seed.anchorCurrencyCode,
-      status: "active",
-      quotedNav: INDEX_FUND_INITIAL_NAV,
-      unitSupply: INDEX_FUND_SEED_RESERVE_UNITS,
-      reserveUnits: INDEX_FUND_SEED_RESERVE_UNITS,
-      cashAnchor: INDEX_FUND_SEED_CASH_ANCHOR,
-      targetConstituents: [],
-      holdings: [],
-      createdAt: now,
-      updatedAt: now,
-    } as IndexFund);
-    await positions.updateOne(
-      { fundId, holderKind: "fund_reserve" },
-      {
-        $setOnInsert: { fundId, holderKind: "fund_reserve", createdAt: now },
-        $set: {
-          units: INDEX_FUND_SEED_RESERVE_UNITS,
-          avgNavAnchor: INDEX_FUND_INITIAL_NAV,
-          updatedAt: now,
+  const documents: IndexFund[] = missing.map((seed) => ({
+    _id: new ObjectId(),
+    slug: seed.slug,
+    name: seed.name,
+    tickerSymbol: seed.ticker,
+    scope: seed.scope,
+    kind: seed.kind,
+    countryId: seed.countryId as CountryId,
+    anchorCurrencyCode: COUNTRY_CURRENCY_MAP[seed.countryId as CountryId],
+    status: "active",
+    quotedNav: INDEX_FUND_INITIAL_NAV,
+    unitSupply: INDEX_FUND_SEED_RESERVE_UNITS,
+    reserveUnits: INDEX_FUND_SEED_RESERVE_UNITS,
+    cashAnchor: INDEX_FUND_SEED_CASH_ANCHOR,
+    targetConstituents: [],
+    holdings: [],
+    createdAt: now,
+    updatedAt: now,
+  }));
+  await indexFundsCollection(db).insertMany(documents);
+  await indexFundPositionsCollection(db).bulkWrite(
+    documents.map((fund) => ({
+      updateOne: {
+        filter: { fundId: fund._id, holderKind: "fund_reserve" as const },
+        update: {
+          $setOnInsert: { fundId: fund._id, holderKind: "fund_reserve" as const, createdAt: now },
+          $set: {
+            units: INDEX_FUND_SEED_RESERVE_UNITS,
+            avgNavAnchor: INDEX_FUND_INITIAL_NAV,
+            updatedAt: now,
+          },
         },
+        upsert: true,
       },
-      { upsert: true }
-    );
-    ensured.push(seed.countryId);
-  }
+    }))
+  );
+  const ensured = missing.map((seed) => seed.countryId);
   return { ensured: ensured.sort() };
 }
 

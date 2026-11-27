@@ -1,7 +1,8 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import type { Db, ObjectId } from "mongodb";
-import type { Character, State, PoliticalParty, StatePartyOrg, CareerEvent } from "@/lib/db/types";
+import type { Character, State, CareerEvent } from "@/lib/db/types";
 import {
   withdrawAllActiveCandidacies,
   cleanupPartyPositionsOnSwitch,
@@ -64,6 +65,17 @@ export async function performRelocation(
   targetState: State,
   options: PerformRelocationOptions = {}
 ): Promise<RelocationOutcome> {
+  return withSessionDb(db, (db) =>
+    performRelocationInTransaction(db, character, targetState, options)
+  );
+}
+
+async function performRelocationInTransaction(
+  db: Db,
+  character: Character,
+  targetState: State,
+  options: PerformRelocationOptions
+): Promise<RelocationOutcome> {
   const characterId = character._id;
   const oldStateId = character.homeState;
   const newStateId = targetState._id;
@@ -104,7 +116,7 @@ export async function performRelocation(
   }
 
   // 2. Withdraw from every active candidacy (no longer a blocking precondition).
-  const withdrawals = await withdrawAllActiveCandidacies(characterId);
+  const withdrawals = await withdrawAllActiveCandidacies(characterId, db);
 
   // 3. Auto-resign CEO of any corporation, unless the caller has asked us to
   //    keep them in place for the matching corp (combined char+corp move).
@@ -274,7 +286,7 @@ export async function performRelocation(
     // chair sync, state-party leadership in other states, committee
     // membership, and party-election candidacy withdrawal (already-withdrawn
     // rows are no-ops).
-    await cleanupPartyPositionsOnSwitch(characterId, oldPartyId, "independent", oldCountryId);
+    await cleanupPartyPositionsOnSwitch(characterId, oldPartyId, "independent", oldCountryId, db);
 
     if (oldParty) {
       await politicalPartiesCollection(db).updateOne(
@@ -364,18 +376,20 @@ export async function performRelocation(
     ...(chairResignedFrom ? ["centralBankChair"] : []),
   ];
   for (const officeType of departedOfficeTypes) {
-    await captureOfficeTransition({
-      db,
-      officeType,
-      transitionType: "left",
-      selectionMethod: "resignation",
-      partyId: character.party,
-      nationId: oldCountryId,
-      turn: gameTime.currentTurn,
-      careerStage: (character.careerHistory?.length ?? 0) + 1,
-    });
+    await afterCommit(db, () =>
+      captureOfficeTransition({
+        db: unboundDb(db),
+        officeType,
+        transitionType: "left",
+        selectionMethod: "resignation",
+        partyId: character.party,
+        nationId: oldCountryId,
+        turn: gameTime.currentTurn,
+        careerStage: (character.careerHistory?.length ?? 0) + 1,
+      })
+    );
   }
-  if (departedOfficeTypes.length) await flushServerPosthog();
+  if (departedOfficeTypes.length) await afterCommit(db, flushServerPosthog);
 
   // 9. Update party presence in the old and new states. Runs AFTER the
   //     character update so the headcount reflects the new homeState.

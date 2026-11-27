@@ -23,7 +23,7 @@ import { convertLawPrograms } from "../conversionPrograms";
 import { convertPublicCurrency } from "./convertPublicCurrency";
 import { loadFxScalePair } from "@/lib/country/mergeFxScale";
 import { carryNorthernIrelandMPs, mirrorNorthernIrelandMPs } from "./carryNorthernIrelandMPs";
-import type { ElectedOfficial } from "@/lib/db/types/officials";
+
 import type { State } from "@/lib/db/types";
 import { computeNationalMetrics } from "@/lib/nationalMetrics";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";
@@ -94,12 +94,6 @@ export async function transferRegion(
   db: Db,
   args: TransferRegionArgs
 ): Promise<TransferRegionResult> {
-  if (
-    !countryHasFeature("ukLib", args.fromCountryId) ||
-    !countryHasFeature("ieLib", args.toCountryId) ||
-    args.relocateToRegionId === null
-  )
-    return transferRegionInTransaction(db, args, unboundDb(db));
   return withSessionDb(db, (transactionDb) =>
     transferRegionInTransaction(transactionDb, args, unboundDb(db))
   );
@@ -146,11 +140,9 @@ async function transferRegionInTransaction(
         .find({ countryId: "UK", state: "NIR", officeType: "commons" })
         .toArray()
     : [];
-  const currencyPair = reunifyingNorthernIreland
-    ? await loadFxScalePair(db, fromCountryId, toCountryId)
-    : undefined;
+  const currencyPair = await loadFxScalePair(db, fromCountryId, toCountryId);
   if (currencyPair?.kind === "missing-rate")
-    throw new Error("Reunification requires usable exchange rates");
+    throw new Error("Region transfer requires usable exchange rates");
   const currencyScale = currencyPair?.kind === "convert" ? currencyPair.scale : 1;
   if (reunifyingNorthernIreland) {
     // The carried delegation can include NPPs living elsewhere in the UK.
@@ -238,10 +230,16 @@ async function transferRegionInTransaction(
       console.error(`${regionId} budget reapportion failed:`, err)
     );
 
-  if (reunifyingNorthernIreland) {
+  if (currencyPair.kind === "convert") {
     await convertPublicCurrency(db, regionId, currencyScale);
-    await convertLawPrograms(db, { regionId, countryId: "IE", scale: currencyScale });
   }
+
+  await convertLawPrograms(db, {
+    regionId,
+    countryId: toCountryId,
+    fromCountryId,
+    scale: currencyScale,
+  });
 
   // Re-denominate the region's corps + resident players into the new country's
   // currency (sterling to Irish pounds). Best-effort: a forex hiccup must not abort the

@@ -84,6 +84,7 @@ export interface Summary {
 }
 
 export type ConfirmAction = {
+  requestId?: string;
   type: "resetTimers" | "forceDividend" | "vacateCeo" | "suspend" | "resume" | "forceLiquidate";
   corpId: string;
   corpName: string;

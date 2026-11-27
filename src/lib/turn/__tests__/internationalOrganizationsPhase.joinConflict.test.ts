@@ -1,3 +1,13 @@
+vi.mock("@/lib/internationalOrganizations/resolvePendingResolution", () => ({
+  withPendingOrganizationResolution: async (
+    db: unknown,
+    item: unknown,
+    work: (db: unknown, item: unknown) => Promise<void>
+  ) => {
+    await work(db, item);
+    return true;
+  },
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { ConflictDoc } from "@/lib/db/types/conflict";

@@ -2,6 +2,7 @@ import type { FinancialCounterpartyType, FinancialTxType } from "@/lib/db/types/
 
 /** Plain-language source groups. The client translates each key. */
 export type MoneyHistoryKind =
+  | "sponsored_post"
   | "office_income"
   | "fundraise"
   | "campaign_donation"
@@ -47,6 +48,7 @@ export type MoneyHistoryKind =
 export type MoneyHistoryWallet = "personal" | "campaign";
 
 const KIND_BY_TYPE: Partial<Record<FinancialTxType, MoneyHistoryKind>> = {
+  sponsored_post_payment: "sponsored_post",
   office_income: "office_income",
   fundraise_credit: "fundraise",
   campaign_donation: "campaign_donation",
@@ -98,6 +100,7 @@ const KIND_BY_TYPE: Partial<Record<FinancialTxType, MoneyHistoryKind>> = {
   world_event_payout: "crisis",
   gov_subsidy_paid: "grant",
   gov_grant_paid: "grant",
+  referral_reward: "reward",
   onboarding_reward: "reward",
   starting_capital: "reward",
   contest_prize: "reward",

@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Sovereign-default cascade orchestrator — runs at crisis-fire time.
  *
@@ -84,14 +85,16 @@ export async function runCascade(db: Db, input: CascadeInput): Promise<CascadeRe
     for (const corp of corpRows) {
       if (isCorporationInsolvent({ liquidCapital: corp.liquidCapital ?? 0 })) {
         insolventIds.push(corp._id);
-        await emitPerCorpCascadeNews({
-          countryCode: input.countryCode,
-          level: result.levels,
-          corpId: corp._id,
-          corpName: corp.name,
-          corpType: corp.type,
-          corpCountryId: corp.countryId ?? "??",
-        });
+        await afterCommit(db, () =>
+          emitPerCorpCascadeNews({
+            countryCode: input.countryCode,
+            level: result.levels,
+            corpId: corp._id,
+            corpName: corp.name,
+            corpType: corp.type,
+            corpCountryId: corp.countryId ?? "??",
+          })
+        );
       }
     }
     result.insolventCorpIdsByLevel.push(insolventIds);

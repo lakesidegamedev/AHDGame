@@ -1,3 +1,4 @@
+import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 /** Viewer-scoped, read-only discovery. Batch inputs before evaluating every candidate. */
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -75,6 +76,8 @@ export async function viewerTenderIds(
           {
             projection: {
               gdp: 1,
+              countryId: 1,
+              currencyCode: 1,
               militaryPriceBaselineGdp: 1,
               "spending.byCategory.defense": 1,
               "baselineSpendingByCategory.defense": 1,
@@ -146,6 +149,7 @@ export async function viewerTenderIds(
           hasCurrentTenderCapacity({
             terms: row.terms,
             countryId,
+            paymentCurrency: resolveCountryCurrencyCode(budget) ?? null,
             corporation: corp,
             sectors: byCorp.get(corp._id.toHexString()) ?? [],
             commitments,

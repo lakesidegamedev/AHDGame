@@ -12,7 +12,7 @@ const VOTING_HOURS = 24;
  * Notify a UK bill's sponsor of the outcome. Royal Assent on enact; failed to
  * pass Parliament on reject; Lords revision when held in enrolled.
  */
-async function notifyUKSponsor(db: Db, bill: Bill, status: Bill["status"]): Promise<void> {
+async function applyUKBudgetResolution(db: Db, bill: Bill, status: Bill["status"]): Promise<void> {
   // Budget vote-vehicle bills apply the outcome to the UKBudget on final
   // resolution (signed = passed, failed = defeated). Runs before the sponsor
   // guard since a budget bill may have no seated sponsor. applyBudgetOutcome
@@ -26,7 +26,9 @@ async function notifyUKSponsor(db: Db, bill: Bill, status: Bill["status"]): Prom
       now: new Date(),
     });
   }
+}
 
+async function notifyUKSponsor(db: Db, bill: Bill, status: Bill["status"]): Promise<void> {
   if (status !== "signed" && status !== "failed" && status !== "enrolled") return;
   if (!bill.sponsorId) return;
   try {
@@ -82,6 +84,7 @@ export const UK_NATIONAL_CONFIG: BillLifecycleConfig = {
   originChambers: ["commons", "lords"],
   skipWhenGovPending: true,
   notifySponsor: notifyUKSponsor,
+  onResolution: applyUKBudgetResolution,
   lordsRevisionFlavor: {
     chance: 0.28,
     delayTurnsMin: 1,

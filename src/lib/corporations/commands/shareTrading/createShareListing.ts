@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 import {
@@ -23,14 +24,7 @@ import {
 } from "@/lib/corporations/shareholderOps";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
-import type {
-  Character,
-  Corporation,
-  NegotiatedSaleTerms,
-  Notification,
-  ShareListing,
-  ShareOrder,
-} from "@/lib/db/types";
+import type { Character, Corporation, NegotiatedSaleTerms, Notification } from "@/lib/db/types";
 import { checkNegotiatedSale } from "@/lib/corporations/negotiatedSaleGuards";
 import { getGameTime } from "@/lib/time/gameTime";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
@@ -104,57 +98,126 @@ export async function createShareListing(request: Request, { params }: RoutePara
       return errorResponse(400, "Negotiated sales are made from your personal shares");
     }
     const db = await getDb();
-    const corpGuard = await requireCorporationActionsEnabled(db);
-    if (corpGuard) return corpGuard;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const corpGuard = await requireCorporationActionsEnabled(db);
+      if (corpGuard) return corpGuard;
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const character = await getCharacterByUserId(db, auth.user.userId);
-    if (!character) {
-      return errorResponse(404, "Character not found");
-    }
+      const character = await getCharacterByUserId(db, auth.user.userId);
+      if (!character) {
+        return errorResponse(404, "Character not found");
+      }
 
-    const tradeLock = await assertCeoTradeNotBlocked(db, corporation, character._id);
-    if (tradeLock.blocked) {
-      return errorResponse(tradeLock.status, tradeLock.error);
-    }
+      const tradeLock = await assertCeoTradeNotBlocked(db, corporation, character._id);
+      if (tradeLock.blocked) {
+        return errorResponse(tradeLock.status, tradeLock.error);
+      }
 
-    const now = new Date();
-    // Turn-based expiry anchor — set alongside the Date so listing expiry
-    // freezes on pause (see ShareListing.expiresAtTurn).
-    const nowTurn = await getCurrentTurn(db);
+      const now = new Date();
+      // Turn-based expiry anchor — set alongside the Date so listing expiry
+      // freezes on pause (see ShareListing.expiresAtTurn).
+      const nowTurn = await getCurrentTurn(db);
 
-    if (sellAsCorporation) {
-      const placerCorp = await corporationsCollection(db).findOne({
-        ...(sellerCorporationId ? { _id: new ObjectId(sellerCorporationId) } : {}),
-        ceoId: character._id,
-        ceoVacant: { $ne: true },
-      });
-      if (!placerCorp) {
-        return errorResponse(
-          403,
-          "You must be an active CEO to list shares on behalf of a corporation"
+      if (sellAsCorporation) {
+        const placerCorp = await corporationsCollection(db).findOne({
+          ...(sellerCorporationId ? { _id: new ObjectId(sellerCorporationId) } : {}),
+          ceoId: character._id,
+          ceoVacant: { $ne: true },
+        });
+        if (!placerCorp) {
+          return errorResponse(
+            403,
+            "You must be an active CEO to list shares on behalf of a corporation"
+          );
+        }
+        if (placerCorp._id.equals(corporation._id)) {
+          return errorResponse(400, "A corporation cannot list its own shares");
+        }
+
+        if (placerCorp.countryOwnerId) {
+          return errorResponse(400, "National corporations cannot hold equity positions");
+        }
+
+        const shareholderEntry = corporation.shareholders?.find(
+          (sh) => sh.corporationId?.toString() === placerCorp._id.toString()
         );
-      }
-      if (placerCorp._id.equals(corporation._id)) {
-        return errorResponse(400, "A corporation cannot list its own shares");
+        const ownedShares = shareholderEntry?.shares ?? 0;
+
+        const openOrders = await shareOrdersCollection(db)
+          .find({
+            corporationId: corporation._id,
+            placerCorporationId: placerCorp._id,
+            type: "sell",
+            status: "open",
+          })
+          .toArray();
+        const alreadyReserved = openOrders.reduce(
+          (s, o) => s + (o.sharesDebitedAtCreation ? 0 : o.sharesRemaining),
+          0
+        );
+        const available = ownedShares - alreadyReserved;
+
+        if (available < shares) {
+          return errorResponse(400, `Only ${available.toLocaleString()} shares available`);
+        }
+
+        const listingId = new ObjectId();
+        const remainingAfterReserve = await debitSharesFromCorp(
+          db,
+          corporation._id,
+          placerCorp._id,
+          shares,
+          {
+            $set: { updatedAt: now },
+          },
+          { requireSufficient: true }
+        );
+        if (remainingAfterReserve < 0) {
+          return errorResponse(409, "Shares were already sold or reserved by another action");
+        }
+
+        try {
+          await shareListingsCollection(db).insertOne({
+            _id: listingId,
+            corporationId: corporation._id,
+            sellerCharacterId: character._id,
+            sellerCorporationId: placerCorp._id,
+            sharesListed: shares,
+            sharesRemaining: shares,
+            marketPriceAtCreation: corporation.sharePrice,
+            status: "open",
+            createdAt: now,
+            expiresAt: new Date(now.getTime() + LISTING_TTL_MS),
+            expiresAtTurn: nowTurn + LISTING_TTL_TURNS,
+          });
+        } catch (error) {
+          await creditSharesToCorp(
+            db,
+            corporation._id,
+            placerCorp._id,
+            shares,
+            shareholderEntry?.avgCostPerShare ?? corporation.sharePrice,
+            { $set: { updatedAt: new Date() } }
+          );
+          throw error;
+        }
+
+        return NextResponse.json({ success: true, sharesReserved: shares });
       }
 
-      if (placerCorp.countryOwnerId) {
-        return errorResponse(400, "National corporations cannot hold equity positions");
-      }
-
+      // Character listing their own shares
       const shareholderEntry = corporation.shareholders?.find(
-        (sh) => sh.corporationId?.toString() === placerCorp._id.toString()
+        (sh) => sh.characterId?.toString() === character._id.toString()
       );
       const ownedShares = shareholderEntry?.shares ?? 0;
 
       const openOrders = await shareOrdersCollection(db)
         .find({
           corporationId: corporation._id,
-          placerCorporationId: placerCorp._id,
+          characterId: character._id,
           type: "sell",
           status: "open",
         })
@@ -165,231 +228,164 @@ export async function createShareListing(request: Request, { params }: RoutePara
       );
       const available = ownedShares - alreadyReserved;
 
+      const terms = positionHoldingTerms(shareholderEntry ?? { shares: 0 }, nowTurn, 0);
+      let selectedTerm: HoldingTerm;
+      try {
+        selectedTerm = chooseHoldingTerm(terms, parsed.data.holdingTerm);
+      } catch {
+        return errorResponse(409, "Choose Short Term Holdings or Long Term Holdings", {
+          extra: { requiresHoldingTerm: true },
+        });
+      }
+      if (availableHoldingShares(terms, selectedTerm) < shares)
+        return errorResponse(400, "Insufficient shares in selected holding bucket");
+      const holdingChange: PersonalHoldingChange = { turn: nowTurn, term: selectedTerm };
+
       if (available < shares) {
         return errorResponse(400, `Only ${available.toLocaleString()} shares available`);
       }
 
+      let negotiatedTerms: NegotiatedSaleTerms | undefined;
+      let negotiatedBuyer: Pick<Character, "_id" | "userId" | "name"> | null = null;
+      if (negotiated) {
+        const buyer = await charactersCollection(db).findOne(
+          { _id: new ObjectId(negotiated.buyerCharacterId) },
+          { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
+        );
+        if (!buyer) return errorResponse(404, "Buyer not found");
+        const gameTime = await getGameTime();
+        const guard = await checkNegotiatedSale(
+          db,
+          character,
+          buyer,
+          gameTime.currentTurn,
+          gameTime.effectiveNow.getTime()
+        );
+        if (!guard.ok) return errorResponse(guard.status, guard.error);
+        const totalPrice = Math.round(negotiated.totalPrice * 100) / 100;
+        if (totalPrice <= 0) return errorResponse(400, "Agreed price must be positive");
+        negotiatedTerms = {
+          buyerCharacterId: buyer._id,
+          totalPrice,
+          pricePerShare: totalPrice / shares,
+        };
+        negotiatedBuyer = buyer;
+      }
+
+      // Listing every unreserved share removes the CEO's effective control immediately.
+      const shouldVacateCeo = character._id.equals(corporation.ceoId) && available === shares;
+      if (shouldVacateCeo && !confirmCeoVacate) {
+        return errorResponse(
+          409,
+          `You are the CEO of ${corporation.name}. Listing all ${shares.toLocaleString()} of your remaining shares will remove you as CEO — this can't be undone, and you'd have to be re-appointed to become CEO again.`,
+          { extra: { requiresCeoVacateConfirm: true } }
+        );
+      }
+      let corporationUpdate: {
+        $set: { updatedAt: Date; ceoVacant?: boolean; ceoVacantSinceTurn?: number };
+        $unset?: { ceoId: ""; userId: ""; pendingCeoCharacterId: "" };
+      } = { $set: { updatedAt: now } };
+      if (shouldVacateCeo) {
+        const currentTurn = await getCurrentTurn(db);
+        corporationUpdate = {
+          $set: {
+            ceoVacant: true,
+            ceoVacantSinceTurn: currentTurn,
+            updatedAt: now,
+          },
+          $unset: { ceoId: "", userId: "", pendingCeoCharacterId: "" },
+        };
+      }
+
       const listingId = new ObjectId();
-      const remainingAfterReserve = await debitSharesFromCorp(
+      const remainingAfterReserve = await debitShares(
         db,
         corporation._id,
-        placerCorp._id,
+        character._id,
         shares,
-        {
-          $set: { updatedAt: now },
-        },
-        { requireSufficient: true }
+        corporationUpdate,
+        { requireSufficient: true, holdingChange }
       );
       if (remainingAfterReserve < 0) {
         return errorResponse(409, "Shares were already sold or reserved by another action");
       }
 
+      let listingInserted = false;
       try {
         await shareListingsCollection(db).insertOne({
           _id: listingId,
           corporationId: corporation._id,
           sellerCharacterId: character._id,
-          sellerCorporationId: placerCorp._id,
+          holdingTerms: holdingChange.taken,
           sharesListed: shares,
           sharesRemaining: shares,
           marketPriceAtCreation: corporation.sharePrice,
           status: "open",
           createdAt: now,
           expiresAt: new Date(now.getTime() + LISTING_TTL_MS),
+          // Mirror the corp-listing path (line 194): set the turn anchor so
+          // character listings freeze on pause and read/submit/expiry all agree.
           expiresAtTurn: nowTurn + LISTING_TTL_TURNS,
+          ...(negotiatedTerms ? { negotiated: negotiatedTerms } : {}),
         });
+        listingInserted = true;
+
+        if (shouldVacateCeo) {
+          await corporationCeoVotesCollection<Document>(db).deleteMany({
+            corporationId: corporation._id,
+          });
+          await closeCeoTenure(db, corporation._id, {
+            holderId: character._id,
+            turn: await getCurrentTurn(db),
+          });
+        }
       } catch (error) {
-        await creditSharesToCorp(
+        if (listingInserted) {
+          await shareListingsCollection<Document>(db).deleteOne({ _id: listingId });
+        }
+
+        await creditShares(
           db,
           corporation._id,
-          placerCorp._id,
+          character._id,
           shares,
-          shareholderEntry?.avgCostPerShare ?? corporation.sharePrice,
-          { $set: { updatedAt: new Date() } }
+          { $set: { updatedAt: new Date() } },
+          {
+            holdingChange: { turn: nowTurn, restore: holdingChange.taken },
+          }
         );
+
+        if (shouldVacateCeo) {
+          await corporationsCollection(db).updateOne(
+            { _id: corporation._id },
+            buildCeoRestoreUpdate(corporation, new Date())
+          );
+        }
+
         throw error;
       }
 
+      if (negotiatedTerms && negotiatedBuyer) {
+        const sym =
+          CURRENCY_SYMBOLS[(corporation.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
+        await notificationsCollection<Omit<Notification, "_id">>(db)
+          .insertOne({
+            userId: negotiatedBuyer.userId,
+            type: "share_listing_offer_received",
+            title: "A player offered you a negotiated share sale",
+            message: `${character.name} will sell you ${shares.toLocaleString()} shares of ${corporation.name} for ${sym}${negotiatedTerms.totalPrice.toLocaleString()}. Accept it on the company's Shares tab within 24 turns.`,
+            read: false,
+            metadata: {
+              listingId: listingId.toString(),
+              corporationId: corporation._id.toString(),
+            },
+            createdAt: now,
+          } as Omit<Notification, "_id">)
+          .catch(() => undefined);
+      }
+
       return NextResponse.json({ success: true, sharesReserved: shares });
-    }
-
-    // Character listing their own shares
-    const shareholderEntry = corporation.shareholders?.find(
-      (sh) => sh.characterId?.toString() === character._id.toString()
-    );
-    const ownedShares = shareholderEntry?.shares ?? 0;
-
-    const openOrders = await shareOrdersCollection(db)
-      .find({
-        corporationId: corporation._id,
-        characterId: character._id,
-        type: "sell",
-        status: "open",
-      })
-      .toArray();
-    const alreadyReserved = openOrders.reduce(
-      (s, o) => s + (o.sharesDebitedAtCreation ? 0 : o.sharesRemaining),
-      0
-    );
-    const available = ownedShares - alreadyReserved;
-
-    const terms = positionHoldingTerms(shareholderEntry ?? { shares: 0 }, nowTurn, 0);
-    let selectedTerm: HoldingTerm;
-    try {
-      selectedTerm = chooseHoldingTerm(terms, parsed.data.holdingTerm);
-    } catch {
-      return errorResponse(409, "Choose Short Term Holdings or Long Term Holdings", {
-        extra: { requiresHoldingTerm: true },
-      });
-    }
-    if (availableHoldingShares(terms, selectedTerm) < shares)
-      return errorResponse(400, "Insufficient shares in selected holding bucket");
-    const holdingChange: PersonalHoldingChange = { turn: nowTurn, term: selectedTerm };
-
-    if (available < shares) {
-      return errorResponse(400, `Only ${available.toLocaleString()} shares available`);
-    }
-
-    let negotiatedTerms: NegotiatedSaleTerms | undefined;
-    let negotiatedBuyer: Pick<Character, "_id" | "userId" | "name"> | null = null;
-    if (negotiated) {
-      const buyer = await charactersCollection(db).findOne(
-        { _id: new ObjectId(negotiated.buyerCharacterId) },
-        { projection: { _id: 1, userId: 1, name: 1, createdTurn: 1, createdAt: 1 } }
-      );
-      if (!buyer) return errorResponse(404, "Buyer not found");
-      const gameTime = await getGameTime();
-      const guard = await checkNegotiatedSale(
-        db,
-        character,
-        buyer,
-        gameTime.currentTurn,
-        gameTime.effectiveNow.getTime()
-      );
-      if (!guard.ok) return errorResponse(guard.status, guard.error);
-      const totalPrice = Math.round(negotiated.totalPrice * 100) / 100;
-      if (totalPrice <= 0) return errorResponse(400, "Agreed price must be positive");
-      negotiatedTerms = {
-        buyerCharacterId: buyer._id,
-        totalPrice,
-        pricePerShare: totalPrice / shares,
-      };
-      negotiatedBuyer = buyer;
-    }
-
-    // Listing every unreserved share removes the CEO's effective control immediately.
-    const shouldVacateCeo = character._id.equals(corporation.ceoId) && available === shares;
-    if (shouldVacateCeo && !confirmCeoVacate) {
-      return errorResponse(
-        409,
-        `You are the CEO of ${corporation.name}. Listing all ${shares.toLocaleString()} of your remaining shares will remove you as CEO — this can't be undone, and you'd have to be re-appointed to become CEO again.`,
-        { extra: { requiresCeoVacateConfirm: true } }
-      );
-    }
-    let corporationUpdate: {
-      $set: { updatedAt: Date; ceoVacant?: boolean; ceoVacantSinceTurn?: number };
-      $unset?: { ceoId: ""; userId: ""; pendingCeoCharacterId: "" };
-    } = { $set: { updatedAt: now } };
-    if (shouldVacateCeo) {
-      const currentTurn = await getCurrentTurn(db);
-      corporationUpdate = {
-        $set: {
-          ceoVacant: true,
-          ceoVacantSinceTurn: currentTurn,
-          updatedAt: now,
-        },
-        $unset: { ceoId: "", userId: "", pendingCeoCharacterId: "" },
-      };
-    }
-
-    const listingId = new ObjectId();
-    const remainingAfterReserve = await debitShares(
-      db,
-      corporation._id,
-      character._id,
-      shares,
-      corporationUpdate,
-      { requireSufficient: true, holdingChange }
-    );
-    if (remainingAfterReserve < 0) {
-      return errorResponse(409, "Shares were already sold or reserved by another action");
-    }
-
-    let listingInserted = false;
-    try {
-      await shareListingsCollection(db).insertOne({
-        _id: listingId,
-        corporationId: corporation._id,
-        sellerCharacterId: character._id,
-        holdingTerms: holdingChange.taken,
-        sharesListed: shares,
-        sharesRemaining: shares,
-        marketPriceAtCreation: corporation.sharePrice,
-        status: "open",
-        createdAt: now,
-        expiresAt: new Date(now.getTime() + LISTING_TTL_MS),
-        // Mirror the corp-listing path (line 194): set the turn anchor so
-        // character listings freeze on pause and read/submit/expiry all agree.
-        expiresAtTurn: nowTurn + LISTING_TTL_TURNS,
-        ...(negotiatedTerms ? { negotiated: negotiatedTerms } : {}),
-      });
-      listingInserted = true;
-
-      if (shouldVacateCeo) {
-        await corporationCeoVotesCollection<Document>(db).deleteMany({
-          corporationId: corporation._id,
-        });
-        await closeCeoTenure(db, corporation._id, {
-          holderId: character._id,
-          turn: await getCurrentTurn(db),
-        });
-      }
-    } catch (error) {
-      if (listingInserted) {
-        await shareListingsCollection<Document>(db).deleteOne({ _id: listingId });
-      }
-
-      await creditShares(
-        db,
-        corporation._id,
-        character._id,
-        shares,
-        { $set: { updatedAt: new Date() } },
-        {
-          holdingChange: { turn: nowTurn, restore: holdingChange.taken },
-        }
-      );
-
-      if (shouldVacateCeo) {
-        await corporationsCollection(db).updateOne(
-          { _id: corporation._id },
-          buildCeoRestoreUpdate(corporation, new Date())
-        );
-      }
-
-      throw error;
-    }
-
-    if (negotiatedTerms && negotiatedBuyer) {
-      const sym =
-        CURRENCY_SYMBOLS[(corporation.liquidCurrencyCode ?? "USD") as CurrencyCode] ?? "₳";
-      void notificationsCollection<Omit<Notification, "_id">>(db)
-        .insertOne({
-          userId: negotiatedBuyer.userId,
-          type: "share_listing_offer_received",
-          title: "A player offered you a negotiated share sale",
-          message: `${character.name} will sell you ${shares.toLocaleString()} shares of ${corporation.name} for ${sym}${negotiatedTerms.totalPrice.toLocaleString()}. Accept it on the company's Shares tab within 24 turns.`,
-          read: false,
-          metadata: {
-            listingId: listingId.toString(),
-            corporationId: corporation._id.toString(),
-          },
-          createdAt: now,
-        } as Omit<Notification, "_id">)
-        .catch(() => undefined);
-    }
-
-    return NextResponse.json({ success: true, sharesReserved: shares });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

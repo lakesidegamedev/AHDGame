@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { migration } from "./2026-11-16-split-renewables-power-method";
 import { MIGRATIONS } from "../registry";
 import { REQUIRED_STARTUP_MIGRATIONS } from "../startupMigrations";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 
 interface Call {
   collection: string;
@@ -23,6 +27,8 @@ function fakeDb(subsidies: Array<Record<string, unknown>>, counts: Record<string
         calls.push({ collection: name, op: "updateMany", args });
         return { modifiedCount: counts[name] ?? 0 };
       },
+      findOne: async (filter: Record<string, unknown>) =>
+        subsidies.find((row) => row._id === filter._id) ?? null,
       find: () => ({ toArray: async () => (name === "subsidies" ? subsidies : []) }),
       updateOne: async (...args: unknown[]) => {
         calls.push({ collection: name, op: "updateOne", args });

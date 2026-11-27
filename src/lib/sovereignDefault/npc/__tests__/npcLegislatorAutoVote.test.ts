@@ -3,11 +3,15 @@ import { ObjectId } from "mongodb";
 import { computeNpcSupportScore, runNpcLegislatorAutoVote } from "../npcLegislatorAutoVote";
 import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
 
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (_db: unknown, work: (db: unknown) => unknown) => work(_db),
+}));
+
 describe("computeNpcSupportScore", () => {
   it("free-market NPP supports bailout", () => {
     const score = computeNpcSupportScore(
       {
-        policies: { economic: 60, social: 0 },
+        policies: { economic: 3, social: 0 },
         personality: { loyalty: 50, ambition: 50, stubbornness: 50 },
       },
       "bailout"
@@ -17,7 +21,7 @@ describe("computeNpcSupportScore", () => {
   it("populist NPP supports repudiate", () => {
     const score = computeNpcSupportScore(
       {
-        policies: { economic: -60, social: 30 },
+        policies: { economic: -3, social: 1.5 },
         personality: { loyalty: 50, ambition: 50, stubbornness: 50 },
       },
       "repudiate"
@@ -27,7 +31,7 @@ describe("computeNpcSupportScore", () => {
   it("technocrat opposes repudiate", () => {
     const score = computeNpcSupportScore(
       {
-        policies: { economic: 50, social: 0 },
+        policies: { economic: 2.5, social: 0 },
         personality: { loyalty: 50, ambition: 50, stubbornness: 50 },
       },
       "repudiate"
@@ -64,6 +68,13 @@ describe("runNpcLegislatorAutoVote", () => {
       updates,
       db: {
         collection: vi.fn((name: string) => {
+          if (name === "electedOfficials")
+            return {
+              find: vi.fn(() => ({
+                toArray: async () =>
+                  opts.npps.map((npp) => ({ nppId: npp._id, isNPP: true, seatsHeld: 1 })),
+              })),
+            };
           if (name === "npps") {
             return {
               find: vi.fn().mockReturnValue({
@@ -160,7 +171,7 @@ describe("runNpcLegislatorAutoVote", () => {
       npps: [
         {
           _id: nppId,
-          policies: { economic: 60, social: 0 },
+          policies: { economic: 3, social: 0 },
           personality: { loyalty: 50, ambition: 50, stubbornness: 50 },
         },
       ],
@@ -180,12 +191,12 @@ describe("runNpcLegislatorAutoVote", () => {
       npps: [
         {
           _id: new ObjectId(),
-          policies: { economic: 60, social: 0 },
+          policies: { economic: 3, social: 0 },
           personality: { loyalty: 80, ambition: 50, stubbornness: 50 },
         },
         {
           _id: new ObjectId(),
-          policies: { economic: -60, social: 30 },
+          policies: { economic: -3, social: 1.5 },
           personality: { loyalty: 30, ambition: 50, stubbornness: 50 },
         },
       ],
@@ -196,7 +207,7 @@ describe("runNpcLegislatorAutoVote", () => {
       countryCode: "US",
     });
     expect(r.npcsVoted).toBe(2);
-    expect(updates).toHaveLength(2);
+    expect(updates).toHaveLength(1);
     // Free-market NPP voted "for" bailout
     const firstVote = updates[0].$set;
     const firstFieldKey = Object.keys(firstVote)[0];
@@ -209,7 +220,7 @@ describe("runNpcLegislatorAutoVote", () => {
       npps: [
         {
           _id: new ObjectId(),
-          policies: { economic: 60, social: 0 },
+          policies: { economic: 3, social: 0 },
           personality: { loyalty: 80, ambition: 50, stubbornness: 50 },
         },
       ],

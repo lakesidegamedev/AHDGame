@@ -1,7 +1,9 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { isDeepStrictEqual } from "node:util";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { BankCharter, BankLoan, InterbankLoan } from "@/lib/db/types/bank";
-import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
+import type { BankCharter } from "@/lib/db/types/bank";
+
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -293,6 +295,14 @@ export async function transferBankCharterToAcquirer(
   acquirerId: ObjectId,
   now: Date
 ): Promise<TransferBankCharterResult> {
+  return withAtomicResult(db, (db) => transferBankCharterInner(db, targetId, acquirerId, now));
+}
+async function transferBankCharterInner(
+  db: Db,
+  targetId: ObjectId,
+  acquirerId: ObjectId,
+  now: Date
+): Promise<TransferBankCharterResult> {
   if (targetId.equals(acquirerId)) {
     return { ok: false, error: "A corporation cannot absorb itself" };
   }
@@ -341,6 +351,19 @@ export async function transferBankCharterToAcquirer(
       ? target.bankCharterTransfer
       : null;
   const plan = isOwnedPlan(rawPlan) ? rawPlan : null;
+  if (
+    charter &&
+    plan &&
+    sameId(plan.to, acquirerId) &&
+    acquirer.bankCharter &&
+    !isDeepStrictEqual(charter, acquirer.bankCharter)
+  ) {
+    return {
+      ok: false,
+      error:
+        "The pending bank transfer changed economically and needs reconciliation before it can resume.",
+    };
+  }
 
   if (!charter) {
     if (!rawPlan) {
@@ -611,7 +634,7 @@ export async function transferBankCharterToAcquirer(
   const release = await corps.updateOne(
     {
       _id: targetId,
-      ...identityFilter(charter),
+      ...fingerprintFilter(charter),
       "bankCharterTransfer.attemptId": owned,
       "bankCharterTransfer.to": acquirerId,
     },

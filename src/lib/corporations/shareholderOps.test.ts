@@ -1,3 +1,5 @@
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { Db } from "mongodb";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -56,65 +58,61 @@ describe("creditShares (character, cost basis)", () => {
 });
 
 describe("creditSharesToCorp", () => {
-  it("increments shares on an existing corp entry", async () => {
-    const targetCorpId = new ObjectId();
-    const buyerCorpId = new ObjectId();
-    const existingEntry = { corporationId: buyerCorpId, shares: 1000, avgCostPerShare: 10 };
-
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [existingEntry],
-    });
-    db.collectionMocks["corporations"].updateOne.mockResolvedValue({ matchedCount: 1 });
-
+  it.each([false, true])(
+    "credits quantity and weighted cost in the same write, existing=%s",
+    async (existing) => {
+      const memory = createInMemoryDb(),
+        target = new ObjectId(),
+        owner = new ObjectId();
+      memory.seed("corporations", [
+        {
+          _id: target,
+          shareholders: existing
+            ? [{ corporationId: owner, shares: 1000, avgCostPerShare: 10 }]
+            : [],
+        },
+      ]);
+      const { creditSharesToCorp } = await import("./shareholderOps");
+      expect(await creditSharesToCorp(memory as unknown as Db, target, owner, 500, 12)).toBe(true);
+      const row = memory.collection("corporations").docs[0];
+      const entries = row.shareholders as { shares: number; avgCostPerShare: number }[];
+      expect(entries).toHaveLength(1);
+      expect(entries[0].shares).toBe(existing ? 1500 : 500);
+      expect(entries[0].avgCostPerShare).toBeCloseTo(existing ? 16000 / 1500 : 12, 8);
+    }
+  );
+  it("preserves guarded cash/public-float changes in the same atomic credit", async () => {
+    const memory = createInMemoryDb(),
+      target = new ObjectId(),
+      owner = new ObjectId();
+    memory.seed("corporations", [
+      { _id: target, shareholders: [], publicFloat: 500, liquidCapital: 0 },
+    ]);
     const { creditSharesToCorp } = await import("./shareholderOps");
-    await creditSharesToCorp(db as any, targetCorpId, buyerCorpId, 500, 12);
-
-    expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalled();
+    const credit = () =>
+      creditSharesToCorp(
+        memory as unknown as Db,
+        target,
+        owner,
+        500,
+        12,
+        { $inc: { publicFloat: -500, liquidCapital: 6000 } },
+        { guardFilter: { publicFloat: { $gte: 500 } } }
+      );
+    expect(await credit()).toBe(true);
+    expect(await credit()).toBe(false);
+    expect(memory.collection("corporations").docs[0]).toMatchObject({
+      publicFloat: 0,
+      liquidCapital: 6000,
+    });
+    expect(memory.collection("corporations").docs[0].shareholders).toHaveLength(1);
   });
-
-  it("pushes a new entry when corp has no existing position", async () => {
-    const targetCorpId = new ObjectId();
-    const buyerCorpId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [],
-    });
-    db.collectionMocks["corporations"].updateOne
-      .mockResolvedValueOnce({ matchedCount: 0 }) // positional update misses
-      .mockResolvedValueOnce({ matchedCount: 1 }); // push succeeds
-
+  it("fails closed for a missing recipient", async () => {
+    const memory = createInMemoryDb();
     const { creditSharesToCorp } = await import("./shareholderOps");
-    await creditSharesToCorp(db as any, targetCorpId, buyerCorpId, 500, 12);
-
-    // Second updateOne should $push a new entry
-    const secondCall = db.collectionMocks["corporations"].updateOne.mock.calls[1];
-    expect(secondCall[1].$push).toBeDefined();
-  });
-
-  it("computes weighted average cost correctly", async () => {
-    const targetCorpId = new ObjectId();
-    const buyerCorpId = new ObjectId();
-
-    // Existing: 1000 shares @ $10 avg. Buying 500 more @ $12.
-    // New avg = (1000*10 + 500*12) / 1500 = 16000/1500 ≈ 10.667
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [{ corporationId: buyerCorpId, shares: 1000, avgCostPerShare: 10 }],
-    });
-    db.collectionMocks["corporations"].updateOne.mockResolvedValue({ matchedCount: 1 });
-
-    const { creditSharesToCorp } = await import("./shareholderOps");
-    await creditSharesToCorp(db as any, targetCorpId, buyerCorpId, 500, 12);
-
-    const setCall = db.collectionMocks["corporations"].updateOne.mock.calls.find(
-      (c: any[]) => c[1].$set?.["shareholders.$.avgCostPerShare"] !== undefined
-    );
-    expect(setCall).toBeDefined();
-    if (!setCall) throw new Error("Expected updateOne to be called with $set.avgCostPerShare");
-    const avgSet = setCall[1].$set["shareholders.$.avgCostPerShare"] as number;
-    expect(Math.round(avgSet * 1000) / 1000).toBeCloseTo(10.667, 2);
+    await expect(
+      creditSharesToCorp(memory as unknown as Db, new ObjectId(), new ObjectId(), 1, 12)
+    ).rejects.toThrow("unavailable");
   });
 });
 
@@ -150,7 +148,7 @@ describe("debitSharesFromCorp", () => {
     expect(remaining).toBe(0);
     expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalledWith(
       { _id: targetCorpId },
-      expect.objectContaining({ $pull: expect.anything() })
+      expect.any(Array)
     );
   });
 
@@ -174,7 +172,7 @@ describe("debitSharesFromCorp", () => {
     expect(call[2]).toMatchObject({ returnDocument: "after", session });
   });
 
-  it("passes the session to the cleanup $pull when the entry is removed", async () => {
+  it("passes the session to the empty-position cleanup when the entry is removed", async () => {
     const targetCorpId = new ObjectId();
     const holderCorpId = new ObjectId();
     const session = { sentinel: "sess" } as any;
@@ -188,8 +186,8 @@ describe("debitSharesFromCorp", () => {
     const { debitSharesFromCorp } = await import("./shareholderOps");
     await debitSharesFromCorp(db as any, targetCorpId, holderCorpId, 200, undefined, { session });
 
-    const pullCall = db.collectionMocks["corporations"].updateOne.mock.calls.find(
-      (c: any[]) => c[1].$pull
+    const pullCall = db.collectionMocks["corporations"].updateOne.mock.calls.find((c: unknown[]) =>
+      Array.isArray(c[1])
     );
     expect(pullCall).toBeDefined();
     expect(pullCall![2]).toMatchObject({ session });
@@ -217,7 +215,7 @@ describe("debitSharesFromImperial", () => {
     expect(call[2]).toMatchObject({ returnDocument: "after", session });
   });
 
-  it("passes the session to the cleanup $pull when the entry is removed", async () => {
+  it("passes the session to the empty-position cleanup when the entry is removed", async () => {
     const targetCorpId = new ObjectId();
     const imperialCharacterId = new ObjectId();
     const session = { sentinel: "sess" } as any;
@@ -233,8 +231,8 @@ describe("debitSharesFromImperial", () => {
       session,
     });
 
-    const pullCall = db.collectionMocks["corporations"].updateOne.mock.calls.find(
-      (c: any[]) => c[1].$pull
+    const pullCall = db.collectionMocks["corporations"].updateOne.mock.calls.find((c: unknown[]) =>
+      Array.isArray(c[1])
     );
     expect(pullCall).toBeDefined();
     expect(pullCall![2]).toMatchObject({ session });
@@ -276,7 +274,7 @@ describe("debitShares", () => {
     );
   });
 
-  it("passes the session to the cleanup $pull when the entry is removed", async () => {
+  it("passes the session to the empty-position cleanup when the entry is removed", async () => {
     const corpId = new ObjectId();
     const charId = new ObjectId();
     const session = { sentinel: "sess" } as any;
@@ -290,8 +288,8 @@ describe("debitShares", () => {
     const { debitShares } = await import("./shareholderOps");
     await debitShares(db as any, corpId, charId, 100, undefined, { session });
 
-    const pullCall = db.collectionMocks["corporations"].updateOne.mock.calls.find(
-      (c: any[]) => c[1].$pull
+    const pullCall = db.collectionMocks["corporations"].updateOne.mock.calls.find((c: unknown[]) =>
+      Array.isArray(c[1])
     );
     expect(pullCall).toBeDefined();
     expect(pullCall![2]).toMatchObject({ session });
@@ -299,70 +297,59 @@ describe("debitShares", () => {
 });
 
 describe("creditSharesToFund", () => {
-  it("increments shares on an existing fund entry", async () => {
-    const targetCorpId = new ObjectId();
-    const fundId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [{ fundId, shares: 1000, avgCostPerShare: 10 }],
-    });
-    db.collectionMocks["corporations"].updateOne.mockResolvedValue({ matchedCount: 1 });
-
+  it.each([false, true])(
+    "credits quantity and weighted cost in the same write, existing=%s",
+    async (existing) => {
+      const memory = createInMemoryDb(),
+        target = new ObjectId(),
+        owner = new ObjectId();
+      memory.seed("corporations", [
+        {
+          _id: target,
+          shareholders: existing ? [{ fundId: owner, shares: 1000, avgCostPerShare: 10 }] : [],
+        },
+      ]);
+      const { creditSharesToFund } = await import("./shareholderOps");
+      expect(await creditSharesToFund(memory as unknown as Db, target, owner, 500, 12)).toBe(true);
+      const row = memory.collection("corporations").docs[0];
+      const entries = row.shareholders as { shares: number; avgCostPerShare: number }[];
+      expect(entries).toHaveLength(1);
+      expect(entries[0].shares).toBe(existing ? 1500 : 500);
+      expect(entries[0].avgCostPerShare).toBeCloseTo(existing ? 16000 / 1500 : 12, 8);
+    }
+  );
+  it("preserves guarded cash/public-float changes in the same atomic credit", async () => {
+    const memory = createInMemoryDb(),
+      target = new ObjectId(),
+      owner = new ObjectId();
+    memory.seed("corporations", [
+      { _id: target, shareholders: [], publicFloat: 500, liquidCapital: 0 },
+    ]);
     const { creditSharesToFund } = await import("./shareholderOps");
-    await creditSharesToFund(db as any, targetCorpId, fundId, 250, 14);
-
-    const updateCall = db.collectionMocks["corporations"].updateOne.mock.calls[0];
-    expect(updateCall[0]).toMatchObject({ _id: targetCorpId, "shareholders.fundId": fundId });
-    expect(updateCall[1].$inc["shareholders.$.shares"]).toBe(250);
+    const credit = () =>
+      creditSharesToFund(
+        memory as unknown as Db,
+        target,
+        owner,
+        500,
+        12,
+        { $inc: { publicFloat: -500, liquidCapital: 6000 } },
+        { guardFilter: { publicFloat: { $gte: 500 } } }
+      );
+    expect(await credit()).toBe(true);
+    expect(await credit()).toBe(false);
+    expect(memory.collection("corporations").docs[0]).toMatchObject({
+      publicFloat: 0,
+      liquidCapital: 6000,
+    });
+    expect(memory.collection("corporations").docs[0].shareholders).toHaveLength(1);
   });
-
-  it("pushes a fund entry when no position exists", async () => {
-    const targetCorpId = new ObjectId();
-    const fundId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [],
-    });
-    db.collectionMocks["corporations"].updateOne
-      .mockResolvedValueOnce({ matchedCount: 0 })
-      .mockResolvedValueOnce({ matchedCount: 1 });
-
+  it("fails closed for a missing recipient", async () => {
+    const memory = createInMemoryDb();
     const { creditSharesToFund } = await import("./shareholderOps");
-    await creditSharesToFund(db as any, targetCorpId, fundId, 500, 12.5);
-
-    const pushCall = db.collectionMocks["corporations"].updateOne.mock.calls[1];
-    expect(pushCall[1].$push.shareholders).toMatchObject({
-      fundId,
-      shares: 500,
-      avgCostPerShare: 12.5,
-    });
-  });
-
-  it("returns false instead of throwing when a guarded public-float buy loses the race", async () => {
-    const targetCorpId = new ObjectId();
-    const fundId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne
-      .mockResolvedValueOnce({ _id: targetCorpId, shareholders: [] })
-      .mockResolvedValueOnce({ _id: targetCorpId, shareholders: [] });
-    db.collectionMocks["corporations"].updateOne.mockResolvedValue({ matchedCount: 0 });
-
-    const { creditSharesToFund } = await import("./shareholderOps");
-    const credited = await creditSharesToFund(
-      db as any,
-      targetCorpId,
-      fundId,
-      500,
-      12.5,
-      undefined,
-      {
-        guardFilter: { publicFloat: { $gte: 500 } },
-      }
-    );
-
-    expect(credited).toBe(false);
+    await expect(
+      creditSharesToFund(memory as unknown as Db, new ObjectId(), new ObjectId(), 1, 12)
+    ).rejects.toThrow("unavailable");
   });
 });
 
@@ -401,7 +388,7 @@ describe("debitSharesFromFund", () => {
     expect(remaining).toBe(0);
     expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalledWith(
       { _id: targetCorpId },
-      expect.objectContaining({ $pull: { shareholders: { fundId } } })
+      expect.any(Array)
     );
   });
 
@@ -431,62 +418,59 @@ describe("debitSharesFromFund", () => {
 });
 
 describe("creditSharesToNpp", () => {
-  it("increments shares on an existing NPP entry", async () => {
-    const targetCorpId = new ObjectId();
-    const nppId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [{ nppId, shares: 1000, avgCostPerShare: 10 }],
-    });
-    db.collectionMocks["corporations"].updateOne.mockResolvedValue({ matchedCount: 1 });
-
+  it.each([false, true])(
+    "credits quantity and weighted cost in the same write, existing=%s",
+    async (existing) => {
+      const memory = createInMemoryDb(),
+        target = new ObjectId(),
+        owner = new ObjectId();
+      memory.seed("corporations", [
+        {
+          _id: target,
+          shareholders: existing ? [{ nppId: owner, shares: 1000, avgCostPerShare: 10 }] : [],
+        },
+      ]);
+      const { creditSharesToNpp } = await import("./shareholderOps");
+      expect(await creditSharesToNpp(memory as unknown as Db, target, owner, 500, 12)).toBe(true);
+      const row = memory.collection("corporations").docs[0];
+      const entries = row.shareholders as { shares: number; avgCostPerShare: number }[];
+      expect(entries).toHaveLength(1);
+      expect(entries[0].shares).toBe(existing ? 1500 : 500);
+      expect(entries[0].avgCostPerShare).toBeCloseTo(existing ? 16000 / 1500 : 12, 8);
+    }
+  );
+  it("preserves guarded cash/public-float changes in the same atomic credit", async () => {
+    const memory = createInMemoryDb(),
+      target = new ObjectId(),
+      owner = new ObjectId();
+    memory.seed("corporations", [
+      { _id: target, shareholders: [], publicFloat: 500, liquidCapital: 0 },
+    ]);
     const { creditSharesToNpp } = await import("./shareholderOps");
-    await creditSharesToNpp(db as any, targetCorpId, nppId, 250, 14);
-
-    const updateCall = db.collectionMocks["corporations"].updateOne.mock.calls[0];
-    expect(updateCall[0]).toMatchObject({ _id: targetCorpId, "shareholders.nppId": nppId });
-    expect(updateCall[1].$inc["shareholders.$.shares"]).toBe(250);
+    const credit = () =>
+      creditSharesToNpp(
+        memory as unknown as Db,
+        target,
+        owner,
+        500,
+        12,
+        { $inc: { publicFloat: -500, liquidCapital: 6000 } },
+        { guardFilter: { publicFloat: { $gte: 500 } } }
+      );
+    expect(await credit()).toBe(true);
+    expect(await credit()).toBe(false);
+    expect(memory.collection("corporations").docs[0]).toMatchObject({
+      publicFloat: 0,
+      liquidCapital: 6000,
+    });
+    expect(memory.collection("corporations").docs[0].shareholders).toHaveLength(1);
   });
-
-  it("pushes an NPP entry when no position exists", async () => {
-    const targetCorpId = new ObjectId();
-    const nppId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne.mockResolvedValue({
-      _id: targetCorpId,
-      shareholders: [],
-    });
-    db.collectionMocks["corporations"].updateOne
-      .mockResolvedValueOnce({ matchedCount: 0 })
-      .mockResolvedValueOnce({ matchedCount: 1 });
-
+  it("fails closed for a missing recipient", async () => {
+    const memory = createInMemoryDb();
     const { creditSharesToNpp } = await import("./shareholderOps");
-    await creditSharesToNpp(db as any, targetCorpId, nppId, 500, 12.5);
-
-    const pushCall = db.collectionMocks["corporations"].updateOne.mock.calls[1];
-    expect(pushCall[1].$push.shareholders).toMatchObject({
-      nppId,
-      shares: 500,
-      avgCostPerShare: 12.5,
-    });
-  });
-
-  it("returns false instead of throwing when a guarded public-float buy loses the race", async () => {
-    const targetCorpId = new ObjectId();
-    const nppId = new ObjectId();
-
-    db.collectionMocks["corporations"].findOne
-      .mockResolvedValueOnce({ _id: targetCorpId, shareholders: [] })
-      .mockResolvedValueOnce({ _id: targetCorpId, shareholders: [] });
-    db.collectionMocks["corporations"].updateOne.mockResolvedValue({ matchedCount: 0 });
-
-    const { creditSharesToNpp } = await import("./shareholderOps");
-    const credited = await creditSharesToNpp(db as any, targetCorpId, nppId, 500, 12.5, undefined, {
-      guardFilter: { publicFloat: { $gte: 500 } },
-    });
-
-    expect(credited).toBe(false);
+    await expect(
+      creditSharesToNpp(memory as unknown as Db, new ObjectId(), new ObjectId(), 1, 12)
+    ).rejects.toThrow("unavailable");
   });
 });
 
@@ -525,7 +509,35 @@ describe("debitSharesFromNpp", () => {
     expect(remaining).toBe(0);
     expect(db.collectionMocks["corporations"].updateOne).toHaveBeenCalledWith(
       { _id: targetCorpId },
-      expect.objectContaining({ $pull: { shareholders: { nppId } } })
+      expect.any(Array)
     );
   });
 });
+
+it.each([
+  ["characterId", "debitShares"],
+  ["imperialCharacterId", "debitSharesFromImperial"],
+  ["corporationId", "debitSharesFromCorp"],
+  ["fundId", "debitSharesFromFund"],
+  ["nppId", "debitSharesFromNpp"],
+] as const)(
+  "keeps a renewed %s position when its credit races empty-position cleanup",
+  async (field, name) => {
+    const memory = createInMemoryDb(),
+      target = new ObjectId(),
+      owner = new ObjectId();
+    memory.seed("corporations", [{ _id: target, shareholders: [{ [field]: owner, shares: 1 }] }]);
+    const col = memory.collection("corporations"),
+      write = col.updateOne.bind(col);
+    vi.spyOn(col, "updateOne").mockImplementationOnce(async (...args) => {
+      await write(
+        { _id: target, [`shareholders.${field}`]: owner },
+        { $inc: { "shareholders.$.shares": 3 } }
+      );
+      return write(...args);
+    });
+    const ops = await import("./shareholderOps");
+    await ops[name](memory as unknown as Db, target, owner, 1);
+    expect(col.docs[0].shareholders).toEqual([{ [field]: owner, shares: 3 }]);
+  }
+);

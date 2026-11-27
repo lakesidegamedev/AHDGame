@@ -483,6 +483,10 @@ export interface Crisis {
   opportunity?: boolean;
   /** Bounded automatic weather-disaster treasury charge, reconciled by crisis ID. */
   autoDisasterFiscalCost?: number;
+  autoDisasterFiscalPaidLocal?: number;
+  autoDisasterFiscalCurrency?: import("@/lib/constants/currencies").CurrencyCode;
+  /** Unpaid local-currency fiscal loss, retained until funded rather than silently waived. */
+  autoDisasterFiscalUnfundedCost?: number;
   // NEW: interaction definition
   interactionDefinition?: {
     decisionTree: CrisisDecisionNode[];

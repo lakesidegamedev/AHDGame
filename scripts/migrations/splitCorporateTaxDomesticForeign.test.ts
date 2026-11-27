@@ -59,6 +59,7 @@ describe("splitCorporateTaxDomesticForeign migration", () => {
       "bills",
       "committeeAssignments",
       "statePolicyRecords",
+      "statePolicies",
       "federalBudget",
       "stateBudgets",
     ]) {
@@ -124,6 +125,7 @@ describe("splitCorporateTaxDomesticForeign migration", () => {
       "bills",
       "committeeAssignments",
       "statePolicyRecords",
+      "statePolicies",
     ] as const) {
       for (const [legacyId, newId] of pairs) {
         expect(db.collectionMocks[coll].updateMany).toHaveBeenCalledWith(

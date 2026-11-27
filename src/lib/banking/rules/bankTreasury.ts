@@ -8,7 +8,7 @@ import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/ban
 import { cbMarginRatePercent } from "@/lib/banking/rules/decide";
 import { discountWindowRatePercent } from "@/lib/banking/rules/discountWindow";
 import { perTurnInterest, perTurnInterestOn } from "@/lib/banking/rules/loans";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { perTurnCouponPayment } from "@/lib/constants/bonds";
 
 export const BANK_TREASURY_MAX_REMAINING_TURNS = 48;

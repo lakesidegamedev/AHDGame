@@ -1,15 +1,14 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
-  NPP,
   NPPInfluenceAttempt,
   InfluenceOutcome,
-  GameState,
   StatePartyOrg,
   PoliticalParty,
   State,
-  ElectionCandidate,
 } from "@/lib/db/types";
 import type { Election } from "@/lib/db/types";
 import { rollInfluence } from "./calculator";
@@ -127,10 +126,11 @@ async function getNationalRelocationTargetCost(
 }
 
 async function executeStatePartyInfluenceCore(
-  input: ExecutePartyInfluenceInput
+  input: ExecutePartyInfluenceInput,
+  db: Db,
+  roll: number,
+  randomSample: number
 ): Promise<ExecutePartyInfluenceResult> {
-  const db = await getDb();
-
   if (!input.stateId) {
     return {
       success: false,
@@ -172,7 +172,8 @@ async function executeStatePartyInfluenceCore(
     input.influenceType,
     input.fundAmount,
     input.actorCharacterId,
-    input.context
+    input.context,
+    db
   );
 
   if (!validation.valid) {
@@ -187,7 +188,7 @@ async function executeStatePartyInfluenceCore(
   }
 
   const gameState = await gameStateCollection(db).findOne({ _id: "current" });
-  const currentTurn = gameState?.currentTurn || 1;
+  const currentTurn = gameState?.currentTurn ?? 0;
   const stateLeadershipBonus =
     qualifiesForStateLeadershipBonus(input.influenceType) &&
     (statePartyOrg.chairId?.equals(input.actorCharacterId) ||
@@ -202,7 +203,6 @@ async function executeStatePartyInfluenceCore(
     0,
     stateLeadershipBonus
   );
-  const roll = rollInfluence();
   // NPP Management actions always succeed (this executor only ever serves the
   // route-restricted state management set). The roll is still computed for the
   // attempt record's calculation block.
@@ -251,7 +251,7 @@ async function executeStatePartyInfluenceCore(
     };
   }
 
-  await nppsCollection(db).updateOne(
+  const targetMarked = await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -261,27 +261,19 @@ async function executeStatePartyInfluenceCore(
       $inc: { "influenceState.totalTimesInfluenced": 1 },
     }
   );
+  if (targetMarked.matchedCount !== 1)
+    throw new Error("Influence target changed; no party resources were spent");
 
   const effectResult =
-    outcome === "success" ? await applyPartyInfluenceEffects(input, npp, party) : {};
+    outcome === "success"
+      ? await applyPartyInfluenceEffects(input, npp, party, db, randomSample)
+      : {};
 
   if (
     input.influenceType === "withdraw_election" &&
     outcome === "success" &&
     effectResult.withdrawApplied === false
   ) {
-    await statePartyOrgCollection(db).updateOne(
-      { _id: statePartyKey },
-      {
-        $inc: { nppActionPoints: totalActionCost, treasury: totalFundCost },
-        $set: { updatedAt: new Date() },
-      }
-    );
-    await nppsCollection(db).updateOne(
-      { _id: npp._id },
-      { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
-    );
-
     const failOutcome: InfluenceOutcome = "failure";
     const failMsg =
       "The NPP could not be withdrawn (no active candidacy matched). Your party was not charged.";
@@ -375,9 +367,11 @@ async function executeStatePartyInfluenceCore(
 }
 
 async function executeNationalPartyInfluenceCore(
-  input: ExecutePartyInfluenceInput
+  input: ExecutePartyInfluenceInput,
+  db: Db,
+  roll: number,
+  randomSample: number
 ): Promise<ExecutePartyInfluenceResult> {
-  const db = await getDb();
   const party = await findPartyForInfluence(db, input);
   const npp = await nppsCollection(db).findOne({ _id: input.nppId });
 
@@ -398,7 +392,8 @@ async function executeNationalPartyInfluenceCore(
     input.influenceType,
     input.fundAmount,
     input.actorCharacterId,
-    input.context
+    input.context,
+    db
   );
 
   if (!validation.valid) {
@@ -413,14 +408,13 @@ async function executeNationalPartyInfluenceCore(
   }
 
   const gameState = await gameStateCollection(db).findOne({ _id: "current" });
-  const currentTurn = gameState?.currentTurn || 1;
+  const currentTurn = gameState?.currentTurn ?? 0;
   const statePartyKey = `${npp.homeState}_${input.partyId}`;
   const statePartyOrg = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
   const organizationLevel = statePartyOrg?.organization || 50;
   // Fund lever retired — NPP work no longer spends treasury, so no fund bonus.
   const calculation = calculatePartyInfluenceChance(npp, input.partyId, organizationLevel, 0);
 
-  const roll = rollInfluence();
   // NPP Management actions always succeed (this executor only ever serves the
   // route-restricted national management set). The roll is still computed for
   // the attempt record's calculation block.
@@ -486,7 +480,7 @@ async function executeNationalPartyInfluenceCore(
     };
   }
 
-  await nppsCollection(db).updateOne(
+  const targetMarked = await nppsCollection(db).updateOne(
     { _id: npp._id },
     {
       $set: {
@@ -496,23 +490,13 @@ async function executeNationalPartyInfluenceCore(
       $inc: { "influenceState.totalTimesInfluenced": 1 },
     }
   );
+  if (targetMarked.matchedCount !== 1)
+    throw new Error("Influence target changed; no party resources were spent");
 
   let effectResult: Awaited<ReturnType<typeof applyPartyInfluenceEffects>> = {};
   if (outcome === "success") {
-    effectResult = await applyPartyInfluenceEffects(input, npp, party);
+    effectResult = await applyPartyInfluenceEffects(input, npp, party, db, randomSample);
     if (input.influenceType === "withdraw_election" && effectResult.withdrawApplied === false) {
-      await politicalPartiesCollection(db).updateOne(
-        { _id: party._id },
-        {
-          $inc: { nppActionPoints: totalActionCost, treasury: totalFundCost },
-          $set: { updatedAt: new Date() },
-        }
-      );
-      await nppsCollection(db).updateOne(
-        { _id: npp._id },
-        { $inc: { "influenceState.totalTimesInfluenced": -1 }, $set: { updatedAt: new Date() } }
-      );
-
       const failOutcome: InfluenceOutcome = "failure";
       const failMsg =
         "The NPP could not be withdrawn (no active candidacy matched). Your party was not charged.";
@@ -606,24 +590,57 @@ async function executeNationalPartyInfluenceCore(
   return { success: outcome === "success", outcome, message, calculation, roll };
 }
 
+async function executePartyInfluenceAtomically(
+  input: ExecutePartyInfluenceInput,
+  scope: "state" | "national"
+): Promise<ExecutePartyInfluenceResult> {
+  const db = await getDb();
+  const roll = rollInfluence(),
+    randomSample = Math.random();
+  const wrapped = await withAtomicResult(db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal)
+      return {
+        ok: false,
+        result: {
+          success: false,
+          outcome: "failure" as const,
+          message: refusal.error,
+          error: refusal.error,
+          calculation: {} as PartyInfluenceCalculation,
+          roll: 0,
+        },
+      };
+    const run = () =>
+      scope === "state"
+        ? executeStatePartyInfluenceCore(input, db, roll, randomSample)
+        : executeNationalPartyInfluenceCore(input, db, roll, randomSample);
+    const party =
+      scope === "national" && input.influenceType === "relocate_state"
+        ? await findPartyForInfluence(db, input)
+        : null;
+    const result = party
+      ? await withPartyTerritoryMutation(
+          db,
+          [{ countryId: party.countryId, partyId: String(party.sequentialId) }],
+          run
+        )
+      : await run();
+    return { ok: result.success, result };
+  });
+  return wrapped.result;
+}
+
 export async function executeStatePartyInfluence(
   input: ExecutePartyInfluenceInput
 ): Promise<ExecutePartyInfluenceResult> {
-  return executeStatePartyInfluenceCore(input);
+  return executePartyInfluenceAtomically(input, "state");
 }
 
 export async function executeNationalPartyInfluence(
   input: ExecutePartyInfluenceInput
 ): Promise<ExecutePartyInfluenceResult> {
-  if (input.influenceType !== "relocate_state") return executeNationalPartyInfluenceCore(input);
-  const db = await getDb();
-  const party = await findPartyForInfluence(db, input);
-  if (!party) return executeNationalPartyInfluenceCore(input);
-  return withPartyTerritoryMutation(
-    db,
-    [{ countryId: party.countryId, partyId: String(party.sequentialId) }],
-    () => executeNationalPartyInfluenceCore(input)
-  );
+  return executePartyInfluenceAtomically(input, "national");
 }
 
 export { calculatePartyInfluenceChance } from "./partyExecutorCalculations";

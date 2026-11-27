@@ -8,7 +8,10 @@ import {
   type LastTurnReconciliation,
 } from "@/lib/corporations/rules/lastTurnReconciliation";
 
-import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
+import {
+  realizedNetIncomePerTurn,
+  historySettlementUnavailable,
+} from "@/lib/corporations/rules/historyFinancials";
 import {
   cashWalkEvidence,
   reportingCashFlows,
@@ -34,6 +37,11 @@ interface HistoryProjection {
   settledBondCouponIncome?: number;
   settledBondInterestPaid?: number;
   settledBankLoanInterestPaid?: number;
+  settledImfInterestPaid?: number;
+  settledImfInterestReceived?: number;
+  settledImfPrincipalPaid?: number;
+  settledImfPrincipalReceived?: number;
+  imfSettlementUnavailable?: boolean;
   perTurnBondCouponIncome?: number;
   perTurnBondDragOnNetIncome?: number;
   dividendReceivedTax?: number;
@@ -66,6 +74,11 @@ const HISTORY_PROJECTION = {
   settledBondCouponIncome: 1,
   settledBondInterestPaid: 1,
   settledBankLoanInterestPaid: 1,
+  settledImfInterestPaid: 1,
+  settledImfInterestReceived: 1,
+  settledImfPrincipalPaid: 1,
+  settledImfPrincipalReceived: 1,
+  imfSettlementUnavailable: 1,
   perTurnBondCouponIncome: 1,
   perTurnBondDragOnNetIncome: 1,
   dividendReceivedTax: 1,
@@ -88,6 +101,7 @@ export async function loadLastTurnReconciliation(
   );
   if (
     !latest ||
+    historySettlementUnavailable(latest) ||
     typeof latest.revenue !== "number" ||
     typeof latest.totalCosts !== "number" ||
     typeof latest.income !== "number" ||
@@ -115,6 +129,41 @@ export async function loadLastTurnReconciliation(
     .aggregate<CashMovementGroup>(
       [
         { $match: { subjectId: corporation._id, subjectType: "corporation", ...evidence.filter } },
+        ...(latest.settledImfInterestPaid != null && latest.settledImfInterestReceived != null
+          ? [
+              {
+                $set: {
+                  amount: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$meta.kind", "imf_facility"] },
+                          { $eq: ["$turn", latest.turn] },
+                          { $isNumber: "$meta.interestCashNative" },
+                        ],
+                      },
+                      { $subtract: ["$amount", "$meta.interestCashNative"] },
+                      "$amount",
+                    ],
+                  },
+                  anchorAmount: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$meta.kind", "imf_facility"] },
+                          { $eq: ["$turn", latest.turn] },
+                          { $isNumber: "$meta.interestCashAnchor" },
+                          { $isNumber: "$anchorAmount" },
+                        ],
+                      },
+                      { $subtract: ["$anchorAmount", "$meta.interestCashAnchor"] },
+                      "$anchorAmount",
+                    ],
+                  },
+                },
+              },
+            ]
+          : []),
         ...(latest.settledBankLoanInterestPaid != null
           ? [
               {
@@ -200,6 +249,8 @@ export async function loadLastTurnReconciliation(
         (latest.perTurnBondCouponIncome ?? 0) - (latest.bondCouponFxFees ?? 0),
       bondInterestPaid: latest.settledBondInterestPaid ?? latest.perTurnBondDragOnNetIncome,
       bankLoanInterestPaid: latest.settledBankLoanInterestPaid,
+      imfInterestPaid: latest.settledImfInterestPaid,
+      imfInterestReceived: latest.settledImfInterestReceived,
       dividendIncomeReceived: latest.dividendIncomeReceived,
       dividendReceivedTax: latest.dividendReceivedTax ?? null,
       sectorFxSpread: latest.sectorFxSpread ?? null,

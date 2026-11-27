@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { UnitDomain } from "@/lib/db/types/militaryUnit";
@@ -54,20 +55,22 @@ export async function depositLots(
   const amount = Math.max(0, Math.round(lots));
   if (amount <= 0) return;
 
-  const current = await getNationalArsenal(db, countryId);
-  const blended = blendGrade(current.stock[domain], current.grade[domain], amount, grade);
+  await withSessionDb(db, async (db) => {
+    const current = await getNationalArsenal(db, countryId);
+    const blended = blendGrade(current.stock[domain], current.grade[domain], amount, grade);
 
-  await arsenals(db).updateOne(
-    { countryId: countryId as CountryId },
-    {
-      $inc: { [`stock.${domain}`]: amount },
-      $set: { [`grade.${domain}`]: blended, updatedAt: new Date() },
-      $setOnInsert: {
-        countryId: countryId as CountryId,
+    await arsenals(db).updateOne(
+      { countryId: countryId as CountryId },
+      {
+        $inc: { [`stock.${domain}`]: amount },
+        $set: { [`grade.${domain}`]: blended, updatedAt: new Date() },
+        $setOnInsert: {
+          countryId: countryId as CountryId,
+        },
       },
-    },
-    { upsert: true }
-  );
+      { upsert: true }
+    );
+  });
 }
 
 /**

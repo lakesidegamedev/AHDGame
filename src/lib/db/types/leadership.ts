@@ -136,6 +136,8 @@ export interface SpeakerElection {
 }
 
 export interface SpeakerNomination extends IterationStampFields {
+  /** Serializes concurrent ballot moves in this race. */
+  leadershipBallotRevision?: number;
   _id: ObjectId;
   nomineeId: ObjectId;
   nomineeName: string;
@@ -218,6 +220,8 @@ export interface BundestagspraesidentElection {
  * members); eligible voters are likewise the seated MdBs.
  */
 export interface BundestagspraesidentNomination {
+  /** Serializes concurrent ballot moves in this race. */
+  leadershipBallotRevision?: number;
   _id: ObjectId;
   nomineeId: ObjectId;
   nomineeName: string;
@@ -260,6 +264,8 @@ export interface NpcscChairElection {
  * nominees and voters are seated NPC delegates.
  */
 export interface NpcscChairNomination {
+  /** Serializes concurrent ballot moves in this race. */
+  leadershipBallotRevision?: number;
   _id: ObjectId;
   nomineeId: ObjectId;
   nomineeName: string;
@@ -299,6 +305,8 @@ export interface CppccChairElection {
  * Stored in `cppccChairNominations`.
  */
 export interface CppccChairNomination {
+  /** Serializes concurrent ballot moves in this race. */
+  leadershipBallotRevision?: number;
   _id: ObjectId;
   nomineeId: ObjectId;
   nomineeName: string;
@@ -332,6 +340,8 @@ export interface HouseLeadershipElection {
 }
 
 export interface HouseLeadershipNomination extends IterationStampFields {
+  /** Serializes concurrent ballot moves in this race. */
+  leadershipBallotRevision?: number;
   _id: ObjectId;
   role: HouseLeadershipElectionRole;
   nomineeId: ObjectId;
@@ -366,6 +376,8 @@ export interface SenateLeadershipElection {
 }
 
 export interface SenateLeadershipNomination extends IterationStampFields {
+  /** Serializes concurrent ballot moves in this race. */
+  leadershipBallotRevision?: number;
   _id: ObjectId;
   role: SenateLeadershipElectionRole;
   nomineeId: ObjectId;

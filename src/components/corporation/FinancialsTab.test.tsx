@@ -19,7 +19,7 @@ vi.mock("next-intl", () => ({
 vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({
     formatAmount: (n: number) => `M${Math.round(n)}`,
-    toInternalFrom: (n: number) => n,
+    toInternalFrom: (n: number, code: string) => (code === "CAD" ? n / 2 : n),
   }),
 }));
 vi.mock("./GroupOverviewCard", () => ({ GroupOverviewCard: () => null }));
@@ -52,8 +52,8 @@ const financials = {
   bondCouponIncome: 0,
   dividendIncomeReceived: 0,
   governmentBondSubsidy: 0,
-  imfFacilityPaymentDaily: 0,
-  imfFacilityReceiptsDaily: 0,
+  imfFacilityInterestPaidDaily: 0,
+  imfFacilityInterestReceivedDaily: 0,
   totalCosts: 201100,
   income: -73100,
   realizedIncome: -79500,
@@ -64,6 +64,23 @@ const financials = {
 } as Financials;
 
 describe("corporation income statement", () => {
+  it("does not convert anchor-denominated unpaid settlement as Canadian cash", () => {
+    render(
+      <FinancialsTab
+        corporation={{ countryId: "CA", liquidCurrencyCode: "CAD" } as CorporationDetail}
+        financials={{ ...financials, supplyAgreementUnpaidAnchor: 700 }}
+        balanceSheet={null}
+        bondInfo={null}
+        corpId="test"
+        periodView="turn"
+        onPeriodViewChange={vi.fn()}
+        sectors={[]}
+      />
+    );
+    const row = screen.getByText("Unpaid settlement, last turn").closest("tr");
+    expect(row).toBeTruthy();
+    expect(within(row!).getByText("M700")).toBeTruthy();
+  });
   it("shows arrears separately without annualizing the balance or last-turn payment", () => {
     const props = {
       corporation: {

@@ -16,6 +16,7 @@ import {
   CORPORATE_CREDIT_MATURITY_HORIZON_TURNS,
 } from "@/lib/constants/bonds";
 import { assessMaturityLiquidity } from "./rules/maturityLiquidity";
+import { producerPayablesAnchor } from "@/lib/corporations/rules/liabilities";
 import type { CorpCapitalCurrencyInfo } from "@/lib/currency/corporationCapital";
 import {
   fxRateForCorpFromMap,
@@ -229,6 +230,7 @@ export interface CorporateCreditComputationInput {
 
 /** Normalize corporation cash arrears to anchor units for credit/equity scoring. */
 export function corporateCashArrearsAnchor(input: {
+  producerPayables?: readonly { amount: number }[];
   operatingByCurrency?: Readonly<Record<string, number | undefined>>;
   federalTaxByCountryAnchor?: Readonly<Record<string, number | undefined>>;
   fxByCurrency: ReadonlyMap<CurrencyCode, number>;
@@ -245,7 +247,7 @@ export function corporateCashArrearsAnchor(input: {
     (sum, amount) => sum + Math.max(0, amount ?? 0),
     0
   );
-  return operating + tax;
+  return operating + tax + producerPayablesAnchor(input.producerPayables);
 }
 
 /** Reuse already loaded bonds and FX rates; there is no extra maturity lookup. */

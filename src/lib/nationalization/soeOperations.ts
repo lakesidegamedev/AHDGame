@@ -1,3 +1,4 @@
+import { sectorMoneyInCorpCurrency } from "@/lib/corporations/sectorRevenueScale";
 import { publicServiceShare, publicServiceTotals } from "./rules/settledEnterprise";
 /**
  * Turn-time SOE behavior (spec §11): apply public-service mandate contributions
@@ -464,9 +465,17 @@ export async function processSoeOperations(
   const revenueByCorp = new Map<string, number>();
   for (const s of sectors) {
     const k = s.corporationId.toString();
+    const owner = corpById.get(k);
+    if (!owner) continue;
     revenueByCorp.set(
       k,
-      (revenueByCorp.get(k) ?? 0) + (Number.isFinite(s.revenue) ? s.revenue : 0)
+      (revenueByCorp.get(k) ?? 0) +
+        sectorMoneyInCorpCurrency(
+          Number.isFinite(s.revenue) ? s.revenue : 0,
+          s,
+          owner,
+          fxByCurrency
+        )
     );
   }
   const rdOps = buildRdModernizationOps(soeCorps, revenueByCorp, now);
@@ -657,6 +666,7 @@ export function foldSoeCashDeltas(args: {
   corpById: Map<string, Corporation>;
   backing: readonly SoeCorpBacking[];
   remittedLocalByCorpId: ReadonlyMap<string, number>;
+  authoritativeCash?: ReadonlyMap<string, number>;
 }): void {
   const snapshotByCorpId = new Map(args.corpSnapshots.map((s) => [s.corpId.toString(), s]));
   const syncCorpCash = (key: string, snap: CorpSnapshot | undefined, deltaLocal: number): void => {
@@ -688,6 +698,12 @@ export function foldSoeCashDeltas(args: {
     const snap = snapshotByCorpId.get(key);
     if (snap) snap.liquidCapital -= amount;
     syncCorpCash(key, snap, -amount);
+  }
+  for (const [key, cash] of args.authoritativeCash ?? []) {
+    const snapshot = snapshotByCorpId.get(key);
+    if (snapshot) snapshot.liquidCapital = cash;
+    const corp = args.corpById.get(key);
+    if (corp) corp.liquidCapital = cash;
   }
 }
 

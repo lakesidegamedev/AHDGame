@@ -1,5 +1,8 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { retainedImfBondClaims } from "@/lib/imf/rules/novateBond";
+import { dilutionSharesForImf } from "@/lib/imf/rules/dilution";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
+import { afterCommit } from "@/lib/db/sessionDb";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { bondPoolCurrency } from "@/lib/bonds/marketPool";
@@ -36,8 +39,6 @@ import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { corporationHistoryCollection } from "@/lib/db/repositories/corporationHistory";
-import { bondHistoryCollection } from "@/lib/db/repositories/bondHistory";
-import type { Document } from "mongodb";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -52,12 +53,6 @@ const patchIncomeCaptureSchema = z.object({
 function incomeCapturePercentToFraction(percent: number): number {
   const clamped = Math.min(45, Math.max(1, percent));
   return Math.min(IMF_BAILOUT_INCOME_FRACTION_CAP, clamped / 100);
-}
-
-function dilutionSharesForImf(totalShares: number, targetPercent: number): number {
-  const p = targetPercent / 100;
-  if (p <= 0 || p >= 1) return 0;
-  return Math.floor((p * totalShares) / (1 - p));
 }
 
 /**
@@ -277,7 +272,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const body = parsed.data;
     const rootDb = await getDb();
-    return await withSessionDb(rootDb, async (db) => {
+    return await withAtomicEconomicCommand(rootDb, async (db) => {
       const busy = await rejectDuringTurn(db);
       if (busy) return busy;
       const state = await gameStateCollection(db).findOne(
@@ -315,6 +310,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       const now = new Date();
 
       if (!body.active) {
+        if ((corp.imfFacilityPrincipalOutstanding ?? 0) > 0)
+          return errorResponse(
+            400,
+            "Repay the outstanding IMF facility before ending its repayment program."
+          );
         await corporationsCollection(db).updateOne(
           { _id: corp._id },
           {
@@ -383,8 +383,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
       const currentImfShares = imfIdx >= 0 ? (shareholders[imfIdx].shares ?? 0) : 0;
       const O = corp.totalShares ?? 10_000_000;
-      const targetImfShares = dilutionSharesForImf(O, body.targetOwnershipPercent);
-      const newShares = Math.max(0, targetImfShares - currentImfShares);
+      const newShares = dilutionSharesForImf(O, currentImfShares, body.targetOwnershipPercent);
 
       if (newShares < 1 && currentImfShares === 0) {
         return errorResponse(400, "Diluted share issuance rounds to zero — raise target %");
@@ -421,16 +420,38 @@ export async function POST(request: Request, { params }: RouteParams) {
               toUserId: ch.userId,
               senderName: "IMF Restructuring",
               subject: `${corp.name}: bond position haircut`,
-              body: `Your bond holdings in ${corp.name} were reduced as part of an IMF restructuring. Bondholders retain approximately ${Math.round(retention * 100)}% of face value; remaining obligations are consolidated into an IMF facility. Dividends and CEO pay are suspended until the facility is repaid or the program ends.`,
+              body: `Your bond holdings in ${corp.name} were reduced as part of an IMF restructuring. Bondholders retain approximately ${Math.round(retention * 100)}% of face value as bonds now owed by the IMF. The corporation repays the IMF through its facility. Dividends and CEO pay are suspended until the facility is repaid or the program ends.`,
             });
           }
         }
 
-        const bondIds = bonds.map((b) => b._id);
-        if (bondIds.length > 0) {
-          await bondHistoryCollection<Document>(db).deleteMany({ bondId: { $in: bondIds } });
-        }
-        await bondsCollection(db).deleteMany({ _id: { $in: bondIds } });
+        const assumed = await bondsCollection(db).bulkWrite(
+          bonds.map((bond) => ({
+            updateOne: {
+              filter: {
+                _id: bond._id,
+                corporationId: corp._id,
+                matured: false,
+                totalIssued: bond.totalIssued,
+                holders: bond.holders,
+                publicFloat: bond.publicFloat ?? { $exists: false },
+              },
+              update: {
+                $set: {
+                  ...retainedImfBondClaims(bond, retention),
+                  corporationId: imfCorp._id,
+                  issuerName: imfCorp.name ?? "International Monetary Fund",
+                  originalIssuerName: bond.originalIssuerName ?? bond.issuerName,
+                  defaulted: false,
+                  defaultedAtTurn: null,
+                  updatedAt: now,
+                },
+              },
+            },
+          }))
+        );
+        if (assumed.matchedCount !== bonds.length)
+          throw new Error("A creditor claim changed during IMF restructuring");
       }
 
       await corporationsCollection(db).updateOne(

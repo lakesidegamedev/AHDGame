@@ -135,6 +135,16 @@ describe("processActionRefresh", () => {
   let statePartyRows: { chairId: string }[] = [];
   const mockNppBulkWrite = vi.fn();
 
+  async function runRefresh(
+    run: typeof import("./actionRefresh").processActionRefresh,
+    rows: Character[],
+    config: GameConfig | null,
+    now: Date
+  ) {
+    characterRows = rows;
+    return run(rows, config, now);
+  }
+
   beforeEach(async () => {
     vi.clearAllMocks();
     roleFixtures.oppositionLeaderIds = new Set();
@@ -299,7 +309,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     expect(mockBulkWrite).toHaveBeenCalledTimes(1);
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
@@ -357,7 +367,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as unknown as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     const grantOp = actionsGrantOp(ops, "midTurnSpend");
@@ -401,7 +411,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 105 - 4 (penalty) + 4 (base) = 105
@@ -439,7 +449,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, now);
+    await runRefresh(processActionRefresh, [char], config, now);
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     const grantOp = actionsGrantOp(ops, "charLog");
@@ -470,7 +480,8 @@ describe("processActionRefresh", () => {
 
   it("caps the grant log at the 48 most recent entries", async () => {
     const { processActionRefresh } = await import("./actionRefresh");
-    await processActionRefresh(
+    await runRefresh(
+      processActionRefresh,
       [
         {
           _id: "capLog" as never,
@@ -526,7 +537,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     const update = fieldsSet(ops);
@@ -575,7 +586,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([mild, doomed], config, new Date());
+    await runRefresh(processActionRefresh, [mild, doomed], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0];
     const byId = Object.fromEntries(
@@ -627,7 +638,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 10 + base 4 + sangiin 1 + chair 3 = 18
@@ -666,7 +677,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 0 + base 4 + chair 3 = 7
@@ -708,7 +719,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     const update = fieldsSet(ops);
@@ -757,10 +768,9 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
-    const update = fieldsSet(ops);
     // 0 + base 4 + bundestag seat 1 + cabinet 1 = 6
     expect(applyActionsPipeline(actionsGrantOp(ops), 0)).toBe(6);
   });
@@ -794,7 +804,7 @@ describe("processActionRefresh", () => {
       updatedAt: new Date(),
     } as Character;
 
-    await processActionRefresh([character], null, new Date());
+    await runRefresh(processActionRefresh, [character], null, new Date());
 
     const update = fieldsSet(mockBulkWrite.mock.calls[0][0] as BulkOp[]);
     // Acting tier 0.75; state influence 25 adds nothing.
@@ -827,7 +837,7 @@ describe("processActionRefresh", () => {
       updatedAt: new Date(),
     } as Character;
 
-    await processActionRefresh([character], null, new Date());
+    await runRefresh(processActionRefresh, [character], null, new Date());
 
     const ops = mockBulkWrite.mock.calls[0][0] as BulkOp[];
     const update = fieldsSet(ops);
@@ -865,7 +875,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     const granted = applyActionsPipeline(actionsGrantOp(ops), 201);
@@ -902,7 +912,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([char], config, new Date());
+    await runRefresh(processActionRefresh, [char], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     const update = fieldsSet(ops);
@@ -949,7 +959,7 @@ describe("processActionRefresh", () => {
       chairActionBonus: 3,
     } as GameConfig;
 
-    await processActionRefresh([player], config, new Date());
+    await runRefresh(processActionRefresh, [player], config, new Date());
 
     // Player still decays below 10 (floor 0).
     const playerUpdate = fieldsSet(mockBulkWrite.mock.calls[0][0] as BulkOp[]);
@@ -984,7 +994,7 @@ describe("processActionRefresh", () => {
     ];
     governmentApprovalRows = [{ _id: "DD", approvalRating: 20 }];
 
-    await processActionRefresh([], null, new Date());
+    await runRefresh(processActionRefresh, [], null, new Date());
 
     const update = mockNppBulkWrite.mock.calls.at(-1)![0][0].updateOne.update.$set;
     expect(update.favorability).toBeCloseTo(49.8875, 5);
@@ -1068,7 +1078,7 @@ describe("processActionRefresh", () => {
       ];
       persistFixture = true;
 
-      await processActionRefresh(characterRows, config, new Date());
+      await runRefresh(processActionRefresh, characterRows, config, new Date());
       return { usMember, usPartyMember, ruPm, ceremonialPresident, nppExecutive };
     };
 
@@ -1136,7 +1146,7 @@ describe("processActionRefresh", () => {
       currentOffice: { type: "house", state: "CA" },
     } as unknown as Character;
 
-    await processActionRefresh([deputy, rep], config, new Date());
+    await runRefresh(processActionRefresh, [deputy, rep], config, new Date());
 
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 5 + 4 base + 1 seat bonus - identical to the US representative.
@@ -1174,7 +1184,7 @@ describe("processActionRefresh", () => {
       config: GameConfig | null = null
     ): Promise<Record<string, unknown> & { actions: number }> => {
       const { processActionRefresh } = await import("./actionRefresh");
-      await processActionRefresh([character], config, new Date());
+      await runRefresh(processActionRefresh, [character], config, new Date());
       const ops = mockBulkWrite.mock.calls[0][0] as BulkOp[];
       const fields = fieldsSet(ops);
       return {
@@ -1287,7 +1297,8 @@ describe("processActionRefresh", () => {
       ];
       governmentApprovalRows = [{ _id: "DD", approvalRating: 20 }];
       const { processActionRefresh } = await import("./actionRefresh");
-      await processActionRefresh(
+      await runRefresh(
+        processActionRefresh,
         [
           baseCharacter({
             _id: "member" as never,
@@ -1323,3 +1334,13 @@ describe("processActionRefresh", () => {
     });
   });
 });
+
+// Formula fixture; atomic refresh tests exercise the phase proof.
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

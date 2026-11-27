@@ -1,3 +1,11 @@
+vi.mock("@/lib/elections/playerEndorsements", () => ({
+  withdrawPlayerEndorsementsOnPartyChange: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  afterCommit: (_db: unknown, work: () => unknown) => work(),
+  boundSession: () => undefined,
+}));
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -344,7 +352,7 @@ describe("ratifyCharter", () => {
     await ratifyCharter(charter._id, db);
 
     expect(transferIndependentCandidaciesToParty).toHaveBeenCalledTimes(2);
-    expect(withdrawFromMismatchedPrimaries).toHaveBeenCalledWith(founderChars[1]!._id, "77");
+    expect(withdrawFromMismatchedPrimaries).toHaveBeenCalledWith(founderChars[1]!._id, "77", db);
   });
 
   it("updates seated founders' party affiliation without changing their seat records", async () => {
@@ -460,7 +468,8 @@ describe("ratifyCharter", () => {
       100, // charterCurrentTurn from the gameState stub
       undefined, // default duration
       expect.any(Date),
-      charter.countryId
+      charter.countryId,
+      db
     );
   });
 

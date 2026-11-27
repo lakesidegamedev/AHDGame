@@ -23,7 +23,7 @@ import { ROSTER_BY_KEY } from "@/lib/constants/alignmentRoster";
 import type { CountryId } from "@/lib/constants/countries";
 import type { InternationalOrganizationId } from "@/lib/constants/internationalOrganizations";
 import { getAlignmentPlaysCollection } from "@/lib/db/collections";
-import type { GameState } from "@/lib/db/types";
+
 import { resolveGameYear } from "@/lib/era/era";
 import { loadAlignmentTopology } from "../topology";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -40,6 +40,7 @@ export async function queueAidAlignmentPull(params: {
   amountUsd: number;
   amountLocal: number;
   turn: number;
+  sourceResolutionId?: ObjectId;
 }): Promise<boolean> {
   const { db, organizationId, recipient, amountUsd, amountLocal, turn } = params;
   if (!(amountUsd > 0)) return false;
@@ -58,8 +59,8 @@ export async function queueAidAlignmentPull(params: {
   if (!(recipient in ROSTER_BY_KEY)) return false;
 
   const plays = await getAlignmentPlaysCollection(db);
-  await plays.insertOne({
-    _id: new ObjectId(),
+  const play = {
+    _id: params.sourceResolutionId ?? new ObjectId(),
     organizationId,
     // The bloc pays as a body; there is no single sponsoring member behind a
     // voted package, so the recipient stands as the counterparty on the row.
@@ -70,8 +71,11 @@ export async function queueAidAlignmentPull(params: {
     turn,
     resolvedTurn: null,
     appliedPoints: null,
-    source: "aid",
+    source: "aid" as const,
     createdAt: new Date(),
-  });
+  };
+  if (params.sourceResolutionId)
+    await plays.updateOne({ _id: play._id }, { $setOnInsert: play }, { upsert: true });
+  else await plays.insertOne(play);
   return true;
 }

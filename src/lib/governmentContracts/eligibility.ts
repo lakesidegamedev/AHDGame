@@ -1,3 +1,4 @@
+import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 /** Corporate bids must be deliverable by an authorized CEO's eligible plant and respect existing contract prices. */
 import { extractionBidError, defenceBidError } from "./rules";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
@@ -5,7 +6,7 @@ import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
 import { resolveDefenseLineFrom } from "@/lib/turn/defenseEnvelope";
 import { ObjectId, type Db } from "mongodb";
-import type { CorporateSector } from "@/lib/db/types";
+
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { resolveFillEligibility, FILL_REASON_TEXT } from "@/lib/military/defenceFillEligibility";
@@ -83,6 +84,7 @@ export async function validateBid(
     corp,
     sector,
     countryId: t.countryId,
+    paymentCurrency: resolveCountryCurrencyCode(budget) ?? null,
     currentYear: year,
     component: t.terms.component,
   });

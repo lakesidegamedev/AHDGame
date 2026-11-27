@@ -1,3 +1,7 @@
+import {
+  legacyHistoryMoneyUpdate,
+  legacyHistoryMoneyMapUpdate,
+} from "../../src/lib/corporations/rules/legacyCurrencyConversion";
 /**
  * One-time migration (v0.2.6): convert every corp-economic money field from
  * ₳ (anchor) storage to each corp's `liquidCurrencyCode` storage.
@@ -199,62 +203,12 @@ async function main() {
 
     // ── Phase 3: history collections (option 3 — backfill all) ───────────────
     // Aggregation pipeline update: for each scalar money field, multiply by
-    // `rate` when the stored value is > 0; zero / missing values stay zero.
+    // `rate` for numeric values of either sign; absent values remain absent.
     //
     // NOTE: marketCapHistory is intentionally NOT rescaled. That collection
     // stores per-turn global aggregates (globalMarketCap, per-exchange caps,
     // bySector) which are summed in ₳ at write time by marketCapSnapshot.ts
     // and remain ₳ aggregates post-v0.2.6.
-    function buildUpdateSet(fields: string[], rate: number) {
-      const setDoc: Record<string, unknown> = {};
-      for (const f of fields) {
-        setDoc[f] = {
-          $cond: {
-            if: { $gt: [{ $ifNull: [`$${f}`, 0] }, 0] },
-            then: { $multiply: [`$${f}`, rate] },
-            else: { $ifNull: [`$${f}`, 0] },
-          },
-        };
-      }
-      return setDoc;
-    }
-
-    // Scale each value inside a Record<string, number> field by `rate`, leaving
-    // the field absent when it's missing on the source doc. Uses MongoDB
-    // aggregation primitives so we can batch-update without fetching each doc.
-    function buildMapUpdateSet(fields: string[], rate: number) {
-      const setDoc: Record<string, unknown> = {};
-      for (const f of fields) {
-        setDoc[f] = {
-          $cond: {
-            if: {
-              $and: [{ $ne: [{ $type: `$${f}` }, "missing"] }, { $ne: [`$${f}`, null] }],
-            },
-            then: {
-              $arrayToObject: {
-                $map: {
-                  input: { $objectToArray: `$${f}` },
-                  as: "kv",
-                  in: {
-                    k: "$$kv.k",
-                    v: {
-                      $cond: {
-                        if: { $gt: ["$$kv.v", 0] },
-                        then: { $multiply: ["$$kv.v", rate] },
-                        else: "$$kv.v",
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            else: "$$REMOVE",
-          },
-        };
-      }
-      return setDoc;
-    }
-
     let historyUpdates = 0;
     for (const corp of corps) {
       const info = corpCurrencyById.get(corp._id.toString());
@@ -264,8 +218,8 @@ async function main() {
       const r1 = await db.collection("corporationHistory").updateMany({ corporationId: corp._id }, [
         {
           $set: {
-            ...buildUpdateSet(CORP_HISTORY_MONEY_FIELDS, rate),
-            ...buildMapUpdateSet(CORP_HISTORY_MAP_FIELDS, rate),
+            ...legacyHistoryMoneyUpdate(CORP_HISTORY_MONEY_FIELDS, rate),
+            ...legacyHistoryMoneyMapUpdate(CORP_HISTORY_MAP_FIELDS, rate),
           },
         },
       ]);
@@ -285,7 +239,7 @@ async function main() {
         .collection("corporationHistory")
         .updateMany(
           { corporationId: corp._id, currencyCode: { $exists: false } },
-          { $set: { currencyCode: info.code } }
+          { $set: { currencyCode: info.code, fxRateAtWrite: info.rate } }
         );
       historyStamps += result.modifiedCount ?? 0;
     }

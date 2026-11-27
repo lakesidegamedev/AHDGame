@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -25,7 +28,10 @@ describe("cancelPendingShareOfferAndRefund", () => {
     const buyerId = new ObjectId();
 
     db.collection("shareOffers");
-    db.collectionMocks["shareOffers"].updateOne.mockResolvedValue({ modifiedCount: 1 });
+    db.collectionMocks["shareOffers"].updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
 
     db.collection("corporations");
     db.collectionMocks["corporations"].findOne.mockResolvedValue({
@@ -79,7 +85,10 @@ describe("cancelPendingShareOfferAndRefund", () => {
     const buyerId = new ObjectId();
 
     db.collection("shareOffers");
-    db.collectionMocks["shareOffers"].updateOne.mockResolvedValue({ modifiedCount: 1 });
+    db.collectionMocks["shareOffers"].updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
 
     db.collection("corporations");
     db.collectionMocks["corporations"].findOne.mockResolvedValue({
@@ -94,7 +103,10 @@ describe("cancelPendingShareOfferAndRefund", () => {
       countryId: "US",
       name: "Buyer",
     });
-    db.collectionMocks["characters"].updateOne.mockResolvedValue({ modifiedCount: 1 });
+    db.collectionMocks["characters"].updateOne.mockResolvedValue({
+      matchedCount: 1,
+      modifiedCount: 1,
+    });
 
     db.collection("exchangeRates");
     db.collectionMocks["exchangeRates"].findOne.mockImplementation(

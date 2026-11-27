@@ -1204,3 +1204,8 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
     expect(body.orgGain).toBeGreaterThan(0);
   });
 });
+
+// Transport fixture; the buildOrg atomic suite exercises the admission fence.
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: async (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));

@@ -1,3 +1,4 @@
+import { withWorldResetAdmission, type WorldResetReservation } from "./resetAdmission";
 import {
   loadCareerLegislation,
   archiveRetiredCareerLegislation,
@@ -8,9 +9,6 @@ import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { resolveStartingPartiesMode, type StartingPartiesMode } from "./startingParties";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
 import { randomUUID } from "node:crypto";
-import type { GameState, ImperialCharacter, User } from "@/lib/db/types";
-import type { Counter } from "@/lib/db/types/counter";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import {
   isPresetAnchorDate,
@@ -195,6 +193,8 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
     processingHeldPhases:
       "The interrupted steps a turn hold is waiting on; owned by the turn runner.",
     processingHeldAt: "When a turn hold was placed; owned by the turn runner.",
+    resetAdmissionId:
+      "Owned reset reservation, released by the reset orchestrator after teardown and bootstrap.",
     processingHolderId:
       "Identity of the process holding the turn lock; owned by processTurn and its recovery.",
     lastTurnFailure:
@@ -298,6 +298,7 @@ export const STALE_PROGRESS_GAME_STATE_UNSET: Readonly<Record<string, "">> = Obj
 });
 
 interface ResetGameWorldOptions {
+  admission?: WorldResetReservation;
   /** 1991 only: leave political offices vacant for player-created parties. */
   startingParties?: StartingPartiesMode;
   deleteProfiles: boolean;
@@ -378,6 +379,13 @@ const TRACKED_GAME_STATE_SWITCHES: readonly string[] = [
 const TRACKED_GAME_CONFIG_SWITCHES: readonly string[] = Object.keys(FRESH_WORLD_GAME_CONFIG_FLAGS);
 
 export async function resetGameWorld(
+  db: Db,
+  options: ResetGameWorldOptions
+): Promise<ResetGameWorldResult> {
+  return withWorldResetAdmission(db, () => resetGameWorldInScope(db, options), options.admission);
+}
+
+async function resetGameWorldInScope(
   db: Db,
   options: ResetGameWorldOptions
 ): Promise<ResetGameWorldResult> {
@@ -660,6 +668,7 @@ export async function resetGameWorld(
   const gameStateUpdate: Record<string, unknown> = {
     worldEpochId: new ObjectId().toHexString(),
     worldEpochStartedAt: now,
+    economicCommandRevision: 0,
     resetWorldId: randomUUID(),
     currentTurn: resetDate.currentTurn,
     hardwareInputReliefStartTurn: resetDate.currentTurn,

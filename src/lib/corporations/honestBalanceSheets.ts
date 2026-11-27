@@ -19,8 +19,8 @@ export const HONEST_BUYBACK_CAP_STAGE = 3;
 /** Live loan states whose principal is still owed. */
 const LIVE_LOAN_STATUSES: BankLoan["status"][] = ["current", "arrears", "defaulted"];
 
-/** Outstanding construction-loan principal per borrowing corporation, in anchor units. */
-export async function loadConstructionLoanDebtAnchorByCorpId(
+/** Outstanding bank-loan principal per borrowing corporation, in anchor units. */
+export async function loadCorporateLoanDebtAnchorByCorpId(
   db: Db,
   fxByCurrency: ReadonlyMap<CurrencyCode, number>
 ): Promise<Map<string, number>> {
@@ -28,7 +28,6 @@ export async function loadConstructionLoanDebtAnchorByCorpId(
     .find(
       {
         borrowerType: "corporation",
-        constructionCollateral: { $exists: true },
         status: { $in: LIVE_LOAN_STATUSES },
       },
       { projection: { borrowerId: 1, outstanding: 1, currency: 1 } }

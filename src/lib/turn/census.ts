@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -77,69 +78,77 @@ export async function runCensus(
   _turn: number,
   currentYearOverride?: number
 ): Promise<CensusResult> {
-  const gameState = await (
+  const admission = await (
     await getGameStateCollection(db)
-  ).findOne({ _id: "current" } as Partial<GameState>);
-  // Prefer the turn context's authoritative year: the persisted
-  // gameState.currentYear is only stamped at turn end (#2059).
-  const currentYear = currentYearOverride ?? gameState?.currentYear;
-  if (currentYear === undefined || !shouldRunCensus(currentYear, gameState?.lastCensusYear)) {
-    return { ran: false };
-  }
-
-  const usStates = await statesCollection<Document>(db)
-    .find<{ _id: string; population?: number; houseDistricts?: number }>(
-      { countryId: "US" },
-      { projection: { _id: 1, population: 1, houseDistricts: 1 } }
-    )
-    .toArray();
-
-  // Apportion only over states that currently hold House seats (excludes DC etc.).
-  const populations: Record<string, number> = {};
-  const oldSeats: Record<string, number> = {};
-  for (const s of usStates) {
-    if (typeof s.houseDistricts === "number" && s.houseDistricts > 0) {
-      populations[s._id] = Number.isFinite(s.population) ? (s.population as number) : 0;
-      oldSeats[s._id] = s.houseDistricts;
+  ).findOne({ _id: "current" }, { projection: { currentYear: 1 } });
+  const year = currentYearOverride ?? admission?.currentYear;
+  if (year === undefined || !Number.isFinite(year) || year % 10 !== 0) return { ran: false };
+  return withTurnValueSettlement(db, "census-apportionment", _turn, async (db) => {
+    const gameState = await (
+      await getGameStateCollection(db)
+    ).findOne({ _id: "current" } as Partial<GameState>);
+    // Prefer the turn context's authoritative year: the persisted
+    // gameState.currentYear is only stamped at turn end (#2059).
+    const currentYear = currentYearOverride ?? gameState?.currentYear;
+    if (currentYear === undefined || !shouldRunCensus(currentYear, gameState?.lastCensusYear)) {
+      return { ran: false };
     }
-  }
 
-  const newSeats = apportionHouseSeats(populations, US_HOUSE_TOTAL_SEATS);
-  const deltas = computeSeatDeltas(oldSeats, newSeats);
+    const usStates = await statesCollection<Document>(db)
+      .find<{ _id: string; population?: number; houseDistricts?: number }>(
+        { countryId: "US" },
+        { projection: { _id: 1, population: 1, houseDistricts: 1 } }
+      )
+      .toArray();
 
-  const ops: AnyBulkWriteOperation<State>[] = Object.entries(newSeats).map(([state, seats]) => ({
-    updateOne: { filter: { _id: state }, update: { $set: { houseDistricts: seats } } },
-  }));
-  if (ops.length > 0) await (await getStatesCollection(db)).bulkWrite(ops);
+    // Apportion only over states that currently hold House seats (excludes DC etc.).
+    const populations: Record<string, number> = {};
+    const oldSeats: Record<string, number> = {};
+    for (const s of usStates) {
+      if (typeof s.houseDistricts === "number" && s.houseDistricts > 0) {
+        populations[s._id] = Number.isFinite(s.population) ? (s.population as number) : 0;
+        oldSeats[s._id] = s.houseDistricts;
+      }
+    }
 
-  // Regenerate districts for states whose seat count changed, plus states that
-  // auto-neutralize each census.
-  const changed = deltas.map((d) => d.state);
-  const autoNeutral = await getAutoNeutralizeStateIds(db, "US");
-  const toRegen = [...new Set([...changed, ...autoNeutral])];
-  if (toRegen.length > 0) {
-    await regenerateCongressionalDistricts(db, {
-      countryId: "US",
-      stateIds: toRegen,
-      preset: gameState?.preset,
-      now: new Date(),
+    const newSeats = apportionHouseSeats(populations, US_HOUSE_TOTAL_SEATS);
+    const deltas = computeSeatDeltas(oldSeats, newSeats);
+
+    const ops: AnyBulkWriteOperation<State>[] = Object.entries(newSeats).map(([state, seats]) => ({
+      updateOne: { filter: { _id: state }, update: { $set: { houseDistricts: seats } } },
+    }));
+    if (ops.length > 0) await (await getStatesCollection(db)).bulkWrite(ops);
+
+    // Regenerate districts for states whose seat count changed, plus states that
+    // auto-neutralize each census.
+    const changed = deltas.map((d) => d.state);
+    const autoNeutral = await getAutoNeutralizeStateIds(db, "US");
+    const toRegen = [...new Set([...changed, ...autoNeutral])];
+    if (toRegen.length > 0) {
+      await regenerateCongressionalDistricts(db, {
+        countryId: "US",
+        stateIds: toRegen,
+        preset: gameState?.preset,
+        now: new Date(),
+      });
+    }
+
+    await (
+      await getGameStateCollection(db)
+    ).updateOne({ _id: "current" } as Partial<GameState>, {
+      // Stamp the year (re-fire guard) AND a compact seat-change summary the region
+      // population route reads to show a per-region reapportionment notice (P1d-3).
+      $set: {
+        lastCensusYear: currentYear,
+        lastCensus: { year: currentYear, deltas },
+      },
     });
-  }
 
-  await (
-    await getGameStateCollection(db)
-  ).updateOne({ _id: "current" } as Partial<GameState>, {
-    // Stamp the year (re-fire guard) AND a compact seat-change summary the region
-    // population route reads to show a per-region reapportionment notice (P1d-3).
-    $set: {
-      lastCensusYear: currentYear,
-      lastCensus: { year: currentYear, deltas },
-    },
+    await createSystemNewsPost(buildCensusContent(currentYear, deltas), "election", {
+      title: `${currentYear} Census`,
+      db,
+    });
+
+    return { ran: true, year: currentYear, deltas };
   });
-
-  await createSystemNewsPost(buildCensusContent(currentYear, deltas), "election", {
-    title: `${currentYear} Census`,
-  });
-
-  return { ran: true, year: currentYear, deltas };
 }

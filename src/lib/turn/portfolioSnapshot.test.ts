@@ -435,6 +435,7 @@ describe("portfolioSnapshot", () => {
       mockCollection.mockReturnValueOnce(createMockChain([])); // imperialCharacters
       mockCollection.mockReturnValueOnce(createMockChain([])); // corps
       mockCollection.mockReturnValueOnce(createMockChain([])); // bonds
+      mockCollection.mockReturnValueOnce(createMockChain([])); // gameState cache epoch
       mockCollection.mockReturnValueOnce(createMockChain([])); // exchangeRates (loadValuationFxRates)
       mockCollection.mockReturnValueOnce(createMockChain([])); // gameState preset (loadValuationFxRates)
       mockCollection.mockReturnValueOnce(

@@ -52,7 +52,7 @@ import { computeDepositCeiling } from "@/lib/banking/rules/capacity";
 import { MODERN_DEPOSIT_CORRIDOR, MODERN_LENDING_CORRIDOR } from "@/lib/banking/regulationQ";
 import { computeConfidence } from "@/lib/banking/rules/confidence";
 import { depositFlight, depositTakerVerdict } from "@/lib/banking/rules/solvency";
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 import { quoteBondPrices } from "@/lib/bonds/marketPoolQuotes";
 import {
   calculateQuarterlyIssuanceAmount,

@@ -1,3 +1,4 @@
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { describe, expect, it } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { listDefenceSuppliers } from "./defenceSuppliers";
@@ -13,6 +14,13 @@ interface World {
 function stubDb(w: World): Db {
   return {
     collection: (name: string) => {
+      if (name === "federalBudget")
+        return {
+          findOne: async (f: Record<string, unknown>) => ({
+            countryId: f.countryId,
+            currencyCode: COUNTRY_CURRENCY_MAP[f.countryId as keyof typeof COUNTRY_CURRENCY_MAP],
+          }),
+        };
       if (name === "corporateSectors") {
         return {
           find: (f: Record<string, unknown> = {}) => ({

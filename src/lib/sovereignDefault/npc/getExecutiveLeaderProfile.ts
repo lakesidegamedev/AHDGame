@@ -16,30 +16,14 @@
  */
 
 import type { Db, ObjectId } from "mongodb";
-import type { NPP } from "@/lib/db/types/npp";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
-import type { NpcGovernmentType, NpcIdeology } from "./npcConstants";
+import type { NpcGovernmentType } from "./npcConstants";
 import type { NpcExecutiveProfile } from "./types";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 
-type PolicyPositionsLike = { economic?: number; social?: number };
-
-export function deriveIdeology(positions: PolicyPositionsLike | undefined): NpcIdeology {
-  const e = positions?.economic ?? 0;
-  const s = positions?.social ?? 0;
-  // Far-left economic + liberal social → socialist
-  if (e < -40 && s < 20) return "socialist";
-  // Free-market + traditional → conservative
-  if (e > 40 && s > 30) return "conservative";
-  // Free-market + socially-open / moderate → technocrat
-  if (e > 30 && s < -10) return "technocrat";
-  // Strongly traditional → nationalist (regardless of economic)
-  if (s > 60) return "nationalist";
-  // Extremes on either axis without fitting above → populist
-  if (Math.abs(e) > 55 || Math.abs(s) > 55) return "populist";
-  return "centrist";
-}
+import { deriveIdeology } from "./rules/ideology";
+export { deriveIdeology } from "./rules/ideology";
 
 export function deriveGovernmentType(countryCode: CountryId): NpcGovernmentType {
   const config = COUNTRY_CONFIGS[countryCode];
@@ -84,11 +68,14 @@ export async function getExecutiveLeaderProfile(
   // Else NPP holding the executive office. NPP `currentOffice` mirrors
   // Character's `OfficeType` discriminated union (per npp.ts), so we filter
   // on the `type` discriminant to match across all variants.
-  const npp = await nppsCollection(db).findOne({
-    countryId: countryCode,
-    "currentOffice.type": { $in: execKeys },
-    retiredAt: null,
-  } as never);
+  const npp = await nppsCollection(db).findOne(
+    {
+      countryId: countryCode,
+      "currentOffice.type": { $in: execKeys },
+      retiredAt: null,
+    } as never,
+    { projection: { _id: 1, policies: 1 } }
+  );
   if (npp) {
     return {
       characterId: npp._id as ObjectId,

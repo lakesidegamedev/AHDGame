@@ -1,3 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Gated autonomous NPP index-fund redemptions, using the same
  * `enqueueRedemption` path as the player route so the cron pays out later.
@@ -14,9 +17,7 @@ import type {
   IndexFundRedemptionQueueEntry,
   IndexFundTransaction,
 } from "@/lib/db/types";
-import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
 import {
-  creditFundPosition,
   debitFundPosition,
   enqueueRedemption,
   insertFundTransaction,
@@ -153,6 +154,39 @@ export async function processNppFundRedemptions(
     archetypesByNppId: ReadonlyMap<string, NppRiskArchetype>;
   }
 ): Promise<NppRedemptionPassResult> {
+  if (
+    options.currentTurn <= 0 ||
+    (
+      await gameConfigCollection(db).findOne(
+        { _id: "default" },
+        { projection: { nppFundRedemptionEnabled: 1 } }
+      )
+    )?.nppFundRedemptionEnabled !== true
+  )
+    return { redemptionsQueued: 0, unitsRedeemed: 0, errors: [] };
+  try {
+    return await withTurnValueSettlement(
+      db,
+      "npp-fund-redemptions",
+      options.currentTurn,
+      async (db) => {
+        const result = await processNppFundRedemptionsWork(db, options);
+        if (result.errors.length) throw new Error(result.errors.join("; "));
+        return result;
+      }
+    );
+  } catch (error) {
+    return {
+      redemptionsQueued: 0,
+      unitsRedeemed: 0,
+      errors: [error instanceof Error ? error.message : String(error)],
+    };
+  }
+}
+async function processNppFundRedemptionsWork(
+  db: Db,
+  options: Parameters<typeof processNppFundRedemptions>[1]
+): Promise<NppRedemptionPassResult> {
   const config = await gameConfigCollection(db).findOne(
     { _id: "default" },
     { projection: { nppFundRedemptionEnabled: 1 } }
@@ -165,7 +199,13 @@ export async function processNppFundRedemptions(
   let redemptionsQueued = 0;
   let unitsRedeemed = 0;
 
-  const fundById = new Map(options.activeFunds.map((fund) => [fund._id.toString(), fund]));
+  const activeFunds = await indexFundsCollection<IndexFund>(db)
+    .find(
+      { _id: { $in: options.activeFunds.map((fund) => fund._id) }, status: "active" },
+      { projection: { quotedNav: 1, unitSupply: 1 } }
+    )
+    .toArray();
+  const fundById = new Map(activeFunds.map((fund) => [fund._id.toString(), fund]));
 
   const positions = await indexFundPositionsCollection<IndexFundPosition>(db)
     .find({ holderKind: "npp" }, { projection: { nppId: 1, fundId: 1, units: 1 } })
@@ -266,25 +306,11 @@ async function applyNppRedemptionsAtomically(
   planned: PlannedNppRedemption[],
   now: Date
 ): Promise<AtomicOutcome> {
-  const client = (db as { client?: { startSession?: () => ClientSession } }).client;
-  if (typeof client?.startSession !== "function") return { status: "unavailable" };
-  let supported = false;
   try {
-    supported = await assertTransactionSupportAtBoot();
-  } catch {
-    supported = false;
-  }
-  if (!supported) return { status: "unavailable" };
-
-  const session = client.startSession();
-  try {
-    await session.withTransaction(() => writeNppRedemptionBatch(db, planned, now, session));
+    await withSessionDb(db, (db) => writeNppRedemptionBatch(db, planned, now));
     return { status: "applied" };
-  } catch (err) {
-    if (err instanceof NppRedemptionGuardMiss) return { status: "unavailable" };
-    return { status: "failed", message: err instanceof Error ? err.message : String(err) };
-  } finally {
-    await session.endSession();
+  } catch (error) {
+    return { status: "failed", message: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -426,33 +452,25 @@ export async function applyNppRedemptionsSequentially(
       for (const p of items) {
         const { nppId, intent } = p;
         try {
-          // Atomic, balance-gated debit: the sole guarantee that we never remove
-          // more units than the NPP holds. A failed debit means a concurrent
-          // change drained the position — skip rather than over-redeem.
-          const debit = await debitFundPosition(db, intent.fundId, "npp", { nppId }, intent.units);
-          if (!debit.ok) continue;
-
-          // Burn the redeemed units from fund supply at request time, mirroring
-          // the player route; the cron then only pays cash. Guarded; if supply
-          // moved under us, restore the position and skip.
-          const burn = await indexFundsCollection<IndexFund>(db).updateOne(
-            { _id: intent.fundId, unitSupply: { $gte: intent.units } },
-            { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } }
-          );
-          if (burn.matchedCount === 0) {
-            await creditFundPosition(
+          const settled = await withAtomicResult(db, async (db) => {
+            const debit = await debitFundPosition(
               db,
               intent.fundId,
               "npp",
               { nppId },
-              intent.units,
-              p.quotedNav
+              intent.units
             );
-            continue;
-          }
-
-          await enqueueRedemption(db, queueEntryFor(p, now));
-          await insertFundTransaction(db, queuedTransactionFor(p, now));
+            if (!debit.ok) return { ok: false };
+            const burn = await indexFundsCollection<IndexFund>(db).updateOne(
+              { _id: intent.fundId, unitSupply: { $gte: intent.units } },
+              { $inc: { unitSupply: -intent.units }, $set: { updatedAt: now } }
+            );
+            if (burn.matchedCount !== 1) return { ok: false };
+            await enqueueRedemption(db, queueEntryFor(p, now));
+            await insertFundTransaction(db, queuedTransactionFor(p, now));
+            return { ok: true };
+          });
+          if (!settled.ok) continue;
 
           redemptionsQueued++;
           unitsRedeemed += intent.units;

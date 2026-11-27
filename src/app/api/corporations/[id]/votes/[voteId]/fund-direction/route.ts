@@ -7,14 +7,13 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { getDb } from "@/lib/mongodb";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { resolveCorporationVoteIfReady } from "@/lib/corporations/votes/voteService";
-import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { notifyVoteEvent } from "@/lib/corporations/votes/voteNotifications";
 import { directableFundsFor } from "@/lib/corporations/votes/fundStewardship";
 import { getGameState } from "@/lib/gameState";
 import { totalVotingPower } from "@/lib/corporations/superShares";
 import type { Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import type { CorporationVote } from "@/lib/db/types/corporationVote";
+
 import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 /**
@@ -218,10 +217,6 @@ async function resolveIfReady(db: Db, voteId: ObjectId, corporation: Corporation
     currentTurn,
   });
   if (!claimed || outcome === "open") return;
-
-  if (outcome === "passed") {
-    await applyPassedVoteEffects({ db, vote: updated, corporation, currentTurn });
-  }
   await notifyVoteEvent({
     db,
     vote: updated,

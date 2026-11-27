@@ -2,6 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { ContestRound } from "@/lib/db/types/contestRound";
 
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+  afterCommit: async (_db: Db, work: () => Promise<unknown>) => work(),
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 vi.mock("./achievements", () => ({ reconcileContestAchievements: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 vi.mock("@/lib/patreon/service", () => ({ applyPatreonStatus: vi.fn() }));

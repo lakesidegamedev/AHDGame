@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * Era Checkpoint Turn, applies each active `EraCheckpoint`'s pull to the
  * targeted states' Layer-1 census buckets (see
@@ -19,8 +20,7 @@
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { StateDemographics } from "@/lib/db/types/demographics";
-import type { DocketCase } from "@/lib/db/types/scotus";
-import type { LegislationType } from "@/lib/db/types/legislation";
+
 import { getActivePoliciesForState, type LegislationTypeMap } from "@/lib/policyEffects";
 import { calculateDemographicShiftsByTarget } from "@/lib/demographicEffects";
 import { calendarTurn, type CalendarClock } from "@/lib/utils/gameDate";
@@ -114,6 +114,20 @@ export async function processEraCheckpointsTurn(
   db: Db,
   currentTurn: number,
   countryId: CountryId = "US"
+): Promise<EraCheckpointTurnResult> {
+  return withTurnValueSettlement(
+    db,
+    "era-checkpoint-demographics",
+    currentTurn,
+    (db) => applyEraCheckpointTurn(db, currentTurn, countryId),
+    { sourceKey: `${countryId}:${currentTurn}` }
+  );
+}
+
+async function applyEraCheckpointTurn(
+  db: Db,
+  currentTurn: number,
+  countryId: CountryId
 ): Promise<EraCheckpointTurnResult> {
   // Each checkpoint names the world start it was authored against (the
   // 1950s-60s history for 1953, the modern realignments for 2027); its start

@@ -1,5 +1,13 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({ fenceEconomicTurn: async () => null }));
+const clock = vi.hoisted(() => ({ turn: 500 }));
+vi.mock("@/lib/db/repositories/gameState", () => ({
+  gameStateCollection: () => ({ findOne: async () => ({ currentTurn: clock.turn }) }),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ObjectId, type Db } from "mongodb";
+import { BSON, ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { VP_ACTION_CAP } from "@/lib/constants/vicePresidentActions";
 import { JUSTICE_ACTION_CAP } from "@/lib/constants/justiceActions";
@@ -20,7 +28,10 @@ function sameValue(a: unknown, b: unknown): boolean {
 
 function matches(doc: Doc, filter: Record<string, unknown>): boolean {
   return Object.entries(filter).every(([key, value]) => {
+    if (key === "$or")
+      return (value as Record<string, unknown>[]).some((branch) => matches(doc, branch));
     const actual = doc[key];
+    if (value === null) return actual == null;
     if (value != null && typeof value === "object" && !(value instanceof ObjectId)) {
       const ops = value as Record<string, unknown>;
       if ("$gte" in ops) return typeof actual === "number" && actual >= (ops.$gte as number);
@@ -40,7 +51,22 @@ function applyUpdate(doc: Doc, update: Record<string, Record<string, unknown>>) 
 }
 
 /** Back one mock collection with an in-memory doc list. */
+const backing = new WeakMap<object, Doc[]>();
 function backCollection(db: MockDb, name: string, docs: Doc[]) {
+  backing.set(db, [...(backing.get(db) ?? []), ...docs]);
+  Object.assign(db, {
+    captureRollback: () => {
+      const copies = (backing.get(db) ?? []).map(
+        (doc) => [doc, BSON.deserialize(BSON.serialize(doc))] as const
+      );
+      return () => {
+        for (const [doc, copy] of copies) {
+          for (const key of Object.keys(doc)) delete doc[key];
+          Object.assign(doc, copy);
+        }
+      };
+    },
+  });
   const col = db.collection(name) as unknown as MockDb["collectionMocks"][string];
   col.findOne.mockImplementation(
     async (filter: Record<string, unknown>) => docs.find((d) => matches(d, filter)) ?? null
@@ -77,6 +103,7 @@ let me: ObjectId;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  clock.turn = 500;
   db = createMockDb();
   me = new ObjectId();
 });
@@ -187,6 +214,7 @@ describe("topUpOfficePool: vice-president", () => {
     });
     expect(character.actions).toBe(40);
     expect(vp.vpActionsRemaining).toBe(1);
+    clock.turn = TURN + 1;
     await expect(topUpOfficePool(db as unknown as Db, me, target, TURN + 1)).resolves.toMatchObject(
       {
         ok: true,
@@ -195,7 +223,7 @@ describe("topUpOfficePool: vice-president", () => {
     );
   });
 
-  it("refunds the AP when the pool credit loses a race", async () => {
+  it("rolls back AP when the pool credit loses a race", async () => {
     const { character, officials } = setupVp({ actions: 30, pool: 0 });
     officials.findOneAndUpdate.mockResolvedValueOnce(null);
     const result = await topUpOfficePool(

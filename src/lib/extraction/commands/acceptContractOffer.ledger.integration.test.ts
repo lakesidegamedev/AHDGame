@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 
 vi.mock("@/lib/currency/corporationCapital", () => ({
@@ -19,7 +19,7 @@ const CORP_ID = new ObjectId("650000000000000000000040");
 const CONTRACT_ID = new ObjectId("650000000000000000000041");
 
 function setup() {
-  const db = createInMemoryDb();
+  const db = createTransactionalMemoryDb().memory;
   db.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
   db.seed("gameState", [{ _id: "current", currentTurn: TURN, preset: "2019-default" }]);
   db.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
@@ -114,4 +114,38 @@ describe("funded national contract signing fee", () => {
       expect(db.collection("bankMoneyMoves").docs[0]).toMatchObject({ status: "applied" });
     }
   );
+});
+
+describe("regional extraction signing fee", () => {
+  it("retains the offer and payer cash after a landed credit failure, then accepts only once", async () => {
+    const { db, contract, corporation } = setup();
+    contract.grantedByLevel = "state";
+    db.collection("extractionContracts").docs[0].grantedByLevel = "state";
+    db.seed("stateBudgets", [
+      { _id: "TX", countryId: "US", balance: 0, revenue: { total: 0, resourceRoyalties: 0 } },
+    ]);
+    const fault = withInjectedCrash(db, {
+      collection: "stateBudgets",
+      op: "bulkWrite",
+      onCall: 1,
+      afterWrite: true,
+    });
+    const { acceptContractOffer } = await import("./acceptContractOffer");
+    await expect(
+      acceptContractOffer(fault.db, contract, corporation, TURN, NOW, true)
+    ).rejects.toThrow();
+    expect(db.collection("corporations").docs[0].liquidCapital).toBe(100);
+    expect(db.collection("stateBudgets").docs[0].balance).toBe(0);
+    expect(db.collection("extractionContracts").docs[0].status).toBe("offered");
+    const results = await Promise.all([
+      acceptContractOffer(db as never, contract, corporation, TURN, NOW, true),
+      acceptContractOffer(db as never, contract, corporation, TURN, NOW, true),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(db.collection("corporations").docs[0].liquidCapital).toBe(80);
+    expect(db.collection("stateBudgets").docs[0]).toMatchObject({
+      balance: 20,
+      revenue: { total: 20, resourceRoyalties: 20 },
+    });
+  });
 });

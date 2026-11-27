@@ -1,3 +1,4 @@
+import { withAtomicStatusResult } from "@/lib/api/withAtomicStatusResult";
 /**
  * Regional bills use seated human or chair-directed party NPP sponsors.
  * proposeStateBill validates provisions and charges the requesting player.
@@ -12,10 +13,10 @@ import {
 } from "@/lib/constants/countries";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
-import type { ElectedOfficial, PoliticalParty, StateBill } from "@/lib/db/types";
+import type { StateBill } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
-import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
+
 import { BILL_PROPOSE_ACTION_COST, getProvisionCostTotal } from "@shared/constants/legislation";
 import type { LegislatureCommandResult } from "@/lib/legislature/commands/types";
 import { getGameState } from "@/lib/gameState";
@@ -41,6 +42,18 @@ export interface ProposeStateBillInput {
 }
 
 export async function proposeStateBill(
+  db: Db,
+  countryId: CountryId,
+  stateId: string,
+  user: AuthUserWithCharacter,
+  input: ProposeStateBillInput
+): Promise<LegislatureCommandResult> {
+  return withAtomicStatusResult(db, (db) =>
+    proposeStateBillInTransaction(db, countryId, stateId, user, input)
+  );
+}
+
+async function proposeStateBillInTransaction(
   db: Db,
   countryId: CountryId,
   stateId: string,

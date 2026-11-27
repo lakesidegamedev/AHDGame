@@ -1,6 +1,7 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { BankCharter } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types";
 import { bankTransferConflict, transferBankCharterToAcquirer } from "../transferCharter";
@@ -41,7 +42,7 @@ describe("transferBankCharterToAcquirer", () => {
   }
 
   it("moves an active charter and re-keys every satellite record", async () => {
-    memory = createInMemoryDb();
+    memory = createTransactionalMemoryDb().memory;
     targetId = new ObjectId();
     acquirerId = new ObjectId();
     const otherBankId = new ObjectId();
@@ -235,7 +236,7 @@ describe("transferBankCharterToAcquirer", () => {
   });
 
   it("refuses to move a live bank into an occupied slot and changes nothing", async () => {
-    memory = createInMemoryDb();
+    memory = createTransactionalMemoryDb().memory;
     targetId = new ObjectId();
     acquirerId = new ObjectId();
     const loanId = new ObjectId();
@@ -272,7 +273,7 @@ describe("transferBankCharterToAcquirer", () => {
   });
 
   it("is a no-op when the target operates no bank", async () => {
-    memory = createInMemoryDb();
+    memory = createTransactionalMemoryDb().memory;
     targetId = new ObjectId();
     acquirerId = new ObjectId();
     memory.seed("corporations", [
@@ -287,7 +288,7 @@ describe("transferBankCharterToAcquirer", () => {
   });
 
   it("moves an inert charter into a free slot so dead-bank recovery keeps working", async () => {
-    memory = createInMemoryDb();
+    memory = createTransactionalMemoryDb().memory;
     targetId = new ObjectId();
     acquirerId = new ObjectId();
     memory.seed("corporations", [

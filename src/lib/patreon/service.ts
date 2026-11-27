@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Supporter benefits follow their granting provider. Reconciliation writes can
  * require an unchanged provider, linked identity, tier and expiry before applying.
@@ -123,17 +125,23 @@ export async function applyPatreonStatus(
           : null;
   if (tierName) {
     const provider = input.provider ?? "patreon";
-    await createNotification({
-      userId: input.userId,
-      type: "system",
-      title: "Supporter Benefits Updated",
-      message: `Your supporter benefits have been updated to ${tierName}. Thank you for supporting A House Divided! Check out the latest updates in the changelog.`,
-      metadata: {
-        tier: input.tier,
-        provider,
-        patreonUserId: input.patreonUserId,
-        changelogUrl: "/changelog",
-      },
+    await afterCommit(db, async () => {
+      try {
+        await createNotification({
+          userId: input.userId,
+          type: "system",
+          title: "Supporter Benefits Updated",
+          message: `Your supporter benefits have been updated to ${tierName}. Thank you for supporting A House Divided! Check out the latest updates in the changelog.`,
+          metadata: {
+            tier: input.tier,
+            provider,
+            patreonUserId: input.patreonUserId,
+            changelogUrl: "/changelog",
+          },
+        });
+      } catch (error) {
+        Sentry.captureException(error, { tags: { area: "benefit-notification" } });
+      }
     });
   }
 

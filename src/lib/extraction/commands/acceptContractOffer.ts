@@ -1,9 +1,12 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { creditRegionalExtractionReceipt } from "../creditRegionalExtractionReceipt";
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
 import { isGovernmentContractsEnabled } from "@/lib/governmentContracts/featureFlag";
 import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "@/lib/governmentContracts/rules/featureGate";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
-import type { StateBudget } from "@/lib/db/types/budget";
+
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { getExtractionContractsCollection } from "@/lib/db/collections/extractionContracts";
@@ -29,22 +32,6 @@ export type AcceptContractResult =
   | { ok: true; status: 200; activatedTurn: number; expiresTurn: number; signingFeeLocal: number }
   | { ok: false; status: number; error: string };
 
-/**
- * Corp CEO accepts an offered extraction contract.
- *
- * Money-safety ordering (compensation-based; a Mongo transaction cannot wrap
- * this flow because creditTreasury/moveTreasury takes no session — see
- * src/lib/budget/treasurySpend.ts):
- *   1. Atomically CLAIM the offer (`offered` → `active`, guarded on status +
- *      not-expired) so a racing double-accept is impossible.
- *   2. Charge the signing fee (atomic guarded corp debit). Insufficient funds
- *      → revert the claim (guarded on our own activatedTurn) and reject 402.
- *   3. Credit the issuer. Any post-debit failure refunds the corp and reverts
- *      the claim before rethrowing, so no path leaves an active-but-unpaid
- *      contract or a debited corp with an uncredited issuer.
- *
- * Caller handles requireCeo.
- */
 export async function acceptContractOffer(
   db: Db,
   contract: ExtractionContract,
@@ -52,6 +39,23 @@ export async function acceptContractOffer(
   turn: number,
   now: Date,
   treasuryCashLedgerEnabled = false
+): Promise<AcceptContractResult> {
+  return withAtomicResult(db, async (tx) => {
+    const fresh = await (await getExtractionContractsCollection(tx)).findOne({ _id: contract._id });
+    const payer = await corporationsCollection(tx).findOne({ _id: corporation._id });
+    if (!fresh || !payer)
+      return { ok: false, status: 404, error: "Contract or corporation no longer exists." };
+    return acceptInTransaction(tx, fresh, payer, turn, now, treasuryCashLedgerEnabled);
+  });
+}
+
+async function acceptInTransaction(
+  db: Db,
+  contract: ExtractionContract,
+  corporation: Corporation,
+  turn: number,
+  now: Date,
+  treasuryCashLedgerEnabled: boolean
 ): Promise<AcceptContractResult> {
   if (contract.status === "offered" && !(await isGovernmentContractsEnabled(db)))
     return { ok: false, status: 503, error: GOVERNMENT_CONTRACTS_DISABLED_MESSAGE };
@@ -61,7 +65,11 @@ export async function acceptContractOffer(
   const possibleFundedFee = treasuryCashLedgerEnabled && feeAnchor > 0;
   const stateTreasuryFallback =
     possibleFundedFee && contract.grantedByLevel === "state"
-      ? !(await stateBudgetsCollection(db).findOne(
+      ? !(await regionalBudgetsCollection(db).findOne({
+          _id: contract.stateId,
+          countryId: contract.countryId,
+        })) &&
+        !(await stateBudgetsCollection(db).findOne(
           { _id: contract.stateId, countryId: contract.countryId },
           { projection: { _id: 1 } }
         ))
@@ -308,24 +316,15 @@ export async function acceptContractOffer(
         if (!fundedTreasuryFee) await creditTreasury(db, countryId, feeIssuerLocal);
         creditedNationalTreasury = true;
       } else {
-        const stateCredit = await stateBudgetsCollection(db).updateOne(
-          { _id: contract.stateId, countryId },
-          {
-            $inc: { "revenue.resourceRoyalties": feeIssuerLocal, "revenue.total": feeIssuerLocal },
-            $set: { updatedAt: now },
-          }
-        );
-        if (stateCredit.matchedCount === 0) {
-          // Money conservation: the corp has been debited, but the state
-          // budget doc is missing (never blind-upsert — StateBudget has a
-          // required fiscal shape the recompute depends on). Route the fee to
-          // the national treasury as custodian so the money does not vanish.
+        if (
+          !(await creditRegionalExtractionReceipt(db, contract.stateId, countryId, feeIssuerLocal))
+        ) {
           if (!fundedTreasuryFee) await creditTreasury(db, countryId, feeIssuerLocal);
           creditedNationalTreasury = true;
         }
       }
 
-      void emitTx(db, {
+      await emitTx(db, {
         type: "contract_signing_fee",
         turn,
         createdAt: now,
@@ -347,7 +346,7 @@ export async function acceptContractOffer(
       // government balance; state-budget credits stay single-sided). Same
       // convention as corp_tax_paid ↔ gov_tax_revenue.
       if (creditedNationalTreasury) {
-        void emitTx(db, {
+        await emitTx(db, {
           type: "govt_signing_fee_receipt",
           turn,
           createdAt: now,

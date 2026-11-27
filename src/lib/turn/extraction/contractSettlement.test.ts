@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -53,6 +57,7 @@ function setContractQueries(
   active: ExtractionContract[]
 ) {
   db.collection("extractionContracts");
+  db.collectionMocks["extractionContracts"]!.findOne.mockResolvedValue(active[0] ?? null);
   db.collectionMocks["extractionContracts"]!.find.mockImplementation(
     (query: { status?: string }) => {
       if (query?.status === "offered") return cursorOf(offered) as never;
@@ -62,6 +67,9 @@ function setContractQueries(
 }
 
 function seedCommon(db: MockDb) {
+  db.collection("stateBudgets");
+  db.collectionMocks.stateBudgets.findOne.mockResolvedValue({ _id: "TX", countryId: "US" });
+  db.collectionMocks.stateBudgets.bulkWrite.mockResolvedValue({ matchedCount: 1 });
   setFind(db, "stateResourceCapacity", [
     {
       _id: new ObjectId(),
@@ -299,6 +307,7 @@ describe("settleExtractionContracts", () => {
   it("falls back to the national treasury when the state budget doc is missing", async () => {
     setContractQueries(db, [], [makeContract({ grantedByLevel: "state" })]);
     seedCommon(db);
+    db.collectionMocks.stateBudgets.findOne.mockResolvedValue(null);
     db.collectionMocks["corporations"]!.updateOne.mockResolvedValue({
       modifiedCount: 1,
       matchedCount: 1,

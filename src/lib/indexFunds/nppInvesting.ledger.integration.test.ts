@@ -1,7 +1,7 @@
 /** NPC investment cash and fund receipts must reconcile after real subscriptions. */
 import { expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { getDb } from "@/lib/mongodb";
 import { resetLedgerShadowFlagCache } from "@/lib/ledger/featureFlag";
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
@@ -15,7 +15,7 @@ it.each([
   { countryId: "US", currency: "USD", rate: 1 },
   { countryId: "UK", currency: "GBP", rate: 0.8 },
 ])("reconciles one subscription witness for $countryId", async ({ countryId, currency, rate }) => {
-  const memory = createInMemoryDb();
+  const { memory } = createTransactionalMemoryDb();
   const db = memory as unknown as Db;
   vi.mocked(getDb).mockResolvedValue(db);
   resetLedgerShadowFlagCache();
@@ -72,7 +72,7 @@ it.each([
   const beforeRetry = { balances: closing, entries: entries.length };
   expect(
     (await processNPPFundInvestments(db, { currentTurn: 16, budgetMultiplier: 4 })).totalInvested
-  ).toBe(0);
+  ).toBe(result.totalInvested);
   expect(await collectBalances(db)).toEqual(beforeRetry.balances);
   expect(await db.collection("ledgerEntries").countDocuments({ turn: 16 })).toBe(
     beforeRetry.entries

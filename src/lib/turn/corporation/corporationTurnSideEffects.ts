@@ -1,3 +1,4 @@
+import { readTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /** Post-market side effects of the corporation turn: shadow phase, media, ventures, contracts, FX spreads and strike pulses. */
 import { runFundedProducerTurn } from "./fundedProducerTurn";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
@@ -226,19 +227,26 @@ export async function runCorporationTurnSideEffects({
     constructionFinanceRequests: nppConstructionFinanceRequests,
     constructionFinanceCandidateCount: nppConstructionFinanceCandidateCount,
     constructionFinanceBacklogCount: nppConstructionFinanceBacklogCount,
-  } = await runJournaledStepWithOutput(journal, "nppCorporationDecisions", "refuse", () =>
-    processNppCorporationDecisions(db, turn ?? 0, now, techTreesEnabled, {
-      groupMembership,
-      corporations: corporationsWithReservedTaxCash(
-        lookups.corporations,
-        corpSnapshots,
-        lookups.exchangeRatesByCurrency,
-        treasuryCashLedgerEnabled
-      ),
-      issuerBondsByCorpId: lookups.bondsByCorpId,
-      heldBondsByCorpId: lookups.bondsHeldByCorpId,
-      ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
-    })
+  } = await runJournaledStepWithOutput(
+    journal,
+    "nppCorporationDecisions",
+    options.batchNppMarketEntryCredit &&
+      (await readTurnValueSettlement(db, "npp-relocation-plan", turn ?? 0)).applied
+      ? "rerun"
+      : "refuse",
+    () =>
+      processNppCorporationDecisions(db, turn ?? 0, now, techTreesEnabled, {
+        groupMembership,
+        corporations: corporationsWithReservedTaxCash(
+          lookups.corporations,
+          corpSnapshots,
+          lookups.exchangeRatesByCurrency,
+          treasuryCashLedgerEnabled
+        ),
+        issuerBondsByCorpId: lookups.bondsByCorpId,
+        heldBondsByCorpId: lookups.bondsHeldByCorpId,
+        ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
+      })
   );
   mark("nppCorpDecisions");
 
@@ -312,6 +320,7 @@ export async function runCorporationTurnSideEffects({
     labourWageIndexByState,
     automationIndexByState,
     journal,
+    turn,
   });
 
   // Record current-turn corporate labour demand for every region. The metric
@@ -354,7 +363,7 @@ export async function runCorporationTurnSideEffects({
       exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
       bondsByCorpId: lookups.bondsByCorpId,
       sectorsByCorp: lookups.sectorsByCorp,
-      constructionLoanDebtByCorpId: lookups.constructionLoanDebtByCorpId,
+      corporateLoanDebtByCorpId: lookups.corporateLoanDebtByCorpId,
       mediaProductSlatesEnabled,
       journal,
       applyOperatingCashWrites: async () => {
@@ -640,8 +649,11 @@ export async function runCorporationTurnSideEffects({
   // Route the reduced FX spreads skimmed from foreign operating income into the
   // CB system (reserve slice → corp's home CB in the source currency; revenue →
   // source-currency CB). Already deducted from the corp's credited income above.
-  await runJournaledStep(journal, "conversionSpreads", "refuse", () =>
-    distributeConversionSpreadsBatch(db, sectorFxSpreadFees)
+  await runJournaledStep(journal, "conversionSpreads", "rerun", () =>
+    distributeConversionSpreadsBatch(db, sectorFxSpreadFees, {
+      key: `corporation-operating-fx:${turn ?? 0}`,
+      turn: turn ?? 0,
+    })
   );
 
   // v3 Phase 6: translate this turn's strike trigger/resolution events into

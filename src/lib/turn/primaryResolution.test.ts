@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 /**
  * Unit tests for primaryResolution: resolvePrimariesIfNeeded, recordPrimarySnapshots,
  * and accumulateGeneralElectionVotes.

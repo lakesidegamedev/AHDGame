@@ -1,4 +1,3 @@
-import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -27,7 +26,8 @@ export function imfFacilityPaymentAnchorPerTurn(
     | "imfFacilityAmortizationTurnsRemaining"
     | "imfFacilityIncomeCaptureFraction"
   >,
-  turnIncomeAnchor: number
+  turnIncomeAnchor: number,
+  component: "cash" | "interest" = "cash"
 ): number {
   if (corp.imfBailoutActive !== true) return 0;
   const principal = corp.imfFacilityPrincipalOutstanding ?? 0;
@@ -45,7 +45,7 @@ export function imfFacilityPaymentAnchorPerTurn(
     turnIncome: turnIncomeAnchor,
     incomeCapFraction,
   });
-  return split.actualPayment;
+  return component === "interest" ? split.interestPortion : split.actualPayment;
 }
 
 /**
@@ -54,7 +54,8 @@ export function imfFacilityPaymentAnchorPerTurn(
  */
 export async function sumImfLenderReceiptsAnchorPerTurnForReceivables(
   db: Db,
-  receivables: ImfFacilityReceivableRow[]
+  receivables: ImfFacilityReceivableRow[],
+  component: "cash" | "interest" = "cash"
 ): Promise<number> {
   if (receivables.length === 0) return 0;
 
@@ -79,10 +80,9 @@ export async function sumImfLenderReceiptsAnchorPerTurnForReceivables(
       },
     ])
     .toArray();
-  const rates = await loadValuationFxRates(db);
   const incomeByBorrower = new Map(
     incomeRows.map((r) => {
-      const rate = r.currencyCode ? (r.fxRateAtWrite ?? rates.get(r.currencyCode as never)) : 1;
+      const rate = r.currencyCode ? r.fxRateAtWrite : 1;
       return [
         r._id.toString(),
         rate && rate > 0 && Number.isFinite(rate) && typeof r.income === "number"
@@ -106,7 +106,7 @@ export async function sumImfLenderReceiptsAnchorPerTurnForReceivables(
       turnIncome,
       incomeCapFraction: capture,
     });
-    total += split.actualPayment;
+    total += component === "interest" ? split.interestPortion : split.actualPayment;
   }
   return total;
 }

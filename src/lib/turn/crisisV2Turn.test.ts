@@ -36,10 +36,10 @@ interface FakeData {
 
 function makeDb(data: FakeData) {
   const calls = {
-    bulkWrite: vi.fn(async () => ({})),
+    bulkWrite: vi.fn(async () => ({ matchedCount: 1 })),
     insertMany: vi.fn(async () => ({})),
     leverUpdateMany: vi.fn(async () => ({})),
-    claim: vi.fn(async () => ({ matchedCount: 1 })),
+    claim: vi.fn(async (_filter?: unknown, _update?: unknown) => ({ matchedCount: 1 })),
     collectionsRead: [] as string[],
     leverFilter: undefined as unknown,
   };
@@ -63,6 +63,12 @@ function makeDb(data: FakeData) {
         insertMany: calls.insertMany,
         updateMany: name === "crisisLeverUses" ? calls.leverUpdateMany : vi.fn(),
         updateOne: calls.claim,
+        findOneAndUpdate: async (filter: { _id: ObjectId }, update: { $set?: object }) => {
+          const claimed = await calls.claim(filter, update);
+          return claimed.matchedCount > 0
+            ? (data.crises.find((row) => String(row._id) === String(filter._id)) ?? null)
+            : null;
+        },
         findOne: vi.fn(async () => (name === "gameConfig" ? (data.config ?? null) : null)),
       };
     },

@@ -1,3 +1,16 @@
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  fenceEconomicTurn: async (db: Db) => {
+    const state = await db
+      .collection<{ _id: string; isProcessing?: boolean }>("gameState")
+      .findOne({ _id: "current" });
+    return state?.isProcessing
+      ? { ok: false, status: 409, error: "The game is processing this turn, try again shortly." }
+      : null;
+  },
+}));
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/unions/unionProsecutionBar", () => ({
@@ -46,7 +59,10 @@ function fundDb(
     .fn()
     .mockResolvedValue(options.funded === false ? null : { funds: 40_000 });
   const characterRefund = vi.fn().mockResolvedValue({});
-  const unionUpdate = vi.fn().mockResolvedValue({ modifiedCount: options.creditModified ?? 1 });
+  const unionUpdate = vi.fn().mockResolvedValue({
+    matchedCount: options.creditModified ?? 1,
+    modifiedCount: options.creditModified ?? 1,
+  });
   const db = {
     collection: (name: string) => {
       if (name === "gameState") {
@@ -116,17 +132,15 @@ describe("fundUnionTreasury", () => {
     expect(unionUpdate).not.toHaveBeenCalled();
   });
 
-  it("refunds the debit when the treasury credit matches nothing", async () => {
+  it("propagates a failed treasury credit for transaction rollback", async () => {
     const character = makeCharacter();
     const union = makeUnion(character._id);
     const { db, characterRefund } = fundDb(union, { creditModified: 0 });
 
-    const result = await fundUnionTreasury(db, character, union._id.toString(), 750);
-
-    expect(result).toMatchObject({ ok: false, status: 500 });
-    expect(characterRefund).toHaveBeenCalledTimes(1);
-    const [, refund] = characterRefund.mock.calls[0];
-    expect(refund.$inc).toEqual({ funds: 750 });
+    await expect(fundUnionTreasury(db, character, union._id.toString(), 750)).rejects.toThrow(
+      "Union treasury recipient is missing"
+    );
+    expect(characterRefund).not.toHaveBeenCalled();
   });
 
   it("rejects a character who does not lead this union", async () => {

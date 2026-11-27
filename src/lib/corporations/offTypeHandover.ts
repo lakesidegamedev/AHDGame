@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * AI companies hand off-type plants to a same-type AI company.
  *
@@ -124,15 +125,50 @@ export async function runOffTypeHandover(
     stage: number | null | undefined;
   }
 ): Promise<{ moved: number; deferred: number }> {
+  const pending = await offTypeHandoversCollection<HandoverReceipt>(db)
+    .find({ state: { $in: ["pending", "debited", "moved"] } })
+    .sort({ turn: 1, _id: 1 })
+    .toArray();
   const out = { moved: 0, deferred: 0 };
+  for (const turn of [...new Set(pending.map((r) => r.turn))]) {
+    const recovered = await withSessionDb(db, (db) =>
+      runOffTypeHandoverInner(db, { ...args, turn }, true)
+    );
+    out.moved += recovered.moved;
+    out.deferred += recovered.deferred;
+  }
+  const unresolved = await offTypeHandoversCollection<HandoverReceipt>(db)
+    .find({ state: { $in: ["pending", "debited", "moved"] } }, { projection: { _id: 1 } })
+    .toArray();
+  if (unresolved.length) return { ...out, deferred: out.deferred + unresolved.length };
   if (!marketRecoveryStageActive(args.stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER))
+    return out;
+  const fresh = await withSessionDb(db, (db) => runOffTypeHandoverInner(db, args));
+  return { moved: out.moved + fresh.moved, deferred: out.deferred + fresh.deferred };
+}
+
+async function runOffTypeHandoverInner(
+  db: Db,
+  args: {
+    turn: number;
+    year: number | null;
+    eraUnitScale: number;
+    stage: number | null | undefined;
+  },
+  recoveryOnly = false
+): Promise<{ moved: number; deferred: number }> {
+  const out = { moved: 0, deferred: 0 };
+  if (
+    !recoveryOnly &&
+    !marketRecoveryStageActive(args.stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER)
+  )
     return out;
   const corpsCol = corporationsCollection(db);
   const sectorsCol = corporateSectorsCollection(db);
   const receipts = offTypeHandoversCollection<HandoverReceipt>(db);
 
   const corps = (await corpsCol.find({ ceoType: "npp" }).toArray()).filter(isStandaloneAiCompany);
-  if (corps.length === 0) return out;
+  if (corps.length === 0 && !recoveryOnly) return out;
   const corpById = new Map(corps.map((c) => [c._id.toString(), c]));
   const [sectors, contractSectorIds, activeAgreements, priorReceipts] = await Promise.all([
     sectorsCol.find({ corporationId: { $in: corps.map((c) => c._id) } }).toArray(),
@@ -176,7 +212,9 @@ export async function runOffTypeHandover(
   const fxByCorp = new Map<string, number>();
   const planned: HandoverReceipt[] = [];
   const now = new Date();
-  for (const [sellerId, rows] of [...bySeller].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [sellerId, rows] of recoveryOnly
+    ? []
+    : [...bySeller].sort(([a], [b]) => a.localeCompare(b))) {
     const seller = corpById.get(sellerId)!;
     const sector = pickHandoverSector(rows);
     if (!sector) continue;
@@ -251,6 +289,43 @@ export async function runOffTypeHandover(
   let open = await receipts
     .find({ turn: args.turn, state: { $in: ["pending", "debited", "moved"] } })
     .toArray();
+  const actors = await corpsCol
+    .find(
+      { _id: { $in: open.flatMap((r) => [r.buyerId, r.sellerId]) } },
+      { projection: { [DEBIT_MARK]: 1, [CREDIT_MARK]: 1, liquidCurrencyCode: 1, countryId: 1 } }
+    )
+    .toArray();
+  const actorById = new Map(actors.map((c) => [c._id.toString(), c]));
+  const ambiguous = open.some((r) => {
+    const buyer = actorById.get(r.buyerId.toString()),
+      seller = actorById.get(r.sellerId.toString());
+    if (
+      !buyer ||
+      !seller ||
+      resolveCorpLiquidCurrencyCode(buyer) !== r.currency ||
+      resolveCorpLiquidCurrencyCode(seller) !== r.currency
+    )
+      return true;
+    const debit = String((buyer as Record<string, unknown>)[DEBIT_MARK] ?? "");
+    const credit = String((seller as Record<string, unknown>)[CREDIT_MARK] ?? "");
+    return (
+      (r.state === "pending" &&
+        debit !== r._id &&
+        debit !== "" &&
+        !(
+          Number.isSafeInteger(Number(debit.split(":")[0])) && Number(debit.split(":")[0]) < r.turn
+        )) ||
+      (r.state === "debited" && debit !== r._id) ||
+      (r.state === "moved" &&
+        credit !== r._id &&
+        credit !== "" &&
+        !(
+          Number.isSafeInteger(Number(credit.split(":")[0])) &&
+          Number(credit.split(":")[0]) < r.turn
+        ))
+    );
+  });
+  if (ambiguous) return { moved: 0, deferred: open.length };
   const pending = open.filter((r) => r.state === "pending");
   if (pending.length > 0) {
     await bulkIgnoringWriteErrors(() =>
@@ -378,6 +453,17 @@ export async function runOffTypeHandover(
       })),
       { ordered: false }
     );
+    const acknowledged = await corpsCol
+      .find(
+        { [CREDIT_MARK]: { $in: toCredit.map((r) => r._id) } },
+        { projection: { [CREDIT_MARK]: 1 } }
+      )
+      .toArray();
+    const credited = new Set(
+      acknowledged.map((c) => String((c as Record<string, unknown>)[CREDIT_MARK]))
+    );
+    if (toCredit.some((r) => !credited.has(r._id)))
+      throw new Error("Handover seller credit requires recovery");
     await receipts.bulkWrite(
       toCredit.map((r) => ({
         updateOne: {
@@ -401,7 +487,7 @@ export async function runOffTypeHandover(
         priceAnchor: r.priceAnchor,
       };
       const common = {
-        turn: args.turn,
+        turn: r.turn,
         createdAt: now,
         subjectType: "corporation",
         currencyCode: r.currency,
@@ -415,6 +501,7 @@ export async function runOffTypeHandover(
           subjectId: r.buyerId,
           subjectName: buyer?.name ?? "",
           amount: -r.priceLocal,
+          anchorAmount: -r.priceAnchor,
           counterpartyId: r.sellerId,
           counterpartyName: seller?.name ?? "",
         },
@@ -424,6 +511,7 @@ export async function runOffTypeHandover(
           subjectId: r.sellerId,
           subjectName: seller?.name ?? "",
           amount: r.priceLocal,
+          anchorAmount: r.priceAnchor,
           counterpartyId: r.buyerId,
           counterpartyName: buyer?.name ?? "",
         },
@@ -448,9 +536,6 @@ export async function processOffTypeHandover(db: Db, turn: number) {
     ),
   ]);
   const stage = normalizeMarketRecoveryStage(config?.marketRecoveryStage);
-  if (!marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER)) {
-    return { moved: 0, deferred: 0 };
-  }
   return runOffTypeHandover(db, {
     turn,
     year: typeof gameState?.currentYear === "number" ? gameState.currentYear : null,

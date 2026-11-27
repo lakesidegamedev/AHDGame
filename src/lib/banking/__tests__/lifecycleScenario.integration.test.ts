@@ -18,7 +18,8 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import type { SavingsAccount } from "@/lib/db/types/savingsAccount";
 import { moveCharacterSavings } from "@/lib/banking/deposits";
 import { runSavingsCommand } from "@/lib/savings/accountsShell";
@@ -47,7 +48,7 @@ const OWNER = new ObjectId();
 const START = 400;
 
 function world(): InMemoryDb {
-  const db = createInMemoryDb();
+  const { memory: db } = createTransactionalMemoryDb();
   db.seed("gameConfig", [
     {
       _id: "default",

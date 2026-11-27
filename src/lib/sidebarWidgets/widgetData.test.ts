@@ -39,8 +39,8 @@ describe("loadSidebarWidgetData", () => {
     const id = new ObjectId();
     const historyFind = vi.fn().mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
-        { corporationId: id, turn: 9, sharePrice: 10 },
-        { corporationId: id, turn: 8, sharePrice: 9 },
+        { corporationId: id, turn: 9, sharePrice: 10, currencyCode: "USD" },
+        { corporationId: id, turn: 8, sharePrice: 9, currencyCode: "USD" },
       ]),
     });
     const db = fakeDb({
@@ -154,7 +154,13 @@ describe("loadSidebarWidgetData", () => {
 
   it("uses each snapshot's exclusive history interval for a shared corporation", async () => {
     const id = new ObjectId();
-    const listing = { _id: id, sequentialId: 1, name: "Acme", sharePrice: 20 };
+    const listing = {
+      _id: id,
+      sequentialId: 1,
+      name: "Acme",
+      sharePrice: 20,
+      liquidCurrencyCode: "USD",
+    };
     const snapshots = [
       { _id: "nyse", exchangeName: "NYSE", turn: 20, listings: [listing] },
       {
@@ -166,11 +172,11 @@ describe("loadSidebarWidgetData", () => {
     ];
     const historyFind = vi.fn().mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
-        { corporationId: id, turn: 25, sharePrice: 25 },
-        { corporationId: id, turn: 19, sharePrice: 16 },
-        { corporationId: id, turn: 14, sharePrice: 12 },
-        { corporationId: id, turn: 20, sharePrice: 21 },
-        { corporationId: id, turn: 22, sharePrice: NaN },
+        { corporationId: id, turn: 25, sharePrice: 25, currencyCode: "USD" },
+        { corporationId: id, turn: 19, sharePrice: 16, currencyCode: "USD" },
+        { corporationId: id, turn: 14, sharePrice: 12, currencyCode: "USD" },
+        { corporationId: id, turn: 20, sharePrice: 21, currencyCode: "USD" },
+        { corporationId: id, turn: 22, sharePrice: NaN, currencyCode: "USD" },
       ]),
     });
     const data = await loadSidebarWidgetData(
@@ -186,7 +192,7 @@ describe("loadSidebarWidgetData", () => {
 
     expect(data).toMatchObject({
       "stockTicker:nyse": { turn: 20, rows: [{ change: 25, series: [12, 16, 20] }] },
-      "stockTicker:ftse": { turn: 26, rows: [{ change: 20, series: [16, 21, 25, 30] }] },
+      "stockTicker:ftse": { turn: 26, rows: [{ change: null, series: [30] }] },
     });
     expect(historyFind).toHaveBeenCalledTimes(1);
     expect(historyFind.mock.calls[0]![0]).toEqual({
@@ -266,14 +272,26 @@ describe("loadSidebarWidgetData", () => {
               _id: "nyse",
               exchangeName: "NYSE",
               turn: 10,
-              listings: [{ _id: id, sequentialId: 4, name: "Acme", sharePrice: 11 }],
+              listings: [
+                {
+                  _id: id,
+                  sequentialId: 4,
+                  name: "Acme",
+                  sharePrice: 11,
+                  liquidCurrencyCode: "USD",
+                },
+              ],
             },
           ]),
         }),
       },
       corporationHistory: {
         find: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([{ corporationId: id, turn: 7, sharePrice: 10 }]),
+          toArray: vi
+            .fn()
+            .mockResolvedValue([
+              { corporationId: id, turn: 7, sharePrice: 10, currencyCode: "USD" },
+            ]),
         }),
       },
     });
@@ -303,8 +321,22 @@ describe("loadSidebarWidgetData", () => {
           sort: () => ({
             limit: () => ({
               toArray: vi.fn().mockResolvedValue([
-                { turn: 5, sharePrice: 12, liquidCapital: 500, revenue: 90, income: -4 },
-                { turn: 4, sharePrice: 10, liquidCapital: 450, revenue: 80, income: 6 },
+                {
+                  currencyCode: "USD",
+                  turn: 5,
+                  sharePrice: 12,
+                  liquidCapital: 500,
+                  revenue: 90,
+                  income: -4,
+                },
+                {
+                  currencyCode: "USD",
+                  turn: 4,
+                  sharePrice: 10,
+                  liquidCapital: 450,
+                  revenue: 80,
+                  income: 6,
+                },
               ]),
             }),
           }),
@@ -335,4 +367,86 @@ describe("loadSidebarWidgetData", () => {
     expect(data.myCompany).toBeNull();
     expect(data.staffQueues).toMatchObject({ admin: true });
   });
+});
+
+it("normalizes a ticker's overseas history using recorded FX and its settled quote basis", async () => {
+  const id = new ObjectId();
+  const data = await loadSidebarWidgetData(
+    fakeDb({
+      stockExchangeSnapshots: {
+        find: () => ({
+          toArray: async () => [
+            {
+              _id: "nyse",
+              exchangeName: "NYSE",
+              turn: 10,
+              listings: [
+                {
+                  _id: id,
+                  sequentialId: 1,
+                  name: "Moved",
+                  sharePrice: 18,
+                  sharePriceAnchor: 12,
+                  liquidCurrencyCode: "CAD",
+                },
+              ],
+            },
+          ],
+        }),
+      },
+      corporationHistory: {
+        find: () => ({
+          toArray: async () => [
+            {
+              corporationId: id,
+              turn: 9,
+              sharePrice: 1000,
+              currencyCode: "JPY",
+              fxRateAtWrite: 100,
+            },
+          ],
+        }),
+      },
+    }),
+    ["stockTicker:nyse"],
+    viewer
+  );
+  expect(data["stockTicker:nyse"]).toMatchObject({ rows: [{ change: 20, series: [15, 18] }] });
+});
+it("leaves ticker changes unavailable when historical currency evidence is missing", async () => {
+  const id = new ObjectId();
+  const data = await loadSidebarWidgetData(
+    fakeDb({
+      stockExchangeSnapshots: {
+        find: () => ({
+          toArray: async () => [
+            {
+              _id: "nyse",
+              exchangeName: "NYSE",
+              turn: 10,
+              listings: [
+                {
+                  _id: id,
+                  sequentialId: 1,
+                  name: "Unknown",
+                  sharePrice: 18,
+                  liquidCurrencyCode: "CAD",
+                },
+              ],
+            },
+          ],
+        }),
+      },
+      corporationHistory: {
+        find: () => ({
+          toArray: async () => [
+            { corporationId: id, turn: 9, sharePrice: 1000, currencyCode: "JPY" },
+          ],
+        }),
+      },
+    }),
+    ["stockTicker:nyse"],
+    viewer
+  );
+  expect(data["stockTicker:nyse"]).toMatchObject({ rows: [{ change: null, series: [18] }] });
 });

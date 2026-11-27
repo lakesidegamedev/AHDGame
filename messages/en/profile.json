@@ -112,6 +112,7 @@
         "error": "Could not load your history.",
         "balanceNote": "Balance is shown only where it was recorded.",
         "kinds": {
+          "sponsored_post": "Sponsored news placement",
           "office_income": "Office income",
           "fundraise": "Fundraising",
           "campaign_donation": "Campaign donation",

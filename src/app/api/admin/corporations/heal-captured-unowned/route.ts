@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 // GET  /api/admin/corporations/heal-captured-unowned — dry-run: preview captured-market fix
 // POST /api/admin/corporations/heal-captured-unowned — absorb unowned + merge intruder sectors
 // Auth: requireAdmin
@@ -27,8 +28,10 @@ export async function POST() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const result = await healCapturedMarkets(db, { dryRun: false });
-    return NextResponse.json({ success: true, ...result });
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const result = await healCapturedMarkets(db, { dryRun: false });
+      return NextResponse.json({ success: true, ...result });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

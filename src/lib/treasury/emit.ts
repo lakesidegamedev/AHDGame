@@ -1,3 +1,4 @@
+import { afterCommit, boundSession } from "@/lib/db/sessionDb";
 /**
  * Append-only emitter for `TreasuryTransaction` rows. Call after the treasury
  * `$inc` succeeds so the audit log reflects committed state.
@@ -6,7 +7,6 @@
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type {
-  GameState,
   FederalBudget,
   TreasuryHolderType,
   TreasuryTransaction,
@@ -82,7 +82,8 @@ async function resolveBudgetCurrencies(
         { projection: { _id: 1, currencyCode: 1 } }
       )
       .toArray();
-  } catch {
+  } catch (error) {
+    if (boundSession(db)) throw error;
     return new Map();
   }
   const byId = new Map(budgets.map((budget) => [budget._id, budget.currencyCode]));
@@ -169,7 +170,7 @@ export async function emitTreasuryTransaction(
   }
 
   await treasuryTransactionsCollection(args.db).insertOne(doc);
-  recordAudit(toAuditEntry(doc));
+  await afterCommit(args.db, () => recordAudit(toAuditEntry(doc)));
   return doc;
 }
 
@@ -194,6 +195,6 @@ export async function emitTreasuryTransactionsBulk(
   if (docs.length === 0) return [];
 
   await treasuryTransactionsCollection(db).insertMany(docs);
-  recordAuditBulk(docs.map(toAuditEntry));
+  await afterCommit(db, () => recordAuditBulk(docs.map(toAuditEntry)));
   return docs;
 }

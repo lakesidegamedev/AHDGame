@@ -30,3 +30,43 @@ describe("recorded income currency", () => {
     ).toBe(15000);
   });
 });
+
+// A missing denomination invalidates the window rather than removing individual points.
+describe("recordedHistoryWindow", () => {
+  it("restates a mixed-currency window into one explicit display basis", async () => {
+    const { recordedHistoryWindow } = await import("./historyCurrency");
+    expect(
+      recordedHistoryWindow(
+        [
+          { currencyCode: "JPY", fxRateAtWrite: 100, sharePrice: 1000, income: -200 },
+          { currencyCode: "CAD", fxRateAtWrite: 1.5, sharePrice: 18, income: -6 },
+        ],
+        "CAD",
+        1.5,
+        ["sharePrice", "income"]
+      )
+    ).toEqual([
+      { currencyCode: "CAD", fxRateAtWrite: 1.5, sharePrice: 15, income: -3 },
+      { currencyCode: "CAD", fxRateAtWrite: 1.5, sharePrice: 18, income: -6 },
+    ]);
+  });
+  it("does not turn missing conversion evidence into a gap-free trend", async () => {
+    const { recordedHistoryWindow } = await import("./historyCurrency");
+    expect(
+      recordedHistoryWindow(
+        [
+          { sharePrice: 100, currencyCode: "JPY" },
+          { sharePrice: 2, currencyCode: "CAD" },
+        ],
+        "CAD",
+        1.5,
+        ["sharePrice"]
+      )
+    ).toEqual([]);
+    expect(
+      recordedHistoryWindow([{ sharePrice: 100, currencyCode: undefined }], "CAD", 1.5, [
+        "sharePrice",
+      ])
+    ).toEqual([]);
+  });
+});

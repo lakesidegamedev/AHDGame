@@ -165,3 +165,13 @@ describe("resolveColdWarHolds", () => {
     expect(applyConflictOutcomeAlignment).not.toHaveBeenCalled();
   });
 });
+
+// Intent-mapping fixture; atomic hold tests use the real transaction.
+vi.mock("../withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

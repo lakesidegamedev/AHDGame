@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 /**
  * Organization cash accounting witnesses real treasury and pooled-fund writes.
  * Funded flows share a settlement reason; tribute from unmodeled treasuries has
@@ -43,6 +44,7 @@ export interface OrganizationCashContext {
 export interface OrganizationCashOptions {
   context?: OrganizationCashContext | null;
   turn?: number;
+  settlementKey?: string;
 }
 
 export interface OrganizationFundedCashMove {
@@ -276,7 +278,7 @@ export async function loadOrganizationCashContext(
     };
   } catch (error) {
     Sentry.captureException(error, { extra: { phase: "loadOrganizationCashContext" } });
-    return null;
+    throw error;
   }
 }
 
@@ -357,12 +359,13 @@ export async function witnessOrganizationCash(
         },
       ],
     };
-    if (context.pending) context.pending.push(entry);
+    if (context.pending && !boundSession(db)) context.pending.push(entry);
     else await emitLedgerEntries(db, [entry]);
   } catch (error) {
     Sentry.captureException(error, {
       extra: { phase: "witnessOrganizationCash", site: input.site },
     });
+    if (boundSession(db)) throw error;
   }
 }
 

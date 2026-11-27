@@ -4,6 +4,7 @@
  * leaves national financial account identities unchanged.
  */
 import type { Db } from "mongodb";
+import { authoritativeCurrencyQuotes } from "../rules/authoritativeCurrencyRates";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ExchangeRate } from "@/lib/db/types";
 import { euroCurrencyRate, euroLedgerCrossRate, type EuroMonetaryUnion } from "./rules";
@@ -23,7 +24,7 @@ export async function loadConversionQuoteContext(
   db: Db,
   union?: EuroMonetaryUnion
 ): Promise<ConversionQuoteContext> {
-  const quotes = await exchangeRatesCollection<ConversionQuote>(db)
+  const quotes = await exchangeRatesCollection<ConversionQuote & { _id: string }>(db)
     .find(
       {},
       {
@@ -36,7 +37,7 @@ export async function loadConversionQuoteContext(
       }
     )
     .toArray();
-  return { quotes: new Map(quotes.map((quote) => [quote.currencyCode, quote])), union };
+  return { quotes: authoritativeCurrencyQuotes(quotes), union };
 }
 
 export async function resolveEuroConversionQuotes(
@@ -94,9 +95,11 @@ export async function loadForexSpreadStrengths(db: Db) {
     .find(
       {},
       {
-        projection: { currencyCode: 1, forexSpreadStrength: 1 },
+        projection: { currencyCode: 1, rate: 1, forexSpreadStrength: 1 },
       }
     )
     .toArray();
-  return Object.fromEntries(rows.map((row) => [row.currencyCode, row.forexSpreadStrength]));
+  return Object.fromEntries(
+    [...authoritativeCurrencyQuotes(rows)].map(([code, row]) => [code, row.forexSpreadStrength])
+  );
 }

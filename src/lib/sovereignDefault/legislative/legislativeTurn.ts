@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Per-turn processor for sovereign-crisis legislative ratification.
  *
@@ -9,7 +10,7 @@
 
 import { type Db, type ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { SovereignCrisisDecision } from "@/lib/db/types/sovereignCrisisDecision";
+
 import { tallyChamberOutcome } from "./tallyChamberOutcome";
 import { buildUpperChamberPhase } from "./buildPhases";
 import { applyRepudiateResolution } from "@/lib/sovereignDefault/resolution/repudiate";
@@ -43,199 +44,218 @@ export async function processSovereignLegislativeTurn(
     advanced: [],
   };
 
-  for (const decision of decisions) {
-    const idx = decision.currentChamberIndex ?? -1;
-    const phases = decision.legislativePhases ?? [];
-    const phase = phases[idx];
-    if (!phase) continue;
-    if (phase.outcome !== "pending") continue;
+  for (const candidate of decisions) {
+    const local = await withSessionDb(db, async (db) => {
+      const local: LegislativeTurnReport = {
+        decisionsEvaluated: 0,
+        ratified: [],
+        rejected: [],
+        advanced: [],
+      };
+      const decision = await sovereignCrisisDecisionsCollection(db).findOne({
+        _id: candidate._id,
+        state: "executiveProposed",
+      });
+      if (!decision) return local;
+      await (async () => {
+        const idx = decision.currentChamberIndex ?? -1;
+        const phases = decision.legislativePhases ?? [];
+        const phase = phases[idx];
+        if (!phase) return;
+        if (phase.outcome !== "pending") return;
 
-    // Phase 10: NPC legislators auto-vote every turn the chamber is open
-    // (idempotent per-NPP via dotted-key $exists filter). Run BEFORE the
-    // deadline check so even on the deadline turn NPC votes are recorded.
-    await runNpcLegislatorAutoVote(db, {
-      decision,
-      chamberIndex: idx,
-      countryCode: decision.countryCode as CountryId,
-    });
+        // Phase 10: NPC legislators auto-vote every turn the chamber is open
+        // (idempotent per-NPP via dotted-key $exists filter). Run BEFORE the
+        // deadline check so even on the deadline turn NPC votes are recorded.
+        await runNpcLegislatorAutoVote(db, {
+          decision,
+          chamberIndex: idx,
+          countryCode: decision.countryCode as CountryId,
+        });
 
-    // Turn-first window close (freezes on pause) with a wall-clock fallback for
-    // phases opened before `endsOnTurn` existed.
-    const windowStillOpen =
-      typeof phase.endsOnTurn === "number"
-        ? phase.endsOnTurn > currentTurn
-        : phase.endsAtRealtimeMs > realtimeMs;
-    if (windowStillOpen) continue;
+        // Turn-first window close (freezes on pause) with a wall-clock fallback for
+        // phases opened before `endsOnTurn` existed.
+        const windowStillOpen =
+          typeof phase.endsOnTurn === "number"
+            ? phase.endsOnTurn > currentTurn
+            : phase.endsAtRealtimeMs > realtimeMs;
+        if (windowStillOpen) return;
 
-    // Re-fetch the phase from the latest decision row so the tally sees
-    // any NPC votes that just landed. CRITICAL: also use the refreshed
-    // `phases` array as the basis for any subsequent
-    // `legislativePhases: updatedPhases` write — otherwise we'd overwrite the
-    // votes map with stale in-memory data and lose the NPC votes.
-    const refreshed = await sovereignCrisisDecisionsCollection(db).findOne({
-      _id: decision._id as ObjectId,
-    });
-    const livePhases = refreshed?.legislativePhases ?? phases;
-    const refreshedPhase = livePhases[idx];
-    const outcome = tallyChamberOutcome(refreshedPhase ?? phase);
+        // Re-fetch the phase from the latest decision row so the tally sees
+        // any NPC votes that just landed. CRITICAL: also use the refreshed
+        // `phases` array as the basis for any subsequent
+        // `legislativePhases: updatedPhases` write — otherwise we'd overwrite the
+        // votes map with stale in-memory data and lose the NPC votes.
+        const refreshed = await sovereignCrisisDecisionsCollection(db).findOne({
+          _id: decision._id as ObjectId,
+        });
+        const livePhases = refreshed?.legislativePhases ?? phases;
+        const refreshedPhase = livePhases[idx];
+        const outcome = tallyChamberOutcome(refreshedPhase ?? phase);
 
-    // Phase 11b: per-voter favorability deltas. Defined here, called below
-    // AFTER each branch's decision-row update so a mid-process crash leaves
-    // the phase already stamped (`outcome !== "pending"`), preventing
-    // double-apply on re-run.
-    const applyImpactsAfterTally = async () => {
-      if (!refreshedPhase || !decision.executiveChoice) return;
-      try {
-        await applyLegislatorImpactsForChamber(
-          db,
-          refreshedPhase.votes ?? {},
-          decision.executiveChoice
+        // Phase 11b: per-voter favorability deltas. Defined here, called below
+        // AFTER each branch's decision-row update so a mid-process crash leaves
+        // the phase already stamped (`outcome !== "pending"`), preventing
+        // double-apply on re-run.
+        const applyImpactsAfterTally = async () => {
+          if (!refreshedPhase || !decision.executiveChoice) return;
+          await applyLegislatorImpactsForChamber(
+            db,
+            refreshedPhase.votes ?? {},
+            decision.executiveChoice
+          );
+        };
+
+        if (outcome === "rejected") {
+          const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
+          await sovereignCrisisDecisionsCollection(db).updateOne(
+            { _id: decision._id as ObjectId },
+            {
+              $set: {
+                state: "rejected",
+                currentChamberIndex: null,
+                legislativePhases: updatedPhases,
+                resolvedAt: new Date(realtimeMs),
+                resolvedReason: "Legislative deadlock — auto-Repudiate (phase 9b)",
+              },
+            }
+          );
+          await applyImpactsAfterTally();
+          const resolution = await applyRepudiateResolution(db, {
+            countryCode: decision.countryCode as CountryId,
+            currentTurn,
+            realtimeMs,
+            decisionId: decision._id as ObjectId,
+            executiveCharacterId: null,
+            // legislativeTurn already wrote the authoritative decision row
+            // (state="rejected", resolvedReason="Legislative deadlock — auto-Repudiate").
+            // Without this flag the orchestrator would overwrite state→"ratified"
+            // and executiveChoice→"repudiate", erasing the rejection record.
+            skipDecisionUpdate: true,
+          });
+          if (!resolution.ok)
+            throw new Error(`Sovereign rejection could not settle: ${resolution.reason}`);
+          local.rejected.push(decision.countryCode);
+          return;
+        }
+
+        // passed — check whether to advance to upper or ratify.
+        const isLowerJustPassed = idx === 0;
+        const upperPhase = isLowerJustPassed
+          ? buildUpperChamberPhase(decision.countryCode as CountryId, realtimeMs, currentTurn)
+          : null;
+
+        if (upperPhase) {
+          const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
+          updatedPhases.push(upperPhase);
+          await sovereignCrisisDecisionsCollection(db).updateOne(
+            { _id: decision._id as ObjectId },
+            {
+              $set: {
+                currentChamberIndex: idx + 1,
+                legislativePhases: updatedPhases,
+              },
+            }
+          );
+          await applyImpactsAfterTally();
+          local.advanced.push(decision.countryCode);
+          return;
+        }
+
+        // ratified — final chamber passed, run the orchestrator.
+        const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
+
+        const baseInput = {
+          countryCode: decision.countryCode as CountryId,
+          currentTurn,
+          realtimeMs,
+          decisionId: decision._id as ObjectId,
+          executiveCharacterId: null,
+          // legislativeTurn writes the authoritative decision row immediately
+          // after the orchestrator returns. Without this flag the orchestrator
+          // would also overwrite the row, clobbering the original
+          // `executiveProposedAtRealtimeMs` (the executive's proposal time, not
+          // the ratification time).
+          skipDecisionUpdate: true,
+        };
+        let orchestratorOk = true;
+        let orchestratorReason: string | undefined;
+        switch (decision.executiveChoice) {
+          case "bailout": {
+            const r = await applyBailoutResolution(db, baseInput);
+            orchestratorOk = r.ok;
+            orchestratorReason = r.reason;
+            break;
+          }
+          case "repudiate": {
+            const r = await applyRepudiateResolution(db, baseInput);
+            orchestratorOk = r.ok;
+            orchestratorReason = r.reason;
+            break;
+          }
+          case "restructure": {
+            const r = await applyRestructureResolution(db, baseInput);
+            orchestratorOk = r.ok;
+            orchestratorReason = r.reason;
+            break;
+          }
+          case "monetize": {
+            const r = await applyMonetizeResolution(db, baseInput);
+            orchestratorOk = r.ok;
+            orchestratorReason = r.reason;
+            break;
+          }
+        }
+
+        // Fallback: if the orchestrator refused (e.g. monetize-gated-by-inflation
+        // because inflation rose past 8% during the 24-48h ratification window),
+        // we cannot leave the country stuck in "crisisResolving" with the
+        // decision marked ratified but no mutation applied. Auto-fall-back to
+        // Repudiate so the country state machine moves forward.
+        if (!orchestratorOk) {
+          const fallback = await applyRepudiateResolution(db, {
+            ...baseInput,
+            skipDecisionUpdate: true,
+          });
+          if (!fallback.ok)
+            throw new Error(`Sovereign fallback could not settle: ${fallback.reason}`);
+          await sovereignCrisisDecisionsCollection(db).updateOne(
+            { _id: decision._id as ObjectId },
+            {
+              $set: {
+                state: "ratified",
+                currentChamberIndex: null,
+                legislativePhases: updatedPhases,
+                resolvedAt: new Date(realtimeMs),
+                resolvedReason: `Legislative ratification ${decision.executiveChoice} infeasible (${orchestratorReason ?? "unknown"}); fell back to Repudiate (phase 9b)`,
+              },
+            }
+          );
+          await applyImpactsAfterTally();
+          local.ratified.push(decision.countryCode);
+          return;
+        }
+
+        await sovereignCrisisDecisionsCollection(db).updateOne(
+          { _id: decision._id as ObjectId },
+          {
+            $set: {
+              state: "ratified",
+              currentChamberIndex: null,
+              legislativePhases: updatedPhases,
+              resolvedAt: new Date(realtimeMs),
+              resolvedReason: "Legislative ratification complete (phase 9b)",
+            },
+          }
         );
-      } catch (err) {
-        console.error("applyLegislatorImpactsForChamber failed", err);
-      }
-    };
-
-    if (outcome === "rejected") {
-      const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
-      await sovereignCrisisDecisionsCollection(db).updateOne(
-        { _id: decision._id as ObjectId },
-        {
-          $set: {
-            state: "rejected",
-            currentChamberIndex: null,
-            legislativePhases: updatedPhases,
-            resolvedAt: new Date(realtimeMs),
-            resolvedReason: "Legislative deadlock — auto-Repudiate (phase 9b)",
-          },
-        }
-      );
-      await applyImpactsAfterTally();
-      await applyRepudiateResolution(db, {
-        countryCode: decision.countryCode as CountryId,
-        currentTurn,
-        realtimeMs,
-        decisionId: decision._id as ObjectId,
-        executiveCharacterId: null,
-        // legislativeTurn already wrote the authoritative decision row
-        // (state="rejected", resolvedReason="Legislative deadlock — auto-Repudiate").
-        // Without this flag the orchestrator would overwrite state→"ratified"
-        // and executiveChoice→"repudiate", erasing the rejection record.
-        skipDecisionUpdate: true,
-      });
-      report.rejected.push(decision.countryCode);
-      continue;
-    }
-
-    // passed — check whether to advance to upper or ratify.
-    const isLowerJustPassed = idx === 0;
-    const upperPhase = isLowerJustPassed
-      ? buildUpperChamberPhase(decision.countryCode as CountryId, realtimeMs, currentTurn)
-      : null;
-
-    if (upperPhase) {
-      const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
-      updatedPhases.push(upperPhase);
-      await sovereignCrisisDecisionsCollection(db).updateOne(
-        { _id: decision._id as ObjectId },
-        {
-          $set: {
-            currentChamberIndex: idx + 1,
-            legislativePhases: updatedPhases,
-          },
-        }
-      );
-      await applyImpactsAfterTally();
-      report.advanced.push(decision.countryCode);
-      continue;
-    }
-
-    // ratified — final chamber passed, run the orchestrator.
-    const updatedPhases = livePhases.map((p, i) => (i === idx ? { ...p, outcome } : p));
-
-    const baseInput = {
-      countryCode: decision.countryCode as CountryId,
-      currentTurn,
-      realtimeMs,
-      decisionId: decision._id as ObjectId,
-      executiveCharacterId: null,
-      // legislativeTurn writes the authoritative decision row immediately
-      // after the orchestrator returns. Without this flag the orchestrator
-      // would also overwrite the row, clobbering the original
-      // `executiveProposedAtRealtimeMs` (the executive's proposal time, not
-      // the ratification time).
-      skipDecisionUpdate: true,
-    };
-    let orchestratorOk = true;
-    let orchestratorReason: string | undefined;
-    switch (decision.executiveChoice) {
-      case "bailout": {
-        const r = await applyBailoutResolution(db, baseInput);
-        orchestratorOk = r.ok;
-        orchestratorReason = r.reason;
-        break;
-      }
-      case "repudiate": {
-        const r = await applyRepudiateResolution(db, baseInput);
-        orchestratorOk = r.ok;
-        orchestratorReason = r.reason;
-        break;
-      }
-      case "restructure": {
-        const r = await applyRestructureResolution(db, baseInput);
-        orchestratorOk = r.ok;
-        orchestratorReason = r.reason;
-        break;
-      }
-      case "monetize": {
-        const r = await applyMonetizeResolution(db, baseInput);
-        orchestratorOk = r.ok;
-        orchestratorReason = r.reason;
-        break;
-      }
-    }
-
-    // Fallback: if the orchestrator refused (e.g. monetize-gated-by-inflation
-    // because inflation rose past 8% during the 24-48h ratification window),
-    // we cannot leave the country stuck in "crisisResolving" with the
-    // decision marked ratified but no mutation applied. Auto-fall-back to
-    // Repudiate so the country state machine moves forward.
-    if (!orchestratorOk) {
-      await applyRepudiateResolution(db, {
-        ...baseInput,
-        skipDecisionUpdate: true,
-      });
-      await sovereignCrisisDecisionsCollection(db).updateOne(
-        { _id: decision._id as ObjectId },
-        {
-          $set: {
-            state: "ratified",
-            currentChamberIndex: null,
-            legislativePhases: updatedPhases,
-            resolvedAt: new Date(realtimeMs),
-            resolvedReason: `Legislative ratification ${decision.executiveChoice} infeasible (${orchestratorReason ?? "unknown"}); fell back to Repudiate (phase 9b)`,
-          },
-        }
-      );
-      await applyImpactsAfterTally();
-      report.ratified.push(decision.countryCode);
-      continue;
-    }
-
-    await sovereignCrisisDecisionsCollection(db).updateOne(
-      { _id: decision._id as ObjectId },
-      {
-        $set: {
-          state: "ratified",
-          currentChamberIndex: null,
-          legislativePhases: updatedPhases,
-          resolvedAt: new Date(realtimeMs),
-          resolvedReason: "Legislative ratification complete (phase 9b)",
-        },
-      }
-    );
-    await applyImpactsAfterTally();
-    report.ratified.push(decision.countryCode);
+        await applyImpactsAfterTally();
+        local.ratified.push(decision.countryCode);
+      })();
+      return local;
+    });
+    report.ratified.push(...local.ratified);
+    report.rejected.push(...local.rejected);
+    report.advanced.push(...local.advanced);
   }
 
   return report;

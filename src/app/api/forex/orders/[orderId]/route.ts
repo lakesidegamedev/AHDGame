@@ -6,9 +6,8 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, forbidden, notFound, badRequest } from "@/lib/api/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type { CurrencyOrder } from "@/lib/db/types";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { SETTLED_KEYS_FIELD } from "@/lib/banking/moneyMove";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { currencyOrdersCollection } from "@/lib/db/repositories/currencyOrders";
 
@@ -53,82 +52,53 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       throw badRequest("Only open or partial orders can be cancelled");
     }
 
-    const refundAmount = order.amount - order.filledAmount;
-    const now = new Date();
-    const claimFilter = {
-      _id: order._id,
-      characterId: order.characterId,
-      status: { $in: ["open", "partial"] as const },
-    };
-
-    await runWithOptionalTransaction(
-      async (session) => {
-        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
-          claimFilter,
-          { $set: { status: "processing", updatedAt: now } },
-          { returnDocument: "before", session }
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const now = new Date();
+      const claimed = await currencyOrdersCollection(db).findOneAndUpdate(
+        {
+          _id: order._id,
+          characterId: auth.user.character._id,
+          status: { $in: ["open", "partial"] },
+          processingFillKey: { $exists: false },
+        },
+        { $set: { status: "cancelled", updatedAt: now } },
+        { returnDocument: "before" }
+      );
+      if (!claimed) throw badRequest("Only open or partial orders can be cancelled");
+      const remaining = claimed.amount - claimed.filledAmount;
+      if (
+        !Number.isFinite(remaining) ||
+        remaining < 0 ||
+        !Number.isFinite(claimed.filledAmount) ||
+        claimed.filledAmount < 0
+      )
+        throw badRequest("Order escrow needs reconciliation before cancellation");
+      let refundedAmount = 0;
+      if (remaining > 0) {
+        const key = cancelClaimKey(claimed._id.toHexString());
+        const delivered = await applyCancelRefund(
+          db,
+          claimed.characterId,
+          claimed.fromCurrency,
+          remaining,
+          key,
+          now
         );
-        if (!claimedOrder) throw badRequest("Only open or partial orders can be cancelled");
-
-        if (refundAmount > 0) {
-          await charactersCollection(db).updateOne(
-            { _id: order.characterId },
-            { $inc: buildPersonalBalanceInc(refundAmount, order.fromCurrency, true) },
-            { session }
+        if (delivered) refundedAmount = remaining;
+        else {
+          const proof = await charactersCollection(db).findOne(
+            { _id: claimed.characterId, [SETTLED_KEYS_FIELD]: `${key}#refund` },
+            { projection: { _id: 1 } }
           );
-        }
-
-        const cancelResult = await currencyOrdersCollection(db).updateOne(
-          { _id: order._id, status: "processing" },
-          { $set: { status: "cancelled", updatedAt: now } },
-          { session }
-        );
-        if (cancelResult.matchedCount === 0) {
-          throw badRequest("Only open or partial orders can be cancelled");
-        }
-      },
-      async () => {
-        const claimedOrder = await currencyOrdersCollection(db).findOneAndUpdate(
-          claimFilter,
-          { $set: { status: "processing", updatedAt: now } },
-          { returnDocument: "before" }
-        );
-        if (!claimedOrder) throw badRequest("Only open or partial orders can be cancelled");
-
-        try {
-          // Stamped: a crash after the refund leaves `processing`, and the
-          // turn sweeper resets intent-less claims to open. The retry then
-          // no-ops the refund instead of paying it twice.
-          await applyCancelRefund(
-            db,
-            order.characterId,
-            order.fromCurrency,
-            refundAmount,
-            cancelClaimKey(order._id.toHexString()),
-            now
-          );
-
-          const cancelResult = await currencyOrdersCollection(db).updateOne(
-            { _id: order._id, status: "processing" },
-            { $set: { status: "cancelled", updatedAt: now } }
-          );
-          if (cancelResult.matchedCount === 0) {
-            throw badRequest("Only open or partial orders can be cancelled");
-          }
-        } catch (error) {
-          await currencyOrdersCollection(db).updateOne(
-            { _id: order._id, status: "processing" },
-            { $set: { status: order.status, updatedAt: new Date() } }
-          );
-          throw error;
+          if (!proof)
+            throw new Error("FX cancellation recipient is unavailable; escrow remains held");
         }
       }
-    );
-
-    return NextResponse.json({
-      success: true,
-      refundedAmount: refundAmount,
-      refundedCurrency: order.fromCurrency,
+      return NextResponse.json({
+        success: true,
+        refundedAmount,
+        refundedCurrency: claimed.fromCurrency,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

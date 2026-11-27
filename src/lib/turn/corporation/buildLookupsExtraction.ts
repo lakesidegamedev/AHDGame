@@ -1,11 +1,11 @@
 /** Extraction capacity, portfolio and freight lookups for the corporation turn. */
+/** Extraction capacity, portfolio and freight lookups for the corporation turn. */
 import type {
   CorporateSector,
   Corporation,
   StateResourceCapacity,
   Bond,
   State,
-  GameState,
 } from "@/lib/db/types";
 import type { Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -30,7 +30,7 @@ import {
 } from "@/lib/turn/extraction/extractionCapacity";
 import { getEffectiveStrategyRates } from "@/lib/constants/sectorStrategies";
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
-import { depletedCapacityDoc } from "@/lib/extraction/depletion";
+import { depletedCapacityDoc, extractionOpeningDoc } from "@/lib/extraction/depletion";
 import {
   haircutScarcityRelief,
   limitExtractionUtilizationRise,
@@ -63,7 +63,7 @@ import {
 } from "@/lib/crises/rules/climateEffects";
 import { getClimateExposureTags } from "@/lib/crises/regionHazards";
 import { loadCabinetGameplayEffects } from "@/lib/resetCabinet/loadGameplayEffects";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+
 import {
   applyCabinetPoliticalInputs,
   cabinetEffectsForRegion,
@@ -264,7 +264,9 @@ export async function buildExtractionAndPortfolioLookups({
         extractionInputs,
         activeContracts,
         options?.plantsEnabled === true
-          ? stateResourceCapacityDocs.map(depletedCapacityDoc)
+          ? stateResourceCapacityDocs.map((doc) =>
+              depletedCapacityDoc(extractionOpeningDoc(doc, capacityTurn))
+            )
           : stateResourceCapacityDocs
       )
     );

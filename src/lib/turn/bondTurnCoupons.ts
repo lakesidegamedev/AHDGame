@@ -41,7 +41,9 @@ export function accrueBondCoupons({
   addPoolCredit,
   corpCouponCosts,
   govCouponByCountry,
+  couponClaimsByBond,
 }: {
+  couponClaimsByBond?: Map<string, number>;
   activeBonds: WithId<Bond>[];
   config:
     | (Pick<
@@ -104,6 +106,11 @@ export function accrueBondCoupons({
     const bondCcy = resolveBondCurrency(bond);
     const bondFxRate = fxByCurrency.get(bondCcy) ?? 1;
     const couponPerUnitAnchor = corpCapitalToAnchor(couponPerUnitLocal, bondCcy, bondFxRate);
+    couponClaimsByBond?.set(
+      String(bond._id),
+      couponPerUnitAnchor *
+        (bond.publicFloat + bond.holders.reduce((sum, holder) => sum + holder.units, 0))
+    );
 
     // Pay each holder
     for (const holder of bond.holders) {

@@ -36,6 +36,7 @@ function controller(over: Partial<ActionsController> = {}): ActionsController {
   return {
     character,
     homeState: null,
+    homeCurrency: "USD",
     ready: true,
     era: "2019",
     eraLabel: "2019",

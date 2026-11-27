@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Turn pass that moves pension money: charges employers, accrues worker claims,
  * and tops up schemes in deficit for every active collective agreement with a
@@ -130,8 +131,9 @@ export function coveredWageBillPerTurn(sectors: Pick<CorporateSector, "laborCost
 export async function runPensionTurn(
   db: Db,
   currentTurn: number,
-  rerunSafe = false
+  _rerunSafe = false
 ): Promise<PensionTurnResult> {
+  const rerunSafe = true;
   const result: PensionTurnResult = {
     schemesCharged: 0,
     contributionsAnchor: 0,
@@ -204,156 +206,204 @@ export async function runPensionTurn(
 
   for (const agreement of agreements) {
     try {
-      const rate = agreement.pensionContributionRate ?? 0;
-      if (!isValidContributionRate(rate) || rate <= 0) continue;
+      const accepted = await withTurnValueSettlement(
+        db,
+        "pension-contribution",
+        currentTurn,
+        async (db) => {
+          const charge = {
+            schemesCharged: 0,
+            contributionsAnchor: 0,
+            topUpsAnchor: 0,
+            accrualsAnchor: 0,
+            shortfalls: 0,
+          };
+          const rate = agreement.pensionContributionRate ?? 0;
+          if (!isValidContributionRate(rate) || rate <= 0) return charge;
 
-      const union = unionById.get(agreement.unionId.toString());
-      const employer = employerById.get(agreement.employerCorporationId.toString());
-      if (!union || !employer) continue;
+          const union = unionById.get(agreement.unionId.toString());
+          const employer = employerById.get(agreement.employerCorporationId.toString());
+          if (!union || !employer) return charge;
 
-      const covered = agreement.sectorIds
-        .map((id) => sectorById.get(id.toString()))
-        .filter((s): s is CorporateSector => s !== undefined);
-      const wageBillLocal = coveredWageBillPerTurn(covered);
-      if (wageBillLocal <= 0) continue;
+          const covered = agreement.sectorIds
+            .map((id) => sectorById.get(id.toString()))
+            .filter((s): s is CorporateSector => s !== undefined);
+          const wageBillLocal = coveredWageBillPerTurn(covered);
+          if (wageBillLocal <= 0) return charge;
 
-      const scheme = await ensurePensionScheme(db, union, currentTurn);
-      // Charged already this turn (the scheme update below is the last write of a charge):
-      // a rerun after a process death must not charge this agreement again.
-      const agreementKey = agreement._id.toString();
-      if (rerunSafe && scheme.agreementChargeTurns?.[agreementKey] === currentTurn) continue;
-      const debitedTurns =
-        (employer as { pensionDebitTurns?: Record<string, number> }).pensionDebitTurns ?? {};
-      const currency = (employer.liquidCurrencyCode ?? "USD") as CurrencyCode;
-      const fxRate = fxRateForCorpFromMap(employer, fxByCurrency);
-      const now = new Date();
+          const scheme = await ensurePensionScheme(db, union, currentTurn);
+          // Charged already this turn (the scheme update below is the last write of a charge):
+          // a rerun after a process death must not charge this agreement again.
+          const agreementKey = agreement._id.toString();
+          if (rerunSafe && scheme.agreementChargeTurns?.[agreementKey] === currentTurn)
+            return charge;
+          const debitedTurns =
+            (employer as { pensionDebitTurns?: Record<string, number> }).pensionDebitTurns ?? {};
+          const currency = (employer.liquidCurrencyCode ?? "USD") as CurrencyCode;
+          const fxRate = fxRateForCorpFromMap(employer, fxByCurrency);
+          const now = new Date();
+          if (
+            debitedTurns[`${agreementKey}_c`] === currentTurn ||
+            debitedTurns[`${agreementKey}_t`] === currentTurn
+          ) {
+            throw new Error("Legacy pension debit needs its original contribution reconciled");
+          }
+          const currencyFence = await corporationsCollection(db).updateOne(
+            {
+              _id: employer._id,
+              liquidCurrencyCode: employer.liquidCurrencyCode ?? { $exists: false },
+              countryId: employer.countryId ?? { $exists: false },
+            },
+            { $set: { updatedAt: now } }
+          );
+          if (currencyFence.matchedCount !== 1)
+            throw new Error("Pension employer currency changed before settlement");
 
-      // 1. Contribution.
-      const contributionLocal = pensionContributionForTurn({
-        coveredWageBill: wageBillLocal,
-        contributionRate: rate,
-      });
-      let paidLocal = 0;
-      if (contributionLocal > 0) {
-        // The debit carries a per-agreement, per-turn stamp in the same update, so a rerun
-        // finds it already taken instead of debiting the employer twice.
-        const debit =
-          rerunSafe && debitedTurns[`${agreementKey}_c`] === currentTurn
-            ? { ok: true as const }
-            : await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal, {
-                corporateObligation: true,
-                ...(rerunSafe
-                  ? { stamp: { path: `pensionDebitTurns.${agreementKey}_c`, turn: currentTurn } }
-                  : {}),
-              });
-        if (debit.ok) {
-          paidLocal = contributionLocal;
-        } else {
-          // An employer that cannot pay does NOT get the claim forgiven. That
-          // is the whole shape of an underfunded scheme: the promise stands and
-          // the assets do not arrive.
-          result.shortfalls += 1;
-        }
-      }
+          // 1. Contribution.
+          const contributionLocal = pensionContributionForTurn({
+            coveredWageBill: wageBillLocal,
+            contributionRate: rate,
+          });
+          let paidLocal = 0;
+          if (contributionLocal > 0) {
+            // The debit carries a per-agreement, per-turn stamp in the same update, so a rerun
+            // finds it already taken instead of debiting the employer twice.
+            const debit =
+              rerunSafe && debitedTurns[`${agreementKey}_c`] === currentTurn
+                ? { ok: true as const }
+                : await atomicallyDebitCorpLiquidCapital(db, employer._id, contributionLocal, {
+                    corporateObligation: true,
+                    ...(rerunSafe
+                      ? {
+                          stamp: { path: `pensionDebitTurns.${agreementKey}_c`, turn: currentTurn },
+                        }
+                      : {}),
+                  });
+            if (debit.ok) {
+              paidLocal = contributionLocal;
+            } else {
+              // An employer that cannot pay does NOT get the claim forgiven. That
+              // is the whole shape of an underfunded scheme: the promise stands and
+              // the assets do not arrive.
+              charge.shortfalls += 1;
+            }
+          }
 
-      // 2. Top-up, on the position BEFORE this turn's accrual.
-      // TOTAL assets, cash plus the marked value of the scheme's units. Reading
-      // `scheme.assetsAnchor` alone here would treat every ₳ a scheme invested
-      // as an ₳ it had lost and bill its employer for the difference.
-      const paidAnchor = corpLiquidCapitalToAnchor(paidLocal, employer, fxRate);
-      const topUpAnchor = pensionTopUpForTurn({
-        assetsAnchor: pensionSchemeAssetsAnchor(scheme) + paidAnchor,
-        liabilitiesAnchor: scheme.liabilitiesAnchor,
-      });
-      const topUpLocal = anchorToCorpLiquidCapital(topUpAnchor, employer, fxRate);
-      let toppedUpAnchor = 0;
-      let toppedUpLocal = 0;
-      if (topUpLocal > 0) {
-        const debit =
-          rerunSafe && debitedTurns[`${agreementKey}_t`] === currentTurn
-            ? { ok: true as const }
-            : await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal, {
-                corporateObligation: true,
-                ...(rerunSafe
-                  ? { stamp: { path: `pensionDebitTurns.${agreementKey}_t`, turn: currentTurn } }
-                  : {}),
-              });
-        if (debit.ok) {
-          toppedUpAnchor = topUpAnchor;
-          toppedUpLocal = topUpLocal;
-        } else result.shortfalls += 1;
-      }
+          // 2. Top-up, on the position BEFORE this turn's accrual.
+          // TOTAL assets, cash plus the marked value of the scheme's units. Reading
+          // `scheme.assetsAnchor` alone here would treat every ₳ a scheme invested
+          // as an ₳ it had lost and bill its employer for the difference.
+          const paidAnchor = corpLiquidCapitalToAnchor(paidLocal, employer, fxRate);
+          const topUpAnchor = pensionTopUpForTurn({
+            assetsAnchor: pensionSchemeAssetsAnchor(scheme) + paidAnchor,
+            liabilitiesAnchor: scheme.liabilitiesAnchor,
+          });
+          const topUpLocal = anchorToCorpLiquidCapital(topUpAnchor, employer, fxRate);
+          let toppedUpAnchor = 0;
+          let toppedUpLocal = 0;
+          if (topUpLocal > 0) {
+            const debit =
+              rerunSafe && debitedTurns[`${agreementKey}_t`] === currentTurn
+                ? { ok: true as const }
+                : await atomicallyDebitCorpLiquidCapital(db, employer._id, topUpLocal, {
+                    corporateObligation: true,
+                    ...(rerunSafe
+                      ? {
+                          stamp: { path: `pensionDebitTurns.${agreementKey}_t`, turn: currentTurn },
+                        }
+                      : {}),
+                  });
+            if (debit.ok) {
+              toppedUpAnchor = topUpAnchor;
+              toppedUpLocal = topUpLocal;
+            } else charge.shortfalls += 1;
+          }
 
-      // 3. Accrual, always, whether or not the employer could pay.
-      const accrualAnchor = corpLiquidCapitalToAnchor(
-        pensionAccrualForTurn(wageBillLocal),
-        employer,
-        fxRate
-      );
+          // 3. Accrual, always, whether or not the employer could pay.
+          const accrualAnchor = corpLiquidCapitalToAnchor(
+            pensionAccrualForTurn(wageBillLocal),
+            employer,
+            fxRate
+          );
 
-      await pensionSchemesCollection<PensionScheme>(db).updateOne(
-        {
-          _id: scheme._id,
-          ...(rerunSafe ? { [`agreementChargeTurns.${agreementKey}`]: { $ne: currentTurn } } : {}),
+          const charged = await pensionSchemesCollection<PensionScheme>(db).updateOne(
+            {
+              _id: scheme._id,
+              ...(rerunSafe
+                ? { [`agreementChargeTurns.${agreementKey}`]: { $ne: currentTurn } }
+                : {}),
+            },
+            {
+              $inc: {
+                assetsAnchor: paidAnchor + toppedUpAnchor,
+                liabilitiesAnchor: accrualAnchor,
+                totalContributionsAnchor: paidAnchor,
+                totalTopUpsAnchor: toppedUpAnchor,
+              },
+              $set: {
+                lastChargedTurn: currentTurn,
+                updatedAt: now,
+                ...(rerunSafe ? { [`agreementChargeTurns.${agreementKey}`]: currentTurn } : {}),
+              },
+            }
+          );
+
+          if (charged.matchedCount !== 1)
+            throw new Error("Pension scheme changed before its contribution settled");
+          const movedLocal = paidLocal + toppedUpLocal;
+          if (movedLocal > 0) {
+            // Both legs. The scheme is a real counterparty holding real assets, so
+            // a one-sided debit would read as money destroyed.
+            await emitTx(db, {
+              type: "pension_contribution",
+              turn: currentTurn,
+              createdAt: now,
+              subjectType: "corporation",
+              subjectId: employer._id,
+              subjectName: employer.name,
+              amount: -movedLocal,
+              anchorAmount: -(paidAnchor + toppedUpAnchor),
+              currencyCode: currency,
+              counterpartyType: "pension_scheme",
+              counterpartyId: scheme._id,
+              counterpartyName: `${union.name} pension scheme`,
+              meta: {
+                schemeId: scheme._id.toString(),
+                contribution: paidLocal,
+                topUp: toppedUpLocal,
+                rate,
+              },
+            });
+            await emitTx(db, {
+              type: "pension_contribution",
+              turn: currentTurn,
+              createdAt: now,
+              subjectType: "pension_scheme",
+              subjectId: scheme._id,
+              subjectName: `${union.name} pension scheme`,
+              amount: movedLocal,
+              anchorAmount: paidAnchor + toppedUpAnchor,
+              currencyCode: currency,
+              counterpartyType: "corporation",
+              counterpartyId: employer._id,
+              counterpartyName: employer.name,
+              meta: { schemeId: scheme._id.toString(), rate },
+            });
+          }
+
+          charge.schemesCharged += 1;
+          charge.contributionsAnchor += paidAnchor;
+          charge.topUpsAnchor += toppedUpAnchor;
+          charge.accrualsAnchor += accrualAnchor;
+          return charge;
         },
-        {
-          $inc: {
-            assetsAnchor: paidAnchor + toppedUpAnchor,
-            liabilitiesAnchor: accrualAnchor,
-            totalContributionsAnchor: paidAnchor,
-            totalTopUpsAnchor: toppedUpAnchor,
-          },
-          $set: {
-            lastChargedTurn: currentTurn,
-            updatedAt: now,
-            ...(rerunSafe ? { [`agreementChargeTurns.${agreementKey}`]: currentTurn } : {}),
-          },
-        }
+        { sourceKey: `${agreement._id}:${currentTurn}` }
       );
-
-      const movedLocal = paidLocal + toppedUpLocal;
-      if (movedLocal > 0) {
-        // Both legs. The scheme is a real counterparty holding real assets, so
-        // a one-sided debit would read as money destroyed.
-        await emitTx(db, {
-          type: "pension_contribution",
-          turn: currentTurn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: employer._id,
-          subjectName: employer.name,
-          amount: -movedLocal,
-          currencyCode: currency,
-          counterpartyType: "pension_scheme",
-          counterpartyId: scheme._id,
-          counterpartyName: `${union.name} pension scheme`,
-          meta: {
-            schemeId: scheme._id.toString(),
-            contribution: paidLocal,
-            topUp: toppedUpLocal,
-            rate,
-          },
-        });
-        await emitTx(db, {
-          type: "pension_contribution",
-          turn: currentTurn,
-          createdAt: now,
-          subjectType: "pension_scheme",
-          subjectId: scheme._id,
-          subjectName: `${union.name} pension scheme`,
-          amount: movedLocal,
-          currencyCode: currency,
-          counterpartyType: "corporation",
-          counterpartyId: employer._id,
-          counterpartyName: employer.name,
-          meta: { schemeId: scheme._id.toString(), rate },
-        });
-      }
-
-      result.schemesCharged += 1;
-      result.contributionsAnchor += paidAnchor;
-      result.topUpsAnchor += toppedUpAnchor;
-      result.accrualsAnchor += accrualAnchor;
+      result.schemesCharged += accepted.schemesCharged;
+      result.contributionsAnchor += accepted.contributionsAnchor;
+      result.topUpsAnchor += accepted.topUpsAnchor;
+      result.accrualsAnchor += accepted.accrualsAnchor;
+      result.shortfalls += accepted.shortfalls;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       result.errors.push(`Agreement ${agreement._id.toString()}: ${message}`);

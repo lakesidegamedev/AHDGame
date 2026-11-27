@@ -1,7 +1,7 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { DossierPlayView } from "@/lib/settlement/queries/dossier";
 
 /**
@@ -38,6 +38,7 @@ const copyFor = (reason: string | null) => (reason ? (REASON_COPY[reason] ?? rea
 
 export function PlayButton({ play, onCommitted }: PlayButtonProps) {
   const actor = play.actor;
+  const pendingRequests = useRef(new Map<string, string>());
   // The MODE in flight rather than a flag, so one route's spinner does not
   // freeze the other.
   const [pending, setPending] = useState<"funds" | "capital" | null>(null);
@@ -46,17 +47,23 @@ export function PlayButton({ play, onCommitted }: PlayButtonProps) {
   const commit = async (payment: "funds" | "capital", direction?: 1 | -1) => {
     setPending(payment);
     setError(null);
+    const fingerprint = JSON.stringify([actor, play.id, direction, payment]);
+    const requestId = pendingRequests.current.get(fingerprint) ?? crypto.randomUUID();
+    pendingRequests.current.set(fingerprint, requestId);
     try {
       const res = await fetch("/api/world/german-question/play", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ actor, playId: play.id, direction, payment }),
+        body: JSON.stringify({ actor, playId: play.id, direction, payment, requestId }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (res.status < 500 && res.status !== 409) pendingRequests.current.delete(fingerprint);
         setError(apiErrorText(body, "That play could not be committed."));
         return;
       }
+      await res.json();
+      pendingRequests.current.delete(fingerprint);
       onCommitted();
     } catch {
       setError("The play could not be sent. Check your connection and try again.");

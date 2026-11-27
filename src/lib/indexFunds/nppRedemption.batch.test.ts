@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { assertTransactionSupportAtBoot } from "@/lib/db/transactionSupport";
 import {
   applyNppRedemptionsSequentially,
@@ -21,10 +22,10 @@ const NPP_2 = new ObjectId("222222222222222222222222");
 const NPP_3 = new ObjectId("333333333333333333333333");
 
 function seedWorld(): InMemoryDb {
-  const db = createInMemoryDb();
+  const { memory: db } = createTransactionalMemoryDb();
   db.seed("indexFunds", [
-    { _id: FUND_A, unitSupply: 1000.5, quotedNav: 12.25 },
-    { _id: FUND_B, unitSupply: 400, quotedNav: 3.5 },
+    { _id: FUND_A, unitSupply: 1000.5, quotedNav: 12.25, status: "active" },
+    { _id: FUND_B, unitSupply: 400, quotedNav: 3.5, status: "active" },
   ]);
   db.seed("indexFundPositions", [
     // Partly legacy, partly not.
@@ -185,15 +186,15 @@ describe("NPP redemption batch", () => {
       });
       const result = await processNppFundRedemptions(db as unknown as Db, options);
       expect(result.redemptionsQueued).toBe(0);
-      expect(result.errors).toEqual(["NPP redemptions batch: commit unknown"]);
+      expect(result.errors).toEqual(["commit unknown"]);
       expect(db.collection("indexFundRedemptionQueue").docs).toHaveLength(0);
     });
 
-    it("uses the per-intent path when transactions are unavailable", async () => {
+    it("requires transactions instead of selecting a sequential fallback", async () => {
       vi.mocked(assertTransactionSupportAtBoot).mockResolvedValueOnce(false);
       const { db, session } = worldWithClient((fn) => fn());
       const result = await processNppFundRedemptions(db as unknown as Db, options);
-      expect(session.withTransaction).not.toHaveBeenCalled();
+      expect(session.withTransaction).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ redemptionsQueued: 1, unitsRedeemed: 9, errors: [] });
     });
   });

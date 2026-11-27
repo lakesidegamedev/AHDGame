@@ -1,12 +1,7 @@
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as ObjectIdCtor } from "mongodb";
-import type {
-  PartyCharter,
-  PartyCharterPlatform,
-  PoliticalParty,
-  State,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { PartyCharterPlatform, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
 import { getCountryState } from "@/lib/countryState";
 import { vacateDepartedLeadership } from "@/lib/parties/vacateDepartedLeadership";
@@ -54,6 +49,14 @@ export interface RatifyCharterResult {
 }
 
 export async function ratifyCharter(
+  charterId: ObjectId,
+  db: Db,
+  now: Date = new Date()
+): Promise<RatifyCharterResult> {
+  return withSessionDb(db, (db) => ratifyCharterInTransaction(charterId, db, now));
+}
+
+async function ratifyCharterInTransaction(
   charterId: ObjectId,
   db: Db,
   now: Date = new Date()
@@ -209,13 +212,8 @@ export async function ratifyCharter(
     }));
     // Use ordered:false so existing partial provisioning (e.g. from a
     // crashed earlier ratify attempt) doesn't fail the whole insert.
-    try {
+    {
       await statePartyOrgCollection(db).insertMany(orgRecords, { ordered: false });
-    } catch {
-      // Duplicate-key exceptions on retry are expected; partyOrg rows are
-      // idempotent by `_id = `${stateId}_${partyId}`. Other errors bubble
-      // through — but ratification has already succeeded, so we log and
-      // continue rather than fail the whole flow.
     }
   }
 
@@ -273,25 +271,21 @@ export async function ratifyCharter(
       departing.push(ch._id);
       departuresByOldParty.set(oldPartySeqId, departing);
     }
-    try {
+    {
       const { transferIndependentCandidaciesToParty, withdrawFromMismatchedPrimaries } =
         await import("@/lib/utils/electionCandidacy");
       if (!oldPartyStr || oldPartyStr === "independent") {
         await transferIndependentCandidaciesToParty(db, ch._id, partyIdStr, now);
       } else {
-        await withdrawFromMismatchedPrimaries(ch._id, partyIdStr);
+        await withdrawFromMismatchedPrimaries(ch._id, partyIdStr, db);
       }
-    } catch {
-      /* non-fatal */
     }
     // Founders defecting from another party must not keep active player
     // endorsements of their old party's primary candidates.
-    try {
+    {
       const { withdrawPlayerEndorsementsOnPartyChange } =
         await import("@/lib/elections/playerEndorsements");
       await withdrawPlayerEndorsementsOnPartyChange(db, ch._id, partyIdStr, { now });
-    } catch {
-      /* non-fatal */
     }
   }
   // Drop former-party caucus membership for every founder who actually moved.
@@ -302,14 +296,12 @@ export async function ratifyCharter(
     .filter((ch) => ch.party !== partyIdStr)
     .map((ch) => ch._id);
   if (foundersWhoMoved.length > 0) {
-    try {
+    {
       await cleanupCaucusParticipationForCharacters(db, foundersWhoMoved, {
         removeMembership: true,
         membershipStatus: "left",
         now,
       });
-    } catch {
-      /* non-fatal — party spawn already succeeded */
     }
   }
   // Per former party, now that founders have left:
@@ -354,44 +346,44 @@ export async function ratifyCharter(
   // shared election sweep keeps the seated founder out of the chair race for
   // this first cycle and opens the vice-chair and treasurer seats now. The
   // hourly leadership-voting phase remains the safety net if this fails.
-  try {
+  {
     const { createMissingNationalElections } =
       await import("@/lib/elections/party/nationalPartyElections");
-    await createMissingNationalElections(charterCurrentTurn, undefined, now, charter.countryId);
-  } catch {
-    /* non-fatal — the hourly phase will create them */
+    await createMissingNationalElections(charterCurrentTurn, undefined, now, charter.countryId, db);
   }
 
   // Notify each founder that the party is live. Non-fatal. Proposer is
   // seated as chair; vice-chair and treasurer start vacant.
-  try {
-    const { createNotification } = await import("@/lib/notifications");
-    const anchorFounderId = anchorFounder?._id ?? null;
-    for (const ch of founderCharacters) {
-      if (!ch.userId) continue;
-      const isChair = anchorFounderId !== null && ch._id.equals(anchorFounderId);
-      const message = isChair
-        ? `The charter passed 3-of-3 and the party is now live. As the founder you are the ` +
-          `party's first chair — set your color and logo on the party page. Vice-chair and ` +
-          `treasurer elections are open.`
-        : `The charter passed 3-of-3 and the party is now live. The founder holds the chair; ` +
-          `vice-chair and treasurer elections are open on the party page, so declare your candidacy.`;
-      await createNotification({
-        userId: ch.userId,
-        type: "charter_ratified",
-        title: `${charter.proposedName} is now ratified`,
-        message,
-        metadata: {
-          charterId: charter._id.toString(),
-          partyId: partyIdStr,
-          countryId: charter.countryId,
-          href: `/country/${charter.countryId.toLowerCase()}/parties/${partyIdStr}`,
-        },
-      });
+  await afterCommit(db, async () => {
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      const anchorFounderId = anchorFounder?._id ?? null;
+      for (const ch of founderCharacters) {
+        if (!ch.userId) continue;
+        const isChair = anchorFounderId !== null && ch._id.equals(anchorFounderId);
+        const message = isChair
+          ? `The charter passed 3-of-3 and the party is now live. As the founder you are the ` +
+            `party's first chair. Set your color and logo on the party page. Vice-chair and ` +
+            `treasurer elections are open.`
+          : `The charter passed 3-of-3 and the party is now live. The founder holds the chair; ` +
+            `vice-chair and treasurer elections are open on the party page, so declare your candidacy.`;
+        await createNotification({
+          userId: ch.userId,
+          type: "charter_ratified",
+          title: `${charter.proposedName} is now ratified`,
+          message,
+          metadata: {
+            charterId: charter._id.toString(),
+            partyId: partyIdStr,
+            countryId: charter.countryId,
+            href: `/country/${charter.countryId.toLowerCase()}/parties/${partyIdStr}`,
+          },
+        });
+      }
+    } catch {
+      /* non-fatal */
     }
-  } catch {
-    /* non-fatal */
-  }
+  });
 
   // Spawn the founding NPP cohort so the newly-ratified party has presence
   // beyond its 3 chartered characters. Cohort size is 3: NPP 1 always spawns in
@@ -404,8 +396,7 @@ export async function ratifyCharter(
   // All 3 are seeded as true believers: loyalty 75-95, ambition 40-55,
   // stubbornness 40-60. Favorability tracks the anchor founder's ±5.
   //
-  // Non-fatal: NPP spawning failures don't roll back ratification.
-  try {
+  {
     if (anchorFounder?.homeState) {
       const { generateUniqueNPPName } = await import("@/lib/npp/nameGenerator");
       const { selectPoliticianImage, weightedRandomEthnicity } =
@@ -492,8 +483,6 @@ export async function ratifyCharter(
         { $inc: { memberCount: npcDocs.length } }
       );
     }
-  } catch {
-    /* non-fatal */
   }
 
   return {

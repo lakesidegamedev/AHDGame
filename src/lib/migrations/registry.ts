@@ -1,3 +1,5 @@
+import { migration as cnWikiPurgeAvailability } from "./entries/2026-11-26-cn-wiki-purge-availability";
+import { migration as supplyAgreementPlanIndex } from "./entries/2026-11-26-supply-agreement-plan-index";
 import { migration as wartimeCrisisDescription } from "./entries/wartime-crisis-description";
 import { migration as crisisFadeDescriptions } from "./entries/crisis-fade-descriptions";
 import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
@@ -408,6 +410,8 @@ export const MIGRATIONS: Migration[] = [
   backfillMechanicalLawTypes,
   successorTaxTypes,
   bankMoneyMoveUnprojectedIndex,
+  supplyAgreementPlanIndex,
+  cnWikiPurgeAvailability,
   turnGrowthIndexes,
   playerReadIndexes,
   dropLogTextIndexes,

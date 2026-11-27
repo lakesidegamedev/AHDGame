@@ -1,3 +1,4 @@
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Shared response votes select authored outcomes and claim their durable result.
  * resolveGlobalResponse freezes civilian mortality authorization in the outcome CAS;
@@ -30,7 +31,7 @@ import { applyCrisisTradeSanctions } from "./sanctions/apply";
 import { russiaUkraineOutcome } from "./rules/russiaUkraineOutcome";
 import type { Db, Filter, ObjectId } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
+
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type {
@@ -651,6 +652,13 @@ export async function resolveGlobalResponse(
   db: Db,
   crisisId: ObjectId
 ): Promise<ResolvedGlobalResponse | null> {
+  return withSessionDb(db, (db) => resolveGlobalResponseInTransaction(db, crisisId));
+}
+
+async function resolveGlobalResponseInTransaction(
+  db: Db,
+  crisisId: ObjectId
+): Promise<ResolvedGlobalResponse | null> {
   const crisis = await crisesCollection(db).findOne({ _id: crisisId });
   if (!crisis?.globalResponse) return null;
   const interaction = await crisisInteractionsCollection(db).findOne({ crisisId });
@@ -880,8 +888,10 @@ export async function resolveGlobalResponse(
       }
     );
   }
-  await logWireEvent("crisis_outcome", outcome.wireMessage, {
-    href: `/world/crises/${crisisId.toString()}`,
-  });
+  await afterCommit(db, () =>
+    logWireEvent("crisis_outcome", outcome.wireMessage, {
+      href: `/world/crises/${crisisId.toString()}`,
+    })
+  );
   return resolved;
 }

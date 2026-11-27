@@ -1,3 +1,4 @@
+import { tallyPublicationFilter } from "@/lib/elections/tallyPublication";
 export { initPresidentVoteTally } from "@/lib/elections/presidential/presidentTallyInitialization";
 /**
  * How the presidential election is decided and who is on track to win. Votes
@@ -1165,17 +1166,13 @@ export async function accumulatePresidentVoteTurn(
   // The write only lands on the tally state this run read: a concurrent run
   // that already banked this turn (or this half) leaves nothing to match.
   await electionVoteTalliesCollection(db).updateOne(
-    {
+    tallyPublicationFilter({
       electionId,
-      turnSnapshots: {
-        $not: {
-          $elemMatch:
-            slicePart === "rest"
-              ? { turn: turnNumber, slicePart: { $ne: "early" } }
-              : { turn: turnNumber },
-        },
-      },
-    },
+      totalVotes: tally.totalVotes,
+      snapshots: tally.turnSnapshots,
+      turn: turnNumber,
+      slicePart,
+    }),
     {
       $set: {
         totalVotes: newTotalVotes,

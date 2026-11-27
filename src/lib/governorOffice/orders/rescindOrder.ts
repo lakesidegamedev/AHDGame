@@ -1,5 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import type { CountryId } from "@/lib/constants/countries";
 import type { Db, ObjectId } from "mongodb";
-import type { GovernorExecutiveOrder, LegislationType, StatePolicy } from "@/lib/db/types";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { buildOrderRevertPolicyFields } from "./revertPolicy";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
@@ -8,6 +9,8 @@ import { governorExecutiveOrdersCollection } from "@/lib/db/repositories/governo
 
 export interface RescindOrderInput {
   orderId: ObjectId;
+  countryId?: CountryId;
+  stateId?: string;
   rescindedByCharacterId: ObjectId;
 }
 
@@ -22,55 +25,63 @@ export async function rescindOrder(
   db: Db,
   input: RescindOrderInput
 ): Promise<{ status: number; body: { success?: boolean; error?: string } }> {
-  const order = await governorExecutiveOrdersCollection(db).findOne({ _id: input.orderId });
-  if (!order) return { status: 404, body: { error: "Order not found." } };
-  if (order.status !== "active") {
-    return { status: 400, body: { error: `Order is already ${order.status}.` } };
-  }
+  return withSessionDb(db, async (db) => {
+    const order = await governorExecutiveOrdersCollection(db).findOne({
+      _id: input.orderId,
+      ...(input.countryId ? { countryId: input.countryId } : {}),
+      ...(input.stateId ? { stateId: input.stateId } : {}),
+    });
+    if (!order) return { status: 404, body: { error: "Order not found." } };
+    if (order.status !== "active") {
+      return { status: 400, body: { error: `Order is already ${order.status}.` } };
+    }
 
-  const currentTurn = await getCurrentTurn(db);
-  const now = new Date();
-  const policy = await statePoliciesCollection(db).findOne({
-    stateId: order.stateId,
-    legislationTypeId: order.legislationTypeId,
-  });
+    const currentTurn = await getCurrentTurn(db);
+    const now = new Date();
+    const policy = await statePoliciesCollection(db).findOne({
+      $or: [{ countryId: order.countryId.toUpperCase() }, { countryId: { $exists: false } }],
+      stateId: order.stateId,
+      legislationTypeId: order.legislationTypeId,
+    });
 
-  const policyMatchesOrder =
-    policy?.enactedBy?.kind === "order" && policy.enactedBy.id.toString() === order._id!.toString();
+    const policyMatchesOrder =
+      policy?.enactedBy?.kind === "order" &&
+      policy.enactedBy.id.toString() === order._id!.toString();
 
-  if (policyMatchesOrder && policy) {
-    // Revert StatePolicy to pre-order snapshot. Restore the original
-    // policyOptionId + axis values from the order snapshot when present so
-    // downstream consumers (current-policy comparison, duplicate-provision,
-    // State Policy page which matches by axes) read the correct base option.
-    // effectDirection comes from the type's own ladder (5-level new-generation
-    // ladders center at 2 — the old hardcoded center-3 misdirects them).
-    const legislationType = await legislationTypesCollection(db).findOne(
-      { _id: order.legislationTypeId },
-      { projection: { policyOptions: 1 } }
-    );
-    await statePoliciesCollection(db).updateOne(
-      { stateId: order.stateId, legislationTypeId: order.legislationTypeId },
+    if (policyMatchesOrder && policy) {
+      // Revert StatePolicy to pre-order snapshot. Restore the original
+      // policyOptionId + axis values from the order snapshot when present so
+      // downstream consumers (current-policy comparison, duplicate-provision,
+      // State Policy page which matches by axes) read the correct base option.
+      // effectDirection comes from the type's own ladder (5-level new-generation
+      // ladders center at 2 — the old hardcoded center-3 misdirects them).
+      const legislationType = await legislationTypesCollection(db).findOne(
+        { _id: order.legislationTypeId },
+        { projection: { policyOptions: 1 } }
+      );
+      await statePoliciesCollection(db).updateOne(
+        { _id: policy._id, "enactedBy.kind": "order", "enactedBy.id": order._id },
+        {
+          $set: {
+            ...buildOrderRevertPolicyFields(order, legislationType, currentTurn),
+          },
+        }
+      );
+    }
+    // else: policy was overwritten by a bill; leave bill's effect in place.
+
+    await governorExecutiveOrdersCollection(db).updateOne(
+      { _id: order._id!, status: "active" },
       {
         $set: {
-          ...buildOrderRevertPolicyFields(order, legislationType, currentTurn),
+          status: policyMatchesOrder ? "rescinded" : "superseded",
+          rescindedAtTurn: currentTurn,
+          rescindedByCharacterId: input.rescindedByCharacterId,
+          updatedAt: now,
         },
       }
     );
-  }
-  // else: policy was overwritten by a bill; leave bill's effect in place.
 
-  await governorExecutiveOrdersCollection(db).updateOne(
-    { _id: order._id! },
-    {
-      $set: {
-        status: policyMatchesOrder ? "rescinded" : "superseded",
-        rescindedAtTurn: currentTurn,
-        rescindedByCharacterId: input.rescindedByCharacterId,
-        updatedAt: now,
-      },
-    }
-  );
-
-  return { status: 200, body: { success: true } };
+    return { status: 200, body: { success: true } };
+  });
 }

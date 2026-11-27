@@ -1,3 +1,19 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (
+    db: import("mongodb").Db,
+    work: (db: import("mongodb").Db) => Promise<Response>
+  ) => work(db),
+}));
+// Collection-only route behavior; paid rollback is checked with transactional fixtures.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  runWithDbSession: (
+    _db: import("mongodb").Db,
+    work: (session: import("mongodb").ClientSession) => Promise<unknown>
+  ) => work({} as import("mongodb").ClientSession),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import { stateOrgLevelCost, STATE_ORG_COST_ACTIONS } from "@/lib/elections/engine/constants";
@@ -100,11 +116,13 @@ describe("POST /api/political-operations/state-org/build with a campaignId", () 
 
   async function setupDb(f: Fixture = {}) {
     const campaignsUpdateOne = vi.fn().mockResolvedValue(f.debit ?? { modifiedCount: 1 });
-    const orgFindOneAndUpdate = vi.fn().mockResolvedValue(
-      f.orgUpdate === undefined
-        ? { characterId: candidateId, stateId: "PA", level: (f.orgLevel ?? 0) + 1 }
-        : f.orgUpdate
-    );
+    const orgFindOneAndUpdate = vi
+      .fn()
+      .mockResolvedValue(
+        f.orgUpdate === undefined
+          ? { characterId: candidateId, stateId: "PA", level: (f.orgLevel ?? 0) + 1 }
+          : f.orgUpdate
+      );
     const activityInsert = vi.fn().mockResolvedValue({ insertedId: new ObjectId() });
     const candidate =
       f.candidate === undefined ? { _id: candidateId, countryId: "US", party: "1" } : f.candidate;
@@ -120,7 +138,9 @@ describe("POST /api/political-operations/state-org/build with a campaignId", () 
         // Ownership lookups carry a userId; the plain lookup is the candidate's character.
         findOne: vi.fn().mockImplementation(async (q: { _id: ObjectId; userId?: ObjectId }) => {
           if (q.userId) {
-            return f.candidateUserId && q.userId.equals(f.candidateUserId) && q._id.equals(candidateId)
+            return f.candidateUserId &&
+              q.userId.equals(f.candidateUserId) &&
+              q._id.equals(candidateId)
               ? { _id: candidateId }
               : null;
           }
@@ -159,7 +179,9 @@ describe("POST /api/political-operations/state-org/build with a campaignId", () 
     return { campaignsUpdateOne, orgFindOneAndUpdate, activityInsert, collections };
   }
 
-  async function post(body: Record<string, unknown> = { stateId: "PA", campaignId: campaignId.toString() }) {
+  async function post(
+    body: Record<string, unknown> = { stateId: "PA", campaignId: campaignId.toString() }
+  ) {
     const { POST } = await import("./route");
     return POST(
       new Request("http://localhost/api/political-operations/state-org/build", {
@@ -301,7 +323,9 @@ describe("POST /api/political-operations/state-org/build with a campaignId", () 
   });
 
   it("refuses an NPP ticket rather than inventing storage for it", async () => {
-    const { orgFindOneAndUpdate } = await setupDb({ campaign: campaignDoc({ candidateIsNPP: true }) });
+    const { orgFindOneAndUpdate } = await setupDb({
+      campaign: campaignDoc({ candidateIsNPP: true }),
+    });
     const response = await post();
     expect(response.status).toBe(400);
     expect((await response.json()).error).toMatch(/not available for this ticket/i);

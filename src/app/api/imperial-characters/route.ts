@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -17,7 +18,7 @@ import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { fetchBordersByUserIds } from "@/lib/db/patreonBorders";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import type { Corporation } from "@/lib/db/types/corporation";
-import type { User } from "@/lib/db/types/user";
+
 import type { CountryId } from "@/lib/constants/countries";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -62,115 +63,116 @@ export async function POST(request: Request) {
 
     const { countryId, name, gender, royalHouse, homeState, bio } = parsed.data;
     const db = await getDb();
-
-    // Validate country is eligible for imperial characters
-    const eligibleCountries = getImperialEligibleCountries();
-    if (!eligibleCountries.includes(countryId as CountryId)) {
-      return errorResponse(400, `${countryId} is not eligible for imperial characters`);
-    }
-
-    // Check no imperial character already exists for this country
-    const existing = await imperialCharactersCollection(db).findOne({
-      countryId: countryId as CountryId,
-    });
-    if (existing) {
-      return errorResponse(400, `An imperial character already exists for ${countryId}`);
-    }
-
-    const imperialConfig = getImperialConfig(countryId as CountryId);
-    if (!imperialConfig) {
-      return errorResponse(400, "Imperial configuration not found for this country");
-    }
-
-    const world = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1 } }
-    );
-    const now = new Date();
-    const adminUserId = new ObjectId(auth.admin.userId);
-    const imperialId = new ObjectId();
-    const sequentialId = await getNextSequentialId(db, "imperial");
-
-    // Create imperial character document
-    const imperialCharacter: ImperialCharacter = {
-      initialIncomeTier: parsed.data.incomeTier,
-      incomeTier: parsed.data.incomeTier,
-      incomeTaxStartTurn: (world?.currentTurn ?? 0) + 1,
-      _id: imperialId,
-      userId: adminUserId,
-      countryId: countryId as CountryId,
-      name,
-      gender,
-      homeState,
-      sequentialId,
-      royalHouse,
-      bio: bio ?? undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await imperialCharactersCollection(db).insertOne(imperialCharacter);
-
-    // Create starter corporation
-    const corpSequentialId = await getNextSequentialId(db, "corporation");
-    const corporation: Omit<Corporation, "_id"> = {
-      name: imperialConfig.corporation.name,
-      type: imperialConfig.corporation.sector as Corporation["type"],
-      countryId: countryId as CountryId,
-      ceoId: imperialId,
-      ceoType: "imperial",
-      userId: adminUserId,
-      headquartersState: homeState,
-      liquidCapital: IMPERIAL_STARTING_CAPITAL,
-      marketingBudget: 0,
-      marketingStrength: 10,
-      logisticsBudget: 0,
-      logisticsStrength: 0,
-      ceoSalary: 0,
-      totalShares: IMPERIAL_INITIAL_SHARES,
-      sharePrice: IMPERIAL_SHARE_PRICE,
-      shareholders: [{ imperialCharacterId: imperialId, shares: IMPERIAL_INITIAL_SHARES }],
-      publicFloat: 0,
-      brandColor: randomBrandColor(),
-      sequentialId: corpSequentialId,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await corporationsCollection(db).insertOne(corporation as Corporation);
-
-    // Update user document: set active imperial character
-    await usersCollection(db).updateOne(
-      { _id: adminUserId },
-      {
-        $set: {
-          activeImperialCharacterId: imperialId,
-          activeCharacterType: "imperial" as const,
-          updatedAt: now,
-        },
+    return await withAtomicEconomicCommand(db, async (db) => {
+      // Validate country is eligible for imperial characters
+      const eligibleCountries = getImperialEligibleCountries();
+      if (!eligibleCountries.includes(countryId as CountryId)) {
+        return errorResponse(400, `${countryId} is not eligible for imperial characters`);
       }
-    );
 
-    // Soft-delete existing ceremonial NPP for this country
-    await nppsCollection<Document>(db).updateMany(
-      {
+      // Check no imperial character already exists for this country
+      const existing = await imperialCharactersCollection(db).findOne({
         countryId: countryId as CountryId,
-        retiredAt: { $ne: null },
-        currentOffice: null,
-        party: "independent",
-        "personality.ambition": 0,
-      },
-      { $set: { supersededByImperial: true, updatedAt: now } }
-    );
+      });
+      if (existing) {
+        return errorResponse(400, `An imperial character already exists for ${countryId}`);
+      }
 
-    return NextResponse.json(
-      {
-        success: true,
-        imperialCharacterId: imperialId.toString(),
+      const imperialConfig = getImperialConfig(countryId as CountryId);
+      if (!imperialConfig) {
+        return errorResponse(400, "Imperial configuration not found for this country");
+      }
+
+      const world = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      );
+      const now = new Date();
+      const adminUserId = new ObjectId(auth.admin.userId);
+      const imperialId = new ObjectId();
+      const sequentialId = await getNextSequentialId(db, "imperial");
+
+      // Create imperial character document
+      const imperialCharacter: ImperialCharacter = {
+        initialIncomeTier: parsed.data.incomeTier,
+        incomeTier: parsed.data.incomeTier,
+        incomeTaxStartTurn: (world?.currentTurn ?? 0) + 1,
+        _id: imperialId,
+        userId: adminUserId,
+        countryId: countryId as CountryId,
+        name,
+        gender,
+        homeState,
         sequentialId,
-      },
-      { status: 201 }
-    );
+        royalHouse,
+        bio: bio ?? undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await imperialCharactersCollection(db).insertOne(imperialCharacter);
+
+      // Create starter corporation
+      const corpSequentialId = await getNextSequentialId(db, "corporation");
+      const corporation: Omit<Corporation, "_id"> = {
+        name: imperialConfig.corporation.name,
+        type: imperialConfig.corporation.sector as Corporation["type"],
+        countryId: countryId as CountryId,
+        ceoId: imperialId,
+        ceoType: "imperial",
+        userId: adminUserId,
+        headquartersState: homeState,
+        liquidCapital: IMPERIAL_STARTING_CAPITAL,
+        marketingBudget: 0,
+        marketingStrength: 10,
+        logisticsBudget: 0,
+        logisticsStrength: 0,
+        ceoSalary: 0,
+        totalShares: IMPERIAL_INITIAL_SHARES,
+        sharePrice: IMPERIAL_SHARE_PRICE,
+        shareholders: [{ imperialCharacterId: imperialId, shares: IMPERIAL_INITIAL_SHARES }],
+        publicFloat: 0,
+        brandColor: randomBrandColor(),
+        sequentialId: corpSequentialId,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await corporationsCollection(db).insertOne(corporation as Corporation);
+
+      // Update user document: set active imperial character
+      await usersCollection(db).updateOne(
+        { _id: adminUserId },
+        {
+          $set: {
+            activeImperialCharacterId: imperialId,
+            activeCharacterType: "imperial" as const,
+            updatedAt: now,
+          },
+        }
+      );
+
+      // Soft-delete existing ceremonial NPP for this country
+      await nppsCollection<Document>(db).updateMany(
+        {
+          countryId: countryId as CountryId,
+          retiredAt: { $ne: null },
+          currentOffice: null,
+          party: "independent",
+          "personality.ambition": 0,
+        },
+        { $set: { supersededByImperial: true, updatedAt: now } }
+      );
+
+      return NextResponse.json(
+        {
+          success: true,
+          imperialCharacterId: imperialId.toString(),
+          sequentialId,
+        },
+        { status: 201 }
+      );
+    });
   } catch (error) {
     return handleRouteError(error);
   }

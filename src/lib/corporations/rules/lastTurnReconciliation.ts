@@ -35,6 +35,8 @@ export interface RecordedTurnInput {
   /** Bond interest paid on the company's own bonds this turn, in the company's currency. */
   bondInterestPaid?: number | null;
   bankLoanInterestPaid?: number | null;
+  imfInterestPaid?: number | null;
+  imfInterestReceived?: number | null;
   /** Tax on dividends received: inside `tax`, but already netted from the dividend credit. */
   dividendReceivedTax?: number | null;
   /** Conversion fee skimmed from foreign operating income before retained income. */
@@ -242,6 +244,16 @@ export function reconcileLastTurn(
       (recorded.revenue - recorded.totalCosts - recorded.tax - recorded.dividendPaid)
   );
   const otherParts: CashFlowLine[] = [
+    {
+      key: "imf_interest_paid",
+      label: "Interest paid on IMF facility",
+      amount: -Math.max(0, recorded.imfInterestPaid ?? 0),
+    },
+    {
+      key: "imf_interest_received",
+      label: "Interest received on IMF facilities",
+      amount: Math.max(0, recorded.imfInterestReceived ?? 0),
+    },
     {
       key: "bond_interest",
       label: "Interest paid on bonds issued",

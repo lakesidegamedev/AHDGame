@@ -1,6 +1,7 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import type { Db } from "mongodb";
 import type { Character, Union } from "@/lib/db/types";
-import type { UnionOrganizer } from "@/lib/db/types/union";
+
 import type { CountryId } from "@/lib/constants/countries";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import {
@@ -43,6 +44,14 @@ export type OrganizeUnionResult =
  * against the same union in the same turn without contending.
  */
 export async function organizeUnion(
+  db: Db,
+  character: Character,
+  union: Union
+): Promise<OrganizeUnionResult> {
+  return withAtomicResult(db, (db) => organizeUnionInTransaction(db, character, union));
+}
+
+async function organizeUnionInTransaction(
   db: Db,
   character: Character,
   union: Union

@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 // POST /api/country/[code]/executive/cabinet/[positionId]/military/recruit
 // Auth: requireAuth — must be the defense cabinet holder or admin. Costs 1 ministerial action.
 // Errors: 400, 401, 403, 404, 409
@@ -68,222 +69,223 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(parsed.status, parsed.error);
     }
 
-    // Live year gates which branches/archetypes exist (e.g. Bundeswehr 1955,
-    // USSF 2019). Prefer gameState.currentYear over the immutable seed year.
-    const gameState = await getGameState();
-    const liveYear = gameState ? resolveGameYear(gameState) : null;
-    const currentTurn = gameState?.currentTurn ?? 1;
-
-    const branch = getBranches(countryId, liveYear).find((b) => b.id === parsed.data.branchId);
-    if (!branch) {
-      return errorResponse(
-        400,
-        liveYear != null ? `Branch is not available in ${liveYear}` : "Invalid branch"
-      );
-    }
-    const archetype = getUnitTypesForYear(branch.domain, liveYear).find(
-      (t) => t.type === parsed.data.type
-    );
-    if (!archetype) {
-      return errorResponse(
-        400,
-        liveYear != null
-          ? `Unit type is not available in ${liveYear}`
-          : "Invalid unit type for this branch"
-      );
-    }
-
     const db = await getDb();
+    return await withAtomicEconomicCommand(db, async (db) => {
+      // Live year gates which branches/archetypes exist (e.g. Bundeswehr 1955,
+      // USSF 2019). Prefer gameState.currentYear over the immutable seed year.
+      const gameState = await getGameState(db);
+      const liveYear = gameState ? resolveGameYear(gameState) : null;
+      const currentTurn = gameState?.currentTurn ?? 1;
 
-    // Research gate before any resource moves: a modern formation needs materiel the
-    // country's own defence industry has researched and delivered.
-    if (archetype.requiredArsenalGrade != null) {
-      const stocked = await getNationalArsenal(db, countryId);
-      const blocked = archetypeResearchBlock(archetype, stocked.grade[branch.domain]);
-      if (blocked) return errorResponse(400, blocked);
-    }
-
-    const membersCol = getCabinetMembersCollection(db);
-    const member = await membersCol.findOne({ countryId, positionId });
-
-    const isHolder =
-      member &&
-      member.characterId &&
-      auth.user.character &&
-      member.characterId.toString() === auth.user.character._id.toString();
-    if (!isHolder && !auth.user.isAdmin) {
-      return errorResponse(403, "Only the defence minister may recruit units.");
-    }
-
-    // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    // On Cabinet v2 countries this is the same charge pool the office header shows.
-    const pool = officeActionPool(db, gameState, countryId, member!);
-    const actions = await pool.remaining();
-    if (actions < 1) {
-      return errorResponse(400, "No ministerial actions remaining");
-    }
-
-    const region = await statesCollection<Document>(db).findOne(
-      { countryId },
-      { projection: { _id: 1 } }
-    );
-    if (!region) {
-      return errorResponse(400, "No region available to station the unit");
-    }
-
-    const spend = await pool.spend();
-    if (!spend.ok) {
-      return errorResponse(409, "No ministerial actions remaining");
-    }
-
-    const refundAction = () => pool.refund();
-
-    // Budget existence is checked FIRST, before any resource moves. It is a
-    // read/heal, not a spend, so it has no ordering constraint with manpower —
-    // and checking it here means a budget-less country never draws 12,000 men
-    // only to hand them straight back. One less rollback path to get wrong.
-    //
-    // `moveTreasury` does NOT upsert, so without a budget doc the charge would
-    // silently vanish and the unit would be free. `ensureFederalBudget` returns
-    // null when no seed exists for this (preset, country) — refuse rather than gift.
-    const healedBudget = await ensureFederalBudget(
-      db,
-      countryId,
-      gameState?.preset ?? DEFAULT_SEED_PRESET
-    );
-
-    // Non-null is NOT sufficient. `ensureFederalBudget` looks the doc up by
-    // `_id: getNationalBudgetId(countryId)` (ensureFederalBudget.ts:65), but
-    // `moveTreasury` reads and writes by `{ countryId }` (treasurySpend.ts:27-29,
-    // 52-55). A doc whose countryId field disagrees with its _id — the exact
-    // corruption `findFederalBudgetCountryMismatches` exists to detect — would
-    // pass a null check and then absorb a zero-match updateOne, producing the
-    // free unit this guard exists to prevent. Require the key both sides use.
-    if (!healedBudget || healedBudget.countryId !== countryId) {
-      await refundAction();
-      return errorResponse(
-        409,
-        "This country has no usable national budget — procurement is unavailable"
+      const branch = getBranches(countryId, liveYear).find((b) => b.id === parsed.data.branchId);
+      if (!branch) {
+        return errorResponse(
+          400,
+          liveYear != null ? `Branch is not available in ${liveYear}` : "Invalid branch"
+        );
+      }
+      const archetype = getUnitTypesForYear(branch.domain, liveYear).find(
+        (t) => t.type === parsed.data.type
       );
-    }
+      if (!archetype) {
+        return errorResponse(
+          400,
+          liveYear != null
+            ? `Unit type is not available in ${liveYear}`
+            : "Invalid unit type for this branch"
+        );
+      }
 
-    // Manpower is the hard block. A new unit is raised at full establishment, so
-    // it costs full establishment. Heal a missing pool first — otherwise a newly
-    // enabled country reads pool 0 and can never recruit.
-    const { pool: poolBefore } = await ensureManpowerPool(db, countryId);
+      // Research gate before any resource moves: a modern formation needs materiel the
+      // country's own defence industry has researched and delivered.
+      if (archetype.requiredArsenalGrade != null) {
+        const stocked = await getNationalArsenal(db, countryId);
+        const blocked = archetypeResearchBlock(archetype, stocked.grade[branch.domain]);
+        if (blocked) return errorResponse(400, blocked);
+      }
 
-    // An ordinary shortfall is a 400; 409 is reserved for losing the atomic
-    // guard to a concurrent order, which is retryable rather than malformed.
-    if (poolBefore < archetype.personnel) {
-      await refundAction();
-      return errorResponse(
-        400,
-        `Insufficient manpower — ${archetype.personnel.toLocaleString("en-US")} required, ` +
-          `${poolBefore.toLocaleString("en-US")} available`
+      const membersCol = getCabinetMembersCollection(db);
+      const member = await membersCol.findOne({ countryId, positionId });
+
+      const isHolder =
+        member &&
+        member.characterId &&
+        auth.user.character &&
+        member.characterId.toString() === auth.user.character._id.toString();
+      if (!isHolder && !auth.user.isAdmin) {
+        return errorResponse(403, "Only the defence minister may recruit units.");
+      }
+
+      // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
+      // On Cabinet v2 countries this is the same charge pool the office header shows.
+      const pool = officeActionPool(db, gameState, countryId, member!);
+      const actions = await pool.remaining();
+      if (actions < 1) {
+        return errorResponse(400, "No ministerial actions remaining");
+      }
+
+      const region = await statesCollection<Document>(db).findOne(
+        { countryId },
+        { projection: { _id: 1 } }
       );
-    }
+      if (!region) {
+        return errorResponse(400, "No region available to station the unit");
+      }
 
-    if (!(await drawManpower(db, countryId, archetype.personnel))) {
-      await refundAction();
-      return errorResponse(409, "Manpower was drawn by another order — try again");
-    }
+      const spend = await pool.spend();
+      if (!spend.ok) {
+        return errorResponse(409, "No ministerial actions remaining");
+      }
 
-    // Price is a share of the healed budget's own gdp — ANCHORED, so a growing economy
-    // outruns its procurement costs instead of cancelling against them — which lands it in
-    // the same units as the appropriation with no conversion.
-    //
-    // A non-positive or missing gdp returns null and MUST refuse — that is the value that
-    // would otherwise make units free (the role a 0 exchange rate played in the abandoned
-    // FX design).
-    const price = unitPurchasePrice(
-      archetype,
-      countryId,
-      healedBudget.gdp,
-      healedBudget.militaryPriceBaselineGdp
-    );
-    if (price == null) {
-      await returnManpower(db, countryId, archetype.personnel);
-      await refundAction();
-      return errorResponse(
-        409,
-        "This country has no usable GDP figure — procurement is unavailable"
-      );
-    }
+      const refundAction = () => pool.refund();
 
-    // Paid from the DEFENCE APPROPRIATION, not the treasury: the enacted defence line has
-    // already left `treasuryBalance` via `processTreasuryTurn`, so a treasury debit here
-    // would bill the country twice for the same unit.
-    //
-    // Hard refusal, no overdraft. The overdraft exists for upkeep — an obligation already
-    // incurred — whereas a new order must fit inside the balance. This is what replaces the
-    // old unlimited borrow against the national treasury.
-    if (!(await debitAppropriation(db, countryId, price))) {
-      await returnManpower(db, countryId, archetype.personnel);
-      await refundAction();
-      const { balance } = await getDefenseAppropriation(db, countryId);
-      return errorResponse(
-        409,
-        `Defence appropriation is short — ${price.toLocaleString("en-US")} required, ` +
-          `${Math.max(0, balance).toLocaleString("en-US")} available`
-      );
-    }
-
-    // Issue materiel from the national arsenal. A short store is NOT a refusal: the unit is
-    // raised either way and arrives under-equipped, then the per-turn refit brings it up to
-    // standard as deliveries land. Scarcity degrades quality and speed; it never presents a
-    // dead button.
-    const neededLots = lotsRequired(archetype);
-    const arsenal = await getNationalArsenal(db, countryId);
-    const drawnLots = await drawLots(db, countryId, branch.domain, neededLots);
-    const issued = equipUnit(drawnLots, neededLots, arsenal.grade[branch.domain] ?? 0);
-
-    try {
-      const buildDuration =
-        archetype.type === "Carrier Strike Group" ? CARRIER_BUILD_TURNS : BUILD_TURNS;
-      await getMilitaryUnitsCollection(db).insertOne({
-        _id: new ObjectId(),
+      // Budget existence is checked FIRST, before any resource moves. It is a
+      // read/heal, not a spend, so it has no ordering constraint with manpower —
+      // and checking it here means a budget-less country never draws 12,000 men
+      // only to hand them straight back. One less rollback path to get wrong.
+      //
+      // `moveTreasury` does NOT upsert, so without a budget doc the charge would
+      // silently vanish and the unit would be free. `ensureFederalBudget` returns
+      // null when no seed exists for this (preset, country) — refuse rather than gift.
+      const healedBudget = await ensureFederalBudget(
+        db,
         countryId,
-        branchId: branch.id,
-        domain: branch.domain,
-        name: parsed.data.name.trim(),
-        type: archetype.type,
-        icon: archetype.icon,
-        posture: "standard",
-        // Both now come from what the country's industry could actually supply, rather than
-        // the hardcoded `1` / `{1,1,1}` that made `equipment` a field nothing could move.
-        techTier: issued.techTier,
-        personnel: archetype.personnel,
-        readiness: 70,
-        basePower: archetype.power,
-        upkeepBase: archetype.upkeep,
-        vet: 1,
-        xp: 0,
-        equipment: issued.equipment,
-        drill: null,
-        theaterId: "reserve",
-        assignedGeneralId: null,
-        createdTurn: currentTurn,
-        readyAtTurn: currentTurn + buildDuration,
-      });
-    } catch (error) {
-      // Unwind in the reverse order of acquisition. The lots go back first because they are
-      // the only resource here that another order could take in the meantime.
-      await returnLots(db, countryId, branch.domain, drawnLots);
-      await creditAppropriation(db, countryId, price);
-      await returnManpower(db, countryId, archetype.personnel);
-      await refundAction();
-      throw error;
-    }
+        gameState?.preset ?? DEFAULT_SEED_PRESET
+      );
 
-    const { balance: appropriationRemaining } = await getDefenseAppropriation(db, countryId);
-    return NextResponse.json({
-      success: true,
-      actionsRemaining: spend.remaining,
-      price,
-      appropriationRemaining,
-      // Derived from poolBefore — re-reading would repeat the stance and
-      // population queries for a value already known.
-      manpowerRemaining: poolBefore - archetype.personnel,
+      // Non-null is NOT sufficient. `ensureFederalBudget` looks the doc up by
+      // `_id: getNationalBudgetId(countryId)` (ensureFederalBudget.ts:65), but
+      // `moveTreasury` reads and writes by `{ countryId }` (treasurySpend.ts:27-29,
+      // 52-55). A doc whose countryId field disagrees with its _id — the exact
+      // corruption `findFederalBudgetCountryMismatches` exists to detect — would
+      // pass a null check and then absorb a zero-match updateOne, producing the
+      // free unit this guard exists to prevent. Require the key both sides use.
+      if (!healedBudget || healedBudget.countryId !== countryId) {
+        await refundAction();
+        return errorResponse(
+          409,
+          "This country has no usable national budget — procurement is unavailable"
+        );
+      }
+
+      // Manpower is the hard block. A new unit is raised at full establishment, so
+      // it costs full establishment. Heal a missing pool first — otherwise a newly
+      // enabled country reads pool 0 and can never recruit.
+      const { pool: poolBefore } = await ensureManpowerPool(db, countryId);
+
+      // An ordinary shortfall is a 400; 409 is reserved for losing the atomic
+      // guard to a concurrent order, which is retryable rather than malformed.
+      if (poolBefore < archetype.personnel) {
+        await refundAction();
+        return errorResponse(
+          400,
+          `Insufficient manpower — ${archetype.personnel.toLocaleString("en-US")} required, ` +
+            `${poolBefore.toLocaleString("en-US")} available`
+        );
+      }
+
+      if (!(await drawManpower(db, countryId, archetype.personnel))) {
+        await refundAction();
+        return errorResponse(409, "Manpower was drawn by another order — try again");
+      }
+
+      // Price is a share of the healed budget's own gdp — ANCHORED, so a growing economy
+      // outruns its procurement costs instead of cancelling against them — which lands it in
+      // the same units as the appropriation with no conversion.
+      //
+      // A non-positive or missing gdp returns null and MUST refuse — that is the value that
+      // would otherwise make units free (the role a 0 exchange rate played in the abandoned
+      // FX design).
+      const price = unitPurchasePrice(
+        archetype,
+        countryId,
+        healedBudget.gdp,
+        healedBudget.militaryPriceBaselineGdp
+      );
+      if (price == null) {
+        await returnManpower(db, countryId, archetype.personnel);
+        await refundAction();
+        return errorResponse(
+          409,
+          "This country has no usable GDP figure — procurement is unavailable"
+        );
+      }
+
+      // Paid from the DEFENCE APPROPRIATION, not the treasury: the enacted defence line has
+      // already left `treasuryBalance` via `processTreasuryTurn`, so a treasury debit here
+      // would bill the country twice for the same unit.
+      //
+      // Hard refusal, no overdraft. The overdraft exists for upkeep — an obligation already
+      // incurred — whereas a new order must fit inside the balance. This is what replaces the
+      // old unlimited borrow against the national treasury.
+      if (!(await debitAppropriation(db, countryId, price))) {
+        await returnManpower(db, countryId, archetype.personnel);
+        await refundAction();
+        const { balance } = await getDefenseAppropriation(db, countryId);
+        return errorResponse(
+          409,
+          `Defence appropriation is short — ${price.toLocaleString("en-US")} required, ` +
+            `${Math.max(0, balance).toLocaleString("en-US")} available`
+        );
+      }
+
+      // Issue materiel from the national arsenal. A short store is NOT a refusal: the unit is
+      // raised either way and arrives under-equipped, then the per-turn refit brings it up to
+      // standard as deliveries land. Scarcity degrades quality and speed; it never presents a
+      // dead button.
+      const neededLots = lotsRequired(archetype);
+      const arsenal = await getNationalArsenal(db, countryId);
+      const drawnLots = await drawLots(db, countryId, branch.domain, neededLots);
+      const issued = equipUnit(drawnLots, neededLots, arsenal.grade[branch.domain] ?? 0);
+
+      try {
+        const buildDuration =
+          archetype.type === "Carrier Strike Group" ? CARRIER_BUILD_TURNS : BUILD_TURNS;
+        await getMilitaryUnitsCollection(db).insertOne({
+          _id: new ObjectId(),
+          countryId,
+          branchId: branch.id,
+          domain: branch.domain,
+          name: parsed.data.name.trim(),
+          type: archetype.type,
+          icon: archetype.icon,
+          posture: "standard",
+          // Both now come from what the country's industry could actually supply, rather than
+          // the hardcoded `1` / `{1,1,1}` that made `equipment` a field nothing could move.
+          techTier: issued.techTier,
+          personnel: archetype.personnel,
+          readiness: 70,
+          basePower: archetype.power,
+          upkeepBase: archetype.upkeep,
+          vet: 1,
+          xp: 0,
+          equipment: issued.equipment,
+          drill: null,
+          theaterId: "reserve",
+          assignedGeneralId: null,
+          createdTurn: currentTurn,
+          readyAtTurn: currentTurn + buildDuration,
+        });
+      } catch (error) {
+        // Unwind in the reverse order of acquisition. The lots go back first because they are
+        // the only resource here that another order could take in the meantime.
+        await returnLots(db, countryId, branch.domain, drawnLots);
+        await creditAppropriation(db, countryId, price);
+        await returnManpower(db, countryId, archetype.personnel);
+        await refundAction();
+        throw error;
+      }
+
+      const { balance: appropriationRemaining } = await getDefenseAppropriation(db, countryId);
+      return NextResponse.json({
+        success: true,
+        actionsRemaining: spend.remaining,
+        price,
+        appropriationRemaining,
+        // Derived from poolBefore — re-reading would repeat the stance and
+        // population queries for a value already known.
+        manpowerRemaining: poolBefore - archetype.personnel,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

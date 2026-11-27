@@ -8,15 +8,12 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { optimizeImage, IMAGE_PRESETS } from "@/lib/imageOptimize";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getPersonalBalance, getHomeCurrency } from "@/lib/currency/characterFunds";
-import {
-  atomicallyDebitCharacterCash,
-  refundCharacterCash,
-} from "@/lib/financialTxLog/atomicCashGuard";
+
 import { getPlayerBannerAdsCollection } from "@/lib/db/collections/playerBannerAds";
 
 import { isPlusOrBetter } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { isR2Enabled, uploadFile } from "@/lib/r2";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { parseFormData } from "@/lib/api/validate";
@@ -248,113 +245,55 @@ export async function POST(request: Request) {
     const personalBalanceField = forexEnabled
       ? `currencyBalances.personal.${homeCurrency}`
       : "cashOnHand";
-    const ad = await runWithOptionalTransaction(
-      async (session) => {
-        const recentAdsInTx = await ads
-          .find({ characterId: character._id, createdTurn: { $gte: windowStartTurn } }, { session })
-          .sort({ createdTurn: -1 })
-          .toArray();
-        const freeUsedInTx = recentAdsInTx.filter((entry) => entry.costPaid === 0).length;
-        const canUseFreeInTx = freeUsedInTx < rateLimit.maxFree;
+    const ad = await runWithDbSession(db, async (session) => {
+      const recentAdsInTx = await ads
+        .find({ characterId: character._id, createdTurn: { $gte: windowStartTurn } }, { session })
+        .sort({ createdTurn: -1 })
+        .toArray();
+      const freeUsedInTx = recentAdsInTx.filter((entry) => entry.costPaid === 0).length;
+      const canUseFreeInTx = freeUsedInTx < rateLimit.maxFree;
 
-        if (!canUseFreeInTx && recentAdsInTx.length > 0) {
-          turnsUntilEligible = Math.max(
-            0,
-            recentAdsInTx[0].createdTurn + rateLimit.windowTurns - currentTurn
-          );
-          throw new Error("PLAYER_AD_SLOT_UNAVAILABLE");
-        }
+      if (!canUseFreeInTx && recentAdsInTx.length > 0) {
+        turnsUntilEligible = Math.max(
+          0,
+          recentAdsInTx[0].createdTurn + rateLimit.windowTurns - currentTurn
+        );
+        throw new Error("PLAYER_AD_SLOT_UNAVAILABLE");
+      }
 
-        if (!canUseFreeInTx) {
-          const debitResult = await charactersCollection(db).updateOne(
-            { _id: character._id, [personalBalanceField]: { $gte: cost } },
-            { $inc: { [personalBalanceField]: -cost }, $set: { updatedAt: new Date() } },
-            { session }
-          );
-
-          if (debitResult.modifiedCount === 0) {
-            throw new Error("PLAYER_AD_FUNDS_CHANGED");
-          }
-        }
-
-        return ads.insertOne(
-          {
-            _id: new ObjectId(),
-            characterId: character._id,
-            userId: new ObjectId(authUser.userId),
-            characterName: character.name,
-            countryId: character.countryId,
-            imageUrl,
-            linkUrl,
-            altText,
-            viewCount: 0,
-            isActive: true,
-            moderationStatus: "pending" as const,
-            createdAt: new Date(),
-            createdTurn: currentTurn,
-            costPaid: canUseFreeInTx ? 0 : cost,
-            currencyCode: homeCurrency,
-          },
+      if (!canUseFreeInTx) {
+        const debitResult = await charactersCollection(db).updateOne(
+          { _id: character._id, [personalBalanceField]: { $gte: cost } },
+          { $inc: { [personalBalanceField]: -cost }, $set: { updatedAt: new Date() } },
           { session }
         );
-      },
-      async () => {
-        const recentAdsFallback = await ads
-          .find({ characterId: character._id, createdTurn: { $gte: windowStartTurn } })
-          .sort({ createdTurn: -1 })
-          .toArray();
-        const freeUsedFallback = recentAdsFallback.filter((entry) => entry.costPaid === 0).length;
-        const canUseFreeFallback = freeUsedFallback < rateLimit.maxFree;
 
-        if (!canUseFreeFallback && recentAdsFallback.length > 0) {
-          turnsUntilEligible = Math.max(
-            0,
-            recentAdsFallback[0].createdTurn + rateLimit.windowTurns - currentTurn
-          );
-          throw new Error("PLAYER_AD_SLOT_UNAVAILABLE");
-        }
-
-        let debited = false;
-        if (!canUseFreeFallback) {
-          const debitResult = await atomicallyDebitCharacterCash(
-            db,
-            character._id,
-            homeCurrency,
-            cost,
-            forexEnabled
-          );
-          if (!debitResult.ok) {
-            throw new Error("PLAYER_AD_FUNDS_CHANGED");
-          }
-          debited = true;
-        }
-
-        try {
-          return await ads.insertOne({
-            _id: new ObjectId(),
-            characterId: character._id,
-            userId: new ObjectId(authUser.userId),
-            characterName: character.name,
-            countryId: character.countryId,
-            imageUrl,
-            linkUrl,
-            altText,
-            viewCount: 0,
-            isActive: true,
-            moderationStatus: "pending" as const,
-            createdAt: new Date(),
-            createdTurn: currentTurn,
-            costPaid: canUseFreeFallback ? 0 : cost,
-            currencyCode: homeCurrency,
-          });
-        } catch (error) {
-          if (debited) {
-            await refundCharacterCash(db, character._id, homeCurrency, cost, forexEnabled);
-          }
-          throw error;
+        if (debitResult.modifiedCount === 0) {
+          throw new Error("PLAYER_AD_FUNDS_CHANGED");
         }
       }
-    );
+
+      return ads.insertOne(
+        {
+          _id: new ObjectId(),
+          characterId: character._id,
+          userId: new ObjectId(authUser.userId),
+          characterName: character.name,
+          countryId: character.countryId,
+          imageUrl,
+          linkUrl,
+          altText,
+          viewCount: 0,
+          isActive: true,
+          moderationStatus: "pending" as const,
+          createdAt: new Date(),
+          createdTurn: currentTurn,
+          costPaid: canUseFreeInTx ? 0 : cost,
+          currencyCode: homeCurrency,
+        },
+        { session }
+      );
+    });
 
     return NextResponse.json({ success: true, adId: ad.insertedId.toString() }, { status: 201 });
   } catch (error) {

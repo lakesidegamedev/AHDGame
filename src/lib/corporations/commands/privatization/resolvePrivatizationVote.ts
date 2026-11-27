@@ -1,5 +1,7 @@
+import { afterCommit, withSessionDb, unboundDb } from "@/lib/db/sessionDb";
+import { allocateReservedPayouts } from "@/lib/corporations/rules/reservedPayouts";
 import { creditEquityPool } from "@/lib/equities/marketPool";
-import type { Db, UpdateFilter, AnyBulkWriteOperation } from "mongodb";
+import type { Db, AnyBulkWriteOperation } from "mongodb";
 import {
   holdingCostBasis,
   mergeHoldingTerms,
@@ -10,6 +12,7 @@ import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt
 import { buildPersonalBalanceInc } from "@/lib/currency/characterFunds";
 import type {
   Character,
+  Corporation,
   CorporationPrivatizationVote,
   IndexFund,
   NPP,
@@ -19,7 +22,12 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { PRIVATIZATION_FAILED_COOLDOWN_TURNS } from "@/lib/constants/corporations";
 import { shareholderVotingPower } from "@/lib/corporations/superShares";
 import { refundCharacterCash } from "@/lib/financialTxLog/atomicCashGuard";
-import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
+import {
+  anchorToCorpCapital,
+  fxRateForCorpFromMap,
+  resolveCorpLiquidCurrencyCode,
+  loadFxRatesByCurrency,
+} from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import {
   logWireEvent,
@@ -64,6 +72,13 @@ export type ResolveResult =
  * On fail: refund CEO's reserved cash, set 96-turn cooldown.
  */
 export async function resolvePrivatizationVote(input: ResolveInput): Promise<ResolveResult> {
+  if (input.vote.status !== "open") return { resolved: false, reason: "already_resolved" };
+  if (!input.force && input.currentTurn <= input.vote.deadlineAtTurn)
+    return { resolved: false, reason: "not_due" };
+  return withSessionDb(input.db, (db) => resolveInTransaction({ ...input, db }));
+}
+
+async function resolveInTransaction(input: ResolveInput): Promise<ResolveResult> {
   const { db, vote, currentTurn, forexEnabled, force } = input;
 
   if (vote.status !== "open") return { resolved: false, reason: "already_resolved" };
@@ -158,30 +173,32 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
         },
       }
     );
-    logWireEvent(
-      "corporation_privatization_vote_failed",
-      wireHeadlineCorpPrivatizationVoteFailed(corp.name),
-      { href: `/corporation/${corp.sequentialId ?? corp._id}` }
-    );
-    recordAudit({
-      source: "api",
-      action: "privatization.voteResolve",
-      category: "corp",
-      turn: currentTurn,
-      ts: now,
-      subject: { type: "corporation", id: corp._id, name: corp.name },
-      refs: { corporationId: corp._id },
-      outcome: "rejected",
-      reason: "Privatization buyout vote failed",
-      meta: { voteId: vote._id, tally },
-    });
-    void notifyVoteEventRaw({
-      db,
-      corporationId: corp._id,
-      voteId: vote._id,
-      corpName: corp.name,
-      summary: "take the corporation private (buyout)",
-      notificationType: "corp_vote_failed",
+    await afterCommit(db, async () => {
+      logWireEvent(
+        "corporation_privatization_vote_failed",
+        wireHeadlineCorpPrivatizationVoteFailed(corp.name),
+        { href: `/corporation/${corp.sequentialId ?? corp._id}` }
+      );
+      recordAudit({
+        source: "api",
+        action: "privatization.voteResolve",
+        category: "corp",
+        turn: currentTurn,
+        ts: now,
+        subject: { type: "corporation", id: corp._id, name: corp.name },
+        refs: { corporationId: corp._id },
+        outcome: "rejected",
+        reason: "Privatization buyout vote failed",
+        meta: { voteId: vote._id, tally },
+      });
+      await notifyVoteEventRaw({
+        db: unboundDb(db),
+        corporationId: corp._id,
+        voteId: vote._id,
+        corpName: corp.name,
+        summary: "take the corporation private (buyout)",
+        notificationType: "corp_vote_failed",
+      }).catch(() => undefined);
     });
     return { resolved: true, status: "failed" };
   }
@@ -199,27 +216,39 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
   // the conserving move and the fund leg stays unbooked. Fund payouts are tracked
   // separately so the CEO's booked outflow leg reflects only the portions it can
   // attribute.
-  const hasFundHolder = nonCeoHolders.some((h) => h.fundId && !h.characterId && !h.corporationId);
-  const fxByCurrency =
-    input.fxByCurrency ??
-    (hasFundHolder || input.stockTaxActive ? await loadFxRatesByCurrency(db) : null);
+  const needsFx = nonCeoHolders.some((h) => h.fundId || h.corporationId) || input.stockTaxActive;
+  const fxByCurrency = input.fxByCurrency ?? (needsFx ? await loadFxRatesByCurrency(db) : null);
 
-  const grossLocal =
-    nonCeoHolders.reduce((acc, h) => acc + Math.round(h.shares * vote.lockedBuyoutPrice), 0) +
-    Math.round(publicFloat * vote.lockedBuyoutPrice);
-  // Shares can move into the cap table after the vote opened (IPO placements
-  // are excluded from the reserve at open). Scale payouts to what was actually
-  // reserved rather than minting the difference, and refund any remainder
-  // below so undershoot does not destroy cash either.
-  const reserveScale =
-    grossLocal > vote.totalReservedCash ? vote.totalReservedCash / grossLocal : 1;
+  const payouts = allocateReservedPayouts(
+    [
+      ...nonCeoHolders.map((holder) => holder.shares * vote.lockedBuyoutPrice),
+      publicFloat * vote.lockedBuyoutPrice,
+    ],
+    vote.totalReservedCash
+  );
   let totalCharCorpPaid = 0;
   let totalPaidLocal = 0;
   const personalPayoutOps: AnyBulkWriteOperation<Character>[] = [];
   const nppPayoutOps: AnyBulkWriteOperation<NPP>[] = [];
+  const corporationPayoutOps: AnyBulkWriteOperation<Corporation>[] = [];
+  const fundPayoutOps: AnyBulkWriteOperation<IndexFund>[] = [];
+  const recipientIds = nonCeoHolders.flatMap((holder) =>
+    holder.corporationId ? [holder.corporationId] : []
+  );
+  const recipients = recipientIds.length
+    ? await corporationsCollection(db)
+        .find(
+          { _id: { $in: recipientIds } },
+          { projection: { liquidCurrencyCode: 1, countryId: 1 } }
+        )
+        .toArray()
+    : [];
+  const recipientsById = new Map(
+    recipients.map((recipient) => [recipient._id.toHexString(), recipient])
+  );
   let totalFundPaidAnchor = 0;
-  for (const holder of nonCeoHolders) {
-    const payout = Math.round(holder.shares * vote.lockedBuyoutPrice * reserveScale);
+  for (const [index, holder] of nonCeoHolders.entries()) {
+    const payout = payouts[index];
     totalPaidLocal += payout;
     if (holder.characterId) {
       const rate = fxByCurrency?.get(vote.lockedBuyoutCurrency as CurrencyCode) ?? 1;
@@ -243,7 +272,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
           },
         },
       });
-      void emitTx(db, {
+      await emitTx(db, {
         type: "share_buyout_payout",
         turn: currentTurn,
         createdAt: now,
@@ -259,19 +288,37 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
       });
       totalCharCorpPaid += payout;
     } else if (holder.corporationId) {
-      await corporationsCollection(db).updateOne(
-        { _id: holder.corporationId },
-        { $inc: { liquidCapital: payout } }
+      const recipient = recipientsById.get(holder.corporationId.toHexString());
+      if (!recipient) throw new Error("Buyout recipient corporation is missing");
+      const sourceRate = fxRateForCorpFromMap(
+        { liquidCurrencyCode: vote.lockedBuyoutCurrency },
+        fxByCurrency!
       );
-      void emitTx(db, {
+      const recipientCurrency = resolveCorpLiquidCurrencyCode(recipient);
+      const recipientPayout = anchorToCorpCapital(
+        payout / sourceRate,
+        recipientCurrency,
+        fxRateForCorpFromMap(recipient, fxByCurrency!)
+      );
+      corporationPayoutOps.push({
+        updateOne: {
+          filter: {
+            _id: holder.corporationId,
+            liquidCurrencyCode: recipient.liquidCurrencyCode,
+            countryId: recipient.countryId,
+          },
+          update: { $inc: { liquidCapital: recipientPayout } },
+        },
+      });
+      await emitTx(db, {
         type: "share_buyout_payout",
         turn: currentTurn,
         createdAt: now,
         subjectType: "corporation",
         subjectId: holder.corporationId,
         subjectName: "(corp shareholder)",
-        amount: payout,
-        currencyCode: vote.lockedBuyoutCurrency,
+        amount: recipientPayout,
+        currencyCode: recipientCurrency ?? "USD",
         counterpartyType: "corporation",
         counterpartyId: corp._id,
         counterpartyName: corp.name,
@@ -280,11 +327,26 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     } else if (holder.fundId) {
       const rate = fxByCurrency?.get(vote.lockedBuyoutCurrency as CurrencyCode) ?? 1;
       const payoutAnchor = rate > 0 ? payout / rate : payout;
-      await indexFundsCollection(db).updateOne({ _id: holder.fundId }, {
-        $inc: { cashAnchor: payoutAnchor },
-        $pull: { holdings: { corporationId: corp._id } },
-        $set: { updatedAt: now },
-      } as unknown as UpdateFilter<IndexFund>);
+      fundPayoutOps.push({
+        updateOne: {
+          filter: { _id: holder.fundId },
+          update: [
+            {
+              $set: {
+                cashAnchor: { $add: [{ $ifNull: ["$cashAnchor", 0] }, payoutAnchor] },
+                holdings: {
+                  $filter: {
+                    input: { $ifNull: ["$holdings", []] },
+                    as: "holding",
+                    cond: { $ne: ["$$holding.corporationId", corp._id] },
+                  },
+                },
+                updatedAt: now,
+              },
+            },
+          ],
+        },
+      });
       totalFundPaidAnchor += payoutAnchor;
     } else if (holder.nppId) {
       nppPayoutOps.push({
@@ -299,11 +361,27 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     }
   }
 
-  if (personalPayoutOps.length) await charactersCollection(db).bulkWrite(personalPayoutOps);
-  if (nppPayoutOps.length) await (await getNppsCollection(db)).bulkWrite(nppPayoutOps);
+  if (corporationPayoutOps.length) {
+    const result = await corporationsCollection(db).bulkWrite(corporationPayoutOps);
+    if (result.matchedCount !== corporationPayoutOps.length)
+      throw new Error("Buyout recipient changed");
+  }
+  if (fundPayoutOps.length) {
+    const result = await indexFundsCollection(db).bulkWrite(fundPayoutOps);
+    if (result.matchedCount !== fundPayoutOps.length) throw new Error("Buyout fund is missing");
+  }
+  if (personalPayoutOps.length) {
+    const result = await charactersCollection(db).bulkWrite(personalPayoutOps);
+    if (result.matchedCount !== personalPayoutOps.length)
+      throw new Error("Buyout shareholder is missing");
+  }
+  if (nppPayoutOps.length) {
+    const result = await (await getNppsCollection(db)).bulkWrite(nppPayoutOps);
+    if (result.matchedCount !== nppPayoutOps.length) throw new Error("Buyout NPP is missing");
+  }
 
   // The float belongs to the equity market pool, not the issuer being taken private.
-  const floatPayout = Math.round(publicFloat * vote.lockedBuyoutPrice * reserveScale);
+  const floatPayout = payouts[nonCeoHolders.length];
   totalPaidLocal += floatPayout;
   if (floatPayout > 0) {
     await creditEquityPool(
@@ -383,7 +461,7 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
     }
   );
 
-  void emitTx(db, {
+  await emitTx(db, {
     type: "share_buyout_outflow",
     turn: currentTurn,
     createdAt: now,
@@ -400,32 +478,33 @@ export async function resolvePrivatizationVote(input: ResolveInput): Promise<Res
 
   // Vote was already marked passed by the atomic claim at the top of this function;
   // no further status write needed here.
-  logWireEvent("corporation_privatized", wireHeadlineCorpPrivatized(corp.name), {
-    href: `/corporation/${corp.sequentialId ?? corp._id}`,
-  });
-  void notifyVoteEventRaw({
-    db,
-    corporationId: corp._id,
-    voteId: vote._id,
-    corpName: corp.name,
-    summary: "take the corporation private (buyout)",
-    notificationType: "corp_vote_passed",
-  });
+  await afterCommit(db, async () => {
+    logWireEvent("corporation_privatized", wireHeadlineCorpPrivatized(corp.name), {
+      href: `/corporation/${corp.sequentialId ?? corp._id}`,
+    });
+    await notifyVoteEventRaw({
+      db: unboundDb(db),
+      corporationId: corp._id,
+      voteId: vote._id,
+      corpName: corp.name,
+      summary: "take the corporation private (buyout)",
+      notificationType: "corp_vote_passed",
+    }).catch(() => undefined);
 
-  recordAudit({
-    source: "api",
-    action: "privatization.voteResolve",
-    category: "corp",
-    turn: currentTurn,
-    ts: now,
-    actor: { kind: "player", userId: undefined, characterId: corp.ceoId },
-    subject: { type: "corporation", id: corp._id, name: corp.name },
-    amount: totalCharCorpPaid + floatPayout,
-    currencyCode: vote.lockedBuyoutCurrency,
-    refs: { corporationId: corp._id },
-    outcome: "ok",
-    meta: { voteId: vote._id, tally, floatPayout, fundPaidAnchor: totalFundPaidAnchor },
+    recordAudit({
+      source: "api",
+      action: "privatization.voteResolve",
+      category: "corp",
+      turn: currentTurn,
+      ts: now,
+      actor: { kind: "player", userId: undefined, characterId: corp.ceoId },
+      subject: { type: "corporation", id: corp._id, name: corp.name },
+      amount: totalCharCorpPaid + floatPayout,
+      currencyCode: vote.lockedBuyoutCurrency,
+      refs: { corporationId: corp._id },
+      outcome: "ok",
+      meta: { voteId: vote._id, tally, floatPayout, fundPaidAnchor: totalFundPaidAnchor },
+    });
   });
-
   return { resolved: true, status: "passed" };
 }

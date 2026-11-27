@@ -118,4 +118,44 @@ describe("POST /api/country/[code]/central-bank/reserve-exchange", () => {
     expect(response.status).toBe(403);
     expect(db.collectionMocks.centralBanks.updateOne).not.toHaveBeenCalled();
   });
+  it("books a JPY spread in the US bank's USD revenue pool", async () => {
+    await setup({ bank: makeBank({ spreadFeeReserveBalances: { JPY: 100000 } }) });
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [
+        { _id: "US", countryId: "US", currencyCode: "USD", rate: 1 },
+        { _id: "JP", countryId: "JP", currencyCode: "JPY", rate: 100 },
+      ],
+    } as never);
+    const { POST } = await import("./route");
+    const response = await POST(
+      makeRequest({ fromCurrency: "JPY", toCurrency: "USD", amount: 100000 }),
+      ctx()
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ spentAmount: 100000, receivedAmount: 990 });
+    const [filter, update, options] = db.collectionMocks.centralBanks.updateOne.mock.calls[0];
+    expect(update.$inc).toMatchObject({
+      "spreadFeeReserveBalances.JPY": -100000,
+      "spreadFeeReserveBalances.USD": 990,
+      forexRevenue: 5,
+    });
+    expect(filter).toMatchObject({ chairCharacterId, chairControlsLocked: { $ne: true } });
+    expect(options?.upsert).not.toBe(true);
+  });
+  it("refuses a missing home quote without changing the bank", async () => {
+    await setup();
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () => [
+        { _id: "JP", countryId: "JP", currencyCode: "JPY", rate: 100 },
+        { _id: "UK", countryId: "UK", currencyCode: "GBP", rate: 0.75 },
+      ],
+    } as never);
+    const { POST } = await import("./route");
+    const response = await POST(
+      makeRequest({ fromCurrency: "JPY", toCurrency: "GBP", amount: 100000 }),
+      ctx()
+    );
+    expect(response.status).toBe(400);
+    expect(db.collectionMocks.centralBanks.updateOne).not.toHaveBeenCalled();
+  });
 });

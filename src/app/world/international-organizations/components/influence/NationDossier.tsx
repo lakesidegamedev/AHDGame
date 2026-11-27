@@ -1,4 +1,5 @@
 "use client";
+import { useEconomicIntent } from "@/hooks/useEconomicIntent";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
@@ -216,6 +217,7 @@ function CommitPlayForm({
   viewerCountryId: string;
   onCommitted: () => void;
 }) {
+  const requestEconomic = useEconomicIntent();
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -278,13 +280,9 @@ function CommitPlayForm({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(
+      const res = await requestEconomic(
         `/api/country/${viewerCountryId}/international-organizations/${orgId}/influence`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ targetEntityId: target.entityId, amountLocal }),
-        }
+        { targetEntityId: target.entityId, amountLocal }
       );
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };

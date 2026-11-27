@@ -1,3 +1,6 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 /**
  * A7 part 2 service: filing a listing petition, deciding one, and letting the
  * deadline decide the ones nobody answered.
@@ -106,258 +109,274 @@ export async function fileListingPetition(opts: {
   currentTurn: number;
   currentYear: number | null;
 }): Promise<FilePetitionResult> {
-  const { db, corporation, filedByCharacterId, contributionAnchor, currentTurn } = opts;
-
-  if (!Number.isFinite(contributionAnchor) || contributionAnchor <= 0) {
-    return { ok: false, error: "Contribution must be a positive amount", status: 400 };
-  }
-  if (corporation.isPrivate) {
-    return {
-      ok: false,
-      error: "A private corporation has no index membership to petition for",
-      status: 400,
-    };
-  }
-
-  const existing = await findPendingPetition(db, corporation._id);
-  if (existing) {
-    return {
-      ok: false,
-      error: "This corporation already has a petition before the committee",
-      status: 409,
-    };
-  }
-  const waiver = await findActiveWaiver(db, corporation._id, currentTurn);
-  if (waiver) {
-    return { ok: false, error: "This corporation already holds a listing waiver", status: 409 };
-  }
-
-  const authority = await resolveMergerAuthority(
-    db,
-    corporation.countryId as string,
-    opts.currentYear
-  );
-  if (!authority) {
-    return {
-      ok: false,
-      error: "This country has no index committee, so there is nobody to petition",
-      status: 400,
-    };
-  }
-
-  // The contribution is set in anchor terms, so every corporation pays the same
-  // value: charge it in the corporation's own currency at its rate.
-  const feeCurrency = (corporation.liquidCurrencyCode ?? "USD") as CurrencyCode;
-  const corpFx = await getCorpFxRate(db, corporation);
-  const feeLocal = Math.round(anchorToCorpLiquidCapital(contributionAnchor, corporation, corpFx));
-  // With the Treasury cash ledger on, a positive Treasury credit must be one
-  // half of a paired transition. Paying a vacant seat's contribution through
-  // the plain credit threw after the corporation was already charged, so the
-  // money left the corporation and never reached the Treasury. That branch
-  // now debits and credits in one settlement instead of debiting up front.
-  const treasuryCash = authority.holderCharacterId
-    ? null
-    : await loadTreasuryCashContext(db, currentTurn);
-  const fundedTreasury = !!treasuryCash?.treasuryCashLedgerEnabled;
-  if (!fundedTreasury) {
-    const debit = await atomicallyDebitCorpLiquidCapital(db, corporation._id, feeLocal);
-    if (!debit.ok) return { ok: false, error: debit.error, status: 400 };
-  }
-
-  const now = new Date();
-  const petition: IndexListingPetition = {
-    _id: new ObjectId(),
-    corporationId: corporation._id,
-    countryId: corporation.countryId as CountryId,
-    filedByCharacterId,
-    filedAtTurn: currentTurn,
-    deadlineAtTurn: currentTurn + PETITION_DECISION_TURNS,
-    seatId: authority.seatId,
-    seatName: authority.seatName,
-    contributionAnchor,
-    ...(authority.holderCharacterId
-      ? { contributionRecipientCharacterId: authority.holderCharacterId }
-      : {}),
-    status: "pending",
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  try {
-    await indexListingPetitionsCollection<IndexListingPetition>(db).insertOne(petition);
-  } catch (e) {
-    // The debit already happened, so put it back rather than leaving the corp
-    // out of pocket for a petition that does not exist.
-    if (!fundedTreasury) await refundCorpLiquidCapital(db, corporation._id, feeLocal);
-    throw e;
-  }
-
-  // Credit through the same helpers every other money movement uses, so the
-  // forex-aware balance field and the treasury account stay single-sourced.
-  // What the treasury actually received, in its own currency, when nobody holds
-  // the seat. Witnessed by the treasury writer; the row below keeps the record.
-  let treasuryCredit: { amount: number; currencyCode: CurrencyCode } | null = null;
-  if (authority.holderCharacterId) {
-    await refundCharacterCash(
-      db,
-      authority.holderCharacterId,
-      feeCurrency,
-      feeLocal,
-      await isForexEnabled()
+  return withAtomicResult(opts.db, async (db): Promise<FilePetitionResult> => {
+    const { filedByCharacterId, contributionAnchor, currentTurn } = opts;
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) return refusal;
+    const state = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
     );
-  } else if (fundedTreasury && treasuryCash) {
-    const countryId = corporation.countryId as CountryId;
-    const treasuryCurrency =
-      treasuryCash.treasuryCurrencies.get(countryId) ??
-      (COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode | undefined) ??
-      "USD";
-    const treasuryRate = treasuryAnchorValuation({
-      countryId,
-      currencyCode: treasuryCurrency,
-      preset: treasuryCash.preset,
-      observedRate: treasuryCash.rates.get(treasuryCurrency),
-    }).anchorRate;
-    const treasuryLocal = Math.round((feeLocal / corpFx) * treasuryRate);
-    const transition: BankingTransition = {
-      key: `index-listing-petition:${petition._id.toString()}`,
-      kind: "index_listing_lobbying",
-      turn: currentTurn,
-      currency: feeCurrency,
-      legs: [
-        {
-          kind: "debit",
-          amount: feeLocal,
-          valuation: { currencyCode: feeCurrency, localPerAnchor: corpFx },
-          collection: "corporations",
-          filter: { _id: corporation._id, liquidCapital: { $gte: feeLocal } },
-          path: "liquidCapital",
-          note: "Pay the listing petition contribution from the corporation",
-        },
-        {
-          kind: "credit",
-          amount: treasuryLocal,
-          valuation: { currencyCode: treasuryCurrency, localPerAnchor: treasuryRate },
-          collection: "federalBudget",
-          filter: { countryId },
-          path: "treasuryCashLocal",
-          note: "Deliver a vacant seat's petition contribution into national Treasury cash",
-        },
-      ],
-      projections: [
-        {
-          collection: "federalBudget",
-          filter: { countryId },
-          update: { $inc: { treasuryBalance: treasuryLocal }, $set: { updatedAt: now } },
-          note: "Record the funded petition contribution in signed fiscal-position analytics",
-        },
-      ],
-      event: {
-        kind: "monetary.executed",
-        command: "indexFunds.petition.contribution",
-        subjectType: "corporation",
-        subjectId: corporation._id.toString(),
-        amount: feeLocal,
-        meta: {
-          petitionId: petition._id.toString(),
-          sourceCurrency: feeCurrency,
-          destinationCurrency: treasuryCurrency,
-          sourceLocalPerAnchor: corpFx,
-          destinationLocalPerAnchor: treasuryRate,
-        },
-      },
-    };
-    const settled = await settleTransition(db, transition);
-    if (settled.status !== "applied" && settled.status !== "replayed") {
-      // Nothing was charged when the settlement refused, so the petition goes too.
-      if (settled.status === "rejected") {
-        await indexListingPetitionsCollection<IndexListingPetition>(db).deleteOne({
-          _id: petition._id,
-        });
-        return {
-          ok: false,
-          status: 400,
-          error: insufficientCapitalMessage(
-            "The contribution",
-            feeLocal,
-            corporation.liquidCapital ?? 0,
-            feeCurrency
-          ),
-        };
-      }
-      throw new Error(settled.error ?? "Funded petition contribution is incomplete");
+    if (state?.currentTurn !== currentTurn)
+      return { ok: false, status: 409, error: "The game advanced; refresh before filing" };
+    const corporation = await corporationsCollection(db).findOne({
+      _id: opts.corporation._id,
+      ceoId: filedByCharacterId,
+    });
+    if (!corporation)
+      return { ok: false, status: 403, error: "Only the current CEO may file a petition" };
+
+    if (!Number.isFinite(contributionAnchor) || contributionAnchor <= 0) {
+      return { ok: false, error: "Contribution must be a positive amount", status: 400 };
     }
-    treasuryCredit = { amount: treasuryLocal, currencyCode: treasuryCurrency };
-  } else {
-    // `contributionAnchor` is in ₳; `creditTreasuryProceeds` expects the
-    // country's own units, so crediting it raw banked an unconverted figure
-    // for every non-anchor currency (same unit confusion).
-    const countryId = corporation.countryId as CountryId;
-    const credited = await creditTreasuryProceedsFromAnchor(
+    if (corporation.isPrivate) {
+      return {
+        ok: false,
+        error: "A private corporation has no index membership to petition for",
+        status: 400,
+      };
+    }
+
+    const existing = await findPendingPetition(db, corporation._id);
+    if (existing) {
+      return {
+        ok: false,
+        error: "This corporation already has a petition before the committee",
+        status: 409,
+      };
+    }
+    const waiver = await findActiveWaiver(db, corporation._id, currentTurn);
+    if (waiver) {
+      return { ok: false, error: "This corporation already holds a listing waiver", status: 409 };
+    }
+
+    const authority = await resolveMergerAuthority(
       db,
-      countryId,
-      contributionAnchor,
-      now,
-      {
-        flow: "index_listing_lobbying",
-      }
+      corporation.countryId as string,
+      opts.currentYear
     );
-    treasuryCredit = {
-      amount: credited,
-      currencyCode: (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode,
+    if (!authority) {
+      return {
+        ok: false,
+        error: "This country has no index committee, so there is nobody to petition",
+        status: 400,
+      };
+    }
+
+    // The contribution is set in anchor terms, so every corporation pays the same
+    // value: charge it in the corporation's own currency at its rate.
+    const feeCurrency = (corporation.liquidCurrencyCode ?? "USD") as CurrencyCode;
+    const corpFx = await getCorpFxRate(db, corporation);
+    const feeLocal = Math.round(anchorToCorpLiquidCapital(contributionAnchor, corporation, corpFx));
+    // With the Treasury cash ledger on, a positive Treasury credit must be one
+    // half of a paired transition. Paying a vacant seat's contribution through
+    // the plain credit threw after the corporation was already charged, so the
+    // money left the corporation and never reached the Treasury. That branch
+    // now debits and credits in one settlement instead of debiting up front.
+    const treasuryCash = authority.holderCharacterId
+      ? null
+      : await loadTreasuryCashContext(db, currentTurn);
+    const fundedTreasury = !!treasuryCash?.treasuryCashLedgerEnabled;
+    if (!fundedTreasury) {
+      const debit = await atomicallyDebitCorpLiquidCapital(db, corporation._id, feeLocal);
+      if (!debit.ok) return { ok: false, error: debit.error, status: 400 };
+    }
+
+    const now = new Date();
+    const petition: IndexListingPetition = {
+      _id: new ObjectId(),
+      corporationId: corporation._id,
+      countryId: corporation.countryId as CountryId,
+      filedByCharacterId,
+      filedAtTurn: currentTurn,
+      deadlineAtTurn: currentTurn + PETITION_DECISION_TURNS,
+      seatId: authority.seatId,
+      seatName: authority.seatName,
+      contributionAnchor,
+      ...(authority.holderCharacterId
+        ? { contributionRecipientCharacterId: authority.holderCharacterId }
+        : {}),
+      status: "pending",
+      createdAt: now,
+      updatedAt: now,
     };
-  }
 
-  // Both legs, so the ledger nets to zero: the corporation pays and either the
-  // officeholder or the treasury receives. A one-sided lobbying debit would
-  // read as money destroyed.
-  await emitTx(db, {
-    type: "index_listing_lobbying",
-    turn: currentTurn,
-    createdAt: now,
-    subjectType: "corporation",
-    subjectId: corporation._id,
-    subjectName: corporation.name,
-    amount: -feeLocal,
-    currencyCode: feeCurrency,
-    counterpartyType: authority.holderCharacterId ? "character" : "government",
-    ...(authority.holderCharacterId ? { counterpartyId: authority.holderCharacterId } : {}),
-    counterpartyName: authority.holderName ?? authority.seatName,
-    meta: {
-      petitionId: petition._id.toString(),
-      seatId: authority.seatId,
-      seatName: authority.seatName,
-    },
-  });
-  await emitTx(db, {
-    type: "index_listing_lobbying",
-    turn: currentTurn,
-    createdAt: now,
-    ...(authority.holderCharacterId
-      ? {
-          subjectType: "character" as const,
-          subjectId: authority.holderCharacterId,
-          subjectName: authority.holderName ?? authority.seatName,
+    try {
+      await indexListingPetitionsCollection<IndexListingPetition>(db).insertOne(petition);
+    } catch (e) {
+      // The debit already happened, so put it back rather than leaving the corp
+      // out of pocket for a petition that does not exist.
+      if (!fundedTreasury) await refundCorpLiquidCapital(db, corporation._id, feeLocal);
+      throw e;
+    }
+
+    // Credit through the same helpers every other money movement uses, so the
+    // forex-aware balance field and the treasury account stay single-sourced.
+    // What the treasury actually received, in its own currency, when nobody holds
+    // the seat. Witnessed by the treasury writer; the row below keeps the record.
+    let treasuryCredit: { amount: number; currencyCode: CurrencyCode } | null = null;
+    if (authority.holderCharacterId) {
+      await refundCharacterCash(
+        db,
+        authority.holderCharacterId,
+        feeCurrency,
+        feeLocal,
+        await isForexEnabled()
+      );
+    } else if (fundedTreasury && treasuryCash) {
+      const countryId = corporation.countryId as CountryId;
+      const treasuryCurrency =
+        treasuryCash.treasuryCurrencies.get(countryId) ??
+        (COUNTRY_CURRENCY_MAP[countryId] as CurrencyCode | undefined) ??
+        "USD";
+      const treasuryRate = treasuryAnchorValuation({
+        countryId,
+        currencyCode: treasuryCurrency,
+        preset: treasuryCash.preset,
+        observedRate: treasuryCash.rates.get(treasuryCurrency),
+      }).anchorRate;
+      const treasuryLocal = Math.round((feeLocal / corpFx) * treasuryRate);
+      const transition: BankingTransition = {
+        key: `index-listing-petition:${petition._id.toString()}`,
+        kind: "index_listing_lobbying",
+        turn: currentTurn,
+        currency: feeCurrency,
+        legs: [
+          {
+            kind: "debit",
+            amount: feeLocal,
+            valuation: { currencyCode: feeCurrency, localPerAnchor: corpFx },
+            collection: "corporations",
+            filter: { _id: corporation._id, liquidCapital: { $gte: feeLocal } },
+            path: "liquidCapital",
+            note: "Pay the listing petition contribution from the corporation",
+          },
+          {
+            kind: "credit",
+            amount: treasuryLocal,
+            valuation: { currencyCode: treasuryCurrency, localPerAnchor: treasuryRate },
+            collection: "federalBudget",
+            filter: { countryId },
+            path: "treasuryCashLocal",
+            note: "Deliver a vacant seat's petition contribution into national Treasury cash",
+          },
+        ],
+        projections: [
+          {
+            collection: "federalBudget",
+            filter: { countryId },
+            update: { $inc: { treasuryBalance: treasuryLocal }, $set: { updatedAt: now } },
+            note: "Record the funded petition contribution in signed fiscal-position analytics",
+          },
+        ],
+        event: {
+          kind: "monetary.executed",
+          command: "indexFunds.petition.contribution",
+          subjectType: "corporation",
+          subjectId: corporation._id.toString(),
+          amount: feeLocal,
+          meta: {
+            petitionId: petition._id.toString(),
+            sourceCurrency: feeCurrency,
+            destinationCurrency: treasuryCurrency,
+            sourceLocalPerAnchor: corpFx,
+            destinationLocalPerAnchor: treasuryRate,
+          },
+        },
+      };
+      const settled = await settleTransition(db, transition);
+      if (settled.status !== "applied" && settled.status !== "replayed") {
+        // Nothing was charged when the settlement refused, so the petition goes too.
+        if (settled.status === "rejected") {
+          await indexListingPetitionsCollection<IndexListingPetition>(db).deleteOne({
+            _id: petition._id,
+          });
+          return {
+            ok: false,
+            status: 400,
+            error: insufficientCapitalMessage(
+              "The contribution",
+              feeLocal,
+              corporation.liquidCapital ?? 0,
+              feeCurrency
+            ),
+          };
         }
-      : {
-          subjectType: "government" as const,
-          countryId: corporation.countryId as string,
-          subjectName: `${corporation.countryId} Treasury`,
-        }),
-    // The treasury row records what the treasury received, in its own currency.
-    amount: treasuryCredit?.amount ?? feeLocal,
-    currencyCode: treasuryCredit?.currencyCode ?? feeCurrency,
-    counterpartyType: "corporation",
-    counterpartyId: corporation._id,
-    counterpartyName: corporation.name,
-    meta: {
-      petitionId: petition._id.toString(),
-      seatId: authority.seatId,
-      seatName: authority.seatName,
-      ...(treasuryCredit ? { ledgerOwnedByWitness: true } : {}),
-    },
-  });
+        throw new Error(settled.error ?? "Funded petition contribution is incomplete");
+      }
+      treasuryCredit = { amount: treasuryLocal, currencyCode: treasuryCurrency };
+    } else {
+      // `contributionAnchor` is in ₳; `creditTreasuryProceeds` expects the
+      // country's own units, so crediting it raw banked an unconverted figure
+      // for every non-anchor currency (same unit confusion).
+      const countryId = corporation.countryId as CountryId;
+      const credited = await creditTreasuryProceedsFromAnchor(
+        db,
+        countryId,
+        contributionAnchor,
+        now,
+        {
+          flow: "index_listing_lobbying",
+        }
+      );
+      treasuryCredit = {
+        amount: credited,
+        currencyCode: (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode,
+      };
+    }
 
-  return { ok: true, petition };
+    // Both legs, so the ledger nets to zero: the corporation pays and either the
+    // officeholder or the treasury receives. A one-sided lobbying debit would
+    // read as money destroyed.
+    await emitTx(db, {
+      type: "index_listing_lobbying",
+      turn: currentTurn,
+      createdAt: now,
+      subjectType: "corporation",
+      subjectId: corporation._id,
+      subjectName: corporation.name,
+      amount: -feeLocal,
+      currencyCode: feeCurrency,
+      counterpartyType: authority.holderCharacterId ? "character" : "government",
+      ...(authority.holderCharacterId ? { counterpartyId: authority.holderCharacterId } : {}),
+      counterpartyName: authority.holderName ?? authority.seatName,
+      meta: {
+        petitionId: petition._id.toString(),
+        seatId: authority.seatId,
+        seatName: authority.seatName,
+      },
+    });
+    await emitTx(db, {
+      type: "index_listing_lobbying",
+      turn: currentTurn,
+      createdAt: now,
+      ...(authority.holderCharacterId
+        ? {
+            subjectType: "character" as const,
+            subjectId: authority.holderCharacterId,
+            subjectName: authority.holderName ?? authority.seatName,
+          }
+        : {
+            subjectType: "government" as const,
+            countryId: corporation.countryId as string,
+            subjectName: `${corporation.countryId} Treasury`,
+          }),
+      // The treasury row records what the treasury received, in its own currency.
+      amount: treasuryCredit?.amount ?? feeLocal,
+      currencyCode: treasuryCredit?.currencyCode ?? feeCurrency,
+      counterpartyType: "corporation",
+      counterpartyId: corporation._id,
+      counterpartyName: corporation.name,
+      meta: {
+        petitionId: petition._id.toString(),
+        seatId: authority.seatId,
+        seatName: authority.seatName,
+        ...(treasuryCredit ? { ledgerOwnedByWitness: true } : {}),
+      },
+    });
+
+    return { ok: true, petition };
+  });
 }
 
 /**

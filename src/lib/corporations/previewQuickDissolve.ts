@@ -1,3 +1,4 @@
+import { assertDissolutionClaimsSettled } from "@/lib/corporations/assertDissolutionClaimsSettled";
 /**
  * Preview for the corporation CEO’s quick dissolve (`POST /api/corporations/[id]/dissolve`) —
  * not site-admin force-liquidate. Personal payout matches that route; commodity deltas use the
@@ -7,8 +8,8 @@
 import { previewBondSettlementDissolve } from "@/lib/corporations/previewBondSettlementDissolve";
 import type { Db } from "mongodb";
 import type { ObjectId } from "mongodb";
-import type { Corporation, CorporateSector, State, StateMetrics } from "@/lib/db/types";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import type { Corporation, CorporateSector } from "@/lib/db/types";
+
 import { ApiError } from "@/lib/api/errors";
 import { corporationDissolutionAgeBlock } from "@/lib/corporations/dissolutionAgeGuard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -157,6 +158,7 @@ export async function previewQuickDissolve(
   db: Db,
   corporation: Corporation
 ): Promise<QuickDissolvePreview> {
+  corporation = await assertDissolutionClaimsSettled(db, corporation);
   const corpIdStr = corporation._id.toString();
 
   const [outstandingBonds, heldBonds, fxByCurrency] = await Promise.all([

@@ -1,3 +1,28 @@
+// Collection-only host fixtures; frozen claims and cash rollback have actual transaction tests.
+vi.mock("./frozenBondTurnInput", () => ({
+  frozenBondTurnInput: (
+    db: import("mongodb").Db,
+    _name: string,
+    _turn: number,
+    load: (db: import("mongodb").Db) => Promise<unknown>
+  ) => load(db),
+  settleBondTurnBatches: (
+    db: import("mongodb").Db,
+    _name: string,
+    _turn: number,
+    rows: unknown[],
+    apply: (db: import("mongodb").Db, rows: unknown[]) => Promise<unknown>
+  ) => apply(db, rows),
+}));
+vi.mock("./withTurnValueSettlement", () => ({
+  readTurnValueSettlement: async () => ({ worldId: "legacy", applied: false }),
+  withTurnValueSettlement: (
+    db: import("mongodb").Db,
+    _phase: string,
+    _turn: number,
+    work: (db: import("mongodb").Db) => Promise<unknown>
+  ) => work(db),
+}));
 /**
  * Unit tests for processBondTurn — bond interest, maturity, and default handling.
  */
@@ -142,8 +167,8 @@ vi.mock("@/lib/corporations/settlementLock", () => ({
       _id: unknown,
       _field: unknown,
       _now: unknown,
-      run: () => Promise<unknown>
-    ) => run()
+      run: (db: unknown) => Promise<unknown>
+    ) => run(_db)
   ),
 }));
 
@@ -2331,17 +2356,22 @@ describe("processBondTurn", () => {
     const result = await processBondTurn(10);
 
     expect(result.bondHistorySnapshots).toBe(1);
-    expect(db.collectionMocks["bondHistory"]!.insertMany).toHaveBeenCalledWith(
+    expect(db.collectionMocks["bondHistory"]!.bulkWrite).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
-          bondId,
-          turn: 10,
-          marketPrice: 1.02,
-          totalInterestPaid: expect.any(Number),
-          createdAt: expect.any(Date),
+          updateOne: expect.objectContaining({
+            update: {
+              $setOnInsert: expect.objectContaining({
+                bondId,
+                turn: 10,
+                marketPrice: 1.02,
+                totalInterestPaid: expect.any(Number),
+              }),
+            },
+            upsert: true,
+          }),
         }),
-      ]),
-      { ordered: false }
+      ])
     );
   });
 
@@ -2368,9 +2398,9 @@ describe("processBondTurn", () => {
 
     await processBondTurn(10);
 
-    const insertCalls = db.collectionMocks["bondHistory"]!.insertMany.mock.calls;
+    const insertCalls = db.collectionMocks["bondHistory"]!.bulkWrite.mock.calls;
     expect(insertCalls.length).toBe(1);
-    const historyDoc = insertCalls[0][0][0];
+    const historyDoc = insertCalls[0][0][0].updateOne.update.$setOnInsert;
     // totalInterestPaid should be prior ($50) + this turn's coupon
     // perTurnCouponPayment mock returns 10 per call, 2 units = 20 this turn
     expect(historyDoc.totalInterestPaid).toBeGreaterThan(50);

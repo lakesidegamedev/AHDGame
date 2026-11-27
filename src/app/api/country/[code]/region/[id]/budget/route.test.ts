@@ -52,7 +52,7 @@ describe("US budget publication", () => {
     expect(body.grantBreakdownBasis).toBe("current-formula-estimate");
     expect(body.grantBreakdownNote).toMatch(/estimate/i);
   });
-  it("reads cash and debt from the financing ledger when it disagrees with the stored balance", async () => {
+  it("reads current state cash separately from the last financing snapshot", async () => {
     await db.collection("stateBudgets").updateOne(
       { _id: "TX" as never },
       {
@@ -63,7 +63,7 @@ describe("US budget publication", () => {
       }
     );
     const body = await (await request()).json();
-    expect(body.budget.balance).toBe(40);
+    expect(body.budget.balance).toBe(0);
     expect(body.budget.financing.principal).toBe(769);
     expect(body.budget.financing.annualInterest).toBe(38);
   });
@@ -106,3 +106,24 @@ it("publishes regional debt, cash and interest without losing authorized service
     Object.values(budget.spending.byCategory).reduce((sum: number, value) => sum + Number(value), 0)
   ).toBe(100);
 });
+
+it.each(["FR", "IT", "AT", "ES", "FI", "GR"])(
+  "inherits the explicit EUR denomination for %s",
+  async (countryId) => {
+    await db
+      .collection("federalBudget")
+      .insertOne({ _id: countryId as never, countryId, currencyCode: "EUR" });
+    await db.collection("stateBudgets").insertOne({
+      _id: "region" as never,
+      countryId,
+      balance: 100,
+      revenue: { total: 20, federalGrants: 0 },
+      spending: { total: 5, byCategory: {} },
+    });
+    const response = await GET(new Request("http://localhost"), {
+      params: Promise.resolve({ code: countryId, id: "region" }),
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).currencyCode).toBe("EUR");
+  }
+);

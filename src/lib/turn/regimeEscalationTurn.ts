@@ -11,6 +11,7 @@
  * Phase 4 will add Stage 3 auto-faction-split firing here (before step 5);
  * Phase 6 wires the `conventionInProgress` flag + Stage 4 conversion.
  */
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 import type { LeaderReference } from "@/lib/government/leaderReference";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -48,6 +49,18 @@ export interface EscalationTurnResult {
 export async function processRegimeEscalationTurn(
   inp: EscalationTurnInputs
 ): Promise<EscalationTurnResult | null> {
+  return withTurnValueSettlement(
+    inp.db,
+    "regime-escalation",
+    inp.currentTurn,
+    (db) => settleRegimeEscalation({ ...inp, db }),
+    { sourceKey: `${inp.countryId}:${inp.currentTurn}` }
+  );
+}
+
+async function settleRegimeEscalation(
+  inp: EscalationTurnInputs
+): Promise<EscalationTurnResult | null> {
   const coll = getRegimeEscalationCollection(inp.db);
 
   let state = await coll.findOne({ _id: inp.countryId });
@@ -64,6 +77,9 @@ export async function processRegimeEscalationTurn(
   // Expire timed-out decisions first so default actions apply before
   // this turn's dwell/stage compute.
   await expireDecisionsForTurn(inp.db, inp.countryId, inp.currentTurn);
+  const refreshed = await coll.findOne({ _id: inp.countryId });
+  if (!refreshed) throw new Error("Regime escalation state disappeared during resolution");
+  state = refreshed;
 
   // 2. Update dwell counters from this turn's scalar values.
   const newDwell = updateDwellCounters({
@@ -201,14 +217,10 @@ export async function ensureInitialEscalationState(
     createdAt: new Date(),
     updatedAt: new Date(),
   };
-  // Best-effort insert — try/catch handles the MockDb-shape-missing case
-  // and the rare concurrent-init race.
-  try {
-    await coll.insertOne(seed);
-  } catch {
-    /* ignore — defensive against MockDb shape AND concurrent inserts */
-  }
-  return seed;
+  await coll.updateOne({ _id: countryId }, { $setOnInsert: seed }, { upsert: true });
+  const existing = await coll.findOne({ _id: countryId });
+  if (!existing) throw new Error("Regime escalation initialization did not persist");
+  return existing;
 }
 
 function decisionKindForStage(stage: RegimeStage): DecisionKind {

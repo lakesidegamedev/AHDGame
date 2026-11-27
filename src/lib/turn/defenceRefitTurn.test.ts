@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => (await import("@/lib/db/sessionDb")).withSessionDb(db, work),
+}));
+import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { applyDefenceRefit } from "./defenceRefitTurn";
 import { EQUIPMENT_TRACK_MAX, lotsToFillUnit } from "@/lib/military/arsenal";
@@ -11,6 +22,14 @@ interface World {
 
 function stubDb(w: World): Db {
   return {
+    captureRollback: () => {
+      const stock = { ...w.stock },
+        writes = [...w.writes];
+      return () => {
+        Object.assign(w.stock, stock);
+        w.writes.splice(0, w.writes.length, ...writes);
+      };
+    },
     collection: (name: string) => {
       if (name === "militaryUnits") {
         return {
@@ -19,7 +38,7 @@ function stubDb(w: World): Db {
             for (const op of ops as { updateOne: World["writes"][number] }[]) {
               w.writes.push(op.updateOne);
             }
-            return { modifiedCount: ops.length };
+            return { matchedCount: ops.length, modifiedCount: ops.length };
           },
         };
       }

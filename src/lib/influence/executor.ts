@@ -1,18 +1,16 @@
-import { ObjectId } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { localCampaignBalance } from "@/lib/currency/campaignBalance";
 import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import type {
   Character,
-  Election,
   NPP,
   NPPRelationship,
   NPPInfluenceAttempt,
   InfluenceType,
   InfluenceOutcome,
-  ElectionCandidate,
-  GameState,
 } from "@/lib/db/types";
 import {
   calculateInfluenceChance,
@@ -149,10 +147,11 @@ export async function validateInfluenceAttempt(
   return { valid: true };
 }
 
-export async function executeInfluence(
-  input: ExecuteInfluenceInput
+async function executeInfluenceInTransaction(
+  input: ExecuteInfluenceInput,
+  db: Db
 ): Promise<ExecuteInfluenceResult> {
-  const [db, forexEnabled] = await Promise.all([getDb(), isForexEnabled()]);
+  const forexEnabled = await isForexEnabled();
   const actionConfig = INFLUENCE_ACTIONS[input.influenceType];
 
   const character = await charactersCollection(db).findOne({ _id: input.characterId });
@@ -546,4 +545,12 @@ export async function getInfluenceOptions(
     attemptsThisTurn,
     maxAttemptsPerTurn: INFLUENCE_LIMITS.MAX_ATTEMPTS_PER_TURN,
   };
+}
+
+export async function executeInfluence(
+  input: ExecuteInfluenceInput,
+  providedDb?: Db
+): Promise<ExecuteInfluenceResult> {
+  const db = providedDb ?? (await getDb());
+  return withSessionDb(db, (tx) => executeInfluenceInTransaction(input, tx));
 }

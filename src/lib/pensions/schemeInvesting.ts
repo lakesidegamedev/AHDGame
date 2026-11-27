@@ -1,29 +1,6 @@
-/**
- * Pension schemes invest idle cash in index funds as a new HOLDER KIND, not a
- * new fund mechanic: they use creditFundPosition, an $inc on the fund's
- * unitSupply and cashAnchor, and an indexFundTransactions row, whole units at
- * quoted NAV, so the fund's backing ratio is unchanged.
- *
- * Fail closed: if index funds are off this pass does nothing and schemes hold
- * cash; contributions, accruals, benefits and funding ratios all keep working.
- * Investment is optional, never a dependency.
- *
- * The pensionInvestableCashAnchor buffer exists because fund units are not a
- * payment instrument for schemes (no redemption path), so invested cash is
- * unavailable to pensioners; without the buffer a scheme manufactures its own
- * benefit cut.
- */
-
 import type { Db } from "mongodb";
-import type { IndexFund, IndexFundTransaction } from "@/lib/db/types/indexFund";
-import type { PensionScheme } from "@/lib/db/types/pensionScheme";
-import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import { emitTx } from "@/lib/financialTxLog/emit";
-import { creditFundPosition, insertFundTransaction } from "@/lib/indexFunds/fundQueries";
-import { pensionInvestableCashAnchor } from "./rules";
-import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
-import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
+import { runStampedPensionSchemeInvestments } from "./schemeInvestingStamped";
+export { chooseSchemeFund } from "./rules/chooseSchemeFund";
 
 export interface PensionInvestingResult {
   schemesInvesting: number;
@@ -31,131 +8,10 @@ export interface PensionInvestingResult {
   errors: string[];
 }
 
-/**
- * Choose where a scheme invests.
- *
- * A scheme is a conservative, mandate-bound institution, not a stock picker:
- * the country-scoped broad index for its own country, falling back to the
- * global broad index when its country has none. Sector funds are deliberately
- * not eligible. Concentrating a country's pensions in the sector its members
- * work in is exactly the failure mode occupational schemes are regulated
- * against, and the game does not need a scheme whose assets collapse in the
- * same turn its employer does.
- */
-export function chooseSchemeFund(funds: IndexFund[], countryId: string): IndexFund | null {
-  const eligible = funds.filter(
-    (f) => f.status === "active" && f.kind === "broad" && f.mandate?.mode !== "picked_stocks"
-  );
-  const home = eligible.find((f) => f.scope === "country" && f.countryId === countryId);
-  if (home) return home;
-  return eligible.find((f) => f.scope === "global") ?? null;
-}
-
+/** Every resilience stage uses frozen investment terms and resumes pending cash first. */
 export async function runPensionSchemeInvestments(
   db: Db,
   currentTurn: number
 ): Promise<PensionInvestingResult> {
-  const result: PensionInvestingResult = { schemesInvesting: 0, investedAnchor: 0, errors: [] };
-
-  const schemes = await pensionSchemesCollection<PensionScheme>(db)
-    .find({ assetsAnchor: { $gt: 0 } })
-    .toArray();
-  if (schemes.length === 0) return result;
-
-  const funds = await indexFundsCollection<IndexFund>(db)
-    .find({ status: "active", kind: "broad", "mandate.mode": { $ne: "picked_stocks" } })
-    .toArray();
-  if (funds.length === 0) return result;
-
-  for (const scheme of schemes) {
-    try {
-      const investable = pensionInvestableCashAnchor({
-        cashAnchor: scheme.assetsAnchor,
-        benefitsInPaymentAnchor: scheme.benefitsInPaymentAnchor ?? 0,
-      });
-      if (investable <= 0) continue;
-
-      const fund = chooseSchemeFund(funds, scheme.countryId);
-      if (!fund) continue;
-      // A fund quoting at or below zero cannot price units. Skipping is the
-      // fail-closed reading; buying at a nonsense NAV would hand the scheme
-      // units it did not pay for, which is a mint.
-      if (!Number.isFinite(fund.quotedNav) || fund.quotedNav <= 0) continue;
-
-      const units = Math.floor(investable / fund.quotedNav);
-      if (units < 1) continue;
-      // Cost is derived from WHOLE units at NAV, never from `investable`, so the
-      // ₳ that leave the scheme and the ₳ that arrive at the fund are the same
-      // number by construction.
-      const costAnchor = units * fund.quotedNav;
-
-      const now = new Date();
-      // Guarded debit first. If the scheme's cash moved since the read (the
-      // benefit pass runs earlier in the same turn), no units are issued.
-      const debit = await pensionSchemesCollection<PensionScheme>(db).updateOne(
-        { _id: scheme._id, assetsAnchor: { $gte: costAnchor } },
-        {
-          $inc: { assetsAnchor: -costAnchor, totalInvestedAnchor: costAnchor },
-          $set: { updatedAt: now },
-        }
-      );
-      if (debit.matchedCount === 0) continue;
-
-      await creditFundPosition(
-        db,
-        fund._id,
-        "pension_scheme",
-        { pensionSchemeId: scheme._id },
-        units,
-        fund.quotedNav
-      );
-      await indexFundsCollection<IndexFund>(db).updateOne(
-        { _id: fund._id },
-        { $inc: { unitSupply: units, cashAnchor: costAnchor }, $set: { updatedAt: now } }
-      );
-      await insertFundTransaction(db, {
-        fundId: fund._id,
-        kind: "subscription",
-        turn: currentTurn,
-        holderKind: "pension_scheme",
-        pensionSchemeId: scheme._id,
-        units,
-        navAnchor: fund.quotedNav,
-        amountAnchor: costAnchor,
-        note: `${scheme.unionName} pension scheme`,
-        createdAt: now,
-      } as Omit<IndexFundTransaction, "_id">);
-
-      await emitTx(db, {
-        type: "index_fund_subscribe",
-        turn: currentTurn,
-        createdAt: now,
-        subjectType: "pension_scheme",
-        subjectId: scheme._id,
-        subjectName: `${scheme.unionName} pension scheme`,
-        amount: -costAnchor,
-        anchorAmount: -costAnchor,
-        currencyCode: (COUNTRY_CURRENCY_MAP[scheme.countryId] ?? "USD") as CurrencyCode,
-        counterpartyType: "system",
-        counterpartyName: fund.name,
-        meta: {
-          schemeId: scheme._id.toString(),
-          fundId: fund._id.toString(),
-          fundSlug: fund.slug,
-          fundCurrency: fund.anchorCurrencyCode,
-          units,
-          navAnchor: fund.quotedNav,
-          source: "cron",
-        },
-      });
-
-      result.schemesInvesting += 1;
-      result.investedAnchor += costAnchor;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      result.errors.push(`Scheme ${scheme._id.toString()}: ${message}`);
-    }
-  }
-
-  return result;
+  return runStampedPensionSchemeInvestments(db, currentTurn);
 }
