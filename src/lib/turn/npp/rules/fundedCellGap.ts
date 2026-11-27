@@ -1,16 +1,10 @@
 /**
  * Unmet demand for one output leg of an NPP placement cell, read from the
- * funded order book the player build dialog uses (corporations/buildRoom,
- * rules/fundedBuildDemand): cash-backed orders less what buyers received.
- *
- * The price documents' state and national demand leave out government buying
- * and, for goods sold country-wide or world-wide, company building spending.
- * Read from them, a market 79% short (timber, US, turn 239) showed a sixth of
- * its gap and a market 98% short (ordnance, China) showed none, so NPPs never
- * built into either. The price documents remain the reading on a world that
- * has no funded book.
- *
- * Plain data in, plain data out.
+ * funded order book the player build dialog uses (rules/fundedBuildDemand):
+ * cash-backed orders less what buyers received. The price documents' state and
+ * national demand omit government buying and company build spending for goods
+ * sold beyond one region, so they hid real shortages from NPPs. They remain the
+ * reading only on a world with no funded book. Plain data in, plain data out.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { BuildDemandRow } from "@/lib/corporations/rules/fundedBuildDemand";
