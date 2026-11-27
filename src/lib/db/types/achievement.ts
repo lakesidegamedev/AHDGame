@@ -25,4 +25,10 @@ export interface CharacterAchievement {
   achievementId: ObjectId;
   earnedAt: Date;
   grantedBy?: ObjectId;
+  /**
+   * Name of the character that earned it, stored at award time so the award
+   * keeps that name after the character is retired or replaced. Older rows
+   * have none.
+   */
+  characterName?: string;
 }

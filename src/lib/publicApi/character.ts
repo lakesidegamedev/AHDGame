@@ -26,6 +26,7 @@ import { electionCandidatesCollection } from "@/lib/db/repositories/electionCand
 import { usersCollection } from "@/lib/db/repositories/users";
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { earnedAsName } from "@/lib/achievements/earnedAs";
 import { investorRankingSnapshotsCollection } from "@/lib/db/repositories/investorRankingSnapshots";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
@@ -348,6 +349,7 @@ export async function queryCharacterAchievements(
     isHidden: boolean;
     isHighlighted: boolean;
     earnedAt: string | null;
+    earnedAs: string | null;
   }>;
 } | null> {
   const char = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
@@ -381,6 +383,7 @@ export async function queryCharacterAchievements(
       isHidden: def?.isHidden ?? false,
       isHighlighted: highlightedIds.has(e.achievementId.toString()),
       earnedAt: e.earnedAt?.toISOString() ?? null,
+      earnedAs: earnedAsName(e.characterName, char.name),
     };
   });
 

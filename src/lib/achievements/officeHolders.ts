@@ -11,6 +11,7 @@ import { invalidateRarityCache } from "./cache";
 import { resolveOfficeHolderGrants } from "./officeHolderRules";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { loadCharacterNames, withCharacterName } from "./characterNames";
 
 export async function awardOfficeHolderAchievements(
   db: Db,
@@ -82,8 +83,15 @@ export async function awardOfficeHolderAchievements(
     }
     if (docs.length === 0) return 0;
 
+    const names = await loadCharacterNames(
+      db,
+      docs.map((doc) => doc.characterId)
+    );
     try {
-      await col.insertMany(docs, { ordered: false });
+      await col.insertMany(
+        docs.map((doc) => withCharacterName(doc, names)),
+        { ordered: false }
+      );
     } catch (error: unknown) {
       const duplicateOnly =
         error != null && typeof error === "object" && (error as { code?: number }).code === 11000;

@@ -83,7 +83,7 @@ export async function runBackfill(db: Db, apply: boolean): Promise<BackfillGrant
     .toArray()) as Achievement[];
   const characterDocs = await db
     .collection("characters")
-    .find({}, { projection: { _id: 1, userId: 1, createdAt: 1, funds: 1 } })
+    .find({}, { projection: { _id: 1, userId: 1, name: 1, createdAt: 1, funds: 1 } })
     .toArray();
   const heldRows = await db
     .collection("characterAchievements")
@@ -122,14 +122,25 @@ export async function runBackfill(db: Db, apply: boolean): Promise<BackfillGrant
 
   if (apply && grants.length > 0) {
     const now = new Date();
+    const nameById = new Map(
+      characterDocs.flatMap((doc) =>
+        typeof doc.name === "string" && doc.name.trim()
+          ? [[doc._id.toString(), doc.name.trim()] as const]
+          : []
+      )
+    );
     await db.collection("characterAchievements").insertMany(
-      grants.map((grant) => ({
-        _id: new ObjectId(),
-        userId: grant.userId,
-        characterId: grant.characterId,
-        achievementId: grant.achievementId,
-        earnedAt: now,
-      })),
+      grants.map((grant) => {
+        const characterName = nameById.get(grant.characterId.toString());
+        return {
+          _id: new ObjectId(),
+          userId: grant.userId,
+          characterId: grant.characterId,
+          achievementId: grant.achievementId,
+          earnedAt: now,
+          ...(characterName ? { characterName } : {}),
+        };
+      }),
       { ordered: false }
     );
   }
