@@ -53,17 +53,9 @@ export function computeInfamyPenalty(infamy: number, maxPenalty: number): number
 }
 
 /**
- * Flat per-turn bonus from leadership roles (stackable).
- * National Chair +5, Vice Chair +2, Treasurer +2, National Committee +1.
- * State Chair +2, State Vice Chair +1 (passed via options — state roles live
- * on `statePartyOrg`, not the national party doc).
- * Caucus Chair +2, Caucus Vice Chair +1, only for a caucus with at least
- * CAUCUS_BONUS_MIN_MEMBERS active members (passed via options — caucus roles
- * live on the `caucuses` collection, mirroring the state-org shape/magnitude).
- *
- * Chair bonuses are sized so party leadership accumulates partyInfluence
- * faster, which now feeds both the presidential-primary snapshot score and
- * the state-by-state vote weight.
+ * Flat per-turn bonus from leadership roles (stackable). National: chair +5,
+ * vice chair or treasurer +2, committee +1. State and caucus roles come in via
+ * options: chair +2, vice chair +1. Feeds primary score and vote weight.
  */
 export function computeLeadershipBonus(
   characterId: ObjectId,
