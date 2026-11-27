@@ -91,6 +91,38 @@ export function computeLeadershipBonus(
 }
 
 /**
+ * State-party and caucus roles one character holds, read the same way the
+ * turn reads them, so screens that preview the per-turn gain show the same
+ * leadership bonus the turn pays.
+ */
+export async function loadLeadershipBonusOptions(
+  db: Awaited<ReturnType<typeof getDb>>,
+  characterId: ObjectId
+): Promise<NonNullable<Parameters<typeof computeLeadershipBonus>[2]>> {
+  const [stateOrgs, caucuses] = await Promise.all([
+    statePartyOrgCollection(db)
+      .find(
+        { $or: [{ chairId: characterId }, { viceChairId: characterId }] },
+        { projection: { chairId: 1, viceChairId: 1 } }
+      )
+      .toArray(),
+    caucusesCollection(db)
+      .find(
+        { disbandedAt: null, $or: [{ chairId: characterId }, { viceChairId: characterId }] },
+        { projection: { chairId: 1, viceChairId: 1 } }
+      )
+      .toArray(),
+  ]);
+  const holds = (id: unknown) => id != null && String(id) === characterId.toString();
+  return {
+    isStateChair: stateOrgs.some((o) => holds(o.chairId)),
+    isStateViceChair: stateOrgs.some((o) => holds(o.viceChairId)),
+    isCaucusChair: caucuses.some((c) => holds(c.chairId)),
+    isCaucusViceChair: caucuses.some((c) => holds(c.viceChairId)),
+  };
+}
+
+/**
  * Per-turn change to partyInfluence (can be negative when infamy is high).
  */
 export function computeTurnGain(
