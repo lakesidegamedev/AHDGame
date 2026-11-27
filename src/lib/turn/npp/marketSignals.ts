@@ -240,6 +240,7 @@ export interface PlacementSignals {
       stateId: string;
       countryId: string;
       sectorType: string;
+      strategyId?: string | null;
     },
     units: number
   ) => void;
@@ -259,6 +260,7 @@ export interface PlacementSignals {
       stateId: string;
       countryId: string;
       sectorType: string;
+      strategyId?: string | null;
       units: number;
     }[],
     options?: { strategyId?: string | null; aggregate?: "mean" | "max" }

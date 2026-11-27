@@ -257,6 +257,9 @@ export function decideNppFounding({
           sectorType: foundingTarget.sectorType as CorporationType,
           units: buildUnits,
           countryId: foundingTarget.countryId,
+          ...(foundingTarget.sectorType === "extraction"
+            ? { strategyId: foundingStrategyId ?? null }
+            : {}),
         });
         cashLocal = entryCapital - foundingCost;
         foundingCashLocal = foundingCost;

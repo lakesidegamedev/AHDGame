@@ -29,6 +29,8 @@ interface PaceCell {
   stateId: string;
   countryId: string;
   sectorType: string;
+  /** Extraction recipe, so a mine's pace reads its own resource's gap. */
+  strategyId?: string | null;
 }
 
 /** The snapshot one turn before the loaded price books; empty when none exists. */
@@ -86,8 +88,9 @@ export function createPricePersistence(
 
 /**
  * Ledger of capacity granted this pass, and the room left in a cell. A cell
- * shares its grants with the gap it is measured against (`gapKey`) and with
- * its country and lane.
+ * shares its grants with the gap it is measured against (`gapKey`). The gap is
+ * read net of the capacity under construction when the pass started
+ * (`inFlightOf`); grants made during the pass are counted here instead.
  */
 export function createPaceLedger(keys: {
   gapKeyOf: (cell: PaceCell) => string;
@@ -95,37 +98,35 @@ export function createPaceLedger(keys: {
     cell: PaceCell,
     options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
   ) => number | null;
+  /** Undelivered queued capacity against a gap when the pass started. */
+  inFlightOf?: (gapKey: string) => number;
 }) {
   const byGap = new Map<string, number>();
-  const byLane = new Map<string, number>();
-  const laneKeyOf = (cell: PaceCell) => `${cell.countryId}|${cell.sectorType}`;
-  const bump = (map: Map<string, number>, key: string, units: number) =>
-    map.set(key, (map.get(key) ?? 0) + units);
   return {
     grant(cell: PaceCell, units: number) {
       if (!Number.isFinite(units) || units <= 0) return;
-      bump(byGap, keys.gapKeyOf(cell), units);
-      bump(byLane, laneKeyOf(cell), units);
+      byGap.set(keys.gapKeyOf(cell), (byGap.get(keys.gapKeyOf(cell)) ?? 0) + units);
     },
     roomOf(
       cell: PaceCell,
       pending: readonly (PaceCell & { units: number })[],
       options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
     ): number {
-      const gapKey = keys.gapKeyOf(cell);
-      const laneKey = laneKeyOf(cell);
+      const gapKey = keys.gapKeyOf({ ...cell, strategyId: options?.strategyId ?? cell.strategyId });
       let pendingGap = 0;
-      let pendingLane = 0;
       for (const claim of pending) {
         if (!(claim.units > 0)) continue;
         if (keys.gapKeyOf(claim) === gapKey) pendingGap += claim.units;
-        if (laneKeyOf(claim) === laneKey) pendingLane += claim.units;
       }
+      const gross = keys.grossUnmetOf(cell, options);
+      const inFlight = keys.inFlightOf?.(gapKey) ?? 0;
       const starter = foundingStarterUnits(cell.sectorType as CorporationType);
       return paceRoomUnits({
-        grossUnmetUnits: keys.grossUnmetOf(cell, options),
+        netUnmetUnits:
+          gross == null || !Number.isFinite(gross)
+            ? null
+            : Math.max(0, gross - (Number.isFinite(inFlight) ? Math.max(0, inFlight) : 0)),
         grantedAgainstGapUnits: (byGap.get(gapKey) ?? 0) + pendingGap,
-        grantedInLaneUnits: (byLane.get(laneKey) ?? 0) + pendingLane,
         plantUnits: starter,
       });
     },
