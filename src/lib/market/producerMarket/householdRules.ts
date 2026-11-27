@@ -7,6 +7,7 @@ import {
   demandSteps,
   incomeAdjustedWeights,
 } from "@/lib/market/rules/demandCurve";
+import { storeRoutedShare, wholesaleBudget } from "@/lib/stores/rules/storeRules";
 
 export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> = {
   food: 0.14,
@@ -17,7 +18,7 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
   energy: 0.06,
   vehicles: 0.06,
   electronics: 0.05,
-  retail: 0.11,
+  consumer_goods: 0.11,
   advertising: 0.04,
   network_services: 0.05,
   financial_services: 0.05,
@@ -49,6 +50,12 @@ export function householdPurchaseOrders(input: {
     weight: number;
     eligibleOfferIds?: readonly string[];
   }[];
+  /**
+   * Stores resell some goods to households at cost plus a markup. `coverage` is
+   * the share of the state's store-routed demand its stores can serve; the rest
+   * is bought direct at the producer price. Absent: every good is bought direct.
+   */
+  stores?: { markup: number; coverage: number };
   /**
    * Absent: one order per good. Present: basket weights shift with `incomeIndex` and each good becomes a price ladder; see market/rules/demandCurve.
    */
@@ -82,8 +89,9 @@ export function householdPurchaseOrders(input: {
   }
   if (!Number.isFinite(totalWeight)) throw new Error("Invalid household basket total");
   if (totalWeight === 0) return [];
-  if (input.demandCurve) return demandCurveOrders(input, input.demandCurve);
-  return [...input.products]
+  const items = withStoreItems(input.products, input.stores);
+  if (input.demandCurve) return demandCurveOrders(input, items, input.demandCurve);
+  return [...items]
     .sort((a, b) =>
       a.commodity < b.commodity
         ? -1
@@ -96,9 +104,15 @@ export function householdPurchaseOrders(input: {
               : 0
     )
     .map((p) => {
-      const maximumSpend = input.cash * input.spendFraction * (p.weight / totalWeight);
+      const maximumSpend =
+        input.cash * input.spendFraction * (p.weight / totalWeight) * p.budgetScale;
       return {
-        id: JSON.stringify([input.accountId, "consumption", p.commodity, p.book]),
+        id: JSON.stringify(
+          p.viaStore
+            ? [input.accountId, "consumption-store", p.commodity, p.book]
+            : [input.accountId, "consumption", p.commodity, p.book]
+        ),
+        ...(p.viaStore ? { storeRouted: true as const } : {}),
         // Household demand must not inherit country/account id priority.
         // The matcher still applies each order's route, price and cash limits.
         fairShare: input.fairShare === false ? undefined : true,
@@ -115,6 +129,44 @@ export function householdPurchaseOrders(input: {
     });
 }
 
+type BasketProduct = Parameters<typeof householdPurchaseOrders>[0]["products"][number];
+type BasketItem = BasketProduct & {
+  /** Bought through a store: the order buys at wholesale and the store adds its markup. */
+  viaStore: boolean;
+  /** Multiplies the good's budget: 1 direct, 1 / (1 + markup) through a store. */
+  budgetScale: number;
+};
+
+/**
+ * Splits each store good into a direct line and a store line. The store line
+ * carries the served share of the good's weight; the unserved share stays
+ * direct at the producer price. Total weight is unchanged.
+ */
+function withStoreItems(
+  products: BasketProduct[] | readonly BasketProduct[],
+  stores: { markup: number; coverage: number } | undefined
+): BasketItem[] {
+  const items: BasketItem[] = [];
+  for (const p of products) {
+    const served = stores ? storeRoutedShare(p.commodity) * clamp01(stores.coverage) : 0;
+    const routed = p.weight * served;
+    if (stores && routed > 0)
+      items.push({
+        ...p,
+        weight: routed,
+        viaStore: true,
+        budgetScale: wholesaleBudget(1, stores.markup),
+      });
+    if (p.weight - routed > 0 || routed === 0)
+      items.push({ ...p, weight: p.weight - routed, viaStore: false, budgetScale: 1 });
+  }
+  return items;
+}
+
+function clamp01(n: number): number {
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
+}
+
 /**
  * Ladder orders for one wallet. The top step of each good keeps the id, units
  * and ceiling the single order had, so turning the stage on only adds units at
@@ -123,9 +175,10 @@ export function householdPurchaseOrders(input: {
  */
 function demandCurveOrders(
   input: Parameters<typeof householdPurchaseOrders>[0],
+  items: readonly BasketItem[],
   curve: { incomeIndex?: number }
 ): PurchaseOrder[] {
-  const products = incomeAdjustedWeights(input.products, curve.incomeIndex ?? 1);
+  const products = incomeAdjustedWeights(items, curve.incomeIndex ?? 1);
   const totalWeight = products.reduce((n, p) => n + p.weight, 0);
   if (!(totalWeight > 0)) return [];
   const orders: PurchaseOrder[] = [];
@@ -140,11 +193,16 @@ function demandCurveOrders(
             ? 1
             : 0
   )) {
-    const budget = input.cash * input.spendFraction * (p.weight / totalWeight);
+    const budget = input.cash * input.spendFraction * (p.weight / totalWeight) * p.budgetScale;
     // Every step of this good shares one budget in the matcher, so the steps
     // together never spend more than the good's share at any mix of prices.
     const spendGroup = {
-      id: JSON.stringify([input.accountId, "consumption-budget", p.commodity, p.book]),
+      id: JSON.stringify([
+        input.accountId,
+        p.viaStore ? "consumption-store-budget" : "consumption-budget",
+        p.commodity,
+        p.book,
+      ]),
       maximumSpend: budget,
     };
     for (const step of demandSteps({
@@ -156,9 +214,21 @@ function demandCurveOrders(
         fairShare: input.fairShare === false ? undefined : true,
         id: JSON.stringify(
           step.step === 0
-            ? [input.accountId, "consumption", p.commodity, p.book]
-            : [input.accountId, "consumption", p.commodity, p.book, step.step]
+            ? [
+                input.accountId,
+                p.viaStore ? "consumption-store" : "consumption",
+                p.commodity,
+                p.book,
+              ]
+            : [
+                input.accountId,
+                p.viaStore ? "consumption-store" : "consumption",
+                p.commodity,
+                p.book,
+                step.step,
+              ]
         ),
+        ...(p.viaStore ? { storeRouted: true as const } : {}),
         accountId: input.accountId,
         commodity: p.commodity,
         book: p.book,

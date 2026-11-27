@@ -1,4 +1,5 @@
 import { recordedSectorTax } from "@/lib/corporations/rules/sectorTaxes";
+import { storeGoodsResoldDaily } from "@/lib/stores/rules/storeRevenueDisplay";
 import { loadOwnTruckTeuByState } from "@/lib/corporations/ownTruckHaul";
 import { ownSiteDeliveries } from "@/lib/corporations/ownSiteDeliveries";
 import type { CountryOperatingTotals } from "./countryStatements";
@@ -249,6 +250,8 @@ export interface SectorFinancialTotals {
   totalLaborCosts: number;
   totalFreightCosts?: number;
   totalFreightIncome?: number;
+  /** Stores: wholesale value of goods resold, inside totalRevenue and charged as its own cost. */
+  totalStoreGoodsCost?: number;
 }
 
 export interface PhysicalRollups {
@@ -325,6 +328,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   let totalRegulatoryBurden = 0;
   let totalLaborCosts = 0;
   let totalFreightCosts = 0;
+  let totalStoreGoodsCost = 0;
   let totalFreightIncome = 0;
   const wageBillAnchorPerTurnBySectorId = new Map<string, number>();
 
@@ -529,6 +533,16 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const freightCost = sectorFieldToCorpCcy(sector.freightBillingCharge ?? 0, sector);
     const freightIncome = revenueBasis.freightIncomeLocal;
     const financialRevenue = revenueBasis.financialRevenueLocal;
+    // A store's revenue is shown at the full value of the goods it sold to
+    // households, with what it paid producers as
+    // its own cost line, so profit is still the markup less running costs.
+    // The engine's economic revenue stays the markup: compliance, overhead and
+    // revenue effects are charged on it, and nothing here changes them.
+    const storeGoodsCost = sectorFieldToCorpCcy(
+      storeGoodsResoldDaily(sector, TURNS_PER_DAY, sectorFieldToAnchor(1, sector)),
+      sector
+    );
+    const shownRevenue = financialRevenue + storeGoodsCost;
     // Ownership terms the turn applies inside the margin stack: SOE efficiency
     // (spec §11.3), expropriation risk (spec §12.4 feed 1), economic-model
     // alignment (§6.2). Same shared functions and inputs as the turn.
@@ -686,7 +700,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ? sectorFieldToCorpCcy(enginePnl.compliance, sector)
       : (fundedCompliance ?? financialRevenue * regulatoryBurdenRate);
     // Freight settles alongside plantsPnl, so neither leg is in its totals.
-    totalRevenue += financialRevenue;
+    totalRevenue += shownRevenue;
+    totalStoreGoodsCost += storeGoodsCost;
     totalFreightCosts += freightCost;
     totalFreightIncome += freightIncome;
     totalMaintenanceCosts += maintenance;
@@ -710,11 +725,13 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       maintenance: 0,
       labor: 0,
       freightCosts: 0,
+      storeGoodsCost: 0,
       growthCosts: 0,
       regulatoryBurden: 0,
     });
     country.sectorCount += 1;
-    country.revenue += financialRevenue;
+    country.revenue += shownRevenue;
+    country.storeGoodsCost = (country.storeGoodsCost ?? 0) + storeGoodsCost;
     country.freightIncome += freightIncome;
     country.maintenance += maintenance;
     if (sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
@@ -902,11 +919,15 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       // Suspended by a total embargo the operating country has against this
       // corp's nation — surfaced so the $0 reads as a suspension, not a bug.
       embargoSuspended: sector.embargoSuspended ?? false,
-      financialRevenue: Math.round(financialRevenue),
+      financialRevenue: Math.round(shownRevenue),
+      /** Store only: wholesale value of the goods resold, inside `financialRevenue`. */
+      storeGoodsCost: Math.round(storeGoodsCost),
       // Exact realized revenue when persisted (null on not-yet-reprocessed
       // sectors, where financialRevenue used the blended-ratio fallback).
       realizedRevenue:
-        sectorRealizedRevenueLocal != null ? Math.round(sectorRealizedRevenueLocal) : null,
+        sectorRealizedRevenueLocal != null
+          ? Math.round(sectorRealizedRevenueLocal + storeGoodsCost)
+          : null,
       profitMargin: sector.profitMargin,
       effectiveProfitMargin,
       effectiveMarginModelled: sector.effectiveMarginModelled === true,
@@ -1016,6 +1037,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       totalLaborCosts,
       totalFreightCosts,
       totalFreightIncome,
+      totalStoreGoodsCost,
     },
     wageBillAnchorPerTurnBySectorId,
     physicalRollups: {

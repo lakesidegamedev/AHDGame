@@ -12,6 +12,8 @@ import { settlePriorProducerPayables } from "./payablesRules";
 import { creditRunShare, producerCreditHeadroom } from "./producerCreditRules";
 import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
 import { householdPurchaseOrders } from "./householdRules";
+import { settleStoreSales, type StoreCoverageRow } from "./storeSalesRules";
+import { storeCoverage, storeRoutedShare } from "@/lib/stores/rules/storeRules";
 import { makeDoOutput } from "./makeDoRules";
 import type {
   ProducerEconomyInput,
@@ -466,13 +468,89 @@ export function advanceProducerEconomy(
   };
   const householdIds = new Set<string>();
   let consumerOrders = [...(input.externalOrders ?? [])];
+  // Stores resell goods to the households of their own state. Capacity is what
+  // a state's stores could resell at a full run; the share of the store-routed
+  // demand it covers is fixed from the opening budgets, and the rest is bought
+  // direct from producers.
+  const storeMarkup = input.storeMarkup;
+  const storeRunUnitsByState = new Map<string, number>();
+  const storeCapacityByState = new Map<string, number>();
+  const storeSites: {
+    storeId: string;
+    accountId: string;
+    stateId: string;
+    capacityValue: number;
+  }[] = [];
+  if (storeMarkup != null)
+    for (const p of plans) {
+      if (!p.store || !p.stateId) continue;
+      const capacityValue =
+        p.capacityUnits * p.activeFraction * p.outputMultiplier * p.store.resaleValuePerRunUnit;
+      if (!(capacityValue > 0)) continue;
+      storeSites.push({ storeId: p.id, accountId: p.accountId, stateId: p.stateId, capacityValue });
+      storeRunUnitsByState.set(
+        p.stateId,
+        (storeRunUnitsByState.get(p.stateId) ?? 0) +
+          p.capacityUnits * p.activeFraction * p.outputMultiplier
+      );
+      storeCapacityByState.set(
+        p.stateId,
+        (storeCapacityByState.get(p.stateId) ?? 0) + capacityValue
+      );
+    }
+  const storeCoverageByState: Record<string, StoreCoverageRow> = {};
+  if (storeMarkup != null) {
+    const routedDemand = new Map<string, number>();
+    for (const household of input.households ?? []) {
+      if (!household.stateId) continue;
+      const total = household.products.reduce((n, pr) => n + Math.max(0, pr.weight), 0);
+      if (!(total > 0)) continue;
+      // What the routed share will actually spend: an order buys at the clearing
+      // price, under its ceiling, so the last clearing over the ceiling is the
+      // share of its budget it spends. Coverage on the raw budget would leave a
+      // full store's capacity unused.
+      const routedWeight = household.products.reduce((n, pr) => {
+        const clearing = input.clearingPriceByLane?.[laneKeyOf(pr.commodity, pr.book)];
+        const spent =
+          clearing != null && clearing > 0 && pr.maximumUnitPrice > 0
+            ? Math.min(1, clearing / pr.maximumUnitPrice)
+            : 1;
+        return n + Math.max(0, pr.weight) * storeRoutedShare(pr.commodity) * spent;
+      }, 0);
+      routedDemand.set(
+        household.stateId,
+        (routedDemand.get(household.stateId) ?? 0) +
+          householdBudgetCash(household) * household.spendFraction * (routedWeight / total)
+      );
+    }
+    for (const [stateId, routedDemandValue] of routedDemand) {
+      const capacityValue = storeCapacityByState.get(stateId) ?? 0;
+      storeCoverageByState[stateId] = {
+        capacityValue,
+        runUnits: storeRunUnitsByState.get(stateId) ?? 0,
+        routedDemandValue,
+        coverage: storeCoverage(capacityValue, routedDemandValue),
+      };
+    }
+  }
+  const householdOrdersFor = (household: NonNullable<typeof input.households>[number]) =>
+    householdPurchaseOrders({
+      ...household,
+      cash: householdBudgetCash(household),
+      ...(storeMarkup != null && household.stateId
+        ? {
+            stores: {
+              markup: storeMarkup,
+              coverage: storeCoverageByState[household.stateId]?.coverage ?? 0,
+            },
+          }
+        : {}),
+    });
   for (const household of input.households ?? []) {
     if (householdIds.has(household.accountId) || !cash.has(household.accountId))
       throw new Error("Duplicate or unknown household wallet");
     householdIds.add(household.accountId);
-    consumerOrders.push(
-      ...householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
-    );
+    consumerOrders.push(...householdOrdersFor(household));
   }
   // Unmet local healthcare demand may buy from neighbouring states (stateServiceSpillRules).
   markStateServiceSpill(consumerOrders);
@@ -666,11 +744,39 @@ export function advanceProducerEconomy(
   for (const p of plans)
     if (!(plannedById.get(p.id)! > 0)) plannedById.set(p.id, physicalMaximum.get(p.id)!);
   clock.lap("economySetupMs");
+  // A store runs, staffs and buys running supplies only for the goods its
+  // households bought through it. Store-routed orders are fixed from the
+  // opening budgets, so the store's run never changes what it resells.
+  const storeSiteById = new Map(storeSites.map((s) => [s.storeId, s]));
+  const storeResaleRunUnits = (
+    settled: ReturnType<typeof settleProducerMarket>
+  ): Map<string, number> => {
+    const out = new Map<string, number>();
+    if (storeSiteById.size === 0) return out;
+    const spent = new Map(settled.orders.map((o) => [o.id, o.cost]));
+    const routedByState = new Map<string, number>();
+    for (const order of consumerOrders)
+      if (order.storeRouted && order.stateId)
+        routedByState.set(
+          order.stateId,
+          (routedByState.get(order.stateId) ?? 0) + Math.max(0, spent.get(order.id) ?? 0)
+        );
+    for (const p of plans) {
+      const site = storeSiteById.get(p.id);
+      const stateCapacity = site ? (storeCapacityByState.get(site.stateId) ?? 0) : 0;
+      if (!site || !p.store || !(p.store.resaleValuePerRunUnit > 0) || !(stateCapacity > 0))
+        continue;
+      const resold = ((routedByState.get(site.stateId) ?? 0) * site.capacityValue) / stateCapacity;
+      out.set(p.id, resold / p.store.resaleValuePerRunUnit);
+    }
+    return out;
+  };
   for (let pass = 0; pass < passes; pass++) {
     const passStarted = performance.now();
     market = trial();
     clock.lap("planningTrialMs");
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
+    const storeResale = storeResaleRunUnits(market);
     let changed = cutShortCredit(market);
     planning.siteChanges = [];
     for (const p of plans) {
@@ -693,7 +799,9 @@ export function advanceProducerEconomy(
           fill: need > 0 ? Math.min(1, have / need) : previous > 0 ? 1 : 0,
         };
       });
-      const target = makeDoOutput(originalPlan.get(p.id)!, fills);
+      const madeDo = makeDoOutput(originalPlan.get(p.id)!, fills);
+      const resale = storeResale.get(p.id);
+      const target = resale == null ? madeDo : Math.min(madeDo, resale);
       // Falls apply at once; rises are damped so the cycle settles.
       const damped = target <= previous ? target : (previous + target) / 2;
       // A plan that has decayed to a negligible share of the original is zero.
@@ -780,9 +888,7 @@ export function advanceProducerEconomy(
   if (billedRunShare.size > 0 && householdIds.size > 0)
     consumerOrders = [
       ...(input.externalOrders ?? []),
-      ...(input.households ?? []).flatMap((household) =>
-        householdPurchaseOrders({ ...household, cash: householdBudgetCash(household) })
-      ),
+      ...(input.households ?? []).flatMap((household) => householdOrdersFor(household)),
     ];
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
@@ -926,6 +1032,43 @@ export function advanceProducerEconomy(
     cashChanges.transfer(plan.accountId, plan.labourRecipientAccountId, paid.labour);
     cashChanges.transfer(plan.accountId, plan.operatingRecipientAccountId, paid.operating);
   }
+  const storeSales =
+    storeMarkup != null && (storeSites.length > 0 || householdIds.size > 0)
+      ? settleStoreSales({
+          markup: storeMarkup,
+          orders: consumerOrders,
+          results: new Map(market.orders.map((o) => [o.id, o])),
+          householdAccountIds: householdIds,
+          stores: storeSites,
+          coverageByState: storeCoverageByState,
+        })
+      : undefined;
+  for (const t of storeSales?.transfers ?? [])
+    cashChanges.transfer(t.fromAccountId, t.toAccountId, t.amount);
+  // A store's turn: the markup is its revenue, the goods it resold are its
+  // throughput. Wholesale value is bought by the household at the producer's
+  // price, so it adds nothing to the store's own cash or profit.
+  for (const row of storeSales?.stores ?? []) {
+    const result = results.find((r) => r.id === row.storeId);
+    const plan = plans.find((p) => p.id === row.storeId);
+    if (!result || !plan?.store) continue;
+    const runUnits = plan.capacityUnits * plan.activeFraction * plan.outputMultiplier;
+    const soldRunUnits =
+      plan.store.resaleValuePerRunUnit > 0
+        ? Math.min(runUnits, row.goodsBoughtWholesale / plan.store.resaleValuePerRunUnit)
+        : 0;
+    result.store = {
+      goodsBoughtWholesale: row.goodsBoughtWholesale,
+      markupEarned: row.markupEarned,
+      wholesaleByCommodity: row.wholesaleByCommodity,
+    };
+    result.offeredUnits = runUnits;
+    result.soldUnits = soldRunUnits;
+    result.deliveredUnits = soldRunUnits;
+    result.revenue += row.markupEarned;
+    result.profit += row.markupEarned;
+    result.cashFlow += row.markupEarned;
+  }
   const movements = cashChanges.rows();
   clock.lap("resultsMs");
   return {
@@ -953,6 +1096,7 @@ export function advanceProducerEconomy(
         }
       : {}),
     ...(wideSales.length > 0 ? { wideEconomySales: wideSales } : {}),
+    ...(storeSales ? { storeSales } : {}),
     orderOutcomes: productionOrderOutcomes(
       [...consumerOrders, ...inputOrders()],
       market.orders,

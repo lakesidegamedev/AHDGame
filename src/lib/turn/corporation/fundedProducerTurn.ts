@@ -798,6 +798,14 @@ async function prepareRunFundedProducerTurn(
       { $set: { householdSpendingPowerStartTurn: demand.householdSpendingPowerStartTurnToStamp } }
     );
 
+  // First live funded turn with stores: stamp the start of the markup
+  // changeover, which this turn's settlement already read as starting now.
+  if (input.env.storeMarkup != null && input.env.storeTransition?.startTurn == null)
+    await gameConfigCollection(db).updateOne(
+      { _id: "default", "storeTransition.startTurn": { $exists: false } },
+      { $set: { "storeTransition.startTurn": turn } }
+    );
+
   if (input.seedHouseholds) {
     const wageBill = new Map<string, number>();
     for (const p of demand.preparedSectors)

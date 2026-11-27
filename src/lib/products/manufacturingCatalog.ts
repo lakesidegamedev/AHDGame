@@ -65,6 +65,20 @@ export const MANUFACTURING_PRODUCT_KINDS: readonly ManufacturingProductKind[] = 
     strategyIds: ["electronics_manufacturing", "additive_manufacturing"],
   },
   {
+    id: "furniture",
+    label: "Furniture",
+    outputCommodity: "consumer_goods",
+    sectorTypes: ["manufacturing"],
+    strategyIds: ["consumer_goods"],
+  },
+  {
+    id: "household_goods",
+    label: "Household goods and appliances",
+    outputCommodity: "consumer_goods",
+    sectorTypes: ["manufacturing"],
+    strategyIds: ["consumer_goods"],
+  },
+  {
     id: "structural_steel",
     label: "Structural steel",
     outputCommodity: "steel",

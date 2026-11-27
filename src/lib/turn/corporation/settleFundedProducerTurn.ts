@@ -94,6 +94,7 @@ import { backgroundTradeOutcomes } from "@/lib/market/producerMarket/backgroundT
 import { producerFillSpend } from "@/lib/market/producerMarket/rules";
 import { recordBackgroundTrade } from "@/lib/turn/corporation/backgroundTraders";
 import { runCorporationProducerMarket } from "@/lib/turn/corporation/producerMarketPhase";
+import { storeMarkupForTurn } from "@/lib/stores/rules/storeRules";
 
 import {
   DEMAND_CURVE_PRICE_SENSITIVITY,
@@ -159,6 +160,18 @@ export async function settleFundedProducerTurn(
       eligibleOffersByOrder: context.demand.eligibleOffersByOrder,
       ...(context.demand.importTariffs ? { importTariffs: context.demand.importTariffs } : {}),
       spilloverShare: context.input.env.spilloverShare,
+      storeMarkup:
+        context.input.env.storeMarkup == null
+          ? undefined
+          : storeMarkupForTurn({
+              standingMarkup: context.input.env.storeMarkup,
+              // Absent start: the changeover starts this turn and the turn stamps it.
+              transition: {
+                ...context.input.env.storeTransition,
+                startTurn: context.input.env.storeTransition?.startTurn ?? context.turn,
+              },
+              turn: context.turn,
+            }),
       ownSitesFirst: context.input.env.ownSitesFirst,
       // An explicit "market first" supply priority is honoured (issue 5505): own
       // sites get no head start for these companies. Unset keeps own sites first.
@@ -749,6 +762,7 @@ export async function publishFundedProducerTurn(
       ...(context.demand.householdSource
         ? { householdSource: context.demand.householdSource }
         : {}),
+      ...(settled.result.storeSales ? { storeSales: settled.result.storeSales } : {}),
       ...(backgroundTrade ? { backgroundTrade: Object.fromEntries(backgroundTrade) } : {}),
       at: new Date(),
     } as never,
