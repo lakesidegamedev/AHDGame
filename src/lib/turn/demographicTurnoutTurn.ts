@@ -1,3 +1,6 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { getCampaignCurrency } from "@/lib/campaigns/rules/currency";
 export { applyDecayToAllStates, processPlayerCanvassing } from "@/lib/parties/playerTurnout";
 import type { RevenueContext } from "@/lib/parties/revenueFromDemographics";
 import { calculatePartyRevenueFromContext } from "@/lib/parties/revenueFromDemographics";
@@ -33,7 +36,7 @@ import {
 } from "@/lib/utils/demographicAlignment";
 
 import { getDb } from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import {
   applyBoost,
   calculateGOTVSpend,
@@ -110,7 +113,52 @@ export async function processPartyGOTV(
   preloadedStateMap?: Map<string, State>,
   statePartyOrgOverrides?: StatePartyOrg[],
   politicalPartyOverrides?: PoliticalParty[],
-  turn?: number
+  turn?: number,
+  providedDb?: Db
+): Promise<ProcessGOTVResult> {
+  if (budgets)
+    return settlePartyGOTV(
+      budgets,
+      turnoutData,
+      partyPosition,
+      revenueOverride,
+      preloadedStateMap,
+      statePartyOrgOverrides,
+      politicalPartyOverrides,
+      turn
+    );
+  const db = providedDb ?? (await getDb());
+  const processingTurn =
+    turn ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn;
+  if (processingTurn === undefined)
+    throw new Error("Party turnout spending requires a processing turn");
+  return withTurnValueSettlement(db, "party-turnout-spending", processingTurn, (db) =>
+    settlePartyGOTV(
+      undefined,
+      turnoutData,
+      partyPosition,
+      revenueOverride,
+      preloadedStateMap,
+      statePartyOrgOverrides,
+      politicalPartyOverrides,
+      processingTurn,
+      db
+    )
+  );
+}
+
+async function settlePartyGOTV(
+  budgets?: PartyBudget[],
+  turnoutData?: StateDemographicTurnout[],
+  partyPosition?: PartyPosition,
+  revenueOverride?: number,
+  preloadedStateMap?: Map<string, State>,
+  statePartyOrgOverrides?: StatePartyOrg[],
+  politicalPartyOverrides?: PoliticalParty[],
+  turn?: number,
+  providedDb?: Db
 ): Promise<ProcessGOTVResult> {
   let budgetCollection;
   let turnoutCollection;
@@ -123,7 +171,7 @@ export async function processPartyGOTV(
     partyBudgets = budgets;
   } else {
     try {
-      budgetCollection = await getPartyBudgetCollection();
+      budgetCollection = await getPartyBudgetCollection(providedDb);
       // Fetch all rows so country-scoped replacements can suppress legacy rows
       // that still carry old spending values during the compatibility window.
       partyBudgets = (await budgetCollection.find({}).toArray()) as StoredPartyBudget[];
@@ -138,7 +186,7 @@ export async function processPartyGOTV(
     stateTurnout = JSON.parse(JSON.stringify(turnoutData)) as StateDemographicTurnout[];
   } else {
     try {
-      turnoutCollection = await getStateDemographicTurnoutCollection();
+      turnoutCollection = await getStateDemographicTurnoutCollection(providedDb);
       stateTurnout = await turnoutCollection.find({}).toArray();
     } catch (error) {
       logger.error("Demographic Turnout Turn", "Error fetching turnout data", error);
@@ -147,7 +195,7 @@ export async function processPartyGOTV(
   }
 
   // Load treasury sources: statePartyOrg for state budgets, politicalParty for national.
-  const db = budgets ? null : await getDb();
+  const db = budgets ? null : (providedDb ?? (await getDb()));
   const now = new Date();
   const thresholds = db ? await loadTxThresholds(db) : null;
   const txGotvEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
@@ -789,7 +837,7 @@ export async function processPartyGOTV(
         subjectType: "party",
         subjectName: partyName,
         amount: -totalSpend,
-        currencyCode: "USD",
+        currencyCode: getCampaignCurrency(budgetCountryId, revenueCtx?.preset),
         meta: {
           scope: budget.scope,
           stateId: "stateId" in budget ? budget.stateId : null,
@@ -958,7 +1006,7 @@ export async function processPartyGOTV(
   }
 
   if (db && thresholds && txGotvEntries.length > 0) {
-    void emitTxBulk(db, txGotvEntries, thresholds);
+    await emitTxBulk(db, txGotvEntries, thresholds);
   }
 
   // Commit registration-drive writes (suggestion #81): reg deltas on state-party

@@ -1,3 +1,5 @@
+import { migration as cnWikiPurgeAvailability } from "./entries/2026-11-26-cn-wiki-purge-availability";
+import { migration as supplyAgreementPlanIndex } from "./entries/2026-11-26-supply-agreement-plan-index";
 import { migration as wartimeCrisisDescription } from "./entries/wartime-crisis-description";
 import { migration as crisisFadeDescriptions } from "./entries/crisis-fade-descriptions";
 import { migration as corporationsWikiMargins } from "./entries/2026-11-20-corporations-wiki-margins";
@@ -116,6 +118,8 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   scotusCareerAchievements,
   // Banking recovery reads this queue every turn; unindexed it scans the journal.
   bankMoneyMoveUnprojectedIndex,
+  supplyAgreementPlanIndex,
+  cnWikiPurgeAvailability,
   // Unused text indexes on the turn's two busiest logs cost index writes every turn.
   dropLogTextIndexes,
   // Japanese laws carry lean effects in code; the live law types need them stored or
@@ -155,6 +159,7 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   supplyAgreementStatusIndex,
   corporateFundPositions,
   bankMoneyMoveUnprojectedIndex,
+  supplyAgreementPlanIndex,
   // Turn-phase probes on bonds and money moves stay bounded by live work.
   turnGrowthIndexes,
   playerReadIndexes,

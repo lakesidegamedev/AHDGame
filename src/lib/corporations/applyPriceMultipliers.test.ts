@@ -11,6 +11,10 @@ describe("applyPriceMultipliers — FTA threading", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("corporations").bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+      modifiedCount: ops.length,
+    }));
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
   });

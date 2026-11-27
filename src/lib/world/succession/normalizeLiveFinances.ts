@@ -1,13 +1,15 @@
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
+
 import { loadLiveSuccessionFinances, type LiveSuccessionFinances } from "./loadLiveFinances";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
 export interface SuccessionAccountingSnapshot {
   /** Signed source treasury cash in shared accounting minor units. */
   signedCashMinor: number;
+  cashSource?: "funded";
+  fiscalPositionMinor?: number;
   financialAssetsMinor: number;
   /** A cash overdraft is not silently treated as a creditor bond. */
   cashDeficitMinor: number;
@@ -46,7 +48,12 @@ export function normalizeSuccessionFinances(
     rates[code] = rate;
   }
   const budgetRate = finances.budgetCurrencyCode ? rates[finances.budgetCurrencyCode] : 1;
-  const signedCashMinor = toMinor(finances.treasuryBalanceLocal, budgetRate);
+  const signedCashMinor = toMinor(
+    finances.cashSource === "funded" ? finances.spendableCashLocal! : finances.treasuryBalanceLocal,
+    budgetRate
+  );
+  if (finances.cashSource === "funded" && signedCashMinor < 0)
+    throw new Error("Funded Treasury cash cannot be negative");
   const reportedDebtMinor = toMinor(finances.reportedDebtPrincipalLocal, budgetRate);
   if (reportedDebtMinor < 0) throw new Error("Federation budget debt cannot be negative");
   const creditorPrincipalByBondMinor: Record<string, number> = {};
@@ -77,6 +84,12 @@ export function normalizeSuccessionFinances(
     throw new Error("Federation budget debt disagrees with outstanding creditor bonds");
   return {
     signedCashMinor,
+    ...(finances.cashSource === "funded"
+      ? {
+          cashSource: "funded" as const,
+          fiscalPositionMinor: toMinor(finances.treasuryBalanceLocal, budgetRate),
+        }
+      : {}),
     financialAssetsMinor: Math.max(0, signedCashMinor),
     cashDeficitMinor: Math.max(0, -signedCashMinor),
     creditorDebtMinor,

@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
@@ -8,7 +9,6 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { GameState } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
@@ -55,223 +55,220 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const { units } = parsed.data;
-    const db = await getDb();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      // Buyback is a corporate-market action (CEO retires outstanding debt with
+      // corporate funds): blocked while an admin has paused corporation actions.
+      const pausedGuard = await requireCorporationActionsEnabled(db);
+      if (pausedGuard) return pausedGuard;
+      // Maturity settlement pays holders and retires the float from a snapshot
+      // taken at the start of the bond phase; a buyback in between is paid twice.
+      const turnGuard = await rejectDuringTurn(db);
+      if (turnGuard) return turnGuard;
+      if (!ObjectId.isValid(bondId)) {
+        return errorResponse(400, "Invalid bond ID");
+      }
 
-    // Buyback is a corporate-market action (CEO retires outstanding debt with
-    // corporate funds): blocked while an admin has paused corporation actions.
-    const pausedGuard = await requireCorporationActionsEnabled(db);
-    if (pausedGuard) return pausedGuard;
-    // Maturity settlement pays holders and retires the float from a snapshot
-    // taken at the start of the bond phase; a buyback in between is paid twice.
-    const turnGuard = await rejectDuringTurn(db);
-    if (turnGuard) return turnGuard;
-    if (!ObjectId.isValid(bondId)) {
-      return errorResponse(400, "Invalid bond ID");
-    }
+      const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
+      if (!bond) {
+        return errorResponse(404, "Bond not found");
+      }
 
-    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
-    if (!bond) {
-      return errorResponse(404, "Bond not found");
-    }
+      if (bond.matured) {
+        return errorResponse(400, "Bond has already matured");
+      }
 
-    if (bond.matured) {
-      return errorResponse(400, "Bond has already matured");
-    }
+      // Verify CEO - use requireCeo for proper vacant seat handling
+      const resolved = await resolveCorporation(db, bond.corporationId.toString());
+      if (!resolved.ok) return resolved.response;
+      const { corporation: issuingCorp } = resolved;
 
-    // Verify CEO - use requireCeo for proper vacant seat handling
-    const resolved = await resolveCorporation(db, bond.corporationId.toString());
-    if (!resolved.ok) return resolved.response;
-    const { corporation: issuingCorp } = resolved;
+      const ceoCheck = requireCeo(issuingCorp, user);
+      if (ceoCheck) return ceoCheck;
 
-    const ceoCheck = requireCeo(issuingCorp, user);
-    if (ceoCheck) return ceoCheck;
+      if (bond.publicFloat < units) {
+        return errorResponse(400, `Only ${bond.publicFloat} units available in public float`);
+      }
 
-    if (bond.publicFloat < units) {
-      return errorResponse(400, `Only ${bond.publicFloat} units available in public float`);
-    }
+      // Bond denomination — canonical key is `bond.currencyCode` (Task-18B). Do
+      // not derive from issuer corp's current country: admin-initiated
+      // cross-country HQ moves don't change the bond's denomination.
+      const bondCurrency: CurrencyCode = (bond.currencyCode ??
+        (bond.countryId && bond.countryId in COUNTRY_CURRENCY_MAP
+          ? COUNTRY_CURRENCY_MAP[bond.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
+          : "USD")) as CurrencyCode;
 
-    // Bond denomination — canonical key is `bond.currencyCode` (Task-18B). Do
-    // not derive from issuer corp's current country: admin-initiated
-    // cross-country HQ moves don't change the bond's denomination.
-    const bondCurrency: CurrencyCode = (bond.currencyCode ??
-      (bond.countryId && bond.countryId in COUNTRY_CURRENCY_MAP
-        ? COUNTRY_CURRENCY_MAP[bond.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
-        : "USD")) as CurrencyCode;
+      // Defaulted bonds: buyback at full face value (no discount exploit).
+      // Non-defaulted: buyback at current market price. Both expressions produce
+      // LOCAL in `bondCurrency`.
+      // Live bonds are bought back from the pool at its ask.
+      const quote = await loadBondQuote(db, bond);
+      const pricePerUnit = bond.defaulted ? BOND_UNIT_FACE_VALUE : quote.askPerUnit;
+      const costLocal = units * pricePerUnit;
 
-    // Defaulted bonds: buyback at full face value (no discount exploit).
-    // Non-defaulted: buyback at current market price. Both expressions produce
-    // LOCAL in `bondCurrency`.
-    // Live bonds are bought back from the pool at its ask.
-    const quote = await loadBondQuote(db, bond);
-    const pricePerUnit = bond.defaulted ? BOND_UNIT_FACE_VALUE : quote.askPerUnit;
-    const costLocal = units * pricePerUnit;
-
-    // Normalize bond cost through ₳ before comparing / deducting against the
-    // issuing corp's liquidCapital (stored in corp.liquidCurrencyCode). Pre-fix
-    // this path compared LOCAL-bond cost directly with ₳-normalized corp
-    // capital and deducted LOCAL as if it were ₳ (A21).
-    const fxRates = await loadFxRatesRecord(db);
-    const bondFxRate =
-      fxRates[bondCurrency] && fxRates[bondCurrency]! > 0 ? fxRates[bondCurrency]! : 1;
-    const costAnchor = corpCapitalToAnchor(costLocal, bondCurrency, bondFxRate);
-    const corpCurrency = resolveCorpLiquidCurrencyCode(issuingCorp) ?? null;
-    const corpPurchaseEstimate = estimateCorpWalletSpend({
-      union: await loadEuroMonetaryUnion(db),
-      spreadStrengths: await loadForexSpreadStrengths(db),
-      requiredAmount: costLocal,
-      availableBalance: issuingCorp.liquidCapital ?? 0,
-      fromCurrency: corpCurrency,
-      toCurrency: bondCurrency,
-      rates: fxRates,
-    });
-    if (!corpPurchaseEstimate) {
-      return errorResponse(503, "Exchange rate unavailable, try again shortly");
-    }
-    if (!corpPurchaseEstimate.canAfford) {
-      const corpSym = CURRENCY_SYMBOLS[corpCurrency ?? "USD"] ?? "$";
-      const bondSym = CURRENCY_SYMBOLS[bondCurrency] ?? "$";
-      const needStr = costLocal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-      const adjustedStr = corpPurchaseEstimate.requiredFromAmount.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
+      // Normalize bond cost through ₳ before comparing / deducting against the
+      // issuing corp's liquidCapital (stored in corp.liquidCurrencyCode). Pre-fix
+      // this path compared LOCAL-bond cost directly with ₳-normalized corp
+      // capital and deducted LOCAL as if it were ₳ (A21).
+      const fxRates = await loadFxRatesRecord(db);
+      const bondFxRate = fxRates[bondCurrency];
+      if (!bondFxRate || !Number.isFinite(bondFxRate) || bondFxRate <= 0)
+        return errorResponse(503, "Exchange rate unavailable, try again shortly");
+      const costAnchor = corpCapitalToAnchor(costLocal, bondCurrency, bondFxRate);
+      const corpCurrency = resolveCorpLiquidCurrencyCode(issuingCorp) ?? null;
+      const corpPurchaseEstimate = estimateCorpWalletSpend({
+        union: await loadEuroMonetaryUnion(db),
+        spreadStrengths: await loadForexSpreadStrengths(db),
+        requiredAmount: costLocal,
+        availableBalance: issuingCorp.liquidCapital ?? 0,
+        fromCurrency: corpCurrency,
+        toCurrency: bondCurrency,
+        rates: fxRates,
       });
-      const haveStr = (issuingCorp.liquidCapital ?? 0).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-      });
-      const currencyNote =
+      if (!corpPurchaseEstimate) {
+        return errorResponse(503, "Exchange rate unavailable, try again shortly");
+      }
+      if (!corpPurchaseEstimate.canAfford) {
+        const corpSym = CURRENCY_SYMBOLS[corpCurrency ?? "USD"] ?? "$";
+        const bondSym = CURRENCY_SYMBOLS[bondCurrency] ?? "$";
+        const needStr = costLocal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        const adjustedStr = corpPurchaseEstimate.requiredFromAmount.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+        });
+        const haveStr = (issuingCorp.liquidCapital ?? 0).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+        });
+        const currencyNote =
+          corpCurrency && corpCurrency !== bondCurrency
+            ? ` (~${corpSym}${adjustedStr} ${corpCurrency} incl. FX, corp has ${corpSym}${haveStr} ${corpCurrency})`
+            : `, have ${corpSym}${haveStr} ${corpCurrency ?? "USD"}`;
+        return errorResponse(
+          400,
+          `Insufficient corporate funds. Need ${bondSym}${needStr} ${bondCurrency}${currencyNote}`
+        );
+      }
+
+      const now = new Date();
+      const retiredFaceValue = units * BOND_UNIT_FACE_VALUE;
+      const holderUnits = bond.holders.reduce((sum, h) => sum + h.units, 0);
+      const corpFxRate = await getCorpFxRate(db, issuingCorp);
+      const costInCorpCapital =
         corpCurrency && corpCurrency !== bondCurrency
-          ? ` (~${corpSym}${adjustedStr} ${corpCurrency} incl. FX, corp has ${corpSym}${haveStr} ${corpCurrency})`
-          : `, have ${corpSym}${haveStr} ${corpCurrency ?? "USD"}`;
-      return errorResponse(
-        400,
-        `Insufficient corporate funds. Need ${bondSym}${needStr} ${bondCurrency}${currencyNote}`
+          ? corpPurchaseEstimate.spendAmount
+          : anchorToCorpLiquidCapital(costAnchor, issuingCorp, corpFxRate);
+
+      const debitResult = await corporationsCollection(db).updateOne(
+        { _id: issuingCorp._id, liquidCapital: { $gte: costInCorpCapital } },
+        { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
       );
-    }
+      if (debitResult.modifiedCount === 0) {
+        return errorResponse(400, "Insufficient corporate funds (race with another transaction).");
+      }
 
-    const now = new Date();
-    const retiredFaceValue = units * BOND_UNIT_FACE_VALUE;
-    const holderUnits = bond.holders.reduce((sum, h) => sum + h.units, 0);
-    const corpFxRate = await getCorpFxRate(db, issuingCorp);
-    const costInCorpCapital =
-      corpCurrency && corpCurrency !== bondCurrency
-        ? corpPurchaseEstimate.spendAmount
-        : anchorToCorpLiquidCapital(costAnchor, issuingCorp, corpFxRate);
-
-    const debitResult = await corporationsCollection(db).updateOne(
-      { _id: issuingCorp._id, liquidCapital: { $gte: costInCorpCapital } },
-      { $inc: { liquidCapital: -costInCorpCapital }, $set: { updatedAt: now } }
-    );
-    if (debitResult.modifiedCount === 0) {
-      return errorResponse(400, "Insufficient corporate funds (race with another transaction).");
-    }
-
-    let bondUpdateFilter: Record<string, unknown> = {
-      _id: bond._id,
-      matured: false,
-      publicFloat: { $gte: units },
-    };
-    let bondUpdate: Record<string, unknown> = { updatedAt: now };
-    if (holderUnits <= 0 && bond.publicFloat === units) {
-      bondUpdateFilter = { _id: bond._id, matured: false, publicFloat: units };
-      bondUpdate = {
-        ...bondUpdate,
-        matured: true,
-        defaulted: false,
-        marketPrice: 1.0,
+      let bondUpdateFilter: Record<string, unknown> = {
+        _id: bond._id,
+        matured: false,
+        publicFloat: { $gte: units },
       };
-    }
+      let bondUpdate: Record<string, unknown> = { updatedAt: now };
+      if (holderUnits <= 0 && bond.publicFloat === units) {
+        bondUpdateFilter = { _id: bond._id, matured: false, publicFloat: units };
+        bondUpdate = {
+          ...bondUpdate,
+          matured: true,
+          defaulted: false,
+          marketPrice: 1.0,
+        };
+      }
 
-    const floatClaim = await bondsCollection(db).updateOne(bondUpdateFilter, {
-      $inc: { publicFloat: -units, totalIssued: -retiredFaceValue },
-      $set: bondUpdate,
-    });
+      const floatClaim = await bondsCollection(db).updateOne(bondUpdateFilter, {
+        $inc: { publicFloat: -units, totalIssued: -retiredFaceValue },
+        $set: bondUpdate,
+      });
 
-    if (floatClaim.modifiedCount === 0) {
-      await corporationsCollection(db).updateOne(
-        { _id: issuingCorp._id },
-        { $inc: { liquidCapital: costInCorpCapital }, $set: { updatedAt: new Date() } }
+      if (floatClaim.modifiedCount === 0) {
+        const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
+        return errorResponse(
+          400,
+          `Only ${refreshedBond?.publicFloat ?? 0} units available in public float`
+        );
+      }
+
+      // The retired units were the pool's; the issuer's cash is the pool's now.
+      await creditBondPool(db, bondCurrency, costLocal, "retiredIn", now);
+
+      // Recorded only once the float claim landed, so a refunded race leaves no row.
+      const turnDoc = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
       );
+      await emitTx(db, {
+        type: "bond_buyback",
+        turn: turnDoc?.currentTurn ?? 0,
+        createdAt: now,
+        subjectType: "corporation",
+        subjectId: issuingCorp._id,
+        subjectName: issuingCorp.name,
+        amount: -costInCorpCapital,
+        currencyCode: corpCurrency ?? "USD",
+        counterpartyType: "system",
+        counterpartyName: "Bond market",
+        meta: {
+          bondId: bond._id.toString(),
+          units,
+          pricePerUnit,
+          bondCurrency,
+          bondAmount: -Math.round(costLocal * 100) / 100,
+        },
+      });
+
       const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
-      return errorResponse(
-        400,
-        `Only ${refreshedBond?.publicFloat ?? 0} units available in public float`
-      );
-    }
+      const remainingPublicFloat =
+        refreshedBond?.publicFloat ?? Math.max(0, bond.publicFloat - units);
+      const newTotalIssued = refreshedBond?.totalIssued ?? bond.totalIssued - retiredFaceValue;
+      const fullyRetired =
+        (refreshedBond?.publicFloat ?? 0) <= 0 &&
+        (refreshedBond?.holders?.reduce((sum, h) => sum + h.units, 0) ?? holderUnits) <= 0;
 
-    // The retired units were the pool's; the issuer's cash is the pool's now.
-    await creditBondPool(db, bondCurrency, costLocal, "retiredIn", now);
+      if (fullyRetired && refreshedBond && !refreshedBond.matured) {
+        await bondsCollection(db).updateOne(
+          { _id: refreshedBond._id, matured: false, publicFloat: { $lte: 0 } },
+          {
+            $set: {
+              matured: true,
+              defaulted: false,
+              marketPrice: 1.0,
+              updatedAt: now,
+            },
+          }
+        );
+      }
 
-    // Recorded only once the float claim landed, so a refunded race leaves no row.
-    const turnDoc = await gameStateCollection(db).findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1 } }
-    );
-    await emitTx(db, {
-      type: "bond_buyback",
-      turn: turnDoc?.currentTurn ?? 0,
-      createdAt: now,
-      subjectType: "corporation",
-      subjectId: issuingCorp._id,
-      subjectName: issuingCorp.name,
-      amount: -costInCorpCapital,
-      currencyCode: corpCurrency ?? "USD",
-      counterpartyType: "system",
-      counterpartyName: "Bond market",
-      meta: {
-        bondId: bond._id.toString(),
-        units,
-        pricePerUnit,
-        bondCurrency,
-        bondAmount: -Math.round(costLocal * 100) / 100,
-      },
-    });
+      // Route the FX spread the corp paid on a cross-currency buyback into the CB
+      // system (was destroyed). The corp already lost it via spendAmount above.
+      if (corpCurrency && corpCurrency !== bondCurrency) {
+        await distributeConversionSpread(
+          db,
+          corpPurchaseEstimate.spreadFee,
+          corpCurrency,
+          bondCurrency
+        );
+      }
 
-    const refreshedBond = await bondsCollection(db).findOne({ _id: bond._id });
-    const remainingPublicFloat =
-      refreshedBond?.publicFloat ?? Math.max(0, bond.publicFloat - units);
-    const newTotalIssued = refreshedBond?.totalIssued ?? bond.totalIssued - retiredFaceValue;
-    const fullyRetired =
-      (refreshedBond?.publicFloat ?? 0) <= 0 &&
-      (refreshedBond?.holders?.reduce((sum, h) => sum + h.units, 0) ?? holderUnits) <= 0;
-
-    if (fullyRetired && refreshedBond && !refreshedBond.matured) {
-      await bondsCollection(db).updateOne(
-        { _id: refreshedBond._id, matured: false, publicFloat: { $lte: 0 } },
-        {
-          $set: {
-            matured: true,
-            defaulted: false,
-            marketPrice: 1.0,
-            updatedAt: now,
-          },
-        }
-      );
-    }
-
-    // Route the FX spread the corp paid on a cross-currency buyback into the CB
-    // system (was destroyed). The corp already lost it via spendAmount above.
-    if (corpCurrency && corpCurrency !== bondCurrency) {
-      await distributeConversionSpread(
-        db,
-        corpPurchaseEstimate.spreadFee,
-        corpCurrency,
-        bondCurrency
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      unitsBoughtBack: units,
-      cost: Math.round(costLocal * 100) / 100,
-      costCurrency: bondCurrency,
-      pricePerUnit: Math.round(pricePerUnit * 100) / 100,
-      remainingPublicFloat,
-      newTotalIssued,
-      fullyRetired,
-      spreadPaid:
-        corpCurrency && corpCurrency !== bondCurrency
-          ? Math.round(corpPurchaseEstimate.spreadFee * 100) / 100
-          : 0,
-      spreadCurrency: corpCurrency ?? bondCurrency,
+      return NextResponse.json({
+        success: true,
+        unitsBoughtBack: units,
+        cost: Math.round(costLocal * 100) / 100,
+        costCurrency: bondCurrency,
+        pricePerUnit: Math.round(pricePerUnit * 100) / 100,
+        remainingPublicFloat,
+        newTotalIssued,
+        fullyRetired,
+        spreadPaid:
+          corpCurrency && corpCurrency !== bondCurrency
+            ? Math.round(corpPurchaseEstimate.spreadFee * 100) / 100
+            : 0,
+        spreadCurrency: corpCurrency ?? bondCurrency,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

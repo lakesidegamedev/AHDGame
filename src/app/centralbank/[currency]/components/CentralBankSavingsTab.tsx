@@ -18,7 +18,7 @@ import { formatNativeFaceAmount as formatNative } from "./centralBankUtils";
 import {
   SAVINGS_CREDIT_INTERVAL_TURNS,
   SAVINGS_REAL_RATE_FLOOR_PERCENT,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 
 interface LedgerRow {
   type: string;
@@ -35,6 +35,8 @@ interface SavingsApiResponse {
   primeRate: number;
   inflationRate?: number;
   apyPercent: number;
+  creditIntervalTurns?: number;
+  interestEligibleBalance?: number;
   savingsHolderType?: "central-bank" | "private-bank" | "unknown";
   savingsHolderName?: string | null;
   centralBankDepositBonusPercentPoints?: number;
@@ -72,39 +74,48 @@ interface Props {
 
 export function CentralBankSavingsTab({ countryId }: Props) {
   const t = useTranslations("centralBank");
-  const homeCurrency = COUNTRY_CURRENCY_MAP[countryId];
-  const sym = CURRENCY_SYMBOLS[homeCurrency] ?? "$";
   const { formatAmount } = useCurrency();
   const { showToast } = useToast();
-  const [data, setData] = useState<SavingsApiResponse | null>(null);
+  const [loadedData, setData] = useState<SavingsApiResponse | null>(null);
+  const data = loadedData?.countryId === countryId ? loadedData : null;
+  const homeCurrency = data?.currencyCode ?? COUNTRY_CURRENCY_MAP[countryId];
+  const sym = CURRENCY_SYMBOLS[homeCurrency] ?? "$";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<null | "deposit" | "withdraw">(null);
   const [amountStr, setAmountStr] = useState("");
 
-  const load = useCallback(() => {
-    setLoading(true);
-    void fetch(`/api/country/${countryId.toLowerCase()}/central-bank/savings`)
-      .then(async (r) => {
-        const j = (await r.json()) as SavingsApiResponse;
-        if (!r.ok) {
-          setError(apiErrorText(j, "Failed to load"));
+  const load = useCallback(
+    (signal?: AbortSignal) => {
+      return fetch(`/api/country/${countryId.toLowerCase()}/central-bank/savings`, { signal })
+        .then(async (r) => {
+          const j = (await r.json()) as SavingsApiResponse;
+          if (signal?.aborted) return;
+          if (!r.ok) {
+            setError(apiErrorText(j, "Failed to load"));
+            setData(null);
+            return;
+          }
+          setError(null);
+          setData(j);
+        })
+        .catch(() => {
+          if (signal?.aborted) return;
+          setError("Failed to load");
           setData(null);
-          return;
-        }
-        setError(null);
-        setData(j);
-      })
-      .catch(() => {
-        setError("Failed to load");
-        setData(null);
-      })
-      .finally(() => setLoading(false));
-  }, [countryId]);
+        })
+        .finally(() => {
+          if (!signal?.aborted) setLoading(false);
+        });
+    },
+    [countryId]
+  );
 
   useEffect(() => {
-    void load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const runAction = async (path: "open" | "deposit" | "withdraw", body: object) => {
@@ -123,7 +134,8 @@ export function CentralBankSavingsTab({ countryId }: Props) {
       showToast("Updated", "success");
       setPanel(null);
       setAmountStr("");
-      void load();
+      setLoading(true);
+      await load();
     } finally {
       setBusy(false);
     }
@@ -205,13 +217,21 @@ export function CentralBankSavingsTab({ countryId }: Props) {
         <CentralBankFigure
           label="Lifetime interest"
           value={formatNative(data.lifetimeInterestEarned, homeCurrency)}
-          hint={`Added to balance every ${SAVINGS_CREDIT_INTERVAL_TURNS} turns`}
+          hint={
+            data.creditIntervalTurns === 1
+              ? "Added to balance each turn"
+              : `Added to balance every ${data.creditIntervalTurns ?? SAVINGS_CREDIT_INTERVAL_TURNS} turns`
+          }
           size="lg"
         />
         <CentralBankFigure
           label="Accrued (uncredited)"
           value={formatNative(data.pendingInterest, homeCurrency)}
-          hint="Earned; adds to balance at next credit"
+          hint={
+            data.creditIntervalTurns === 1
+              ? "Interest is credited each turn"
+              : "Earned; adds to balance at next credit"
+          }
           size="lg"
         />
         <CentralBankFigure
@@ -222,9 +242,11 @@ export function CentralBankSavingsTab({ countryId }: Props) {
               : "-"
           }
           hint={
-            data.turnsUntilCredit === 1
-              ? "Next balance credit this turn"
-              : `Next credit in ${data.turnsUntilCredit} turns`
+            data.creditIntervalTurns === 1
+              ? "Interest credited each turn"
+              : data.turnsUntilCredit === 1
+                ? "Next balance credit this turn"
+                : `Next credit in ${data.turnsUntilCredit} turns`
           }
           size="lg"
         />

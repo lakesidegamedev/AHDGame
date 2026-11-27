@@ -1,3 +1,4 @@
+import { loadDefencePaymentCurrency } from "@/lib/military/defencePaymentCurrency";
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import type { UnitDomain } from "@/lib/db/types/militaryUnit";
@@ -20,11 +21,11 @@ export interface DefenceSupplierView {
   sectorId: string;
   corporationId: string;
   corporationName: string;
-  /** The plant's own name if its CEO gave it one, else where it sits — a corporation with
+  /** The plant's own name if its CEO gave it one, else where it sits â€” a corporation with
    *  three defence lines is otherwise three identical rows. */
   plantLabel: string;
   strategyId: string;
-  /** The component a contract here would be written against — the route picks `[0]` too. */
+  /** The component a contract here would be written against â€” the route picks `[0]` too. */
   component: UnitDomain;
   /** Every domain this line is certified for; a two-domain plant splits its output. */
   components: UnitDomain[];
@@ -52,7 +53,7 @@ export interface DefenceSupplierView {
 /**
  * Plants this country's defence minister may award a procurement contract to.
  *
- * The filters here are a deliberate mirror of the award route's own rejections — defence
+ * The filters here are a deliberate mirror of the award route's own rejections â€” defence
  * sector, a strategy that maps to at least one component, and `canSupply` for the domestic
  * currency rule. A picker that offered a plant the route would refuse would turn every one of
  * those clear 400s into a dead option the minister cannot diagnose.
@@ -60,8 +61,8 @@ export interface DefenceSupplierView {
  * Domestic is the CORPORATION, not the plant's host state. `canSupply` and
  * the delivery sweep both key on corp HQ / currency; filtering sectors by `countryId` hid
  * every overseas works of a home-country supplier, so a UK minister could only award
- * Streibl's tiny East-of-England line while the same corp's Greek and French plants — which
- * delivery would have honoured — never appeared.
+ * Streibl's tiny East-of-England line while the same corp's Greek and French plants â€” which
+ * delivery would have honoured â€” never appeared.
  *
  * `alreadyContracted` marks rather than removes: a second contract on one plant is legal (its
  * output is split across them), but it is rarely what a minister means to do, so the decision
@@ -82,10 +83,11 @@ export async function listDefenceSuppliers(
   // constraint: a UK corporation banking in pounds can be paid from the UK appropriation
   // whether the works sit in Kent or Attica. The old sector-country filter implemented
   // the opposite of `resolveFillEligibility` and is what ticket #1149 was looking at.
+  const paymentCurrency = await loadDefencePaymentCurrency(db, countryId);
   const corps = await corporationsCollection(db)
     .find({ countryId: countryId as Corporation["countryId"] })
     .toArray();
-  const eligibleCorps = corps.filter((c) => canSupply(c, countryId));
+  const eligibleCorps = corps.filter((c) => canSupply(c, countryId, paymentCurrency));
   if (eligibleCorps.length === 0) return [];
 
   const sectors = await corporateSectorsCollection(db)
@@ -143,6 +145,7 @@ export async function listDefenceSuppliers(
       corp,
       sector,
       countryId,
+      paymentCurrency,
       currentYear,
       assignedFactories: assignedForProjection,
     });
@@ -180,7 +183,7 @@ export async function listDefenceSuppliers(
 }
 
 /**
- * Where the works sit, with the host country when that is not the buyer — otherwise a UK
+ * Where the works sit, with the host country when that is not the buyer â€” otherwise a UK
  * minister looking at three Streibl rows cannot tell Kent from Attica.
  */
 function plantLabelFor(

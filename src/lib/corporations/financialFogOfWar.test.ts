@@ -27,6 +27,7 @@ function makeHistory(
     liquidCapital: 0,
     revenue: 0,
     income: 0,
+    settledBankLoanInterestPaid: 0,
     marketingStrength: 0,
     logisticsStrength: 0,
     dividendRate: 0,
@@ -90,6 +91,7 @@ describe("buildQuarterlySnapshot", () => {
     const history = makeHistory({
       totalCosts: 1_000,
       perTurnBondInterestExpense: 50,
+      settledBondInterestPaid: 50,
       revenue: 2_000,
     });
     const snap = buildQuarterlySnapshot(history);
@@ -101,6 +103,7 @@ describe("buildQuarterlySnapshot", () => {
       totalCosts: 1_000,
       income: -56_300,
       perTurnBondCouponIncome: 2_200_000,
+      settledBondCouponIncome: 2_200_000,
       perTurnBondDragOnNetIncome: 0,
       revenue: 2_400_000,
     });
@@ -299,4 +302,13 @@ it("includes dividends received and restores paid dividends only for the quarter
   });
   expect(realizedNetIncomePerTurn(history)).toBe(400);
   expect(buildQuarterlySnapshot(history).income).toBe(420);
+});
+
+it("withholds quarterly income and costs when loan settlement evidence is missing", () => {
+  const history = makeHistory({
+    totalCosts: 100,
+    income: 200,
+    settledBankLoanInterestPaid: undefined,
+  });
+  expect(buildQuarterlySnapshot(history)).toMatchObject({ income: null, totalCosts: null });
 });

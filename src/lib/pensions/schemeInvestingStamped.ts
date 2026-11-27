@@ -1,15 +1,9 @@
-/**
- * Pension scheme investing for turn resilience stage 2 and above. The cash leaves the scheme
- * together with a recorded plan, and the fund-side writes finish forward behind per-turn
- * witnesses, so a rerun after a process death neither loses the cash nor buys twice.
- * Below stage 2 the turn runs `runPensionSchemeInvestments` in schemeInvesting.ts unchanged.
- */
-
+import { loadFxRatesByCurrency, requireCurrencyRate } from "@/lib/currency/corporationCapital";
+import { withSessionDb } from "@/lib/db/sessionDb";
+/** Frozen scheme investment plans finish before new allocations are admitted. */
 import { ObjectId, type Db, type Document } from "mongodb";
 import type { IndexFund, IndexFundPosition, IndexFundTransaction } from "@/lib/db/types/indexFund";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
-import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { insertFundTransaction } from "@/lib/indexFunds/fundQueries";
 import { isDuplicateKeyError } from "@/lib/elections/duplicateKey";
@@ -17,7 +11,8 @@ import { financialTxLogCollection } from "@/lib/db/repositories/financialTxLog";
 import { indexFundPositionsCollection } from "@/lib/db/repositories/indexFundPositions";
 import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
 import { pensionInvestableCashAnchor } from "./rules";
-import { chooseSchemeFund, type PensionInvestingResult } from "./schemeInvesting";
+import { chooseSchemeFund } from "./rules/chooseSchemeFund";
+import type { PensionInvestingResult } from "./schemeInvesting";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
 import { pensionSchemesCollection } from "@/lib/db/repositories/pensionSchemes";
 
@@ -32,34 +27,30 @@ export async function runStampedPensionSchemeInvestments(
     .find({ pendingInvestment: { $ne: null } })
     .toArray();
   const finishedThisTurn = new Set<string>();
-  const pendingFunds =
-    unfinished.length === 0
-      ? []
-      : await indexFundsCollection<IndexFund>(db)
-          .find({
-            _id: {
-              $in: unfinished.flatMap((s) =>
-                s.pendingInvestment ? [s.pendingInvestment.fundId] : []
-              ),
-            },
-          })
-          .toArray();
-  const pendingFundById = new Map(pendingFunds.map((f) => [f._id.toString(), f]));
-  for (const scheme of unfinished) {
+  let receiptRate = unfinished.length
+    ? requireCurrencyRate("USD", (await loadFxRatesByCurrency(db)).get("USD"))
+    : 1;
+  for (const candidate of unfinished) {
     try {
-      const pending = scheme.pendingInvestment!;
-      const fund = pendingFundById.get(pending.fundId.toString());
-      if (!fund) {
-        result.errors.push(`Scheme ${scheme._id.toString()}: pending investment fund is missing`);
-        continue;
-      }
-      await finishInvestment(db, scheme, fund, pending);
-      if (pending.turn === currentTurn) finishedThisTurn.add(scheme._id.toString());
+      const recovered = await withSessionDb(db, async (db) => {
+        const scheme = await pensionSchemesCollection<PensionScheme>(db).findOne({
+          _id: candidate._id,
+        });
+        const pending = scheme?.pendingInvestment;
+        if (!scheme || !pending) return null;
+        const fund = await indexFundsCollection<IndexFund>(db).findOne({ _id: pending.fundId });
+        if (!fund) throw new Error("Pending investment fund is missing");
+        await finishInvestment(db, scheme, fund, pending, receiptRate);
+        return pending;
+      });
+      if (!recovered) continue;
+      if (recovered.turn === currentTurn) finishedThisTurn.add(candidate._id.toString());
       result.schemesInvesting += 1;
-      result.investedAnchor += pending.costAnchor;
+      result.investedAnchor += recovered.costAnchor;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      result.errors.push(`Scheme ${scheme._id.toString()}: ${message}`);
+      result.errors.push(
+        `Scheme ${candidate._id}: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 
@@ -72,66 +63,83 @@ export async function runStampedPensionSchemeInvestments(
     .find({ status: "active", kind: "broad", "mandate.mode": { $ne: "picked_stocks" } })
     .toArray();
   if (funds.length === 0) return result;
+  receiptRate = requireCurrencyRate("USD", (await loadFxRatesByCurrency(db)).get("USD"));
 
-  for (const scheme of schemes) {
+  for (const candidate of schemes) {
     try {
-      if (
-        scheme.pendingInvestment ||
-        finishedThisTurn.has(scheme._id.toString()) ||
-        scheme.lastInvestedTurn === currentTurn
-      )
-        continue;
-      const investable = pensionInvestableCashAnchor({
-        cashAnchor: scheme.assetsAnchor,
-        benefitsInPaymentAnchor: scheme.benefitsInPaymentAnchor ?? 0,
+      const invested = await withSessionDb(db, async (db) => {
+        const scheme = await pensionSchemesCollection<PensionScheme>(db).findOne({
+          _id: candidate._id,
+        });
+        if (!scheme) return null;
+        if (
+          scheme.pendingInvestment ||
+          finishedThisTurn.has(scheme._id.toString()) ||
+          scheme.lastInvestedTurn === currentTurn
+        )
+          return null;
+        const investable = pensionInvestableCashAnchor({
+          cashAnchor: scheme.assetsAnchor,
+          benefitsInPaymentAnchor: scheme.benefitsInPaymentAnchor ?? 0,
+        });
+        if (investable <= 0) return null;
+
+        const selected = chooseSchemeFund(funds, scheme.countryId);
+        if (!selected) return null;
+        const fund = await indexFundsCollection<IndexFund>(db).findOne({
+          _id: selected._id,
+          status: "active",
+          kind: "broad",
+          "mandate.mode": { $ne: "picked_stocks" },
+        });
+        if (!fund) return null;
+        // A fund quoting at or below zero cannot price units. Skipping is the
+        // fail-closed reading; buying at a nonsense NAV would hand the scheme
+        // units it did not pay for, which is a mint.
+        if (!Number.isFinite(fund.quotedNav) || fund.quotedNav <= 0) return null;
+
+        const units = Math.floor(investable / fund.quotedNav);
+        if (units < 1) return null;
+        // Cost is derived from WHOLE units at NAV, never from `investable`, so the
+        // ₳ that leave the scheme and the ₳ that arrive at the fund are the same
+        // number by construction.
+        const costAnchor = units * fund.quotedNav;
+
+        // One guarded update takes the cash and records the plan, so a death after it can
+        // finish the investment forward instead of losing the cash or buying twice. If the
+        // scheme's cash moved since the read (the benefit pass runs earlier in the same
+        // turn), no units are issued.
+        const plan = {
+          turn: currentTurn,
+          fundId: fund._id,
+          units,
+          navAnchor: fund.quotedNav,
+          costAnchor,
+        };
+        const debit = await pensionSchemesCollection<PensionScheme>(db).updateOne(
+          {
+            _id: scheme._id,
+            assetsAnchor: { $gte: costAnchor },
+            pendingInvestment: null,
+            lastInvestedTurn: { $ne: currentTurn },
+          },
+          {
+            $inc: { assetsAnchor: -costAnchor, totalInvestedAnchor: costAnchor },
+            $set: { updatedAt: new Date(), pendingInvestment: plan, lastInvestedTurn: currentTurn },
+          }
+        );
+        if (debit.matchedCount === 0) return null;
+
+        await finishInvestment(db, scheme, fund, plan, receiptRate);
+        return costAnchor;
       });
-      if (investable <= 0) continue;
-
-      const fund = chooseSchemeFund(funds, scheme.countryId);
-      if (!fund) continue;
-      // A fund quoting at or below zero cannot price units. Skipping is the
-      // fail-closed reading; buying at a nonsense NAV would hand the scheme
-      // units it did not pay for, which is a mint.
-      if (!Number.isFinite(fund.quotedNav) || fund.quotedNav <= 0) continue;
-
-      const units = Math.floor(investable / fund.quotedNav);
-      if (units < 1) continue;
-      // Cost is derived from WHOLE units at NAV, never from `investable`, so the
-      // ₳ that leave the scheme and the ₳ that arrive at the fund are the same
-      // number by construction.
-      const costAnchor = units * fund.quotedNav;
-
-      // One guarded update takes the cash and records the plan, so a death after it can
-      // finish the investment forward instead of losing the cash or buying twice. If the
-      // scheme's cash moved since the read (the benefit pass runs earlier in the same
-      // turn), no units are issued.
-      const plan = {
-        turn: currentTurn,
-        fundId: fund._id,
-        units,
-        navAnchor: fund.quotedNav,
-        costAnchor,
-      };
-      const debit = await pensionSchemesCollection<PensionScheme>(db).updateOne(
-        {
-          _id: scheme._id,
-          assetsAnchor: { $gte: costAnchor },
-          pendingInvestment: null,
-          lastInvestedTurn: { $ne: currentTurn },
-        },
-        {
-          $inc: { assetsAnchor: -costAnchor, totalInvestedAnchor: costAnchor },
-          $set: { updatedAt: new Date(), pendingInvestment: plan, lastInvestedTurn: currentTurn },
-        }
-      );
-      if (debit.matchedCount === 0) continue;
-
-      await finishInvestment(db, scheme, fund, plan);
-      result.schemesInvesting += 1;
-      result.investedAnchor += costAnchor;
+      if (invested !== null) {
+        result.schemesInvesting += 1;
+        result.investedAnchor += invested;
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      result.errors.push(`Scheme ${scheme._id.toString()}: ${message}`);
+      result.errors.push(`Scheme ${candidate._id.toString()}: ${message}`);
     }
   }
 
@@ -149,10 +157,14 @@ async function finishInvestment(
   db: Db,
   scheme: PensionScheme,
   fund: IndexFund,
-  plan: PendingInvestment
+  plan: PendingInvestment,
+  receiptRate: number
 ): Promise<void> {
   const now = new Date();
   const schemeKey = scheme._id.toString();
+  const fundTurn = fund.pensionSubscriptionTurns?.[schemeKey];
+  if (fundTurn !== undefined && fundTurn > plan.turn)
+    throw new Error("Older pension investment cash requires subscription reconciliation");
 
   // 1. The scheme's position, stamped with the turn it was credited on.
   const positions = indexFundPositionsCollection<IndexFundPosition>(db);
@@ -179,6 +191,8 @@ async function finishInvestment(
       position = await positions.findOne(identity);
     }
   }
+  if (position?.lastSubscriptionTurn !== undefined && position.lastSubscriptionTurn > plan.turn)
+    throw new Error("Older pension investment position requires subscription reconciliation");
   if (position && position.lastSubscriptionTurn !== plan.turn) {
     const totalUnits = position.units + plan.units;
     const avgNav =
@@ -246,9 +260,9 @@ async function finishInvestment(
       subjectType: "pension_scheme",
       subjectId: scheme._id,
       subjectName: `${scheme.unionName} pension scheme`,
-      amount: -plan.costAnchor,
+      amount: -plan.costAnchor * receiptRate,
       anchorAmount: -plan.costAnchor,
-      currencyCode: (COUNTRY_CURRENCY_MAP[scheme.countryId] ?? "USD") as CurrencyCode,
+      currencyCode: "USD",
       counterpartyType: "system",
       counterpartyName: fund.name,
       meta: {
@@ -259,6 +273,8 @@ async function finishInvestment(
         units: plan.units,
         navAnchor: plan.navAnchor,
         source: "cron",
+        receiptValuationRate: receiptRate,
+        bookCurrency: "anchor",
       },
     });
   }

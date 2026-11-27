@@ -1,10 +1,15 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { BankCharter } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types";
 import { charterFingerprint, transferBankCharterToAcquirer } from "../transferCharter";
 
+// Exercise legacy plan CAS interleavings; real Mongo tests cover transaction conflicts.
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 function makeCharter(overrides: Partial<BankCharter> = {}): BankCharter {
@@ -182,7 +187,7 @@ describe("transferBankCharterToAcquirer concurrency hardening", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    memory = createInMemoryDb();
+    memory = createTransactionalMemoryDb().memory;
     seedWorld();
   });
 

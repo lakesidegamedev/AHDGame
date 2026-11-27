@@ -1,9 +1,11 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { getCurrentTurn } from "./currentTurn";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { getMilitaryUnitsCollection } from "@/lib/db/collections/militaryUnits";
 import { getUnitArchetype } from "@/lib/constants/military";
-import { getNationalArsenal, drawLots, returnLots } from "@/lib/db/collections/nationalArsenal";
+import { getNationalArsenal, drawLots } from "@/lib/db/collections/nationalArsenal";
 import { lotsRequired, lotsToRepair, repairOrder } from "@/lib/military/arsenal";
 import { FREE_REPAIR_CEILING } from "@/lib/navair/repair";
 
@@ -34,17 +36,19 @@ export interface NavalRepairResult {
  *
  * Naval and air only; no other domain carries `integrity`.
  */
-export async function applyNavalRepair(
+async function applyNavalRepairInTransaction(
   db: Db,
-  countryId: string,
-  knownUnits?: MilitaryUnit[]
+  countryId: string
 ): Promise<NavalRepairResult> {
   const unitsCol = getMilitaryUnitsCollection(db);
-  const units = knownUnits
-    ? knownUnits.filter((unit) => unit.domain === "naval" || unit.domain === "air")
-    : await unitsCol
-        .find({ countryId: countryId as CountryId, domain: { $in: ["naval", "air"] } })
-        .toArray();
+  const units = await unitsCol
+    .find(
+      { countryId: countryId as CountryId, domain: { $in: ["naval", "air"] } },
+      {
+        projection: { _id: 1, countryId: 1, domain: 1, type: 1, equipment: 1, integrity: 1 },
+      }
+    )
+    .toArray();
   if (units.length === 0) return { unitsRepaired: 0, lotsUsed: 0 };
 
   const arsenal = await getNationalArsenal(db, countryId);
@@ -55,7 +59,7 @@ export async function applyNavalRepair(
 
   const ops: AnyBulkWriteOperation<MilitaryUnit>[] = [];
   let lotsUsed = 0;
-  /** Lots taken per domain this turn, so a failed write can put them back. */
+  // Allocate against the transaction snapshot, then draw each domain once.
   const drawnByDomain = new Map<string, number>();
 
   // Grouped by domain because each draws from its own store: a full aircraft store does
@@ -93,7 +97,10 @@ export async function applyNavalRepair(
       const needed = lotsToRepair(unit, lotsRequired(archetype));
       if (needed <= 0) continue;
 
-      const drawn = await drawLots(db, countryId, unit.domain, needed);
+      const drawn = Math.min(
+        needed,
+        Math.max(0, arsenal.stock[unit.domain] - (drawnByDomain.get(unit.domain) ?? 0))
+      );
       if (drawn <= 0) break; // this domain's store is exhausted
 
       // Proportional to what was actually drawn, never the full restore. Awarding full
@@ -112,19 +119,31 @@ export async function applyNavalRepair(
     }
   }
 
+  for (const [domain, lots] of drawnByDomain) {
+    const drawn = await drawLots(db, countryId, domain as MilitaryUnit["domain"], lots);
+    if (drawn !== lots) throw new Error("Arsenal changed during equipment allocation");
+  }
   if (ops.length > 0) {
-    try {
-      await unitsCol.bulkWrite(ops);
-    } catch (error) {
-      // Lots are drawn per unit but written in one batch, so a failed write would
-      // otherwise destroy every lot taken this turn with nothing issued for them. Put them
-      // back before rethrowing — materiel a nation paid for must not evaporate because a
-      // write failed.
-      for (const [domain, lots] of drawnByDomain) {
-        await returnLots(db, countryId, domain as MilitaryUnit["domain"], lots);
-      }
-      throw error;
-    }
+    const result = await unitsCol.bulkWrite(ops);
+    if (result.matchedCount !== ops.length)
+      throw new Error("Military formations changed during equipment delivery");
   }
   return { unitsRepaired: ops.length, lotsUsed };
+}
+
+/** A country receipt binds consumed lots to their delivered equipment for this turn. */
+export async function applyNavalRepair(
+  db: Db,
+  countryId: string,
+  _knownUnits?: MilitaryUnit[],
+  turn?: number
+): Promise<NavalRepairResult> {
+  const settledTurn = turn ?? (await getCurrentTurn(db));
+  return withTurnValueSettlement(
+    db,
+    "naval-repair",
+    settledTurn,
+    (db) => applyNavalRepairInTransaction(db, countryId),
+    { sourceKey: `${countryId}:${settledTurn}` }
+  );
 }

@@ -109,7 +109,7 @@ export interface IsolatedMongod {
  */
 export async function startIsolatedMongod(
   prefix: string,
-  options: { replicaSet?: string } = {}
+  options: { replicaSet?: string; monitorCommands?: boolean } = {}
 ): Promise<IsolatedMongod> {
   const base = tmpdir();
   const freeBytes = statfsSync(base).bavail * statfsSync(base).bsize;
@@ -137,7 +137,7 @@ export async function startIsolatedMongod(
     const child = spawn(
       "mongod",
       [
-        ...(options.replicaSet ? ["--replSet", options.replicaSet] : []),
+        ...(options.replicaSet ? ["--replSet", options.replicaSet, "--oplogSize", "64"] : []),
         "--port",
         String(port),
         "--dbpath",
@@ -148,7 +148,7 @@ export async function startIsolatedMongod(
         "--wiredTigerCacheSizeGB",
         "0.25",
       ],
-      { stdio: "ignore" }
+      { stdio: "ignore", windowsHide: true }
     );
     // Registered synchronously so a failed spawn can never surface as an
     // unhandled 'error' event.
@@ -172,7 +172,10 @@ export async function startIsolatedMongod(
         );
         break;
       }
-      const candidate = new MongoClient(uri, { serverSelectionTimeoutMS: 1000 });
+      const candidate = new MongoClient(uri, {
+        serverSelectionTimeoutMS: 1000,
+        monitorCommands: options.monitorCommands,
+      });
       try {
         await candidate.connect();
         await candidate.db().admin().ping();

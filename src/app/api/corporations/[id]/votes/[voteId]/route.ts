@@ -7,9 +7,8 @@ import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { resolveCorporationVoteIfReady } from "@/lib/corporations/votes/voteService";
 import { notifyVoteEvent } from "@/lib/corporations/votes/voteNotifications";
-import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { totalVotingPower } from "@/lib/corporations/superShares";
-import type { CorporationVote } from "@/lib/db/types/corporationVote";
+
 import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
 
 interface RouteParams {
@@ -53,9 +52,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
       if (claimed && outcome !== "open") {
         const notificationType =
           outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
-        if (outcome === "passed") {
-          await applyPassedVoteEffects({ db, vote, corporation, currentTurn });
-        }
         await notifyVoteEvent({ db, vote, corpName: corporation.name, notificationType });
       }
       if (outcome !== "open") {

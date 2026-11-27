@@ -1,3 +1,5 @@
+import type { Db } from "mongodb";
+import { withTurnValueSettlement } from "../withTurnValueSettlement";
 // src/lib/turn/partyOrg/turnProcessing.ts
 import { getDb } from "@/lib/mongodb";
 import type { Filter } from "mongodb";
@@ -13,6 +15,12 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
  */
 export async function processPartyOrgTurn(currentTurn: number, now = new Date()): Promise<void> {
   const db = await getDb();
+  await withTurnValueSettlement(db, "party-organization-decay", currentTurn, (db) =>
+    decayOrganization(db, currentTurn, now)
+  );
+}
+
+async function decayOrganization(db: Db, currentTurn: number, now: Date): Promise<void> {
   const statePartyOrgCol = statePartyOrgCollection(db);
 
   const allSpo = await statePartyOrgCol

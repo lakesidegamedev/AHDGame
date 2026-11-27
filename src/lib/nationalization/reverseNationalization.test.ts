@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 
 const creditTreasury = vi.fn().mockResolvedValue(0);
 vi.mock("./treasury", () => ({
@@ -22,7 +22,7 @@ import {
 } from "./reverseNationalization";
 
 function world(opts: { priorCash: number; merged?: boolean }) {
-  const memory = createInMemoryDb();
+  const { memory, db } = createTransactionalMemoryDb();
   const natCorp = new ObjectId();
   const prior = new ObjectId();
   const sectorId = new ObjectId();
@@ -56,7 +56,7 @@ function world(opts: { priorCash: number; merged?: boolean }) {
       },
     },
   ]);
-  return { memory, db: memory as unknown as Db, natCorp, prior, sectorId };
+  return { memory, db, natCorp, prior, sectorId };
 }
 
 const params = (sectorId: ObjectId) => ({
@@ -67,6 +67,41 @@ const params = (sectorId: ObjectId) => ({
 });
 
 describe("reverseNationalizationTaking compensation clawback", () => {
+  it("does not lose capacity or compensation if destination creation fails after source shrink", async () => {
+    const w = world({ priorCash: 1000, merged: true });
+    const sectors = w.memory.collection("corporateSectors");
+    const original = sectors.insertOne.bind(sectors);
+    const failure = vi.spyOn(sectors, "insertOne").mockImplementationOnce(async (...args) => {
+      await original(...args);
+      throw new Error("landed destination failure");
+    });
+    const result = await reverseNationalizationTaking(w.db, params(w.sectorId));
+    expect(result).toMatchObject({
+      restoredToPriorOwner: 0,
+      skipped: 1,
+      compensationRecoveredAnchor: 0,
+    });
+    expect(await sectors.findOne({ _id: w.sectorId })).toMatchObject({
+      revenue: 1000,
+      workers: 100,
+      nationalizationProvenance: { formerCorporationId: w.prior },
+    });
+    expect(await sectors.countDocuments({ corporationId: w.prior })).toBe(0);
+    expect(await w.memory.collection("corporations").findOne({ _id: w.prior })).toMatchObject({
+      liquidCapital: 1000,
+    });
+    failure.mockRestore();
+    const [first, second] = await Promise.all([
+      reverseNationalizationTaking(w.db, params(w.sectorId)),
+      reverseNationalizationTaking(w.db, params(w.sectorId)),
+    ]);
+    expect(first.restoredToPriorOwner + second.restoredToPriorOwner).toBe(1);
+    expect(await sectors.countDocuments({ corporationId: w.prior })).toBe(1);
+    expect((await sectors.findOne({ _id: w.sectorId }))?.revenue).toBe(150);
+    expect(
+      (await w.memory.collection("corporations").findOne({ _id: w.prior }))?.liquidCapital
+    ).toBe(400);
+  });
   it("recovers the full compensation to the treasury when the company can pay", async () => {
     creditTreasury.mockClear();
     const w = world({ priorCash: 1_000 });
@@ -108,6 +143,22 @@ describe("reverseNationalizationTaking compensation clawback", () => {
     expect(creditTreasury).toHaveBeenCalledTimes(1);
   });
 
+  it("does not privatize the surviving state holding when a merged reversal is retried", async () => {
+    const w = world({ priorCash: 1000, merged: true });
+    vi.mocked(privatizeAsset).mockClear();
+    expect(
+      (await reverseNationalizationTaking(w.db, params(w.sectorId))).restoredToPriorOwner
+    ).toBe(1);
+    expect(await reverseNationalizationTaking(w.db, params(w.sectorId))).toMatchObject({
+      restoredToPriorOwner: 0,
+      spunOut: 0,
+    });
+    expect(privatizeAsset).not.toHaveBeenCalled();
+    expect(await w.db.collection("corporateSectors").findOne({ _id: w.sectorId })).toMatchObject({
+      corporationId: w.natCorp,
+      revenue: 150,
+    });
+  });
   it("returns only the folded amounts of a merged state holding", async () => {
     const w = world({ priorCash: 1_000, merged: true });
     const result = await reverseNationalizationTaking(w.db, params(w.sectorId));
@@ -130,7 +181,7 @@ describe("reverseNationalizationTaking compensation clawback", () => {
 
   it("hands back every taking folded into one row and recovers each compensation", async () => {
     creditTreasury.mockClear();
-    const memory = createInMemoryDb();
+    const { memory, db } = createTransactionalMemoryDb();
     const natCorp = new ObjectId();
     const ownerA = new ObjectId();
     const ownerB = new ObjectId();
@@ -171,7 +222,6 @@ describe("reverseNationalizationTaking compensation clawback", () => {
         },
       },
     ]);
-    const db = memory as unknown as Db;
 
     const result = await reverseNationalizationTaking(db, params(sectorId));
 
@@ -192,7 +242,7 @@ describe("reverseNationalizationTaking compensation clawback", () => {
 
   it("recovers from the corporation that now holds the asset when no prior owner survives", async () => {
     creditTreasury.mockClear();
-    const memory = createInMemoryDb();
+    const { memory } = createTransactionalMemoryDb();
     const natCorp = new ObjectId();
     const gone = new ObjectId();
     const spunOut = new ObjectId();
@@ -239,7 +289,7 @@ describe("resumePendingCompensationRecoveries", () => {
   });
 
   const spinOutWorld = (sectorHolder: "state" | "spun") => {
-    const memory = createInMemoryDb();
+    const { memory } = createTransactionalMemoryDb();
     const natCorp = new ObjectId();
     const spun = new ObjectId();
     const sectorId = new ObjectId();
@@ -300,7 +350,7 @@ describe("resumePendingCompensationRecoveries", () => {
   });
 
   it("leaves the taking intact and the marker dropped when the spin-out itself fails", async () => {
-    const memory = createInMemoryDb();
+    const { memory } = createTransactionalMemoryDb();
     const natCorp = new ObjectId();
     const gone = new ObjectId();
     const sectorId = new ObjectId();
@@ -330,7 +380,7 @@ describe("resumePendingCompensationRecoveries", () => {
 
   it("completes a recovery whose asset already moved before the crash", async () => {
     creditTreasury.mockClear();
-    const memory = createInMemoryDb();
+    const { memory } = createTransactionalMemoryDb();
     const owner = new ObjectId();
     const natCorp = new ObjectId();
     const sectorId = new ObjectId();
@@ -357,7 +407,7 @@ describe("resumePendingCompensationRecoveries", () => {
 
   it("drops a marker whose taking never left the state, moving no money", async () => {
     creditTreasury.mockClear();
-    const memory = createInMemoryDb();
+    const { memory } = createTransactionalMemoryDb();
     const owner = new ObjectId();
     const natCorp = new ObjectId();
     const sectorId = new ObjectId();
@@ -387,7 +437,7 @@ describe("resumePendingCompensationRecoveries", () => {
 
   it("credits the treasury once for cash already taken, then books the unpaid rest as debt", async () => {
     creditTreasury.mockClear();
-    const memory = createInMemoryDb();
+    const { memory, db } = createTransactionalMemoryDb();
     const owner = new ObjectId();
     const sectorId = new ObjectId();
     memory.seed("corporations", [
@@ -403,7 +453,6 @@ describe("resumePendingCompensationRecoveries", () => {
     memory.seed("corporateSectors", [
       { _id: sectorId, corporationId: owner, stateId: "TX", sectorType: "extraction" },
     ]);
-    const db = memory as unknown as Db;
 
     creditTreasury.mockRejectedValueOnce(new Error("crash"));
     await resumePendingCompensationRecoveries(db);

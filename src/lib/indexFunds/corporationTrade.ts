@@ -176,6 +176,8 @@ export async function tradeCorporationFund(
           );
           if (!currentCorp)
             throw badRequest("Corporation ownership changed; reload before trading");
+          if (resolveCorpLiquidCurrencyCode(currentCorp) !== currency)
+            throw badRequest("Corporation currency changed; reload before trading");
           let balanceAfter = 0;
           if (kind === "subscribe") {
             const priorPosition = await getPosition(

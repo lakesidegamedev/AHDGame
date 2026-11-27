@@ -24,7 +24,7 @@ import {
   estimateSavingsAccrualFromApy,
   savingsApyPercent,
   turnsUntilSavingsCredit,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 import { getGameState } from "@/lib/gameState";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";

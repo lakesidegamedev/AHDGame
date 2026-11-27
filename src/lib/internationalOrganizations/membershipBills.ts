@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import {
   organizationCashContext,
   organizationLocalPerAnchor,
@@ -43,7 +44,26 @@ export async function applyOrgFundProvision(
   db: Db,
   countryId: CountryId,
   p: InternationalOrganizationProvision,
-  billId?: string
+  billId?: string,
+  provisionIndex = 0
+): Promise<void> {
+  if (!billId) throw new Error("Organization capitalization requires its source bill");
+  const turn = await getCurrentTurn(db);
+  return withTurnValueSettlement(
+    db,
+    "organization-capitalization",
+    turn,
+    (db) => applyOrgFundProvisionWork(db, countryId, p, billId, provisionIndex),
+    { sourceKey: `${billId}:${provisionIndex}` }
+  );
+}
+
+async function applyOrgFundProvisionWork(
+  db: Db,
+  countryId: CountryId,
+  p: InternationalOrganizationProvision,
+  billId: string,
+  provisionIndex: number
 ): Promise<void> {
   const amountLocal = p.amountLocal ?? 0;
   if (!(amountLocal > 0)) return;
@@ -83,7 +103,7 @@ export async function applyOrgFundProvision(
           { upsert: true }
         );
         const result = await settleOrganizationFundedCashMove(db, batch, {
-          key: `organization-capitalization:${billId}`,
+          key: `organization-capitalization:${billId}:${provisionIndex}`,
           kind: "organization_capitalization",
           source: {
             collection: "federalBudget",
@@ -113,6 +133,7 @@ export async function applyOrgFundProvision(
         { countryId },
         { $inc: { treasuryBalance: -amountLocal }, $set: { updatedAt: new Date() } }
       );
+      if (debit.matchedCount !== 1) throw new Error("Organization funding Treasury disappeared");
       if (debit.modifiedCount > 0) {
         await witnessOrganizationCash(db, batch, {
           kind: "government",

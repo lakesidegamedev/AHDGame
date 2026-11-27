@@ -1,11 +1,8 @@
+import { logger } from "@/lib/observability/logger";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
-import type {
-  BargainingCampaign,
-  CollectiveAgreement,
-  CorporateSector,
-  StateMetrics,
-  Union,
-} from "@/lib/db/types";
+import type { BargainingCampaign, Union } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { disputeLapseTurn, escalationUpkeepPerTurn } from "@/lib/unions/bargaining";
 import {
@@ -47,6 +44,15 @@ export async function processLabourRelationsTurn(
   db: Db,
   currentTurn: number
 ): Promise<LabourRelationsTurnResult> {
+  return withTurnValueSettlement(db, "labour-relations", currentTurn, (db) =>
+    settleLabourRelationsTurn(db, currentTurn)
+  );
+}
+
+async function settleLabourRelationsTurn(
+  db: Db,
+  currentTurn: number
+): Promise<LabourRelationsTurnResult> {
   const now = new Date();
   const [campaigns, agreements, mediations] = await Promise.all([
     bargainingCampaignsCollection(db).updateMany(
@@ -84,10 +90,16 @@ export async function processLabourRelationsTurn(
 
   // Both of these end industrial action the leader called and paid for, out of
   // turn processing, with no action of theirs behind it. Silent is unreadable.
-  await notifyLabourRelationsEvents(db, currentTurn, [
-    ...lapsed.campaigns.map((campaign) => ({ ...campaign, kind: "lapsed" as const })),
-    ...endedBans.map((ban) => ({ ...ban, kind: "ban_defunded" as const })),
-  ]);
+  await afterCommit(db, async () => {
+    try {
+      await notifyLabourRelationsEvents(unboundDb(db), currentTurn, [
+        ...lapsed.campaigns.map((campaign) => ({ ...campaign, kind: "lapsed" as const })),
+        ...endedBans.map((ban) => ({ ...ban, kind: "ban_defunded" as const })),
+      ]);
+    } catch (error) {
+      logger.error("labour-relations", "Notification failed", error);
+    }
+  });
 
   return {
     campaignsMovedToDispute: campaigns.modifiedCount,

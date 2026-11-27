@@ -1,36 +1,5 @@
-/**
- * NPP found-a-corporation command core (V3 full-agency finance).
- *
- * Lets an ambitious, sufficiently wealthy NPP found a brand-new corporation
- * — the natural next step after nppBuyShares/nppSellShares let NPPs
- * accumulate capital in the equity market. Reuses `spawnNppCorporation` (the
- * same auth-independent core the production admin batch-spawn tool and the
- * sim harness bootstrap both already use) for everything correctness-
- * critical — ticker generation, sector creation, standard-size
- * starting revenue, national-corp exclusion, share allocation math — rather
- * than reimplementing any of it.
- *
- * The one thing `spawnNppCorporation` can't do is guarantee a SPECIFIC NPP
- * becomes CEO (its own CEO selection, `chooseNppCorpCeo`, balances
- * ownership across a country's parties and is deliberately not overridable
- * to a single NPP — that balancing logic is shared with production admin
- * tooling and shouldn't be touched for this). So: spawn normally (biased
- * toward the founder's own party via `nppPartyId`), then reassign — move
- * the auto-selected CEO's majority stake to the founding NPP via the same
- * atomic share ops nppBuyShares/nppSellShares use, and flip `ceoId`. If the
- * auto-selected CEO IS already the founder (can happen — same balancing
- * pool), the reassignment is a no-op.
- *
- * Scope constraint: founding a corporation is a REAL-ECONOMY action, so the
- * founding fee is deducted from the founder's personal forex account
- * (`nppInvestmentCashAnchor`, ₳), NOT the campaign war chest (`funds`). The
- * fee is quoted LOCAL and converted at the FX boundary. The corp's own
- * starting treasury is a separate, system-granted amount from
- * spawnNppCorporation's default, unrelated to the founder's personal cost of
- * entry. Deducted BEFORE spawning (atomic guard) so a corp is never created
- * for an NPP who then turns out unable to pay.
- */
-
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import { type OperatingSectorType } from "@/lib/constants/corporations";
 import { ObjectId, type Db } from "mongodb";
 import type { NPP } from "@/lib/db/types";
@@ -73,6 +42,49 @@ export async function nppFoundCorporation(
   /** Recipe for the founding sector; absent builds the standard recipe. */
   initialStrategyId?: string
 ): Promise<NppFoundCorporationResult> {
+  try {
+    return await withAtomicResult(db, (tx) =>
+      withTurnValueSettlement(
+        tx,
+        "npp-corporation-founding",
+        currentTurn,
+        async (inner) =>
+          foundInTransaction(
+            inner,
+            npp,
+            lane,
+            foundingFeeLocal,
+            currentTurn,
+            homeRate,
+            blockedCountries,
+            preset,
+            initialStrategyId
+          ),
+        { sourceKey: `${currentTurn}:${npp._id}` }
+      )
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      reason: `Corporation founding failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+async function foundInTransaction(
+  db: Db,
+  npp: Pick<NPP, "_id" | "countryId" | "party" | "homeState" | "personality">,
+  lane: OperatingSectorType,
+  foundingFeeLocal: number,
+  currentTurn: number,
+  homeRate?: number,
+  blockedCountries?: ReadonlySet<CountryId>,
+  preset?: string,
+  initialStrategyId?: string
+): Promise<NppFoundCorporationResult> {
+  if (!Number.isFinite(foundingFeeLocal) || foundingFeeLocal <= 0)
+    return { ok: false, reason: "Invalid corporation founding fee." };
+
   if (!npp.homeState) {
     return { ok: false, reason: "NPP has no home state to headquarter a corporation in." };
   }
@@ -103,6 +115,8 @@ export async function nppFoundCorporation(
   // Founding is real-economy → charge the personal forex account, not campaign
   // `funds`. Fee is quoted LOCAL; convert at the FX boundary.
   const rate = homeRate ?? (await nppHomeFxRate(db, npp.countryId, undefined, preset));
+  if (!Number.isFinite(rate) || rate <= 0)
+    return { ok: false, reason: "Founding currency quote is unavailable." };
   const foundingFeeAnchor = localToAnchor(foundingFeeLocal, rate);
   const now = new Date();
   const deducted = await nppsCollection(db).findOneAndUpdate(
@@ -116,30 +130,16 @@ export async function nppFoundCorporation(
   }
 
   const name = generateNppCorpName(countryId, lane, []);
-  let spawnResult;
-  try {
-    spawnResult = await spawnNppCorporation(db, {
-      name,
-      realName: "sector",
-      type: lane,
-      countryId,
-      headquartersState: npp.homeState,
-      nppPartyId: npp.party,
-      foundedAtTurn: currentTurn,
-      ...(initialStrategyId ? { initialStrategyId } : {}),
-    });
-  } catch (error) {
-    // Refund the founding fee — no corp was created, no partial state.
-    await nppsCollection(db).updateOne(
-      { _id: npp._id },
-      { $inc: { nppInvestmentCashAnchor: foundingFeeAnchor }, $set: { updatedAt: new Date() } }
-    );
-    return {
-      ok: false,
-      reason: `Corporation founding failed: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-
+  const spawnResult = await spawnNppCorporation(db, {
+    name,
+    realName: "sector",
+    type: lane,
+    countryId,
+    headquartersState: npp.homeState,
+    nppPartyId: npp.party,
+    foundedAtTurn: currentTurn,
+    ...(initialStrategyId ? { initialStrategyId } : {}),
+  });
   await witnessNppFoundingCash(db, npp, foundingFeeAnchor, now);
 
   const corporationId = new ObjectId(spawnResult.corporationId);
@@ -153,8 +153,8 @@ export async function nppFoundCorporation(
   // preserves that instead of forcing a price through the trade-basis math
   // creditSharesToNpp/debitSharesFromNpp are built for.
   if (!autoCeoId.equals(npp._id)) {
-    await corporationsCollection(db).updateOne(
-      { _id: corporationId, "shareholders.nppId": autoCeoId },
+    const assigned = await corporationsCollection(db).updateOne(
+      { _id: corporationId, ceoId: autoCeoId, "shareholders.nppId": autoCeoId },
       {
         $set: {
           "shareholders.$.nppId": npp._id,
@@ -163,6 +163,8 @@ export async function nppFoundCorporation(
         },
       }
     );
+    if (assigned.matchedCount !== 1)
+      throw new Error("Founding CEO ownership changed during assignment");
   }
 
   return {

@@ -255,7 +255,7 @@ export function getBillsCampaignsAndActivityPhases(): TurnPhaseAdapter[] {
         // whose campaign or race has ended, whichever resolution path ended it.
         await runtime.runPhase("campaignFieldOffices", async () => {
           const { processFieldOfficeUpkeep } = await import("@/lib/campaigns/fieldOffices/upkeep");
-          return processFieldOfficeUpkeep(db);
+          return processFieldOfficeUpkeep(db, newTurn);
         });
 
         // In-game year for era-gated events (same formula as fiscalYearBoundary).

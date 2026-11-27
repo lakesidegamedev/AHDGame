@@ -112,7 +112,7 @@ const REGISTRY: Record<string, Registered> = {
  */
 const SPEND_REGISTRY: Record<string, Registered> = {
   "src/lib/crises/aidPledge.ts": {
-    writers: ["refundTreasurySpend", "spendFromTreasury"],
+    writers: ["spendFromTreasury"],
     witness: [{ kind: "flow", flows: ["crisis_aid"] }],
   },
   "src/lib/crises/aidFinalize.ts": {

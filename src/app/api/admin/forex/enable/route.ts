@@ -1,3 +1,6 @@
+import { logger } from "@/lib/observability/logger";
+import { randomUUID } from "node:crypto";
+import { ApiError } from "@/lib/api/errors";
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 // POST /api/admin/forex/enable — One-time migration to enable the forex system.
 // Auth: requireAdmin
@@ -5,7 +8,6 @@ import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
-import type { GameState } from "@/lib/db/types";
 import { getProcessingLockState } from "@/lib/turn/processingLock";
 import {
   migrateCharacterBalances,
@@ -51,31 +53,66 @@ export const POST = withAdminRoute(async (_auth) => {
 
   // Lock — prevent turns during migration
   const lockStartedAt = new Date();
-  await gameStateCol.updateOne(
-    { _id: "current" },
-    {
-      $set: {
-        isProcessing: true,
-        processingKind: "forexMigration",
-        processingPhase: "forexMigration",
-        processingStartedAt: lockStartedAt,
-        processingHeartbeatAt: lockStartedAt,
-        updatedAt: lockStartedAt,
+  const holderId = randomUUID();
+  const owned = {
+    _id: "current",
+    isProcessing: true,
+    processingKind: "forexMigration" as const,
+    processingHolderId: holderId,
+  };
+  let acquired;
+  try {
+    acquired = await gameStateCol.updateOne(
+      {
+        _id: "current",
+        isProcessing: { $ne: true },
+        resetAdmissionId: null,
+        currentTurn: gameState.currentTurn,
+        forexEnabled: { $ne: true },
+        ...(gameState.worldEpochId != null
+          ? { worldEpochId: gameState.worldEpochId }
+          : { worldEpochId: { $exists: false } }),
       },
-    }
-  );
+      {
+        $set: {
+          isProcessing: true,
+          processingHolderId: holderId,
+          processingKind: "forexMigration",
+          processingPhase: "forexMigration",
+          processingStartedAt: lockStartedAt,
+          processingHeartbeatAt: lockStartedAt,
+          updatedAt: lockStartedAt,
+        },
+      }
+    );
+  } catch (error) {
+    await gameStateCol
+      .updateOne(owned, {
+        $set: {
+          isProcessing: false,
+          processingHolderId: null,
+          processingKind: null,
+          processingPhase: null,
+          processingStartedAt: null,
+          processingHeartbeatAt: null,
+        },
+      })
+      .catch((cleanupError) =>
+        logger.error("forex-enable", "Migration admission cleanup failed", cleanupError)
+      );
+    throw error;
+  }
+  if (acquired.matchedCount !== 1)
+    return errorResponse(409, "Turn or world state changed. Refresh and retry forex enable.");
 
   const heartbeatTimer = setInterval(() => {
     void gameStateCol
-      .updateOne(
-        { _id: "current", isProcessing: true, processingKind: "forexMigration" },
-        {
-          $set: {
-            processingHeartbeatAt: new Date(),
-            processingPhase: "forexMigration",
-          },
-        }
-      )
+      .updateOne(owned, {
+        $set: {
+          processingHeartbeatAt: new Date(),
+          processingPhase: "forexMigration",
+        },
+      })
       .catch(() => {
         // Best-effort heartbeat only. The route still clears the lock in the main flow.
       });
@@ -83,27 +120,37 @@ export const POST = withAdminRoute(async (_auth) => {
 
   try {
     const preset = await getGameStatePresetOrDefault(db);
+    const requireOwnership = async () => {
+      if (!(await gameStateCol.findOne(owned, { projection: { _id: 1 } })))
+        throw new ApiError(409, "Forex migration no longer owns the processing lock.");
+    };
+    await requireOwnership();
     const migrationResult = await migrateCharacterBalances(db, preset);
+    await requireOwnership();
     await seedExchangeRates(db, preset);
+    await requireOwnership();
     const corpMigrationResult = await migrateCorporationLiquidCapital(db);
+    await requireOwnership();
     await updateCentralBanks(db, preset);
+    await requireOwnership();
     await createForexIndexes(db);
 
     // Flip the flag and release lock
-    await gameStateCol.updateOne(
-      { _id: "current" },
-      {
-        $set: {
-          forexEnabled: true,
-          isProcessing: false,
-          processingKind: null,
-          processingPhase: null,
-          processingStartedAt: null,
-          processingHeartbeatAt: null,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    const completed = await gameStateCol.updateOne(owned, {
+      $set: {
+        forexEnabled: true,
+        isProcessing: false,
+        processingHolderId: null,
+        processingKind: null,
+        processingPhase: null,
+        processingStartedAt: null,
+        processingHeartbeatAt: null,
+        updatedAt: new Date(),
+      },
+    });
+
+    if (completed.matchedCount !== 1)
+      throw new ApiError(409, "Forex migration no longer owns the processing lock.");
 
     return NextResponse.json({
       success: true,
@@ -117,19 +164,17 @@ export const POST = withAdminRoute(async (_auth) => {
     });
   } catch (migrationError) {
     // Release lock but do NOT set forexEnabled — allows retry after fix
-    await gameStateCol.updateOne(
-      { _id: "current" },
-      {
-        $set: {
-          isProcessing: false,
-          processingKind: null,
-          processingPhase: null,
-          processingStartedAt: null,
-          processingHeartbeatAt: null,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    await gameStateCol.updateOne(owned, {
+      $set: {
+        isProcessing: false,
+        processingHolderId: null,
+        processingKind: null,
+        processingPhase: null,
+        processingStartedAt: null,
+        processingHeartbeatAt: null,
+        updatedAt: new Date(),
+      },
+    });
     throw migrationError;
   } finally {
     clearInterval(heartbeatTimer);

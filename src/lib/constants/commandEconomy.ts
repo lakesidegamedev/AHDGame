@@ -16,6 +16,8 @@ export {
   nonConvertibleCurrencyMessage,
   isDualTrackEconomy,
   isPlannedEconomy,
+  isPlannedLevel,
+  plannedShareAtLevel,
   isCurtained,
   plannedShare,
   commandEconomySoeSectors,

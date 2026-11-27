@@ -472,7 +472,7 @@ describe("terminal failure and compensation", () => {
     const settlement = await loadAcquisitionSettlement(world.db, world.offerId);
     expect(settlement?.status).toBe("compensated");
     expect(settlement?.refundTotal).toBe(0);
-    expect(settlement?.error).toMatch(/could not be applied/);
+    expect(settlement?.error).toMatch(/could not be applied|acquiring corporation was removed/);
   });
 
   it("refuses to resume a compensated settlement", async () => {

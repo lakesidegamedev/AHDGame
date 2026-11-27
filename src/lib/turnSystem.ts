@@ -344,6 +344,7 @@ async function processTurnImpl(
     ).findOneAndUpdate(
       {
         _id: "current",
+        resetAdmissionId: null,
         processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
         // A held turn waits for a person; no path takes the lock over.
         processingHoldReason: null,
@@ -383,7 +384,7 @@ async function processTurnImpl(
     localTurnLock.held = true;
     // With the fast takeover on, a holder that lost its lock must not write over
     // the new holder's state: every lock-owner write below is conditional on it.
-    setTurnLockFence(resilienceStage >= 1 ? TURN_HOLDER_ID : null);
+    setTurnLockFence(TURN_HOLDER_ID, lockResult);
 
     const gameState = lockResult;
     activeIteration = gameState.iteration ? { ...gameState.iteration } : undefined;
@@ -446,7 +447,10 @@ async function processTurnImpl(
       if (reset) {
         await (
           await getGameStateCollection(db)
-        ).updateOne({ _id: "current", isProcessing: true }, { $set: reset });
+        ).updateOne(
+          { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
+          { $set: reset }
+        );
       }
     }
 
@@ -454,6 +458,7 @@ async function processTurnImpl(
     gameState.currentTurn = repairedClock.currentTurn;
     gameState.currentYear = repairedClock.currentYear;
     gameState.lastTurnProcessed = repairedClock.lastTurnProcessed;
+    setTurnLockFence(TURN_HOLDER_ID, gameState);
 
     // Population vectors, totals and readouts can land in separate writes.
     // Repair their frozen receipt before any resumed phase reads the context.
@@ -502,7 +507,7 @@ async function processTurnImpl(
     await (
       await getGameStateCollection(db)
     ).updateOne(
-      { _id: "current", isProcessing: true },
+      { _id: "current", isProcessing: true, ...turnLockFenceFilter() },
       {
         $set: {
           processingTargetTurn: nextTurnNumber,

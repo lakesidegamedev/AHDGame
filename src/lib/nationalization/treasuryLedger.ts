@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 /**
  * Treasury cash witnesses for event-driven flows: state enterprises,
  * nationalization and privatization, crisis responses, settlement plays and
@@ -161,7 +162,7 @@ export async function loadTreasuryCashContext(
     };
   } catch (error) {
     Sentry.captureException(error, { extra: { phase: "loadTreasuryCashContext" } });
-    return null;
+    throw error;
   }
 }
 
@@ -246,6 +247,7 @@ export async function witnessTreasuryCash(
     else await emitLedgerEntries(db, [entry]);
   } catch (error) {
     Sentry.captureException(error, { extra: { phase: "witnessTreasuryCash", site: input.site } });
+    if (boundSession(db)) throw error;
   }
 }
 

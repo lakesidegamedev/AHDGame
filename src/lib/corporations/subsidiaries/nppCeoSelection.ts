@@ -41,11 +41,15 @@ export async function pickOrCreateNppCeoForNewCorp(
   const choice = chooseNppCorpCeo({ affiliations, ...(sectorLane ? { sectorLane } : {}) });
   if (choice.kind === "existing") return new Oid(choice.nppId);
 
-  const npp = await createNPP({
-    state: headquartersState,
-    party: choice.party,
-    countryId,
-    targetOffice: null,
-  });
+  const npp = await createNPP(
+    {
+      state: headquartersState,
+      party: choice.party,
+      countryId,
+      targetOffice: null,
+    },
+    undefined,
+    db
+  );
   return npp._id;
 }

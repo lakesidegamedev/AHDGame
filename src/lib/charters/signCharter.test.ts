@@ -1,3 +1,8 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  afterCommit: (_db: unknown, work: () => unknown) => work(),
+  boundSession: () => undefined,
+}));
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";

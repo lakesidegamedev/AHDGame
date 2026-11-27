@@ -1,3 +1,5 @@
+import { recordedHistoryWindow } from "@/lib/corporations/rules/historyCurrency";
+import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { ObjectId, type Db } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
@@ -111,13 +113,44 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
   const history = await corporationHistoryCollection(db)
     .find(
       { corporationId: corp._id },
-      { projection: { turn: 1, sharePrice: 1, liquidCapital: 1, revenue: 1, income: 1 } }
+      {
+        projection: {
+          turn: 1,
+          sharePrice: 1,
+          liquidCapital: 1,
+          revenue: 1,
+          income: 1,
+          currencyCode: 1,
+          fxRateAtWrite: 1,
+        },
+      }
     )
     .sort({ turn: -1 })
     .limit(SERIES_TURNS)
     .toArray();
-  const oldestFirst = [...history].reverse();
-  const latest = history[0];
+  const currencyCode =
+    corp.liquidCurrencyCode ?? (corp.countryId ? COUNTRY_CURRENCY_MAP[corp.countryId] : undefined);
+  const rates =
+    currencyCode &&
+    currencyCode !== "USD" &&
+    history.some((row) => row.currencyCode && row.currencyCode !== currencyCode)
+      ? await loadFxRatesRecord(db)
+      : { USD: 1 };
+  const normalized = recordedHistoryWindow(
+    history,
+    currencyCode,
+    currencyCode ? (rates[currencyCode] ?? Number.NaN) : Number.NaN,
+    ["sharePrice", "liquidCapital", "revenue", "income"]
+  );
+  const oldestFirst = [...normalized].reverse();
+  const latest = history[0]
+    ? recordedHistoryWindow(
+        [history[0]],
+        currencyCode,
+        currencyCode ? (rates[currencyCode] ?? Number.NaN) : Number.NaN,
+        ["revenue", "income"]
+      )[0]
+    : undefined;
   return {
     sequentialId: corp.sequentialId ?? null,
     name: corp.name,
@@ -129,7 +162,9 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
     // A private corporation has no market, so no quote leaves the server.
     sharePrice: corp.isPrivate === true ? 0 : (corp.sharePrice ?? 0),
     sharePriceChange:
-      corp.isPrivate === true ? null : percentChange(corp.sharePrice ?? 0, history[1]?.sharePrice),
+      corp.isPrivate === true
+        ? null
+        : percentChange(corp.sharePrice ?? 0, normalized[1]?.sharePrice),
     revenue: latest?.revenue ?? null,
     income: latest?.income ?? null,
     sharePriceSeries: corp.isPrivate === true ? [] : oldestFirst.map((row) => row.sharePrice),
@@ -139,7 +174,10 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
   };
 }
 
-type TickerHistory = Map<string, { turn: number; sharePrice: number }[]>;
+type TickerHistory = Map<
+  string,
+  { turn: number; sharePrice: number; currencyCode?: string; fxRateAtWrite?: number }[]
+>;
 
 async function loadTickerData(db: Db, exchanges: Set<string>) {
   const snapshots = await stockExchangeSnapshotsCollection(db)
@@ -165,11 +203,17 @@ async function loadTickerData(db: Db, exchanges: Set<string>) {
     }));
     const history = await corporationHistoryCollection(db)
       .find(filters[0] && filters.length === 1 ? filters[0] : { $or: filters }, {
-        projection: { _id: 0, corporationId: 1, turn: 1, sharePrice: 1 },
+        projection: {
+          _id: 0,
+          corporationId: 1,
+          turn: 1,
+          sharePrice: 1,
+          currencyCode: 1,
+          fxRateAtWrite: 1,
+        },
       })
       .toArray();
     for (const row of history) {
-      if (!Number.isFinite(row.sharePrice)) continue;
       const key = row.corporationId.toString();
       const points = past.get(key) ?? [];
       points.push(row);
@@ -187,8 +231,18 @@ function renderTicker(snapshot: StockExchangeSnapshot, past: TickerHistory): Sto
     turn: snapshot.turn,
     rows: (snapshot.listings ?? []).map((row) => {
       // The same listing can appear in exchanges with different snapshot turns.
-      const points = (past.get(row._id.toString()) ?? []).filter(
+      const rawPoints = (past.get(row._id.toString()) ?? []).filter(
         (point) => point.turn > snapshot.turn - SERIES_TURNS && point.turn < snapshot.turn
+      );
+      const targetRate =
+        row.sharePriceAnchor != null && row.sharePriceAnchor > 0
+          ? row.sharePrice / row.sharePriceAnchor
+          : Number.NaN;
+      const points = recordedHistoryWindow(
+        rawPoints,
+        row.liquidCurrencyCode ?? undefined,
+        targetRate,
+        ["sharePrice"]
       );
       const previous = points.at(-1);
       return {

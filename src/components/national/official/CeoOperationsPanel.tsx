@@ -774,7 +774,7 @@ function SectorOpsRow({
                 sectorType={sector.sectorType as CorporationType}
                 currentStrategyId={sector.strategyId}
                 targetStrategyId={strategy}
-                dailyRevenue={sector.revenue}
+                quoteUrl={`/api/corporations/${encodeURIComponent(corpId)}/sectors/${encodeURIComponent(sector.sectorId)}`}
                 liquidCurrencyCode={currency}
                 loading={disabled}
                 onConfirm={() => {

@@ -8,7 +8,8 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 
 export const PRICE = 1_000_000;
 export const SHELL_CASH = 5_000_000;
@@ -73,7 +74,7 @@ function activeCharter(charteredTurn: number) {
 export function buildAcquisitionWorld(opts: WorldOpts = {}): AcquisitionWorld {
   const price = opts.price ?? PRICE;
   const shellCash = opts.shellCash ?? SHELL_CASH;
-  const memory = createInMemoryDb();
+  const { memory, db } = createTransactionalMemoryDb();
 
   const acq = new ObjectId();
   const tgt = new ObjectId();
@@ -198,7 +199,7 @@ export function buildAcquisitionWorld(opts: WorldOpts = {}): AcquisitionWorld {
 
   return {
     memory,
-    db: memory as unknown as Db,
+    db,
     acq,
     tgt,
     offerId,

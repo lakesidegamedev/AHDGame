@@ -1,3 +1,4 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Phase 11b — civil-unrest event chain.
  *
@@ -66,7 +67,7 @@ export async function emitCivilUnrestEvents(
   for (const idx of chosen) {
     const template = EVENT_TEMPLATES[idx];
     const content = `Civil Unrest — ${countryCode}: ${template}`;
-    await createSystemNewsPost(content, "sovereign");
+    await afterCommit(db, () => createSystemNewsPost(content, "sovereign"));
   }
 
   // Aggregated publicTrust hit for all events this turn, applied to every

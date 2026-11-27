@@ -20,8 +20,7 @@ import {
   settleBondPurchasesInTransaction,
   type BondPurchasePlan,
 } from "@/lib/bonds/purchaseBondUnitsForFund";
-import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
-import { getMongoClient } from "@/lib/mongodb";
+import { withSessionDb, boundSession } from "@/lib/db/sessionDb";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import {
@@ -413,11 +412,13 @@ async function deployBondReserve(
       });
     }
     try {
-      await runTransactionWithSessionRetry(getMongoClient, async (session) => {
-        if (!session) throw new BondBatchGuardMiss("transactions unavailable");
-        await settleBondPurchasesInTransaction(db, session, fund, planned);
-        // Receipts commit with the money they describe.
-        await insertFundTransactionsBulk(db, transactions, { session });
+      await withSessionDb(db, async (tx) => {
+        const session = boundSession(tx);
+        if (!session) throw new Error("Bond batch requires a transaction");
+        await settleBondPurchasesInTransaction(tx, session, fund, planned);
+        await insertFundTransactionsBulk(tx, transactions);
+        if (ledgerEntries.length > 0)
+          await emitTxBulk(tx, ledgerEntries, thresholds ?? (await loadTxThresholds(tx)));
       });
     } catch (err) {
       // A guard miss is thrown inside the transaction body, so the
@@ -428,7 +429,6 @@ async function deployBondReserve(
       ledgerEntries.length = 0;
     }
     if (transactions.length > 0) {
-      await flushLedgerEntries(ledgerEntries);
       // The pass snapshot and the shared issue list both move with a settled
       // batch: the next fund's quote prices off the credited pool and its
       // sizing sees the float this fund took.

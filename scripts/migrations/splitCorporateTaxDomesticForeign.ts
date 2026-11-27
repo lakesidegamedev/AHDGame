@@ -26,7 +26,8 @@
 
 import { connectDb, closeDb } from "../utils/db";
 import { calculateFederalRevenue, calculateStateRevenue } from "../../src/lib/budget/revenue";
-import type { Db } from "mongodb";
+import type { Db, Document } from "mongodb";
+import { statePoliciesCollection } from "../../src/lib/db/repositories/statePolicies";
 import type { FederalBudget, StateBudget } from "../../src/lib/db/types/budget";
 import type { State } from "../../src/lib/db/types/state";
 import type { LegislationType } from "../../src/lib/db/types/legislation";
@@ -44,6 +45,7 @@ const REMAPPED_COLLECTIONS = [
   "bills",
   "committeeAssignments",
   "statePolicyRecords",
+  "statePolicies",
 ] as const;
 
 interface LegacyBudgetShape {
@@ -101,14 +103,14 @@ async function renameLegislationTypes(db: Db): Promise<number> {
   return renamed;
 }
 
-async function remapReferences(db: Db): Promise<Record<string, number>> {
+export async function remapReferences(db: Db): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const coll of REMAPPED_COLLECTIONS) {
     let total = 0;
     for (const [legacyId, newId] of Object.entries(LEGACY_TO_NEW_IDS)) {
-      const res = await db
-        .collection(coll)
-        .updateMany({ legislationTypeId: legacyId }, { $set: { legislationTypeId: newId } });
+      const res = await (
+        coll === "statePolicies" ? statePoliciesCollection<Document>(db) : db.collection(coll)
+      ).updateMany({ legislationTypeId: legacyId }, { $set: { legislationTypeId: newId } });
       total += res.modifiedCount;
     }
     counts[coll] = total;
@@ -324,9 +326,9 @@ export async function rollback(): Promise<void> {
         .deleteOne({ _id: newId as unknown as LegislationType["_id"] });
     }
     for (const coll of REMAPPED_COLLECTIONS) {
-      await db
-        .collection(coll)
-        .updateMany({ legislationTypeId: newId }, { $set: { legislationTypeId: legacyId } });
+      await (
+        coll === "statePolicies" ? statePoliciesCollection<Document>(db) : db.collection(coll)
+      ).updateMany({ legislationTypeId: newId }, { $set: { legislationTypeId: legacyId } });
     }
   }
 

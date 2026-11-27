@@ -11,7 +11,7 @@ vi.mock("@/lib/api/rateLimit", () => ({
 }));
 vi.mock("@/lib/turn/currentTurn", () => ({ getCurrentTurn: vi.fn().mockResolvedValue(10) }));
 vi.mock("@/lib/nationalization/treasury", () => ({
-  drawFromTreasury: vi.fn().mockResolvedValue({ ok: true, amount: 0 }),
+  drawFromTreasury: vi.fn().mockResolvedValue({ ok: true, amount: 0, corporationAmount: 0 }),
 }));
 
 let db: MockDb;
@@ -56,18 +56,21 @@ beforeEach(async () => {
 describe("POST .../treasury-draw", () => {
   it("draws within the per-turn allowance and increments the tally", async () => {
     const { drawFromTreasury } = await import("@/lib/nationalization/treasury");
-    vi.mocked(drawFromTreasury).mockResolvedValue({ ok: true, amount: 500 });
+    vi.mocked(drawFromTreasury).mockResolvedValue({
+      ok: true,
+      amount: 500,
+      corporationAmount: 500,
+    });
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ amount: 500 }), ctx);
     expect(res.status).toBe(200);
     expect(vi.mocked(drawFromTreasury)).toHaveBeenCalledWith(
       db,
-      { countryId: "CN", corpId, amountLocal: 500, corpCurrency: "USD" },
+      { countryId: "CN", corpId, amountLocal: 500, corpCurrency: "USD", actorId: ceoId },
       expect.any(Date)
     );
-    expect(
-      db.collectionMocks.corporations.updateOne.mock.calls[0][1].$inc.treasuryDrawnThisTurn
-    ).toBe(500);
+    expect(db.collectionMocks.corporations.updateOne).not.toHaveBeenCalled();
+    expect(await res.json()).toMatchObject({ drawn: 500, corporationCredit: 500 });
   });
 
   it("rejects a draw over the remaining per-turn allowance", async () => {
@@ -80,7 +83,11 @@ describe("POST .../treasury-draw", () => {
 
   it("allows a draw even when the reserve is short — the country takes on debt", async () => {
     const { drawFromTreasury } = await import("@/lib/nationalization/treasury");
-    vi.mocked(drawFromTreasury).mockResolvedValue({ ok: true, amount: 500 });
+    vi.mocked(drawFromTreasury).mockResolvedValue({
+      ok: true,
+      amount: 500,
+      corporationAmount: 500,
+    });
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ amount: 500 }), ctx);
     expect(res.status).toBe(200);

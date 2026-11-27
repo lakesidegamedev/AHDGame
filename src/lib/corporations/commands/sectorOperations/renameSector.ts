@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -33,49 +34,56 @@ export async function renameSector(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    if (!ObjectId.isValid(sectorId)) {
-      return errorResponse(400, "Invalid sector ID");
-    }
+      if (!ObjectId.isValid(sectorId)) {
+        return errorResponse(400, "Invalid sector ID");
+      }
 
-    const sector = await corporateSectorsCollection(db).findOne({
-      _id: new ObjectId(sectorId),
-      corporationId: corporation._id,
-    });
-    if (!sector) {
-      return errorResponse(404, "Sector not found");
-    }
+      const sector = await corporateSectorsCollection(db).findOne({
+        _id: new ObjectId(sectorId),
+        corporationId: corporation._id,
+      });
+      if (!sector) {
+        return errorResponse(404, "Sector not found");
+      }
 
-    const trimmedName = parsed.data.displayName?.trim() ?? "";
+      const trimmedName = parsed.data.displayName?.trim() ?? "";
 
-    const update: Parameters<ReturnType<typeof db.collection<CorporateSector>>["updateOne"]>[1] =
-      trimmedName
-        ? {
-            $set: {
-              displayName: trimmedName,
-              updatedAt: new Date(),
-            },
-          }
-        : {
-            $set: {
-              updatedAt: new Date(),
-            },
-            $unset: {
-              displayName: 1,
-            },
-          };
+      const update: Parameters<ReturnType<typeof db.collection<CorporateSector>>["updateOne"]>[1] =
+        trimmedName
+          ? {
+              $set: {
+                displayName: trimmedName,
+                updatedAt: new Date(),
+              },
+            }
+          : {
+              $set: {
+                updatedAt: new Date(),
+              },
+              $unset: {
+                displayName: 1,
+              },
+            };
 
-    await corporateSectorsCollection(db).updateOne({ _id: sector._id }, update);
+      const written = await corporateSectorsCollection(db).updateOne(
+        { _id: sector._id, corporationId: corporation._id },
+        update
+      );
+      if (written.matchedCount !== 1)
+        return errorResponse(409, "Sector ownership changed. Refresh and try again.");
 
-    return NextResponse.json({
-      success: true,
-      displayName: trimmedName || null,
+      return NextResponse.json({
+        success: true,
+        displayName: trimmedName || null,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

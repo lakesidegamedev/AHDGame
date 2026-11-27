@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
@@ -44,8 +46,24 @@ export interface StateArmsResult {
 export async function applyStateArmsProduction(
   db: Db,
   countryId: string,
-  knownUnits?: MilitaryUnit[]
+  _knownUnits?: MilitaryUnit[],
+  currentTurn?: number
 ): Promise<StateArmsResult> {
+  const turn =
+    currentTurn ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ??
+    0;
+  return withTurnValueSettlement(
+    db,
+    "state-arms-production",
+    turn,
+    (db) => produceStateArms(db, countryId),
+    { sourceKey: `${countryId}:${turn}` }
+  );
+}
+
+async function produceStateArms(db: Db, countryId: string): Promise<StateArmsResult> {
   const planned = stateArmsLotsPerTurn(countryId);
   const arsenal = await getNationalArsenal(db, countryId);
 
@@ -55,11 +73,9 @@ export async function applyStateArmsProduction(
     return { lots: 0, domain: null };
   }
 
-  const units =
-    knownUnits ??
-    ((await getMilitaryUnitsCollection(db)
-      .find({ countryId: countryId as CountryId })
-      .toArray()) as MilitaryUnit[]);
+  const units = (await getMilitaryUnitsCollection(db)
+    .find({ countryId: countryId as CountryId })
+    .toArray()) as MilitaryUnit[];
   if (units.length === 0) return { lots: 0, domain: null };
 
   // What each domain still needs to top its formations up, and the size of one full

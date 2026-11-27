@@ -1,3 +1,5 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { fenceCorporateWallets } from "@/lib/corporations/fenceCorporateWallets";
 import {
   loadStockWithholdingContexts,
   withholdStockReceipt,
@@ -310,34 +312,46 @@ export async function executeShareFillMoneyFlow(
     }
   const moneyKey = buildShareFillMoneyKey(plan.fillKey);
   const print = fingerprint ?? buildShareFillMoneyFingerprint(plan);
-  const claim = await claimMoneyFlowReceipt(receipts(db), moneyKey, print);
-  if (claim === "duplicate") {
-    const settled = await receiptsEx(db).findOne({ _id: moneyKey });
-    const stored = settled?.shareFillMoneyPlan as ShareFillMoneyPlan | undefined;
-    if (stored) await bridgeAuditFromPlan(db, stored);
-    const outcome = stored?.outcome;
-    if (outcome && typeof outcome.sharesMoved === "number") return { ...outcome };
-    return { sharesMoved: plan.shares };
-  }
-  let active: ShareFillMoneyPlan = plan;
-  if (claim === "in-progress") {
-    const existing = await receiptsEx(db).findOne({ _id: moneyKey });
-    const stored = existing?.shareFillMoneyPlan;
-    if (!isShareFillMoneyPlan(stored)) {
-      throw new Error("share-fill-money:plan-never-stored");
+  const pinned = await withSessionDb(db, async (tx) => {
+    const claim = await claimMoneyFlowReceipt(receipts(tx), moneyKey, print);
+    if (claim === "duplicate") {
+      const settled = await receiptsEx(tx).findOne({ _id: moneyKey });
+      const stored = settled?.shareFillMoneyPlan as ShareFillMoneyPlan | undefined;
+      if (stored) await bridgeAuditFromPlan(tx, stored);
+      const outcome = stored?.outcome;
+      if (outcome && typeof outcome.sharesMoved === "number")
+        return { claim, active: stored!, completed: { ...outcome } };
+      return { claim, active: stored ?? plan, completed: { sharesMoved: plan.shares } };
     }
-    active = stored;
-  } else {
-    // Persist the resume plan before any money moves. Deliberately unsettled
-    // on failure: a real crash here runs no further code, leaving the receipt
-    // plan-less `in_progress`, so settling here would mask the crash with a
-    // write the dead process could never have run. Key recovery owns the
-    // settlement and fails the plan-less receipt without guessing.
-    await receiptsEx(db).updateOne(
-      { _id: moneyKey },
-      { $set: { shareFillMoneyPlan: plan, updatedAt: new Date() } }
-    );
-  }
+    let active: ShareFillMoneyPlan = plan;
+    if (claim === "in-progress") {
+      const existing = await receiptsEx(tx).findOne({ _id: moneyKey });
+      const stored = existing?.shareFillMoneyPlan;
+      if (!isShareFillMoneyPlan(stored)) {
+        throw new Error("share-fill-money:plan-never-stored");
+      }
+      active = stored;
+    } else {
+      // Persist the resume plan before any money moves. Deliberately unsettled
+      // on failure: a real crash here runs no further code, leaving the receipt
+      // plan-less `in_progress`, so settling here would mask the crash with a
+      // write the dead process could never have run. Key recovery owns the
+      // settlement and fails the plan-less receipt without guessing.
+      await fenceCorporateWallets(
+        tx,
+        [plan.fillerDebit, plan.fillerCredit, plan.sellerProceeds, plan.buyerRefund]
+          .filter((leg): leg is NonNullable<typeof leg> => leg?.collection === "corporations")
+          .map((leg) => ({ id: new ObjectId(leg.idHex), currency: leg.currencyCode }))
+      );
+      await receiptsEx(tx).updateOne(
+        { _id: moneyKey },
+        { $set: { shareFillMoneyPlan: plan, updatedAt: new Date() } }
+      );
+    }
+    return { claim, active, completed: undefined };
+  });
+  if (pinned.completed) return pinned.completed;
+  const active = pinned.active;
   await runMoneyFlowSteps(
     receipts(db),
     moneyKey,

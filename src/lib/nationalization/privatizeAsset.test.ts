@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (_db: Db, work: (db: Db) => Promise<unknown>) => work(_db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -110,6 +114,35 @@ describe("privatizeAsset", () => {
       }
     );
     db.collectionMocks.corporateSectors.findOne.mockResolvedValue({ ...baseSector });
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      toArray: async () => [await db.collectionMocks.corporateSectors.findOne({ _id: sectorId })],
+    });
+    db.collectionMocks.corporateSectors.bulkWrite.mockImplementation(
+      async (
+        ops: Array<
+          import("mongodb").AnyBulkWriteOperation<import("@/lib/db/types").CorporateSector>
+        >
+      ) => {
+        let matchedCount = 0,
+          deletedCount = 0;
+        for (const op of ops) {
+          if ("insertOne" in op)
+            await db.collectionMocks.corporateSectors.insertOne(op.insertOne.document);
+          if ("updateOne" in op) {
+            const result = await db.collectionMocks.corporateSectors.updateOne(
+              op.updateOne.filter,
+              op.updateOne.update
+            );
+            matchedCount += result.matchedCount ?? 1;
+          }
+          if ("deleteOne" in op) {
+            const result = await db.collectionMocks.corporateSectors.deleteOne(op.deleteOne.filter);
+            deletedCount += result.deletedCount ?? 1;
+          }
+        }
+        return { matchedCount, deletedCount };
+      }
+    );
     db.collectionMocks.centralBanks.find.mockReturnValue(cursor([]));
     db.collectionMocks.corporations.insertOne.mockImplementation(
       async (doc: { _id?: ObjectId }) => ({

@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 // POST /api/country/[code]/national-corporation/[id]/resign-ceo
 // The seated CEO of a National Corporation voluntarily resigns, vacating the
 // seat for a fresh State-official (SoT) appointment. This is the CEO-initiated
@@ -44,37 +45,48 @@ export async function POST(_request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const corps = corporationsCollection(db);
-    const target = await corps.findOne({ ...idQuery, countryOwnerId: countryId });
-    if (!target || !isStateOwned(target)) {
-      return errorResponse(404, "National Corporation not found for this country.");
-    }
-
-    if (target.ceoVacant || !target.ceoId) {
-      return errorResponse(400, "This National Corporation has no seated CEO.");
-    }
-
-    // Only the seated CEO may resign themselves.
-    if (!target.userId || target.userId.toString() !== auth.user.userId) {
-      return errorResponse(403, "Only the seated CEO of this National Corporation may resign.");
-    }
-
-    const now = new Date();
-
-    // Vacate the seat — mirrors the treasury-driven remove-ceo flow. A NatCorp
-    // seat refills via SoT appointment, not a shareholder election.
-    await corps.updateOne(
-      { _id: target._id },
-      {
-        $set: { ceoVacant: true, updatedAt: now },
-        $unset: { ceoId: "", userId: "", pendingCeoCharacterId: "" },
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const corps = corporationsCollection(db);
+      const target = await corps.findOne({ ...idQuery, countryOwnerId: countryId });
+      if (!target || !isStateOwned(target)) {
+        return errorResponse(404, "National Corporation not found for this country.");
       }
-    );
 
-    // Clear any dangling CEO votes so nothing stale carries into the next seat.
-    await corporationCeoVotesCollection<Document>(db).deleteMany({ corporationId: target._id });
+      if (target.ceoVacant || !target.ceoId) {
+        return errorResponse(400, "This National Corporation has no seated CEO.");
+      }
 
-    return NextResponse.json({ success: true });
+      // Only the seated CEO may resign themselves.
+      if (!target.userId || target.userId.toString() !== auth.user.userId) {
+        return errorResponse(403, "Only the seated CEO of this National Corporation may resign.");
+      }
+
+      const now = new Date();
+
+      // Vacate the seat — mirrors the treasury-driven remove-ceo flow. A NatCorp
+      // seat refills via SoT appointment, not a shareholder election.
+      const vacated = await corps.updateOne(
+        {
+          _id: target._id,
+          ceoId: target.ceoId,
+          userId: target.userId,
+          ceoVacant: { $ne: true },
+          countryOwnerId: countryId,
+        },
+        {
+          $set: { ceoVacant: true, updatedAt: now },
+          $unset: { ceoId: "", userId: "", pendingCeoCharacterId: "" },
+        }
+      );
+
+      if (vacated.matchedCount !== 1)
+        return errorResponse(409, "CEO holder changed. Refresh and try again.");
+
+      // Clear any dangling CEO votes so nothing stale carries into the next seat.
+      await corporationCeoVotesCollection<Document>(db).deleteMany({ corporationId: target._id });
+
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

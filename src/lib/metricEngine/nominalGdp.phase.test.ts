@@ -1,3 +1,6 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: vi.fn(async (db, _phase, _turn, work) => work(db)),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";

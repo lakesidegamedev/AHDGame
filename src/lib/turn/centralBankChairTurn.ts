@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * Central Bank Chair Turn Processing.
  *
@@ -15,8 +16,7 @@ import { syncEuroMonetaryPolicy } from "@/lib/currency/euro/service";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+
 import type { State } from "@/lib/db/types/state";
 import { nationalOutputGap } from "@/lib/metricEngine/outputTrend";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
@@ -106,6 +106,12 @@ export async function processCentralBankChairTurn(
   db: Db,
   currentTurn: number
 ): Promise<CentralBankChairTurnResult> {
+  return withTurnValueSettlement(db, "central-bank-chair", currentTurn, (db) =>
+    applyChairTurn(db, currentTurn)
+  );
+}
+
+async function applyChairTurn(db: Db, currentTurn: number): Promise<CentralBankChairTurnResult> {
   const banks = await centralBanksCollection(db)
     .find({})
     .project<

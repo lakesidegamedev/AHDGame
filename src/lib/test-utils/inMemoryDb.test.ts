@@ -550,6 +550,14 @@ it("evaluates $type and $not in $expr like the server", async () => {
 });
 
 describe("inMemoryDb set union expressions", () => {
+  it("pulls matching primitive members using a query operator", async () => {
+    const db = createInMemoryDb();
+    db.seed("nodes", [{ _id: "company", values: ["keep", "remove", "remove"] }]);
+    await db
+      .collection("nodes")
+      .updateOne({ _id: "company" }, { $pull: { values: { $in: ["remove"] } } });
+    expect(db.collection("nodes").docs[0].values).toEqual(["keep"]);
+  });
   it("deduplicates stored receipt keys and remains unchanged on replay", async () => {
     const db = createInMemoryDb();
     db.seed("receipts", [{ _id: "event", keys: ["old", "old"] }]);
@@ -585,4 +593,36 @@ describe("inMemoryDb set union expressions", () => {
         .updateOne({ _id: "invalid" }, [{ $set: { values: { $setUnion: [[1], "invalid"] } } }])
     ).rejects.toThrow("expected arrays for $setUnion");
   });
+});
+
+it("models the numeric type predicate without coercing strings or null", async () => {
+  const db = createInMemoryDb();
+  db.seed("numbers", [{ _id: "one", number: -10, text: "10", nullable: null }]);
+  await db.collection("numbers").updateOne({ _id: "one" }, [
+    {
+      $set: {
+        numeric: { $isNumber: "$number" },
+        textNumeric: { $isNumber: "$text" },
+        nullNumeric: { $isNumber: "$nullable" },
+        absentNumeric: { $isNumber: "$absent" },
+      },
+    },
+  ]);
+  expect(db.collection("numbers").docs[0]).toMatchObject({
+    numeric: true,
+    textNumeric: false,
+    nullNumeric: false,
+    absentNumeric: false,
+  });
+});
+
+it("round-trips object entries without changing negative numbers or null", async () => {
+  const db = createInMemoryDb();
+  db.seed("objects", [{ _id: "one", source: { negative: -5, nullable: null } }]);
+  await db
+    .collection("objects")
+    .updateOne({ _id: "one" }, [
+      { $set: { copy: { $arrayToObject: { $objectToArray: "$source" } } } },
+    ]);
+  expect(db.collection("objects").docs[0].copy).toEqual({ negative: -5, nullable: null });
 });

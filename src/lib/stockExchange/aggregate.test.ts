@@ -80,3 +80,16 @@ describe("aggregateExchangeTotals", () => {
     expect(t.weightedChange24h).toBeCloseTo(4);
   });
 });
+
+it("preserves unavailable income and revenue in a basket instead of presenting a partial sum as its total", () => {
+  const total = aggregateExchangeTotals([
+    { incomeAnchor: 100, totalRevenueAnchor: 200 },
+    { income: null, incomeAnchor: null, totalRevenue: null, totalRevenueAnchor: null },
+  ]);
+  expect(total.income).toBeNull();
+  expect(total.revenue).toBeNull();
+  expect(aggregateExchangeTotals([{ income: 0, totalRevenue: 0 }])).toMatchObject({
+    income: 0,
+    revenue: 0,
+  });
+});

@@ -4,7 +4,7 @@ import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import { openPosition, closePosition, quoteForexPosition } from "../propTrading";
 import { recoverPropForexFees, settlePendingPropForexFee } from "../propForexFees";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { resumeSettlement } from "../settlementJournal";
 import { resetCorpFxRateCacheForTests } from "@/lib/currency/corporationCapital";
 

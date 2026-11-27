@@ -618,10 +618,10 @@ export interface Financials {
   dividendIncomeReceived: number;
   /** Government contribution that offsets bond interest for natcorps (state-owned corps) */
   governmentBondSubsidy: number;
-  /** IMF facility principal+interest cash out (daily display units), when under active bailout */
-  imfFacilityPaymentDaily: number;
-  /** IMF facility cash in to the lender corp (daily display units) */
-  imfFacilityReceiptsDaily: number;
+  /** Forecast IMF interest expense, excluding principal (daily display units) */
+  imfFacilityInterestPaidDaily: number;
+  /** Forecast IMF interest income, excluding principal (daily display units) */
+  imfFacilityInterestReceivedDaily: number;
   /**
    * Last-turn supply-agreement CFD net cash, in daily display units (local).
    * Not inside `income` / `realizedIncome` (those are P&L): this is the cash

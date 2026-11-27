@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * Shell for cyber operations. Loads resilience and pair history, runs the pure resolver, and
  * routes the result through existing systems: a Cyber Attack crisis on the target, tension,
@@ -266,7 +267,9 @@ function nameOf(countryId: string): string {
   return getCountryDisplayName(countryId as CountryId);
 }
 
-export async function launchCyberOperation(args: LaunchCyberArgs): Promise<LaunchCyberResult> {
+async function launchCyberOperationInTransaction(
+  args: LaunchCyberArgs
+): Promise<LaunchCyberResult> {
   const { db, attackerId, targetId, turn } = args;
   if (!(await isLiveWorldSwitchOn(db, "cyberOperationsEnabled"))) {
     return { ok: false, status: 409, error: CYBER_OPERATIONS_CLOSED_TEXT };
@@ -428,7 +431,7 @@ export type StandDownResult =
   { ok: false; status: number; error: string } | { ok: true; truceUntilTurn: number };
 
 /** Publicly stand down against a target: opens a truce and relieves tension. */
-export async function standDownCyber(
+async function standDownCyberInTransaction(
   db: Db,
   attackerId: CountryId,
   targetId: CountryId,
@@ -487,4 +490,20 @@ export async function standDownCyber(
     // A news failure never undoes the truce.
   }
   return { ok: true, truceUntilTurn: until };
+}
+
+export async function launchCyberOperation(args: LaunchCyberArgs): Promise<LaunchCyberResult> {
+  return withAtomicResult(args.db, (db) => launchCyberOperationInTransaction({ ...args, db }));
+}
+
+export async function standDownCyber(
+  db: Db,
+  attackerId: CountryId,
+  targetId: CountryId,
+  turn: number,
+  actorUserId: string | null = null
+): Promise<StandDownResult> {
+  return withAtomicResult(db, (tx) =>
+    standDownCyberInTransaction(tx, attackerId, targetId, turn, actorUserId)
+  );
 }

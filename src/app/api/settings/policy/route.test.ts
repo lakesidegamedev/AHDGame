@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -73,7 +74,9 @@ describe("POST /api/settings/policy", () => {
     expect(setStage.positionUpdateVouchers).toEqual({
       $subtract: [{ $ifNull: ["$positionUpdateVouchers", 0] }, 1],
     });
-    expect(setStage["policies.economic"]).toEqual({ $add: ["$policies.economic", 1] });
+    expect(setStage["policies.economic"]).toEqual({
+      $min: [5, { $max: [-5, { $add: ["$policies.economic", 1] }] }],
+    });
     expect(setStage).not.toHaveProperty("actions");
     expect(setStage).not.toHaveProperty("infamy");
     expect(setStage).not.toHaveProperty("politicalInfluence");
@@ -119,4 +122,30 @@ describe("POST /api/settings/policy", () => {
     expect(pipeline[0].$set.actions).toEqual({ $subtract: ["$actions", 15] });
     expect(pipeline[0].$set.positionUpdateVouchers).toBeUndefined();
   });
+  it.each([4.8, -4.8])(
+    "clamps a fractional position and serializes racing last-step requests at %s",
+    async (start) => {
+      const f = createTransactionalMemoryDb();
+      f.memory.seed("characters", [
+        {
+          _id: characterId,
+          policies: { economic: start, social: 0 },
+          positionUpdateVouchers: 2,
+          actions: 10,
+        },
+      ]);
+      const { getDb } = await import("@/lib/mongodb");
+      vi.mocked(getDb).mockResolvedValue(f.db);
+      const { POST } = await import("./route");
+      const responses = await Promise.all(
+        [1, 2].map(() =>
+          POST(request({ axis: "economic", direction: start > 0 ? 1 : -1, useVoucher: true }))
+        )
+      );
+      expect(responses.map((res) => res.status).sort()).toEqual([200, 400]);
+      const row = f.memory.collection("characters").docs[0];
+      expect((row.policies as { economic: number }).economic).toBe(start > 0 ? 5 : -5);
+      expect(row.positionUpdateVouchers).toBe(1);
+    }
+  );
 });

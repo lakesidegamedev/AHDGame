@@ -95,7 +95,7 @@ export async function computeLiveGroupTurnouts(
   return result;
 }
 
-function generateStateDemographics(
+export function generateStateDemographics(
   stateId: string,
   config: Layer1Config,
   era: EraId,

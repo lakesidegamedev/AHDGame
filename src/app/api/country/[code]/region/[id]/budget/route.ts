@@ -1,3 +1,4 @@
+import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 // GET /api/country/[code]/region/[id]/budget — Return the budget breakdown for a region/state
 // Auth: requireAuth
 // Errors: 401, 404
@@ -19,7 +20,7 @@ import {
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { normalizeStateSpending, SECTOR_SUBSIDIES_SPENDING_KEY } from "@/lib/budget/spending";
 import { computeRegionalSpendingByCategory } from "@/lib/budget/regionalSpending";
-import { buildRegionalRevenueShape } from "@/lib/budget/regionalRevenueShape";
+import { buildRegionalRevenueShape } from "@/lib/countries/rules/regionalRevenueShape";
 import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Document } from "mongodb";
@@ -49,13 +50,25 @@ export async function GET(
     const stateId = id;
     const db = await getDb();
 
+    const parentBudget = await federalBudgetCollection(db).findOne(
+      { countryId },
+      { projection: { currencyCode: 1, countryId: 1 } }
+    );
+    const currencyCode = resolveCountryCurrencyCode(parentBudget ?? { countryId });
+
     // Parliamentary countries use the regionalBudgets collection
     if (isParliamentarySystem(config)) {
-      return serveRegionalBudget(db, stateId, countryId, config.centralGovernmentLabel);
+      return serveRegionalBudget(
+        db,
+        stateId,
+        countryId,
+        config.centralGovernmentLabel,
+        currencyCode
+      );
     }
 
     // Presidential countries (US) use stateBudgets
-    return serveStateBudget(db, stateId, countryId, config.centralGovernmentLabel);
+    return serveStateBudget(db, stateId, countryId, config.centralGovernmentLabel, currencyCode);
   } catch (error) {
     return handleRouteError(error);
   }
@@ -73,7 +86,8 @@ async function serveRegionalBudget(
   db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
   stateId: string,
   countryId: CountryId,
-  grantLabel: string
+  grantLabel: string,
+  currencyCode: ReturnType<typeof resolveCountryCurrencyCode>
 ) {
   const gameState = await gameStateCollection<Document>(db).findOne(
     { _id: "current" } as Record<string, unknown>,
@@ -129,7 +143,7 @@ async function serveRegionalBudget(
           amount: fallbackStateBudget.revenue.federalGrants ?? 0,
         },
       ],
-      currencyCode: resolveCountryCurrencyCode({ countryId }),
+      currencyCode,
     });
   }
 
@@ -200,7 +214,7 @@ async function serveRegionalBudget(
     budget,
     enactedLaws,
     grantBreakdown,
-    currencyCode: resolveCountryCurrencyCode({ countryId }),
+    currencyCode,
   });
 }
 
@@ -209,7 +223,8 @@ async function serveStateBudget(
   db: Awaited<ReturnType<typeof import("@/lib/mongodb").getDb>>,
   stateId: string,
   countryId: CountryId,
-  grantLabel: string
+  grantLabel: string,
+  currencyCode: ReturnType<typeof resolveCountryCurrencyCode>
 ) {
   const stateBudget = await stateBudgetsCollection(db).findOne({ _id: stateId, countryId });
   if (!stateBudget) {
@@ -231,7 +246,7 @@ async function serveStateBudget(
     budget: {
       ...stateBudget,
       spending,
-      balance: stateBudget.financing?.cash ?? stateBudget.balance,
+      balance: stateBudget.balance,
       surplus: balance,
     },
     enactedLaws,
@@ -244,6 +259,6 @@ async function serveStateBudget(
         }
       : {}),
     grantLabel,
-    currencyCode: resolveCountryCurrencyCode({ countryId }),
+    currencyCode,
   });
 }

@@ -184,7 +184,7 @@ describe("GET /api/cron/price-update", () => {
       updateOne: { filter: { _id: ObjectId; fundamentalSharePrice: number } };
     }>;
     expect(ops).toHaveLength(1);
-    expect(ops[0].updateOne.filter).toEqual({
+    expect(ops[0].updateOne.filter).toMatchObject({
       _id: corpId,
       fundamentalSharePrice: 80,
     });

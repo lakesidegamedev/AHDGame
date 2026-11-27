@@ -1,3 +1,5 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { consolidatePositions } from "@/lib/nationalization/rules/financialHoldings";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -5,12 +7,8 @@ import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
-import {
-  anchorToCorpLiquidCapital,
-  corpLiquidCapitalToAnchor,
-  loadFxRatesByCurrency,
-} from "@/lib/currency/corporationCapital";
-import type { CurrencyCode } from "@/lib/constants/currencies";
+import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
+
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 const schema = z.object({
@@ -21,7 +19,7 @@ const schema = z.object({
  * POST /api/admin/heal/nationalization-shares
  * Heals Bug #0803: shares owned by dissolved corporations that were orphaned
  * during nationalization. Transfers orphaned corporate shareholdings to the
- * appropriate National Corporation and credits the value.
+ * appropriate National Corporation without issuing cash.
  *
  * Auth: requireAdmin
  * Errors: 400, 403
@@ -37,208 +35,180 @@ export async function POST(request: Request) {
     }
 
     const { dryRun } = parsed.data;
-    const db = await getDb();
-    const corps = corporationsCollection(db);
-    const now = new Date();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      const corps = corporationsCollection(db);
+      const now = new Date();
 
-    // National corporations are the destination for orphaned shares.
-    const nationalCorps = await corps
-      .find({
-        $or: [{ countryOwnerId: { $exists: true } }, { ownershipState: "stateOwned" }],
-      })
-      .toArray();
-
-    // Find every corporation that has at least one corporate shareholder.
-    const corpsWithCorpShareholders = await corps
-      .find({ "shareholders.corporationId": { $exists: true } })
-      .toArray();
-
-    // Collect all referenced corporate shareholder IDs and see which still exist.
-    const referencedIds = new Set<string>();
-    for (const corp of corpsWithCorpShareholders) {
-      for (const sh of corp.shareholders ?? []) {
-        if (sh.corporationId) {
-          referencedIds.add(sh.corporationId.toString());
-        }
-      }
-    }
-
-    const existingIds = new Set<string>();
-    if (referencedIds.size > 0) {
-      const existing = await corps
-        .find({ _id: { $in: Array.from(referencedIds).map((id) => new ObjectId(id)) } })
-        .project({ _id: 1 })
+      // National corporations are the destination for orphaned shares.
+      const nationalCorps = await corps
+        .find({
+          $or: [{ countryOwnerId: { $exists: true } }, { ownershipState: "stateOwned" }],
+        })
         .toArray();
-      for (const c of existing) {
-        existingIds.add(c._id.toString());
-      }
-    }
 
-    const fxByCurrency = await loadFxRatesByCurrency(db);
+      // Find every corporation that has at least one corporate shareholder.
+      const corpsWithCorpShareholders = await corps
+        .find({ "shareholders.corporationId": { $exists: true } })
+        .toArray();
 
-    let totalSharesHealed = 0;
-    let totalValueHealed = 0;
-    const operations: Array<{
-      type: "info" | "success" | "warning" | "dry-run";
-      message: string;
-      details?: Record<string, unknown>;
-    }> = [];
-
-    for (const targetCorp of corpsWithCorpShareholders) {
-      const orphanedShareholders =
-        targetCorp.shareholders?.filter(
-          (sh) => sh.corporationId && !existingIds.has(sh.corporationId.toString())
-        ) ?? [];
-
-      if (orphanedShareholders.length === 0) continue;
-
-      const countryId = targetCorp.countryId;
-      if (!countryId) {
-        operations.push({
-          type: "warning",
-          message: `Corporation ${targetCorp.name} (${targetCorp._id}) has no countryId, skipping ${orphanedShareholders.length} orphaned shareholder(s)`,
-        });
-        continue;
-      }
-
-      const nationalCorp = nationalCorps.find((nc) => nc.countryId === countryId);
-      if (!nationalCorp) {
-        operations.push({
-          type: "warning",
-          message: `No national corporation found for country ${countryId}, skipping ${targetCorp.name}`,
-        });
-        continue;
-      }
-
-      const dissolvedIds = orphanedShareholders
-        .map((sh) => sh.corporationId)
-        .filter((id): id is NonNullable<typeof id> => id !== undefined);
-
-      const totalShares = orphanedShareholders.reduce((sum, sh) => sum + sh.shares, 0);
-      const totalCostBasis = orphanedShareholders.reduce(
-        (sum, sh) => sum + sh.shares * (sh.avgCostPerShare ?? 0),
-        0
-      );
-      const avgCostPerShare = totalShares > 0 ? totalCostBasis / totalShares : 0;
-      const sharePrice = targetCorp.sharePrice ?? 0;
-      const shareValue = totalShares * sharePrice;
-      const shareValueAnchor = corpLiquidCapitalToAnchor(
-        shareValue,
-        targetCorp,
-        fxByCurrency.get(targetCorp.liquidCurrencyCode as CurrencyCode) ?? 1
-      );
-
-      operations.push({
-        type: "info",
-        message: `Found ${totalShares} orphaned shares in ${targetCorp.name} (ID: ${targetCorp._id}) across ${orphanedShareholders.length} dissolved holder(s)`,
-        details: {
-          targetCorpId: targetCorp._id.toString(),
-          targetCorpName: targetCorp.name,
-          dissolvedHolderIds: dissolvedIds.map((id) => id.toString()),
-          shares: totalShares,
-          sharePrice,
-          avgCostPerShare,
-          shareValue,
-          nationalCorpId: nationalCorp._id.toString(),
-          nationalCorpName: nationalCorp.name,
-        },
-      });
-
-      if (dryRun) {
-        operations.push({
-          type: "dry-run",
-          message: `[DRY RUN] Would transfer ${totalShares} shares to ${nationalCorp.name}`,
-        });
-        continue;
-      }
-
-      // Remove the dissolved corporations' shareholder entries.
-      await corps.updateOne(
-        { _id: targetCorp._id },
-        {
-          $pull: { shareholders: { corporationId: { $in: dissolvedIds } } },
-          $set: { updatedAt: now },
-        }
-      );
-
-      // Add or merge the National Corporation's shareholder entry.
-      const freshTarget = await corps.findOne({ _id: targetCorp._id });
-      const existingEntry = freshTarget?.shareholders?.find((sh) =>
-        sh.corporationId?.equals(nationalCorp._id)
-      );
-
-      if (existingEntry) {
-        const combinedShares = existingEntry.shares + totalShares;
-        const combinedAvgCost =
-          combinedShares > 0
-            ? (existingEntry.shares * (existingEntry.avgCostPerShare ?? 0) + totalCostBasis) /
-              combinedShares
-            : 0;
-        await corps.updateOne(
-          { _id: targetCorp._id },
-          {
-            $set: {
-              "shareholders.$[elem].shares": combinedShares,
-              "shareholders.$[elem].avgCostPerShare": combinedAvgCost,
-              updatedAt: now,
-            },
-          },
-          { arrayFilters: [{ "elem.corporationId": nationalCorp._id }] }
-        );
-      } else {
-        await corps.updateOne(
-          { _id: targetCorp._id },
-          {
-            $push: {
-              shareholders: {
-                corporationId: nationalCorp._id,
-                shares: totalShares,
-                avgCostPerShare: avgCostPerShare,
-              },
-            },
-            $set: { updatedAt: now },
+      // Collect all referenced corporate shareholder IDs and see which still exist.
+      const referencedIds = new Set<string>();
+      for (const corp of corpsWithCorpShareholders) {
+        for (const sh of corp.shareholders ?? []) {
+          if (sh.corporationId) {
+            referencedIds.add(sh.corporationId.toString());
           }
-        );
+        }
       }
 
-      // Credit the National Corporation with the value of the shares.
-      const nationalCorpFxRate =
-        fxByCurrency.get(nationalCorp.liquidCurrencyCode as CurrencyCode) ?? 1;
-      const valueInNatCorpCurrency = Math.round(
-        anchorToCorpLiquidCapital(shareValueAnchor, nationalCorp, nationalCorpFxRate)
-      );
-
-      await corps.updateOne(
-        { _id: nationalCorp._id },
-        {
-          $inc: { liquidCapital: valueInNatCorpCurrency },
-          $set: { updatedAt: now },
+      const existingIds = new Set<string>();
+      if (referencedIds.size > 0) {
+        const existing = await corps
+          .find({ _id: { $in: Array.from(referencedIds).map((id) => new ObjectId(id)) } })
+          .project({ _id: 1 })
+          .toArray();
+        for (const c of existing) {
+          existingIds.add(c._id.toString());
         }
-      );
+      }
 
-      totalSharesHealed += totalShares;
-      totalValueHealed += valueInNatCorpCurrency;
+      const fxByCurrency = await loadFxRatesByCurrency(db);
 
-      operations.push({
-        type: "success",
-        message: `✓ Transferred ${totalShares} shares to ${nationalCorp.name}, credited ${valueInNatCorpCurrency} ${nationalCorp.liquidCurrencyCode}`,
+      let totalSharesHealed = 0;
+      let totalValueHealed = 0;
+      const operations: Array<{
+        type: "info" | "success" | "warning" | "dry-run";
+        message: string;
+        details?: Record<string, unknown>;
+      }> = [];
+
+      for (const targetCorp of corpsWithCorpShareholders) {
+        const orphanedShareholders =
+          targetCorp.shareholders?.filter(
+            (sh) => sh.corporationId && !existingIds.has(sh.corporationId.toString())
+          ) ?? [];
+
+        if (orphanedShareholders.length === 0) continue;
+
+        const countryId = targetCorp.countryId;
+        if (!countryId) {
+          operations.push({
+            type: "warning",
+            message: `Corporation ${targetCorp.name} (${targetCorp._id}) has no countryId, skipping ${orphanedShareholders.length} orphaned shareholder(s)`,
+          });
+          continue;
+        }
+
+        const nationalCorp = nationalCorps.find((nc) => nc.countryId === countryId);
+        if (!nationalCorp) {
+          operations.push({
+            type: "warning",
+            message: `No national corporation found for country ${countryId}, skipping ${targetCorp.name}`,
+          });
+          continue;
+        }
+
+        const dissolvedIds = orphanedShareholders
+          .map((sh) => sh.corporationId)
+          .filter((id): id is NonNullable<typeof id> => id !== undefined);
+
+        const totalShares = orphanedShareholders.reduce((sum, sh) => sum + sh.shares, 0);
+        const totalCostBasis = orphanedShareholders.reduce(
+          (sum, sh) => sum + sh.shares * (sh.avgCostPerShare ?? 0),
+          0
+        );
+        const avgCostPerShare = totalShares > 0 ? totalCostBasis / totalShares : 0;
+        const sharePrice = targetCorp.sharePrice ?? 0;
+        const shareValue = totalShares * sharePrice;
+
+        operations.push({
+          type: "info",
+          message: `Found ${totalShares} orphaned shares in ${targetCorp.name} (ID: ${targetCorp._id}) across ${orphanedShareholders.length} dissolved holder(s)`,
+          details: {
+            targetCorpId: targetCorp._id.toString(),
+            targetCorpName: targetCorp.name,
+            dissolvedHolderIds: dissolvedIds.map((id) => id.toString()),
+            shares: totalShares,
+            sharePrice,
+            avgCostPerShare,
+            shareValue,
+            nationalCorpId: nationalCorp._id.toString(),
+            nationalCorpName: nationalCorp.name,
+          },
+        });
+
+        if (dryRun) {
+          operations.push({
+            type: "dry-run",
+            message: `[DRY RUN] Would transfer ${totalShares} shares to ${nationalCorp.name}`,
+          });
+          continue;
+        }
+
+        const existingEntries = (targetCorp.shareholders ?? []).filter((sh) =>
+          sh.corporationId?.equals(nationalCorp._id)
+        );
+        const positions = [...existingEntries, ...orphanedShareholders];
+        const currency = targetCorp.liquidCurrencyCode;
+        const needsQuote = positions.some(
+          (sh) => sh.avgCostPerShare !== undefined && sh.avgCostBasisUnit !== "anchor"
+        );
+        const quote = needsQuote && currency ? fxByCurrency.get(currency) : 1;
+        if (!(quote && Number.isFinite(quote) && quote > 0))
+          throw new Error("Missing live holdings exchange rate");
+        const merged = consolidatePositions(
+          positions.map((sh) => ({
+            units: sh.shares,
+            unitCost: sh.avgCostPerShare,
+            anchorBasis: sh.avgCostBasisUnit === "anchor",
+            superUnits: sh.superShares,
+          })),
+          quote
+        );
+        const removed = new Set([...dissolvedIds, nationalCorp._id].map(String));
+        const shareholders = (targetCorp.shareholders ?? []).filter(
+          (sh) => !sh.corporationId || !removed.has(String(sh.corporationId))
+        );
+        shareholders.push({
+          corporationId: nationalCorp._id,
+          shares: merged.units,
+          ...(merged.unitCost !== undefined
+            ? { avgCostPerShare: merged.unitCost, avgCostBasisUnit: "anchor" as const }
+            : {}),
+          ...(merged.superUnits ? { superShares: merged.superUnits } : {}),
+        });
+        const saved = await corps.updateOne(
+          { _id: targetCorp._id, shareholders: targetCorp.shareholders },
+          { $set: { shareholders, updatedAt: now } }
+        );
+        if (saved.matchedCount !== 1)
+          throw new Error("Share register changed during ownership repair");
+        const valueInNatCorpCurrency = 0;
+
+        totalSharesHealed += totalShares;
+        totalValueHealed += valueInNatCorpCurrency;
+
+        operations.push({
+          type: "success",
+          message: `✓ Transferred ${totalShares} shares to ${nationalCorp.name}, no cash was issued`,
+        });
+      }
+
+      const message = dryRun
+        ? `Dry run completed. ${operations.filter((op) => op.type === "dry-run").length} operation(s) would be performed.`
+        : `Healing completed successfully. ${totalSharesHealed} shares healed, ${totalValueHealed} cash issued.`;
+
+      return NextResponse.json({
+        success: true,
+        message,
+        dryRun,
+        stats: {
+          corporationsChecked: corpsWithCorpShareholders.length,
+          sharesHealed: totalSharesHealed,
+          valueCredited: totalValueHealed,
+        },
+        operations,
       });
-    }
-
-    const message = dryRun
-      ? `Dry run completed. ${operations.filter((op) => op.type === "dry-run").length} operation(s) would be performed.`
-      : `Healing completed successfully. ${totalSharesHealed} shares healed, ${totalValueHealed} credited.`;
-
-    return NextResponse.json({
-      success: true,
-      message,
-      dryRun,
-      stats: {
-        corporationsChecked: corpsWithCorpShareholders.length,
-        sharesHealed: totalSharesHealed,
-        valueCredited: totalValueHealed,
-      },
-      operations,
     });
   } catch (error) {
     return handleRouteError(error);

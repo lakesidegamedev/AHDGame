@@ -27,6 +27,13 @@ export async function processImfBailoutPayments(
   corpSnapshots: CorpSnapshot[],
   corporations: Corporation[]
 ): Promise<{ paymentsApplied: number }> {
+  for (const snapshot of corpSnapshots) {
+    snapshot.settledImfInterestPaid = 0;
+    snapshot.settledImfInterestReceived = 0;
+    snapshot.settledImfPrincipalPaid = 0;
+    snapshot.settledImfPrincipalReceived = 0;
+    snapshot.imfSettlementUnavailable = false;
+  }
   const existing = new Set(
     (
       await bankMoneyMovesCollection<{ _id: string }>(db)
@@ -41,7 +48,13 @@ export async function processImfBailoutPayments(
   );
   if (!borrowers.length) return { paymentsApplied: 0 };
   const imf = await getImfCorporation(db);
-  if (!imf) return { paymentsApplied: 0 };
+  if (!imf) {
+    for (const snapshot of corpSnapshots) {
+      if (borrowers.some((corp) => corp._id.equals(snapshot.corpId)))
+        snapshot.imfSettlementUnavailable = true;
+    }
+    return { paymentsApplied: 0 };
+  }
   const forexEnabled = await isForexEnabled();
   const fx = forexEnabled ? await loadFxRatesByCurrency(db) : new Map();
   const codeOf = (corp: Corporation) => resolveCorpLiquidCurrencyCode(corp) ?? "USD";
@@ -125,6 +138,30 @@ export async function processImfBailoutPayments(
                   settlementId: key,
                   principalAnchor: split.principalPortion,
                   interestAnchor: split.interestPortion,
+                  interestCashNative: -split.interestPortion * rate,
+                  interestCashAnchor: -split.interestPortion,
+                },
+              },
+              {
+                type: "bank_loan_repayment",
+                turn,
+                createdAt: now,
+                subjectType: "corporation",
+                subjectId: imf._id,
+                subjectName: imf.name,
+                amount: credit,
+                anchorAmount: split.actualPayment,
+                currencyCode: codeOf(imf),
+                counterpartyType: "corporation",
+                counterpartyId: corp._id,
+                counterpartyName: corp.name,
+                meta: {
+                  kind: "imf_facility",
+                  settlementId: key,
+                  principalAnchor: split.principalPortion,
+                  interestAnchor: split.interestPortion,
+                  interestCashNative: split.interestPortion * imfRate,
+                  interestCashAnchor: split.interestPortion,
                 },
               },
             ],
@@ -179,11 +216,73 @@ export async function processImfBailoutPayments(
           note: "Publish the frozen IMF payment receipt",
         })),
       ],
-      event: { kind: "loan.paid", command: "imf.facility.service", amount: split.actualPayment },
+      event: {
+        kind: "loan.paid",
+        command: "imf.facility.service",
+        amount: split.actualPayment,
+        meta: {
+          borrowerId: String(corp._id),
+          lenderId: String(imf._id),
+          interestAnchor: split.interestPortion,
+          principalAnchor: split.principalPortion,
+          capitalizedInterestAnchor: split.interestShortfall,
+        },
+      },
     };
     const settled = await settleTransition(db, transition);
     if (settled.error) throw new Error(`IMF settlement remains pending: ${settled.error}`);
     if (split.actualPayment > 0) paymentsApplied++;
+  }
+  const reporting = await bankMoneyMovesCollection<{
+    _id: string;
+    event?: {
+      meta?: {
+        borrowerId?: string;
+        lenderId?: string;
+        interestAnchor?: number;
+        principalAnchor?: number;
+      };
+    };
+  }>(db)
+    .find({ kind: "imf_facility_payment", turn, status: "applied" }, { projection: { event: 1 } })
+    .toArray();
+  const proved = new Set<string>();
+  for (const row of reporting) {
+    const meta = row.event?.meta;
+    if (
+      !meta ||
+      typeof meta.interestAnchor !== "number" ||
+      !Number.isFinite(meta.interestAnchor) ||
+      meta.interestAnchor < 0 ||
+      typeof meta.principalAnchor !== "number" ||
+      !Number.isFinite(meta.principalAnchor) ||
+      meta.principalAnchor < 0 ||
+      !meta.borrowerId ||
+      !meta.lenderId
+    )
+      continue;
+    proved.add(meta.borrowerId);
+    const borrower = snapshots.get(meta.borrowerId),
+      lender = snapshots.get(meta.lenderId);
+    if (borrower) {
+      borrower.settledImfInterestPaid =
+        (borrower.settledImfInterestPaid ?? 0) + meta.interestAnchor;
+      borrower.settledImfPrincipalPaid =
+        (borrower.settledImfPrincipalPaid ?? 0) + meta.principalAnchor;
+    }
+    if (lender) {
+      lender.settledImfInterestReceived =
+        (lender.settledImfInterestReceived ?? 0) + meta.interestAnchor;
+      lender.settledImfPrincipalReceived =
+        (lender.settledImfPrincipalReceived ?? 0) + meta.principalAnchor;
+    }
+  }
+  for (const corp of borrowers) {
+    if (corp._id.equals(imf._id) || proved.has(String(corp._id))) continue;
+    const snapshot = snapshots.get(String(corp._id));
+    if (snapshot) snapshot.imfSettlementUnavailable = true;
+    const lender = snapshots.get(String(imf._id));
+    if (lender) lender.imfSettlementUnavailable = true;
   }
   // Read the landed balances rather than subtracting a payment again on replay.
   const balances = await corporationsCollection(db)

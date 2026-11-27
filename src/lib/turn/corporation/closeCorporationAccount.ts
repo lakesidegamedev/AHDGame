@@ -485,11 +485,12 @@ export function closeCorporationAccount(context: ProcessCorporationAccountStageC
     ),
     otherLiabilitiesAnchor:
       corporateCashArrearsAnchor({
+        producerPayables: context.corp.producerPayables?.claims,
         operatingByCurrency: context.corp.operatingCashArrearsByCurrency,
         federalTaxByCountryAnchor: context.corp.federalTaxArrearsAnchorByCountry,
         fxByCurrency: context.context.lookups.exchangeRatesByCurrency,
       }) +
-      (context.context.lookups.constructionLoanDebtByCorpId?.get(context.corp._id.toString()) ?? 0),
+      (context.context.lookups.corporateLoanDebtByCorpId?.get(context.corp._id.toString()) ?? 0),
   });
 
   // Capture snapshot for history charts + credit time series

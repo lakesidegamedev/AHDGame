@@ -56,6 +56,7 @@ export interface ActionCosts {
 }
 
 export interface ActionsController {
+  homeCurrency: import("@/lib/constants/currencies").CurrencyCode;
   character: Character | null;
   homeState: ActionStateEconomics | null;
   /** Live prices and eligibility can be shown after the character and world data load. */
@@ -213,7 +214,12 @@ export function useActionsController({
       // fields expose the same value during the migration.
       funds: next.currencyBalances?.campaign ?? next.funds ?? 0,
       campaignFundsStored: next.currencyBalances?.campaign ?? next.funds ?? 0,
-      personalHomeLiquid: getTotalPersonalLiquidWealth(next, !!next.currencyBalances),
+      personalHomeLiquid: getTotalPersonalLiquidWealth(
+        next,
+        !!next.currencyBalances,
+        undefined,
+        worldFlags.preset
+      ),
     });
   };
 
@@ -335,10 +341,17 @@ export function useActionsController({
   const adPriceLabel = useMemo(() => {
     const anchor = adPurchaseCost(1) * (worldFlags.campaignPriceLevel ?? 1);
     const local = forexOn
-      ? campaignAnchorToLocal(anchor, character?.countryId ?? "US", campaignRates)
+      ? campaignAnchorToLocal(
+          anchor,
+          character?.countryId ?? "US",
+          campaignRates,
+          worldFlags.preset
+        )
       : anchor;
-    return character ? formatCurrencyFaceAmount(local, getHomeCurrency(character)) : "";
-  }, [forexOn, character, campaignRates, worldFlags.campaignPriceLevel]);
+    return character
+      ? formatCurrencyFaceAmount(local, getHomeCurrency(character, worldFlags.preset))
+      : "";
+  }, [forexOn, character, campaignRates, worldFlags.campaignPriceLevel, worldFlags.preset]);
 
   const cards = useMemo<ActionCard[]>(
     () =>
@@ -453,7 +466,7 @@ export function useActionsController({
     ? (character?.currencyBalances?.campaign ?? 0)
     : (character?.funds ?? 0);
   const displayPersonalWealth = character
-    ? getTotalPersonalLiquidWealth(character, forexEnabled)
+    ? getTotalPersonalLiquidWealth(character, forexEnabled, undefined, worldFlags.preset)
     : 0;
 
   // One-use outcome previews, from the same quotes the server executes. Shown
@@ -480,7 +493,7 @@ export function useActionsController({
         effect: `${signedPoints(actionCosts.advertiseFavorabilityGain)} Favorability`,
       };
     }
-    const campaignCurrency = getHomeCurrency(character);
+    const campaignCurrency = getHomeCurrency(character, worldFlags.preset);
     projections.fundraise = {
       label: "Campaign funds",
       from: formatCurrencyFaceAmount(displayCampaignFundsStored, campaignCurrency),
@@ -500,6 +513,7 @@ export function useActionsController({
   return {
     character,
     homeState,
+    homeCurrency: character ? getHomeCurrency(character, worldFlags.preset) : "USD",
     // Live prices depend on the active world preset.
     ready: !loading && !!worldFlags.loaded && !!character && !!actionCosts,
     era,

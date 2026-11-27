@@ -1,3 +1,6 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { afterCommit } from "@/lib/db/sessionDb";
+import { logger } from "@/lib/observability/logger";
 import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import { COMMODITY_LABELS } from "@/lib/constants/commodities";
 import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
@@ -70,146 +73,153 @@ export async function resolveProspects(
    */
   year: number | null = null
 ): Promise<ResolveProspectsResult> {
-  const era = prospectEraScaling(year);
-  const surveysCol = await getProspectingSurveysCollection(db);
-  const dueSurveys = await surveysCol
-    .find({ status: "active", completesTurn: { $lte: turn } })
-    .toArray();
-
-  const result: ResolveProspectsResult = {
-    surveysResolved: 0,
-    succeeded: 0,
-    failed: 0,
-    totalCapacityAdded: 0,
-    finderRightsGranted: 0,
-  };
-  if (dueSurveys.length === 0) return result;
-
-  // Load capacity docs for the involved states (keyed by stateId|countryId).
-  const capCol = await getStateResourceCapacityCollection(db);
-  const stateIds = [...new Set(dueSurveys.map((s) => s.stateId))];
-  const capDocs = await capCol.find({ stateId: { $in: stateIds } }).toArray();
-  const capByKey = new Map<string, StateResourceCapacity>();
-  for (const doc of capDocs) capByKey.set(`${doc.stateId}|${doc.countryId}`, doc);
-
-  // Load corp docs (corp survey notifications go to the CEO's user, like
-  // rdInnovation) — the launcher may have since changed.
-  const corpIds = dueSurveys
-    .filter((s) => s.initiatorType === "corporation" && s.corporationId)
-    .map((s) => s.corporationId as ObjectId);
-  const corpById = new Map<string, Corporation>();
-  if (corpIds.length > 0) {
-    const corps = await corporationsCollection(db)
-      .find({ _id: { $in: corpIds } }, { projection: { userId: 1, name: 1 } })
+  return withTurnValueSettlement(db, "prospecting-resolution", turn, async (db) => {
+    const era = prospectEraScaling(year);
+    const surveysCol = await getProspectingSurveysCollection(db);
+    const dueSurveys = await surveysCol
+      .find({ status: "active", completesTurn: { $lte: turn } })
       .toArray();
-    for (const c of corps) corpById.set(c._id.toString(), c);
-  }
 
-  // stateId|countryId → resource → accumulated $inc (stack multiple wins in the
-  // same state before writing to avoid $inc op collisions).
-  const capIncByKey = new Map<string, Record<string, number>>();
-  const surveyBulk: AnyBulkWriteOperation<ProspectingSurvey>[] = [];
-  const notifications: NotificationInput[] = [];
-  const finderGrants: Array<{
-    survey: ProspectingSurvey;
-    gained: number;
-    notification?: NotificationInput;
-  }> = [];
+    const result: ResolveProspectsResult = {
+      surveysResolved: 0,
+      succeeded: 0,
+      failed: 0,
+      totalCapacityAdded: 0,
+      finderRightsGranted: 0,
+    };
+    if (dueSurveys.length === 0) return result;
 
-  for (const survey of dueSurveys) {
-    const rng = rngFactory(`prospect:${survey._id.toString()}:${turn}`);
-    const isCorp = survey.initiatorType === "corporation";
-    const rdScore = survey.rdScoreAtStart ?? 0;
-    const baseChance = isCorp ? prospectCorpSuccessChance(rdScore) : PROSPECT_GOVT_SUCCESS_CHANCE;
-    // Clamped: an era multiplier must never make a survey a certainty or an
-    // impossibility, whatever the anchors are later tuned to.
-    const chance = Math.max(0.01, Math.min(0.99, baseChance * era.success));
-    const success = rng() < chance;
+    // Load capacity docs for the involved states (keyed by stateId|countryId).
+    const capCol = await getStateResourceCapacityCollection(db);
+    const stateIds = [...new Set(dueSurveys.map((s) => s.stateId))];
+    const capDocs = await capCol.find({ stateId: { $in: stateIds } }).toArray();
+    const capByKey = new Map<string, StateResourceCapacity>();
+    for (const doc of capDocs) capByKey.set(`${doc.stateId}|${doc.countryId}`, doc);
 
-    let capacityGained = 0;
-    if (success) {
-      const key = `${survey.stateId}|${survey.countryId}`;
-      const currentCap = capByKey.get(key)?.resources?.[survey.resource] ?? 0;
-      if (currentCap > 0) {
-        const yieldFraction =
-          (PROSPECT_YIELD_MIN + rng() * (PROSPECT_YIELD_MAX - PROSPECT_YIELD_MIN)) * era.yield;
-        const rdMult = isCorp ? prospectCorpRdMult(rdScore) : PROSPECT_GOVT_RD_MULT;
-        const rawGain = currentCap * yieldFraction * rdMult;
-        // The cap scales with the era too. Without this, a strong corp in 1953
-        // (rdMult up to 2× on a 1.6× era yield) clips at the modern 20% ceiling
-        // and the era bonus is silently erased for exactly the players most
-        // able to earn it.
-        const maxGain = currentCap * PROSPECT_MAX_GAIN_FRACTION * era.yield;
-        capacityGained = Math.round(Math.min(rawGain, maxGain));
-      }
-      if (capacityGained > 0) {
-        const inc = capIncByKey.get(key) ?? {};
-        inc[`resources.${survey.resource}`] =
-          (inc[`resources.${survey.resource}`] ?? 0) + capacityGained;
-        capIncByKey.set(key, inc);
-      }
+    // Load corp docs (corp survey notifications go to the CEO's user, like
+    // rdInnovation) — the launcher may have since changed.
+    const corpIds = dueSurveys
+      .filter((s) => s.initiatorType === "corporation" && s.corporationId)
+      .map((s) => s.corporationId as ObjectId);
+    const corpById = new Map<string, Corporation>();
+    if (corpIds.length > 0) {
+      const corps = await corporationsCollection(db)
+        .find({ _id: { $in: corpIds } }, { projection: { userId: 1, name: 1 } })
+        .toArray();
+      for (const c of corps) corpById.set(c._id.toString(), c);
     }
 
-    surveyBulk.push({
-      updateOne: {
-        filter: { _id: survey._id, status: "active" },
-        update: {
-          $set: {
-            status: success ? "succeeded" : "failed",
-            capacityGained,
-            resolvedTurn: turn,
-            updatedAt: now,
+    // stateId|countryId → resource → accumulated $inc (stack multiple wins in the
+    // same state before writing to avoid $inc op collisions).
+    const capIncByKey = new Map<string, Record<string, number>>();
+    const surveyBulk: AnyBulkWriteOperation<ProspectingSurvey>[] = [];
+    const notifications: NotificationInput[] = [];
+    const finderGrants: Array<{
+      survey: ProspectingSurvey;
+      gained: number;
+      notification?: NotificationInput;
+    }> = [];
+
+    for (const survey of dueSurveys) {
+      const rng = rngFactory(`prospect:${survey._id.toString()}:${turn}`);
+      const isCorp = survey.initiatorType === "corporation";
+      const rdScore = survey.rdScoreAtStart ?? 0;
+      const baseChance = isCorp ? prospectCorpSuccessChance(rdScore) : PROSPECT_GOVT_SUCCESS_CHANCE;
+      // Clamped: an era multiplier must never make a survey a certainty or an
+      // impossibility, whatever the anchors are later tuned to.
+      const chance = Math.max(0.01, Math.min(0.99, baseChance * era.success));
+      const success = rng() < chance;
+
+      let capacityGained = 0;
+      if (success) {
+        const key = `${survey.stateId}|${survey.countryId}`;
+        const currentCap = capByKey.get(key)?.resources?.[survey.resource] ?? 0;
+        if (currentCap > 0) {
+          const yieldFraction =
+            (PROSPECT_YIELD_MIN + rng() * (PROSPECT_YIELD_MAX - PROSPECT_YIELD_MIN)) * era.yield;
+          const rdMult = isCorp ? prospectCorpRdMult(rdScore) : PROSPECT_GOVT_RD_MULT;
+          const rawGain = currentCap * yieldFraction * rdMult;
+          // The cap scales with the era too. Without this, a strong corp in 1953
+          // (rdMult up to 2× on a 1.6× era yield) clips at the modern 20% ceiling
+          // and the era bonus is silently erased for exactly the players most
+          // able to earn it.
+          const maxGain = currentCap * PROSPECT_MAX_GAIN_FRACTION * era.yield;
+          capacityGained = Math.round(Math.min(rawGain, maxGain));
+        }
+        if (capacityGained > 0) {
+          const inc = capIncByKey.get(key) ?? {};
+          inc[`resources.${survey.resource}`] =
+            (inc[`resources.${survey.resource}`] ?? 0) + capacityGained;
+          capIncByKey.set(key, inc);
+        }
+      }
+
+      surveyBulk.push({
+        updateOne: {
+          filter: { _id: survey._id, status: "active" },
+          update: {
+            $set: {
+              status: success ? "succeeded" : "failed",
+              capacityGained,
+              resolvedTurn: turn,
+              updatedAt: now,
+            },
           },
         },
-      },
-    });
+      });
 
-    result.surveysResolved += 1;
-    if (success) {
-      result.succeeded += 1;
-      result.totalCapacityAdded += capacityGained;
-    } else {
-      result.failed += 1;
+      result.surveysResolved += 1;
+      if (success) {
+        result.succeeded += 1;
+        result.totalCapacityAdded += capacityGained;
+      } else {
+        result.failed += 1;
+      }
+
+      const recipient = resolveRecipientUserId(survey, corpById);
+      const notification = recipient
+        ? buildNotification(survey, success, capacityGained, recipient)
+        : undefined;
+      if (notification) notifications.push(notification);
+      if (isCorp && survey.corporationId && capacityGained > 0) {
+        finderGrants.push({ survey, gained: capacityGained, notification });
+      }
     }
 
-    const recipient = resolveRecipientUserId(survey, corpById);
-    const notification = recipient
-      ? buildNotification(survey, success, capacityGained, recipient)
-      : undefined;
-    if (notification) notifications.push(notification);
-    if (isCorp && survey.corporationId && capacityGained > 0) {
-      finderGrants.push({ survey, gained: capacityGained, notification });
+    // Survey closure, capacity and finder rights share the completion proof.
+    if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
+
+    // Apply capacity growth (one updateOne per state with all resource $incs).
+    const capBulk: AnyBulkWriteOperation<StateResourceCapacity>[] = [];
+    for (const [key, inc] of capIncByKey) {
+      const [stateId, countryId] = key.split("|");
+      capBulk.push({
+        updateOne: {
+          filter: { stateId, countryId: countryId as StateResourceCapacity["countryId"] },
+          update: { $inc: inc, $set: { updatedAt: now } },
+        },
+      });
     }
-  }
+    if (capBulk.length > 0) await capCol.bulkWrite(capBulk);
+    result.finderRightsGranted = await grantFinderRights(
+      db,
+      turn,
+      now,
+      finderGrants,
+      capByKey,
+      capIncByKey
+    );
+    if (notifications.length > 0)
+      await afterCommit(db, async () => {
+        try {
+          await createNotifications(notifications);
+        } catch (error) {
+          logger.error("prospecting", "Prospecting notifications failed", error);
+        }
+      });
 
-  // Close the surveys before granting anything. A failure after this point
-  // loses at most this turn's gains; the other order re-rolls the same surveys
-  // next turn and grants capacity again on every retry.
-  if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
-
-  // Apply capacity growth (one updateOne per state with all resource $incs).
-  const capBulk: AnyBulkWriteOperation<StateResourceCapacity>[] = [];
-  for (const [key, inc] of capIncByKey) {
-    const [stateId, countryId] = key.split("|");
-    capBulk.push({
-      updateOne: {
-        filter: { stateId, countryId: countryId as StateResourceCapacity["countryId"] },
-        update: { $inc: inc, $set: { updatedAt: now } },
-      },
-    });
-  }
-  if (capBulk.length > 0) await capCol.bulkWrite(capBulk);
-  result.finderRightsGranted = await grantFinderRights(
-    db,
-    turn,
-    now,
-    finderGrants,
-    capByKey,
-    capIncByKey
-  );
-  if (notifications.length > 0) await createNotifications(notifications);
-
-  return result;
+    return result;
+  });
 }
 
 /**

@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { applyTensionEvent } from "@/lib/coldwar/tension";
@@ -77,7 +78,7 @@ function refuse(status: number, error: string): RunOperationResult {
  * collection keeps the coverage it bought even when the network burns for it.
  * Compromise costs future ACCESS, never intelligence already in hand.
  */
-export async function runOperation(args: RunOperationArgs): Promise<RunOperationResult> {
+async function runOperationInTransaction(args: RunOperationArgs): Promise<RunOperationResult> {
   const { db, agency, targetCountryId, domain, kind, opType, turn, statMultiplier } = args;
 
   if (targetCountryId === agency.countryId) {
@@ -360,4 +361,8 @@ function describeOperation(
   }[compromise];
 
   return `${did} ${cost}`;
+}
+
+export async function runOperation(args: RunOperationArgs): Promise<RunOperationResult> {
+  return withAtomicResult(args.db, (db) => runOperationInTransaction({ ...args, db }));
 }

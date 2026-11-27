@@ -160,8 +160,12 @@ export function isPlannedEconomy(
   currentYear: number | null | undefined,
   enabled: boolean | null | undefined
 ): boolean {
-  if (!enabled) return false;
-  return marketizationLevel(countryId, currentYear) < DUAL_TRACK_CEILING;
+  return isPlannedLevel(marketizationLevel(countryId, currentYear), enabled);
+}
+
+/** Classify an explicit persisted snapshot without consulting the process registry. */
+export function isPlannedLevel(level: number, enabled: boolean | null | undefined): boolean {
+  return !!enabled && level < DUAL_TRACK_CEILING;
 }
 
 /**
@@ -191,9 +195,12 @@ export function plannedShare(
   currentYear: number | null | undefined,
   enabled: boolean | null | undefined
 ): number {
-  if (!enabled) return 0;
-  const level = marketizationLevel(countryId, currentYear);
-  if (level >= DUAL_TRACK_CEILING) return 0;
+  return plannedShareAtLevel(marketizationLevel(countryId, currentYear), enabled);
+}
+
+/** Share under planning at an explicit level, for isolated settlement calculations. */
+export function plannedShareAtLevel(level: number, enabled: boolean | null | undefined): number {
+  if (!enabled || level >= DUAL_TRACK_CEILING) return 0;
   return Math.max(0, Math.min(1, 1 - level / DUAL_TRACK_CEILING));
 }
 

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import type { Db } from "mongodb";
 
 vi.mock("@/lib/sovereignDefault/resolution/repudiate", () => ({

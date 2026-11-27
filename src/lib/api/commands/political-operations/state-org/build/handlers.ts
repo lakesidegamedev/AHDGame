@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,7 +14,7 @@ import {
   stateOrgLevelCost,
 } from "@/lib/elections/engine/constants";
 import { loadCampaignFxRate } from "@/lib/currency/campaignFxRate";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { getGameTime } from "@/lib/time/gameTime";
 import {
   loadUsPoliticalStateIds,
@@ -115,105 +116,105 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
-    const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
-    if (!isUsResidentPoliticalRegion(stateId, preset, admittedIds)) {
-      return NextResponse.json(badRequest(unplayableTerritoryHomeError(stateId)).toJson(), {
-        status: 400,
-      });
-    }
-
-    // Whose presence this is. Without a campaign id it is the caller's own;
-    // with one it is the campaign's candidate, once the caller is shown to be
-    // that candidate or one of the campaign's managers.
-    let ownerId: ObjectId;
-    let freshChar: Pick<PresenceCandidate, "countryId"> | null;
-    let campaign: Pick<PresenceCampaign, "_id" | "actions" | "funds"> | null;
-    if (campaignId) {
-      const subject = await resolvePresenceSubject(db, {
-        campaignId,
-        userId: auth.user.userId,
-        activeCharacterId: character._id,
-      });
-      ownerId = subject.campaign.candidateId;
-      freshChar = subject.candidate;
-      campaign = subject.campaign;
-    } else {
-      ownerId = character._id;
-      freshChar = await charactersCollection(db).findOne(
-        { _id: character._id },
-        { projection: { countryId: 1 } }
-      );
-      if (!freshChar) {
-        return NextResponse.json(badRequest("Character not found").toJson(), { status: 404 });
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const { admittedIds, preset } = await loadUsPoliticalStateIds(db);
+      if (!isUsResidentPoliticalRegion(stateId, preset, admittedIds)) {
+        return NextResponse.json(badRequest(unplayableTerritoryHomeError(stateId)).toJson(), {
+          status: 400,
+        });
       }
 
-      // Campaign Presence is campaign infrastructure and is paid for out of the
-      // campaign's own pools. A character with no active campaign has nothing to
-      // build presence FOR, so this is a clean 400 rather than a silent fallback
-      // onto personal action points.
-      campaign = await campaignsCollection(db).findOne(
-        { candidateId: character._id, status: { $ne: "archived" } },
-        { projection: { actions: 1, funds: 1 } }
-      );
-    }
-    if (!campaign) {
-      return NextResponse.json(
-        badRequest(
-          "You need an active campaign to build Campaign Presence — it is funded by the campaign, not by you personally."
-        ).toJson(),
-        { status: 400 }
-      );
-    }
-    if ((campaign.actions ?? 0) < STATE_ORG_COST_ACTIONS) {
-      return NextResponse.json(
-        badRequest(
-          `Not enough campaign actions — building presence costs ${STATE_ORG_COST_ACTIONS} (campaign has ${campaign.actions ?? 0})`
-        ).toJson(),
-        { status: 400 }
-      );
-    }
+      // Whose presence this is. Without a campaign id it is the caller's own;
+      // with one it is the campaign's candidate, once the caller is shown to be
+      // that candidate or one of the campaign's managers.
+      let ownerId: ObjectId;
+      let freshChar: Pick<PresenceCandidate, "countryId"> | null;
+      let campaign: Pick<PresenceCampaign, "_id" | "actions" | "funds"> | null;
+      if (campaignId) {
+        const subject = await resolvePresenceSubject(db, {
+          campaignId,
+          userId: auth.user.userId,
+          activeCharacterId: character._id,
+        });
+        ownerId = subject.campaign.candidateId;
+        freshChar = subject.candidate;
+        campaign = subject.campaign;
+      } else {
+        ownerId = character._id;
+        freshChar = await charactersCollection(db).findOne(
+          { _id: character._id },
+          { projection: { countryId: 1 } }
+        );
+        if (!freshChar) {
+          return NextResponse.json(badRequest("Character not found").toJson(), { status: 404 });
+        }
 
-    // Price the NEXT level off the current one — presence escalates, so the
-    // cost is read before the gate and re-asserted inside the atomic update so
-    // a racing build cannot buy a level at a stale (cheaper) price.
-    const existing = await characterStateOrgCollection(db).findOne(
-      { characterId: ownerId, stateId },
-      { projection: { level: 1 } }
-    );
-    const currentLevel = existing?.level ?? 0;
-    const costFundsAnchor = stateOrgLevelCost(currentLevel);
+        // Campaign Presence is campaign infrastructure and is paid for out of the
+        // campaign's own pools. A character with no active campaign has nothing to
+        // build presence FOR, so this is a clean 400 rather than a silent fallback
+        // onto personal action points.
+        campaign = await campaignsCollection(db).findOne(
+          { candidateId: character._id, status: { $ne: "archived" } },
+          { projection: { actions: 1, funds: 1 } }
+        );
+      }
+      if (!campaign) {
+        return NextResponse.json(
+          badRequest(
+            "You need an active campaign to build Campaign Presence — it is funded by the campaign, not by you personally."
+          ).toJson(),
+          { status: 400 }
+        );
+      }
+      if ((campaign.actions ?? 0) < STATE_ORG_COST_ACTIONS) {
+        return NextResponse.json(
+          badRequest(
+            `Not enough campaign actions — building presence costs ${STATE_ORG_COST_ACTIONS} (campaign has ${campaign.actions ?? 0})`
+          ).toJson(),
+          { status: 400 }
+        );
+      }
 
-    // Anchor-denominated cost → the campaign treasury's own currency, at the
-    // same frozen basis campaign income uses.
-    const costFundsLocal = costFundsAnchor * (await loadCampaignFxRate(db, freshChar));
-    if ((campaign.funds ?? 0) < costFundsLocal) {
-      return NextResponse.json(
-        badRequest(
-          `Not enough campaign funds — level ${currentLevel + 1} in ${stateId} costs $${Math.round(costFundsAnchor).toLocaleString()} (campaign has $${Math.floor(campaign.funds ?? 0).toLocaleString()})`
-        ).toJson(),
-        { status: 400 }
+      // Price the NEXT level off the current one — presence escalates, so the
+      // cost is read before the gate and re-asserted inside the atomic update so
+      // a racing build cannot buy a level at a stale (cheaper) price.
+      const existing = await characterStateOrgCollection(db).findOne(
+        { characterId: ownerId, stateId },
+        { projection: { level: 1 } }
       );
-    }
-    const now = new Date();
-    // The throttle is turn-based, not wall-clock. The current turn started at
-    // the most recently processed turn boundary; a build that happened in the
-    // current turn (updatedAt >= lastTurnProcessed) must wait until the next turn
-    // advances lastTurnProcessed. This enforces "at most +1 per state per turn"
-    // instead of the old 60-minute wall-clock window that locked players out for
-    // the remainder of the current turn and part of the next one.
-    const { lastTurnProcessed, currentTurn } = await getGameTime();
-    const throttleCutoff = lastTurnProcessed;
+      const currentLevel = existing?.level ?? 0;
+      const costFundsAnchor = stateOrgLevelCost(currentLevel);
 
-    // Atomic guard: the upsert filter requires the doc to be absent OR at a
-    // level < MAX AND last-updated before the start of the current turn. Combined
-    // with the unique index on { characterId, stateId } seeded in core.ts, this
-    // eliminates the read-then-write TOCTOU window — two parallel requests
-    // serialize through the upsert and only one increments the level. A racing
-    // partner whose filter no longer matches (because the first request just
-    // updated the doc) returns null from findOneAndUpdate → we refund and 409.
-    try {
-      await runWithOptionalTransaction(
-        async (session) => {
+      // Anchor-denominated cost → the campaign treasury's own currency, at the
+      // same frozen basis campaign income uses.
+      const costFundsLocal = costFundsAnchor * (await loadCampaignFxRate(db, freshChar));
+      if ((campaign.funds ?? 0) < costFundsLocal) {
+        return NextResponse.json(
+          badRequest(
+            `Not enough campaign funds — level ${currentLevel + 1} in ${stateId} costs $${Math.round(costFundsAnchor).toLocaleString()} (campaign has $${Math.floor(campaign.funds ?? 0).toLocaleString()})`
+          ).toJson(),
+          { status: 400 }
+        );
+      }
+      const now = new Date();
+      // The throttle is turn-based, not wall-clock. The current turn started at
+      // the most recently processed turn boundary; a build that happened in the
+      // current turn (updatedAt >= lastTurnProcessed) must wait until the next turn
+      // advances lastTurnProcessed. This enforces "at most +1 per state per turn"
+      // instead of the old 60-minute wall-clock window that locked players out for
+      // the remainder of the current turn and part of the next one.
+      const { lastTurnProcessed, currentTurn } = await getGameTime();
+      const throttleCutoff = lastTurnProcessed;
+
+      // Atomic guard: the upsert filter requires the doc to be absent OR at a
+      // level < MAX AND last-updated before the start of the current turn. Combined
+      // with the unique index on { characterId, stateId } seeded in core.ts, this
+      // eliminates the read-then-write TOCTOU window — two parallel requests
+      // serialize through the upsert and only one increments the level. A racing
+      // partner whose filter no longer matches (because the first request just
+      // updated the doc) returns null from findOneAndUpdate → we refund and 409.
+      try {
+        await runWithDbSession(db, async (session) => {
           const debitResult = await campaignsCollection(db).updateOne(
             {
               _id: campaign._id,
@@ -259,131 +260,76 @@ export async function POST(request: Request) {
             throw error;
           }
           if (!orgUpdate) throw new Error("ORG_RACE_OR_THROTTLE");
-        },
-        async () => {
-          const debitResult = await campaignsCollection(db).updateOne(
-            {
-              _id: campaign._id,
-              actions: { $gte: STATE_ORG_COST_ACTIONS },
-              funds: { $gte: costFundsLocal },
-            },
-            {
-              $inc: {
-                actions: -STATE_ORG_COST_ACTIONS,
-                funds: -costFundsLocal,
-              },
-              $set: { updatedAt: now },
-            }
-          );
-          if (debitResult.modifiedCount === 0) throw new Error("INSUFFICIENT_RESOURCES");
-
-          try {
-            const orgUpdate = await characterStateOrgCollection(db).findOneAndUpdate(
-              {
-                characterId: ownerId,
-                stateId,
-                $or: [{ updatedAt: { $exists: false } }, { updatedAt: { $lt: throttleCutoff } }],
-                // No level ceiling. This asserts the level is still the one
-                // we priced, so a racing build cannot buy a level at a stale
-                // (cheaper) price on the escalating cost curve.
-                $and: [
-                  {
-                    $or: [{ level: { $exists: false } }, { level: currentLevel }],
-                  },
-                ],
-              },
-              {
-                $inc: { level: 1, totalInvested: STATE_ORG_COST_ACTIONS },
-                $set: { updatedAt: now, lastBuildAt: now, lastBuildFunds: costFundsLocal },
-                $setOnInsert: { characterId: ownerId, stateId },
-              },
-              { upsert: true, returnDocument: "after" }
-            );
-            if (!orgUpdate) throw new Error("ORG_RACE_OR_THROTTLE");
-          } catch (error) {
-            await campaignsCollection(db).updateOne(
-              { _id: campaign._id },
-              {
-                $inc: {
-                  actions: STATE_ORG_COST_ACTIONS,
-                  funds: costFundsLocal,
-                },
-                $set: { updatedAt: new Date() },
-              }
-            );
-            if (isStateOrgDuplicateKey(error)) throw new Error("ORG_RACE_OR_THROTTLE");
-            throw error;
-          }
-        }
-      );
-    } catch (error) {
-      const msg = (error as Error).message;
-      if (msg === "INSUFFICIENT_RESOURCES") {
-        return NextResponse.json(
-          badRequest("Your campaign's actions or funds changed. Please try again.").toJson(),
-          { status: 409 }
-        );
-      }
-      if (msg === "ORG_RACE_OR_THROTTLE") {
-        return NextResponse.json(
-          badRequest(
-            `Already built ${stateId} this turn (cap ${STATE_ORG_PER_STATE_TURN_CAP} per state per turn), or another build landed first — reload for the current price`
-          ).toJson(),
-          { status: 409 }
-        );
-      }
-      throw error;
-    }
-
-    // A manager spends the candidate's campaign money, so the audit log says who
-    // pressed the button. Best effort: the build has already landed and been
-    // paid for, and a log failure must not turn that into an error.
-    if (!ownerId.equals(character._id)) {
-      try {
-        await activityLogCollection<Document>(db).insertOne({
-          type: "game_action",
-          timestamp: now,
-          userId: new ObjectId(auth.user.userId),
-          characterId: character._id,
-          characterName: character.name,
-          username: auth.user.username,
-          countryId: character.countryId,
-          actionType: "state_org_build",
-          actionCost: STATE_ORG_COST_ACTIONS,
-          turn: currentTurn,
-          targetId: campaign._id,
-          targetType: "campaign",
-          result: {
-            success: true,
-            fundsChange: -costFundsLocal,
-            message: `Built Campaign Presence in ${stateId} for the campaign`,
-          },
-          summary: `state_org_build - ${character.name} built Campaign Presence in ${stateId}`,
-          details: {
-            campaignId: campaign._id.toString(),
-            candidateId: ownerId.toString(),
-            stateId,
-            builtByManager: true,
-          },
         });
-      } catch {
-        // Audit row only; the build itself stands.
+      } catch (error) {
+        const msg = (error as Error).message;
+        if (msg === "INSUFFICIENT_RESOURCES") {
+          return NextResponse.json(
+            badRequest("Your campaign's actions or funds changed. Please try again.").toJson(),
+            { status: 409 }
+          );
+        }
+        if (msg === "ORG_RACE_OR_THROTTLE") {
+          return NextResponse.json(
+            badRequest(
+              `Already built ${stateId} this turn (cap ${STATE_ORG_PER_STATE_TURN_CAP} per state per turn), or another build landed first — reload for the current price`
+            ).toJson(),
+            { status: 409 }
+          );
+        }
+        throw error;
       }
-    }
 
-    // Re-read the post-image after both paths complete. We can't reliably
-    // close-over the value from inside runWithOptionalTransaction, so the
-    // returned shape is sourced from a fresh findOne — single round trip
-    // and avoids transaction-vs-callback bookkeeping.
-    const final = await characterStateOrgCollection(db).findOne(
-      { characterId: ownerId, stateId },
-      { projection: { level: 1, totalInvested: 1 } }
-    );
-    return NextResponse.json({
-      level: final?.level ?? 1,
-      totalInvested: final?.totalInvested ?? STATE_ORG_COST_ACTIONS,
-      stateId,
-      spentThisTurn: costFundsLocal,
+      // A manager spends the candidate's campaign money, so the audit log says who
+      // pressed the button. Best effort: the build has already landed and been
+      // paid for, and a log failure must not turn that into an error.
+      if (!ownerId.equals(character._id)) {
+        try {
+          await activityLogCollection<Document>(db).insertOne({
+            type: "game_action",
+            timestamp: now,
+            userId: new ObjectId(auth.user.userId),
+            characterId: character._id,
+            characterName: character.name,
+            username: auth.user.username,
+            countryId: character.countryId,
+            actionType: "state_org_build",
+            actionCost: STATE_ORG_COST_ACTIONS,
+            turn: currentTurn,
+            targetId: campaign._id,
+            targetType: "campaign",
+            result: {
+              success: true,
+              fundsChange: -costFundsLocal,
+              message: `Built Campaign Presence in ${stateId} for the campaign`,
+            },
+            summary: `state_org_build - ${character.name} built Campaign Presence in ${stateId}`,
+            details: {
+              campaignId: campaign._id.toString(),
+              candidateId: ownerId.toString(),
+              stateId,
+              builtByManager: true,
+            },
+          });
+        } catch {
+          // Audit row only; the build itself stands.
+        }
+      }
+
+      // Re-read the post-image after both paths complete. We can't reliably
+      // close-over the value from inside runWithOptionalTransaction, so the
+      // returned shape is sourced from a fresh findOne — single round trip
+      // and avoids transaction-vs-callback bookkeeping.
+      const final = await characterStateOrgCollection(db).findOne(
+        { characterId: ownerId, stateId },
+        { projection: { level: 1, totalInvested: 1 } }
+      );
+      return NextResponse.json({
+        level: final?.level ?? 1,
+        totalInvested: final?.totalInvested ?? STATE_ORG_COST_ACTIONS,
+        stateId,
+        spentThisTurn: costFundsLocal,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

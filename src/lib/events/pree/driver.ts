@@ -206,7 +206,7 @@ export async function processPlayerRandomEventsTurn(
     currentYear?: number;
   }
 ): Promise<PlayerRandomEventsTurnResult> {
-  await processLotteryAnnuities(db);
+  await processLotteryAnnuities(db, currentTurn);
   const sweepResult = await sweepExpiredWithNotifications(
     db,
     currentTurn,

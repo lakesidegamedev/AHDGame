@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { processNppSavingsInterest } from "./nppSavingsInterest";
 
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
+
 function cursor(list: unknown[]) {
   return { project: () => ({ toArray: () => Promise.resolve(list) }) };
 }

@@ -33,6 +33,7 @@ export function computeCorporationLiabilityValueAnchor(
     | "countryId"
     | "operatingCashArrearsByCurrency"
     | "federalTaxArrearsAnchorByCountry"
+    | "producerPayables"
   >,
   issuedBonds: Array<
     Pick<Bond, "corporationId" | "matured" | "totalIssued" | "currencyCode" | "countryId">
@@ -58,6 +59,7 @@ export function computeCorporationLiabilityValueAnchor(
       0
     ),
     arrears: corporateCashArrearsAnchor({
+      producerPayables: corporation.producerPayables?.claims,
       operatingByCurrency: corporation.operatingCashArrearsByCurrency,
       federalTaxByCountryAnchor: corporation.federalTaxArrearsAnchorByCountry,
       fxByCurrency,

@@ -1,122 +1,128 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ObjectId, type Db } from "mongodb";
+import { ObjectId } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
-import { createMockDb } from "@/lib/test-utils/mockDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import { deployBondReserveFromCash } from "./fundBondReserve";
-
-vi.mock("@/lib/currency/corporationCapital", () => ({
-  corpCapitalToAnchor: (n: number) => n,
-  loadFxRatesRecord: vi.fn(async () => ({ USD: 1 })),
-}));
-vi.mock("@/lib/bonds/marketPool", () => ({
-  loadBondPoolsByCurrency: vi.fn(async () => new Map()),
-  loadBondQuote: vi.fn(async () => ({ askPerUnit: 1000 })),
-  creditBondPool: vi.fn(async () => {}),
-  advanceBondPoolSnapshot: vi.fn(),
-}));
-
+vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: async () => false }));
 function fixture() {
-  const db = createMockDb();
-  const bonds = Array.from({ length: 10 }, () => ({
-    _id: new ObjectId(),
-    issuerType: "sovereign",
-    countryId: "US",
-    currencyCode: "USD",
-    matured: false,
-    defaulted: false,
-    publicFloat: 10000,
-    totalIssued: 10000000,
-    faceValue: 1000,
-    marketPrice: 1,
-    holders: [],
-    maturityTurn: 100,
-  }));
-  db.collection("bonds").find.mockReturnValue({
-    sort: vi.fn().mockReturnThis(),
-    toArray: vi.fn(async () => bonds),
-  });
-  db.collection("bonds").updateOne.mockResolvedValue({ modifiedCount: 1 });
-  db.collection("indexFunds").findOneAndUpdate.mockResolvedValue({ cashAnchor: 1000000 });
+  const f = createTransactionalMemoryDb();
   const fund = {
     _id: new ObjectId(),
-    name: "Test",
-    slug: "test",
+    name: "Synthetic fund",
+    tickerSymbol: "SYN",
+    reserveUnits: 0,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+    slug: "synthetic",
     kind: "broad",
     scope: "country",
     countryId: "US",
     anchorCurrencyCode: "USD",
-    cashAnchor: 1000000,
+    cashAnchor: 1e6,
     quotedNav: 100,
     unitSupply: 10000,
     holdings: [],
     targetConstituents: [],
-  } as unknown as IndexFund;
-  return { db, fund };
+    status: "active",
+  } as IndexFund;
+  f.memory.seed("gameState", [{ _id: "current", currentTurn: 100, preset: "2019-default" }]);
+  f.memory.seed("indexFunds", [{ ...fund }]);
+  f.memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
+  f.memory.seed(
+    "bonds",
+    Array.from({ length: 10 }, () => ({
+      _id: new ObjectId(),
+      issuerType: "sovereign",
+      countryId: "US",
+      currencyCode: "USD",
+      matured: false,
+      defaulted: false,
+      publicFloat: 10000,
+      totalIssued: 1e7,
+      faceValue: 1000,
+      marketPrice: 1,
+      holders: [],
+      maturityTurn: 200,
+    }))
+  );
+  return { ...f, fund };
 }
-
-describe("fund bond reserve audit batching", () => {
+describe("fund bond reserve receipts and batching", () => {
   beforeEach(() => vi.clearAllMocks());
-  it("flushes completed receipts when a later purchase fails", async () => {
-    const { db, fund } = fixture();
-    db.collection("indexFunds")
-      .findOneAndUpdate.mockResolvedValueOnce({ cashAnchor: 900000 })
-      .mockResolvedValueOnce({ cashAnchor: 800000 })
-      .mockRejectedValueOnce(new Error("debit unavailable"));
+  it("retains only receipts for earlier committed purchases when a later debit fails", async () => {
+    const f = fixture(),
+      fault = withInjectedCrash(f.memory, {
+        collection: "indexFunds",
+        op: "findOneAndUpdate",
+        onCall: 3,
+        afterWrite: true,
+      });
     await expect(
-      deployBondReserveFromCash(db as unknown as Db, fund, 0, {
-        liquidityTargetEnabled: true,
-        turn: 100,
-      })
-    ).rejects.toThrow("debit unavailable");
-    expect(db.collectionMocks.indexFundTransactions.insertMany).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.indexFundTransactions.insertMany.mock.calls[0][0]).toHaveLength(2);
-    expect(db.collectionMocks.financialTxLog.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.financialTxLog.insertMany).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.financialTxLog.insertMany.mock.calls[0][0]).toHaveLength(2);
+      deployBondReserveFromCash(fault.db, f.fund, 0, { liquidityTargetEnabled: true, turn: 100 })
+    ).rejects.toThrow();
+    const receipts = f.memory.collection("indexFundTransactions").docs;
+    expect(receipts).toHaveLength(2);
+    expect(f.memory.collection("financialTxLog").docs).toHaveLength(2);
+    expect(f.memory.collection("indexFunds").docs[0].cashAnchor).toBeCloseTo(
+      1e6 - receipts.reduce((sum, row) => sum + Number(row.amountAnchor), 0),
+      6
+    );
   });
-
-  it("surfaces receipt persistence failures", async () => {
-    const { db, fund } = fixture();
-    db.collection("indexFundTransactions").insertMany.mockRejectedValueOnce(
+  it("rolls back the purchase when its receipt cannot persist", async () => {
+    const f = fixture();
+    vi.spyOn(f.memory.collection("indexFundTransactions"), "insertOne").mockRejectedValueOnce(
       new Error("receipt unavailable")
     );
     await expect(
-      deployBondReserveFromCash(db as unknown as Db, fund, 0, {
-        liquidityTargetEnabled: true,
-        turn: 100,
-      })
+      deployBondReserveFromCash(f.db, f.fund, 0, { liquidityTargetEnabled: true, turn: 100 })
     ).rejects.toThrow("receipt unavailable");
-    expect(db.collectionMocks.financialTxLog.insertMany).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.financialTxLog.insertMany.mock.calls[0][0]).toHaveLength(10);
+    expect(f.memory.collection("indexFunds").docs[0].cashAnchor).toBe(1e6);
+    expect(f.memory.collection("bonds").docs.every((bond) => bond.publicFloat === 10000)).toBe(
+      true
+    );
+    expect(f.memory.collection("financialTxLog").docs).toHaveLength(0);
   });
-
-  it("preserves ten ordered purchases with one write per log", async () => {
-    const { db, fund } = fixture();
-    const result = await deployBondReserveFromCash(db as unknown as Db, fund, 0, {
+  it("commits ten ordered purchases with one write per receipt collection", async () => {
+    const f = fixture();
+    const financial = vi.spyOn(f.memory.collection("financialTxLog"), "insertMany");
+    const transactions = vi.spyOn(f.memory.collection("indexFundTransactions"), "insertMany");
+    const result = await deployBondReserveFromCash(f.db, f.fund, 0, {
       liquidityTargetEnabled: true,
+      settleInTransaction: true,
       turn: 100,
     });
     expect(result.unitsPurchased).toBeGreaterThan(0);
-    expect(db.collectionMocks.indexFunds.findOneAndUpdate).toHaveBeenCalledTimes(10);
-    expect(db.collectionMocks.bonds.updateOne).toHaveBeenCalledTimes(10);
-    expect(db.collectionMocks.indexFundTransactions.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.indexFundTransactions.insertMany).toHaveBeenCalledTimes(1);
-    const transactions = db.collectionMocks.indexFundTransactions.insertMany.mock.calls[0][0];
-    expect(transactions).toHaveLength(10);
-    expect(db.collectionMocks.financialTxLog.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.financialTxLog.insertMany).toHaveBeenCalledTimes(1);
-    const ledgerRows = db.collectionMocks.financialTxLog.insertMany.mock.calls[0][0];
-    expect(ledgerRows).toHaveLength(10);
-    expect(
-      ledgerRows.every(
-        (row: { turn: number; type: string }) => row.turn === 100 && row.type === "bond_purchase"
-      )
-    ).toBe(true);
-    expect(
-      transactions.reduce((sum: number, tx: { amountAnchor: number }) => sum + tx.amountAnchor, 0)
-    ).toBe(result.deployedAnchor);
-    expect(ledgerRows.reduce((sum: number, row: { amount: number }) => sum - row.amount, 0)).toBe(
-      result.deployedAnchor
+    expect(financial).toHaveBeenCalledOnce();
+    expect(transactions).toHaveBeenCalledOnce();
+    expect(f.memory.collection("indexFundTransactions").docs).toHaveLength(10);
+    expect(f.memory.collection("financialTxLog").docs).toHaveLength(10);
+    expect(f.memory.collection("indexFunds").docs[0].cashAnchor).toBeCloseTo(
+      1e6 - result.deployedAnchor,
+      6
     );
+  });
+  it("rolls back all batch money and custody after a landed ledger failure", async () => {
+    const f = fixture(),
+      fault = withInjectedCrash(f.memory, {
+        collection: "financialTxLog",
+        op: "insertMany",
+        onCall: 1,
+        afterWrite: true,
+      });
+    await expect(
+      deployBondReserveFromCash(fault.db, f.fund, 0, {
+        liquidityTargetEnabled: true,
+        settleInTransaction: true,
+        turn: 100,
+      })
+    ).rejects.toThrow();
+    expect(f.memory.collection("indexFunds").docs[0].cashAnchor).toBe(1e6);
+    expect(f.memory.collection("bonds").docs.every((bond) => bond.publicFloat === 10000)).toBe(
+      true
+    );
+    expect(f.memory.collection("indexFundTransactions").docs).toHaveLength(0);
+    expect(f.memory.collection("financialTxLog").docs).toHaveLength(0);
   });
 });

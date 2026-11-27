@@ -3,6 +3,7 @@ import { requireHumanSessionWithCharacter } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse, statusResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { rescindOrder } from "@/lib/governorOffice/orders/rescindOrder";
 import { isSittingLeader } from "@/lib/governorOffice/isSittingLeader";
 
@@ -35,6 +36,8 @@ export async function DELETE(
 
     const result = await rescindOrder(db, {
       orderId: new ObjectId(orderId),
+      countryId,
+      stateId: getNationalStateId(countryId),
       rescindedByCharacterId: auth.user.character._id,
     });
     return statusResponse(result.status, result.body);

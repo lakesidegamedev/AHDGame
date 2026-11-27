@@ -1,3 +1,5 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { fenceCorporateWallets } from "@/lib/corporations/fenceCorporateWallets";
 import { corporateDiscretionaryCashGuard } from "@/lib/corporations/rules/discretionaryCash";
 import {
   loadStockWithholdingContexts,
@@ -211,8 +213,19 @@ export async function claimAcquisitionSettlement(
     updatedAt: now,
   };
   try {
-    await settlements(db).insertOne(doc);
-    return { settlement: doc, fresh: true };
+    const fresh = await withSessionDb(db, async (tx) => {
+      if (await settlements(tx).findOne({ _id: spec.offerId }, { projection: { _id: 1 } }))
+        return false;
+      await fenceCorporateWallets(
+        tx,
+        storedLegs
+          .filter((leg) => leg.collection === "corporations")
+          .map((leg) => ({ id: leg.filter._id as ObjectId, currency: leg.currencyCode }))
+      );
+      await settlements(tx).insertOne(doc);
+      return true;
+    });
+    if (fresh) return { settlement: doc, fresh: true };
   } catch (error) {
     const code =
       typeof error === "object" && error !== null && "code" in error
@@ -268,6 +281,12 @@ export async function applyAcquisitionLeg(
 
   const filter = {
     ...leg.filter,
+    ...(leg.collection === "corporations"
+      ? {
+          liquidCurrencyCode:
+            leg.currencyCode === "USD" ? { $in: ["USD", null] } : leg.currencyCode,
+        }
+      : {}),
     ...(leg.kind === "acquirer_debit" ? corporateDiscretionaryCashGuard() : {}),
     ...(leg.guardPath && leg.guardGte !== undefined
       ? { [leg.guardPath]: { $gte: leg.guardGte } }

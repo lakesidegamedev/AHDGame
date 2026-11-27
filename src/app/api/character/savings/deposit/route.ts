@@ -15,7 +15,9 @@ import {
 } from "@/lib/currency/characterFunds";
 import { insertSavingsLedgerEntry } from "@/lib/savings/ledger";
 import { moveCharacterSavings } from "@/lib/banking/deposits";
-import { getGameState } from "@/lib/gameState";
+import { getCurrentTurn } from "@/lib/currentTurn";
+import { withRecordedEconomicCommand } from "@/lib/api/withRecordedEconomicCommand";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { normalizeSavingsMutationAmount } from "@/lib/api/savings/savingsAmount";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
@@ -28,13 +30,14 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 const depositSchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
   amount: z.number(),
+  requestId: z.string().min(1).max(100).optional(),
   // Optional: route this currency's savings to a specific bank in the same
   // action (a bank corp id hex, or "centralBank"). Lets a player deposit into a
   // bank straight from its own page. Omitted = balance stays where it is.
   holder: z.string().optional(),
 });
 
-// POST /api/character/savings/deposit — Move liquid cash into savings for a currency
+// POST /api/character/savings/deposit â€” Move liquid cash into savings for a currency
 // Auth: requireBasicAuth
 // Errors: 400, 401, 429
 export async function POST(request: Request) {
@@ -61,131 +64,141 @@ export async function POST(request: Request) {
       return NextResponse.json(badRequest("Invalid amount").toJson(), { status: 400 });
     }
 
-    const db = await getDb();
-    const forexEnabled = await isForexEnabled();
+    const sourceDb = await getDb();
+    return await withRecordedEconomicCommand(
+      sourceDb,
+      "savings-deposit",
+      auth.user.userId,
+      parsed.data.requestId,
+      { currency: c, amount: normalized, holder: holder?.trim() ?? "" },
+      async (db) => {
+        const forexEnabled = await isForexEnabled();
 
-    const character = await getCharacterByUserId(db, auth.user.userId);
-    if (!character) {
-      return NextResponse.json(badRequest("Character not found").toJson(), { status: 400 });
-    }
-
-    if (!forexEnabled && c !== getHomeCurrency(character)) {
-      return NextResponse.json(
-        badRequest("Foreign-currency savings require the forex system").toJson(),
-        { status: 400 }
-      );
-    }
-
-    if (!isSavingsAccountOpened(character, c)) {
-      return NextResponse.json(
-        badRequest("Open a savings account for this currency first").toJson(),
-        {
-          status: 400,
+        const character = await getCharacterByUserId(db, auth.user.userId);
+        if (!character) {
+          return NextResponse.json(badRequest("Character not found").toJson(), { status: 400 });
         }
-      );
-    }
 
-    const now = new Date();
-    const inc = buildTransferToSavingsInc(normalized, c, forexEnabled);
-    const policy = await loadBankingPolicy(db);
-    const accountsAuthoritative = policy.savingsAccounts === "authoritative" && forexEnabled;
+        if (!forexEnabled && c !== getHomeCurrency(character)) {
+          return NextResponse.json(
+            badRequest("Foreign-currency savings require the forex system").toJson(),
+            { status: 400 }
+          );
+        }
 
-    if (accountsAuthoritative) {
-      // The account command moves the cash into the holder and keeps the
-      // character's legacy fields in step as projections.
-      const deposited = await runSavingsCommand(db, character._id, c, {
-        type: "deposit",
-        amount: normalized,
-      });
-      if (!deposited.ok) {
-        return NextResponse.json(badRequest(deposited.error).toJson(), { status: 400 });
-      }
-    } else if (forexEnabled) {
-      const res = await charactersCollection(db).updateOne(
+        if (!isSavingsAccountOpened(character, c)) {
+          return NextResponse.json(
+            badRequest("Open a savings account for this currency first").toJson(),
+            {
+              status: 400,
+            }
+          );
+        }
+
+        const now = new Date();
+        const inc = buildTransferToSavingsInc(normalized, c, forexEnabled);
+        const policy = await loadBankingPolicy(db);
+        const accountsAuthoritative = policy.savingsAccounts === "authoritative" && forexEnabled;
+
+        if (accountsAuthoritative) {
+          // The account command moves the cash into the holder and keeps the
+          // character's legacy fields in step as projections.
+          const deposited = await runSavingsCommand(db, character._id, c, {
+            type: "deposit",
+            amount: normalized,
+          });
+          if (!deposited.ok) {
+            return NextResponse.json(badRequest(deposited.error).toJson(), { status: 400 });
+          }
+        } else if (forexEnabled) {
+          const res = await charactersCollection(db).updateOne(
+            {
+              _id: character._id,
+              [`currencyBalances.personal.${c}`]: { $gte: normalized },
+            },
+            { $inc: inc, $set: { updatedAt: now } }
+          );
+          if (res.matchedCount === 0) {
+            return NextResponse.json(badRequest("Insufficient liquid balance").toJson(), {
+              status: 400,
+            });
+          }
+        } else {
+          const res = await charactersCollection(db).updateOne(
+            {
+              _id: character._id,
+              cashOnHand: { $gte: normalized },
+            },
+            { $inc: inc, $set: { updatedAt: now } }
+          );
+          if (res.matchedCount === 0) {
+            return NextResponse.json(badRequest("Insufficient liquid balance").toJson(), {
+              status: 400,
+            });
+          }
+        }
+
+        // Routing and the deposit must share one outcome so a refusal cannot strand funds.
+        let holderMove: { ok: boolean; error?: string } | null = null;
+        if (holder && holder.trim()) {
+          const move = await moveCharacterSavings(db, character._id, c, holder.trim());
+          if (!move.ok) return NextResponse.json(badRequest(move.error).toJson(), { status: 400 });
+          holderMove = { ok: true };
+        }
+
+        const turn = await getCurrentTurn(db);
+        const after = await charactersCollection(db).findOne({ _id: character._id });
+        if (!after) throw new Error("Savings owner disappeared before the command receipt");
         {
-          _id: character._id,
-          [`currencyBalances.personal.${c}`]: { $gte: normalized },
-        },
-        { $inc: inc, $set: { updatedAt: now } }
-      );
-      if (res.matchedCount === 0) {
-        return NextResponse.json(badRequest("Insufficient liquid balance").toJson(), {
-          status: 400,
+          await insertSavingsLedgerEntry(db, {
+            characterId: character._id,
+            currencyCode: c,
+            type: "deposit",
+            amount: normalized,
+            balanceAfter: getSavingsBalance(after, c, forexEnabled),
+            turn,
+          });
+        }
+
+        await afterCommit(db, () =>
+          emitBankingAuditEvent(
+            {
+              kind: "account.deposited",
+              command: "savings.deposit",
+              turn,
+              outcome: "ok",
+              currency: c,
+              subjectType: "character",
+              subjectId: character._id.toString(),
+              statusAfter:
+                (after?.currencyBalances?.savingsHolder?.[c] as string | undefined) ??
+                "centralBank",
+              amount: normalized,
+              meta: { holderRequested: holder?.trim() ? true : false },
+            },
+            unboundDb(db)
+          )
+        );
+
+        await emitTx(db, {
+          type: "savings_deposit",
+          turn,
+          createdAt: now,
+          subjectType: "character",
+          subjectId: character._id,
+          subjectName: character.name,
+          amount: normalized,
+          currencyCode: c,
+        });
+
+        return NextResponse.json({
+          success: true,
+          currency: c,
+          amount: normalized,
+          ...(holderMove ? { holderRouted: holderMove.ok, holderError: holderMove.error } : {}),
         });
       }
-    } else {
-      const res = await charactersCollection(db).updateOne(
-        {
-          _id: character._id,
-          cashOnHand: { $gte: normalized },
-        },
-        { $inc: inc, $set: { updatedAt: now } }
-      );
-      if (res.matchedCount === 0) {
-        return NextResponse.json(badRequest("Insufficient liquid balance").toJson(), {
-          status: 400,
-        });
-      }
-    }
-
-    // Route the deposit to a chosen bank if requested. Pointer-only move of the
-    // whole currency balance; moveCharacterSavings validates the target charter,
-    // currency match, blacklist and deposit ceiling. A routing failure is
-    // surfaced but the deposit itself already succeeded, so we report it softly.
-    let holderMove: { ok: boolean; error?: string } | null = null;
-    if (holder && holder.trim()) {
-      const move = await moveCharacterSavings(db, character._id, c, holder.trim());
-      holderMove = move.ok ? { ok: true } : { ok: false, error: move.error };
-    }
-
-    const gameState = await getGameState();
-    const turn = gameState?.currentTurn ?? 0;
-    const after = await charactersCollection(db).findOne({ _id: character._id });
-    if (after) {
-      await insertSavingsLedgerEntry(db, {
-        characterId: character._id,
-        currencyCode: c,
-        type: "deposit",
-        amount: normalized,
-        balanceAfter: getSavingsBalance(after, c, forexEnabled),
-        turn,
-      });
-    }
-
-    emitBankingAuditEvent(
-      {
-        kind: "account.deposited",
-        command: "savings.deposit",
-        turn,
-        outcome: "ok",
-        currency: c,
-        subjectType: "character",
-        subjectId: character._id.toString(),
-        statusAfter:
-          (after?.currencyBalances?.savingsHolder?.[c] as string | undefined) ?? "centralBank",
-        amount: normalized,
-        meta: { holderRequested: holder?.trim() ? true : false },
-      },
-      db
     );
-
-    void emitTx(db, {
-      type: "savings_deposit",
-      turn,
-      createdAt: now,
-      subjectType: "character",
-      subjectId: character._id,
-      subjectName: character.name,
-      amount: normalized,
-      currencyCode: c,
-    });
-
-    return NextResponse.json({
-      success: true,
-      currency: c,
-      amount: normalized,
-      ...(holderMove ? { holderRouted: holderMove.ok, holderError: holderMove.error } : {}),
-    });
   } catch (error) {
     return handleRouteError(error);
   }

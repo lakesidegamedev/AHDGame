@@ -1,7 +1,8 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial, GovernorOfficeState } from "@/lib/db/types";
-import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { MINISTERIAL_ACTION_CAP } from "@/lib/constants/cabinetMechanicsTypes";
 import { initialVpActionFields, VP_ACTION_CAP } from "@/lib/constants/vicePresidentActions";
 import { initialJusticeActionFields, JUSTICE_ACTION_CAP } from "@/lib/constants/justiceActions";
@@ -229,14 +230,8 @@ function resolvePool(db: Db, characterId: ObjectId, target: OfficePoolTarget, no
   }
 }
 
-/**
- * Spend `OFFICE_POOL_TOP_UP_AP_COST` main AP to add one action to an office
- * pool the character holds. Standalone Mongo has no transactions, so the AP
- * debit is a conditional single-document update made first, and the pool
- * credit is a conditional update gated on `pool < cap` and "not already
- * topped up this turn". If the credit loses a race, the AP is refunded.
- */
-export async function topUpOfficePool(
+/** Spend AP and deliver the office resource in one fenced operation. */
+async function topUpOfficePoolInTransaction(
   db: Db,
   characterId: ObjectId,
   target: OfficePoolTarget,
@@ -274,21 +269,17 @@ export async function topUpOfficePool(
     {
       _id: pool.docId,
       [pool.field]: { $lt: pool.cap },
-      [pool.topUpField]: { $ne: currentTurn },
+      $or: [{ [pool.topUpField]: null }, { [pool.topUpField]: { $lt: currentTurn } }],
     } as never,
     { $inc: { [pool.field]: 1 }, $set: { [pool.topUpField]: currentTurn, updatedAt: now } },
     { returnDocument: "after", projection: { [pool.field]: 1 } }
   );
   const remaining = (credited as Record<string, unknown> | null)?.[pool.field];
   if (typeof remaining !== "number") {
-    await charactersCol.updateOne(
-      { _id: characterId },
-      { $inc: { actions: OFFICE_POOL_TOP_UP_AP_COST }, $set: { updatedAt: now } }
-    );
     return {
       ok: false,
       status: 409,
-      error: "This action pool filled or was already topped up this turn. Your AP was refunded.",
+      error: "This action pool filled or was already topped up this turn. No AP was spent.",
     };
   }
 
@@ -300,4 +291,28 @@ export async function topUpOfficePool(
     cap: pool.cap,
     actionsLeft: debited.actions ?? 0,
   };
+}
+
+export async function topUpOfficePool(
+  db: Db,
+  characterId: ObjectId,
+  target: OfficePoolTarget,
+  currentTurn: number,
+  now: Date = new Date()
+): Promise<OfficePoolTopUpResult> {
+  return withAtomicResult<OfficePoolTopUpResult>(db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) return refusal;
+    const state = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
+    if (!Number.isSafeInteger(currentTurn) || state?.currentTurn !== currentTurn)
+      return {
+        ok: false,
+        status: 409,
+        error: "The turn changed. Reload before buying office actions.",
+      };
+    return topUpOfficePoolInTransaction(db, characterId, target, currentTurn, now);
+  });
 }

@@ -11,7 +11,15 @@ import type { Db } from "mongodb";
 import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 
 export type WriteOp =
-  "insertOne" | "insertMany" | "updateOne" | "updateMany" | "findOneAndUpdate" | "bulkWrite";
+  | "insertOne"
+  | "insertMany"
+  | "updateOne"
+  | "updateMany"
+  | "findOneAndUpdate"
+  | "replaceOne"
+  | "deleteOne"
+  | "deleteMany"
+  | "bulkWrite";
 
 export interface FaultPlan {
   /** Only writes to this collection count. Omit to count every collection. */
@@ -41,6 +49,9 @@ const WRITE_OPS: WriteOp[] = [
   "updateOne",
   "updateMany",
   "findOneAndUpdate",
+  "replaceOne",
+  "deleteOne",
+  "deleteMany",
   "bulkWrite",
 ];
 
@@ -93,9 +104,13 @@ export function withInjectedCrash(memory: InMemoryDb, plan: FaultPlan): FaultyDb
     });
   };
 
-  const db = {
-    collection: (name: string) => proxyCollection(name),
-  } as unknown as Db;
+  const db = new Proxy(memory, {
+    get(target, property, receiver) {
+      if (property === "collection") return (name: string) => proxyCollection(name);
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as unknown as Db;
 
   return {
     db,

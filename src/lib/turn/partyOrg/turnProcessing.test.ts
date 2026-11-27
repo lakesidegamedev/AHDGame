@@ -121,3 +121,13 @@ describe("processPartyOrgTurn", () => {
     expect(operations[1].updateOne.update.$set.organization).toBeCloseTo(30.8642, 4);
   });
 });
+
+// Formula/transport fixture; the recurrence atomic suite uses the real boundary.
+vi.mock("../withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

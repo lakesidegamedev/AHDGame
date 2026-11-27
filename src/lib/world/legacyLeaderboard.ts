@@ -6,8 +6,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { ExchangeRate } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
-import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
-import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
+
 import type { GameIteration } from "@/lib/db/types/gameState";
 import { getGameState } from "@/lib/gameState";
 import { iterationLabel } from "@/lib/wiki/officeIteration";
@@ -327,8 +326,10 @@ export async function getLegacyLeaderboardData(
 
   for (const c of activeCharacters) {
     const achievementCount = achievementCountByUser.get(String(c.userId)) ?? 0;
-    const cashOnHandLocal = c.currencyBalances?.personal?.[getHomeCurrency(c)] ?? c.cashOnHand ?? 0;
-    const savingsLocal = c.currencyBalances?.savings?.[getHomeCurrency(c)] ?? c.savingsOnHand ?? 0;
+    const cashOnHandLocal =
+      c.currencyBalances?.personal?.[getHomeCurrency(c, gameState?.preset)] ?? c.cashOnHand ?? 0;
+    const savingsLocal =
+      c.currencyBalances?.savings?.[getHomeCurrency(c, gameState?.preset)] ?? c.savingsOnHand ?? 0;
     const characterIdStr = String(c._id);
     const { breakdown: netWorthBreakdown } = computeNetWorth(
       {
@@ -343,7 +344,7 @@ export async function getLegacyLeaderboardData(
     );
 
     const liquid = liquidBalancesAnchor({
-      homeCurrency: getHomeCurrency(c),
+      homeCurrency: getHomeCurrency(c, gameState?.preset),
       personal: c.currencyBalances?.personal,
       savings: c.currencyBalances?.savings,
       legacyPersonal: c.cashOnHand ?? 0,

@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 /**
  * Primary stagger phase: during the final 6 turns of a presidential primary,
  * one wave of states unlocks per turn; missed turns catch up all outstanding
@@ -13,16 +14,7 @@ import { turnoutForElection } from "@/lib/campaignTargeting/rules";
 
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
-import type {
-  CharacterStateOrg,
-  Election,
-  ElectionCandidate,
-  ElectionVoteTally,
-  PoliticalParty,
-  StateDemographics,
-  StatePartyOrg,
-  StateDemographicTurnout,
-} from "@/lib/db/types";
+import type { Election, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
 import {
   getPrimaryWaveSchedule,
   startedScheduleForFirstOffset,
@@ -187,6 +179,18 @@ export async function runPrimaryStaggerWaveIfDue(
   currentTurn: number
 ): Promise<StaggerPhaseResult | null> {
   if (election.electionType !== "president") return null;
+  return withSessionDb(db, (db) =>
+    runPrimaryStaggerWaveInTransaction(db, election, now, currentTurn)
+  );
+}
+
+async function runPrimaryStaggerWaveInTransaction(
+  db: Db,
+  election: Election,
+  now: Date,
+  currentTurn: number
+): Promise<StaggerPhaseResult | null> {
+  if (election.electionType !== "president") return null;
 
   // Rules-freeze seam: the calendar spacing (compressed vs stretched) and the
   // momentum knobs are read from the race's stamped ruleset, so a live race
@@ -342,6 +346,7 @@ export async function runPrimaryStaggerWaveIfDue(
   // Scope the party lookup by countryId so sequentialId collisions across
   // countries cannot invert candidate party positions.
   const enriched = await fetchEnrichedCandidates(candidates, {
+    db,
     includePartyPositions: true,
     countryId: (election.countryId ?? "US") as CountryId,
   });
@@ -1021,7 +1026,13 @@ export async function runPrimaryStaggerWaveIfDue(
 
   // Per-race wire: the wave that just closed and what it awarded. Fire-and-
   // forget after the tally write has committed, so it can never fail the wave.
-  void emitPrimaryTierWire(election._id, wavesRun + 1, totalDelegatesAwarded);
+  await afterCommit(db, async () => {
+    try {
+      await emitPrimaryTierWire(election._id, wavesRun + 1, totalDelegatesAwarded);
+    } catch (error) {
+      logger.error("Primary Stagger", "Wave announcement failed", error);
+    }
+  });
 
   return {
     electionId: election._id,

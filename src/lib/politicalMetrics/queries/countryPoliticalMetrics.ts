@@ -1,12 +1,10 @@
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { GameState } from "@/lib/db/types/gameState";
+
 import { resolveGameYear } from "@/lib/era/era";
 import type { State } from "@/lib/db/types/state";
-import type {
-  PoliticalMetricsDoc,
-  PoliticalMetricsHistoryDoc,
-} from "@/lib/db/types/politicalMetrics";
+
 import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 import { loadDemocraticCompetition } from "@/lib/governanceStyle/loadCompetition";
 import { scoreGovernanceStyle, type GovernanceStyleScore } from "@/lib/governanceStyle/score";
@@ -299,7 +297,7 @@ export async function loadCountryPoliticalMetrics(
           nationalValue: round1(nationalValue),
           status: statusFor(nationalValue),
           legislation: legislationByMetric.get(f.id) ?? null,
-          history: (historyDoc?.entries ?? []).map((entry) => ({
+          history: uniqueTurnHistory(historyDoc?.entries ?? []).map((entry) => ({
             turn: entry.turn,
             value: round1(entry.values[f.id] ?? 0),
           })),

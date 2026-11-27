@@ -1,4 +1,5 @@
 "use client";
+import { useEconomicIntent } from "@/hooks/useEconomicIntent";
 import { useCallback, useEffect, useState } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -210,6 +211,7 @@ export default function IntelligenceTab({
   currencySymbol?: string;
   canAct?: boolean;
 }) {
+  const requestEconomic = useEconomicIntent();
   const [view, setView] = useState<ServiceView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -273,13 +275,9 @@ export default function IntelligenceTab({
     setBusy(true);
     setProblem(null);
     try {
-      const res = await fetch(
+      const res = await requestEconomic(
         `/api/country/${countryId}/executive/cabinet/${positionId}/intelligence/${path}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
+        body
       );
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as { error?: string };

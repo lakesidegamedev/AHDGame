@@ -1,3 +1,14 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { NPP } from "@/lib/db/types";
@@ -110,7 +121,7 @@ describe("executeForeignPolicyChoice", () => {
       input: { type: "free_trade_agreement", parties: ["FR", "IT"] },
     });
     expect(db.collection("diplomaticActions").updateOne).toHaveBeenCalledWith(
-      { countryId: "FR" },
+      expect.objectContaining({ countryId: "FR", _id: expect.any(ObjectId) }),
       expect.objectContaining({ $set: expect.objectContaining({ turn: 21, remaining: 3 }) }),
       { upsert: true }
     );

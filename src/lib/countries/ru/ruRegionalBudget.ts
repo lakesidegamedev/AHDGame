@@ -1,3 +1,4 @@
+import { foreignRegionalRevenueFields } from "@/lib/budget/rules/regionalRevenueFields";
 /**
  * RU regional-budget turn phase (political-legislation spec §5.2 — built with
  * the legislation rebuild; no RU pipeline existed before).
@@ -143,7 +144,11 @@ export async function processRURegionalBudgets(
       updatedAt: new Date(),
     };
     regionalBudgetOps.push({
-      updateOne: { filter: { _id: regionId }, update: { $set: budgetDoc }, upsert: true },
+      updateOne: {
+        filter: { _id: regionId },
+        update: { $set: budgetDoc, $unset: foreignRegionalRevenueFields("RU") },
+        upsert: true,
+      },
     });
     regionsProcessed++;
   }

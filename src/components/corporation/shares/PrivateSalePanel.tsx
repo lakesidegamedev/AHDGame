@@ -230,6 +230,14 @@ export default function PrivateSalePanel({
   const handleSubmitOffer = async (listingId: string) => {
     const shares = offerShares[listingId] ?? 0;
     const price = offerPrice[listingId] ?? 0;
+    const localPrice = corpCurrencyCode ? toLocalOf(price, corpCurrencyCode) : toInternal(price);
+    if (!Number.isFinite(localPrice) || localPrice <= 0) {
+      onToast(
+        "Exchange quote unavailable. Wait for rates to load before making an offer.",
+        "error"
+      );
+      return;
+    }
     if (shares <= 0 || price <= 0) return;
     setLoading(true);
     try {
@@ -240,7 +248,7 @@ export default function PrivateSalePanel({
           shares,
           // Server stores pricePerShare in the listing corp's liquidCurrencyCode
           // (Option B). Convert the display-currency input to that target local.
-          pricePerShare: corpCurrencyCode ? toLocalOf(price, corpCurrencyCode) : toInternal(price),
+          pricePerShare: localPrice,
         }),
       });
       const data = await res.json();
@@ -694,7 +702,16 @@ export default function PrivateSalePanel({
                       </div>
                       <button
                         onClick={() => handleSubmitOffer(listing._id)}
-                        disabled={loading || !offerShares[listing._id] || !offerPrice[listing._id]}
+                        disabled={
+                          loading ||
+                          !offerShares[listing._id] ||
+                          !offerPrice[listing._id] ||
+                          !Number.isFinite(
+                            corpCurrencyCode
+                              ? toLocalOf(offerPrice[listing._id] ?? 0, corpCurrencyCode)
+                              : toInternal(offerPrice[listing._id] ?? 0)
+                          )
+                        }
                         className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-body-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-card-border disabled:text-muted disabled:hover:bg-card-border"
                       >
                         {loading ? "Submitting" : "Make offer"}

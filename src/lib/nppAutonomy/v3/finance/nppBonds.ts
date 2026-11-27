@@ -1,3 +1,6 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { afterCommit } from "@/lib/db/sessionDb";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * NPP bond-buy command core (V3 full-agency finance).
  *
@@ -50,7 +53,7 @@ export type NppBondBuySnapshot = Pick<
   | "issuerName"
 >;
 
-export async function nppBuyBond(
+async function buyBondInTransaction(
   db: Db,
   npp: Pick<NPP, "_id" | "countryId">,
   bondId: ObjectId,
@@ -62,7 +65,7 @@ export async function nppBuyBond(
   bondSnapshot?: NppBondBuySnapshot,
   preset?: string
 ): Promise<NppBondBuyResult> {
-  if (!Number.isInteger(units) || units <= 0) {
+  if (!Number.isSafeInteger(units) || units <= 0) {
     return { ok: false, reason: "Units must be a positive integer." };
   }
 
@@ -92,6 +95,8 @@ export async function nppBuyBond(
   const cost = Math.round(units * pricePerUnit * 100) / 100;
   // Bond price is LOCAL; the economic account is ₳ — convert at the FX boundary.
   const rate = homeRate ?? (await nppHomeFxRate(db, npp.countryId, undefined, preset));
+  if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(cost) || cost <= 0)
+    return { ok: false, reason: "Bond currency quote is unavailable." };
   const costAnchor = localToAnchor(cost, rate);
   const now = new Date();
 
@@ -176,4 +181,41 @@ export async function nppBuyBond(
     costAnchor,
     investmentCashAnchor: deducted.nppInvestmentCashAnchor ?? 0,
   };
+}
+
+export async function nppBuyBond(
+  db: Db,
+  npp: Pick<NPP, "_id" | "countryId">,
+  bondId: ObjectId,
+  units: number,
+  currentTurn: number,
+  homeRate?: number,
+  bondSnapshot?: NppBondBuySnapshot,
+  preset?: string
+): Promise<NppBondBuyResult> {
+  return withAtomicResult(db, (tx) =>
+    withTurnValueSettlement(
+      tx,
+      "npp-bond-purchase",
+      currentTurn,
+      async (inner) => {
+        const result = await buyBondInTransaction(
+          inner,
+          npp,
+          bondId,
+          units,
+          currentTurn,
+          homeRate,
+          bondSnapshot,
+          preset
+        );
+        if (result.ok && bondSnapshot)
+          await afterCommit(inner, () => {
+            bondSnapshot.publicFloat -= result.units;
+          });
+        return result;
+      },
+      { sourceKey: `${currentTurn}:${npp._id}` }
+    )
+  );
 }

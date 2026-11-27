@@ -78,6 +78,11 @@ describe("POST org-building national-chair row bootstrap", () => {
       name: "Bayern",
     });
     db.collectionMocks["statePartyOrg"]!.findOne.mockResolvedValue(null);
+    db.collectionMocks["statePartyOrg"]!.updateOne.mockResolvedValue({
+      matchedCount: 0,
+      modifiedCount: 0,
+      upsertedCount: 1,
+    } as never);
 
     // Default: party has live presence in the state.
     const { checkPartyPresence } = await import("@/lib/turn/partyOrg/presence");

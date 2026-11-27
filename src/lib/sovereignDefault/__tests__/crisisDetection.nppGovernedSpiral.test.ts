@@ -1,3 +1,17 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 

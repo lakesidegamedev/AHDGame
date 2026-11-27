@@ -555,6 +555,8 @@ export async function applyDeclarativeEffects(
   const campaignRates = await loadCampaignCurrencyRates(ctx.db);
   const homeCurrency = getHomeCurrency(character, ctx.preset);
   const charUpdates: Record<string, number> = {};
+  let campaignFundsDelta = 0;
+  let fundedElectionId: ObjectId | null = null;
   let favorability = character.favorability ?? 50;
   let infamy = character.infamy ?? 0;
   let politicalInfluence = character.politicalInfluence ?? 0;
@@ -599,10 +601,8 @@ export async function applyDeclarativeEffects(
         );
         // Campaign documents hold their spendable money in `funds`; every
         // campaign reader and upkeep path uses it, with or without forex.
-        await campaignsCollection<Document>(ctx.db).updateOne(
-          { characterId, electionId },
-          { $inc: { funds: localDelta } }
-        );
+        campaignFundsDelta += localDelta;
+        fundedElectionId = electionId;
         break;
       }
       case "campaignSupport": {
@@ -660,6 +660,12 @@ export async function applyDeclarativeEffects(
   const update: Record<string, unknown> = { $set: setFields };
   if (Object.keys(charUpdates).length > 0) {
     update.$inc = charUpdates;
+  }
+  if (fundedElectionId && campaignFundsDelta !== 0) {
+    await campaignsCollection<Document>(ctx.db).updateOne(
+      { candidateId: characterId, electionId: fundedElectionId },
+      { $inc: { funds: campaignFundsDelta } }
+    );
   }
   await charactersCollection(ctx.db).updateOne({ _id: characterId }, update);
 }

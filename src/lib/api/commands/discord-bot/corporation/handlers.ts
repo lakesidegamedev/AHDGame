@@ -1,3 +1,4 @@
+import { corpIncomeBasis } from "@/lib/corporations/rules/incomeBasis";
 import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
@@ -11,14 +12,9 @@ import { bulkFetchCharacterNames } from "@/lib/db/characterLookup";
 import { toAbsoluteUploadUrl } from "@/lib/discord";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
-  getUnemploymentMarginModifier,
-  getStateSectorSpecializationMarginBonus,
   calculateWorkers,
   TURNS_PER_DAY,
-  NPV_ANNUAL_DISCOUNT_RATE,
-  MAX_DIVIDEND_RATE,
 } from "@/lib/constants/corporations";
-import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
 import { loadStrengthUpkeepStage } from "@/lib/corporations/strengthUpkeep";
 import { loadCorporationDetailView } from "@/lib/corporations/queries/corporationDetail";
@@ -32,10 +28,8 @@ import { getCountryConfig } from "@/lib/constants/countries";
 import { getGameState } from "@/lib/gameState";
 import { getPublicShareQuote, getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { sectorEconomicRevenue } from "@/lib/corporations/sectorRevenueBasis";
-import { readPlantsPnl } from "@/lib/corporations/plantsPnlBasis";
 import { roundMarketingStrength } from "@/lib/utils/formatters";
 import {
-  anchorToCorpCapital,
   corpCapitalToAnchor,
   fxRateForCorpFromMap,
   fxRateForSectorHostFromMap,
@@ -44,8 +38,6 @@ import {
   resolveSectorHostCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
@@ -53,7 +45,6 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://ahousedividedgame.com";
 const LIST_CACHE_HEADERS = {
@@ -92,6 +83,8 @@ type CorpDetailPayload =
       corporation: Record<string, unknown>;
       ceo: { name: string; profileUrl: string | null } | null;
       shareholders: { name: string; shares: number; percentage: number }[];
+      financialBasis: "settled" | "estimate";
+      financialTurn?: number;
       financials: Record<string, number>;
       balanceSheet: Record<string, number>;
       creditRating: { rating: string; compositeScore: number; effectiveCouponRate: number };
@@ -133,9 +126,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   // so the bot embed matches the corp page by construction. The builder returns
   // daily-unit, corp-LOCAL figures (the same units the fields below use) and
   // folds in the engine's realized income when a corporationHistory row exists.
-  // `viewerUserId: null` = public view. Only `financials` is used here; the
-  // sectors, bonds, balance-sheet and credit sections keep their existing
-  // computations.
+  // Use the shared balance sheet as well so all debt and portfolio assets agree.
   const detail = await loadCorporationDetailView({
     db,
     corporation,
@@ -145,40 +136,21 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const f = detail.financials;
   // Headline net income mirrors the website: prefer engine-realized income when
   // present, else the projected income (FinancialsTab.tsx / CorporationMasthead.tsx).
-  const netIncome = typeof f.realizedIncome === "number" ? f.realizedIncome : f.income;
+  const incomeBasis = corpIncomeBasis(f);
+  const netIncome = incomeBasis.netIncome;
 
   // Resolve state names and unemployment for financial calculations
   const allStateIds = [corporation.headquartersState, ...sectors.map((s) => s.stateId)];
   const uniqueStateIds = [...new Set(allStateIds)];
 
-  const [states, stateMetricsDocs] =
+  const states =
     uniqueStateIds.length > 0
-      ? await Promise.all([
-          statesCollection(db)
-            .find({ _id: { $in: uniqueStateIds } })
-            .project<Pick<State, "_id" | "name" | "sectorSpecializations">>({
-              _id: 1,
-              name: 1,
-              sectorSpecializations: 1,
-            })
-            .toArray(),
-          macroMetricsCollection(db)
-            .find(
-              { _id: { $in: uniqueStateIds } },
-              { projection: { "economic.unemploymentRate.value": 1 } }
-            )
-            .toArray(),
-        ])
-      : [[], []];
-
-  const stateNameMap = new Map(states.map((s) => [s._id, s.name]));
-  const stateSpecializationMap = new Map(states.map((s) => [s._id, s.sectorSpecializations]));
-  const unemploymentModMap = new Map(
-    stateMetricsDocs.map((sm) => [
-      String(sm._id),
-      getUnemploymentMarginModifier(sm.economic?.unemploymentRate?.value),
-    ])
-  );
+      ? await statesCollection(db)
+          .find({ _id: { $in: uniqueStateIds } })
+          .project<Pick<State, "_id" | "name">>({ _id: 1, name: 1 })
+          .toArray()
+      : [];
+  const stateNameMap = new Map(states.map((state) => [state._id, state.name]));
   // SP4: merged legacy + political-board read so playable regions' worker
   // counts keep matching the turn's adapter-fed values.
   const workforceSkillMap = await loadWorkforceSkillByState(db, uniqueStateIds);
@@ -223,25 +195,9 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
       workers: calculateWorkers(revenueAnchor, workforceSkillMap.get(sector.stateId) ?? null),
     };
   });
-  const totalDebtAnchor = outstandingBonds.reduce((sum, b) => {
-    const bondCcy = (b.currencyCode ??
-      (b.countryId && b.countryId in COUNTRY_CURRENCY_MAP
-        ? COUNTRY_CURRENCY_MAP[b.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
-        : undefined)) as CurrencyCode | undefined;
-    const bondFxRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
-    return sum + corpCapitalToAnchor(b.totalIssued, bondCcy, bondFxRate);
-  }, 0);
-  const annualInterestAnchor = outstandingBonds.reduce((sum, b) => {
-    const bondCcy = (b.currencyCode ??
-      (b.countryId && b.countryId in COUNTRY_CURRENCY_MAP
-        ? COUNTRY_CURRENCY_MAP[b.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
-        : undefined)) as CurrencyCode | undefined;
-    const bondFxRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
-    return sum + corpCapitalToAnchor((b.couponRate / 100) * b.totalIssued, bondCcy, bondFxRate);
-  }, 0);
   const GAME_DAYS_PER_YEAR = TURNS_PER_YEAR / TURNS_PER_DAY;
-  const totalDebt = anchorToCorpCapital(totalDebtAnchor, corpCurrency, corpFxRate);
-  const annualInterest = anchorToCorpCapital(annualInterestAnchor, corpCurrency, corpFxRate);
+  const totalDebt = detail.balanceSheet.liabilities.totalDebt;
+  const annualInterest = (f.bondInterestCost + f.bankLoanInterestCost) * GAME_DAYS_PER_YEAR;
 
   // Income statement — sourced entirely from the shared builder (`f`) so the
   // bot matches the website. `income` is the realized-or-projected net income
@@ -285,51 +241,16 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
   const publicFloat = corporation.publicFloat ?? 0;
   const publicFloatPct = Math.round((publicFloat / totalShares) * 10000) / 100;
 
-  // Dividends — honor legal-structure minimum payout (matches turn loop).
-  const corpDividendRateClamped = Math.min(corporation.dividendRate ?? 0, MAX_DIVIDEND_RATE);
-  let legalMinDividendPct = 0;
-  try {
-    legalMinDividendPct = (getLegalStructureForCorp(corporation).minimumDividendRate ?? 0) * 100;
-  } catch {
-    legalMinDividendPct = 0;
-  }
-  const dividendRate = income > 0 ? Math.max(corpDividendRateClamped, legalMinDividendPct) : 0;
-  const dailyDividendPayout = income > 0 ? Math.round((income * dividendRate) / 100) : 0;
+  const dividendRate = f.effectiveDividendRate;
+  const dailyDividendPayout = Math.round(incomeBasis.dividendPaid);
 
-  // Balance sheet (simplified — use per-sector raw data for NPV). Sectors can
-  // span multiple host currencies for one corp, so per-sector profit is
-  // computed in anchor (₳) units before being summed — mixing raw host-currency
-  // figures across sectors here would silently misstate the total.
-  let totalSectorNPVAnchor = 0;
-  for (const sector of sectors) {
-    const unemploymentMod = unemploymentModMap.get(sector.stateId) ?? 0;
-    const stateSectorSpecializationMod = getStateSectorSpecializationMarginBonus(
-      stateSpecializationMap.get(sector.stateId),
-      sector.sectorType
-    );
-    const effMargin = Math.max(
-      0,
-      Math.min(100, sector.profitMargin + unemploymentMod + stateSectorSpecializationMod)
-    );
-    const sectorRevenueAnchor = sectorAmountAnchor(sectorEconomicRevenue(sector), sector);
-    const growthCostAnchor = sectorAmountAnchor(sector.currentGrowthCost, sector);
-    // Ticket 1122: prefer the P&L the turn booked (see the financials route).
-    const bookedPnl = readPlantsPnl(sector);
-    const profit = bookedPnl
-      ? sectorAmountAnchor(bookedPnl.profit, sector)
-      : sectorRevenueAnchor - sectorRevenueAnchor * (1 - effMargin / 100) - growthCostAnchor;
-    const yearlyProfit = profit * GAME_DAYS_PER_YEAR;
-    if (yearlyProfit > 0) totalSectorNPVAnchor += yearlyProfit / NPV_ANNUAL_DISCOUNT_RATE;
-  }
-  const totalSectorNPV = Math.round(
-    writeCorpEconomicLocal(totalSectorNPVAnchor, corpCurrency, corpFxRate)
-  );
-  const totalAssets = Math.round(corporation.liquidCapital) + totalSectorNPV;
-  const bookValue = totalAssets - totalDebt;
+  const totalSectorNPV = detail.balanceSheet.assets.totalSectorNPV;
+  const totalAssets = detail.balanceSheet.assets.totalAssets;
+  const bookValue = detail.balanceSheet.equity.bookValue;
 
   // Credit rating
   const annualIncome = income * GAME_DAYS_PER_YEAR;
-  const totalEquity = Math.round(corporation.liquidCapital) + totalSectorNPV;
+  const totalEquity = totalAssets;
   const creditRating = calculateCreditScore(
     corporation.liquidCapital,
     totalDebt,
@@ -351,7 +272,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
             corpCurrency,
             corpFxRate
           ),
-          annualCouponObligations: annualInterestAnchor,
+          annualCouponObligations: corpCapitalToAnchor(annualInterest, corpCurrency, corpFxRate),
           currentTurn,
           fxByCurrency,
         }).liquidityScore ?? undefined,
@@ -420,6 +341,10 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
     },
     ceo: ceo && !corporation.ceoVacant ? { name: ceo.name, profileUrl: ceoUrl } : null,
     shareholders,
+    financialBasis: incomeBasis.isRealized ? "settled" : "estimate",
+    ...(incomeBasis.isRealized && f.realizedIncomeTurn != null
+      ? { financialTurn: f.realizedIncomeTurn }
+      : {}),
     financials: {
       totalRevenue: Math.round(f.totalRevenue),
       maintenanceCosts: Math.round(f.maintenanceCosts),
@@ -433,7 +358,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
       totalCosts: Math.round(totalCosts),
       income: Math.round(income),
       dailyDividendPayout,
-      retainedEarnings: Math.round(income - dailyDividendPayout),
+      retainedEarnings: Math.round(incomeBasis.retained),
     },
     balanceSheet: {
       totalAssets,
@@ -441,11 +366,7 @@ async function buildCorpDetail(nameLower: string): Promise<CorpDetailPayload> {
       sectorNPV: totalSectorNPV,
       totalDebt: Math.round(totalDebt),
       bookValue: Math.round(bookValue),
-      // Subtract debt from displayed equity to match the website API and the
-      // turn-system share-price formula. Natcorps exempt (sovereign-backed).
-      // Note: `totalEquity` above is the credit-rating input (cash+NPV only),
-      // intentionally distinct from the balance-sheet equity exposed here.
-      totalEquity: Math.round(totalEquity - (corporation.countryOwnerId ? 0 : totalDebt)),
+      totalEquity: Math.round(detail.balanceSheet.equity.totalEquity),
       marketCapitalization: Math.round(marketCapitalization),
     },
     creditRating: {

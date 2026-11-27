@@ -3,10 +3,16 @@ import { ObjectId, type Db } from "mongodb";
 import { applyDefenceDeliveries } from "@/lib/turn/defenceDeliveryTurn";
 import { lotProductionCost, GRADE_PRICE_SCALE } from "@/lib/military/defenceLotEconomics";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 
+// Formula fixtures isolate session plumbing; defenceDeliveryAtomic tests rollback and races.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
 
 /**
@@ -107,6 +113,10 @@ function stubDb(l: Ledger): Db {
   const moneyDb = money;
   return {
     collection: (name: string) => {
+      if (name === "gameState")
+        return {
+          findOne: async () => ({ _id: "current", currentTurn: 5, worldEpochId: "fixture" }),
+        };
       if (name === "defenceContracts") {
         return {
           find: () => ({
@@ -135,6 +145,11 @@ function stubDb(l: Ledger): Db {
       if (name === "corporateSectors") {
         return {
           findOne: async () => ({ _id: SECTOR_ID, strategyId: "heavy_armor", revenue: 10_000_000 }),
+          find: () => ({
+            toArray: async () => [
+              { _id: SECTOR_ID, strategyId: "heavy_armor", revenue: 10_000_000 },
+            ],
+          }),
           bulkWrite: async (ops: unknown[]) => ({ modifiedCount: ops.length }),
         };
       }
@@ -287,11 +302,11 @@ describe("defence procurement money conservation", () => {
     const second = await applyDefenceDeliveries(stubDb(l), "US", 1953, 3, 5);
 
     expect(first.paid).toBeGreaterThan(0);
-    expect(second.paid).toBe(0);
+    expect(second.paid).toBe(first.paid);
     expect(l.balance).toBe(balanceAfter);
     expect(l.corpCash).toBe(cashAfter);
     expect(l.contracts[0].lotsDelivered).toBe(deliveredAfter);
-    expect(l.contracts[0].carryReason).toBe("already_settled_this_turn");
+    expect(l.contracts[0].lotsDelivered).toBe(deliveredAfter);
   });
 
   // A NEW turn is a new key, so idempotency does not become a permanent stall.

@@ -1,3 +1,4 @@
+import { recordedCasinoResponse } from "@/lib/casino/recordedResponse";
 import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -5,7 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { errorResponse, handleRouteError } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { getTotalPersonalWealth } from "@/lib/currency/characterFunds";
+import { getPersonalBalance } from "@/lib/currency/characterFunds";
 import { getCurrencyFxRate } from "@/lib/currency/corporationCapital";
 import { houseLimits, loadHouse, settleHouseBet } from "@/lib/casino/house";
 import { casinoFailure, guardCasinoPlayer, guardCasinoRequest } from "@/lib/casino/routeSupport";
@@ -14,8 +15,8 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 import { blackjackPendingWagersCollection } from "@/lib/db/repositories/blackjackPendingWagers";
 
 const resolveSchema = z.object({
-  discordId: z.string().min(1, "discordId is required"),
-  gameId: z.string().min(1, "gameId is required"),
+  discordId: z.string().min(1, "discordId is required").max(100),
+  gameId: z.string().min(1, "gameId is required").max(150),
   result: z.enum(["win", "loss", "push"]),
   // Bounded: an unbounded client multiplier could size a payout far beyond any
   // legitimate blackjack table (10x already covers 3:2 naturals with headroom).
@@ -54,70 +55,77 @@ export async function POST(request: Request) {
     if (limited) return limited;
 
     const db = await getDb();
-    const pending = await blackjackPendingWagersCollection<PendingWager>(db).findOneAndDelete({
-      discordId,
-      gameId,
-      status: "pending",
-    });
-    if (!pending) {
-      return errorResponse(404, "Pending wager not found", {
-        extra: {
-          message:
-            "No active wager found for this game. The wager may have already been resolved or never placed.",
+    return recordedCasinoResponse(
+      db,
+      `resolve-wager:${discordId}:${gameId}`,
+      parsed.data,
+      async (db) => {
+        const pending = await blackjackPendingWagersCollection<PendingWager>(db).findOneAndDelete({
           discordId,
           gameId,
-        },
-      });
-    }
+          status: "pending",
+        });
+        if (!pending) {
+          return errorResponse(404, "Pending wager not found", {
+            extra: {
+              message:
+                "No active wager found for this game. The wager may have already been resolved or never placed.",
+              discordId,
+              gameId,
+            },
+          });
+        }
 
-    const character = await charactersCollection(db).findOne({ _id: pending.characterId });
-    if (!character) return errorResponse(404, "Character not found", { extra: { discordId } });
-    const currency = pending.currency ?? ("USD" as CurrencyCode);
-    const rate = pending.rate ?? (await getCurrencyFxRate(db, currency));
-    const player = {
-      discordId,
-      characterId: character._id,
-      characterName: character.name,
-      countryId: character.countryId,
-      currency,
-      rate,
-    };
+        const character = await charactersCollection(db).findOne({ _id: pending.characterId });
+        if (!character) return errorResponse(404, "Character not found", { extra: { discordId } });
+        const currency = pending.currency ?? ("USD" as CurrencyCode);
+        const rate = pending.rate ?? (await getCurrencyFxRate(db, currency));
+        const player = {
+          discordId,
+          characterId: character._id,
+          characterName: character.name,
+          countryId: character.countryId,
+          currency,
+          rate,
+        };
 
-    const houseEdge = blackjackHouseEdge();
-    const multiplier =
-      result === "win" ? 1 + payoutMultiplier * (1 - houseEdge) : result === "push" ? 1 : 0;
-    const previousCash = getTotalPersonalWealth(character, true);
-    const limits = houseLimits((await loadHouse(db)).anchorBalance);
-    const settled = await settleHouseBet(db, {
-      player,
-      game: "blackjack",
-      stakeLocal: pending.wagerAmount,
-      multiplier,
-      limits,
-      meta: { gameId, result },
-    });
-    if (!settled.ok) return casinoFailure(settled);
+        const houseEdge = blackjackHouseEdge();
+        const multiplier =
+          result === "win" ? 1 + payoutMultiplier * (1 - houseEdge) : result === "push" ? 1 : 0;
+        const previousCash = getPersonalBalance(character, currency, true);
+        const limits = houseLimits((await loadHouse(db)).anchorBalance);
+        const settled = await settleHouseBet(db, {
+          player,
+          game: "blackjack",
+          stakeLocal: pending.wagerAmount,
+          multiplier,
+          limits,
+          meta: { gameId, result },
+        });
+        if (!settled.ok) return casinoFailure(settled);
 
-    const winnings = Math.max(0, settled.payout - pending.wagerAmount);
-    return NextResponse.json({
-      success: true,
-      discordId,
-      gameId,
-      characterId: character._id.toString(),
-      characterName: character.name,
-      countryId: character.countryId,
-      wagerAmount: pending.wagerAmount,
-      result,
-      payoutMultiplier: result === "win" ? payoutMultiplier : undefined,
-      houseEdge: result === "win" ? houseEdge : undefined,
-      payout: result === "win" ? winnings : undefined,
-      totalReturned: settled.payout > 0 ? settled.payout : undefined,
-      capped: settled.capped || undefined,
-      previousCash,
-      newCash: previousCash + settled.payout,
-      newPoolBalance: Math.floor(settled.newHouseAnchor),
-      currency,
-    });
+        const winnings = Math.max(0, settled.payout - pending.wagerAmount);
+        return NextResponse.json({
+          success: true,
+          discordId,
+          gameId,
+          characterId: character._id.toString(),
+          characterName: character.name,
+          countryId: character.countryId,
+          wagerAmount: pending.wagerAmount,
+          result,
+          payoutMultiplier: result === "win" ? payoutMultiplier : undefined,
+          houseEdge: result === "win" ? houseEdge : undefined,
+          payout: result === "win" ? winnings : undefined,
+          totalReturned: settled.payout > 0 ? settled.payout : undefined,
+          capped: settled.capped || undefined,
+          previousCash,
+          newCash: previousCash + settled.payout,
+          newPoolBalance: Math.floor(settled.newHouseAnchor),
+          currency,
+        });
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

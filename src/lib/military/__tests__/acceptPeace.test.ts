@@ -69,6 +69,7 @@ vi.mock("@/lib/turn/ensureFederalBudget", () => ({
 
 const db = {
   collection: () => ({
+    findOne: async () => null,
     updateOne: (...a: unknown[]) => {
       budgetSpy(...a);
       return Promise.resolve({ modifiedCount: 1 });

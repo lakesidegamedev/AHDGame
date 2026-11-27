@@ -19,9 +19,9 @@ import {
   nonConvertibleCurrencyMessage,
   nonConvertibleTradeCurrency,
 } from "@/lib/constants/commandEconomy";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { newCharacterTransferBarrierResponse } from "@/lib/api/newCharacterTransferBarrier";
-import type { CurrencyOrder, CurrencyOrderStatus, GameConfig, GameState } from "@/lib/db/types";
+import type { CurrencyOrder, CurrencyOrderStatus } from "@/lib/db/types";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { gameStateCollection } from "@/lib/db/repositories/gameState";
@@ -166,52 +166,25 @@ export async function POST(request: Request) {
     };
 
     let insertedId: ObjectId | null = null;
-    await runWithOptionalTransaction(
-      async (session) => {
-        const escrowResult = await charactersCollection(db).updateOne(
-          { _id: character._id, [balanceField]: { $gte: amount } },
-          { $inc: escrowInc },
-          { session }
+    await runWithDbSession(db, async (session) => {
+      const escrowResult = await charactersCollection(db).updateOne(
+        { _id: character._id, [balanceField]: { $gte: amount } },
+        { $inc: escrowInc },
+        { session }
+      );
+      if (escrowResult.modifiedCount === 0) {
+        const balance = getPersonalBalance(character, fromCurrency, true);
+        throw badRequest(
+          `Insufficient ${fromCurrency} balance. Have ${Math.floor(balance).toLocaleString()}, need ${amount.toLocaleString()}.`
         );
-        if (escrowResult.modifiedCount === 0) {
-          const balance = getPersonalBalance(character, fromCurrency, true);
-          throw badRequest(
-            `Insufficient ${fromCurrency} balance. Have ${Math.floor(balance).toLocaleString()}, need ${amount.toLocaleString()}.`
-          );
-        }
-
-        const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
-          order as CurrencyOrder,
-          { session }
-        );
-        insertedId = result.insertedId;
-      },
-      async () => {
-        const escrowResult = await charactersCollection(db).updateOne(
-          { _id: character._id, [balanceField]: { $gte: amount } },
-          { $inc: escrowInc }
-        );
-        if (escrowResult.modifiedCount === 0) {
-          const balance = getPersonalBalance(character, fromCurrency, true);
-          throw badRequest(
-            `Insufficient ${fromCurrency} balance. Have ${Math.floor(balance).toLocaleString()}, need ${amount.toLocaleString()}.`
-          );
-        }
-
-        try {
-          const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(
-            db
-          ).insertOne(order as CurrencyOrder);
-          insertedId = result.insertedId;
-        } catch (error) {
-          await charactersCollection(db).updateOne(
-            { _id: character._id },
-            { $inc: buildPersonalBalanceInc(amount, fromCurrency, true) }
-          );
-          throw error;
-        }
       }
-    );
+
+      const result: InsertOneResult<CurrencyOrder> = await currencyOrdersCollection(db).insertOne(
+        order as CurrencyOrder,
+        { session }
+      );
+      insertedId = result.insertedId;
+    });
 
     recordAudit({
       source: "api",

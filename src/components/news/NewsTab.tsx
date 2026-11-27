@@ -146,7 +146,8 @@ export function NewsTab({
               <h3 className="mb-2 text-body-lg font-semibold">Join the conversation</h3>
               <p className="text-body-sm text-muted">
                 Create a character and log in to post free news (12h cooldown), place sponsored
-                posts (5 AP + $100k personal cash), and react to the feed.
+                posts (5 AP plus 100,000 in your character&apos;s home currency), and react to the
+                feed.
               </p>
             </div>
           )}

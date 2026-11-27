@@ -1,3 +1,13 @@
+vi.mock("@/lib/internationalOrganizations/resolvePendingResolution", () => ({
+  withPendingOrganizationResolution: async (
+    db: unknown,
+    item: unknown,
+    work: (db: unknown, item: unknown) => Promise<void>
+  ) => {
+    await work(db, item);
+    return true;
+  },
+}));
 import { foundDueOrganizations } from "./internationalOrganizationsPhase";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";

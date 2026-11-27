@@ -6,7 +6,12 @@ import { RetentionMode } from "./policy";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ isR2Enabled: vi.fn(() => true) }));
 vi.mock("./archive", () => ({
-  archiveDocs: vi.fn(async () => ({ archivedCount: 9, parts: 1, bytes: 10, keys: ["k"] })),
+  archiveDocs: vi.fn(
+    async (params: { onArchivedBatch?: (rows: Record<string, unknown>[]) => Promise<void> }) => {
+      await params.onArchivedBatch?.([{ _id: "archived", turn: 1 }]);
+      return { archivedCount: 9, parts: 1, bytes: 10, keys: ["k"] };
+    }
+  ),
 }));
 
 import { getDb } from "@/lib/mongodb";

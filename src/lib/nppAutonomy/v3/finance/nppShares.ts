@@ -1,3 +1,7 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { afterCommit } from "@/lib/db/sessionDb";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { getCurrentTurn } from "@/lib/currentTurn";
 /**
  * The trade's equity pool, read once. It prices the quote and answers pool
  * existence for the settlement legs, which would otherwise each read the same
@@ -82,7 +86,7 @@ export type NppShareBuySnapshot = Pick<
   | "shareBuybackMode"
 >;
 
-export async function nppBuyShares(
+async function buySharesInTransaction(
   db: Db,
   npp: Pick<NPP, "_id" | "countryId">,
   corporationId: ObjectId,
@@ -101,7 +105,7 @@ export async function nppBuyShares(
    */
   pools?: Map<CurrencyCode, EquityMarketPool>
 ): Promise<NppShareBuyResult> {
-  if (!Number.isInteger(shares) || shares <= 0) {
+  if (!Number.isSafeInteger(shares) || shares <= 0) {
     return { ok: false, reason: "Shares must be a positive integer." };
   }
 
@@ -136,6 +140,8 @@ export async function nppBuyShares(
   const cost = Math.round(shares * executionPrice * 100) / 100;
   // Share price is LOCAL; the economic account is ₳ — convert at the FX boundary.
   const rate = homeRate ?? (await nppHomeFxRate(db, npp.countryId, undefined, preset));
+  if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(cost) || cost <= 0)
+    return { ok: false, reason: "Share currency quote is unavailable." };
   const costAnchor = localToAnchor(cost, rate);
   const now = new Date();
 
@@ -257,7 +263,7 @@ export type NppShareSellSnapshot = Pick<
   | "ceoId"
 >;
 
-export async function nppSellShares(
+async function sellSharesInTransaction(
   db: Db,
   npp: Pick<NPP, "_id" | "countryId">,
   corporationId: ObjectId,
@@ -269,7 +275,7 @@ export async function nppSellShares(
   corpSnapshot?: NppShareSellSnapshot,
   preset?: string
 ): Promise<NppShareSellResult> {
-  if (!Number.isInteger(shares) || shares <= 0) {
+  if (!Number.isSafeInteger(shares) || shares <= 0) {
     return { ok: false, reason: "Shares must be a positive integer." };
   }
 
@@ -311,6 +317,8 @@ export async function nppSellShares(
   const orderFlowEligible = isOrderFlowPriceEligible(corp.publicFloat, corp.totalShares);
   const proceeds = Math.round(shares * executionPrice * 100) / 100;
   const rate = homeRate ?? (await nppHomeFxRate(db, npp.countryId, undefined, preset));
+  if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(proceeds) || proceeds <= 0)
+    return { ok: false, reason: "Share currency quote is unavailable." };
   const proceedsAnchor = localToAnchor(proceeds, rate);
   const now = new Date();
 
@@ -387,7 +395,7 @@ export async function nppSellShares(
 
   if (credited) await witnessNppShareCash(db, npp, proceedsAnchor, now);
 
-  void onFloatSellCommitted(db, corp, proceeds, { pools });
+  await onFloatSellCommitted(db, corp, proceeds, { pools });
 
   return {
     ok: true,
@@ -397,4 +405,97 @@ export async function nppSellShares(
     proceedsAnchor,
     investmentCashAnchor: credited?.nppInvestmentCashAnchor ?? 0,
   };
+}
+
+export async function nppBuyShares(
+  db: Db,
+  npp: Pick<NPP, "_id" | "countryId">,
+  corporationId: ObjectId,
+  shares: number,
+  homeRate?: number,
+  corpSnapshot?: NppShareBuySnapshot,
+  preset?: string,
+  pools?: Map<CurrencyCode, EquityMarketPool>,
+  settlementTurn?: number
+): Promise<NppShareBuyResult> {
+  const turn = settlementTurn ?? (await getCurrentTurn(db));
+  return withAtomicResult(db, (tx) =>
+    withTurnValueSettlement(
+      tx,
+      "npp-stock-purchase",
+      turn,
+      async (inner) => {
+        const localPools = pools
+          ? new Map([...pools].map(([key, pool]) => [key, { ...pool }]))
+          : undefined;
+        const opening = new Map(
+          [...(localPools ?? [])].map(([key, pool]) => [key, pool.cashLocal ?? 0])
+        );
+        const result = await buySharesInTransaction(
+          inner,
+          npp,
+          corporationId,
+          shares,
+          homeRate,
+          corpSnapshot,
+          preset,
+          localPools
+        );
+        if (result.ok)
+          await afterCommit(inner, () => {
+            if (corpSnapshot)
+              corpSnapshot.publicFloat = (corpSnapshot.publicFloat ?? 0) - result.shares;
+            if (pools && localPools)
+              for (const [key, pool] of localPools) {
+                const original = pools.get(key),
+                  delta = (pool.cashLocal ?? 0) - (opening.get(key) ?? 0);
+                if (original && delta) original.cashLocal = (original.cashLocal ?? 0) + delta;
+              }
+          });
+        return result;
+      },
+      { sourceKey: `${turn}:${npp._id}` }
+    )
+  );
+}
+
+export async function nppSellShares(
+  db: Db,
+  npp: Pick<NPP, "_id" | "countryId">,
+  corporationId: ObjectId,
+  shares: number,
+  currentTurn: number,
+  homeRate?: number,
+  corpSnapshot?: NppShareSellSnapshot,
+  preset?: string
+): Promise<NppShareSellResult> {
+  return withAtomicResult(db, (tx) =>
+    withTurnValueSettlement(
+      tx,
+      "npp-stock-sale",
+      currentTurn,
+      async (inner) => {
+        const result = await sellSharesInTransaction(
+          inner,
+          npp,
+          corporationId,
+          shares,
+          currentTurn,
+          homeRate,
+          corpSnapshot,
+          preset
+        );
+        if (result.ok && corpSnapshot)
+          await afterCommit(inner, () => {
+            corpSnapshot.publicFloat = (corpSnapshot.publicFloat ?? 0) + result.shares;
+            const holding = corpSnapshot.shareholders?.find((holder) =>
+              holder.nppId?.equals(npp._id)
+            );
+            if (holding) holding.shares -= result.shares;
+          });
+        return result;
+      },
+      { sourceKey: `${currentTurn}:${npp._id}:${corporationId}` }
+    )
+  );
 }

@@ -41,6 +41,8 @@ function supplierDb(): Db {
           find: () => ({ project: () => ({ toArray: async () => [supplier] }) }),
         };
       }
+      if (name === "gameState")
+        return { findOne: async () => ({ _id: "current", preset: "2019-default" }) };
       if (name === "exchangeRates") {
         return { find: () => ({ toArray: async () => [] }) };
       }

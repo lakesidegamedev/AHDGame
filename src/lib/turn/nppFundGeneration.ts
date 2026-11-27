@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * NPP Fund Generation Turn Phase
  *
@@ -8,7 +9,7 @@
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 
 import type { Db, ObjectId } from "mongodb";
-import type { NPP, StatePartyOrg, State, GameConfig } from "@/lib/db/types";
+import type { NPP, State } from "@/lib/db/types";
 import { projectNppGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import {
   campaignAnchorToLocal,
@@ -55,7 +56,7 @@ export interface NppFundGenerationResult {
  * @param currentTurn - Current turn number
  * @param preloadedStateMap - Optional pre-loaded state map to avoid duplicate DB query
  */
-export async function processNppFundGeneration(
+async function processNppFundGenerationInTransaction(
   db: Db,
   currentTurn: number,
   preloadedStateMap?: Map<string, State>
@@ -363,4 +364,15 @@ export async function processNppFundGeneration(
   }
 
   return { nppsProcessed, totalGenerated, totalStateTax, totalNationalTax };
+}
+
+/** Pair every income batch, tax delivery and original result with one phase proof. */
+export async function processNppFundGeneration(
+  db: Db,
+  currentTurn: number,
+  preloadedStateMap?: Map<string, State>
+): Promise<NppFundGenerationResult> {
+  return withTurnValueSettlement(db, "npp-fund-generation", currentTurn, (db) =>
+    processNppFundGenerationInTransaction(db, currentTurn, preloadedStateMap)
+  );
 }

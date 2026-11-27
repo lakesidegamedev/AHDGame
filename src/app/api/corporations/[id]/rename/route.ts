@@ -117,6 +117,18 @@ export async function POST(request: Request, { params }: RouteParams) {
     const renamed = await corporationsCollection(db).updateOne(
       {
         _id: corporation._id,
+        name: oldName,
+        ceoId: corporation.ceoId ?? null,
+        lastRenameTurn: corporation.lastRenameTurn ?? null,
+        ...(corporation.liquidCurrencyCode != null
+          ? { liquidCurrencyCode: corporation.liquidCurrencyCode }
+          : {
+              $or: [
+                { liquidCurrencyCode: { $exists: false } },
+                { liquidCurrencyCode: { $type: "null" as const } },
+              ],
+            }),
+        marketingStrength: corporation.marketingStrength,
         liquidCapital: { $gte: costInCorpCurrency },
         ...corporateDiscretionaryCashGuard(),
       },

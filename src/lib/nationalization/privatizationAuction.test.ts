@@ -1,15 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { resolveNationalizationAuction as resolveCurrentAuction } from "./privatizationAuction";
 import { ObjectId } from "mongodb";
 import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: vi.fn(async (db, work) => work(db)),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  fenceEconomicTurn: vi.fn(async () => null),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(false) }));
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
   atomicallyDebitCharacterCash: vi.fn().mockResolvedValue({ ok: true, newBalance: 0 }),
-  refundCharacterCash: vi.fn().mockResolvedValue(undefined),
+  refundCharacterCash: vi.fn().mockResolvedValue(true),
   atomicallyDebitCorpLiquidCapital: vi.fn().mockResolvedValue({ ok: true, newBalance: 0 }),
-  refundCorpLiquidCapital: vi.fn().mockResolvedValue(undefined),
+  refundCorpLiquidCapital: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("@/lib/corporations/cleanupShareMarketActivity", () => ({
   cleanupShareMarketActivityForCorporations: vi.fn().mockResolvedValue(undefined),
@@ -57,6 +65,15 @@ function baseAuction(overrides: Record<string, unknown> = {}) {
     bids: [],
     ...overrides,
   };
+}
+
+async function resolveStoredAuction(
+  db: MockDb,
+  auction: ReturnType<typeof baseAuction>,
+  turn: number
+) {
+  db.collectionMocks.nationalizationAuctions.findOne.mockResolvedValue(auction);
+  return resolveCurrentAuction(db as unknown as Db, auction as never, turn);
 }
 
 describe("placeAuctionBid", () => {
@@ -498,11 +515,10 @@ describe("resolveNationalizationAuction", () => {
       homeState: "CA",
     });
 
-    const { resolveNationalizationAuction } = await import("./privatizationAuction");
     const { creditTreasuryProceedsPaired } = await import("./treasury");
     const { refundCharacterCash } = await import("@/lib/financialTxLog/atomicCashGuard");
 
-    const result = await resolveNationalizationAuction(db as unknown as Db, auction as never, 50);
+    const result = await resolveStoredAuction(db, auction, 50);
 
     expect(result).toBe("sold");
     expect(vi.mocked(creditTreasuryProceedsPaired)).toHaveBeenCalledWith(
@@ -589,8 +605,7 @@ describe("resolveNationalizationAuction", () => {
       return Promise.resolve(null);
     });
 
-    const { resolveNationalizationAuction } = await import("./privatizationAuction");
-    const result = await resolveNationalizationAuction(db as unknown as Db, auction as never, 50);
+    const result = await resolveStoredAuction(db, auction, 50);
 
     expect(result).toBe("sold");
     const upd = db.collectionMocks.corporations.updateOne.mock.calls.find(
@@ -620,10 +635,9 @@ describe("resolveNationalizationAuction", () => {
       project: vi.fn().mockReturnThis(),
     });
 
-    const { resolveNationalizationAuction } = await import("./privatizationAuction");
     const { refundCharacterCash } = await import("@/lib/financialTxLog/atomicCashGuard");
 
-    const result = await resolveNationalizationAuction(db as unknown as Db, auction as never, 60);
+    const result = await resolveStoredAuction(db, auction, 60);
 
     expect(result).toBe("passedIn");
     expect(vi.mocked(refundCharacterCash)).toHaveBeenCalledWith(db, loserId, "USD", 500, false);
@@ -653,6 +667,9 @@ describe("resolveNationalizationAuction", () => {
       sort: vi.fn().mockReturnThis(),
       project: vi.fn().mockReturnThis(),
     });
+    db.collectionMocks.nationalizationAuctions.findOne.mockImplementation(async (filter) =>
+      baseAuction({ _id: filter._id, bids: [] })
+    );
     // First claim throws → isolated; second resolves (no winner, no shell → passedIn).
     db.collectionMocks.nationalizationAuctions.updateOne
       .mockRejectedValueOnce(new Error("boom"))

@@ -288,19 +288,25 @@ export async function claimMoneyFlowReceipt(
     throw new TypeError("Money flow claim needs a non-empty fingerprint");
   }
   const now = new Date();
-  try {
-    await receipts.insertOne(
-      { _id: key, status: "in_progress", fingerprint, createdAt: now, updatedAt: now },
-      sessionOpt(options)
-    );
-    return "fresh";
-  } catch (error) {
-    if (!isDuplicateKeyError(error)) throw error;
-  }
-  const existing = await receipts.findOne(
+  let existing = await receipts.findOne(
     { _id: key } as Filter<MoneyFlowReceipt>,
     sessionOpt(options)
   );
+  if (!existing) {
+    try {
+      await receipts.insertOne(
+        { _id: key, status: "in_progress", fingerprint, createdAt: now, updatedAt: now },
+        sessionOpt(options)
+      );
+      return "fresh";
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) throw error;
+    }
+    existing = await receipts.findOne(
+      { _id: key } as Filter<MoneyFlowReceipt>,
+      sessionOpt(options)
+    );
+  }
   if (!existing) {
     throw new Error("MONEY_FLOW_RECEIPT_LOST");
   }

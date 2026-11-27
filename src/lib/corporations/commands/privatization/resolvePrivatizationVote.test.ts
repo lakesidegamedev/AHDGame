@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 import { creditEquityPool } from "@/lib/equities/marketPool";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -190,7 +194,7 @@ describe("resolvePrivatizationVote — atomic claim", () => {
     });
     const updateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
     const corpUpdateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
-    const fundUpdateOne = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+    const fundBulkWrite = vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
     const corp = {
       _id: corpId,
       ceoId,
@@ -209,7 +213,7 @@ describe("resolvePrivatizationVote — atomic claim", () => {
         if (name === "corporationPrivatizationVotes") return { updateOne };
         if (name === "corporations")
           return { findOne: vi.fn().mockResolvedValue(corp), updateOne: corpUpdateOne };
-        if (name === "indexFunds") return { updateOne: fundUpdateOne };
+        if (name === "indexFunds") return { bulkWrite: fundBulkWrite };
         return {
           findOne: vi.fn(),
           updateOne: vi.fn(),
@@ -229,11 +233,11 @@ describe("resolvePrivatizationVote — atomic claim", () => {
     if (result.resolved) expect(result.status).toBe("passed");
     // The fund was actually paid: cashAnchor credited (1,000,000 × 1.1 / rate 1)
     // and its now-absorbed holding pulled — not silently wiped.
-    expect(fundUpdateOne).toHaveBeenCalledTimes(1);
-    const [filter, update] = fundUpdateOne.mock.calls[0];
-    expect(filter._id).toBe(fundId);
-    expect(update.$inc.cashAnchor).toBeCloseTo(1_100_000, 0);
-    expect(update.$pull.holdings.corporationId).toBe(corpId);
+    expect(fundBulkWrite).toHaveBeenCalledTimes(1);
+    const operation = fundBulkWrite.mock.calls[0][0][0].updateOne;
+    expect(operation.filter._id).toBe(fundId);
+    expect(operation.update[0].$set.cashAnchor.$add[1]).toBeCloseTo(1_100_000, 0);
+    expect(operation.update[0].$set.holdings.$filter.cond.$ne[1]).toBe(corpId);
   });
 
   it("on pass, pays an NPP holder instead of absorbing its shares for nothing", async () => {

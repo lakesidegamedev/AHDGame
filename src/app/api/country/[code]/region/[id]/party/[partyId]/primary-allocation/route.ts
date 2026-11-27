@@ -1,9 +1,10 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
-import type { StatePartyOrg, State, Election } from "@/lib/db/types";
 import {
   findPartyBySequentialId,
   getPartyIdString,
@@ -57,113 +58,119 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const { method } = parsed.data;
 
-    const db = await getDb();
+    const rootDb = await getDb();
+    const { effectiveNow } = await getGameTime();
+    return await withAtomicEconomicCommand(rootDb, async (db) => {
+      const state = await statesCollection(db).findOne({ _id: stateId, countryId });
+      if (!state) {
+        return errorResponse(404, "State not found");
+      }
 
-    const state = await statesCollection(db).findOne({ _id: stateId, countryId });
-    if (!state) {
-      return errorResponse(404, "State not found");
-    }
+      const party = await findPartyBySequentialId(db, partyId, countryId);
+      if (!party) {
+        return errorResponse(404, "Party not found");
+      }
 
-    const party = await findPartyBySequentialId(db, partyId, countryId);
-    if (!party) {
-      return errorResponse(404, "Party not found");
-    }
+      const partyKey = getPartyIdString(party);
+      const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
+      const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
 
-    const partyKey = getPartyIdString(party);
-    const statePartyKey = getStatePartyOrgDocumentId(stateId, party);
-    const stateParty = await statePartyOrgCollection(db).findOne({ _id: statePartyKey });
+      // Chair/vice-chair/treasurer/national-chair/admin may change allocation.
+      // Same auth surface as the tax route for the state party.
+      const isAdmin = authUser.isAdmin;
+      const isNationalChair = party.chairId?.equals(authUser.character._id);
+      const isStateChair = stateParty?.chairId?.equals(authUser.character._id);
+      const isStateViceChair = stateParty?.viceChairId?.equals(authUser.character._id);
+      const isStateTreasurer = stateParty?.treasurerId?.equals(authUser.character._id);
 
-    // Chair/vice-chair/treasurer/national-chair/admin may change allocation.
-    // Same auth surface as the tax route for the state party.
-    const isAdmin = authUser.isAdmin;
-    const isNationalChair = party.chairId?.equals(authUser.character._id);
-    const isStateChair = stateParty?.chairId?.equals(authUser.character._id);
-    const isStateViceChair = stateParty?.viceChairId?.equals(authUser.character._id);
-    const isStateTreasurer = stateParty?.treasurerId?.equals(authUser.character._id);
+      if (!isAdmin && !isNationalChair && !isStateChair && !isStateViceChair && !isStateTreasurer) {
+        return errorResponse(
+          403,
+          "Only the state chair, vice chair, treasurer, national chair, or an admin can change primary allocation"
+        );
+      }
 
-    if (!isAdmin && !isNationalChair && !isStateChair && !isStateViceChair && !isStateTreasurer) {
-      return errorResponse(
-        403,
-        "Only the state chair, vice chair, treasurer, national chair, or an admin can change primary allocation"
+      // Lock the setting once a presidential primary is active for this country.
+      // Admins may override — their action is logged separately. The goal is to
+      // prevent a chair from flipping allocation mid-primary to game outcomes.
+      const stateClock = await gameStateCollection(db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
       );
-    }
+      const currentTurn = stateClock!.currentTurn;
+      const activePresPrimary = await electionsCollection(db).findOne({
+        countryId,
+        electionType: "president",
+        status: "active",
+        ...primaryOpenFilter(currentTurn, effectiveNow),
+      });
+      if (activePresPrimary && !isAdmin) {
+        return errorResponse(
+          409,
+          "Presidential primary is currently active; allocation is locked for this cycle. Admins may override."
+        );
+      }
 
-    // Lock the setting once a presidential primary is active for this country.
-    // Admins may override — their action is logged separately. The goal is to
-    // prevent a chair from flipping allocation mid-primary to game outcomes.
-    const { currentTurn, effectiveNow } = await getGameTime();
-    const activePresPrimary = await electionsCollection(db).findOne({
-      countryId,
-      electionType: "president",
-      status: "active",
-      ...primaryOpenFilter(currentTurn, effectiveNow),
-    });
-    if (activePresPrimary && !isAdmin) {
-      return errorResponse(
-        409,
-        "Presidential primary is currently active — allocation is locked for this cycle. Admins may override."
+      const now = new Date();
+
+      await statePartyOrgCollection(db).updateOne(
+        { _id: statePartyKey },
+        method === null
+          ? {
+              $unset: { primaryAllocation: "" },
+              $set: { updatedAt: now },
+              $setOnInsert: {
+                _id: statePartyKey,
+                countryId,
+                stateId,
+                partyId: partyKey,
+                organization: 0,
+                chairId: null,
+                viceChairId: null,
+                treasurerId: null,
+                treasury: 0,
+                stateTaxRate: 0,
+                politicalStrength: 0,
+                hasPresence: false,
+                createdAt: now,
+              },
+            }
+          : {
+              $set: { primaryAllocation: method, updatedAt: now },
+              $setOnInsert: {
+                _id: statePartyKey,
+                countryId,
+                stateId,
+                partyId: partyKey,
+                organization: 0,
+                chairId: null,
+                viceChairId: null,
+                treasurerId: null,
+                treasury: 0,
+                stateTaxRate: 0,
+                politicalStrength: 0,
+                hasPresence: false,
+                createdAt: now,
+              },
+            },
+        { upsert: true }
       );
-    }
 
-    const now = new Date();
+      await adminLogsCollection<Document>(db).insertOne({
+        category: "system",
+        action: "primary_allocation_changed",
+        username: authUser.username,
+        characterName: authUser.character.name,
+        adminUsername: isAdmin ? authUser.username : undefined,
+        details: `Primary allocation for ${state.name} ${party.name} set to ${method ?? "default"}${isAdmin && activePresPrimary ? " (admin override during active primary)" : ""}`,
+        createdAt: now,
+      });
 
-    await statePartyOrgCollection(db).updateOne(
-      { _id: statePartyKey },
-      method === null
-        ? {
-            $unset: { primaryAllocation: "" },
-            $set: { updatedAt: now },
-            $setOnInsert: {
-              _id: statePartyKey,
-              countryId,
-              stateId,
-              partyId: partyKey,
-              organization: 0,
-              chairId: null,
-              viceChairId: null,
-              treasurerId: null,
-              treasury: 0,
-              stateTaxRate: 0,
-              politicalStrength: 0,
-              hasPresence: false,
-              createdAt: now,
-            },
-          }
-        : {
-            $set: { primaryAllocation: method, updatedAt: now },
-            $setOnInsert: {
-              _id: statePartyKey,
-              countryId,
-              stateId,
-              partyId: partyKey,
-              organization: 0,
-              chairId: null,
-              viceChairId: null,
-              treasurerId: null,
-              treasury: 0,
-              stateTaxRate: 0,
-              politicalStrength: 0,
-              hasPresence: false,
-              createdAt: now,
-            },
-          },
-      { upsert: true }
-    );
-
-    await adminLogsCollection<Document>(db).insertOne({
-      category: "system",
-      action: "primary_allocation_changed",
-      username: authUser.username,
-      characterName: authUser.character.name,
-      adminUsername: isAdmin ? authUser.username : undefined,
-      details: `Primary allocation for ${state.name} ${party.name} set to ${method ?? "default"}${isAdmin && activePresPrimary ? " (admin override during active primary)" : ""}`,
-      createdAt: now,
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `Primary allocation set to ${method ?? "default"}`,
-      method,
+      return NextResponse.json({
+        success: true,
+        message: `Primary allocation set to ${method ?? "default"}`,
+        method,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

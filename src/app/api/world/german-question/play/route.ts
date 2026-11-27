@@ -11,6 +11,7 @@ const schema = z.object({
   actor: z.enum(["seat", "personal"]),
   /** Catalogue key. Bounded so a junk body never reaches the command. */
   playId: z.string().min(1).max(64),
+  requestId: z.string().min(1).max(100).optional(),
   /**
    * Personal plays only. A seat play's direction is its country's live bloc and
    * is derived server-side; anything sent here for one is ignored, never
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
       characterId: auth.user.character._id,
       actor: parsed.data.actor,
       playId: parsed.data.playId,
+      requestId: parsed.data.requestId,
       direction: parsed.data.direction,
       payment: parsed.data.payment,
     });

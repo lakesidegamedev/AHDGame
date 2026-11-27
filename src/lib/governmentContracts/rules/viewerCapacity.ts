@@ -20,6 +20,7 @@ export function hasCurrentTenderCapacity(
       corp: input.corporation,
       sector,
       countryId: input.countryId,
+      paymentCurrency: input.paymentCurrency,
       currentYear: input.year,
       component: input.terms.type === "defence" ? input.terms.component : undefined,
     });
@@ -42,6 +43,7 @@ export function hasCurrentTenderCapacity(
         corp: input.corporation,
         sector,
         countryId: input.countryId,
+        paymentCurrency: input.paymentCurrency,
         currentYear: input.year,
         component: input.terms.type === "defence" ? input.terms.component : undefined,
         assignedFactories: slots,

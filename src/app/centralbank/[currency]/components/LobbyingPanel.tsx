@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui";
@@ -52,21 +52,27 @@ export function LobbyingPanel({
     .map((n) => ({ id: n.characterId, name: n.characterName }))
     .filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i);
 
+  const lobbyIntent = useRef<{ fingerprint: string; key: string } | null>(null);
+
   const handleLobby = async () => {
     if (!lobbyTargetId) return;
+    const fingerprint = JSON.stringify([bankApiBasePath, lobbyTargetId, lobbyAmount]);
+    if (lobbyIntent.current?.fingerprint !== fingerprint)
+      lobbyIntent.current = { fingerprint, key: crypto.randomUUID() };
     setLobbyLoading(true);
     setLobbyError(null);
     setLobbySuccess(null);
     try {
       const res = await fetch(`${bankApiBasePath}/lobby`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": lobbyIntent.current.key },
         body: JSON.stringify({ targetCharacterId: lobbyTargetId, amount: lobbyAmount }),
       });
       if (!res.ok) {
         const json = await res.json();
         throw new Error((json as { error?: string }).error || "Failed to lobby");
       }
+      lobbyIntent.current = null;
       setLobbySuccess("Lobbying funds committed successfully.");
       setLobbyTargetId(null);
       setLobbyAmount(CENTRAL_BANK_LOBBY_DEFAULT_AMOUNT);
@@ -79,6 +85,7 @@ export function LobbyingPanel({
   };
 
   const resetLobby = (targetId: string) => {
+    lobbyIntent.current = null;
     setLobbyTargetId(targetId);
     setLobbyAmount(CENTRAL_BANK_LOBBY_DEFAULT_AMOUNT);
     setLobbyError(null);

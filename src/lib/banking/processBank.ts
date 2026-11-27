@@ -33,7 +33,7 @@ import { settleTransition } from "@/lib/banking/settlementJournal";
 import { oid } from "@/lib/banking/rules/boundary";
 import { playerDepositRatePercent } from "@/lib/banking/rates";
 import { depositCeilingFromSectors, getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import type { TxThresholds } from "@/lib/db/types/financialTxLog";

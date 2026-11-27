@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -33,52 +34,52 @@ export async function POST(_request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
-    const db = await getDb();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      // Restructuring (selling sectors to settle bonds) is a corporation action:
+      // blocked while an admin has paused corporation actions.
+      const pausedGuard = await requireCorporationActionsEnabled(db);
+      if (pausedGuard) return pausedGuard;
 
-    // Restructuring (selling sectors to settle bonds) is a corporation action:
-    // blocked while an admin has paused corporation actions.
-    const pausedGuard = await requireCorporationActionsEnabled(db);
-    if (pausedGuard) return pausedGuard;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      if (corporation.countryOwnerId) {
+        return errorResponse(400, "Not available for national corporations");
+      }
 
-    if (corporation.countryOwnerId) {
-      return errorResponse(400, "Not available for national corporations");
-    }
+      // The cure stamp's curedAtTurn and the bond_maturity ledger rows derive from
+      // currentTurn; fail explicitly rather than leaking a turn=0 sentinel.
+      const gameState = await getGameState(db);
+      const cureTurn = gameState?.currentTurn ?? 0;
+      if (cureTurn <= 0) {
+        return errorResponse(503, "Game state unavailable; restructuring cannot be processed.");
+      }
 
-    // The cure stamp's curedAtTurn and the bond_maturity ledger rows derive from
-    // currentTurn; fail explicitly rather than leaking a turn=0 sentinel.
-    const gameState = await getGameState();
-    const cureTurn = gameState?.currentTurn ?? 0;
-    if (cureTurn <= 0) {
-      return errorResponse(503, "Game state unavailable; restructuring cannot be processed.");
-    }
+      const now = new Date();
+      const result = await withCorporationSettlementLock(
+        db,
+        corporation._id,
+        "bondSettlementInProgressAt",
+        now,
+        async () => executeCorporationBondRestructure(db, corporation, { now, cureTurn })
+      );
 
-    const now = new Date();
-    const result = await withCorporationSettlementLock(
-      db,
-      corporation._id,
-      "bondSettlementInProgressAt",
-      now,
-      async () => executeCorporationBondRestructure(db, corporation, { now, cureTurn })
-    );
+      if (!result) {
+        return errorResponse(409, "Bond settlement is already in progress for this corporation");
+      }
 
-    if (!result) {
-      return errorResponse(409, "Bond settlement is already in progress for this corporation");
-    }
-
-    return NextResponse.json({
-      success: true,
-      paid: result.paid,
-      bondsMatured: result.bondsMatured,
-      sectorsLiquidated: result.sectorsLiquidated,
-      proceeds: result.proceeds,
-      residualLiquidCapital: result.residualLiquidCapital,
+      return NextResponse.json({
+        success: true,
+        paid: result.paid,
+        bondsMatured: result.bondsMatured,
+        sectorsLiquidated: result.sectorsLiquidated,
+        proceeds: result.proceeds,
+        residualLiquidCapital: result.residualLiquidCapital,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

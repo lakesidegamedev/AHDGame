@@ -45,6 +45,7 @@ async function seedParty(
   await db.collection("characters").insertOne({
     _id: leaderId,
     name: "Leader Lex",
+    countryId: country,
     party: partySeq,
     userId: new ObjectId(),
   });
@@ -54,6 +55,7 @@ async function seedParty(
     await db.collection("characters").insertOne({
       _id: id,
       name: `Member ${i}`,
+      countryId: country,
       party: partySeq,
       userId: new ObjectId(),
     });

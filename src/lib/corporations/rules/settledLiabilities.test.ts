@@ -10,6 +10,20 @@ describe("settled debt and expense units", () => {
       _id: new ObjectId(),
       countryId: "CA" as const,
       liquidCurrencyCode: "CAD" as const,
+      producerPayables: {
+        worldEpoch: "test",
+        turn: 1,
+        claims: [
+          {
+            id: "wages",
+            debtorAccountId: "corp",
+            creditorAccountId: "workers",
+            producerId: "plant",
+            kind: "labour" as const,
+            amount: 700,
+          },
+        ],
+      },
       imfBailoutActive: true,
       imfFacilityPrincipalOutstanding: 1000,
       operatingCashArrearsByCurrency: { CAD: 200 },
@@ -27,7 +41,7 @@ describe("settled debt and expense units", () => {
         { outstanding: 1e12, currency: "JPY" },
       ]
     );
-    expect(total).toBe(1.01e12 + 1150);
+    expect(total).toBe(1.01e12 + 1850);
   });
   it("consolidates retained bond face into anchor principal", () => {
     expect(
@@ -47,5 +61,17 @@ describe("settled debt and expense units", () => {
         settledBondInterestPaid: 10,
       })
     ).toBe(535);
+  });
+  it("reports IMF interest but never principal as profit or operating cost", () => {
+    const row = {
+      income: 1000,
+      totalCosts: 100,
+      settledBankLoanInterestPaid: 0,
+      settledImfInterestPaid: 12,
+      settledImfInterestReceived: 5,
+      settledImfPrincipalPaid: 500000,
+    };
+    expect(realizedNetIncomePerTurn(row)).toBe(993);
+    expect(totalCostsPerTurnFromParts(row)).toBe(112);
   });
 });

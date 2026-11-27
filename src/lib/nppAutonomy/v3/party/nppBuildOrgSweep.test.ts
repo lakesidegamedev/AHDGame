@@ -470,3 +470,8 @@ describe("nppBuildPartyOrg command profile", { timeout: 60000 }, () => {
     expect(missing).toEqual({ ok: false, reason: "Party not found." });
   });
 });
+
+// Transport fixtures; atomic build tests exercise resource rollback.
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);

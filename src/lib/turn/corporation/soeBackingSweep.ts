@@ -12,6 +12,9 @@ import {
   withTreasuryCashBatch,
 } from "@/lib/nationalization/treasuryLedger";
 import type { CorpSnapshot } from "./types";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SoeBackingSweepArgs {
   db: Db;
@@ -24,49 +27,69 @@ export interface SoeBackingSweepArgs {
   mark: (label: string) => void;
 }
 
-/* SOE loss backing then profit remittance, folding both cash legs into the
- * in-memory snapshots before history persistence. Remittance runs after
- * backing so it only acts on positive balance. Coverable basis is this
- * turn's realized income, with margin estimate as fallback. Both legs share
- * one treasury cash batch, flushed even if a later leg fails. Returns the
- * aggregate audit row, or null when neither leg moved anything. */
+/** Settle SOE effects and both treasury legs before publishing cash snapshots. */
 export async function runSoeBackingSweep(
   args: SoeBackingSweepArgs
 ): Promise<ActionAuditInput | null> {
   const realizedIncomeAnchorByCorpId = new Map(
     args.corpSnapshots.map((snap) => [snap.corpId.toString(), snap.income])
   );
-  const context = await loadTreasuryCashContext(args.db, args.turn);
-  const { soeBacking, soeRemitted } = await withTreasuryCashBatch(
+  const turn =
+    args.turn ??
+    (
+      await gameStateCollection(args.db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
+    )?.currentTurn;
+  if (turn === undefined) throw new Error("SOE sweep requires a processing turn");
+  const { soeBacking, soeRemitted } = await withTurnValueSettlement(
     args.db,
-    context,
-    async (ledger) => {
-      const { backing } = await processSoeOperations(
-        args.db,
-        args.now,
-        args.currentYear,
-        realizedIncomeAnchorByCorpId,
-        ledger
-      );
-      args.mark("soeOperations");
-      const { perCorp } = await processSoeRemittance(
-        args.db,
-        args.now,
-        ledger,
-        realizedIncomeAnchorByCorpId
-      );
-      args.mark("soeRemittance");
-      return { soeBacking: backing, soeRemitted: perCorp };
+    "soe-backing-remittance",
+    turn,
+    async (db) => {
+      const context = await loadTreasuryCashContext(db, turn);
+      return withTreasuryCashBatch(db, context, async (ledger) => {
+        const { backing } = await processSoeOperations(
+          db,
+          args.now,
+          args.currentYear,
+          realizedIncomeAnchorByCorpId,
+          ledger
+        );
+        const { perCorp } = await processSoeRemittance(
+          db,
+          args.now,
+          ledger,
+          realizedIncomeAnchorByCorpId
+        );
+        return { soeBacking: backing, soeRemitted: perCorp };
+      });
     }
   );
+  args.mark("soeOperations");
+  args.mark("soeRemittance");
+  const affectedIds = [
+    ...new Map([
+      ...soeBacking.map((row) => [row.corpId.toString(), row.corpId] as const),
+      ...soeRemitted.map((row) => [row.corpId.toString(), row.corpId] as const),
+    ]).values(),
+  ];
+  const cashRows = affectedIds.length
+    ? await corporationsCollection(args.db)
+        .find({ _id: { $in: affectedIds } }, { projection: { liquidCapital: 1 } })
+        .toArray()
+    : [];
+  const authoritativeCash = new Map(cashRows.map((row) => [row._id.toString(), row.liquidCapital]));
+  if (affectedIds.some((id) => !Number.isFinite(authoritativeCash.get(id.toString()))))
+    throw new Error("SOE cash snapshot requires a reconciled corporation balance");
 
-  // Fold both SOE cash legs into the in-memory snapshots/corp map BEFORE the
-  // Phase 8 history persistence, so corporationHistory rows chart post-backing
-  // cash (pre-fold they showed the stale pre-backing balance).
+  // A resumed sweep reads the settled balance instead of adding its receipt again.
   foldSoeCashDeltas({
     corpSnapshots: args.corpSnapshots,
     corpById: args.corpById,
     backing: soeBacking,
+    authoritativeCash,
     remittedLocalByCorpId: new Map(soeRemitted.map((r) => [r.corpId.toString(), r.amountLocal])),
   });
   return buildSoeBackingAuditEntry({

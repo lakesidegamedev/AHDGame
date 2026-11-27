@@ -407,9 +407,7 @@ async function mergePartyIntoInTransaction(
         { $set: { party: targetStrId } }
       );
 
-      // Hard-delete the over-cap overflow and cascade-clean their references so no
-      // seat or candidacy row points at a deleted NPP (mirrors the admin NPP delete
-      // cascade; senate vacancies notify the governor as in the party-delete route).
+      // Remove overflow from political service and clean its active electoral references.
       if (cullIds.length > 0) {
         const heldOfficials = await electedOfficialsCollection(db)
           .find({ nppId: { $in: cullIds } })
@@ -440,7 +438,11 @@ async function mergePartyIntoInTransaction(
             },
           }
         );
-        await nppsCollection(db).deleteMany({ _id: { $in: cullIds } });
+        // Retiring removes political capacity while preserving the actor's financial estate.
+        await nppsCollection(db).updateMany(
+          { _id: { $in: cullIds } },
+          { $set: { party: targetStrId, retiredAt: now, currentOffice: null } }
+        );
       }
 
       // 4d. Live candidacies follow their candidates. A candidacy keeps the party

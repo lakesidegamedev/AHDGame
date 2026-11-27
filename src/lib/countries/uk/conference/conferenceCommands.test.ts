@@ -91,6 +91,7 @@ async function seedWorld(
     await db.collection("characters").insertOne({
       _id: id,
       name: charName,
+      countryId: "UK",
       ...(party ? { party } : {}),
       userId: new ObjectId(),
     });

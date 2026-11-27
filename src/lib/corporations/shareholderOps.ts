@@ -1,3 +1,5 @@
+import { removeEmptyShareholder } from "./rules/removeEmptyShareholder";
+import { weightedPositionCredit } from "./rules/weightedPositionCredit";
 import type { ClientSession, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -380,9 +382,7 @@ export async function debitShares(
 
   // Clean up zero/negative entries.
   if (remaining <= 0) {
-    const pullUpdate = {
-      $pull: { shareholders: { characterId } },
-    };
+    const pullUpdate = removeEmptyShareholder("characterId", characterId);
     const options = mongoOptions(opts);
     if (options) {
       await corporationsCollection<Corporation>(db).updateOne(
@@ -454,9 +454,7 @@ export async function debitSharesFromImperial(
   const remaining = entry?.shares ?? 0;
 
   if (remaining <= 0) {
-    const pullUpdate = {
-      $pull: { shareholders: { imperialCharacterId } },
-    };
+    const pullUpdate = removeEmptyShareholder("imperialCharacterId", imperialCharacterId);
     const options = mongoOptions(opts);
     if (options) {
       await corporationsCollection<Corporation>(db).updateOne(
@@ -492,84 +490,23 @@ export async function creditSharesToCorp(
   extraUpdate?: { $inc?: Record<string, number>; $set?: Record<string, unknown> },
   opts?: Pick<CreditSharesOpts, "guardFilter" | "session">
 ): Promise<boolean> {
-  const guardFilter = opts?.guardFilter ?? {};
-  // Read current position to compute weighted average cost basis.
-  const targetCorp = await corporationsCollection<Corporation>(db).findOne(
-    { _id: targetCorpId },
-    { projection: { shareholders: 1 } }
+  const result = await corporationsCollection<Corporation>(db).updateOne(
+    { _id: targetCorpId, ...(opts?.guardFilter ?? {}) },
+    weightedPositionCredit({
+      array: "shareholders",
+      identityField: "corporationId",
+      identity: buyerCorpId,
+      shares,
+      price: pricePerShare,
+      costField: "avgCostPerShare",
+      increments: extraUpdate?.$inc,
+      set: extraUpdate?.$set,
+    }),
+    mongoOptions(opts)
   );
-
-  const existing = targetCorp?.shareholders?.find(
-    (sh) => sh.corporationId?.toString() === buyerCorpId.toString()
-  );
-  const existingShares = existing?.shares ?? 0;
-  const oldAvg = existing?.avgCostPerShare ?? pricePerShare;
-  // Weighted average: blend old cost basis with new purchase price.
-  const newAvg =
-    existingShares > 0
-      ? (existingShares * oldAvg + shares * pricePerShare) / (existingShares + shares)
-      : pricePerShare;
-
-  // Try to increment existing entry (atomic positional update).
-  const incResult = await corporationsCollection<Corporation>(db).updateOne(
-    { _id: targetCorpId, ...(guardFilter ?? {}), "shareholders.corporationId": buyerCorpId },
-    {
-      $inc: { "shareholders.$.shares": shares, ...extraUpdate?.$inc },
-      $set: {
-        "shareholders.$.avgCostPerShare": newAvg,
-        ...extraUpdate?.$set,
-      },
-    }
-  );
-
-  if (incResult.matchedCount > 0) return true;
-
-  // Entry doesn't exist yet — push a new one.
-  const pushResult = await corporationsCollection<Corporation>(db).updateOne(
-    {
-      _id: targetCorpId,
-      ...(guardFilter ?? {}),
-      shareholders: {
-        $not: { $elemMatch: { corporationId: buyerCorpId } },
-      },
-    },
-    {
-      $push: {
-        shareholders: { corporationId: buyerCorpId, shares, avgCostPerShare: pricePerShare },
-      },
-      ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
-      ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
-    }
-  );
-
-  if (pushResult.matchedCount > 0) return true;
-
-  const retryCorp = await corporationsCollection<Corporation>(db).findOne(
-    { _id: targetCorpId },
-    { projection: { shareholders: 1 } }
-  );
-  const retryExisting = retryCorp?.shareholders?.find(
-    (sh) => sh.corporationId?.toString() === buyerCorpId.toString()
-  );
-  if (!retryExisting) return false;
-  const retryAvg =
-    (retryExisting.shares * (retryExisting.avgCostPerShare ?? pricePerShare) +
-      shares * pricePerShare) /
-    (retryExisting.shares + shares);
-  const retryResult = await corporationsCollection<Corporation>(db).updateOne(
-    { _id: targetCorpId, ...(guardFilter ?? {}), "shareholders.corporationId": buyerCorpId },
-    {
-      $inc: { "shareholders.$.shares": shares, ...extraUpdate?.$inc },
-      $set: {
-        "shareholders.$.avgCostPerShare": retryAvg,
-        ...extraUpdate?.$set,
-      },
-    }
-  );
-
-  if (retryResult.matchedCount > 0) return true;
+  if (result.matchedCount === 1) return true;
   if (isGuardedCredit(opts)) return false;
-  throw new Error("Failed to credit corporation shares after retry");
+  throw new Error("Share recipient corporation is unavailable");
 }
 
 // ── Debit / remove shares (corporation holder) ────────────────────
@@ -615,11 +552,7 @@ export async function debitSharesFromCorp(
 
   // Clean up zero/negative entries.
   if (remaining <= 0) {
-    const pullUpdate = {
-      $pull: {
-        shareholders: { corporationId: holderCorpId },
-      },
-    };
+    const pullUpdate = removeEmptyShareholder("corporationId", holderCorpId);
     const options = mongoOptions(opts);
     if (options) {
       await corporationsCollection<Corporation>(db).updateOne(
@@ -652,92 +585,28 @@ export async function creditSharesToFund(
   extraUpdate?: { $inc?: Record<string, number>; $set?: Record<string, unknown> },
   opts?: Pick<CreditSharesOpts, "guardFilter" | "session"> & {
     /**
-     * The corp's cap table as the caller already holds it this turn, so the
-     * average-cost read below is skipped. Only the fund's own entry is read
-     * from it, and a stale entry only affects that fund's average cost.
+     * Compatibility hint; cost basis is calculated atomically from the stored cap table.
      */
     knownShareholders?: Corporation["shareholders"];
   }
 ): Promise<boolean> {
-  const guardFilter = opts?.guardFilter ?? {};
-  const shareholders =
-    opts?.knownShareholders ??
-    (
-      await corporationsCollection<Corporation>(db).findOne(
-        { _id: targetCorpId },
-        { projection: { shareholders: 1 }, ...mongoOptions(opts) }
-      )
-    )?.shareholders;
-
-  const existing = shareholders?.find((sh) => sh.fundId?.toString() === fundId.toString());
-  const existingShares = existing?.shares ?? 0;
-  const oldAvg = existing?.avgCostPerShare ?? pricePerShare;
-  const newAvg =
-    existingShares > 0
-      ? (existingShares * oldAvg + shares * pricePerShare) / (existingShares + shares)
-      : pricePerShare;
-
-  const incResult = await corporationsCollection<Corporation>(db).updateOne(
-    { _id: targetCorpId, ...guardFilter, "shareholders.fundId": fundId },
-    {
-      $inc: { "shareholders.$.shares": shares, ...extraUpdate?.$inc },
-      $set: {
-        "shareholders.$.avgCostPerShare": newAvg,
-        ...extraUpdate?.$set,
-      },
-    },
+  const result = await corporationsCollection<Corporation>(db).updateOne(
+    { _id: targetCorpId, ...(opts?.guardFilter ?? {}) },
+    weightedPositionCredit({
+      array: "shareholders",
+      identityField: "fundId",
+      identity: fundId,
+      shares,
+      price: pricePerShare,
+      costField: "avgCostPerShare",
+      increments: extraUpdate?.$inc,
+      set: extraUpdate?.$set,
+    }),
     mongoOptions(opts)
   );
-
-  if (incResult.matchedCount > 0) return true;
-
-  const pushResult = await corporationsCollection<Corporation>(db).updateOne(
-    {
-      _id: targetCorpId,
-      ...guardFilter,
-      shareholders: {
-        $not: { $elemMatch: { fundId } },
-      },
-    },
-    {
-      $push: {
-        shareholders: { fundId, shares, avgCostPerShare: pricePerShare },
-      },
-      ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
-      ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
-    },
-    mongoOptions(opts)
-  );
-
-  if (pushResult.matchedCount > 0) return true;
-
-  const retryCorp = await corporationsCollection<Corporation>(db).findOne(
-    { _id: targetCorpId },
-    { projection: { shareholders: 1 }, ...mongoOptions(opts) }
-  );
-  const retryExisting = retryCorp?.shareholders?.find(
-    (sh) => sh.fundId?.toString() === fundId.toString()
-  );
-  if (!retryExisting) return false;
-  const retryAvg =
-    (retryExisting.shares * (retryExisting.avgCostPerShare ?? pricePerShare) +
-      shares * pricePerShare) /
-    (retryExisting.shares + shares);
-  const retryResult = await corporationsCollection<Corporation>(db).updateOne(
-    { _id: targetCorpId, ...guardFilter, "shareholders.fundId": fundId },
-    {
-      $inc: { "shareholders.$.shares": shares, ...extraUpdate?.$inc },
-      $set: {
-        "shareholders.$.avgCostPerShare": retryAvg,
-        ...extraUpdate?.$set,
-      },
-    },
-    mongoOptions(opts)
-  );
-
-  if (retryResult.matchedCount > 0) return true;
+  if (result.matchedCount === 1) return true;
   if (isGuardedCredit(opts)) return false;
-  throw new Error("Failed to credit fund shares after retry");
+  throw new Error("Share recipient corporation is unavailable");
 }
 
 // ── Add / credit shares (NPP buyer) ────────────────────────────────
@@ -757,83 +626,23 @@ export async function creditSharesToNpp(
   extraUpdate?: { $inc?: Record<string, number>; $set?: Record<string, unknown> },
   opts?: Pick<CreditSharesOpts, "guardFilter" | "session">
 ): Promise<boolean> {
-  const guardFilter = opts?.guardFilter ?? {};
-  const targetCorp = await corporationsCollection<Corporation>(db).findOne(
-    { _id: targetCorpId },
-    { projection: { shareholders: 1 }, ...mongoOptions(opts) }
-  );
-
-  const existing = targetCorp?.shareholders?.find(
-    (sh) => sh.nppId?.toString() === nppId.toString()
-  );
-  const existingShares = existing?.shares ?? 0;
-  const oldAvg = existing?.avgCostPerShare ?? pricePerShare;
-  const newAvg =
-    existingShares > 0
-      ? (existingShares * oldAvg + shares * pricePerShare) / (existingShares + shares)
-      : pricePerShare;
-
-  const incResult = await corporationsCollection<Corporation>(db).updateOne(
-    { _id: targetCorpId, ...guardFilter, "shareholders.nppId": nppId },
-    {
-      $inc: { "shareholders.$.shares": shares, ...extraUpdate?.$inc },
-      $set: {
-        "shareholders.$.avgCostPerShare": newAvg,
-        ...extraUpdate?.$set,
-      },
-    },
+  const result = await corporationsCollection<Corporation>(db).updateOne(
+    { _id: targetCorpId, ...(opts?.guardFilter ?? {}) },
+    weightedPositionCredit({
+      array: "shareholders",
+      identityField: "nppId",
+      identity: nppId,
+      shares,
+      price: pricePerShare,
+      costField: "avgCostPerShare",
+      increments: extraUpdate?.$inc,
+      set: extraUpdate?.$set,
+    }),
     mongoOptions(opts)
   );
-
-  if (incResult.matchedCount > 0) return true;
-
-  const pushResult = await corporationsCollection<Corporation>(db).updateOne(
-    {
-      _id: targetCorpId,
-      ...guardFilter,
-      shareholders: {
-        $not: { $elemMatch: { nppId } },
-      },
-    },
-    {
-      $push: {
-        shareholders: { nppId, shares, avgCostPerShare: pricePerShare },
-      },
-      ...(extraUpdate?.$inc ? { $inc: extraUpdate.$inc } : {}),
-      ...(extraUpdate?.$set ? { $set: extraUpdate.$set } : {}),
-    },
-    mongoOptions(opts)
-  );
-
-  if (pushResult.matchedCount > 0) return true;
-
-  const retryCorp = await corporationsCollection<Corporation>(db).findOne(
-    { _id: targetCorpId },
-    { projection: { shareholders: 1 }, ...mongoOptions(opts) }
-  );
-  const retryExisting = retryCorp?.shareholders?.find(
-    (sh) => sh.nppId?.toString() === nppId.toString()
-  );
-  if (!retryExisting) return false;
-  const retryAvg =
-    (retryExisting.shares * (retryExisting.avgCostPerShare ?? pricePerShare) +
-      shares * pricePerShare) /
-    (retryExisting.shares + shares);
-  const retryResult = await corporationsCollection<Corporation>(db).updateOne(
-    { _id: targetCorpId, ...guardFilter, "shareholders.nppId": nppId },
-    {
-      $inc: { "shareholders.$.shares": shares, ...extraUpdate?.$inc },
-      $set: {
-        "shareholders.$.avgCostPerShare": retryAvg,
-        ...extraUpdate?.$set,
-      },
-    },
-    mongoOptions(opts)
-  );
-
-  if (retryResult.matchedCount > 0) return true;
+  if (result.matchedCount === 1) return true;
   if (isGuardedCredit(opts)) return false;
-  throw new Error("Failed to credit NPP shares after retry");
+  throw new Error("Share recipient corporation is unavailable");
 }
 
 // ── Debit / remove shares (NPP holder) ─────────────────────────────
@@ -875,11 +684,7 @@ export async function debitSharesFromNpp(
   const remaining = entry?.shares ?? 0;
 
   if (remaining <= 0) {
-    const pullUpdate = {
-      $pull: {
-        shareholders: { nppId },
-      },
-    };
+    const pullUpdate = removeEmptyShareholder("nppId", nppId);
     const options = mongoOptions(opts);
     if (options) {
       await corporationsCollection<Corporation>(db).updateOne(
@@ -933,11 +738,7 @@ export async function debitSharesFromFund(
   const remaining = entry?.shares ?? 0;
 
   if (remaining <= 0) {
-    const pullUpdate = {
-      $pull: {
-        shareholders: { fundId },
-      },
-    };
+    const pullUpdate = removeEmptyShareholder("fundId", fundId);
     const options = mongoOptions(opts);
     if (options) {
       await corporationsCollection<Corporation>(db).updateOne(

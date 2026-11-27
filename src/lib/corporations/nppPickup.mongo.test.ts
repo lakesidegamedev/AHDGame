@@ -28,7 +28,7 @@ vi.mock("@/lib/npp/generator", () => ({
   }),
 }));
 
-const { disposeLeavingSectors, NPP_PICKUP_SHARE } = await import("./nppPickup");
+const { disposeLeavingSectors, creditNppPickup, NPP_PICKUP_SHARE } = await import("./nppPickup");
 
 const owner = { _id: new ObjectId() };
 
@@ -101,7 +101,17 @@ describe.runIf(REAL_MONGO_ENABLED)("NPP pickup against isolated mongod", () => {
   let db: Db;
 
   beforeAll(async () => {
-    fixture = await startIsolatedMongod("ahd-npp-pickup-");
+    fixture = await startIsolatedMongod("ahd-npp-pickup-", { replicaSet: "pickup" });
+    const host = new URL(fixture.uri).host;
+    await fixture.client
+      .db("admin")
+      .command({ replSetInitiate: { _id: "pickup", members: [{ _id: 0, host }] } });
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      if ((await fixture.client.db("admin").command({ hello: 1 })).isWritablePrimary) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect((await fixture.client.db("admin").command({ hello: 1 })).isWritablePrimary).toBe(true);
     db = fixture.db;
     fixtureDb = db;
   }, 120_000);
@@ -331,5 +341,43 @@ describe.runIf(REAL_MONGO_ENABLED)("NPP pickup against isolated mongod", () => {
     const result = await disposeLeavingSectors(db, owner, [leaving], new Date());
     expect(result.recipientIds).toHaveLength(0);
     expect(await db.collection("corporateSectors").countDocuments({ _id: leaving._id })).toBe(0);
+  });
+  it("preserves two concurrent capacity credits to the same receiver and replays each receipt", async () => {
+    const { aRow } = await seed(db);
+    const donor = plantSector(owner._id, "S1", 1000);
+    const first = {
+      key: "pickup-a",
+      receiverCorporationId: aRow.corporationId,
+      receiverSectorId: aRow._id,
+      merge: true,
+    };
+    const second = { ...first, key: "pickup-b" };
+    const carve = (capitalStock: number) => ({
+      ...donor,
+      capitalStock,
+      operatingCapacityUnits: capitalStock,
+      capacityBookAnchor: capitalStock * 10,
+      mothballed: false,
+      plantsStartTurn: null,
+      legacyRevenueShadow: null,
+      plantCount: 0,
+      plantUnitRemainder: capitalStock,
+      buildQueue: [],
+    });
+    const before = aRow.capitalStock!;
+    await Promise.all([
+      creditNppPickup(db, donor, first, "US", carve(10), new Date(), 0.01),
+      creditNppPickup(db, donor, second, "US", carve(20), new Date(), 0.02),
+    ]);
+    const after = await db
+      .collection<CorporateSector>("corporateSectors")
+      .findOne({ _id: aRow._id });
+    expect(after?.capitalStock).toBe(before + 30);
+    expect(after?.nppPickupReceipts).toEqual(expect.arrayContaining([first.key, second.key]));
+    expect(await creditNppPickup(db, donor, first, "US", carve(10), new Date(), 0.01)).toBe(0);
+    expect(
+      (await db.collection<CorporateSector>("corporateSectors").findOne({ _id: aRow._id }))
+        ?.capitalStock
+    ).toBe(before + 30);
   });
 });

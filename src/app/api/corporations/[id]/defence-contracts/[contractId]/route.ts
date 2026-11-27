@@ -1,7 +1,8 @@
-// POST /api/corporations/[id]/defence-contracts/[contractId] — accept or decline an offer
+import { loadDefencePaymentCurrency } from "@/lib/military/defencePaymentCurrency";
+// POST /api/corporations/[id]/defence-contracts/[contractId] â€” accept or decline an offer
 //
 // Auth: the corporation's CEO (or admin). A government may award a contract, but the
-// corporation decides whether to build it — this is the supplier's only lever over an order,
+// corporation decides whether to build it â€” this is the supplier's only lever over an order,
 // and the counterpart to the minister's cancel.
 //
 // Errors: 400, 401, 403, 404, 409
@@ -14,9 +15,9 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
-import type { DefenceContract } from "@/lib/db/types/defenceContract";
+
 import { respondToContract } from "@/lib/db/collections/defenceContracts";
-import type { CorporateSector } from "@/lib/db/types/corporation";
+
 import { resolveFillEligibility, FILL_REASON_TEXT } from "@/lib/military/defenceFillEligibility";
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -41,7 +42,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(parsed.status, parsed.error);
     }
 
-    // Contract ids are Mongo ObjectIds. The corporation param is not — corp pages
+    // Contract ids are Mongo ObjectIds. The corporation param is not â€” corp pages
     // address /api/corporations/[id] by sequentialId (e.g. Lockheed is 453), and
     // `new ObjectId("453")` is the "Invalid id" the Accept button was hitting.
     if (!ObjectId.isValid(contractId) || contractId.length !== 24) {
@@ -88,6 +89,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         corp,
         sector,
         countryId: contract.countryId,
+        paymentCurrency: await loadDefencePaymentCurrency(db, contract.countryId),
         currentYear: STARTING_YEAR + Math.floor((currentTurn - 1) / TURNS_PER_YEAR),
         component: contract.component,
         assignedFactories: contract.assignedFactories,

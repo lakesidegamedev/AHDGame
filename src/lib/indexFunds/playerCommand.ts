@@ -38,19 +38,23 @@ export async function claimFundCommand(
 ): Promise<{ key: string; response?: Response }> {
   const key = `fund:${characterId}:${operationId}`;
   const commands = indexFundCommandsCollection<FundCommand>(db);
-  try {
-    await commands.insertOne({
-      _id: key,
-      request,
-      state: "pending",
-      createdAt: new Date(),
-    });
-    return { key };
-  } catch (error) {
-    if (!(error && typeof error === "object" && "code" in error && error.code === 11000))
-      throw error;
+  let existing = await commands.findOne({ _id: key });
+  if (!existing) {
+    try {
+      await commands.insertOne({
+        _id: key,
+        request,
+        state: "pending",
+        createdAt: new Date(),
+      });
+      return { key };
+    } catch (error) {
+      if (!(error && typeof error === "object" && "code" in error && error.code === 11000))
+        throw error;
+    }
+
+    existing = await commands.findOne({ _id: key });
   }
-  const existing = await commands.findOne({ _id: key });
   if (!existing || JSON.stringify(existing.request) !== JSON.stringify(request)) {
     return {
       key,

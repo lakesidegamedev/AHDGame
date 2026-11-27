@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PROSPECT_DURATION_TURNS,

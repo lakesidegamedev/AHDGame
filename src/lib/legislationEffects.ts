@@ -11,7 +11,6 @@ import type { Db, Filter, ObjectId } from "mongodb";
 import type {
   Bill,
   LegislationType,
-  StateMetrics,
   TariffProvision,
   SubsidyProvision,
   EndSubsidyProvision,
@@ -253,7 +252,7 @@ export async function applyLegislationEffect(
           // International-organization membership actions (Foreign Policy). Fund
           // moves treasury → org fund; leave/join effects land in later tasks.
           if (p.subType === "fund") {
-            await applyOrgFundProvision(db, countryId, p, String(bill._id));
+            await applyOrgFundProvision(db, countryId, p, String(bill._id), provisionIndex);
           } else if (p.subType === "leave") {
             await applyOrgLeaveProvision(db, bill, countryId, p);
           } else if (p.subType === "join") {

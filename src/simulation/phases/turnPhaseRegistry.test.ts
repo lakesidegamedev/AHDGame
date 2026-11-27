@@ -82,7 +82,7 @@ describe("turn phase registry", () => {
     it("rolls FY1954 at the first post-founding October boundary", async () => {
       const phaseResults = {} as Record<string, unknown>;
       const runtime = {
-        runPhase: vi.fn().mockResolvedValue(undefined),
+        runPhase: vi.fn().mockResolvedValue({ processed: true }),
         markPhaseSkipped: vi.fn(),
       };
 
@@ -102,10 +102,26 @@ describe("turn phase registry", () => {
       expect(phaseResults.fiscalYear).toEqual({ processed: true, newFiscalYear: 1954 });
     });
 
+    it("does not claim a failed fiscal phase was processed", async () => {
+      const phaseResults = {} as Record<string, unknown>;
+      const runtime = { runPhase: vi.fn().mockResolvedValue(null), markPhaseSkipped: vi.fn() };
+      await fiscalYearAdapter().execute(
+        {
+          db: {} as never,
+          newTurn: 40,
+          calendarTurn: 40,
+          currentYear: 1953,
+          phaseResults,
+        } as never,
+        runtime as never
+      );
+      expect(phaseResults.fiscalYear).toEqual({ processed: false, newFiscalYear: 1954 });
+    });
+
     it("preserves rollover timing in a world without a founding offset", async () => {
       const phaseResults = {} as Record<string, unknown>;
       const runtime = {
-        runPhase: vi.fn().mockResolvedValue(undefined),
+        runPhase: vi.fn().mockResolvedValue({ processed: true }),
         markPhaseSkipped: vi.fn(),
       };
 

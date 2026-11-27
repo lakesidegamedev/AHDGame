@@ -1,5 +1,8 @@
+import { billsCollection } from "@/lib/db/repositories/bills";
+import { publishNppBillVotes, type NppBillVotePublication } from "./publishBillVotes";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { constitutionalConsentForce } from "@/lib/referendum/rules/consent";
-import type { Referendum } from "@/lib/db/types/referendum";
+
 // src/lib/turn/npp/billVoting.ts
 /**
  * NPP Bill Voting
@@ -23,7 +26,6 @@ import type { Referendum } from "@/lib/db/types/referendum";
  * stateSenate/regionalCouncil NPPs are not.
  */
 
-import type { Bill, GovernorAddress, NPP, NPPVotePrediction } from "@/lib/db/types";
 import { ObjectId } from "mongodb";
 import type { NPPContext } from "./context";
 import { resolveWhipForNPP } from "./whipResolution";
@@ -68,21 +70,17 @@ import {
   businessInterestForce,
   businessInterestLabel,
   hasBusinessProvision,
-  INTEREST_VOTE_FAVORABILITY_COST,
   type NppBusinessStakes,
 } from "@/lib/nppAutonomy/v6/rules/businessInterest";
 import { oppositionBlocWorthwhile } from "@/lib/nppAutonomy/v6/rules/oppositionBattles";
-import type { CorporateSector } from "@/lib/db/types";
+
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { countryHasFeature } from "@/lib/countries/rules/countryFeatures";
-import { nppsCollection } from "@/lib/db/repositories/npps";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
-import { billsCollection } from "@/lib/db/repositories/bills";
 import { referendumsCollection } from "@/lib/db/repositories/referendums";
 import { governorAddressesCollection } from "@/lib/db/repositories/governorAddresses";
-import { nppVotePredictionsCollection } from "@/lib/db/repositories/nppVotePredictions";
 
-export async function processBillVoting(ctx: NPPContext): Promise<number> {
+export async function processBillVoting(ctx: NPPContext, publicationAttempt = 0): Promise<number> {
   const {
     db,
     now,
@@ -307,9 +305,11 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
   }
 
   // Engine 6.14 (v6): NPPs whose own business interest decided a vote this pass.
-  const interestDecidedVotes = new Set<string>();
+  const publications: NppBillVotePublication[] = [];
 
   for (const bill of activeBills) {
+    const votesBeforeBill = votescast;
+    const billInterestVotes = new Set<string>();
     const isOtherChamber = bill.status === "active_other";
     const isVetoOverride = bill.status === "veto_override";
     const isJPShugiinOverride = bill.status === "override_shugiin";
@@ -613,7 +613,7 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
         businessInterest !== 0 &&
         verdictFromForces({ ...forces, donors: forces.donors - businessInterest }) !== rawVerdict
       ) {
-        interestDecidedVotes.add(nppIdStr);
+        billInterestVotes.add(nppIdStr);
       }
 
       // Override votes don't allow abstain (US veto override or JP Shugiin override).
@@ -659,9 +659,12 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
     if (legacyConsentSnapshots.has(String(bill._id)))
       setFields.referendumConsent = bill.referendumConsent;
     const incFields: Record<string, number> = {};
+    const observedVotes: Record<string, unknown> = {};
     for (const [field, b] of byField) {
       for (const [k, v] of Object.entries(b.updates)) {
         setFields[`${field}.${k}`] = v;
+        const previous = bill[field]?.[k];
+        observedVotes[`${field}.${k}`] = previous === undefined ? { $exists: false } : previous;
       }
       const [forKey, againstKey, abstainKey] = TALLY[field];
       incFields[forKey] = b.forW;
@@ -669,73 +672,38 @@ export async function processBillVoting(ctx: NPPContext): Promise<number> {
       if (abstainKey) incFields[abstainKey] = b.abstainW;
     }
 
-    await billsCollection(db).updateOne(
-      { _id: bill._id },
-      {
-        $set: setFields,
-        $inc: incFields,
-      }
-    );
-
-    // Persist cross-pressure predictions for the prediction surface (Phase 5)
-    // and replayable vote audit. One upsert per NPP per bill, keyed by the pair.
-    if (predictionOps.length > 0) {
-      const collection = nppVotePredictionsCollection(db);
-      await collection.bulkWrite(
-        predictionOps.map((op) => ({
-          updateOne: {
-            filter: { nppId: op.nppId, billId: bill._id },
-            update: {
-              $set: {
-                computedAtTurn: currentTurn,
-                forces: op.forces,
-                donorsLabel: op.donorsLabel,
-                verdict: op.verdict,
-                resolvedVote: op.resolvedVote,
-                updatedAt: now,
-              },
-              $setOnInsert: {
-                nppId: op.nppId,
-                billId: bill._id,
-                createdAt: now,
-              },
-            },
-            upsert: true,
-          },
-        }))
-      );
-    }
+    publications.push({
+      billId: bill._id,
+      status: bill.status,
+      observedVotes,
+      setFields,
+      incFields,
+      predictions: predictionOps,
+      interestNppIds: [...billInterestVotes].map((id) => new ObjectId(id)),
+      votesCast: votescast - votesBeforeBill,
+    });
   }
 
-  // Engine 6.14 (v6): a small favorability cost, once per NPP per pass, never
-  // below zero. One batched write.
-  if (interestDecidedVotes.size > 0) {
-    await nppsCollection(db).bulkWrite(
-      [...interestDecidedVotes].map((id) => ({
-        updateOne: {
-          filter: { _id: new ObjectId(id) },
-          update: [
-            {
-              $set: {
-                favorability: {
-                  $max: [
-                    0,
-                    {
-                      $subtract: [
-                        { $ifNull: ["$favorability", 0] },
-                        INTEREST_VOTE_FAVORABILITY_COST,
-                      ],
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-      })),
-      { ordered: false }
-    );
-  }
-
-  return votescast;
+  const staleBillIds = new Set<string>();
+  const published = await publishNppBillVotes(
+    db,
+    publications,
+    currentTurn ?? (await getCurrentTurn(db)),
+    now,
+    { staleBillIds }
+  );
+  if (staleBillIds.size === 0 || publicationAttempt >= 2) return published;
+  const freshBills = await billsCollection(db)
+    .find({
+      _id: { $in: [...staleBillIds].map((id) => new ObjectId(id)) },
+      status: {
+        $in: ["active", "active_both", "active_other", "veto_override", "override_shugiin"],
+      },
+    })
+    .toArray();
+  if (freshBills.length === 0) return published;
+  return (
+    published +
+    (await processBillVoting({ ...ctx, activeBills: freshBills }, publicationAttempt + 1))
+  );
 }

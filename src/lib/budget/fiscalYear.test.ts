@@ -10,6 +10,14 @@ import type { Db } from "mongodb";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 vi.mock("./revenue", () => ({
   calculateFederalRevenue: vi.fn(),
   calculateStateRevenue: vi.fn(),
@@ -964,7 +972,7 @@ describe("processFiscalYear", () => {
     expect(setOps.creditRating).toBe("AA");
   });
 
-  it("applies trust penalties when debt threshold has trustPenalty > 0", async () => {
+  it("does not leak national debt into regional trust", async () => {
     vi.mocked(processAnnualDebt).mockResolvedValue({
       interestPayment: 880_000_000_000,
       newPrincipal: 40_000_000_000_000,
@@ -996,11 +1004,7 @@ describe("processFiscalYear", () => {
 
     await processFiscalYear(db as unknown as Db, 2026, 600);
 
-    // SP4: the US is a playable-pipeline country — governance.publicTrust is
-    // retired, so the legacy debt→trust `$inc` writes nowhere. The channel is
-    // not lost: it now moves `governance.integrity` on the political board via
-    // applyLegacyTrustDelta, which is asserted in the sovereign-default trust
-    // tests. This case pins only that the LEGACY collection stays untouched.
+    expect(db.collection.mock.calls.some(([name]) => name === "politicalMetrics")).toBe(false);
     expect(updateMany).not.toHaveBeenCalled();
   });
 
@@ -1057,7 +1061,7 @@ describe("processFiscalYear", () => {
     const call = db._stateBudgetUpdateOne.mock.calls[1];
     const setOps = (call[1] as { $set: Record<string, unknown> }).$set;
     expect(setOps.surplus).toBe(10_000_000_000);
-    expect(setOps.balance).toBe(50_000_000_000);
+    expect(setOps).not.toHaveProperty("balance");
   });
 
   it("retains Canadian standing services and records their deficit demand", async () => {
@@ -1084,7 +1088,7 @@ describe("processFiscalYear", () => {
       .find((s) => s.fiscalYear === 2028);
     expect(write.spending.total).toBe(128_567_355_000);
     expect(write.authorizedSpending.total).toBe(128_567_355_000);
-    expect(write.balance).toBe(0);
+    expect(write).not.toHaveProperty("balance");
     expect(write.surplus).toBe(-28_567_355_000);
     expect(Object.keys(write.regionalProgramSettlements)).toHaveLength(5);
   });
@@ -1159,7 +1163,7 @@ describe("processFiscalYear", () => {
       });
       expect(set.spending.total).toBe(100_000_000 + additional);
       expect(set.authorizedSpending.total).toBe(100_000_000 + additional);
-      expect(set.balance).toBe(0);
+      expect(set).not.toHaveProperty("balance");
     }
   );
 
@@ -1448,7 +1452,7 @@ describe("processFiscalYear — sovereign auction evaluation hook", () => {
     expect(typeof vi.mocked(evaluateSovereignAuctionForCountry).mock.calls[0][3]).toBe("number");
   });
 
-  it("does not abort the loop if one country's evaluation throws", async () => {
+  it("preserves an auction failure for resumable fiscal recovery", async () => {
     const { evaluateSovereignAuctionForCountry } =
       await import("@/lib/sovereignDefault/crisisDetection");
     vi.mocked(evaluateSovereignAuctionForCountry).mockReset();
@@ -1463,8 +1467,9 @@ describe("processFiscalYear — sovereign auction evaluation hook", () => {
       ],
     });
 
-    // Should not throw despite first call rejecting
-    await expect(processFiscalYear(db as unknown as Db, 2026, 600)).resolves.toBeUndefined();
-    expect(evaluateSovereignAuctionForCountry).toHaveBeenCalledTimes(2);
+    await expect(processFiscalYear(db as unknown as Db, 2026, 600)).rejects.toThrow(
+      "fiscalYear must succeed"
+    );
+    expect(evaluateSovereignAuctionForCountry).toHaveBeenCalledTimes(1);
   });
 });

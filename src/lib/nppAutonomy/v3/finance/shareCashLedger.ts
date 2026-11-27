@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { NPP } from "@/lib/db/types";
@@ -59,6 +60,6 @@ async function witnessNppInvestmentCash(
       accounting.reason
     ),
   };
-  if (context.pendingEntries) context.pendingEntries.push(entry);
+  if (context.pendingEntries && !boundSession(db)) context.pendingEntries.push(entry);
   else await emitLedgerEntries(db, [entry]);
 }

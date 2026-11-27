@@ -13,8 +13,7 @@
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { UKGovernment } from "@/lib/db/types/ukGovernment";
-import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovernment";
-import type { PoliticalParty } from "@/lib/db/types/party";
+
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { getTotalUkCommonsSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
@@ -23,7 +22,7 @@ import {
   getUkConfidenceErosionScale,
   tickConfidenceForGov,
 } from "@/lib/countries/uk/confidence/confidenceGaugeStore";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
+
 import { loadUkBrokenPromiseMeter } from "@/lib/countries/uk/manifesto/deliveryMeter";
 import { tickNhsFromBudget } from "@/lib/countries/uk/nhs/nhsStore";
 import { triggerSnapElection } from "@/lib/turn/snapElection";
@@ -71,7 +70,7 @@ export function getLargestParty(seatsByParty: Record<string, number>): string | 
  * Recalculate UK Commons seat distribution. Seeds the governmentFormations
  * document from legacy collections on first run if it doesn't exist.
  */
-export async function updateGovernmentSeats(): Promise<void> {
+export async function updateGovernmentSeats(currentTurn?: number): Promise<void> {
   const db = await getDb();
   const govCol = getGovernmentFormationsCollection(db);
 
@@ -85,14 +84,19 @@ export async function updateGovernmentSeats(): Promise<void> {
   }
 
   // Per-turn gauges run on EVERY turn, independent of the one-time seed.
-  await tickUkGovernmentGauges(db, new Date());
+  await tickUkGovernmentGauges(db, new Date(), currentTurn);
 }
 
 /**
  * Confidence gauge and NHS quality per-turn drift. Dissolves Parliament via the shared snap-election path (House withdrawing confidence, not the PM's snap) when the gauge bottoms out and UK_CONFIDENCE_GAUGE_DISSOLUTION=1; the gauge persists through the election. Off by default but still accrues and is observable.
  */
-export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
+export async function tickUkGovernmentGauges(
+  db: Db,
+  now: Date,
+  currentTurn?: number
+): Promise<void> {
   const nhsGameState = await getGameState(db);
+  const processingTurn = currentTurn ?? nhsGameState?.currentTurn;
   const [approvalDoc, brokenPromiseMeter] = await Promise.all([
     governmentApprovalsCollection(db).findOne({ _id: "UK" }),
     loadUkBrokenPromiseMeter(db),
@@ -100,7 +104,7 @@ export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
   if (approvalDoc) {
     const erosionScale = getUkConfidenceErosionScale(
       approvalDoc.headOfGovernmentSinceTurn,
-      nhsGameState?.currentTurn,
+      processingTurn,
       nhsGameState?.preset
     );
     const gauge = await tickConfidenceForGov(db, {
@@ -111,7 +115,7 @@ export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
       brokenPromiseMeter,
       erosionScale,
       now,
-      turn: nhsGameState?.currentTurn,
+      turn: processingTurn,
     });
     const government = gauge.dissolutionEnabled
       ? await getGovernmentFormationsCollection(db).findOne(
@@ -140,13 +144,14 @@ export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
     }
   }
 
-  const nhsCurrentTurn = nhsGameState?.currentTurn ?? 1;
+  const nhsCurrentTurn = processingTurn ?? 1;
   const nhsStartingYear = nhsGameState?.startingYear ?? STARTING_YEAR;
   const nhsCurrentYear =
     nhsGameState?.currentYear ??
     nhsStartingYear + Math.floor((nhsCurrentTurn - 1) / TURNS_PER_YEAR);
   await tickNhsFromBudget(db, {
     fiscalYear: calculateFiscalYear(nhsCurrentYear, nhsCurrentTurn),
+    currentTurn: nhsCurrentTurn,
     now,
   });
 }

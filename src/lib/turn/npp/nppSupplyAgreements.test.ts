@@ -1,3 +1,4 @@
+import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { SupplyAgreement } from "@/lib/db/types/supplyAgreement";
@@ -935,9 +936,13 @@ describe("processNppSupplyAgreements shell", () => {
   function fakeDb(over: {
     agreements: (sellerId: ObjectId) => unknown[];
     listings?: unknown[];
+    afterAgreementWrite?: (model: ReturnType<typeof createInMemoryDb>) => Promise<void>;
     buyer?: { _id: ObjectId; countryId: string; userId?: ObjectId };
   }) {
     const sellerId = new ObjectId();
+    const model = createInMemoryDb();
+    model.seed("supplyAgreements", over.agreements(sellerId) as never[]);
+    const agreementModel = model.collection("supplyAgreements");
     const calls = {
       agreementBulk: [] as unknown[],
       listingBulk: [] as unknown[],
@@ -979,10 +984,12 @@ describe("processNppSupplyAgreements shell", () => {
           return { find: () => cursor([]) };
         case "supplyAgreements":
           return {
-            find: () => cursor(over.agreements(sellerId)),
-            bulkWrite: async (ops: unknown[]) => {
+            find: agreementModel.find.bind(agreementModel),
+            bulkWrite: async (ops: Parameters<typeof agreementModel.bulkWrite>[0]) => {
               calls.agreementBulk.push(...ops);
-              return { modifiedCount: ops.length };
+              const result = await agreementModel.bulkWrite(ops);
+              await over.afterAgreementWrite?.(model);
+              return result;
             },
             insertMany: vi.fn(),
           };
@@ -1074,6 +1081,36 @@ describe("processNppSupplyAgreements shell", () => {
       userId: buyer.userId,
       title: "Supply agreement countered",
     });
+  });
+
+  it("does not announce a counter superseded by cancellation before acknowledgement", async () => {
+    const buyer = { _id: new ObjectId(), countryId: "US", userId: new ObjectId() };
+    const id = new ObjectId();
+    const f = fakeDb({
+      buyer,
+      agreements: (supplierCorpId) => [
+        {
+          _id: id,
+          supplierCorpId,
+          buyerCorpId: buyer._id,
+          proposedByCorpId: buyer._id,
+          commodity: "iron",
+          volumeCap: 1,
+          pricePremium: -0.35,
+          exclusive: false,
+          currentOffer: { revision: 1, proposedByCorpId: buyer._id },
+          status: "pending",
+        },
+      ],
+      afterAgreementWrite: async (model) => {
+        await model
+          .collection("supplyAgreements")
+          .updateOne({ _id: id }, { $set: { status: "cancelled" } });
+      },
+    });
+    notified.length = 0;
+    await processNppSupplyAgreements(f.db, 100, new Date(), true);
+    expect(notified).toHaveLength(0);
   });
 
   it("keeps market plus or minus pricing when it counters", async () => {

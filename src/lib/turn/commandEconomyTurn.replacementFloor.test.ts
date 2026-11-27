@@ -1,3 +1,11 @@
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 /**
  * Directed credit, floored at capacity replacement (plants tier).
  *
@@ -10,7 +18,7 @@
  * always at least big enough to replace what wore out, and that the extra is
  * paid for in issuance rather than conjured.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { processCommandEconomyTurn } from "./commandEconomyTurn";
 import { soeCapacityReplacementCostAnchor } from "@/lib/economy/soe";
@@ -112,6 +120,12 @@ function makeDb(creditAggressiveness: number): { db: Db; captured: Captured } {
         case "federalBudget":
           return {
             find: () => ({ toArray: async () => [budget] }),
+            bulkWrite: async (
+              ops: { updateOne: { update: { $set: Record<string, unknown> } } }[]
+            ) => {
+              for (const op of ops) captured.budgetSets.push(op.updateOne.update.$set);
+              return { matchedCount: ops.length };
+            },
             updateOne: async (_f: unknown, u: { $set: Record<string, unknown> }) => {
               captured.budgetSets.push(u.$set);
               return { matchedCount: 1 };

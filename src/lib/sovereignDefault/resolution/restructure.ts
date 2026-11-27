@@ -1,3 +1,4 @@
+import { afterCommit, unboundDb, withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Restructure resolution path — Phase 6.
  *
@@ -59,6 +60,13 @@ export interface RestructureResolutionResult {
 }
 
 export async function applyRestructureResolution(
+  db: Db,
+  input: RestructureResolutionInput
+): Promise<RestructureResolutionResult> {
+  return withSessionDb(db, (db) => applyRestructureResolutionInTransaction(db, input));
+}
+
+async function applyRestructureResolutionInTransaction(
   db: Db,
   input: RestructureResolutionInput
 ): Promise<RestructureResolutionResult> {
@@ -171,20 +179,20 @@ export async function applyRestructureResolution(
     );
   }
 
-  await emitRestructuredNews(countryCode, currentTurn, RESTRUCTURE_HAIRCUT, bondsAffected);
-  await emitCascadeSummaryNews(countryCode, cascadeResult);
-  await emitMassCascadeAlert(db, countryCode, cascadeResult.totalCorpsInsolvent, currentTurn);
+  await afterCommit(db, () =>
+    emitRestructuredNews(countryCode, currentTurn, RESTRUCTURE_HAIRCUT, bondsAffected)
+  );
+  await afterCommit(db, () => emitCascadeSummaryNews(countryCode, cascadeResult));
+  await afterCommit(db, () =>
+    emitMassCascadeAlert(unboundDb(db), countryCode, cascadeResult.totalCorpsInsolvent, currentTurn)
+  );
 
   // Phase 11b: executive personal political impact.
   const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "restructure");
 
   // Phase 11b: civil-unrest event (1 for restructure path).
-  try {
-    await emitCivilUnrestEvents(db, countryCode, "restructure");
-  } catch (err) {
-    console.error("emitCivilUnrestEvents (restructure) failed", err);
-  }
+  await emitCivilUnrestEvents(db, countryCode, "restructure");
 
   return { ok: true, bondsAffected };
 }

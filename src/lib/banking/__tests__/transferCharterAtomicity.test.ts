@@ -1,6 +1,7 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import type { BankCharter } from "@/lib/db/types/bank";
 import type { Corporation } from "@/lib/db/types";
 import { charterFingerprint, transferBankCharterToAcquirer } from "../transferCharter";
@@ -162,7 +163,7 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    memory = createInMemoryDb();
+    memory = createTransactionalMemoryDb().memory;
     seedWorld();
   });
 
@@ -175,12 +176,10 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
       "primary stepped down"
     );
 
-    // Charter moved, satellites untouched: the exact split the old code
-    // stranded. The plan survives so the retry knows where to resume.
-    expect(corp(acquirerId).bankCharter?.currency).toBe("USD");
-    expect("bankCharter" in corp(targetId)).toBe(false);
+    expect(corp(acquirerId).bankCharter).toBeUndefined();
+    expect(corp(targetId).bankCharter?.currency).toBe("USD");
     expect(holderOf(accountId)).toBe(targetHex);
-    expect(corp(targetId).bankCharterTransfer?.to.equals(acquirerId)).toBe(true);
+    expect(corp(targetId).bankCharterTransfer).toBeUndefined();
 
     const retry = await transferBankCharterToAcquirer(db(), targetId, acquirerId, now);
     expect(retry.ok).toBe(true);
@@ -205,10 +204,8 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
     const retry = await transferBankCharterToAcquirer(db(), targetId, acquirerId, now);
     expect(retry.ok).toBe(true);
     if (!retry.ok) return;
-    // Loans and interbank sides already moved in the crashed attempt; the
-    // retry only re-runs them as no-ops and finishes the pointers.
-    expect(retry.loansRekeyed).toBe(0);
-    expect(retry.savingsAccountsRekeyed).toBe(0);
+    expect(retry.loansRekeyed).toBe(1);
+    expect(retry.savingsAccountsRekeyed).toBe(1);
     expect(retry.depositorPointersRekeyed).toBe(1);
     expectUnified();
   });
@@ -257,8 +254,7 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
     await expect(transferBankCharterToAcquirer(db(), targetId, acquirerId, now)).rejects.toThrow(
       "crash after release"
     );
-    // Release landed: the shell is charterless with a surviving plan.
-    expect("bankCharter" in corp(targetId)).toBe(false);
+    expect(corp(targetId).bankCharter?.currency).toBe("USD");
 
     const retry = await transferBankCharterToAcquirer(db(), targetId, acquirerId, now);
     expect(retry).toMatchObject({ ok: true, transferred: true });
@@ -323,7 +319,7 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
     expectUnified();
   });
 
-  it("replaces its own stale claimed copy when taking over after drift", async () => {
+  it("preserves both economically divergent legacy copies for reconciliation", async () => {
     // Crash after claim plus drift: the acquirer holds the superseded plan's
     // orphan copy while the shell holds the drifted charter. The retry must
     // not read its own orphan as a foreign bank (occupied-slot conflict);
@@ -351,9 +347,9 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
       .updateOne({ _id: acquirerId }, { $set: { bankCharter: { ...before }, updatedAt: now } });
 
     const result = await transferBankCharterToAcquirer(db(), targetId, acquirerId, now);
-    expect(result).toMatchObject({ ok: true, transferred: true });
-    expect(corp(acquirerId).bankCharter?.cashReserves).toBe(drifted.cashReserves);
-    expectUnified();
+    expect(result.ok).toBe(false);
+    expect(corp(acquirerId).bankCharter?.cashReserves).toBe(before.cashReserves);
+    expect(corp(targetId).bankCharter?.cashReserves).toBe(drifted.cashReserves);
   });
 
   it("still conflicts when a foreign bank holds the slot after our plan drifted", async () => {
@@ -463,7 +459,7 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
     expectUnified();
   });
 
-  it("converges when a crash lands between stale-plan takeover and own-slot cleanup", async () => {
+  it("does not delete a stale legacy slot before proving its economic reconciliation", async () => {
     // Crash after claim plus drift leaves the superseded copy on our own
     // slot. Attempt 1 takes the stale plan over, then throws before removing
     // that copy. The retry must drain it and move the current charter, not
@@ -490,27 +486,10 @@ describe("transferBankCharterToAcquirer crash recovery", () => {
       .collection("corporations")
       .updateOne({ _id: acquirerId }, { $set: { bankCharter: { ...before }, updatedAt: now } });
 
-    const corps = memory.collection("corporations");
-    const orig = corps.updateOne.bind(corps);
-    let crashed = false;
-    vi.spyOn(corps, "updateOne").mockImplementation(async (filter, update, options) => {
-      const unset = (update as { $unset?: Record<string, unknown> }).$unset;
-      const target = (filter as { _id?: ObjectId })._id;
-      if (!crashed && unset && "bankCharter" in unset && target?.equals(acquirerId)) {
-        crashed = true;
-        throw new Error("crash between takeover and own-slot cleanup");
-      }
-      return orig(filter, update, options);
-    });
-
-    await expect(transferBankCharterToAcquirer(db(), targetId, acquirerId, now)).rejects.toThrow(
-      "crash between takeover and own-slot cleanup"
-    );
-
-    const retry = await transferBankCharterToAcquirer(db(), targetId, acquirerId, now);
-    expect(retry).toMatchObject({ ok: true, transferred: true });
-    expect(corp(acquirerId).bankCharter?.cashReserves).toBe(drifted.cashReserves);
-    expectUnified();
+    const result = await transferBankCharterToAcquirer(db(), targetId, acquirerId, now);
+    expect(result.ok).toBe(false);
+    expect(corp(acquirerId).bankCharter?.cashReserves).toBe(before.cashReserves);
+    expect(corp(targetId).bankCharter?.cashReserves).toBe(drifted.cashReserves);
   });
 
   it("drains chained superseded orphans across adopt-of-adopt crashes", async () => {

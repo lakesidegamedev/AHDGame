@@ -308,6 +308,7 @@ export async function settleListingOffer(
       collection: sellerCorp ? "corporations" : "characters",
       idHex: sellerId.toHexString(),
       field: sellerCorp ? "liquidCapital" : personalBalanceField(sellerCcy, forexEnabled),
+      ...(sellerCorp ? { currencyCode: sellerCcy } : {}),
       amount: sellerAmount,
       ...(stockTax ? { stockTaxReceipt: stockTax } : {}),
     },
@@ -317,6 +318,7 @@ export async function settleListingOffer(
             collection: buyerCorp ? ("corporations" as const) : ("characters" as const),
             idHex: buyerId.toHexString(),
             field: buyerCorp ? "liquidCapital" : personalBalanceField(buyerCcy, forexEnabled),
+            ...(buyerCorp ? { currencyCode: buyerCcy } : {}),
             amount: buyerRefundAmount,
           },
         }

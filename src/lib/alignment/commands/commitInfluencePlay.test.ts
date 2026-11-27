@@ -1,3 +1,10 @@
+// Collection-only behavior fixtures; transaction rollback is covered by atomic tests.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  afterCommit: (_db: import("mongodb").Db, effect: () => unknown) => effect(),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";

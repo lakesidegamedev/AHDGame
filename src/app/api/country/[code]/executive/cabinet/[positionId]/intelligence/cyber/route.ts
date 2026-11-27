@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/executive/cabinet/[positionId]/intelligence/cyber
 //
 // Launch a cyber operation against another country, or publicly stand down against it.
@@ -53,40 +57,49 @@ export async function POST(request: Request, { params }: IntelligenceRouteParams
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    const target = await requireRegisteredTarget(db, parsed.data.targetCountryId, countryId);
-    if ("error" in target) return target.error;
-    const { targetCountryId } = target;
-
-    const turn = await loadCurrentTurn(db);
-    const agency = await getOrCreateAgency(db, countryId, turn, member?.characterId ?? null);
-
-    if (parsed.data.action === "stand_down") {
-      const result = await standDownCyber(
-        db,
-        countryId,
-        targetCountryId,
-        turn,
-        user.userId ?? null
-      );
-      if (!result.ok) return errorResponse(result.status, result.error);
-      return NextResponse.json({ truceUntilTurn: result.truceUntilTurn });
-    }
-
-    const result = await launchCyberOperation({
+    return await withRecordedEconomicCommand(
       db,
-      attackerId: countryId,
-      targetId: targetCountryId,
-      turn,
-      tradecraft: agency.tradecraft,
-      actorUserId: user.userId ?? null,
-      chargeAppropriation: true,
-    });
-    if (!result.ok) return errorResponse(result.status, result.error);
-    return NextResponse.json({
-      outcome: result.outcome,
-      attributed: result.attributed,
-      message: result.message,
-    });
+      "minister-cyber-operation",
+      String(user.userId ?? countryId),
+      economicRequestId(request),
+      { countryId, positionId, ...parsed.data },
+      async (db) => {
+        const target = await requireRegisteredTarget(db, parsed.data.targetCountryId, countryId);
+        if (target.error) return target.error;
+        const { targetCountryId } = target;
+
+        const turn = await loadCurrentTurn(db);
+        const agency = await getOrCreateAgency(db, countryId, turn, member?.characterId ?? null);
+
+        if (parsed.data.action === "stand_down") {
+          const result = await standDownCyber(
+            db,
+            countryId,
+            targetCountryId,
+            turn,
+            user.userId ?? null
+          );
+          if (!result.ok) return errorResponse(result.status, result.error);
+          return NextResponse.json({ truceUntilTurn: result.truceUntilTurn });
+        }
+
+        const result = await launchCyberOperation({
+          db,
+          attackerId: countryId,
+          targetId: targetCountryId,
+          turn,
+          tradecraft: agency.tradecraft,
+          actorUserId: user.userId ?? null,
+          chargeAppropriation: true,
+        });
+        if (!result.ok) return errorResponse(result.status, result.error);
+        return NextResponse.json({
+          outcome: result.outcome,
+          attributed: result.attributed,
+          message: result.message,
+        });
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

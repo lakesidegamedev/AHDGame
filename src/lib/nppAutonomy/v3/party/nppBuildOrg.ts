@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * NPP party-org-building command core. Lets an autonomous NPP trigger the
  * same Build Org action as a player, via the same `spendPoliticalStrength`
@@ -13,12 +14,7 @@
  */
 
 import { ObjectId, type Db } from "mongodb";
-import type {
-  OrgRegLedger,
-  PoliticalParty,
-  StatePartyOrg,
-  PartyStrengthPressure,
-} from "@/lib/db/types";
+import type { OrgRegLedger, PoliticalParty } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isNonPartyOrganizationUsRegion } from "@/lib/constants/states";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
@@ -115,6 +111,28 @@ export async function preloadNppBuildOrgSweepCache(
 }
 
 export async function nppBuildPartyOrg(
+  db: Db,
+  actorNppId: ObjectId,
+  countryId: CountryId,
+  stateId: string,
+  partySequentialId: number,
+  currentTurn: number,
+  sweepCache?: NppBuildOrgSweepCache
+): Promise<NppBuildOrgResult> {
+  return withAtomicResult(db, (db) =>
+    buildNppOrganization(
+      db,
+      actorNppId,
+      countryId,
+      stateId,
+      partySequentialId,
+      currentTurn,
+      sweepCache
+    )
+  );
+}
+
+async function buildNppOrganization(
   db: Db,
   actorNppId: ObjectId,
   countryId: CountryId,

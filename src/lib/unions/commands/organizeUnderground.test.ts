@@ -1,3 +1,13 @@
+// Collection-only behavior checks; paid outcome rollback has atomic fixture coverage.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  runWithDbSession: (
+    _db: import("mongodb").Db,
+    work: (session: import("mongodb").ClientSession) => Promise<unknown>
+  ) => work({} as import("mongodb").ClientSession),
+}));
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";

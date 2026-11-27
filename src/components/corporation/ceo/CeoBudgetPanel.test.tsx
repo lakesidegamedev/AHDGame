@@ -58,8 +58,8 @@ const baseFinancials = {
   bondInterestCost: 0,
   bondCouponIncome: 0,
   governmentBondSubsidy: 0,
-  imfFacilityPaymentDaily: 0,
-  imfFacilityReceiptsDaily: 0,
+  imfFacilityInterestPaidDaily: 0,
+  imfFacilityInterestReceivedDaily: 0,
   dividendIncomeReceived: 0,
   income: 0,
 } as Record<string, unknown>;

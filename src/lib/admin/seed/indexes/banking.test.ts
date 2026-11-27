@@ -38,6 +38,11 @@ describe("seedBankingIndexes", () => {
       expect.arrayContaining([
         {
           collection: "bankMoneyMoves",
+          key: { worldId: 1, supplyProjectionsComplete: 1, turn: 1 },
+          options: expect.objectContaining({ name: "bankMoneyMoves_supply_cash_recovery" }),
+        },
+        {
+          collection: "bankMoneyMoves",
           key: { status: 1, _id: 1 },
           options: expect.objectContaining({ name: "bankMoneyMoves_status_id" }),
         },

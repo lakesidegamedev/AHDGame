@@ -1,292 +1,132 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Character } from "@/lib/db/types";
-
-vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(false) }));
-vi.mock("@/lib/gameState", () => ({
-  getGameState: vi.fn().mockResolvedValue({ _id: "current", currentTurn: 200 }),
-}));
-vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
-  atomicallyDebitCharacterCash: vi.fn(),
-  refundCharacterCash: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn() }));
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
+import { foundCorporation } from "./foundCorporation";
+vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: async () => false }));
 vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/wireEvent", () => ({
   logWireEvent: vi.fn(),
-  wireHeadlineCorpFounded: vi.fn().mockReturnValue("headline"),
-  wireHeadlineCorpIpo: vi.fn().mockReturnValue("ipo headline"),
+  wireHeadlineCorpFounded: () => "Founded",
+  wireHeadlineCorpIpo: () => "Listed",
 }));
-
-import {
-  atomicallyDebitCharacterCash,
-  refundCharacterCash,
-} from "@/lib/financialTxLog/atomicCashGuard";
-import { recordAudit } from "@/lib/audit/recordAudit";
-import { foundCorporation } from "./foundCorporation";
-
-function makeDb(insertOne: (doc: unknown) => Promise<unknown>) {
-  const writes: string[] = [];
-  const corporations = {
-    findOne: vi.fn().mockResolvedValue(null),
-    insertOne: vi.fn(async (doc: unknown) => {
-      writes.push("corporations.insertOne");
-      return insertOne(doc);
-    }),
-    updateOne: vi.fn(async () => {
-      writes.push("corporations.updateOne");
-      return { matchedCount: 1, modifiedCount: 1 };
-    }),
-    deleteOne: vi.fn(async () => {
-      writes.push("corporations.deleteOne");
-      return { deletedCount: 1 };
-    }),
-  };
-  const ceoVotes = {
-    insertOne: vi.fn(async () => {
-      writes.push("corporationCeoVotes.insertOne");
-      return { acknowledged: true };
-    }),
-    deleteMany: vi.fn(async () => {
-      writes.push("corporationCeoVotes.deleteMany");
-      return { deletedCount: 0 };
-    }),
-  };
-  const characters = {
-    updateOne: vi.fn(async () => {
-      writes.push("characters.updateOne");
-      return { modifiedCount: 1 };
-    }),
-  };
-  const db = {
-    collection: vi.fn((name: string) => {
-      if (name === "gameState") {
-        return { findOne: async () => ({ _id: "current", currentYear: 2027 }) };
-      }
-      if (name === "federalBudget") {
-        return { find: () => ({ toArray: async () => [] }), findOne: async () => null };
-      }
-      if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
-      if (name === "users") return { findOne: vi.fn().mockResolvedValue(null) };
-      if (name === "counters") return { findOneAndUpdate: vi.fn().mockResolvedValue({ seq: 7 }) };
-      if (name === "states") return { findOne: vi.fn().mockResolvedValue({ name: "California" }) };
-      if (name === "corporations") return corporations;
-      if (name === "corporationCeoVotes") return ceoVotes;
-      if (name === "characters") return characters;
-      return {
-        findOne: vi.fn().mockResolvedValue(null),
-        insertOne: vi.fn().mockResolvedValue({ acknowledged: true }),
-        updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-      };
-    }),
-  };
-  return { db, writes, corporations, ceoVotes };
-}
-
-function makeCharacter(): Character {
-  return {
+function fixture(cashOnHand = 1e9) {
+  const f = createTransactionalMemoryDb(),
+    userId = new ObjectId().toHexString();
+  const character = {
     _id: new ObjectId(),
-    name: "Founder",
+    name: "Synthetic founder",
     countryId: "US",
     homeState: "CA",
-    cashOnHand: 1_000_000_000,
-  } as unknown as Character;
+    cashOnHand,
+  } as Character;
+  f.memory.seed("gameState", [
+    { _id: "current", currentTurn: 200, currentYear: 2027, worldEpochId: "synthetic" },
+  ]);
+  f.memory.seed("characters", [{ ...character }]);
+  f.memory.seed("states", [{ _id: "CA", countryId: "US", name: "California" }]);
+  const input = {
+    db: f.db,
+    character,
+    userId,
+    request: { name: "Synthetic Works", tickerSymbol: "SYNW", type: "manufacturing" as const },
+  };
+  return { ...f, input };
 }
-
-const request = {
-  name: "Example Works",
-  tickerSymbol: "EXWK",
-  type: "manufacturing",
-} as const;
-
 describe("foundCorporation", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(atomicallyDebitCharacterCash).mockResolvedValue({ ok: true } as never);
+  it("debits the founder and inserts a private corporation with its ownership", async () => {
+    const f = fixture(),
+      reply = await foundCorporation(f.input);
+    expect(reply).toMatchObject({ ok: true, status: 201 });
+    const corp = await f.db.collection("corporations").findOne({ tickerSymbol: "SYNW" });
+    expect(corp).toMatchObject({
+      isPrivate: true,
+      ceoId: f.input.character._id,
+      ceoType: "character",
+    });
+    expect(
+      (await f.db.collection("characters").findOne({ _id: f.input.character._id }))!.cashOnHand
+    ).toBeLessThan(1e9);
+    expect(await f.db.collection("corporationCeoVotes").countDocuments({})).toBe(1);
   });
-
-  it("debits the founder, inserts a private corporation and returns 201", async () => {
-    const insertedId = new ObjectId();
-    const { db, writes, corporations } = makeDb(async () => ({ insertedId }));
-    const character = makeCharacter();
-    const userId = new ObjectId().toString();
-
-    const result = await foundCorporation({
-      db: db as never,
-      userId,
-      character,
-      request: request as never,
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      status: 201,
-      body: {
-        corporationId: insertedId.toString(),
-        sequentialId: expect.any(Number),
-        message: "Example Works has been founded!",
-      },
-    });
-    const debit = vi.mocked(atomicallyDebitCharacterCash).mock.calls[0]!;
-    expect(debit[1]).toEqual(character._id);
-    const debitedAmount = debit[3];
-    expect(debitedAmount).toBeGreaterThan(0);
-    expect(writes).toEqual([
-      "corporations.insertOne",
-      "corporations.updateOne",
-      "corporations.updateOne",
-      "characters.updateOne",
-      "corporationCeoVotes.insertOne",
-    ]);
-    const inserted = corporations.insertOne.mock.calls[0]![0] as {
-      isPrivate: boolean;
-      userId: ObjectId;
-      ceoType: string;
-      tickerSymbol: string;
-    };
-    expect(inserted.isPrivate).toBe(true);
-    expect(inserted.userId.toString()).toBe(userId);
-    expect(inserted.ceoType).toBe("character");
-    expect(inserted.tickerSymbol).toBe("EXWK");
-    expect(refundCharacterCash).not.toHaveBeenCalled();
-    expect(vi.mocked(recordAudit).mock.calls[0]![0]).toMatchObject({
-      action: "corp.found",
-      amount: -debitedAmount,
-    });
-  });
-
-  it("refunds the founder and returns 400 when a concurrent founder wins the ticker", async () => {
-    const duplicate = Object.assign(new Error("E11000 duplicate key tickerSymbol_1"), {
-      code: 11000,
-    });
-    const { db, writes } = makeDb(async () => {
-      throw duplicate;
-    });
-    const character = makeCharacter();
-
-    const result = await foundCorporation({
-      db: db as never,
-      userId: new ObjectId().toString(),
-      character,
-      request: request as never,
-    });
-
-    expect(result).toEqual({
+  it("rolls back the debit when a concurrent founder wins the ticker", async () => {
+    const f = fixture();
+    vi.spyOn(f.memory.collection("corporations"), "insertOne").mockRejectedValueOnce(
+      Object.assign(new Error("E11000 duplicate key tickerSymbol_1"), { code: 11000 })
+    );
+    expect(await foundCorporation(f.input)).toMatchObject({
       ok: false,
       status: 400,
       error: "That ticker symbol is already taken",
     });
-    const debitedAmount = vi.mocked(atomicallyDebitCharacterCash).mock.calls[0]![3];
-    expect(refundCharacterCash).toHaveBeenCalledWith(
-      db,
-      character._id,
-      "USD",
-      debitedAmount,
-      false
-    );
-    expect(writes).toEqual(["corporations.insertOne"]);
+    expect(
+      (await f.db.collection("characters").findOne({ _id: f.input.character._id }))!.cashOnHand
+    ).toBe(1e9);
+    expect(await f.db.collection("corporations").countDocuments({})).toBe(0);
   });
-
-  it("removes the corporation, refunds and rethrows when a later write fails", async () => {
-    const insertedId = new ObjectId();
-    const { db, writes, ceoVotes } = makeDb(async () => ({ insertedId }));
-    ceoVotes.insertOne.mockRejectedValueOnce(new Error("vote write failed"));
-    const character = makeCharacter();
-
-    await expect(
-      foundCorporation({
-        db: db as never,
-        userId: new ObjectId().toString(),
-        character,
-        request: request as never,
-      })
-    ).rejects.toThrow("vote write failed");
-
-    expect(writes).toContain("corporationCeoVotes.deleteMany");
-    expect(writes).toContain("corporations.deleteOne");
-    expect(refundCharacterCash).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not insert when the atomic debit fails", async () => {
-    vi.mocked(atomicallyDebitCharacterCash).mockResolvedValue({ ok: false } as never);
-    const { db, writes } = makeDb(async () => ({}));
-
-    const result = await foundCorporation({
-      db: db as never,
-      userId: new ObjectId().toString(),
-      character: makeCharacter(),
-      request: request as never,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result).toMatchObject({ status: 400 });
-    expect(writes).toEqual([]);
-    expect(refundCharacterCash).not.toHaveBeenCalled();
-  });
-
-  describe("one corporation per character", () => {
-    function ownedBy(owner: ObjectId) {
-      return async (filter: { ceoId?: ObjectId; ceoVacant?: unknown; userId?: ObjectId }) =>
-        filter.ceoId && filter.ceoId.equals(owner) && !filter.userId
-          ? { _id: new ObjectId() }
-          : null;
-    }
-
-    it("lets a second character on the same account found a corporation", async () => {
-      const insertedId = new ObjectId();
-      const { db, corporations } = makeDb(async () => ({ insertedId }));
-      const firstCharacter = makeCharacter();
-      const secondCharacter = makeCharacter();
-      corporations.findOne.mockImplementation(ownedBy(firstCharacter._id) as never);
-
-      const result = await foundCorporation({
-        db: db as never,
-        userId: new ObjectId().toString(),
-        character: secondCharacter,
-        request: request as never,
+  it("rolls back every landed write when a later write fails", async () => {
+    const f = fixture(),
+      fault = withInjectedCrash(f.memory, {
+        collection: "corporationCeoVotes",
+        op: "insertOne",
+        onCall: 1,
+        afterWrite: true,
       });
-
-      expect(result).toMatchObject({ ok: true, status: 201 });
-    });
-
-    it("rejects a character that already owns a corporation", async () => {
-      const { db, writes, corporations } = makeDb(async () => ({}));
-      const character = makeCharacter();
-      corporations.findOne.mockImplementation(ownedBy(character._id) as never);
-
-      const result = await foundCorporation({
-        db: db as never,
-        userId: new ObjectId().toString(),
-        character,
-        request: request as never,
-      });
-
-      expect(result).toEqual({
-        ok: false,
-        status: 400,
-        error: "This character already owns a corporation.",
-      });
-      expect(writes).toEqual([]);
-      expect(atomicallyDebitCharacterCash).not.toHaveBeenCalled();
-    });
+    await expect(foundCorporation({ ...f.input, db: fault.db })).rejects.toThrow();
+    expect(
+      (await f.db.collection("characters").findOne({ _id: f.input.character._id }))!.cashOnHand
+    ).toBe(1e9);
+    expect(await f.db.collection("corporations").countDocuments({})).toBe(0);
+    expect(await f.db.collection("corporationCeoVotes").countDocuments({})).toBe(0);
   });
-
-  it("rejects a secondary sector equal to the primary before any write", async () => {
-    const { db, writes } = makeDb(async () => ({}));
-
-    const result = await foundCorporation({
-      db: db as never,
-      userId: new ObjectId().toString(),
-      character: makeCharacter(),
-      request: { ...request, secondaryType: "manufacturing" } as never,
-    });
-
-    expect(result).toEqual({
+  it("does not insert when fresh founder cash is insufficient", async () => {
+    const f = fixture(0);
+    expect(
+      await foundCorporation({ ...f.input, character: { ...f.input.character, cashOnHand: 1e9 } })
+    ).toMatchObject({ ok: false, status: 400 });
+    expect(await f.db.collection("corporations").countDocuments({})).toBe(0);
+  });
+  it("lets a second character on the same account found a corporation", async () => {
+    const f = fixture();
+    f.memory.seed("corporations", [
+      {
+        _id: new ObjectId(),
+        userId: new ObjectId(f.input.userId),
+        ceoId: new ObjectId(),
+        ceoType: "character",
+        tickerSymbol: "OTHER",
+      },
+    ]);
+    expect(await foundCorporation(f.input)).toMatchObject({ ok: true, status: 201 });
+    expect(await f.db.collection("corporations").countDocuments({})).toBe(2);
+  });
+  it("rejects a character that already owns a corporation", async () => {
+    const f = fixture();
+    f.memory.seed("corporations", [
+      { _id: new ObjectId(), ceoId: f.input.character._id, ceoType: "character" },
+    ]);
+    expect(await foundCorporation(f.input)).toMatchObject({
       ok: false,
       status: 400,
-      error: "Secondary sector must be different from the primary sector",
+      error: "This character already owns a corporation.",
     });
-    expect(writes).toEqual([]);
-    expect(atomicallyDebitCharacterCash).not.toHaveBeenCalled();
+    expect(
+      (await f.db.collection("characters").findOne({ _id: f.input.character._id }))!.cashOnHand
+    ).toBe(1e9);
+  });
+  it("rejects identical primary and secondary sectors without charging", async () => {
+    const f = fixture();
+    expect(
+      await foundCorporation({
+        ...f.input,
+        request: { ...f.input.request, secondaryType: "manufacturing" },
+      })
+    ).toMatchObject({ ok: false, status: 400 });
+    expect(
+      (await f.db.collection("characters").findOne({ _id: f.input.character._id }))!.cashOnHand
+    ).toBe(1e9);
+    expect(await f.db.collection("corporations").countDocuments({})).toBe(0);
   });
 });

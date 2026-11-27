@@ -1,3 +1,8 @@
+import type { AnyBulkWriteOperation } from "mongodb";
+import type { FederalBudget } from "@/lib/db/types";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { createHash } from "node:crypto";
 import {
   organizationCashContext,
   organizationLocalPerAnchor,
@@ -128,6 +133,19 @@ export async function chargeOrganizationDues(
   memberGdpUsd: { countryId: CountryId; gdpUsd: number }[],
   options?: OrganizationCashOptions
 ): Promise<number> {
+  if (memberGdpUsd.length === 0) return 0;
+  const turn = options?.turn ?? options?.context?.turn ?? (await getCurrentTurn(db));
+  const phase = `organization-dues-${createHash("sha256").update(organizationId).digest("hex")}`;
+  return withTurnValueSettlement(db, phase, turn, (db) =>
+    chargeOrganizationDuesWork(db, organizationId, memberGdpUsd, options)
+  );
+}
+async function chargeOrganizationDuesWork(
+  db: Db,
+  organizationId: InternationalOrganizationId,
+  memberGdpUsd: { countryId: CountryId; gdpUsd: number }[],
+  options?: OrganizationCashOptions
+): Promise<number> {
   const { duesRateAnnual, currencyCountryId } = await getOrganizationFund(db, organizationId);
   if (!(duesRateAnnual > 0) || memberGdpUsd.length === 0) return 0;
   const context = await organizationCashContext(db, options);
@@ -137,7 +155,43 @@ export async function chargeOrganizationDues(
     const budget = federalBudgetCollection(db);
     let totalFund = 0;
     const fundedCash = batch?.treasuryCashLedgerEnabled === true;
-    let fundReady = false;
+
+    if (
+      fundedCash &&
+      batch &&
+      memberGdpUsd.some((member) => {
+        const due = memberDueUsd(member.gdpUsd, duesRateAnnual);
+        return due > 0 && Math.round(due / getGdpAnchorRate(member.countryId, preset)) > 0;
+      })
+    ) {
+      const fundCollection = await getOrganizationFundsCollection(db);
+      await fundCollection.updateOne(
+        { organizationId },
+        {
+          $setOnInsert: {
+            _id: new ObjectId(),
+            organizationId,
+            balanceLocal: 0,
+            duesRateAnnual,
+            currencyCountryId,
+          },
+        },
+        { upsert: true }
+      );
+    }
+    const legacyDebitOps: AnyBulkWriteOperation<FederalBudget>[] = [];
+    const legacyCountries = !fundedCash
+      ? new Set(
+          (
+            await budget
+              .find(
+                { countryId: { $in: memberGdpUsd.map((member) => member.countryId) } },
+                { projection: { countryId: 1 } }
+              )
+              .toArray()
+          ).map((row) => row.countryId)
+        )
+      : new Set<CountryId>();
     for (const m of memberGdpUsd) {
       const dueUsd = memberDueUsd(m.gdpUsd, duesRateAnnual);
       if (dueUsd <= 0) continue;
@@ -153,23 +207,6 @@ export async function chargeOrganizationDues(
         const treasuryRate = organizationTreasuryLocalPerAnchor(batch, m.countryId);
         const fundRate = organizationLocalPerAnchor(batch, currencyCountryId);
         const fundAmount = (dueLocal / treasuryRate) * fundRate;
-        if (!fundReady) {
-          const fundCollection = await getOrganizationFundsCollection(db);
-          await fundCollection.updateOne(
-            { organizationId },
-            {
-              $setOnInsert: {
-                _id: new ObjectId(),
-                organizationId,
-                balanceLocal: 0,
-                duesRateAnnual,
-                currencyCountryId,
-              },
-            },
-            { upsert: true }
-          );
-          fundReady = true;
-        }
         const result = await settleOrganizationFundedCashMove(db, batch, {
           key: `organization-dues:${batch.turn}:${organizationId}:${m.countryId}`,
           kind: "organization_dues",
@@ -197,11 +234,13 @@ export async function chargeOrganizationDues(
           totalFund += fundAmount;
         }
       } else {
-        const debit = await budget.updateOne(
-          { countryId: m.countryId },
-          { $inc: { treasuryBalance: -dueLocal }, $set: { updatedAt: now } }
-        );
-        if (debit.matchedCount !== 1) continue;
+        if (!legacyCountries.has(m.countryId)) continue;
+        legacyDebitOps.push({
+          updateOne: {
+            filter: { countryId: m.countryId },
+            update: { $inc: { treasuryBalance: -dueLocal }, $set: { updatedAt: now } },
+          },
+        });
         await witnessOrganizationCash(db, batch, {
           kind: "government",
           ref: m.countryId,
@@ -211,10 +250,15 @@ export async function chargeOrganizationDues(
           now,
         });
         const fundRate = getGdpAnchorRate(currencyCountryId, preset);
-        totalFund += dueUsd / fundRate;
+        totalFund += (dueLocal * rate) / fundRate;
       }
     }
-    const totalFundRounded = Math.round(totalFund);
+    if (legacyDebitOps.length) {
+      const debits = await budget.bulkWrite(legacyDebitOps);
+      if (debits.matchedCount !== legacyDebitOps.length)
+        throw new Error("Organization treasury changed during collection");
+    }
+    const totalFundRounded = Math.round(totalFund * 100) / 100;
     if (!fundedCash && totalFundRounded > 0) {
       const col = await getOrganizationFundsCollection(db);
       const credit = await col.updateOne(

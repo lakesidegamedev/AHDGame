@@ -6,7 +6,7 @@ import { resolveBondCurrency } from "./bondTurnHelpers";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { isUnfundableOverdueMaturity } from "@/lib/bonds/sovereignMaturityWave";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { PartialTxEntry } from "./bondTurnLedger";
 import { ObjectId } from "mongodb";

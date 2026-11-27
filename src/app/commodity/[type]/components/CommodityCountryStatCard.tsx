@@ -37,7 +37,7 @@ interface CommodityCountryStatCardProps {
   market?: FundedCountryMarket;
   mode: MapMode;
   onModeChange: (mode: MapMode) => void;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   position?: { x: number; y: number };
   onClose: () => void;
@@ -202,7 +202,7 @@ function CardContent({
   market?: FundedCountryMarket;
   hasRegionMap: boolean;
   currencyCode: CurrencyCode;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
   onModeChange: (mode: MapMode) => void;
   onClose: () => void;

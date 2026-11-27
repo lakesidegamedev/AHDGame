@@ -1,10 +1,10 @@
 import type { Db } from "mongodb";
 import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
-import type { CorporateSector, FederalBudget, CentralBank, Bond, GameState } from "@/lib/db/types";
+import type { CorporateSector, FederalBudget, CentralBank, Bond } from "@/lib/db/types";
 import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pendingFirmActivity";
 import {
   HONEST_LOANS_STAGE,
-  loadConstructionLoanDebtAnchorByCorpId,
+  loadCorporateLoanDebtAnchorByCorpId,
 } from "@/lib/corporations/honestBalanceSheets";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
@@ -28,7 +28,6 @@ import { sectorCountryForClearing } from "./sectorCountry";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { type ManufacturingProductProject } from "@/lib/products/manufacturingProject";
 import { type MediaProductProject } from "@/lib/products/mediaProduct";
-import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
 import {
   getUnemploymentMarginModifier,
   getGridReliabilityMarginModifier,
@@ -642,9 +641,9 @@ export async function buildCorporationLookups(
     typeof overheadCfg?.honestBalanceSheetsStage === "number"
       ? overheadCfg.honestBalanceSheetsStage
       : 0;
-  const constructionLoanDebtByCorpId =
+  const corporateLoanDebtByCorpId =
     honestBalanceSheetsStage >= HONEST_LOANS_STAGE
-      ? await loadConstructionLoanDebtAnchorByCorpId(db, exchangeRatesByCurrency)
+      ? await loadCorporateLoanDebtAnchorByCorpId(db, exchangeRatesByCurrency)
       : new Map<string, number>();
   // Control-group roots for size costs (contestability plan): every corp
   // resolved to its ultimate controlling owner. Only built when a group size
@@ -1042,7 +1041,7 @@ export async function buildCorporationLookups(
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
     managementOverheadPpByCorpId,
     honestBalanceSheetsStage,
-    constructionLoanDebtByCorpId,
+    corporateLoanDebtByCorpId,
     fundedOverheadStage:
       typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 1,
     fundedHeadcountStage:

@@ -30,7 +30,7 @@ export async function DELETE(
       return errorResponse(403, "Only the sitting leader can withdraw this endorsement");
     }
 
-    const result = await withdrawExecutiveEndorsement(db, new ObjectId(id), "manual");
+    const result = await withdrawExecutiveEndorsement(db, new ObjectId(id), "manual", countryId);
     return statusResponse(result.status, result.body);
   } catch (error) {
     return handleRouteError(error);

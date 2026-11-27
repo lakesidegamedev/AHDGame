@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { applyBoardDelta, applyBoardValueDeltasByRegion } from "./boardWrite";
+
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 
 const FAMILY = "governance.integrity";
 

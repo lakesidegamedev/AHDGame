@@ -1,3 +1,4 @@
+import { reserveExchangeQuote } from "@/lib/centralBank/rules/reserveExchange";
 // POST /api/country/[code]/central-bank/reserve-exchange - Convert central-bank reserve balances between currencies.
 // Auth: requireAuth
 // Errors: 400, 401, 403, 404
@@ -11,13 +12,9 @@ import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { isSameCountry } from "@/lib/api/sameCountry";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import {
-  FOREX_ACTIVE_CURRENCIES,
-  MARKET_MAKER_SPREAD,
-  ZOD_ACTIVE_CURRENCY_ENUM,
-} from "@/lib/constants/currencies";
+import { FOREX_ACTIVE_CURRENCIES, ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { exchangeRatesCollection } from "@/lib/db/repositories/exchangeRates";
 
@@ -88,7 +85,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const rates = await exchangeRatesCollection(db)
-      .find({ currencyCode: { $in: [fromCurrency, toCurrency] } })
+      .find({ $or: [{ currencyCode: { $in: [fromCurrency, toCurrency] } }, { _id: bankId }] })
       .toArray();
     const rateByCurrency = new Map(rates.map((rate) => [rate.currencyCode, rate.rate]));
     const fromRate = rateByCurrency.get(fromCurrency);
@@ -97,25 +94,26 @@ export async function POST(request: Request, context: RouteContext) {
       throw badRequest("Exchange rate is unavailable for one or both currencies");
     }
 
-    // Charge spread fee on reserve exchange (same MARKET_MAKER_SPREAD as player trades)
-    const spreadFee = Math.max(1, Math.round(amount * MARKET_MAKER_SPREAD));
-    const netAmount = amount - spreadFee;
-    const receivedAmount = Math.round((netAmount / fromRate) * toRate);
-    if (!Number.isFinite(receivedAmount) || receivedAmount <= 0) {
-      throw badRequest("Exchange amount is too small at current rates");
-    }
+    const homeRate = rates.find((rate) => rate._id === bankId)?.rate;
+    const quote = reserveExchangeQuote(amount, fromRate, toRate, homeRate ?? NaN);
+    if (!quote)
+      throw badRequest("Exchange amount or home-currency quote is unavailable at current rates");
+    const { receivedAmount, revenueHome } = quote;
 
     const result = await centralBanksCollection(db).updateOne(
-      { _id: bankId, [`spreadFeeReserveBalances.${fromCurrency}`]: { $gte: amount } },
+      {
+        _id: bankId,
+        [`spreadFeeReserveBalances.${fromCurrency}`]: { $gte: amount },
+        ...(!isAdmin ? { chairCharacterId: myChar._id, chairControlsLocked: { $ne: true } } : {}),
+      },
       {
         $inc: {
           [`spreadFeeReserveBalances.${fromCurrency}`]: -amount,
           [`spreadFeeReserveBalances.${toCurrency}`]: receivedAmount,
-          forexRevenue: Math.floor(spreadFee / 2),
+          forexRevenue: revenueHome,
         },
         $set: { updatedAt: new Date() },
-      },
-      { upsert: true }
+      }
     );
     if (result.matchedCount === 0) throw badRequest(`Insufficient ${fromCurrency} reserve balance`);
 
@@ -125,7 +123,7 @@ export async function POST(request: Request, context: RouteContext) {
       toCurrency,
       spentAmount: amount,
       receivedAmount,
-      rate: toRate / fromRate,
+      rate: quote.rate,
     });
   } catch (error) {
     return handleRouteError(error);

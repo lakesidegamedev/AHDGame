@@ -64,10 +64,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(400, res.reason ?? "Cannot train");
     }
 
-    await getCharacterGeneralsCollection(db).updateOne(
-      { characterId: charId },
+    const trained = await getCharacterGeneralsCollection(db).updateOne(
+      { characterId: charId, commissioned: { $ne: false }, general },
       { $set: { general: res.general } }
     );
+    if (trained.matchedCount !== 1)
+      return errorResponse(409, "Your general profile changed. Refresh and try again.");
     return NextResponse.json({ general: res.general });
   } catch (error) {
     return handleRouteError(error);

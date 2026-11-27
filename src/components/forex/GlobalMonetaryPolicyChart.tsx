@@ -1,5 +1,6 @@
 "use client";
 
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import type { CountryMacroSnapshot, MacroMetric } from "@/app/country/[code]/forex/types";
 import { type CountryId } from "@/lib/constants/countriesCore";
@@ -90,9 +91,12 @@ export function GlobalMonetaryPolicyChart({ countries, defaultCountryIds }: Prop
     () =>
       countries.map((c) => ({
         ...c,
-        inflationHistory: slicePointsByTurnWindow(c.inflationHistory, timeframe),
-        interestRateHistory: slicePointsByTurnWindow(c.interestRateHistory, timeframe),
-        gdpGrowthHistory: slicePointsByTurnWindow(c.gdpGrowthHistory, timeframe),
+        inflationHistory: slicePointsByTurnWindow(uniqueTurnHistory(c.inflationHistory), timeframe),
+        interestRateHistory: slicePointsByTurnWindow(
+          uniqueTurnHistory(c.interestRateHistory),
+          timeframe
+        ),
+        gdpGrowthHistory: slicePointsByTurnWindow(uniqueTurnHistory(c.gdpGrowthHistory), timeframe),
       })),
     [countries, timeframe]
   );

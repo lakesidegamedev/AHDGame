@@ -24,7 +24,7 @@ import { getStateLean } from "@/lib/utils/demographics";
 import type { NPP } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import { getPartyNppControlStatus } from "@/lib/parties/antiAbuseGuards";
 import { getPartyNppCapacity, partyNppCapacityError } from "@/lib/npp/partyCapacity";
 import { activePartyNppFilter } from "@/lib/npp/recruitmentScope";
@@ -396,99 +396,28 @@ export async function POST(
         );
       }
 
-      await runWithOptionalTransaction(
-        async (session) => {
-          const deductResult = await statePartyOrgCollection(db).updateOne(
-            {
-              stateId,
-              partyId: partyIdStr,
-              nppActionPoints: { $gte: recruitCost },
-              treasury: { $gte: recruitFund },
-              ...cooldownReadyFilter,
-            },
-            {
-              $inc: { nppActionPoints: -recruitCost, treasury: -recruitFund },
-              $set: { ...cooldownSet, updatedAt: now },
-            },
-            { session }
-          );
+      await runWithDbSession(db, async (session) => {
+        const deductResult = await statePartyOrgCollection(db).updateOne(
+          {
+            stateId,
+            partyId: partyIdStr,
+            nppActionPoints: { $gte: recruitCost },
+            treasury: { $gte: recruitFund },
+            ...cooldownReadyFilter,
+          },
+          {
+            $inc: { nppActionPoints: -recruitCost, treasury: -recruitFund },
+            $set: { ...cooldownSet, updatedAt: now },
+          },
+          { session }
+        );
 
-          if (deductResult.matchedCount === 0) {
-            throw new Error("STATE_RECRUITMENT_CHANGED");
-          }
-
-          await nppsCollection(db).insertOne(npp, { session });
-        },
-        async () => {
-          const deductResult = await statePartyOrgCollection(db).updateOne(
-            {
-              stateId,
-              partyId: partyIdStr,
-              nppActionPoints: { $gte: recruitCost },
-              treasury: { $gte: recruitFund },
-              ...cooldownReadyFilter,
-            },
-            {
-              $inc: { nppActionPoints: -recruitCost, treasury: -recruitFund },
-              $set: { ...cooldownSet, updatedAt: now },
-            }
-          );
-
-          if (deductResult.matchedCount === 0) {
-            throw new Error("STATE_RECRUITMENT_CHANGED");
-          }
-
-          try {
-            await nppsCollection(db).insertOne(npp);
-          } catch (error) {
-            const rollbackUpdate: {
-              $inc: { nppActionPoints: number; treasury: number };
-              $set: {
-                updatedAt: Date;
-                nppRecruitmentCooldownUntil?: Date;
-                nppRecruitmentCooldownUntilTurn?: number;
-              };
-              $unset?: Partial<{
-                nppRecruitmentCooldownUntil: "";
-                nppRecruitmentCooldownUntilTurn: "";
-              }>;
-            } = {
-              $inc: { nppActionPoints: recruitCost, treasury: recruitFund },
-              $set: { updatedAt: new Date() },
-            };
-
-            // Restore each pre-recruit cooldown field independently: $set the ones
-            // that existed, $unset the ones that did not — so a rollback never
-            // leaves a phantom turn/Date cooldown behind (e.g. a legacy org that
-            // had only the Date field would otherwise keep the freshly-written turn).
-            const rollbackUnset: Partial<{
-              nppRecruitmentCooldownUntil: "";
-              nppRecruitmentCooldownUntilTurn: "";
-            }> = {};
-            if (statePartyOrg?.nppRecruitmentCooldownUntil) {
-              rollbackUpdate.$set.nppRecruitmentCooldownUntil =
-                statePartyOrg.nppRecruitmentCooldownUntil;
-            } else {
-              rollbackUnset.nppRecruitmentCooldownUntil = "";
-            }
-            if (statePartyOrg?.nppRecruitmentCooldownUntilTurn != null) {
-              rollbackUpdate.$set.nppRecruitmentCooldownUntilTurn =
-                statePartyOrg.nppRecruitmentCooldownUntilTurn;
-            } else {
-              rollbackUnset.nppRecruitmentCooldownUntilTurn = "";
-            }
-            if (Object.keys(rollbackUnset).length > 0) {
-              rollbackUpdate.$unset = rollbackUnset;
-            }
-
-            await statePartyOrgCollection(db).updateOne(
-              { stateId, partyId: partyIdStr },
-              rollbackUpdate
-            );
-            throw error;
-          }
+        if (deductResult.matchedCount === 0) {
+          throw new Error("STATE_RECRUITMENT_CHANGED");
         }
-      );
+
+        await nppsCollection(db).insertOne(npp, { session });
+      });
 
       console.log(
         `[NPP Recruitment] State leadership ${auth.character.name} recruited ${name} in ${state.name} for ${party.name}`

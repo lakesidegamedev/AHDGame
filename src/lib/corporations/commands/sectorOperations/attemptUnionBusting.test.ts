@@ -34,6 +34,19 @@ vi.mock("@/lib/labour/unionBusting", async (importOriginal) => {
   return { ...actual, rollD100: vi.fn() };
 });
 
+vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/currency/corporationCapital")>()),
+  loadValuationFxRates: vi.fn().mockResolvedValue(
+    new Map([
+      ["USD", 1],
+      ["CAD", 2],
+      ["JPY", 100],
+      ["GBP", 1],
+      ["PLZ", 1],
+    ])
+  ),
+}));
+
 function makeCorp(overrides: Partial<Corporation> = {}): Corporation {
   return {
     _id: new ObjectId(),
@@ -130,6 +143,15 @@ function mockDb({
 }
 
 describe("attemptUnionBusting", () => {
+  it("charges a US owner for a Japanese site's host revenue in dollars", async () => {
+    const corp = makeCorp({ liquidCurrencyCode: "USD" });
+    const sector = makeSector(corp._id, { countryId: "JP", revenue: 2_400_000 });
+    const { db, corpUpdateOne } = mockDb({ sector });
+    const result = await attemptUnionBusting(db, corp, sector._id.toString(), 10);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.cashSpent).toBe(12_000);
+    expect(corpUpdateOne.mock.calls[0][1].$inc.liquidCapital).toBe(-12_000);
+  });
   it("returns 404 for a nonexistent sector", async () => {
     const corp = makeCorp();
     const db = {

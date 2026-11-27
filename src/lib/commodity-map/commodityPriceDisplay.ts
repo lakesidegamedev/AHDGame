@@ -10,9 +10,10 @@ export function getCommodityDisplayCurrency(countryId: CountryId): CurrencyCode 
 export function convertCommodityPrice(
   amount: number,
   currencyCode: CurrencyCode,
-  forexEnabled: boolean,
+  forexEnabled: boolean | null,
   exchangeRates?: Partial<Record<CurrencyCode, number>>
 ): number | null {
+  if (forexEnabled == null) return null;
   if (!forexEnabled) return amount;
   return convertFromInternal(amount, currencyCode, exchangeRates);
 }
@@ -20,7 +21,7 @@ export function convertCommodityPrice(
 export function formatCommodityPrice(
   amount: number,
   currencyCode: CurrencyCode,
-  forexEnabled: boolean,
+  forexEnabled: boolean | null,
   exchangeRates?: Partial<Record<CurrencyCode, number>>
 ): string {
   const converted = convertCommodityPrice(amount, currencyCode, forexEnabled, exchangeRates);

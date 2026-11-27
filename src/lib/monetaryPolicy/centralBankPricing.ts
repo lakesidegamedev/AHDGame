@@ -1,3 +1,5 @@
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import * as Sentry from "@sentry/nextjs";
 import type { Db } from "mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
@@ -186,7 +188,12 @@ export async function ensureCentralBankPricingPhaseIn(
     { $set: { "centralBankPricingPhaseIn.notificationSentTurn": currentTurn } }
   );
   if (notificationClaim.matchedCount > 0) {
-    await notifyExposedPlayers(db, adjustment, startedTurn);
+    const phaseStart = startedTurn;
+    await afterCommit(db, () =>
+      notifyExposedPlayers(unboundDb(db), adjustment, phaseStart).catch((error) => {
+        Sentry.captureException(error);
+      })
+    );
   }
 
   return { ...adjustment, startedTurn };

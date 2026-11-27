@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ObjectId, type Db } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { describe, expect, it } from "vitest";
+import { ObjectId } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { IndexFund } from "@/lib/db/types";
 import {
   NPP_ARCHETYPE_TARGET_FUND_SHARE,
@@ -133,101 +134,70 @@ describe("planNppFundRedemptions — pure rules", () => {
   });
 });
 
-describe("processNppFundRedemptions — gating", () => {
-  let db: MockDb;
-  beforeEach(() => {
-    db = createMockDb();
-    vi.clearAllMocks();
-  });
-
-  it("is a read-only no-op when the flag is absent", async () => {
-    db.collection("gameConfig").findOne.mockResolvedValue({ ledgerShadow: true });
-
-    const result = await processNppFundRedemptions(db as unknown as Db, {
+describe("processNppFundRedemptions", () => {
+  function world(enabled?: boolean, units = 20) {
+    const { db, memory } = createTransactionalMemoryDb();
+    memory.seed("gameState", [{ _id: "current", currentTurn: 8 }]);
+    memory.seed("gameConfig", [{ _id: "default", nppFundRedemptionEnabled: enabled }]);
+    memory.seed("indexFunds", [fund() as unknown as Record<string, unknown>]);
+    memory.seed("indexFundPositions", [
+      { _id: new ObjectId(), fundId: FUND_ID, holderKind: "npp", nppId: NPP_ID, units },
+    ]);
+    memory.seed("npps", [{ _id: NPP_ID, nppInvestmentCashAnchor: 0 }]);
+    const options = {
       currentTurn: 8,
       activeFunds: [fund()],
-      archetypesByNppId: new Map([[NPP_ID.toString(), "conservative"]]),
+      archetypesByNppId: new Map([[String(NPP_ID), "conservative" as const]]),
+    };
+    return { db, memory, options };
+  }
+  it.each([undefined, false])("does no writes when disabled: %s", async (enabled) => {
+    const { db, memory, options } = world(enabled);
+    expect(await processNppFundRedemptions(db, options)).toEqual({
+      redemptionsQueued: 0,
+      unitsRedeemed: 0,
+      errors: [],
     });
-
-    expect(result).toEqual({ redemptionsQueued: 0, unitsRedeemed: 0, errors: [] });
-    // Nothing past the config read is touched — no positions, no queue.
-    expect(db.collectionMocks["indexFundPositions"]).toBeUndefined();
-    expect(db.collectionMocks["indexFundRedemptionQueue"]).toBeUndefined();
+    expect(memory.collection("bankMoneyMoves").docs).toHaveLength(0);
+    expect(memory.collection("indexFundRedemptionQueue").docs).toHaveLength(0);
   });
-
-  it("is a read-only no-op when the flag is explicitly false", async () => {
-    db.collection("gameConfig").findOne.mockResolvedValue({ nppFundRedemptionEnabled: false });
-
-    const result = await processNppFundRedemptions(db as unknown as Db, {
-      currentTurn: 8,
-      activeFunds: [fund()],
-      archetypesByNppId: new Map([[NPP_ID.toString(), "conservative"]]),
-    });
-
-    expect(result.redemptionsQueued).toBe(0);
-    expect(db.collectionMocks["indexFundPositions"]).toBeUndefined();
-    expect(db.collectionMocks["indexFundRedemptionQueue"]).toBeUndefined();
-  });
-
-  it("queues a bounded redemption through the shared enqueueRedemption path when enabled", async () => {
-    db.collection("gameConfig").findOne.mockResolvedValue({ nppFundRedemptionEnabled: true });
-    // NPP holds 20 units, no cash → overweight; planner caps at 2 units.
-    db.collection("indexFundPositions").find.mockReturnValue({
-      toArray: async () => [{ nppId: NPP_ID, fundId: FUND_ID, units: 20 }],
-    });
-    db.collection("npps").find.mockReturnValue({
-      toArray: async () => [{ _id: NPP_ID, nppInvestmentCashAnchor: 0 }],
-    });
-    // debitFundPosition reads the PRE-image (returnDocument: "before").
-    db.collection("indexFundPositions").findOneAndUpdate.mockResolvedValue({
-      _id: new ObjectId(),
-      fundId: FUND_ID,
-      holderKind: "npp",
-      nppId: NPP_ID,
-      units: 20,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    const result = await processNppFundRedemptions(db as unknown as Db, {
-      currentTurn: 8,
-      activeFunds: [fund()],
-      archetypesByNppId: new Map([[NPP_ID.toString(), "conservative"]]),
-    });
-
-    expect(result).toEqual({ redemptionsQueued: 1, unitsRedeemed: 2, errors: [] });
-    const queueInsert = db.collectionMocks["indexFundRedemptionQueue"]!.insertOne;
-    expect(queueInsert).toHaveBeenCalledTimes(1);
-    const entry = queueInsert.mock.calls[0]![0] as Record<string, unknown>;
-    expect(entry).toMatchObject({
-      fundId: FUND_ID,
-      holderKind: "npp",
-      nppId: NPP_ID,
+  it("queues a bounded claim once across concurrent turn retries", async () => {
+    const { db, memory, options } = world(true);
+    await Promise.all([
+      processNppFundRedemptions(db, options),
+      processNppFundRedemptions(db, options),
+    ]);
+    expect(memory.collection("indexFundRedemptionQueue").docs).toHaveLength(1);
+    expect(memory.collection("indexFundRedemptionQueue").docs[0]).toMatchObject({
       units: 2,
       requestedNavAnchor: 100,
       requestedAmountAnchor: 200,
-      paidAmountAnchor: 0,
       unitsBurnedAtRequest: true,
-      status: "queued",
     });
+    expect(memory.collection("indexFundPositions").docs[0].units).toBe(18);
+    expect(memory.collection("indexFunds").docs[0].unitSupply).toBe(999998);
   });
-
-  it("skips a position that is too small to redeem a whole unit this turn", async () => {
-    db.collection("gameConfig").findOne.mockResolvedValue({ nppFundRedemptionEnabled: true });
-    db.collection("indexFundPositions").find.mockReturnValue({
-      toArray: async () => [{ nppId: NPP_ID, fundId: FUND_ID, units: 1 }],
+  it("retains the claim if queue publication is interrupted, then retries once", async () => {
+    const { db, memory, options } = world(true);
+    const fault = withInjectedCrash(memory, {
+      collection: "indexFundRedemptionQueue",
+      op: "insertMany",
+      onCall: 1,
+      afterWrite: true,
     });
-    db.collection("npps").find.mockReturnValue({
-      toArray: async () => [{ _id: NPP_ID, nppInvestmentCashAnchor: 0 }],
-    });
-
-    const result = await processNppFundRedemptions(db as unknown as Db, {
-      currentTurn: 8,
-      activeFunds: [fund()],
-      archetypesByNppId: new Map([[NPP_ID.toString(), "conservative"]]),
-    });
-
-    expect(result.redemptionsQueued).toBe(0);
-    expect(db.collectionMocks["indexFundRedemptionQueue"]).toBeUndefined();
+    Object.assign(fault.db, { client: db.client });
+    const failed = await processNppFundRedemptions(fault.db, options);
+    expect(failed.errors.length).toBeGreaterThan(0);
+    expect(memory.collection("indexFundPositions").docs[0].units).toBe(20);
+    expect(memory.collection("indexFunds").docs[0].unitSupply).toBe(1000000);
+    expect(memory.collection("indexFundRedemptionQueue").docs).toHaveLength(0);
+    fault.disarm();
+    await processNppFundRedemptions(db, options);
+    expect(memory.collection("indexFundRedemptionQueue").docs).toHaveLength(1);
+  });
+  it("keeps a sub-unit position untouched", async () => {
+    const { db, memory, options } = world(true, 1);
+    expect((await processNppFundRedemptions(db, options)).redemptionsQueued).toBe(0);
+    expect(memory.collection("indexFundPositions").docs[0].units).toBe(1);
   });
 });

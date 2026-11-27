@@ -3,7 +3,7 @@ import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { CentralBank, RateChangeRecord } from "@/lib/db/types/centralBank";
 import { SYSTEM_RATE_ACTOR } from "@/lib/centralBank/rateHistory";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { isCommandEconomy } from "@/lib/constants/commandEconomy";
 import { getEraMonetaryBaseline } from "@/lib/constants/monetaryEra";
@@ -27,10 +27,10 @@ import {
   computeNppChairRateTarget,
 } from "@/lib/nppAutonomy/rules/chairRateTarget";
 import { nationalOutputGap } from "@/lib/metricEngine/outputTrend";
-import type { State } from "@/lib/db/types/state";
+
 export { computeNppChairRateTarget } from "@/lib/nppAutonomy/rules/chairRateTarget";
 import { isBankGovernmentControlled } from "@/lib/centralBank/governance";
-import type { ExchangeRate, InterventionPolicy } from "@/lib/db/types/exchangeRate";
+import type { InterventionPolicy } from "@/lib/db/types/exchangeRate";
 import {
   INITIAL_RATES,
   INTERVENTION_POLICY_COOLDOWN_TURNS,
@@ -311,15 +311,21 @@ export async function processNppChairAutoRate(
         reason: taylor,
       };
 
-  await centralBanksCollection(db).updateOne(
-    { _id: bank._id },
-    {
-      $set: governmentControlled
-        ? { primeRate: newRate, lastStandingAdviceTurn: currentTurn, updatedAt: now }
-        : { primeRate: newRate, lastRateChangeTurn: currentTurn, updatedAt: now },
-      $push: { rateHistory: { $each: [record], $slice: -RATE_HISTORY_MAX } },
-    }
-  );
+  const unchangedBank: Record<string, unknown> = {
+    _id: bank._id,
+    chairMode: bank.chairMode,
+    chairNppId: bank.chairNppId ?? null,
+    governmentControlled: bank.governmentControlled ?? null,
+    primeRate: bank.primeRate,
+    lastRateChangeTurn: bank.lastRateChangeTurn ?? null,
+    lastStandingAdviceTurn: bank.lastStandingAdviceTurn ?? null,
+  };
+  await centralBanksCollection(db).updateOne(unchangedBank, {
+    $set: governmentControlled
+      ? { primeRate: newRate, lastStandingAdviceTurn: currentTurn, updatedAt: now }
+      : { primeRate: newRate, lastRateChangeTurn: currentTurn, updatedAt: now },
+    $push: { rateHistory: { $each: [record], $slice: -RATE_HISTORY_MAX } },
+  });
 }
 
 /**

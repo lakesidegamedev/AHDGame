@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -50,6 +53,7 @@ let db: MockDb;
 
 beforeEach(async () => {
   db = createMockDb();
+  db.collection("shareListings").updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
   vi.clearAllMocks();
 
   const { isForexEnabled } = await import("@/lib/currency/featureFlag");

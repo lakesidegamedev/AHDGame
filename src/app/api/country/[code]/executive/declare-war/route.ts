@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 // POST /api/country/[code]/executive/declare-war
 // The executive introduces a declaration of war; the chambers then ratify it at a
 // two-thirds bar (see billPassRule). Auth: head of government or defence seat.
@@ -56,148 +57,150 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const { character } = auth.user;
 
     const db = await getDb();
-    const gs = await (
-      await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const gs = await (
+        await getGameStateCollection(db)
+      ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
 
-    const parsed = await parseJsonBody(request, bodySchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-    const targetCountry = parsed.data.targetCountry.toUpperCase();
+      const parsed = await parseJsonBody(request, bodySchema);
+      if (!parsed.success) {
+        return errorResponse(parsed.status, parsed.error);
+      }
+      const targetCountry = parsed.data.targetCountry.toUpperCase();
 
-    // Only the executive takes the country to war; the chambers then ratify.
-    //
-    // Resolved through the shared helper because it branches on the RUNTIME
-    // government type. `governmentFormations.pmCharacterId` is the PARLIAMENTARY
-    // path only — a presidential leader is a row in `electedOfficials` with
-    // officeType "president". Reading pmCharacterId directly locked the US
-    // President out of declaring war entirely, leaving only the defence seat: the
-    // exact failure this spec set out to avoid.
-    const hog = await getHeadOfGovernmentCharacterId(db, countryId);
-    const isHog = !!hog && hog.toString() === character._id.toString();
-    const defenceSeat = DEFENSE_POSITION_BY_COUNTRY[countryId];
-    const isDefence =
-      !!defenceSeat &&
-      !!(await cabinetMembersCollection<Document>(db).findOne({
-        countryId,
-        positionId: defenceSeat,
-        characterId: character._id,
-      }));
-    if (!auth.user.isAdmin && !isHog && !isDefence) {
-      return errorResponse(
-        403,
-        "Only the head of government or the defence minister may declare war."
-      );
-    }
-
-    const currentTurn = gs?.currentTurn ?? 0;
-    const check = await validateDeclareWar(
-      db,
-      { targetCountry, warGoal: parsed.data.warGoal },
-      countryId,
-      currentTurn
-    );
-    if (!check.ok) return errorResponse(check.status, check.error);
-
-    // One live declaration at a time, so a chamber is never asked to ratify two
-    // wars against the same country at once.
-    const existing = await billsCollection(db).findOne({
-      countryId,
-      status: { $in: ["proposed", "active", "passed_origin", "active_other", "active_both"] },
-      "provisions.type": "declare_war",
-      "provisions.targetCountry": targetCountry,
-    });
-    if (existing) {
-      return errorResponse(
-        409,
-        "A declaration against that country is already before the legislature."
-      );
-    }
-
-    // The same stake any other bill proposal puts up, charged only once every check
-    // above has passed so a refused declaration is free. `billEnactment` refunds it
-    // from `proposalActionCost` if the chambers actually pass the thing.
-    const actionCost = BILL_PROPOSE_ACTION_COST;
-    if (!auth.user.isAdmin) {
-      // Re-read rather than trusting `auth.user.character`, which is a snapshot taken
-      // at the top of the request and may have been spent down since.
-      const fresh = await charactersCollection(db).findOne(
-        { _id: character._id },
-        { projection: { actions: 1 } }
-      );
-      const currentActions = fresh?.actions ?? 0;
-      if (currentActions < actionCost) {
+      // Only the executive takes the country to war; the chambers then ratify.
+      //
+      // Resolved through the shared helper because it branches on the RUNTIME
+      // government type. `governmentFormations.pmCharacterId` is the PARLIAMENTARY
+      // path only — a presidential leader is a row in `electedOfficials` with
+      // officeType "president". Reading pmCharacterId directly locked the US
+      // President out of declaring war entirely, leaving only the defence seat: the
+      // exact failure this spec set out to avoid.
+      const hog = await getHeadOfGovernmentCharacterId(db, countryId);
+      const isHog = !!hog && hog.toString() === character._id.toString();
+      const defenceSeat = DEFENSE_POSITION_BY_COUNTRY[countryId];
+      const isDefence =
+        !!defenceSeat &&
+        !!(await cabinetMembersCollection<Document>(db).findOne({
+          countryId,
+          positionId: defenceSeat,
+          characterId: character._id,
+        }));
+      if (!auth.user.isAdmin && !isHog && !isDefence) {
         return errorResponse(
-          400,
-          `Proposing a bill costs ${actionCost} action points (you have ${currentActions}).`
+          403,
+          "Only the head of government or the defence minister may declare war."
         );
       }
-      // Conditional $inc, not read-then-write: two declarations submitted at once
-      // would both clear the check above and both spend the same points.
-      const spend = await charactersCollection(db).updateOne(
-        { _id: character._id, actions: { $gte: actionCost } },
-        { $inc: { actions: -actionCost }, $set: { updatedAt: new Date() } }
+
+      const currentTurn = gs?.currentTurn ?? 0;
+      const check = await validateDeclareWar(
+        db,
+        { targetCountry, warGoal: parsed.data.warGoal },
+        countryId,
+        currentTurn
       );
-      if (spend.modifiedCount === 0) {
-        return errorResponse(409, "Your actions changed. Please try again.");
-      }
-    }
+      if (!check.ok) return errorResponse(check.status, check.error);
 
-    const config = getCountryConfig(countryId);
-    const now = new Date();
-    const goal = parsed.data.warGoal as WarGoal;
-    const targetName = COUNTRY_CONFIGS[targetCountry as CountryId]?.name ?? targetCountry;
-
-    const bill: Omit<Bill, "_id"> = {
-      title: `Declaration of War against ${targetName}`,
-      summary: `A declaration of war against ${targetName}. Stated aim: ${warGoalLabel(goal)}.`,
-      fullText: "",
-      category: "foreign_policy",
-      provisions: [
-        { type: "declare_war", targetCountry: targetCountry as CountryId, warGoal: goal },
-      ],
-      originChamber: config.legislature.lowerChamber.key,
-      currentChamber: config.legislature.lowerChamber.key,
-      countryId,
-      status: "active",
-      effectDirection: 0,
-      sponsorId: character._id,
-      sponsorName: character.name,
-      sponsorParty: character.party?.toString(),
-      votesFor: 0,
-      votesAgainst: 0,
-      votesAbstain: 0,
-      votes: {},
-      votingStartedAt: now,
-      votingEndsAt: new Date(now.getTime() + VOTE_DURATION_MS),
-      proposedAt: now,
-      // Stamped so the cooldown counts turns rather than inferring them from a date.
-      proposedTurn: currentTurn,
-      // What `billEnactment` refunds on passage. Omitted for admins, who paid nothing.
-      ...(!auth.user.isAdmin ? { proposalActionCost: actionCost } : {}),
-      createdAt: now,
-      updatedAt: now,
-    } as Omit<Bill, "_id">;
-
-    // Hand the points back if the insert fails — the points were spent to file a bill
-    // that now does not exist, and nothing downstream would ever refund them.
-    let result;
-    try {
-      result = await billsCollection(db).insertOne(bill as Bill);
-    } catch (error) {
-      if (!auth.user.isAdmin) {
-        await charactersCollection(db).updateOne(
-          { _id: character._id },
-          { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
+      // One live declaration at a time, so a chamber is never asked to ratify two
+      // wars against the same country at once.
+      const existing = await billsCollection(db).findOne({
+        countryId,
+        status: { $in: ["proposed", "active", "passed_origin", "active_other", "active_both"] },
+        "provisions.type": "declare_war",
+        "provisions.targetCountry": targetCountry,
+      });
+      if (existing) {
+        return errorResponse(
+          409,
+          "A declaration against that country is already before the legislature."
         );
       }
-      throw error;
-    }
-    return NextResponse.json({
-      success: true,
-      billId: result.insertedId.toString(),
-      votingEndsAt: bill.votingEndsAt,
+
+      // The same stake any other bill proposal puts up, charged only once every check
+      // above has passed so a refused declaration is free. `billEnactment` refunds it
+      // from `proposalActionCost` if the chambers actually pass the thing.
+      const actionCost = BILL_PROPOSE_ACTION_COST;
+      if (!auth.user.isAdmin) {
+        // Re-read rather than trusting `auth.user.character`, which is a snapshot taken
+        // at the top of the request and may have been spent down since.
+        const fresh = await charactersCollection(db).findOne(
+          { _id: character._id },
+          { projection: { actions: 1 } }
+        );
+        const currentActions = fresh?.actions ?? 0;
+        if (currentActions < actionCost) {
+          return errorResponse(
+            400,
+            `Proposing a bill costs ${actionCost} action points (you have ${currentActions}).`
+          );
+        }
+        // Conditional $inc, not read-then-write: two declarations submitted at once
+        // would both clear the check above and both spend the same points.
+        const spend = await charactersCollection(db).updateOne(
+          { _id: character._id, actions: { $gte: actionCost } },
+          { $inc: { actions: -actionCost }, $set: { updatedAt: new Date() } }
+        );
+        if (spend.modifiedCount === 0) {
+          return errorResponse(409, "Your actions changed. Please try again.");
+        }
+      }
+
+      const config = getCountryConfig(countryId);
+      const now = new Date();
+      const goal = parsed.data.warGoal as WarGoal;
+      const targetName = COUNTRY_CONFIGS[targetCountry as CountryId]?.name ?? targetCountry;
+
+      const bill: Omit<Bill, "_id"> = {
+        title: `Declaration of War against ${targetName}`,
+        summary: `A declaration of war against ${targetName}. Stated aim: ${warGoalLabel(goal)}.`,
+        fullText: "",
+        category: "foreign_policy",
+        provisions: [
+          { type: "declare_war", targetCountry: targetCountry as CountryId, warGoal: goal },
+        ],
+        originChamber: config.legislature.lowerChamber.key,
+        currentChamber: config.legislature.lowerChamber.key,
+        countryId,
+        status: "active",
+        effectDirection: 0,
+        sponsorId: character._id,
+        sponsorName: character.name,
+        sponsorParty: character.party?.toString(),
+        votesFor: 0,
+        votesAgainst: 0,
+        votesAbstain: 0,
+        votes: {},
+        votingStartedAt: now,
+        votingEndsAt: new Date(now.getTime() + VOTE_DURATION_MS),
+        proposedAt: now,
+        // Stamped so the cooldown counts turns rather than inferring them from a date.
+        proposedTurn: currentTurn,
+        // What `billEnactment` refunds on passage. Omitted for admins, who paid nothing.
+        ...(!auth.user.isAdmin ? { proposalActionCost: actionCost } : {}),
+        createdAt: now,
+        updatedAt: now,
+      } as Omit<Bill, "_id">;
+
+      // Hand the points back if the insert fails — the points were spent to file a bill
+      // that now does not exist, and nothing downstream would ever refund them.
+      let result;
+      try {
+        result = await billsCollection(db).insertOne(bill as Bill);
+      } catch (error) {
+        if (!auth.user.isAdmin) {
+          await charactersCollection(db).updateOne(
+            { _id: character._id },
+            { $inc: { actions: actionCost }, $set: { updatedAt: new Date() } }
+          );
+        }
+        throw error;
+      }
+      return NextResponse.json({
+        success: true,
+        billId: result.insertedId.toString(),
+        votingEndsAt: bill.votingEndsAt,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

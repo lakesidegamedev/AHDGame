@@ -10,7 +10,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BSON, ObjectId, type Db } from "mongodb";
 import type { Bond, IndexFund } from "@/lib/db/types";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { countRoundTrips, type RoundTripCounter } from "@/lib/test-utils/roundTripCounter";
 import { deployBondReserveFromCash } from "./fundBondReserve";
 import { lazyFundBondCandidates } from "@/lib/bonds/fundBondCandidates";

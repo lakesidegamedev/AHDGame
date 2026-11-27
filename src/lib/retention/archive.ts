@@ -33,6 +33,7 @@ export async function archiveDocs(params: {
   filter: Document;
   cutoff: number;
   stamp: string;
+  onArchivedBatch?: (snapshots: Document[]) => Promise<void>;
 }): Promise<ArchiveResult> {
   const { db, dbName, collection, filter, cutoff, stamp } = params;
   const prefix = `retention/${dbName}/${collection}/turn-lt-${cutoff}-${stamp}`;
@@ -54,6 +55,13 @@ export async function archiveDocs(params: {
     keys.push(key);
     bytes += gz.length;
     part += 1;
+    if (params.onArchivedBatch) {
+      for (let offset = 0; offset < batch.length; offset += 100) {
+        await params.onArchivedBatch(
+          batch.slice(offset, offset + 100).map((line) => EJSON.parse(line, { relaxed: false }))
+        );
+      }
+    }
     batch = [];
   };
 

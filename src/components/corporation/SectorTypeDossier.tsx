@@ -1,5 +1,6 @@
 "use client";
 
+import { consolidateSiteStatements } from "@/lib/corporations/rules/siteStatement";
 import { sectorDisplayProfit } from "./sectorSortUtils";
 
 /**
@@ -60,11 +61,22 @@ export function SectorTypeDossier({
   const stateCount = typeStateCount(sectors);
 
   // The Total row's basis, so the dossier and the table below it never disagree.
-  const revenue = sumSectorDisplayRevenue(sectors);
-  const profit = sectors.reduce((sum, s) => sum + sectorDisplayProfit(s), 0);
-  const corpRevenue = sumSectorDisplayRevenue(allSectors);
+  const statements = sectors.flatMap((s) => (s.siteStatement ? [s.siteStatement] : []));
+  const consolidated =
+    statements.length === sectors.length && statements.length > 0
+      ? consolidateSiteStatements(statements)
+      : null;
+  const allStatements = allSectors.flatMap((s) => (s.siteStatement ? [s.siteStatement] : []));
+  const consolidatedCorp =
+    allStatements.length === allSectors.length && allStatements.length > 0
+      ? consolidateSiteStatements(allStatements)
+      : null;
+  const revenue = consolidated?.revenue ?? sumSectorDisplayRevenue(sectors);
+  const profit =
+    consolidated?.profit ?? sectors.reduce((sum, s) => sum + sectorDisplayProfit(s), 0);
+  const corpRevenue = consolidatedCorp?.revenue ?? sumSectorDisplayRevenue(allSectors);
   const revenueShare = corpRevenue > 0 ? Math.round((revenue / corpRevenue) * 100) : 0;
-  const blendedMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const blendedMargin = revenue > 0 ? (profit / revenue) * 100 : null;
   // Outsiders viewing a private corp get revenue stripped row by row; a zero
   // total in that case is redaction, not a business that earns nothing.
   const financialsRedacted = sectors.some((s) => s.revenue == null);
@@ -81,8 +93,12 @@ export function SectorTypeDossier({
     },
     {
       label: `Profit${suffix}`,
-      value: fmtMoney(profit * scaleFactor),
-      sub: financialsRedacted ? "" : `${blendedMargin.toFixed(1)}% blended margin`,
+      value: financialsRedacted ? "n/a" : fmtMoney(profit * scaleFactor),
+      sub: financialsRedacted
+        ? ""
+        : blendedMargin == null
+          ? "Margin unavailable"
+          : `${blendedMargin.toFixed(1)}% blended margin`,
       help: `Net profit of every ${facilitySingular(sectorType)} you own.`,
       tone:
         profit > 0 ? ("success" as const) : profit < 0 ? ("error" as const) : ("neutral" as const),

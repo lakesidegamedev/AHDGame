@@ -9,7 +9,7 @@ import {
   bondAccruesCoupon,
   perTurnCouponPayment,
 } from "@/lib/constants/bonds";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 
 export interface BankCouponPlan {
   bankId: string;

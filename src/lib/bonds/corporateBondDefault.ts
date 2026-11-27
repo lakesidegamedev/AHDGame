@@ -1,3 +1,4 @@
+import { roundFaceToBondUnits } from "./rules/units";
 /**
  * What happens when a corporation defaults on its bonds. A corp can issue new bonds
  * up to 2x its equity minus existing debt (maxNewIssuanceFaceValue); defaulted
@@ -12,7 +13,7 @@
 
 import type { ObjectId } from "mongodb";
 import type { Bond, CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
-import { BOND_UNIT_FACE_VALUE, type BondMaturityTurns } from "@/lib/db/types/bond";
+import { type BondMaturityTurns } from "@/lib/db/types/bond";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CorpCapitalCurrencyInfo } from "@/lib/currency/corporationCapital";
 import {
@@ -139,10 +140,7 @@ export const sumDefaultedBondPrincipal = (
   );
 
 /** Face value rounded down to whole bond units ($1k each). */
-export function roundFaceToBondUnits(faceValue: number): number {
-  const units = Math.floor(faceValue / BOND_UNIT_FACE_VALUE);
-  return units * BOND_UNIT_FACE_VALUE;
-}
+export { roundFaceToBondUnits } from "./rules/units";
 
 /**
  * Max new face value the corporation can issue under the 2× equity rule (all non-matured bonds count).

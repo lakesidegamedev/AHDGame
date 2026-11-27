@@ -1,8 +1,8 @@
+import { afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CurrencyCode } from "@/lib/constants/currencies";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { actionLogsCollection } from "@/lib/db/repositories/actionLogs";
 import type { Document } from "mongodb";
@@ -109,24 +109,27 @@ export async function logEconomicAction(db: Db, params: EconomicActionLogParams)
     // Audit spine envelope — cost fields (corp capital, in ₳) go into `amount`;
     // marketing-strength/revenue quick fields land in `meta` since they aren't
     // money-in-a-currency. `refs.actionLogId` cross-links the heavy row above.
-    recordAudit({
-      source: "api",
-      action: `corp.${params.actionType}`,
-      category: "corp",
-      actor: { kind: "player", userId, characterId, name: params.username },
-      subject: { type: "character", id: characterId, name: params.characterName },
-      counterparty: params.targetState ? { type: "state", id: params.targetState } : undefined,
-      amount: params.corpCashCostAnchor,
-      currencyCode: params.currencyCode as CurrencyCode | undefined,
-      refs: { actionLogId: insertResult.insertedId },
-      outcome: params.result.success ? "ok" : "rejected",
-      reason: params.result.success ? undefined : params.result.message,
-      meta: {
-        msCost: params.msCost,
-        capturedRevenueAnchor: params.capturedRevenueAnchor,
-        countryId: params.countryId,
-      },
-    });
+    await afterCommit(db, () =>
+      recordAudit({
+        source: "api",
+        action: `corp.${params.actionType}`,
+        category: "corp",
+        actor: { kind: "player", userId, characterId, name: params.username },
+        subject: { type: "character", id: characterId, name: params.characterName },
+        counterparty: params.targetState ? { type: "state", id: params.targetState } : undefined,
+        amount: params.corpCashCostAnchor,
+        anchorAmount: params.corpCashCostAnchor,
+        refs: { actionLogId: insertResult.insertedId },
+        outcome: params.result.success ? "ok" : "rejected",
+        reason: params.result.success ? undefined : params.result.message,
+        meta: {
+          corporationCurrencyCode: params.currencyCode,
+          msCost: params.msCost,
+          capturedRevenueAnchor: params.capturedRevenueAnchor,
+          countryId: params.countryId,
+        },
+      })
+    );
   } catch (error) {
     // Never let action logging break or fault the action it records — but the
     // dropped row is invisible to the suspicious-activity detector, so report it.

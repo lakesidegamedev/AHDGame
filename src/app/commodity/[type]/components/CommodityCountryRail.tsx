@@ -40,7 +40,7 @@ export function buildCountryRailRows({
   countryData: Record<string, CountryCommodityData>;
   countryCapacity: Record<string, number>;
   reachableRatioByCountry: Record<string, number | null>;
-  forexEnabled: boolean;
+  forexEnabled: boolean | null;
   exchangeRates: Partial<Record<CurrencyCode, number>>;
 }): CountryRailRow[] {
   const rows: CountryRailRow[] = [];

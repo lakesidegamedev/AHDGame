@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/executive/cabinet/[positionId]/infra/start
 // Auth: requireAuth — transportation seat holder or admin. Costs 1 ministerial action.
 // Errors: 400, 401, 403, 404, 409
@@ -55,67 +59,76 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
-      { _id: parsed.data.regionId, countryId },
-      { projection: { _id: 1 } }
+    return await withRecordedEconomicCommand(
+      db,
+      "minister-infrastructure-start",
+      String(auth.user.userId),
+      economicRequestId(request),
+      { countryId, positionId, ...parsed.data },
+      async (db) => {
+        const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
+          { _id: parsed.data.regionId, countryId },
+          { projection: { _id: 1 } }
+        );
+        if (!region) {
+          return errorResponse(400, "Invalid region for this country");
+        }
+
+        const membersCol = getCabinetMembersCollection(db);
+        const member = await membersCol.findOne({ countryId, positionId });
+        const isHolder =
+          member &&
+          member.characterId &&
+          auth.user.character &&
+          member.characterId.toString() === auth.user.character._id.toString();
+        if (!isHolder && !auth.user.isAdmin) {
+          return errorResponse(403, "Only the transportation holder or admin can start projects");
+        }
+
+        // Breaking ground commits the department's budget for the build's duration.
+        const actingDenied = requireConfirmedSecretary(member, "assets", !!auth.user.isAdmin);
+        if (actingDenied) return actingDenied;
+
+        // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
+        const actions = await resolveMinisterialRemaining(db, countryId, member!);
+        if (actions < 1) {
+          return errorResponse(400, "No ministerial actions remaining");
+        }
+
+        const gameState = await getGameState(db);
+        const currentTurn = gameState?.currentTurn ?? 1;
+
+        const spend = await spendMinisterialAction(db, countryId, member!);
+        if (!spend.ok) {
+          return errorResponse(409, "No ministerial actions remaining");
+        }
+
+        try {
+          await getInfraProjectsCollection(db).insertOne({
+            _id: new ObjectId(),
+            countryId,
+            positionId,
+            archetypeId: arch.id,
+            name: parsed.data.name.trim(),
+            icon: arch.icon,
+            regionId: parsed.data.regionId,
+            status: "construction",
+            progress: 0,
+            buildDuration: arch.buildDuration,
+            fundingLevel: "standard",
+            outputBase: arch.outputBase,
+            upkeepBase: arch.upkeepBase,
+            constructionCostBase: arch.constructionCostBase,
+            createdTurn: currentTurn,
+          });
+        } catch (error) {
+          await refundMinisterialAction(db, countryId, member!);
+          throw error;
+        }
+
+        return NextResponse.json({ success: true, actionsRemaining: spend.remaining });
+      }
     );
-    if (!region) {
-      return errorResponse(400, "Invalid region for this country");
-    }
-
-    const membersCol = getCabinetMembersCollection(db);
-    const member = await membersCol.findOne({ countryId, positionId });
-    const isHolder =
-      member &&
-      member.characterId &&
-      auth.user.character &&
-      member.characterId.toString() === auth.user.character._id.toString();
-    if (!isHolder && !auth.user.isAdmin) {
-      return errorResponse(403, "Only the transportation holder or admin can start projects");
-    }
-
-    // Breaking ground commits the department's budget for the build's duration.
-    const actingDenied = requireConfirmedSecretary(member, "assets", !!auth.user.isAdmin);
-    if (actingDenied) return actingDenied;
-
-    // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
-    if (actions < 1) {
-      return errorResponse(400, "No ministerial actions remaining");
-    }
-
-    const gameState = await getGameState();
-    const currentTurn = gameState?.currentTurn ?? 1;
-
-    const spend = await spendMinisterialAction(db, countryId, member!);
-    if (!spend.ok) {
-      return errorResponse(409, "No ministerial actions remaining");
-    }
-
-    try {
-      await getInfraProjectsCollection(db).insertOne({
-        _id: new ObjectId(),
-        countryId,
-        positionId,
-        archetypeId: arch.id,
-        name: parsed.data.name.trim(),
-        icon: arch.icon,
-        regionId: parsed.data.regionId,
-        status: "construction",
-        progress: 0,
-        buildDuration: arch.buildDuration,
-        fundingLevel: "standard",
-        outputBase: arch.outputBase,
-        upkeepBase: arch.upkeepBase,
-        constructionCostBase: arch.constructionCostBase,
-        createdTurn: currentTurn,
-      });
-    } catch (error) {
-      await refundMinisterialAction(db, countryId, member!);
-      throw error;
-    }
-
-    return NextResponse.json({ success: true, actionsRemaining: spend.remaining });
   } catch (error) {
     return handleRouteError(error);
   }

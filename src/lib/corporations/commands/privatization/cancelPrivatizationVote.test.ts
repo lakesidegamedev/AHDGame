@@ -1,10 +1,14 @@
+vi.mock("@/lib/db/sessionDb", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import type { CorporationPrivatizationVote } from "@/lib/db/types";
 
 vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
-  refundCharacterCash: vi.fn(),
+  refundCharacterCash: vi.fn().mockResolvedValue(true),
 }));
 
 import { refundCharacterCash } from "@/lib/financialTxLog/atomicCashGuard";
@@ -46,13 +50,12 @@ describe("cancelPrivatizationVote", () => {
     expect(refundCharacterCash).not.toHaveBeenCalled();
   });
 
-  it("reopens the vote when the refund throws", async () => {
+  it("propagates a refund failure for the enclosing transaction to abort", async () => {
     const { db, updateOne } = makeDb(1);
     vi.mocked(refundCharacterCash).mockRejectedValueOnce(new Error("boom"));
     await expect(
       cancelPrivatizationVote({ db, vote: makeVote(), forexEnabled: true })
     ).rejects.toThrow("boom");
-    expect(updateOne).toHaveBeenCalledTimes(2);
-    expect(updateOne.mock.calls[1][1].$set.status).toBe("open");
+    expect(updateOne).toHaveBeenCalledTimes(1);
   });
 });

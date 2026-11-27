@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";

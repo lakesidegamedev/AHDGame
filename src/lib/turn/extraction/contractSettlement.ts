@@ -1,3 +1,6 @@
+import { regionalBudgetsCollection } from "@/lib/db/repositories/regionalBudgets";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { creditRegionalExtractionReceipt } from "@/lib/extraction/creditRegionalExtractionReceipt";
 import { createHash } from "node:crypto";
 import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { ObjectId, type Db } from "mongodb";
@@ -283,25 +286,33 @@ export async function settleExtractionContracts(
   // Batch-load supporting data.
   const stateIds = [...new Set(activeContracts.map((c) => c.stateId))];
   const capCol = await getStateResourceCapacityCollection(db);
-  const [capDocs, priceDocs, fxByCurrency, thresholds, stateBudgets] = await Promise.all([
-    capCol.find({ stateId: { $in: stateIds } }).toArray(),
-    commodityPricesCollection(db)
-      .find({ commodity: { $in: [...EXTRACTABLE_RESOURCES] } })
-      .toArray(),
-    loadFxRatesByCurrency(db),
-    loadTxThresholds(db),
-    treasuryCashLedgerEnabled
-      ? stateBudgetsCollection(db)
-          .find({ _id: { $in: [...new Set(activeContracts.map((contract) => contract.stateId))] } })
-          .toArray()
-      : Promise.resolve([] as StateBudget[]),
-  ]);
+  const [capDocs, priceDocs, fxByCurrency, thresholds, stateBudgets, regionalBudgets] =
+    await Promise.all([
+      capCol.find({ stateId: { $in: stateIds } }).toArray(),
+      commodityPricesCollection(db)
+        .find({ commodity: { $in: [...EXTRACTABLE_RESOURCES] } })
+        .toArray(),
+      loadFxRatesByCurrency(db),
+      loadTxThresholds(db),
+      treasuryCashLedgerEnabled
+        ? stateBudgetsCollection(db)
+            .find({
+              _id: { $in: [...new Set(activeContracts.map((contract) => contract.stateId))] },
+            })
+            .toArray()
+        : Promise.resolve([] as StateBudget[]),
+      treasuryCashLedgerEnabled
+        ? regionalBudgetsCollection(db)
+            .find({ _id: { $in: stateIds } }, { projection: { _id: 1, countryId: 1 } })
+            .toArray()
+        : Promise.resolve([]),
+    ]);
   const capByKey = new Map<string, StateResourceCapacity>();
   for (const doc of capDocs) capByKey.set(`${doc.stateId}|${doc.countryId}`, doc);
   const priceByCommodity = new Map<string, CommodityPrice>();
   for (const doc of priceDocs) priceByCommodity.set(doc.commodity, doc);
   const stateBudgetKeys = new Set(
-    stateBudgets.map((budget) => `${budget._id}|${budget.countryId}`)
+    [...stateBudgets, ...regionalBudgets].map((budget) => `${budget._id}|${budget.countryId}`)
   );
   const royaltyReceiptKeys = treasuryCashLedgerEnabled
     ? activeContracts.map((contract) => `extraction-royalty:${contract._id.toString()}:${turn}`)
@@ -396,7 +407,7 @@ export async function settleExtractionContracts(
 
     // Legacy state-credit outcomes keep their original claim path. Funded
     // national outcomes stamp inside the durable settlement receipt instead.
-    if (!fundedNational) {
+    if (!fundedNational && contract.grantedByLevel === "national") {
       const settlementClaim = await contractsCol.updateOne(
         {
           _id: contract._id,
@@ -469,6 +480,121 @@ export async function settleExtractionContracts(
         : (fxByCurrency.get(corpCode) ?? 1)
       : 1;
     const amountCorp = anchorToCorpLiquidCapital(dueAnchor, corp, corpFxRate);
+
+    if (!fundedNational && contract.grantedByLevel === "state") {
+      const paid = await withTurnValueSettlement(
+        db,
+        "regional-extraction-royalty",
+        turn,
+        async (tx) => {
+          const fresh = await (
+            await getExtractionContractsCollection(tx)
+          ).findOne({ _id: contract._id, status: "active", revokedTurn: { $exists: false } });
+          if (!fresh || (fresh.lastRoyaltyTurn ?? -1) >= turn) return null;
+          const debit = await corporationsCollection(tx).updateOne(
+            {
+              _id: corp._id,
+              liquidCapital: { $gte: amountCorp },
+              liquidCurrencyCode: corp.liquidCurrencyCode ?? { $exists: false },
+            },
+            {
+              $inc: { liquidCapital: -amountCorp },
+              $set: { updatedAt: now },
+            }
+          );
+          if (!debit.modifiedCount) {
+            const missed = (fresh.missedPayments ?? 0) + 1;
+            const defaulted = missed >= CONTRACT_DEFAULT_MISSED_PAYMENTS;
+            await (
+              await getExtractionContractsCollection(tx)
+            ).updateOne(
+              { _id: fresh._id },
+              {
+                $set: {
+                  lastRoyaltyTurn: turn,
+                  missedPayments: missed,
+                  updatedAt: now,
+                  ...(defaulted ? { status: "defaulted", revokedTurn: turn } : {}),
+                },
+              }
+            );
+            return { paid: false, defaulted, anchor: 0 };
+          }
+          const currency = COUNTRY_CURRENCY_MAP[contract.countryId as CountryId] ?? "USD";
+          const issuerRate =
+            fxByCurrency.get(currency) ??
+            (!treasuryCashLedgerEnabled && currency === "USD" ? 1 : undefined);
+          if (!(issuerRate && Number.isFinite(issuerRate) && issuerRate > 0))
+            throw new Error("Regional royalty currency quote is unavailable");
+          const local = dueAnchor * issuerRate;
+          const regional = await creditRegionalExtractionReceipt(
+            tx,
+            fresh.stateId,
+            fresh.countryId,
+            local
+          );
+          if (!regional) await creditTreasury(tx, fresh.countryId as CountryId, local);
+          await (
+            await getExtractionContractsCollection(tx)
+          ).updateOne(
+            { _id: fresh._id },
+            { $set: { lastRoyaltyTurn: turn, missedPayments: 0, updatedAt: now } }
+          );
+          await emitTxBulk(
+            tx,
+            [
+              {
+                type: "contract_royalty_payment",
+                turn,
+                createdAt: now,
+                subjectType: "corporation",
+                subjectId: corp._id,
+                subjectName: corp.name ?? "Corporation",
+                amount: -amountCorp,
+                currencyCode: corpCode ?? "USD",
+                anchorAmount: -dueAnchor,
+                meta: {
+                  contractId: String(fresh._id),
+                  stateId: fresh.stateId,
+                  resource: fresh.resource,
+                  grantedByLevel: "state",
+                },
+              },
+              ...(!regional
+                ? [
+                    {
+                      type: "govt_royalty_receipt" as const,
+                      turn,
+                      createdAt: now,
+                      subjectType: "government" as const,
+                      countryId: fresh.countryId as CountryId,
+                      subjectName: `${fresh.countryId} Government`,
+                      amount: local,
+                      currencyCode: currency,
+                      anchorAmount: dueAnchor,
+                      meta: { contractId: String(fresh._id), stateId: fresh.stateId },
+                    },
+                  ]
+                : []),
+            ],
+            thresholds
+          );
+          return { paid: true, defaulted: false, anchor: dueAnchor };
+        },
+        { sourceKey: `${turn}:${contract._id}` }
+      );
+      if (paid) {
+        result.contractsSettled++;
+        if (paid.paid) {
+          result.royaltiesPaid++;
+          result.totalRoyaltyAnchor += paid.anchor;
+        } else {
+          result.paymentsMissed++;
+          if (paid.defaulted) result.contractsDefaulted++;
+        }
+      }
+      continue;
+    }
 
     if (fundedNational) {
       const countryId = contract.countryId as CountryId;

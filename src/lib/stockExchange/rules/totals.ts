@@ -1,8 +1,8 @@
 import type { ExchangeListingSlice, ExchangeTotals } from "../aggregate";
 
-const finite = (value: number | undefined): number | null =>
+const finite = (value: number | null | undefined): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
-const anchored = (anchor: number | undefined, local: number | undefined): number =>
+const anchored = (anchor: number | null | undefined, local: number | null | undefined): number =>
   finite(anchor) ?? finite(local) ?? 0;
 
 /**
@@ -25,8 +25,12 @@ export function aggregateExchangeTotals(listings: ExchangeListingSlice[]): Excha
   });
   return {
     marketCap: listings.reduce((sum, l) => sum + anchored(l.marketCapAnchor, l.marketCap), 0),
-    revenue: listings.reduce((sum, l) => sum + anchored(l.totalRevenueAnchor, l.totalRevenue), 0),
-    income: listings.reduce((sum, l) => sum + anchored(l.incomeAnchor, l.income), 0),
+    revenue: listings.some((l) => l.totalRevenue === null || l.totalRevenueAnchor === null)
+      ? null
+      : listings.reduce((sum, l) => sum + anchored(l.totalRevenueAnchor, l.totalRevenue), 0),
+    income: listings.some((l) => l.income === null || l.incomeAnchor === null)
+      ? null
+      : listings.reduce((sum, l) => sum + anchored(l.incomeAnchor, l.income), 0),
     weightedChange1h: changes[0],
     weightedChange24h: changes[1],
     weightedChange48h: changes[2],

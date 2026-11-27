@@ -8,7 +8,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/ui";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import type { StockListing, SortField, SortDir } from "../types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -43,10 +43,10 @@ interface SoEGroup {
   members: StockListing[];
   marketCap: number;
   marketCapAnchor: number;
-  totalRevenue: number;
-  totalRevenueAnchor: number;
-  income: number;
-  incomeAnchor: number;
+  totalRevenue: number | null;
+  totalRevenueAnchor: number | null;
+  income: number | null;
+  incomeAnchor: number | null;
   publicFloat: number;
   totalShares: number;
   priceChange1h: number;
@@ -111,6 +111,7 @@ function buildRows(
     // firms have no measured return and must not dilute the basket.
     const tradableMembers = members.filter(listingTradable);
     const returns = aggregateExchangeTotals(tradableMembers);
+    const money = aggregateExchangeTotals(members);
     rows.push({
       kind: "soeGroup",
       countryId,
@@ -119,10 +120,10 @@ function buildRows(
       members,
       marketCap: members.reduce((s, m) => s + m.marketCap, 0),
       marketCapAnchor: members.reduce((s, m) => s + (m.marketCapAnchor ?? m.marketCap), 0),
-      totalRevenue: members.reduce((s, m) => s + m.totalRevenue, 0),
-      totalRevenueAnchor: members.reduce((s, m) => s + (m.totalRevenueAnchor ?? m.totalRevenue), 0),
-      income: members.reduce((s, m) => s + m.income, 0),
-      incomeAnchor: members.reduce((s, m) => s + (m.incomeAnchor ?? m.income), 0),
+      totalRevenue: money.revenue,
+      totalRevenueAnchor: money.revenue,
+      income: money.income,
+      incomeAnchor: money.income,
       publicFloat: members.reduce((s, m) => s + (m.publicFloat ?? 0), 0),
       totalShares: members.reduce((s, m) => s + m.totalShares, 0),
       priceChange1h: returns.weightedChange1h,
@@ -155,7 +156,7 @@ function getPriceChangeForTimeframe(
  * price or ticker, which have no meaningful group-level value — those are
  * handled as explicit cases in the comparator below).
  */
-function getSortValue(row: Row, field: SortField, timeframe: PriceChangeTimeframe): number {
+function getSortValue(row: Row, field: SortField, timeframe: PriceChangeTimeframe): number | null {
   if (isSoEGroup(row)) {
     switch (field) {
       case "marketCap":
@@ -285,7 +286,10 @@ export function StockList({
           break;
         }
         default:
-          cmp = getSortValue(a, sortField, timeframe) - getSortValue(b, sortField, timeframe);
+          const av = getSortValue(a, sortField, timeframe),
+            bv = getSortValue(b, sortField, timeframe);
+          if (av == null || bv == null) return av == null ? (bv == null ? 0 : 1) : -1;
+          cmp = av - bv;
       }
       return sortDir === "desc" ? -cmp : cmp;
     });
@@ -463,20 +467,36 @@ export function StockList({
       </td>
       <td className="px-4 py-3 text-right hidden md:table-cell">
         <div className="font-medium tabular-nums text-muted">
-          {formatAmount(
-            listing.totalRevenueAnchor ?? listing.totalRevenue,
-            (listing.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined
-          )}
+          {listing.totalRevenue == null
+            ? "Unavailable"
+            : formatAmount(
+                listing.totalRevenueAnchor ?? listing.totalRevenue,
+                (listing.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined
+              )}
         </div>
       </td>
       <td className="px-4 py-3 text-right hidden md:table-cell">
         <div
-          className={`font-medium tabular-nums ${listing.income >= 0 ? "text-success" : "text-error"}`}
+          title={
+            listing.incomeBasis === "settled"
+              ? `Recorded retained income from turn ${listing.incomeTurn}`
+              : listing.income == null
+                ? "Settlement evidence is incomplete"
+                : "Estimated retained income from current operations"
+          }
+          className={`font-medium tabular-nums ${listing.income == null ? "text-muted" : listing.income >= 0 ? "text-success" : "text-error"}`}
         >
-          {listing.income >= 0 ? "+" : ""}
-          {formatAmount(
-            listing.incomeAnchor ?? listing.income,
-            (listing.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined
+          {listing.income != null && listing.income >= 0 ? "+" : ""}
+          {listing.income == null
+            ? "Unavailable"
+            : formatAmount(
+                listing.incomeAnchor ?? listing.income,
+                (listing.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined
+              )}
+          {listing.income != null && (
+            <div className="text-caption text-muted">
+              {listing.incomeBasis === "settled" ? `Turn ${listing.incomeTurn}` : "Estimate"}
+            </div>
           )}
         </div>
       </td>
@@ -588,15 +608,17 @@ export function StockList({
           </td>
           <td className="px-4 py-3 text-right hidden md:table-cell">
             <div className="font-medium tabular-nums text-muted">
-              {formatAmount(group.totalRevenueAnchor)}
+              {group.totalRevenueAnchor == null
+                ? "Unavailable"
+                : formatAmount(group.totalRevenueAnchor)}
             </div>
           </td>
           <td className="px-4 py-3 text-right hidden md:table-cell">
             <div
-              className={`font-medium tabular-nums ${group.income >= 0 ? "text-success" : "text-error"}`}
+              className={`font-medium tabular-nums ${group.income == null ? "text-muted" : group.income >= 0 ? "text-success" : "text-error"}`}
             >
-              {group.income >= 0 ? "+" : ""}
-              {formatAmount(group.incomeAnchor)}
+              {group.income != null && group.income >= 0 ? "+" : ""}
+              {group.incomeAnchor == null ? "Unavailable" : formatAmount(group.incomeAnchor)}
             </div>
           </td>
           <td className="px-4 py-3 text-right hidden md:table-cell">

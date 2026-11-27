@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 vi.mock("@/lib/db/sessionDb", () => ({
   withSessionDb: async (
     db: import("mongodb").Db,
@@ -23,6 +26,7 @@ beforeEach(async () => {
   db.collection("corporations");
   db.collection("bonds");
   db.collection("bondHistory");
+  db.collectionMocks.bonds.bulkWrite.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
   db.collection("corporationHistory");
 
   const { getDb } = await import("@/lib/mongodb");

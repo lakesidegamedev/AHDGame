@@ -1,3 +1,5 @@
+import { fundSovereignResolution } from "./funding";
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 /**
  * IMF Bailout resolution path — Phase 5.
  *
@@ -41,11 +43,18 @@ export interface BailoutResolutionInput {
 
 export interface BailoutResolutionResult {
   ok: boolean;
-  reason?: "not-in-crisisPending" | "no-budget" | "no-imf-corp";
+  reason?: "not-in-crisisPending" | "no-budget" | "no-imf-corp" | "insufficient-imf-funds";
   termsApplied?: SovereignBailoutTerms;
 }
 
 export async function applyBailoutResolution(
+  db: Db,
+  input: BailoutResolutionInput
+): Promise<BailoutResolutionResult> {
+  return withSessionDb(db, (db) => applyBailoutResolutionInTransaction(db, input));
+}
+
+async function applyBailoutResolutionInTransaction(
   db: Db,
   input: BailoutResolutionInput
 ): Promise<BailoutResolutionResult> {
@@ -69,6 +78,18 @@ export async function applyBailoutResolution(
     rolloverFaceValue: rollover,
     annualDeficit,
   });
+
+  const funded = await fundSovereignResolution(db, {
+    kind: "bailout",
+    budget,
+    countryId: countryCode,
+    decisionKey: decisionId.toHexString(),
+    turn: currentTurn,
+    now: new Date(realtimeMs),
+    amountLocal: terms.principal,
+    lender: imfCorp,
+  });
+  if (!funded) return { ok: false, reason: "insufficient-imf-funds" };
 
   const update: Partial<FederalBudget> = {
     imfSovereignBailoutActive: true,
@@ -107,7 +128,7 @@ export async function applyBailoutResolution(
     );
   }
 
-  await emitBailoutGrantedNews(countryCode, currentTurn, terms.principal);
+  await afterCommit(db, () => emitBailoutGrantedNews(countryCode, currentTurn, terms.principal));
 
   // Phase 11b: hit the proposing character with calibrated favorability/infamy
   // delta. Re-read the decision so we get the proposer who actually made the
@@ -116,11 +137,7 @@ export async function applyBailoutResolution(
   await applyExecutivePoliticalImpact(db, decision?.proposingCharacterId ?? null, "bailout");
 
   // Phase 11b: civil-unrest event chain (1 event for the bailout path).
-  try {
-    await emitCivilUnrestEvents(db, countryCode, "bailout");
-  } catch (err) {
-    console.error("emitCivilUnrestEvents (bailout) failed", err);
-  }
+  await emitCivilUnrestEvents(db, countryCode, "bailout");
 
   return { ok: true, termsApplied: terms };
 }

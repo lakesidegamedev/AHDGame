@@ -1,3 +1,14 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: async (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
@@ -30,7 +41,7 @@ const worldPreset = (db: MockDb, preset: string) =>
 
 describe("chargeOrganizationTribute", () => {
   let db: MockDb;
-  let budgetUpdateOne: ReturnType<typeof vi.fn>;
+  let budgetUpdateOne = vi.fn<(...args: unknown[]) => void>();
   let fundUpdateOne: ReturnType<typeof vi.fn>;
 
   /** Treasuries the roll is read from in one query. */
@@ -47,7 +58,13 @@ describe("chargeOrganizationTribute", () => {
     // Tribute exists only in a 1953-start world, so that is the default here;
     // the scope cases below override it.
     worldPreset(db, "1953-default");
-    budgetUpdateOne = db.collection("federalBudget").updateOne;
+    budgetUpdateOne = vi.fn<(...args: unknown[]) => void>();
+    db.collection("federalBudget").bulkWrite.mockImplementation(
+      async (operations: { updateOne: { filter: unknown; update: unknown } }[]) => {
+        for (const { updateOne } of operations) budgetUpdateOne(updateOne.filter, updateOne.update);
+        return { matchedCount: operations.length, modifiedCount: operations.length };
+      }
+    );
     treasuries([]);
     fundUpdateOne = db.collection("organizationFunds").updateOne;
     // NATO's fund sits in USD via the US, whose rate is 1.0, so the fund figure
@@ -76,7 +93,10 @@ describe("chargeOrganizationTribute", () => {
     const debitLocal = Math.round(usd / rateOf("TR"));
     expect(result.payers).toBe(1);
     expect(result.minted).toBe(0);
-    expect(result.collectedLocal).toBe(Math.round(usd / rateOf("US")));
+    expect(result.collectedLocal * rateOf("US")).toBeCloseTo(
+      Math.round(usd / rateOf("TR")) * rateOf("TR"),
+      4
+    );
     // The payer is billed in its own currency; the fund is credited in the
     // fund's. They are the same money seen from two sides.
     expect(budgetUpdateOne).toHaveBeenCalledWith(
@@ -163,7 +183,10 @@ describe("chargeOrganizationTribute", () => {
 
     const usd = perTurnUsd(ONE_TRILLION_IN_USD_MILLIONS);
     expect(rateOf("PL")).not.toBe(1); // guard: the case is only meaningful if it differs
-    expect(result.collectedLocal).toBe(Math.round(usd / rateOf("PL")));
+    expect(result.collectedLocal * rateOf("PL")).toBeCloseTo(
+      Math.round(usd / rateOf("TR")) * rateOf("TR"),
+      4
+    );
   });
   it("normalises currency at the era's rate, not the modern one", async () => {
     // Turkey's stored-GDP normaliser is 0.029 in the base config and 0.357 in

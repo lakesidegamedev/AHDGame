@@ -1,6 +1,7 @@
 import { cancelShareOrderAndRefund } from "@/lib/corporations/cancelShareOrder";
 import { creditShares, debitShares } from "@/lib/corporations/shareholderOps";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, getAccessedCollections, type MockDb } from "@/lib/test-utils/mockDb";

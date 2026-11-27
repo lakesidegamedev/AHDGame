@@ -96,6 +96,7 @@ export interface RelocationCreditBatch {
   resolve<T extends RelocationCreditDecision>(request: RelocationCreditRequest<T>): Promise<T>;
   /** Insert every queued bond in loop order. No-op when nothing was issued. */
   flush(): Promise<void>;
+  plannedBonds(): Bond[];
   /** What the pass actually queued, for the turn log and the bench. */
   stats(): { corporations: number; issuedBonds: number; cohortQueries: number };
 }
@@ -312,6 +313,7 @@ export function createRelocationCreditBatch(input: {
   return {
     resolve,
     flush,
+    plannedBonds: () => [...pendingBonds],
     stats: () => ({
       corporations: corporations.length,
       issuedBonds,

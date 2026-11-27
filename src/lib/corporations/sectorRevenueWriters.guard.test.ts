@@ -225,7 +225,7 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "Sector-wide nationalization. The revenue writer is plants-gated off `plantsEnabled`: the carve into the NatCorp moves the donor's sliced plant state (capitalStock haircut by NATIONALIZATION_REVENUE_HAIRCUT, CIP and build orders at full value) and the donor keeps the 1−f complement, so capacity is conserved.",
   },
   "src/lib/nationalization/privatizeAsset.ts": {
-    writeSites: 2,
+    writeSites: 1,
     status: "plants-gated",
     reason: "Privatization; plants-aware.",
   },
@@ -240,7 +240,7 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
 
   // ─── Reviewed by the ownership/transfer sweep ────────────────────────────
   "src/lib/corporations/commands/sectorOperations/buyListedSector.ts": {
-    writeSites: 4,
+    writeSites: 2,
     status: "plants-gated",
     reason:
       "Marketplace purchase; merge path folds capitalStock/buildQueue/CIP via mergeSectorPlantFields.",
@@ -264,9 +264,10 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
       "Duplicate-row heal is a MERGE; folds plant state via mergeSectorPlantFields before deleting.",
   },
   "src/lib/nationalization/seedToNatCorp.ts": {
-    writeSites: 2,
+    writeSites: 3,
     status: "plants-gated",
-    reason: "Natcorp seed grants capitalStock units under plants; revenue written in lockstep.",
+    reason:
+      "NatCorp seeds grant capitalStock with nameplate revenue. Captured-site absorption merges the complete plant ledger before adding the donor nameplate and deleting the donor; funded sites use their settlement-aware transfer.",
   },
   "src/lib/remediation/defects/AHD-1271-merged-state-extraction.ts": {
     writeSites: 1,

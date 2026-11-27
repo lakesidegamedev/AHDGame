@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
 /**
  * Settlement-crisis turn phase — the only per-turn write path for the German
  * Question.
@@ -131,187 +132,194 @@ export async function processSettlementTurn(
   // the crisis panel in the admin control surface (`/api/admin/settlement`), at
   // whatever moment an operator judges right. This phase only advances one that
   // already exists.
-  const crisis = await crises.findOne({ status: "open" } as Filter<SettlementCrisisDoc>);
-  if (!crisis) return idle();
-  // `frozen` and `resolved` are both excluded by the query; the explicit guard
-  // keeps this correct if the query is ever widened.
-  if (crisis.status !== "open") return idle();
+  return withSessionDb(db, async (db) => {
+    const crises = await getSettlementCrisesCollection(db);
+    const crisis = await crises.findOne({ status: "open" } as Filter<SettlementCrisisDoc>);
+    if (!crisis) return idle();
+    // `frozen` and `resolved` are both excluded by the query; the explicit guard
+    // keeps this correct if the query is ever widened.
+    if (crisis.status !== "open") return idle();
 
-  // A crisis with no institutions has no index to derive. Bail rather than
-  // continue: `recomputePosition([])` is 0, which is below the lock threshold,
-  // so a malformed document would otherwise resolve itself for the incumbent on
-  // the very next tick.
-  if (crisis.institutions.length === 0) return idle();
+    // A crisis with no institutions has no index to derive. Bail rather than
+    // continue: `recomputePosition([])` is 0, which is below the lock threshold,
+    // so a malformed document would otherwise resolve itself for the incumbent on
+    // the very next tick.
+    if (crisis.institutions.length === 0) return idle();
 
-  // CLAIM THE TICK before touching anything. Two overlapping turn runs would
-  // otherwise both read this snapshot; the one that loses the per-play claims
-  // still computes a drift-only result and `$set`s it over the winner's write,
-  // discarding every play that landed this turn. Claiming here makes the whole
-  // tick single-writer, and the per-play claims below remain as the guard
-  // against a commit route racing the phase.
-  const wonTick = await claimStatusTransition(
-    db,
-    "settlementCrises",
-    { _id: crisis._id, lastTickedTurn: { $ne: currentTurn } },
-    { $set: { lastTickedTurn: currentTurn } }
-  );
-  if (!wonTick) return idle();
-
-  // A war declared BY or AGAINST one of the Germanies, against the opposing
-  // bloc, settles the question by force — no ladder, no threshold, no index.
-  //
-  // AFTER the tick claim, deliberately. The claim is what makes the whole tick
-  // single-writer, and this sweep freezes the crisis: run before it, two
-  // overlapping turn runs would race, and the one whose freeze lost would carry
-  // on to write `status: "open"` back over the winner's frozen crisis. It still
-  // runs BEFORE the plays are drained, so a board about to freeze does not spend
-  // this turn's plays moving a meter nobody will read again. They stay pending
-  // and inert, exactly as they do when the crisis's own declaration freezes it.
-  const attached = await attachCrisisToLiveWar(db, crisis);
-  if (attached.attached) return idle();
-
-  const plays = await getSettlementPlaysCollection(db);
-  const pending = await plays
-    .find({ crisisId: crisis._id, resolvedTurn: null } as Filter<SettlementPlayDoc>)
-    .toArray();
-
-  // CLAIM each play before applying it. This project has had overlapping turn
-  // runs from rolling deploys, and a twice-applied swing is not replayable.
-  // Claiming on `resolvedTurn` is what makes the second runner's update match
-  // nothing, because it is the same field the stamp below writes.
-  //
-  // Routed through `claimStatusTransition` rather than a local
-  // `findOneAndUpdate`: that helper is the repo's established claim primitive
-  // and tests truthiness on `matchedCount === 1`, which is unambiguous.
-  // `findOneAndUpdate` returns the document on driver v6+ but `{ value: doc }`
-  // before it, so a bare truthiness check there silently stops rejecting the
-  // second runner on a driver downgrade.
-  const claimed: SettlementPlayDoc[] = [];
-  for (const candidate of pending) {
-    const won = await claimStatusTransition(
+    // CLAIM THE TICK before touching anything. Two overlapping turn runs would
+    // otherwise both read this snapshot; the one that loses the per-play claims
+    // still computes a drift-only result and `$set`s it over the winner's write,
+    // discarding every play that landed this turn. Claiming here makes the whole
+    // tick single-writer, and the per-play claims below remain as the guard
+    // against a commit route racing the phase.
+    const wonTick = await claimStatusTransition(
       db,
-      "settlementPlays",
-      { _id: candidate._id, resolvedTurn: null },
-      { $set: { resolvedTurn: currentTurn } }
+      "settlementCrises",
+      { _id: crisis._id, status: "open", lastTickedTurn: { $ne: currentTurn } },
+      { $set: { lastTickedTurn: currentTurn } }
     );
-    if (won) claimed.push(candidate);
-  }
+    if (!wonTick) return idle();
 
-  const batch = resolvePlayBatch(claimed);
+    // A war declared BY or AGAINST one of the Germanies, against the opposing
+    // bloc, settles the question by force — no ladder, no threshold, no index.
+    //
+    // AFTER the tick claim, deliberately. The claim is what makes the whole tick
+    // single-writer, and this sweep freezes the crisis: run before it, two
+    // overlapping turn runs would race, and the one whose freeze lost would carry
+    // on to write `status: "open"` back over the winner's frozen crisis. It still
+    // runs BEFORE the plays are drained, so a board about to freeze does not spend
+    // this turn's plays moving a meter nobody will read again. They stay pending
+    // and inert, exactly as they do when the crisis's own declaration freezes it.
+    const attached = await attachCrisisToLiveWar(db, crisis);
+    if (attached.attached) return idle();
 
-  // Stamp what each play actually bought, so a player can audit their spend.
-  for (const stamp of batch.stamped) {
-    await plays.updateOne(
-      { _id: stamp.id },
-      { $set: { resolvedTurn: currentTurn, appliedPoints: stamp.appliedPoints } }
-    );
-  }
+    const plays = await getSettlementPlaysCollection(db);
+    const pending = await plays
+      .find({ crisisId: crisis._id, resolvedTurn: null } as Filter<SettlementPlayDoc>)
+      .toArray();
 
-  // Drift is drawn from ONE seeded rng per tick, advanced in the stored
-  // institution order, so a replay reproduces the identical rolls.
-  const rng = makeSeededRng(driftSeedFor(currentTurn));
-
-  let institutionsMoved = 0;
-  const institutions: SettlementInstitutionState[] = crisis.institutions.map((inst) => {
-    const fromPlays = batch.perInstitution.get(inst.id) ?? 0;
-    // A settlement-level play is added EQUALLY to every institution: adding the
-    // same delta to each moves the weighted mean by exactly that delta, so the
-    // play lands at its stated value without a second write path to the index.
-    const delta = fromPlays + batch.settlementDelta;
-    const withPlays = applyToInstitution(inst, delta);
-    const drift = rollInstitutionDrift({
-      institutionId: inst.id,
-      position: withPlays.position,
-      rng,
-    });
-    if (delta !== 0) institutionsMoved++;
-    const moved = applyToInstitution(withPlays, drift);
-    return { ...moved, lastDrift: drift, lastPlay: lastPlayFor(inst, claimed, currentTurn) };
-  });
-
-  const position = recomputePosition(institutions);
-  // With the ladder switched off, heat is not merely frozen — it is driven back
-  // to zero. A crisis that had climbed to rung 4 before an admin disabled
-  // escalation would otherwise sit permanently at DEFCON 2, one flag-flip away
-  // from a war nobody can now arm or stand down.
-  const rules = settlementRulesFor(crisis);
-  const ladder = rules.escalationEnabled
-    ? nextHeat({
-        current: crisis.ladder.heat,
-        added: batch.heatAdded,
-        quietTurns: crisis.ladder.quietTurns,
-      })
-    : // Switched off, the counter resets with the heat: a crisis that comes
-      // back on should not spend a stored grace it never earned.
-      { heat: 0, quietTurns: 0 };
-  const heat = ladder.heat;
-  const outcome = outcomeFor(position);
-
-  // Charged on the heat the crisis is at AFTER this tick's decay, so a bloc that
-  // let the ladder fall pays nothing for the turn it stepped back.
-  const armed = isArmed(heat);
-  const mobilisation = await levyMobilisation(db, { armed, turn: currentTurn });
-  // The stamp survives only while the ladder is actually at the top; letting it
-  // linger would leave a disarmed crisis looking armed to the declare route.
-  const armedTurn = armed ? (crisis.ladder.armedTurn ?? currentTurn) : null;
-  const ladderState = { heat, armedTurn, quietTurns: ladder.quietTurns };
-
-  const driftHistory = [
-    weightedDrift(institutions.map((i) => ({ weight: i.weight, drift: i.lastDrift }))),
-    ...crisis.driftHistory,
-  ].slice(0, DRIFT_HISTORY_LENGTH);
-
-  const seats = crisis.seats.map((seat) => accrue(seat, claimed, batch, currentTurn));
-
-  // GUARDED ON `open`. The tick claim makes this phase single-writer, but the
-  // crisis can still be frozen underneath it from a REQUEST — a `declare` press
-  // lands between the claim above and this write, and an unguarded `$set` would
-  // put `status: "open"` back over a crisis whose war is already on the board.
-  // Losing this tick's plays is the right trade: they are inert on a frozen
-  // crisis anyway, and the alternative silently un-declares a war.
-  await crises.updateOne(
-    { _id: crisis._id, status: "open" },
-    {
-      $set: {
-        institutions,
-        seats,
-        position,
-        driftHistory,
-        ladder: ladderState,
-        status: outcome ? "resolved" : "open",
-        outcome,
-        resolvedTurn: outcome ? currentTurn : null,
-        updatedAt: new Date(),
-      },
+    // CLAIM each play before applying it. This project has had overlapping turn
+    // runs from rolling deploys, and a twice-applied swing is not replayable.
+    // Claiming on `resolvedTurn` is what makes the second runner's update match
+    // nothing, because it is the same field the stamp below writes.
+    //
+    // Routed through `claimStatusTransition` rather than a local
+    // `findOneAndUpdate`: that helper is the repo's established claim primitive
+    // and tests truthiness on `matchedCount === 1`, which is unambiguous.
+    // `findOneAndUpdate` returns the document on driver v6+ but `{ value: doc }`
+    // before it, so a bare truthiness check there silently stops rejecting the
+    // second runner on a driver downgrade.
+    const claimed: SettlementPlayDoc[] = [];
+    for (const candidate of pending) {
+      const won = await claimStatusTransition(
+        db,
+        "settlementPlays",
+        { _id: candidate._id, resolvedTurn: null },
+        { $set: { resolvedTurn: currentTurn } }
+      );
+      if (won) claimed.push(candidate);
     }
-  );
 
-  // AFTER the state write, and reading the state as written: a briefing that
-  // reported the pre-tick board would be a turn stale every time.
-  const ticked: SettlementCrisisDoc = {
-    ...crisis,
-    institutions,
-    seats,
-    position,
-    driftHistory,
-    ladder: ladderState,
-    status: outcome ? "resolved" : "open",
-    outcome,
-  };
-  const wire = await emitSettlementWire(db, ticked, currentTurn, {
-    events: ["opened", ...(armed ? (["armed"] as const) : [])],
-    briefing: true,
+    const batch = resolvePlayBatch(claimed);
+
+    // Stamp what each play actually bought, so a player can audit their spend.
+    for (const stamp of batch.stamped) {
+      await plays.updateOne(
+        { _id: stamp.id },
+        { $set: { resolvedTurn: currentTurn, appliedPoints: stamp.appliedPoints } }
+      );
+    }
+
+    // Drift is drawn from ONE seeded rng per tick, advanced in the stored
+    // institution order, so a replay reproduces the identical rolls.
+    const rng = makeSeededRng(driftSeedFor(currentTurn));
+
+    let institutionsMoved = 0;
+    const institutions: SettlementInstitutionState[] = crisis.institutions.map((inst) => {
+      const fromPlays = batch.perInstitution.get(inst.id) ?? 0;
+      // A settlement-level play is added EQUALLY to every institution: adding the
+      // same delta to each moves the weighted mean by exactly that delta, so the
+      // play lands at its stated value without a second write path to the index.
+      const delta = fromPlays + batch.settlementDelta;
+      const withPlays = applyToInstitution(inst, delta);
+      const drift = rollInstitutionDrift({
+        institutionId: inst.id,
+        position: withPlays.position,
+        rng,
+      });
+      if (delta !== 0) institutionsMoved++;
+      const moved = applyToInstitution(withPlays, drift);
+      return { ...moved, lastDrift: drift, lastPlay: lastPlayFor(inst, claimed, currentTurn) };
+    });
+
+    const position = recomputePosition(institutions);
+    // With the ladder switched off, heat is not merely frozen — it is driven back
+    // to zero. A crisis that had climbed to rung 4 before an admin disabled
+    // escalation would otherwise sit permanently at DEFCON 2, one flag-flip away
+    // from a war nobody can now arm or stand down.
+    const rules = settlementRulesFor(crisis);
+    const ladder = rules.escalationEnabled
+      ? nextHeat({
+          current: crisis.ladder.heat,
+          added: batch.heatAdded,
+          quietTurns: crisis.ladder.quietTurns,
+        })
+      : // Switched off, the counter resets with the heat: a crisis that comes
+        // back on should not spend a stored grace it never earned.
+        { heat: 0, quietTurns: 0 };
+    const heat = ladder.heat;
+    const outcome = outcomeFor(position);
+
+    // Charged on the heat the crisis is at AFTER this tick's decay, so a bloc that
+    // let the ladder fall pays nothing for the turn it stepped back.
+    const armed = isArmed(heat);
+    const mobilisation = await levyMobilisation(db, { armed, turn: currentTurn });
+    // The stamp survives only while the ladder is actually at the top; letting it
+    // linger would leave a disarmed crisis looking armed to the declare route.
+    const armedTurn = armed ? (crisis.ladder.armedTurn ?? currentTurn) : null;
+    const ladderState = { heat, armedTurn, quietTurns: ladder.quietTurns };
+
+    const driftHistory = [
+      weightedDrift(institutions.map((i) => ({ weight: i.weight, drift: i.lastDrift }))),
+      ...crisis.driftHistory,
+    ].slice(0, DRIFT_HISTORY_LENGTH);
+
+    const seats = crisis.seats.map((seat) => accrue(seat, claimed, batch, currentTurn));
+
+    // GUARDED ON `open`. The tick claim makes this phase single-writer, but the
+    // crisis can still be frozen underneath it from a REQUEST — a `declare` press
+    // lands between the claim above and this write, and an unguarded `$set` would
+    // put `status: "open"` back over a crisis whose war is already on the board.
+    // A conflicting freeze rolls back this tick and leaves its plays pending.
+    const saved = await crises.updateOne(
+      { _id: crisis._id, status: "open" },
+      {
+        $set: {
+          institutions,
+          seats,
+          position,
+          driftHistory,
+          ladder: ladderState,
+          status: outcome ? "resolved" : "open",
+          outcome,
+          resolvedTurn: outcome ? currentTurn : null,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    if (saved.matchedCount !== 1) throw new Error("Settlement changed before tick publication");
+
+    // AFTER the state write, and reading the state as written: a briefing that
+    // reported the pre-tick board would be a turn stale every time.
+    const ticked: SettlementCrisisDoc = {
+      ...crisis,
+      institutions,
+      seats,
+      position,
+      driftHistory,
+      ladder: ladderState,
+      status: outcome ? "resolved" : "open",
+      outcome,
+    };
+    const result: SettlementTurnResult = {
+      playsResolved: claimed.length,
+      institutionsMoved,
+      crisesResolved: outcome ? 1 : 0,
+      heat,
+      position,
+      countriesLevied: mobilisation.countriesLevied,
+      wirePosts: 0,
+    };
+    await afterCommit(db, async () => {
+      const wire = await emitSettlementWire(unboundDb(db), ticked, currentTurn, {
+        events: ["opened", ...(armed ? (["armed"] as const) : [])],
+        briefing: true,
+      });
+      result.wirePosts = wire.posts;
+    });
+    return result;
   });
-
-  return {
-    playsResolved: claimed.length,
-    institutionsMoved,
-    crisesResolved: outcome ? 1 : 0,
-    heat,
-    position,
-    countriesLevied: mobilisation.countriesLevied,
-    wirePosts: wire.posts,
-  };
 }
 
 /** The most recent play against one institution this turn, for the card. */

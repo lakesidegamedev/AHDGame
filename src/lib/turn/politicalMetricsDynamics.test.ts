@@ -1,3 +1,12 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+import { historyAppendInfo } from "@/lib/test-utils/historyAppendInfo";
 import type { Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -91,10 +100,10 @@ describe("processPoliticalMetricsDynamics", () => {
   }) {
     db.collectionMocks.macroMetrics.find = vi
       .fn()
-      .mockImplementation((filter?: { countryId?: string }) =>
+      .mockImplementation((filter?: { countryId?: string | { $in: string[] } }) =>
         cursorOf(
-          (macroDocs as Array<{ countryId?: string }>).filter(
-            (d) => d.countryId === filter?.countryId
+          (macroDocs as Array<{ countryId?: string }>).filter((d) =>
+            matchesCountry(d.countryId, filter?.countryId)
           )
         )
       );
@@ -107,10 +116,10 @@ describe("processPoliticalMetricsDynamics", () => {
       ]);
     db.collectionMocks.politicalMetrics.find = vi
       .fn()
-      .mockImplementation((filter?: { countryId?: string }) =>
+      .mockImplementation((filter?: { countryId?: string | { $in: string[] } }) =>
         cursorOf(
-          (metricsDocs as Array<{ countryId?: string }>).filter(
-            (d) => d.countryId === filter?.countryId
+          (metricsDocs as Array<{ countryId?: string }>).filter((d) =>
+            matchesCountry(d.countryId, filter?.countryId)
           )
         )
       );
@@ -544,9 +553,9 @@ describe("trend history (§5)", () => {
     db.collectionMocks.politicalMetrics.distinct = vi.fn().mockResolvedValue(["UK"]);
     db.collectionMocks.politicalMetrics.find = vi
       .fn()
-      .mockImplementation((filter?: { countryId?: string }) => ({
+      .mockImplementation((filter?: { countryId?: string | { $in: string[] } }) => ({
         toArray: vi.fn().mockResolvedValue(
-          filter?.countryId === "UK"
+          matchesCountry("UK", filter?.countryId)
             ? [
                 {
                   _id: "R1",
@@ -575,16 +584,15 @@ describe("trend history (§5)", () => {
 
   it("appends a pop-weighted national snapshot with the 365 cap on the 24-turn cadence", async () => {
     await processPoliticalMetricsDynamics(db as unknown as Db, 48);
-    const call = (db.collectionMocks.politicalMetricsHistory.updateOne as ReturnType<typeof vi.fn>)
-      .mock.calls[0];
-    expect(call[0]).toEqual({ _id: "UK" });
-    const update = call[1] as {
-      $push: {
-        entries: { $each: Array<{ turn: number; values: Record<string, number> }>; $slice: number };
-      };
-    };
-    expect(update.$push.entries.$slice).toBe(-365);
-    const entry = update.$push.entries.$each[0];
+    const call = (db.collectionMocks.politicalMetricsHistory.bulkWrite as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0][0].updateOne;
+    expect(call.filter).toEqual({ _id: "UK" });
+    const update = call.update as Array<{ $set: { entries: unknown } }>;
+    const publication = historyAppendInfo<{ turn: number; values: Record<string, number> }>(
+      update[0].$set.entries
+    );
+    expect(publication.cap).toBe(365);
+    const entry = publication.point;
     expect(entry.turn).toBe(48);
     // The snapshot is the POST-DRIFT population-weighted mean, 1M vs 3M. Taken
     // from the values actually written rather than from a hand-computed target:
@@ -615,7 +623,7 @@ describe("trend history (§5)", () => {
 
   it("does not append off-cadence", async () => {
     await processPoliticalMetricsDynamics(db as unknown as Db, 47);
-    expect(db.collectionMocks.politicalMetricsHistory.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.politicalMetricsHistory.bulkWrite).not.toHaveBeenCalled();
   });
 });
 
@@ -652,19 +660,21 @@ describe("Bridge B — macro conditions bend the political equilibrium", () => {
     db.collectionMocks.politicalMetrics.distinct = vi.fn().mockResolvedValue(["US"]);
     db.collectionMocks.politicalMetrics.find = vi
       .fn()
-      .mockImplementation((f?: { countryId?: string }) => ({
-        toArray: vi.fn().mockResolvedValue(f?.countryId === "US" ? [doc] : []),
+      .mockImplementation((f?: { countryId?: string | { $in: string[] } }) => ({
+        toArray: vi.fn().mockResolvedValue(matchesCountry("US", f?.countryId) ? [doc] : []),
       }));
     db.collectionMocks.statePolicies.find = vi
       .fn()
       .mockImplementation(() => ({ toArray: vi.fn().mockResolvedValue([]) }));
     db.collectionMocks.macroMetrics.find = vi
       .fn()
-      .mockImplementation((f?: { countryId?: string }) => ({
+      .mockImplementation((f?: { countryId?: string | { $in: string[] } }) => ({
         toArray: vi
           .fn()
           .mockResolvedValue(
-            (macroDocs as Array<{ countryId?: string }>).filter((d) => d.countryId === f?.countryId)
+            (macroDocs as Array<{ countryId?: string }>).filter((d) =>
+              matchesCountry(d.countryId, f?.countryId)
+            )
           ),
       }));
     return processPoliticalMetricsDynamics(db as unknown as Db, 100).then(() => {
@@ -796,3 +806,12 @@ describe("engine term — funded services bend the political equilibrium", () =>
     expect(ops[0].updateOne.update.$set.residuals).toBeUndefined();
   });
 });
+
+function matchesCountry(
+  country: string | undefined,
+  condition: string | { $in: string[] } | undefined
+): boolean {
+  return typeof condition === "object"
+    ? condition.$in.includes(country ?? "")
+    : country === condition;
+}

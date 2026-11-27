@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useRef } from "react";
@@ -44,6 +45,7 @@ export function NewsComposer({
   onPost,
   onClose,
 }: NewsComposerProps) {
+  const { currencyCode } = useCurrency();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -225,7 +227,7 @@ export function NewsComposer({
               <span className="text-body font-medium">{submitting ? "Posting…" : "Post"}</span>
               <span className="text-body-sm opacity-75">
                 {isAd
-                  ? "5 actions · $100,000 personal cash · 30 min cooldown"
+                  ? `5 actions · 100,000 ${currencyCode} personal cash · 30 min cooldown`
                   : "Free · 12 hour cooldown"}
               </span>
             </button>

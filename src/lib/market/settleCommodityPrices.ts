@@ -1,3 +1,4 @@
+import { commodityPricingOpening } from "@/lib/turn/commodity/rules/pricingOpening";
 import type { CommodityPriceTurnResult } from "@/lib/turn/commodityPriceTurn";
 import { loadFinancialCrisisDemand } from "@/lib/livingConflict/financialDemand";
 
@@ -90,6 +91,13 @@ import type { ProcessCommodityPriceTurnStageContext } from "@/lib/turn/commodity
 export async function settleCommodityPrices(
   context: ProcessCommodityPriceTurnStageContext
 ): Promise<CommodityPriceTurnResult> {
+  context = {
+    ...context,
+    existingPrices: context.existingPrices.flatMap((price) => {
+      const opening = commodityPricingOpening(price, context.turn);
+      return opening ? [opening] : [];
+    }),
+  };
   // Background countries: their regions hold no sectors or modelled
   // households, so their book is their macro economy. The world total already
   // carries it; here the same units land in the country's own regions so the

@@ -1,8 +1,34 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
-vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+vi.mock("@/lib/mongodb", () => ({
+  getDb: vi.fn(),
+  getMongoClient: vi.fn().mockResolvedValue({
+    startSession: () => ({
+      withTransaction: async (work: () => Promise<unknown>) => work(),
+      endSession: async () => {},
+    }),
+  }),
+}));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
   checkRateLimit: vi.fn(() => ({ ok: true })),
@@ -440,7 +466,7 @@ describe("POST /api/npps/[id]/direct-action", () => {
     expect(db.collectionMocks["characters"]!.findOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it("refunds spent actions if a later write fails", async () => {
+  it("rolls back spent actions if a later write fails", async () => {
     db.collectionMocks["capitalActionLogs"]!.insertOne.mockRejectedValueOnce(
       new Error("write failed")
     );
@@ -452,20 +478,11 @@ describe("POST /api/npps/[id]/direct-action", () => {
 
     expect(response.status).toBe(500);
     expect(db.collectionMocks["characters"]!.findOneAndUpdate).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks["characters"]!.updateOne).toHaveBeenCalledWith(
-      { _id: characterId },
-      { $inc: { actions: 3, funds: 0 } }
-    );
-    expect(db.collectionMocks["nppRelationships"]!.replaceOne).toHaveBeenCalledWith(
-      { _id: `${characterId.toString()}_${nppId.toString()}` },
-      expect.objectContaining({
-        relationshipScore: 25,
-      }),
-      { upsert: true }
-    );
+    expect(db.collectionMocks["characters"]!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["nppRelationships"]!.replaceOne).not.toHaveBeenCalled();
   });
 
-  it("refunds both actions and funds if a later write fails on a funded stat action", async () => {
+  it("rolls back both actions and funds if a later write fails on a funded stat action", async () => {
     db.collectionMocks["capitalActionLogs"]!.insertOne.mockRejectedValueOnce(
       new Error("write failed")
     );
@@ -481,9 +498,6 @@ describe("POST /api/npps/[id]/direct-action", () => {
     });
 
     expect(response.status).toBe(500);
-    expect(db.collectionMocks["characters"]!.updateOne).toHaveBeenCalledWith(
-      { _id: characterId },
-      { $inc: { actions: 5, funds: 10000 } }
-    );
+    expect(db.collectionMocks["characters"]!.updateOne).not.toHaveBeenCalled();
   });
 });

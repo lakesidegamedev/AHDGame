@@ -1,3 +1,11 @@
+import { supplyCashLegs } from "./rules/supplyCashLegs";
+import {
+  prepareSupplyCashPlan,
+  pendingSupplyCashPlans,
+  replaySupplyPlan,
+  type SupplyPlanPart,
+} from "./supplyAgreementPlan";
+import { representedCashDelta } from "@/lib/banking/rules/representedCashDelta";
 /**
  * Bilateral supply-agreement settlement (supplyAgreementsEnabled).
  *
@@ -60,7 +68,6 @@ import { fundedContractDeliveries, type FundedPairFlows } from "./rules/contract
 import {
   resolveCorpLiquidCurrencyCode,
   fxRateForCorpFromMap,
-  anchorToCorpCapital,
   corpCapitalToAnchor,
 } from "@/lib/currency/corporationCapital";
 import {
@@ -560,8 +567,11 @@ export function computeSupplyAgreementSettlements(args: {
       });
     }
 
-    const supplierLocal = Math.round(anchorToCorpCapital(netAnchor, supplier.ccy, supplier.fxRate));
-    const buyerLocal = Math.round(anchorToCorpCapital(netAnchor, buyer.ccy, buyer.fxRate));
+    const { supplierLocal, buyerLocal } = supplyCashLegs(
+      netAnchor,
+      { currencyCode: supplier.ccy, rate: supplier.fxRate },
+      { currencyCode: buyer.ccy, rate: buyer.fxRate }
+    );
     if (!Number.isFinite(supplierLocal) || !Number.isFinite(buyerLocal)) continue;
     if (supplierLocal === 0 && buyerLocal === 0) continue;
     if (deliveryRecord) {
@@ -582,29 +592,27 @@ export function computeSupplyAgreementSettlements(args: {
     const meta = {
       ...(a.agreementId ? { agreementId: a.agreementId } : {}),
       commodity: a.commodity,
-      unitsSettled: Math.round(qty),
+      unitsSettled: qty,
       pricePremium: a.pricePremium,
-      premiumAnchor: Math.round(premiumAnchor),
+      premiumAnchor,
       ...(newMode
         ? {
             priceMode: newMode,
-            marketUnitPrice: Math.round((marketUnitPrice ?? 0) * 100) / 100,
+            marketUnitPrice: marketUnitPrice ?? 0,
             marketPriceSource,
-            contractUnitPrice: Math.round((contractUnitPrice ?? 0) * 100) / 100,
+            contractUnitPrice: contractUnitPrice ?? 0,
           }
         : {}),
       ...(shortfallUnits > 0
         ? {
-            shortfallUnits: Math.round(shortfallUnits),
-            shortfallPenaltyAnchor: Math.round(penaltyAnchor),
+            shortfallUnits,
+            shortfallPenaltyAnchor: penaltyAnchor,
             ...(uncappedPenaltyAnchor > penaltyAnchor
-              ? { damagesCappedFromAnchor: Math.round(uncappedPenaltyAnchor) }
+              ? { damagesCappedFromAnchor: uncappedPenaltyAnchor }
               : {}),
           }
         : {}),
-      ...(unpaidAnchor >= MIN_SETTLE_ANCHOR
-        ? { unpaidDamagesAnchor: Math.round(unpaidAnchor) }
-        : {}),
+      ...(unpaidAnchor >= MIN_SETTLE_ANCHOR ? { unpaidDamagesAnchor: unpaidAnchor } : {}),
     };
     if (supplier.ccy) {
       txEntries.push({
@@ -690,99 +698,182 @@ export async function settleSupplyAgreements(args: {
       damages: [],
     };
 
-  // Income, dividends and other corporation-turn writes have already landed in
-  // MongoDB, while `lookups.corpById` is the pre-turn snapshot. The solvency
-  // floor must use the balance that actually exists at settlement time. Using
-  // the stale lookup made damages depend on whether the player spent yesterday's
-  // cash, exactly the behavior reported in ticket #1147.
-  const participantIds = [
-    ...new Set(
-      agreements.flatMap((agreement) => [agreement.supplierCorpId, agreement.buyerCorpId])
-    ),
-  ].filter(ObjectId.isValid);
-  const freshCapitalByCorpId = new Map<string, number>();
-  if (participantIds.length > 0) {
-    const currentBalances = await corporationsCollection<
-      Pick<Corporation, "_id" | "liquidCapital">
-    >(db)
+  await resumePendingSupplyProjections(db, args.thresholds, now);
+  const manifest = await prepareSupplyCashPlan(db, turn, now, async (db) => {
+    // Income, dividends and other corporation-turn writes have already landed in
+    // MongoDB, while `lookups.corpById` is the pre-turn snapshot. The solvency
+    // floor must use the balance that actually exists at settlement time. Using
+    // the stale lookup made damages depend on whether the player spent yesterday's
+    // cash, exactly the behavior reported in ticket #1147.
+    const participantIds = [
+      ...new Set(
+        agreements.flatMap((agreement) => [agreement.supplierCorpId, agreement.buyerCorpId])
+      ),
+    ].filter(ObjectId.isValid);
+    const freshCapitalByCorpId = new Map<string, number>();
+    const freshCorporationsById = new Map<string, Corporation>();
+    if (participantIds.length > 0) {
+      const currentBalances = await corporationsCollection<Corporation>(db)
+        .find(
+          { _id: { $in: participantIds.map((id) => new ObjectId(id)) } },
+          {
+            projection: {
+              liquidCapital: 1,
+              liquidCurrencyCode: 1,
+              countryId: 1,
+              ceoType: 1,
+              ceoId: 1,
+            },
+          }
+        )
+        .toArray();
+      for (const current of currentBalances) {
+        freshCapitalByCorpId.set(current._id.toString(), current.liquidCapital ?? 0);
+        freshCorporationsById.set(current._id.toString(), current);
+      }
+    }
+
+    step.mark("settle.balances");
+
+    const {
+      deltaByCorp,
+      txEntries,
+      settledCount,
+      totalPremiumAnchor,
+      settledPremiums,
+      deliveries,
+      damages,
+    } = computeSupplyAgreementSettlements({
+      agreements,
+      contractSettlementByCorp,
+      buyerDemandByCorpCommodity: args.buyerDemandByCorpCommodity,
+      priceRatioByCommodity,
+      eraUnitScale: lookups.eraUnitScale,
+      producedByCorpCommodity: args.producedByCorpCommodity,
+      achievableByCorpCommodity: args.achievableByCorpCommodity,
+      plantsEnabled: args.plantsEnabled,
+      fundedPairFlows: args.fundedPairFlows,
+      realisedSupplierPrices: args.realisedSupplierPrices,
+      corpInfo: (corpId) => {
+        const current = freshCorporationsById.get(corpId);
+        const prior = lookups.corpById.get(corpId);
+        if (!current || !prior) return undefined;
+        const corp = { ...prior, ...current };
+        return {
+          _id: corp._id,
+          name: corp.name,
+          ccy: resolveCorpLiquidCurrencyCode(corp),
+          fxRate: fxRateForCorpFromMap(corp, lookups.exchangeRatesByCurrency),
+          // C6 solvency floor: the payer's own balance, in ₳.
+          liquidCapitalAnchor: corpCapitalToAnchor(
+            freshCapitalByCorpId.get(corpId) ?? corp.liquidCapital ?? 0,
+            resolveCorpLiquidCurrencyCode(corp),
+            fxRateForCorpFromMap(corp, lookups.exchangeRatesByCurrency)
+          ),
+          ...(corp.ceoType === "npp" && corp.ceoId
+            ? {
+                premiumReserveAnchor: getNppCashFloorAnchor(
+                  args.plantsEnabled ? lookups.preset : undefined
+                ),
+              }
+            : {}),
+        };
+      },
+      turn,
+      now,
+    });
+
+    step.mark("settle.compute");
+
+    const cashClosings: Array<{ corporationId: string; balance: number }> = [];
+    if (deltaByCorp.size > 0) {
+      const ops: AnyBulkWriteOperation<Corporation>[] = [];
+      for (const [corpId, delta] of deltaByCorp) {
+        if (delta === 0) continue;
+        const corp = freshCorporationsById.get(corpId);
+        if (!corp) continue;
+        ops.push({
+          updateOne: {
+            filter: {
+              _id: corp._id,
+              liquidCapital: corp.liquidCapital,
+              ...representedCashDelta("liquidCapital", delta),
+            },
+            update: { $inc: { liquidCapital: delta }, $set: { updatedAt: now } },
+          },
+        });
+        const balance = (freshCapitalByCorpId.get(corpId) ?? corp.liquidCapital ?? 0) + delta;
+        if (!Number.isFinite(balance) || balance < 0)
+          throw new Error("Supply settlement cash is invalid");
+        cashClosings.push({ corporationId: corpId, balance });
+      }
+      if (ops.length > 0) {
+        const saved = await corporationsCollection(db).bulkWrite(ops);
+        if (saved.matchedCount !== ops.length)
+          throw new Error("Supply settlement cash changed before publication");
+      }
+    }
+
+    return {
+      deltaByCorp,
+      txEntries,
+      settledCount,
+      totalPremiumAnchor,
+      settledPremiums,
+      deliveries,
+      damages,
+      cashClosings,
+    };
+  });
+  step.mark("settle.corpWrites");
+  const parts = await replaySupplyPlan(db, manifest, (db, part) =>
+    publishSupplyProjectionPart(db, part, args.thresholds, now)
+  );
+  if (manifest.cashClosings.length) {
+    const current = await corporationsCollection(db)
       .find(
-        { _id: { $in: participantIds.map((id) => new ObjectId(id)) } },
+        { _id: { $in: manifest.cashClosings.map((row) => new ObjectId(row.corporationId)) } },
         { projection: { liquidCapital: 1 } }
       )
       .toArray();
-    for (const current of currentBalances) {
-      freshCapitalByCorpId.set(current._id.toString(), current.liquidCapital ?? 0);
+    for (const row of current) {
+      const corp = lookups.corpById.get(row._id.toString());
+      if (corp) corp.liquidCapital = row.liquidCapital;
     }
   }
-
-  step.mark("settle.balances");
-
-  const {
-    deltaByCorp,
-    txEntries,
-    settledCount,
-    totalPremiumAnchor,
+  const settledPremiums = parts.flatMap((part) => part.settledPremiums);
+  const deliveries = parts.flatMap((part) => part.deliveries);
+  const damages = parts.flatMap((part) => part.damages);
+  await notifySupplyAgreementDamages({ db, damages, agreements, lookups, turn });
+  return {
+    settledCount: manifest.settledCount,
+    totalPremiumAnchor: manifest.totalPremiumAnchor,
     settledPremiums,
     deliveries,
     damages,
-  } = computeSupplyAgreementSettlements({
-    agreements,
-    contractSettlementByCorp,
-    buyerDemandByCorpCommodity: args.buyerDemandByCorpCommodity,
-    priceRatioByCommodity,
-    eraUnitScale: lookups.eraUnitScale,
-    producedByCorpCommodity: args.producedByCorpCommodity,
-    achievableByCorpCommodity: args.achievableByCorpCommodity,
-    plantsEnabled: args.plantsEnabled,
-    fundedPairFlows: args.fundedPairFlows,
-    realisedSupplierPrices: args.realisedSupplierPrices,
-    corpInfo: (corpId) => {
-      const corp = lookups.corpById.get(corpId);
-      if (!corp) return undefined;
-      return {
-        _id: corp._id,
-        name: corp.name,
-        ccy: resolveCorpLiquidCurrencyCode(corp),
-        fxRate: fxRateForCorpFromMap(corp, lookups.exchangeRatesByCurrency),
-        // C6 solvency floor: the payer's own balance, in ₳.
-        liquidCapitalAnchor: corpCapitalToAnchor(
-          freshCapitalByCorpId.get(corpId) ?? corp.liquidCapital ?? 0,
-          resolveCorpLiquidCurrencyCode(corp),
-          fxRateForCorpFromMap(corp, lookups.exchangeRatesByCurrency)
-        ),
-        ...(corp.ceoType === "npp" && corp.ceoId
-          ? {
-              premiumReserveAnchor: getNppCashFloorAnchor(
-                args.plantsEnabled ? lookups.preset : undefined
-              ),
-            }
-          : {}),
-      };
-    },
-    turn,
-    now,
-  });
+  };
+}
 
-  step.mark("settle.compute");
-
-  if (deltaByCorp.size > 0) {
-    const ops: AnyBulkWriteOperation<Corporation>[] = [];
-    for (const [corpId, delta] of deltaByCorp) {
-      if (delta === 0) continue;
-      const corp = lookups.corpById.get(corpId);
-      if (!corp) continue;
-      ops.push({
-        updateOne: {
-          filter: { _id: corp._id },
-          update: { $inc: { liquidCapital: delta }, $set: { updatedAt: now } },
-        },
-      });
-      // Keep the in-memory snapshot consistent for any later same-turn reader.
-      corp.liquidCapital = (freshCapitalByCorpId.get(corpId) ?? corp.liquidCapital ?? 0) + delta;
-    }
-    if (ops.length > 0) await corporationsCollection(db).bulkWrite(ops);
+export async function resumePendingSupplyProjections(
+  db: Db,
+  thresholds: TxThresholds,
+  now: Date
+): Promise<void> {
+  const pending = await pendingSupplyCashPlans(db);
+  for (const manifest of pending) {
+    await replaySupplyPlan(db, manifest, (db, part) =>
+      publishSupplyProjectionPart(db, part, thresholds, now)
+    );
   }
-  step.mark("settle.corpWrites");
+}
+
+async function publishSupplyProjectionPart(
+  db: Db,
+  part: SupplyPlanPart,
+  thresholds: TxThresholds,
+  now: Date
+): Promise<void> {
+  const { deliveries, txEntries } = part;
   if (deliveries.length > 0) {
     const deliveryOps: AnyBulkWriteOperation<SupplyAgreement>[] = [];
     for (const delivery of deliveries) {
@@ -803,16 +894,16 @@ export async function settleSupplyAgreements(args: {
         ...(delivery.previousBuyerConsumptionUnits !== undefined
           ? { previousBuyerConsumptionUnits: delivery.previousBuyerConsumptionUnits }
           : {}),
-        lastShortfallUnits: Math.round(delivery.shortfallUnits ?? 0),
-        lastShortfallPenaltyAnchor: Math.round(delivery.penaltyAnchor ?? 0),
+        lastShortfallUnits: delivery.shortfallUnits ?? 0,
+        lastShortfallPenaltyAnchor: delivery.penaltyAnchor ?? 0,
         lastSupplierCashDelta: delivery.supplierCashDeltaLocal ?? 0,
         lastBuyerCashDelta: delivery.buyerCashDeltaLocal ?? 0,
-        lastUnpaidSettlementAnchor: Math.round(delivery.unpaidSettlementAnchor ?? 0),
+        lastUnpaidSettlementAnchor: delivery.unpaidSettlementAnchor ?? 0,
         ...(delivery.achievableUnits !== undefined
-          ? { lastAchievableUnits: Math.round(delivery.achievableUnits) }
+          ? { lastAchievableUnits: delivery.achievableUnits }
           : {}),
         ...(delivery.creditedProductionUnits !== undefined
-          ? { lastCreditedProductionUnits: Math.round(delivery.creditedProductionUnits) }
+          ? { lastCreditedProductionUnits: delivery.creditedProductionUnits }
           : {}),
         ...(delivery.supplierCurrencyCode
           ? { lastSupplierCashCurrency: delivery.supplierCurrencyCode }
@@ -847,7 +938,13 @@ export async function settleSupplyAgreements(args: {
       };
       deliveryOps.push({
         updateOne: {
-          filter: { _id: new ObjectId(delivery.agreementId) },
+          filter: {
+            _id: new ObjectId(delivery.agreementId),
+            $or: [
+              { lastDeliveryTurn: { $exists: false } },
+              { lastDeliveryTurn: { $lte: delivery.turn } },
+            ],
+          },
           update: {
             $set: setFields,
             ...(Object.keys(unsetFields).length > 0 ? { $unset: unsetFields } : {}),
@@ -859,13 +956,7 @@ export async function settleSupplyAgreements(args: {
     // own `_id`, so the batches can be applied side by side.
     await partitionedBulkWrite(supplyAgreementsCollection(db), deliveryOps);
   }
-  step.mark("settle.deliveryWrites");
-  if (txEntries.length > 0) await emitTxBulk(db, txEntries, args.thresholds);
-  step.mark("settle.ledger");
-  await notifySupplyAgreementDamages({ db, damages, agreements, lookups, turn });
-  step.mark("settle.notify");
-
-  return { settledCount, totalPremiumAnchor, settledPremiums, deliveries, damages };
+  if (txEntries.length > 0) await emitTxBulk(db, txEntries, thresholds);
 }
 
 /**

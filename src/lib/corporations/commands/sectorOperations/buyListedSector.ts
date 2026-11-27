@@ -1,3 +1,5 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { afterCommit } from "@/lib/db/sessionDb";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 /**
  * Buy a sector that the seller corp has listed for sale.
@@ -27,7 +29,6 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { rejectWhileTurnProcessing } from "./turnGuard";
 import { parseJsonBody } from "@/lib/api/validate";
 import { schemas } from "@/lib/api/validate";
-import type { CorporateSector, State } from "@/lib/db/types";
 import { OPERATING_SECTOR_TYPE_LABELS, type CorporationType } from "@/lib/constants/corporations";
 import {
   anchorToCorpLiquidCapital,
@@ -40,19 +41,13 @@ import { safeDistributeConversionSpread } from "@/lib/currency/marketMaker";
 import { sectorFxSpreadBetween } from "@/lib/currency/sectorFxSpread";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import {
-  atomicallyDebitCorpLiquidCapital,
-  refundCorpLiquidCapital,
-} from "@/lib/financialTxLog/atomicCashGuard";
+import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
 import { createNotification } from "@/lib/notifications";
 import { isCorporateSectorDuplicateKey } from "@/lib/corporations/sectorLocation";
-import {
-  identitySectorPlantFields,
-  mergeSectorPlantFields,
-} from "@/lib/corporations/sectorTransferCapex";
+import { mergeSectorPlantFields } from "@/lib/corporations/sectorTransferCapex";
 import { sectorMergeStrategyRefusal } from "@/lib/corporations/sectorMergeStrategy";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
@@ -94,293 +89,470 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
       return errorResponse(400, "Invalid sector ID");
     }
 
-    const db = await getDb();
-    const corpGuard = await requireCorporationActionsEnabled(db);
-    if (corpGuard) return corpGuard;
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      const corpGuard = await requireCorporationActionsEnabled(db);
+      if (corpGuard) return corpGuard;
 
-    const sellerResolved = await resolveCorporation(db, id);
-    if (!sellerResolved.ok) return sellerResolved.response;
-    const seller = sellerResolved.corporation;
+      const sellerResolved = await resolveCorporation(db, id);
+      if (!sellerResolved.ok) return sellerResolved.response;
+      const seller = sellerResolved.corporation;
 
-    const buyer = await corporationsCollection(db).findOne({
-      _id: new ObjectId(buyerCorporationId),
-    });
-    if (!buyer) {
-      return errorResponse(404, "Buyer corporation not found");
-    }
+      const buyer = await corporationsCollection(db).findOne({
+        _id: new ObjectId(buyerCorporationId),
+      });
+      if (!buyer) {
+        return errorResponse(404, "Buyer corporation not found");
+      }
 
-    if (buyer._id.equals(seller._id)) {
-      return errorResponse(400, "A corporation cannot buy its own sector");
-    }
+      if (buyer._id.equals(seller._id)) {
+        return errorResponse(400, "A corporation cannot buy its own sector");
+      }
 
-    if (buyer.ceoVacant === true || !buyer.userId || buyer.userId.toString() !== auth.user.userId) {
-      return errorResponse(403, "You must be the CEO of the buying corporation");
-    }
-
-    const sector = await corporateSectorsCollection(db).findOne({ _id: new ObjectId(sectorId) });
-    const securedClaim = sector?.constructionFinancing;
-    const saleRetry =
-      securedClaim?.borrowerId === String(seller._id) &&
-      securedClaim.sale?.buyerId === String(buyer._id);
-    if (!sector || (!sector.corporationId.equals(seller._id) && !saleRetry)) {
-      return errorResponse(404, "Sector not found");
-    }
-
-    if (!saleRetry) {
-      const transferRestriction = await controllerTransferBarrierError(
-        db,
-        buyer,
-        await getCurrentTurn(db),
-        new Date()
-      );
-      if (transferRestriction) return errorResponse(403, transferRestriction);
-    }
-
-    if (
-      saleRetry ||
-      (securedClaim?.loanFunded && ["building", "released"].includes(securedClaim.status))
-    ) {
       if (
-        !saleRetry &&
-        (await isPrivateEnterpriseBlocked(db, sector.countryId ?? seller.countryId))
-      )
-        return errorResponse(
-          403,
-          "This market is state-controlled and closed to private acquisition."
+        buyer.ceoVacant === true ||
+        !buyer.userId ||
+        buyer.userId.toString() !== auth.user.userId
+      ) {
+        return errorResponse(403, "You must be the CEO of the buying corporation");
+      }
+
+      const sector = await corporateSectorsCollection(db).findOne({ _id: new ObjectId(sectorId) });
+      const securedClaim = sector?.constructionFinancing;
+      const saleRetry =
+        securedClaim?.borrowerId === String(seller._id) &&
+        securedClaim.sale?.buyerId === String(buyer._id);
+      if (!sector || (!sector.corporationId.equals(seller._id) && !saleRetry)) {
+        return errorResponse(404, "Sector not found");
+      }
+
+      if (!saleRetry) {
+        const transferRestriction = await controllerTransferBarrierError(
+          db,
+          buyer,
+          await getCurrentTurn(db),
+          new Date()
         );
-      const result = await buySecuredConstructionProperty({
-        db,
-        sectorId: sector._id,
-        borrowerId: seller._id,
-        buyerId: buyer._id,
-        turn: await getCurrentTurn(db),
-      });
-      if (!result.ok) return errorResponse(409, result.error);
-      return NextResponse.json({
-        success: true,
-        priceAnchor: result.quote.priceAnchor,
-        priceInBuyerCapital: result.quote.buyerCostLocal,
-        priceInSellerCapital: result.quote.ownerProceeds,
-        buyerCurrency: result.quote.buyerCurrency,
-        sellerCurrency: securedClaim?.currency,
-        principalRepaid: result.quote.principalRepaid,
-        merged: !!result.quote.mergeIntoSectorId,
-        message: result.quote.mergeIntoSectorId
-          ? "Property acquired and merged into your existing site; secured principal paid before seller proceeds."
-          : "Property acquired; secured principal paid before seller proceeds.",
-      });
-    }
-    if (hasProtectedConstructionProperty(sector)) {
-      return errorResponse(409, "This sector has secured construction and cannot be acquired yet");
-    }
-    if (securedClaim && !["released", "cancelled"].includes(securedClaim.status))
-      return errorResponse(
-        409,
-        "Resolve the pending construction request before selling its site."
-      );
-    if (!sector.forSale) {
-      return errorResponse(400, "Sector is not currently listed for sale");
-    }
+        if (transferRestriction) return errorResponse(403, transferRestriction);
+      }
 
-    // Keyed on the SECTOR's country, not the buyer's: a foreign private corp
-    // must not acquire production inside a planned economy either.
-    const sectorCountryId = sector.countryId ?? seller.countryId;
-    if (await isPrivateEnterpriseBlocked(db, sectorCountryId)) {
-      return errorResponse(
-        403,
-        "This market is state-controlled under a command economy and is closed to private companies. Pick a state with a market economy."
-      );
-    }
-
-    // If the buyer already operates this sector type in this state, allow the
-    // purchase but merge the acquired sector into the existing one rather than
-    // transferring it (which would violate the unique index).
-    const existingBuyerSector = await corporateSectorsCollection(db).findOne({
-      corporationId: buyer._id,
-      stateId: sector.stateId,
-      sectorType: sector.sectorType,
-    });
-    if (existingBuyerSector && hasProtectedConstructionProperty(existingBuyerSector))
-      return errorResponse(409, "The buyer's existing site has an unfinished secured obligation.");
-
-    const strategyRefusal = existingBuyerSector
-      ? sectorMergeStrategyRefusal(sector, existingBuyerSector)
-      : null;
-    if (strategyRefusal) return errorResponse(409, strategyRefusal);
-
-    const priceAnchor = sector.forSale.priceAnchor;
-    if (!Number.isFinite(priceAnchor) || priceAnchor <= 0) {
-      return errorResponse(400, "Listing price is invalid; ask the seller to relist.");
-    }
-
-    // Pull live FX rates for both sides — the seller and buyer can be on
-    // different home currencies (forex aware). Each conversion goes through ₳.
-    const [buyerFxRate, sellerFxRate] = await Promise.all([
-      getCorpFxRate(db, buyer),
-      getCorpFxRate(db, seller),
-    ]);
-
-    const buyerCurrency = resolveCorpLiquidCurrencyCode(buyer);
-    const sellerCurrency = resolveCorpLiquidCurrencyCode(seller);
-
-    // Cross-currency acquisition: the buyer pays the reduced sector FX spread on
-    // top of the price (the seller still receives the plain price). Routed below.
-    const acqSpread = sectorFxSpreadBetween(
-      buyerCurrency as CurrencyCode | null,
-      sellerCurrency as CurrencyCode | null,
-      priceAnchor
-    );
-    const priceInBuyerCapital = Math.round(
-      anchorToCorpLiquidCapital(priceAnchor + acqSpread.spreadAnchor, buyer, buyerFxRate)
-    );
-    const priceInSellerCapital = Math.round(
-      anchorToCorpLiquidCapital(priceAnchor, seller, sellerFxRate)
-    );
-
-    // Atomic balance-gated debit on the buyer's corp. Race-safe: a concurrent
-    // bond purchase or share buy from the same corp cannot drain liquidCapital
-    // out from under us.
-    const buyerDebit = await atomicallyDebitCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
-    if (!buyerDebit.ok) {
-      return errorResponse(
-        400,
-        `Insufficient corporate funds. Need ${priceInBuyerCapital.toLocaleString()} ${
-          buyerCurrency ?? "USD"
-        } to purchase this sector.`
-      );
-    }
-
-    const now = new Date();
-    let sellerCredited = false;
-
-    // Sector economic fields are stored in the sector's HOST-state currency,
-    // which is invariant to ownership — so revenue/growthCost carry over
-    // unchanged when the sector changes hands (no seller→buyer re-denomination).
-    // Normalize to ₳ at the host rate for the captured-revenue records and merge
-    // math below; the stored local values stay in host currency (identity).
-    const sectorHostCurrency = resolveSectorHostCurrencyCode(sector, seller);
-    const sectorHostFxRate = await getSectorHostFxRate(db, sector, seller);
-    const revenueAnchor = readCorpEconomicAnchor(
-      sector.revenue,
-      sectorHostCurrency,
-      sectorHostFxRate
-    );
-    const newRevenueLocal = Math.round(sector.revenue ?? 0);
-    const newGrowthCostLocal = Math.round(sector.currentGrowthCost ?? 0);
-
-    const turn = await getCurrentTurn(db).catch(() => 0);
-    const stateDoc = await statesCollection(db).findOne(
-      { _id: sector.stateId },
-      { projection: { name: 1 } }
-    );
-    const stateName = stateDoc?.name ?? sector.stateId;
-    const sectorLabel =
-      OPERATING_SECTOR_TYPE_LABELS[sector.sectorType as CorporationType] ?? sector.sectorType;
-
-    if (existingBuyerSector) {
-      // Brand facility-loss (Boeing rule): the seller is losing this sector, so
-      // dent its brand proportional to the sector's share of the seller's
-      // revenue. Called while the seller still owns it (aggregate includes it).
-      // No-op when the seller has no loyalty. Best-effort — loyalty recomputes
-      // each turn, so a rare post-call failure self-heals.
-      await applyBrandFacilityLoss(db, seller._id, [sector]);
-
-      // ── Merge path ──────────────────────────────────────────────────────────
-      // Buyer already owns this sector type in this state. Claim the listing
-      // atomically, merge stats into the existing sector, then delete the
-      // purchased doc.
-      const claimResult = await corporateSectorsCollection(db).updateOne(
-        { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
-        { $unset: { forSale: "" }, $set: { updatedAt: now } }
-      );
-      if (claimResult.matchedCount === 0) {
-        await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
+      if (
+        saleRetry ||
+        (securedClaim?.loanFunded && ["building", "released"].includes(securedClaim.status))
+      ) {
+        if (
+          !saleRetry &&
+          (await isPrivateEnterpriseBlocked(db, sector.countryId ?? seller.countryId))
+        )
+          return errorResponse(
+            403,
+            "This market is state-controlled and closed to private acquisition."
+          );
+        const result = await buySecuredConstructionProperty({
+          db,
+          sectorId: sector._id,
+          borrowerId: seller._id,
+          buyerId: buyer._id,
+          turn: await getCurrentTurn(db),
+        });
+        if (!result.ok) return errorResponse(409, result.error);
+        return NextResponse.json({
+          success: true,
+          priceAnchor: result.quote.priceAnchor,
+          priceInBuyerCapital: result.quote.buyerCostLocal,
+          priceInSellerCapital: result.quote.ownerProceeds,
+          buyerCurrency: result.quote.buyerCurrency,
+          sellerCurrency: securedClaim?.currency,
+          principalRepaid: result.quote.principalRepaid,
+          merged: !!result.quote.mergeIntoSectorId,
+          message: result.quote.mergeIntoSectorId
+            ? "Property acquired and merged into your existing site; secured principal paid before seller proceeds."
+            : "Property acquired; secured principal paid before seller proceeds.",
+        });
+      }
+      if (hasProtectedConstructionProperty(sector)) {
         return errorResponse(
           409,
-          "Listing was unlisted or already sold. Refresh and try another sector."
+          "This sector has secured construction and cannot be acquired yet"
+        );
+      }
+      if (securedClaim && !["released", "cancelled"].includes(securedClaim.status))
+        return errorResponse(
+          409,
+          "Resolve the pending construction request before selling its site."
+        );
+      if (!sector.forSale) {
+        return errorResponse(400, "Sector is not currently listed for sale");
+      }
+
+      // Keyed on the SECTOR's country, not the buyer's: a foreign private corp
+      // must not acquire production inside a planned economy either.
+      const sectorCountryId = sector.countryId ?? seller.countryId;
+      if (await isPrivateEnterpriseBlocked(db, sectorCountryId)) {
+        return errorResponse(
+          403,
+          "This market is state-controlled under a command economy and is closed to private companies. Pick a state with a market economy."
         );
       }
 
-      // Resolved before the try so the catch's rollback branch sees the same
-      // tier the forward merge used.
-      const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-      let mergeApplied = false;
-      try {
-        const combinedRevenue = existingBuyerSector.revenue + newRevenueLocal;
-        const combinedWorkers = existingBuyerSector.workers + sector.workers;
-        const weightedMargin =
-          combinedRevenue > 0
-            ? (existingBuyerSector.profitMargin * existingBuyerSector.revenue +
-                sector.profitMargin * newRevenueLocal) /
-              combinedRevenue
-            : existingBuyerSector.profitMargin;
-        const combinedGrowthCost =
-          (existingBuyerSector.currentGrowthCost ?? 0) + newGrowthCostLocal;
-        const weightedProductionPolicyLevel =
-          combinedRevenue > 0
-            ? clampProductionPolicy(
-                Math.round(
-                  ((existingBuyerSector.productionPolicyLevel ?? 0) * existingBuyerSector.revenue +
-                    (sector.productionPolicyLevel ?? 0) * newRevenueLocal) /
+      // If the buyer already operates this sector type in this state, allow the
+      // purchase but merge the acquired sector into the existing one rather than
+      // transferring it (which would violate the unique index).
+      const existingBuyerSector = await corporateSectorsCollection(db).findOne({
+        corporationId: buyer._id,
+        stateId: sector.stateId,
+        sectorType: sector.sectorType,
+      });
+      if (existingBuyerSector && hasProtectedConstructionProperty(existingBuyerSector))
+        return errorResponse(
+          409,
+          "The buyer's existing site has an unfinished secured obligation."
+        );
+
+      const strategyRefusal = existingBuyerSector
+        ? sectorMergeStrategyRefusal(sector, existingBuyerSector)
+        : null;
+      if (strategyRefusal) return errorResponse(409, strategyRefusal);
+
+      const priceAnchor = sector.forSale.priceAnchor;
+      if (!Number.isFinite(priceAnchor) || priceAnchor <= 0) {
+        return errorResponse(400, "Listing price is invalid; ask the seller to relist.");
+      }
+
+      // Pull live FX rates for both sides — the seller and buyer can be on
+      // different home currencies (forex aware). Each conversion goes through ₳.
+      const [buyerFxRate, sellerFxRate] = await Promise.all([
+        getCorpFxRate(db, buyer),
+        getCorpFxRate(db, seller),
+      ]);
+
+      const buyerCurrency = resolveCorpLiquidCurrencyCode(buyer);
+      const sellerCurrency = resolveCorpLiquidCurrencyCode(seller);
+
+      // Cross-currency acquisition: the buyer pays the reduced sector FX spread on
+      // top of the price (the seller still receives the plain price). Routed below.
+      const acqSpread = sectorFxSpreadBetween(
+        buyerCurrency as CurrencyCode | null,
+        sellerCurrency as CurrencyCode | null,
+        priceAnchor
+      );
+      const priceInBuyerCapital = Math.round(
+        anchorToCorpLiquidCapital(priceAnchor + acqSpread.spreadAnchor, buyer, buyerFxRate)
+      );
+      const priceInSellerCapital = Math.round(
+        anchorToCorpLiquidCapital(priceAnchor, seller, sellerFxRate)
+      );
+
+      // Atomic balance-gated debit on the buyer's corp. Race-safe: a concurrent
+      // bond purchase or share buy from the same corp cannot drain liquidCapital
+      // out from under us.
+      const buyerDebit = await atomicallyDebitCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
+      if (!buyerDebit.ok) {
+        return errorResponse(
+          400,
+          `Insufficient corporate funds. Need ${priceInBuyerCapital.toLocaleString()} ${
+            buyerCurrency ?? "USD"
+          } to purchase this sector.`
+        );
+      }
+
+      const now = new Date();
+
+      // Sector economic fields are stored in the sector's HOST-state currency,
+      // which is invariant to ownership — so revenue/growthCost carry over
+      // unchanged when the sector changes hands (no seller→buyer re-denomination).
+      // Normalize to ₳ at the host rate for the captured-revenue records and merge
+      // math below; the stored local values stay in host currency (identity).
+      const sectorHostCurrency = resolveSectorHostCurrencyCode(sector, seller);
+      const sectorHostFxRate = await getSectorHostFxRate(db, sector, seller);
+      const revenueAnchor = readCorpEconomicAnchor(
+        sector.revenue,
+        sectorHostCurrency,
+        sectorHostFxRate
+      );
+      const newRevenueLocal = Math.round(sector.revenue ?? 0);
+      const newGrowthCostLocal = Math.round(sector.currentGrowthCost ?? 0);
+
+      const turn = await getCurrentTurn(db).catch(() => 0);
+      const stateDoc = await statesCollection(db).findOne(
+        { _id: sector.stateId },
+        { projection: { name: 1 } }
+      );
+      const stateName = stateDoc?.name ?? sector.stateId;
+      const sectorLabel =
+        OPERATING_SECTOR_TYPE_LABELS[sector.sectorType as CorporationType] ?? sector.sectorType;
+
+      if (existingBuyerSector) {
+        // Brand facility-loss (Boeing rule): the seller is losing this sector, so
+        // dent its brand proportional to the sector's share of the seller's
+        // revenue. Called while the seller still owns it (aggregate includes it).
+        // No-op when the seller has no loyalty. Best-effort — loyalty recomputes
+        // each turn, so a rare post-call failure self-heals.
+        await applyBrandFacilityLoss(db, seller._id, [sector]);
+
+        // ── Merge path ──────────────────────────────────────────────────────────
+        // Buyer already owns this sector type in this state. Claim the listing
+        // atomically, merge stats into the existing sector, then delete the
+        // purchased doc.
+        const claimResult = await corporateSectorsCollection(db).updateOne(
+          { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
+          { $unset: { forSale: "" }, $set: { updatedAt: now } }
+        );
+        if (claimResult.matchedCount === 0) {
+          return errorResponse(
+            409,
+            "Listing was unlisted or already sold. Refresh and try another sector."
+          );
+        }
+
+        // Resolved before the try so the catch's rollback branch sees the same
+        // tier the forward merge used.
+        const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+        try {
+          const combinedRevenue = existingBuyerSector.revenue + newRevenueLocal;
+          const combinedWorkers = existingBuyerSector.workers + sector.workers;
+          const weightedMargin =
+            combinedRevenue > 0
+              ? (existingBuyerSector.profitMargin * existingBuyerSector.revenue +
+                  sector.profitMargin * newRevenueLocal) /
+                combinedRevenue
+              : existingBuyerSector.profitMargin;
+          const combinedGrowthCost =
+            (existingBuyerSector.currentGrowthCost ?? 0) + newGrowthCostLocal;
+          const weightedProductionPolicyLevel =
+            combinedRevenue > 0
+              ? clampProductionPolicy(
+                  Math.round(
+                    ((existingBuyerSector.productionPolicyLevel ?? 0) *
+                      existingBuyerSector.revenue +
+                      (sector.productionPolicyLevel ?? 0) * newRevenueLocal) /
+                      combinedRevenue
+                  )
+                )
+              : (existingBuyerSector.productionPolicyLevel ?? 0);
+          const weightedNegativeProductionTurns =
+            combinedRevenue > 0
+              ? Math.round(
+                  ((existingBuyerSector.negativeProductionSustainedTurns ?? 0) *
+                    existingBuyerSector.revenue +
+                    (sector.negativeProductionSustainedTurns ?? 0) * newRevenueLocal) /
                     combinedRevenue
                 )
-              )
-            : (existingBuyerSector.productionPolicyLevel ?? 0);
-        const weightedNegativeProductionTurns =
-          combinedRevenue > 0
-            ? Math.round(
-                ((existingBuyerSector.negativeProductionSustainedTurns ?? 0) *
-                  existingBuyerSector.revenue +
-                  (sector.negativeProductionSustainedTurns ?? 0) * newRevenueLocal) /
-                  combinedRevenue
-              )
-            : (existingBuyerSector.negativeProductionSustainedTurns ?? 0);
+              : (existingBuyerSector.negativeProductionSustainedTurns ?? 0);
 
-        // The purchased doc is deleted next, so fold its plant state into the
-        // survivor first: capacity, build queue, and construction-in-progress the
-        // buyer just paid for. `constructionInProgressAnchor` and each order's
-        // `costPaidAnchor` are an absolute currency amount and are summed, NOT
-        // re-converted through either corp's currency. Gated on plants mode, like
-        // every other plant-state writer; unconditional spreading also SUMMED
-        // `capitalStock`, a field capital mode re-derives each turn.
-        const mergedPlant = plantsEnabled
-          ? mergeSectorPlantFields(existingBuyerSector, sector)
-          : {};
-        const mergeResult = await corporateSectorsCollection(db).updateOne(
-          { _id: existingBuyerSector._id, ...unprotectedConstructionPropertyFilter() },
-          {
-            $set: {
-              // Under plants the plant-state fold below is what carries value
-              // across the merge; this nameplate is a one-turn placeholder.
-              // PLANTS-GATED: restated from merged `capitalStock` next tick.
-              revenue: combinedRevenue,
-              workers: combinedWorkers,
-              profitMargin: weightedMargin,
-              currentGrowthCost: combinedGrowthCost,
-              productionPolicyLevel: weightedProductionPolicyLevel,
-              negativeProductionSustainedTurns: weightedNegativeProductionTurns,
-              ...mergedPlant,
-              updatedAt: now,
+          // The purchased doc is deleted next, so fold its plant state into the
+          // survivor first: capacity, build queue, and construction-in-progress the
+          // buyer just paid for. `constructionInProgressAnchor` and each order's
+          // `costPaidAnchor` are an absolute currency amount and are summed, NOT
+          // re-converted through either corp's currency. Gated on plants mode, like
+          // every other plant-state writer; unconditional spreading also SUMMED
+          // `capitalStock`, a field capital mode re-derives each turn.
+          const mergedPlant = plantsEnabled
+            ? mergeSectorPlantFields(existingBuyerSector, sector)
+            : {};
+          const mergeResult = await corporateSectorsCollection(db).updateOne(
+            { _id: existingBuyerSector._id, ...unprotectedConstructionPropertyFilter() },
+            {
+              $set: {
+                // Under plants the plant-state fold below is what carries value
+                // across the merge; this nameplate is a one-turn placeholder.
+                // PLANTS-GATED: restated from merged `capitalStock` next tick.
+                revenue: combinedRevenue,
+                workers: combinedWorkers,
+                profitMargin: weightedMargin,
+                currentGrowthCost: combinedGrowthCost,
+                productionPolicyLevel: weightedProductionPolicyLevel,
+                negativeProductionSustainedTurns: weightedNegativeProductionTurns,
+                ...mergedPlant,
+                updatedAt: now,
+              },
+            }
+          );
+          if (mergeResult.matchedCount !== 1) {
+            throw new Error("The buyer's destination sector became secured during the purchase");
+          }
+          const deleteResult = await corporateSectorsCollection(db).deleteOne({
+            _id: sector._id,
+            ...unprotectedConstructionPropertyFilter(),
+          });
+          if (deleteResult.deletedCount !== 1) {
+            throw new Error("The listed sector became secured during the purchase");
+          }
+
+          const sellerCredit = await corporationsCollection(db).updateOne(
+            { _id: seller._id },
+            { $inc: { liquidCapital: priceInSellerCapital }, $set: { updatedAt: now } }
+          );
+
+          if (sellerCredit.matchedCount !== 1)
+            throw new Error("Seller corporation disappeared during purchase");
+
+          await Promise.all([
+            emitTx(db, {
+              type: "corp_sector_purchase",
+              turn,
+              createdAt: now,
+              subjectType: "corporation",
+              subjectId: buyer._id,
+              subjectName: buyer.name,
+              amount: -priceInBuyerCapital,
+              balanceAfter: buyerDebit.newBalance,
+              currencyCode: buyerCurrency ?? "USD",
+              counterpartyType: "corporation",
+              counterpartyId: seller._id,
+              counterpartyName: seller.name,
+              meta: {
+                kind: "sector_purchase_merge",
+                sectorId: sector._id.toString(),
+                mergedIntoSectorId: existingBuyerSector._id.toString(),
+                sectorType: sector.sectorType,
+                stateId: sector.stateId,
+                stateName,
+                sectorLabel,
+                priceAnchor,
+              },
+            }),
+            emitTx(db, {
+              type: "corp_sector_sale",
+              turn,
+              createdAt: now,
+              subjectType: "corporation",
+              subjectId: seller._id,
+              subjectName: seller.name,
+              amount: priceInSellerCapital,
+              balanceAfter: (seller.liquidCapital ?? 0) + priceInSellerCapital,
+              currencyCode: sellerCurrency ?? "USD",
+              counterpartyType: "corporation",
+              counterpartyId: buyer._id,
+              counterpartyName: buyer.name,
+              meta: {
+                kind: "sector_sale",
+                sectorId: sector._id.toString(),
+                sectorType: sector.sectorType,
+                stateId: sector.stateId,
+                stateName,
+                sectorLabel,
+                priceAnchor,
+              },
+            }),
+          ]);
+
+          await logEconomicAction(db, {
+            characterId: buyer.ceoId,
+            userId: auth.user.userId,
+            actionType: "buySector",
+            targetState: sector.stateId,
+            turn,
+            characterName: buyer.name,
+            countryId: buyer.countryId,
+            // priceAnchor + acquisition spread is the buyer's total ₳ (anchor) cost;
+            // revenueAnchor is the acquired sector's revenue normalized to ₳.
+            corpCashCostAnchor: priceAnchor + acqSpread.spreadAnchor,
+            capturedRevenueAnchor: revenueAnchor,
+            currencyCode: buyerCurrency ?? undefined,
+            result: {
+              success: true,
+              message: `${buyer.name} bought ${sectorLabel} sector in ${stateName}`,
             },
+          }).catch(() => {});
+
+          await afterCommit(db, async () => {
+            await createNotification({
+              userId: seller.userId,
+              type: "corp_sector_sold",
+              title: "Sector Sold",
+              message: `Your ${sectorLabel} sector in ${stateName} was purchased by ${buyer.name} for ${priceInSellerCapital.toLocaleString()} ${sellerCurrency ?? "USD"}.`,
+              metadata: {
+                sectorType: sector.sectorType,
+                sectorLabel,
+                stateId: sector.stateId.toString(),
+                stateName,
+                buyerCorporationId: buyer._id.toString(),
+                buyerName: buyer.name,
+                priceAnchor,
+              },
+            }).catch(() => undefined);
+          });
+
+          if (acqSpread.spreadAnchor > 0 && acqSpread.from && acqSpread.to) {
+            await safeDistributeConversionSpread(
+              db,
+              Math.round(anchorToCorpLiquidCapital(acqSpread.spreadAnchor, buyer, buyerFxRate)),
+              acqSpread.from,
+              acqSpread.to
+            );
+          }
+          return NextResponse.json({
+            success: true,
+            message: `Merged ${sectorLabel} sector in ${stateName} into your existing sector for ${priceInBuyerCapital.toLocaleString()} ${
+              buyerCurrency ?? "USD"
+            }.`,
+            priceAnchor,
+            priceInBuyerCapital,
+            priceInSellerCapital,
+            spreadPaid: Math.round(
+              anchorToCorpLiquidCapital(acqSpread.spreadAnchor, buyer, buyerFxRate)
+            ),
+            buyerCurrency: buyerCurrency ?? "USD",
+            sellerCurrency: sellerCurrency ?? "USD",
+            merged: true,
+          });
+        } catch (error) {
+          throw error;
+        }
+      }
+
+      // ── Transfer path ──────────────────────────────────────────────────────────
+      // Buyer does not yet operate this sector type in this state: standard
+      // ownership transfer.
+      try {
+        // Transfer sector ownership atomically. Guard with the seller corp id +
+        // forSale presence so a concurrent unlist or another buy attempt can't
+        // double-spend the listing.
+        try {
+          const transferResult = await corporateSectorsCollection(db).updateOne(
+            { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
+            {
+              $set: {
+                corporationId: buyer._id,
+                // PLANTS-GATED: reassign path — the doc keeps its own plant
+                // state, and under plants `revenue` is restated from that
+                // capacity next turn regardless of the value written here.
+                revenue: newRevenueLocal,
+                currentGrowthCost: newGrowthCostLocal,
+                updatedAt: now,
+              },
+              $unset: { forSale: "" },
+            }
+          );
+          if (transferResult.matchedCount === 0) {
+            return errorResponse(
+              409,
+              "Listing was unlisted or already sold. Refresh and try another sector."
+            );
+          }
+        } catch (error) {
+          if (isCorporateSectorDuplicateKey(error)) {
+            return errorResponse(
+              400,
+              `Your corporation already operates a ${
+                OPERATING_SECTOR_TYPE_LABELS[sector.sectorType as CorporationType]
+              } sector in this state.`
+            );
+          }
+          throw error;
+        }
+
+        // Credit the seller corp's liquidCapital in seller currency.
+        const sellerCredit = await corporationsCollection(db).updateOne(
+          { _id: seller._id },
+          {
+            $inc: { liquidCapital: priceInSellerCapital },
+            $set: { updatedAt: now },
           }
         );
-        if (mergeResult.matchedCount !== 1) {
-          throw new Error("The buyer's destination sector became secured during the purchase");
-        }
-        const deleteResult = await corporateSectorsCollection(db).deleteOne({
-          _id: sector._id,
-          ...unprotectedConstructionPropertyFilter(),
-        });
-        if (deleteResult.deletedCount !== 1) {
-          throw new Error("The listed sector became secured during the purchase");
-        }
-        mergeApplied = true;
 
-        await corporationsCollection(db).updateOne(
-          { _id: seller._id },
-          { $inc: { liquidCapital: priceInSellerCapital }, $set: { updatedAt: now } }
-        );
-        sellerCredited = true;
+        if (sellerCredit.matchedCount !== 1)
+          throw new Error("Seller corporation disappeared during purchase");
 
         await Promise.all([
           emitTx(db, {
@@ -397,9 +569,8 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
             counterpartyId: seller._id,
             counterpartyName: seller.name,
             meta: {
-              kind: "sector_purchase_merge",
+              kind: "sector_purchase",
               sectorId: sector._id.toString(),
-              mergedIntoSectorId: existingBuyerSector._id.toString(),
               sectorType: sector.sectorType,
               stateId: sector.stateId,
               stateName,
@@ -432,7 +603,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
           }),
         ]);
 
-        void logEconomicAction(db, {
+        await logEconomicAction(db, {
           characterId: buyer.ceoId,
           userId: auth.user.userId,
           actionType: "buySector",
@@ -451,20 +622,22 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
           },
         }).catch(() => {});
 
-        void createNotification({
-          userId: seller.userId,
-          type: "corp_sector_sold",
-          title: "Sector Sold",
-          message: `Your ${sectorLabel} sector in ${stateName} was purchased by ${buyer.name} for ${priceInSellerCapital.toLocaleString()} ${sellerCurrency ?? "USD"}.`,
-          metadata: {
-            sectorType: sector.sectorType,
-            sectorLabel,
-            stateId: sector.stateId.toString(),
-            stateName,
-            buyerCorporationId: buyer._id.toString(),
-            buyerName: buyer.name,
-            priceAnchor,
-          },
+        await afterCommit(db, async () => {
+          await createNotification({
+            userId: seller.userId,
+            type: "corp_sector_sold",
+            title: "Sector Sold",
+            message: `Your ${sectorLabel} sector in ${stateName} was purchased by ${buyer.name} for ${priceInSellerCapital.toLocaleString()} ${sellerCurrency ?? "USD"}.`,
+            metadata: {
+              sectorType: sector.sectorType,
+              sectorLabel,
+              stateId: sector.stateId.toString(),
+              stateName,
+              buyerCorporationId: buyer._id.toString(),
+              buyerName: buyer.name,
+              priceAnchor,
+            },
+          }).catch(() => undefined);
         });
 
         if (acqSpread.spreadAnchor > 0 && acqSpread.from && acqSpread.to) {
@@ -477,7 +650,7 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
         }
         return NextResponse.json({
           success: true,
-          message: `Merged ${sectorLabel} sector in ${stateName} into your existing sector for ${priceInBuyerCapital.toLocaleString()} ${
+          message: `Acquired ${sectorLabel} sector in ${stateName} for ${priceInBuyerCapital.toLocaleString()} ${
             buyerCurrency ?? "USD"
           }.`,
           priceAnchor,
@@ -488,237 +661,11 @@ export async function buyListedSector(request: Request, { params }: RouteParams)
           ),
           buyerCurrency: buyerCurrency ?? "USD",
           sellerCurrency: sellerCurrency ?? "USD",
-          merged: true,
         });
       } catch (error) {
-        if (!mergeApplied) {
-          await corporateSectorsCollection(db).updateOne(
-            { _id: sector._id, corporationId: seller._id },
-            { $set: { forSale: sector.forSale, updatedAt: new Date() } }
-          );
-        } else if (!sellerCredited) {
-          // Sector was merged+deleted but seller wasn't credited. Restore the
-          // existing sector's original stats and recreate the seller's sector.
-          await corporateSectorsCollection(db).updateOne(
-            { _id: existingBuyerSector._id },
-            {
-              $set: {
-                // Failure path: restore the survivor's own snapshot.
-                // PLANTS-GATED: correct in every mode; under plants the paired
-                // identitySectorPlantFields fold below puts the capacity back.
-                revenue: existingBuyerSector.revenue,
-                workers: existingBuyerSector.workers,
-                profitMargin: existingBuyerSector.profitMargin,
-                currentGrowthCost: existingBuyerSector.currentGrowthCost ?? 0,
-                // Undo the plant fold too, or the rollback leaves the survivor
-                // holding the recreated sector's capacity AND the recreated
-                // sector holding it as well — duplicated plants. This must be
-                // a true IDENTITY: `mergeSectorPlantFields(survivor, {})` is
-                // not one, because `mothballed` is an AND and an empty second
-                // argument un-mothballed a survivor that was idle before the
-                // purchase, silently putting its capacity back into production.
-                ...(plantsEnabled ? identitySectorPlantFields(existingBuyerSector) : {}),
-                updatedAt: new Date(),
-              },
-            }
-          );
-          await corporateSectorsCollection(db).insertOne({
-            ...sector,
-            forSale: sector.forSale,
-            updatedAt: new Date(),
-          });
-        }
-        await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
         throw error;
       }
-    }
-
-    // ── Transfer path ──────────────────────────────────────────────────────────
-    // Buyer does not yet operate this sector type in this state: standard
-    // ownership transfer.
-    let sectorTransferred = false;
-    try {
-      // Transfer sector ownership atomically. Guard with the seller corp id +
-      // forSale presence so a concurrent unlist or another buy attempt can't
-      // double-spend the listing.
-      try {
-        const transferResult = await corporateSectorsCollection(db).updateOne(
-          { _id: sector._id, corporationId: seller._id, forSale: { $ne: null } },
-          {
-            $set: {
-              corporationId: buyer._id,
-              // PLANTS-GATED: reassign path — the doc keeps its own plant
-              // state, and under plants `revenue` is restated from that
-              // capacity next turn regardless of the value written here.
-              revenue: newRevenueLocal,
-              currentGrowthCost: newGrowthCostLocal,
-              updatedAt: now,
-            },
-            $unset: { forSale: "" },
-          }
-        );
-        if (transferResult.matchedCount === 0) {
-          await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
-          return errorResponse(
-            409,
-            "Listing was unlisted or already sold. Refresh and try another sector."
-          );
-        }
-      } catch (error) {
-        if (isCorporateSectorDuplicateKey(error)) {
-          await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
-          return errorResponse(
-            400,
-            `Your corporation already operates a ${
-              OPERATING_SECTOR_TYPE_LABELS[sector.sectorType as CorporationType]
-            } sector in this state.`
-          );
-        }
-        throw error;
-      }
-      sectorTransferred = true;
-
-      // Credit the seller corp's liquidCapital in seller currency.
-      await corporationsCollection(db).updateOne(
-        { _id: seller._id },
-        {
-          $inc: { liquidCapital: priceInSellerCapital },
-          $set: { updatedAt: now },
-        }
-      );
-      sellerCredited = true;
-
-      await Promise.all([
-        emitTx(db, {
-          type: "corp_sector_purchase",
-          turn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: buyer._id,
-          subjectName: buyer.name,
-          amount: -priceInBuyerCapital,
-          balanceAfter: buyerDebit.newBalance,
-          currencyCode: buyerCurrency ?? "USD",
-          counterpartyType: "corporation",
-          counterpartyId: seller._id,
-          counterpartyName: seller.name,
-          meta: {
-            kind: "sector_purchase",
-            sectorId: sector._id.toString(),
-            sectorType: sector.sectorType,
-            stateId: sector.stateId,
-            stateName,
-            sectorLabel,
-            priceAnchor,
-          },
-        }),
-        emitTx(db, {
-          type: "corp_sector_sale",
-          turn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: seller._id,
-          subjectName: seller.name,
-          amount: priceInSellerCapital,
-          balanceAfter: (seller.liquidCapital ?? 0) + priceInSellerCapital,
-          currencyCode: sellerCurrency ?? "USD",
-          counterpartyType: "corporation",
-          counterpartyId: buyer._id,
-          counterpartyName: buyer.name,
-          meta: {
-            kind: "sector_sale",
-            sectorId: sector._id.toString(),
-            sectorType: sector.sectorType,
-            stateId: sector.stateId,
-            stateName,
-            sectorLabel,
-            priceAnchor,
-          },
-        }),
-      ]);
-
-      void logEconomicAction(db, {
-        characterId: buyer.ceoId,
-        userId: auth.user.userId,
-        actionType: "buySector",
-        targetState: sector.stateId,
-        turn,
-        characterName: buyer.name,
-        countryId: buyer.countryId,
-        // priceAnchor + acquisition spread is the buyer's total ₳ (anchor) cost;
-        // revenueAnchor is the acquired sector's revenue normalized to ₳.
-        corpCashCostAnchor: priceAnchor + acqSpread.spreadAnchor,
-        capturedRevenueAnchor: revenueAnchor,
-        currencyCode: buyerCurrency ?? undefined,
-        result: {
-          success: true,
-          message: `${buyer.name} bought ${sectorLabel} sector in ${stateName}`,
-        },
-      }).catch(() => {});
-
-      void createNotification({
-        userId: seller.userId,
-        type: "corp_sector_sold",
-        title: "Sector Sold",
-        message: `Your ${sectorLabel} sector in ${stateName} was purchased by ${buyer.name} for ${priceInSellerCapital.toLocaleString()} ${sellerCurrency ?? "USD"}.`,
-        metadata: {
-          sectorType: sector.sectorType,
-          sectorLabel,
-          stateId: sector.stateId.toString(),
-          stateName,
-          buyerCorporationId: buyer._id.toString(),
-          buyerName: buyer.name,
-          priceAnchor,
-        },
-      });
-
-      if (acqSpread.spreadAnchor > 0 && acqSpread.from && acqSpread.to) {
-        await safeDistributeConversionSpread(
-          db,
-          Math.round(anchorToCorpLiquidCapital(acqSpread.spreadAnchor, buyer, buyerFxRate)),
-          acqSpread.from,
-          acqSpread.to
-        );
-      }
-      return NextResponse.json({
-        success: true,
-        message: `Acquired ${sectorLabel} sector in ${stateName} for ${priceInBuyerCapital.toLocaleString()} ${
-          buyerCurrency ?? "USD"
-        }.`,
-        priceAnchor,
-        priceInBuyerCapital,
-        priceInSellerCapital,
-        spreadPaid: Math.round(
-          anchorToCorpLiquidCapital(acqSpread.spreadAnchor, buyer, buyerFxRate)
-        ),
-        buyerCurrency: buyerCurrency ?? "USD",
-        sellerCurrency: sellerCurrency ?? "USD",
-      });
-    } catch (error) {
-      // Roll back any partial state. If the sector transferred but the seller
-      // wasn't credited, return the sector to the seller and refund the buyer
-      // so neither side ends up with stolen value.
-      if (sectorTransferred && !sellerCredited) {
-        await corporateSectorsCollection(db).updateOne(
-          { _id: sector._id, corporationId: buyer._id },
-          {
-            $set: {
-              corporationId: seller._id,
-              // PLANTS-GATED: failure-path restore of the seller's own
-              // pre-transfer snapshot; plant state never left the doc.
-              revenue: sector.revenue,
-              currentGrowthCost: sector.currentGrowthCost ?? 0,
-              forSale: sector.forSale,
-              updatedAt: new Date(),
-            },
-          }
-        );
-        await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
-      } else if (!sectorTransferred) {
-        await refundCorpLiquidCapital(db, buyer._id, priceInBuyerCapital);
-      }
-      throw error;
-    }
+    });
   } catch (error) {
     return handleRouteError(error);
   }

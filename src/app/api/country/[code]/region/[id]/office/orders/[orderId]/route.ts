@@ -34,6 +34,8 @@ export async function DELETE(
 
     const result = await rescindOrder(db, {
       orderId: new ObjectId(orderId),
+      countryId,
+      stateId,
       rescindedByCharacterId: auth.user.character._id,
     });
     return statusResponse(result.status, result.body);

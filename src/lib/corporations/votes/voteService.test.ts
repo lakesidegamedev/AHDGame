@@ -1,3 +1,9 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  fenceEconomicTurn: vi.fn(async () => null),
+}));
 import { describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import {
@@ -126,6 +132,12 @@ describe("resolveCorporationVoteIfReady", () => {
       updatedAt: new Date("2026-08-20T14:22:03.446Z"),
     } as unknown as CorporationVote;
 
+    db.collection("corporationVotes").findOne.mockResolvedValue(vote);
+    db.collection("corporations").findOne.mockResolvedValue({
+      _id: vote.corporationId,
+      totalShares: 1_000_000,
+      shareholders: [],
+    });
     const result = await resolveCorporationVoteIfReady({
       db: db as unknown as Db,
       vote,

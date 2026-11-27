@@ -147,7 +147,8 @@ describe("settleCorporateOperatingCash round trips", () => {
       cash: () => 500,
       netLocal: fundedNet,
     });
-    expect(Number.parseInt(detail, 10) <= 170, detail).toBe(true);
+    // Two projected precision reads per fixed-size cash book, not per corporation.
+    expect(Number.parseInt(detail, 10) <= 186, detail).toBe(true);
   });
 
   it("merges corporations withholding for different Treasuries", async () => {
@@ -175,7 +176,8 @@ describe("settleCorporateOperatingCash round trips", () => {
       cash: (n) => (n % 2 === 0 ? 0 : 3),
       netLocal: (n) => (n % 3 === 0 ? -100 : -25),
     });
-    expect(Number.parseInt(detail, 10) <= 1300, detail).toBe(true);
+    // Loss books add a projected precision read before standalone delivery.
+    expect(Number.parseInt(detail, 10) <= 1304, detail).toBe(true);
     // Every corporation took its whole loss out of the cash it had, and the
     // rest is a payable. Nothing reached a Treasury, exactly as the refused
     // withholding left it.

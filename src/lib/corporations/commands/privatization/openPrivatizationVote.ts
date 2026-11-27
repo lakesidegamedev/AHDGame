@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { controllerTransferBarrierError } from "../acquisitions/controllerTransferBarrier";
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation, CorporationPrivatizationVote } from "@/lib/db/types";
@@ -5,14 +6,11 @@ import {
   PRIVATIZATION_THRESHOLD_PCT,
   PRIVATIZATION_VOTE_DURATION_TURNS,
 } from "@/lib/constants/corporations";
-import {
-  atomicallyDebitCharacterCash,
-  refundCharacterCash,
-} from "@/lib/financialTxLog/atomicCashGuard";
+import { atomicallyDebitCharacterCash } from "@/lib/financialTxLog/atomicCashGuard";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { quotePrivatizationBuyout } from "./privatizationQuote";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
-import { executeFundOnlyBuyout } from "./fundOnlyBuyout";
+import { executeFundOnlyBuyout, FundBuyoutRefusal } from "./fundOnlyBuyout";
 import { unplacedIpoShares } from "@/lib/corporations/rules/dividendShares";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporationPrivatizationVotesCollection } from "@/lib/db/repositories/corporationPrivatizationVotes";
@@ -52,6 +50,19 @@ export type OpenPrivatizationVoteResult =
  * holders + corp treasury (for the public-float chunk).
  */
 export async function openPrivatizationVote(
+  input: OpenPrivatizationVoteInput
+): Promise<OpenPrivatizationVoteResult> {
+  try {
+    return await withSessionDb(input.db, (db) => openInTransaction({ ...input, db }));
+  } catch (error) {
+    if (error instanceof FundBuyoutRefusal) return error.result;
+    if ((error as { code?: number }).code === 11000)
+      return { ok: false, error: "A privatization vote is already open", status: 400 };
+    throw error;
+  }
+}
+
+async function openInTransaction(
   input: OpenPrivatizationVoteInput
 ): Promise<OpenPrivatizationVoteResult> {
   const { db, corporation, character, currentTurn, forexEnabled } = input;
@@ -106,6 +117,18 @@ export async function openPrivatizationVote(
   if (existingOpen) {
     return { ok: false, error: "A privatization vote is already open", status: 400 };
   }
+
+  const ownershipFence = await corporationsCollection(db).updateOne(
+    {
+      _id: corporation._id,
+      isPrivate: { $ne: true },
+      ceoId: character._id,
+      shareholders: corporation.shareholders,
+      totalShares: corporation.totalShares,
+    },
+    { $set: { updatedAt: new Date() } }
+  );
+  if (ownershipFence.matchedCount !== 1) throw new Error("Privatization ownership changed");
 
   const nonCeoShares = Math.max(
     0,
@@ -201,43 +224,25 @@ export async function openPrivatizationVote(
     };
   }
 
-  // Insert can fail for two reasons we need to handle:
-  //   1. The partial unique index on (corporationId, status="open") rejects a
-  //      duplicate when another open() raced past our existing-vote check.
-  //   2. Any other DB error. In both cases we MUST refund the cash we just
-  //      debited; otherwise the CEO is silently deducted with no vote to show.
   const now = new Date();
-  let insertedId;
-  try {
-    const result = await corporationPrivatizationVotesCollection(db).insertOne({
-      corporationId: corporation._id,
-      openedByCharacterId: character._id,
-      openedAtTurn: currentTurn,
-      deadlineAtTurn: currentTurn + PRIVATIZATION_VOTE_DURATION_TURNS,
-      lockedBuyoutPrice,
-      lockedBuyoutCurrency: lockedCurrency,
-      totalReservedCash,
-      reservedCashCurrency: lockedCurrency,
-      votes: [],
-      status: "open",
-      createdAt: now,
-      updatedAt: now,
-    } as unknown as CorporationPrivatizationVote);
-    insertedId = result.insertedId;
-  } catch (err) {
-    await refundCharacterCash(db, character._id, lockedCurrency, totalReservedCash, forexEnabled);
-    // Duplicate-key error from the partial unique index ⇒ another vote slipped
-    // past the check. Surface the user-friendly version.
-    const code = (err as { code?: number })?.code;
-    if (code === 11000) {
-      return { ok: false, error: "A privatization vote is already open", status: 400 };
-    }
-    throw err;
-  }
+  const result = await corporationPrivatizationVotesCollection(db).insertOne({
+    corporationId: corporation._id,
+    openedByCharacterId: character._id,
+    openedAtTurn: currentTurn,
+    deadlineAtTurn: currentTurn + PRIVATIZATION_VOTE_DURATION_TURNS,
+    lockedBuyoutPrice,
+    lockedBuyoutCurrency: lockedCurrency,
+    totalReservedCash,
+    reservedCashCurrency: lockedCurrency,
+    votes: [],
+    status: "open",
+    createdAt: now,
+    updatedAt: now,
+  } as unknown as CorporationPrivatizationVote);
 
   return {
     ok: true,
-    voteId: insertedId,
+    voteId: result.insertedId,
     lockedBuyoutPrice,
     totalReservedCash,
     bankNavFloorApplied,

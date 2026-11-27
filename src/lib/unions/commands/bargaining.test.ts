@@ -1,3 +1,13 @@
+// Collection-only behavior checks; paid outcome rollback has atomic fixture coverage.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: import("mongodb").Db, work: (db: import("mongodb").Db) => Promise<unknown>) =>
+    work(db),
+  runWithDbSession: (
+    _db: import("mongodb").Db,
+    work: (session: import("mongodb").ClientSession) => Promise<unknown>
+  ) => work({} as import("mongodb").ClientSession),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/unions/unionProsecutionBar", () => ({
@@ -166,7 +176,7 @@ describe("bargaining commands", () => {
     expect(inserted.deadlineTurn).toBe(108);
   });
 
-  it("lets the employer accept the union's offer and records the agreement on fallback Mongo", async () => {
+  it("lets the employer accept the union's offer and records the agreement in the required transaction", async () => {
     const userId = new ObjectId();
     const employerId = new ObjectId();
     const sectorId = new ObjectId();
@@ -238,6 +248,15 @@ describe("bargaining commands", () => {
       },
     } as unknown as Db;
 
+    Object.assign(db, {
+      client: {
+        writeConcern: { w: "majority" },
+        startSession: () => ({
+          withTransaction: async (work: (session: object) => Promise<unknown>) => work({}),
+          endSession: async () => {},
+        }),
+      },
+    });
     const result = await actOnBargainingCampaignAsEmployer(
       db,
       userId.toString(),
@@ -255,7 +274,7 @@ describe("bargaining commands", () => {
         expiresAtTurn: 150,
         noStrikeUntilTurn: 126,
       }),
-      { session: undefined }
+      { session: expect.any(Object) }
     );
     expect(wageUpdate).not.toHaveBeenCalled();
   });
@@ -379,7 +398,7 @@ describe("bargaining commands", () => {
     expect(unionUpdate).toHaveBeenCalledWith(
       { _id: ledUnion._id, treasury: { $gte: 400 } },
       expect.objectContaining({ $inc: { treasury: -400 } }),
-      { session: undefined }
+      { session: expect.any(Object) }
     );
     expect(sectorBulkWrite).toHaveBeenCalledOnce();
     const strikeOps = sectorBulkWrite.mock.calls[0][0] as Array<{

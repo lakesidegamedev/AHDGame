@@ -1,3 +1,13 @@
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import {
+  bondSettlementComponents,
+  packBondSettlementComponents,
+} from "./rules/bondSettlementComponents";
+import { logger } from "@/lib/observability/logger";
+import { sovereignCouponClaimsCollection } from "@/lib/db/repositories/sovereignCouponClaims";
+import type { SovereignCouponClaimRecord } from "@/lib/banking/sovereignCouponPrefetch";
+import { frozenBondTurnInput, settleBondTurnBatches } from "./frozenBondTurnInput";
+import { withTurnValueSettlement, readTurnValueSettlement } from "./withTurnValueSettlement";
 import { recordBondCouponFees } from "./bondCouponFeeHistory";
 import { readFundedBankMaturityCash } from "./bondTurnBankMaturityCash";
 /**
@@ -64,7 +74,7 @@ import {
 } from "./bondTurnHelpers";
 import { emitBondTurnLedger, snapshotBondHistory, type PartialTxEntry } from "./bondTurnLedger";
 import { autoResolveLingeringDefaults } from "./bondTurnAutoResolve";
-import { loadBondPoolLedgerContext, withBondPoolLedgerBatch } from "@/lib/bonds/marketPoolLedger";
+import { loadBondPoolLedgerContext } from "@/lib/bonds/marketPoolLedger";
 import { creditBondPool } from "@/lib/bonds/marketPool";
 import { processBondMarketPoolTurn } from "@/lib/bonds/marketPoolTurn";
 import { placeUnsoldBondUnits, settlePlacementProceeds } from "@/lib/bonds/primaryMarket";
@@ -79,6 +89,7 @@ import { createSovereignMaturityPlanner } from "./bondTurnSovereignPlan";
 import { getCorporationsCollection } from "@/lib/db/collections/corporations";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
+import { buildPrimeRateByCountry } from "@/lib/centralBank/helpers";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
@@ -100,9 +111,36 @@ export type { BondTurnResult } from "./bondTurnTypes";
 export async function processBondTurn(
   ...args: Parameters<typeof processBondTurnInScope>
 ): Promise<BondTurnResult> {
-  return withSovereignPricingSnapshot(() =>
-    withSettlementReadSnapshot(() => processBondTurnInScope(...args))
-  );
+  const db = await getDb();
+  const previous = await readTurnValueSettlement<BondTurnResult>(db, "bond-turn-complete", args[0]);
+  if (previous.applied) return previous.result!;
+  try {
+    const result = await withSovereignPricingSnapshot(() =>
+      withSettlementReadSnapshot(() => processBondTurnInScope(...args))
+    );
+    const completed = await withTurnValueSettlement(
+      db,
+      "bond-turn-complete",
+      args[0],
+      async () => result,
+      { sourceKey: String(args[0]), expectedWorldId: previous.worldId }
+    );
+    try {
+      await bankMoneyMovesCollection(db).deleteMany({
+        kind: "frozen-bond-turn-input",
+        turn: args[0],
+        worldId: previous.worldId,
+      });
+    } catch (error) {
+      logger.warn("bondTurn", "Completed input cleanup deferred", { error });
+    }
+    return completed;
+  } catch (error) {
+    // A competing completed host may have retired its temporary input chunks.
+    const winner = await readTurnValueSettlement<BondTurnResult>(db, "bond-turn-complete", args[0]);
+    if (winner.applied && winner.worldId === previous.worldId) return winner.result!;
+    throw error;
+  }
 }
 
 async function processBondTurnInScope(
@@ -183,7 +221,9 @@ async function processBondTurnInScope(
   invalidateSovereignPricingSnapshot();
   steps.mark("sovereignLegislative");
 
-  const activeBonds = await bondsCollection(db).find({ matured: false }).toArray();
+  const activeBonds = await frozenBondTurnInput(db, "bonds", turn, (tx) =>
+    bondsCollection(tx).find({ matured: false }).toArray()
+  );
 
   // Fund the exact holder snapshot this bond turn will pay. A funding failure
   // stops this payout phase before any creditor credits can escape its journal.
@@ -245,15 +285,18 @@ async function processBondTurnInScope(
       if (h.corporationId) holderCorpIds.add(h.corporationId.toString());
   }
   const allCorpIds = new Set([...corpIds, ...holderCorpIds]);
-  const corporations =
-    allCorpIds.size === 0
-      ? []
-      : await (
-          await getCorporationsCollection(db)
-        )
-          .find({ _id: { $in: [...allCorpIds].map((id) => new ObjectId(id)) } })
-          .project<Corporation>(SETTLEMENT_HISTORY_EXCLUDED)
-          .toArray();
+  const corporations = await frozenBondTurnInput<Corporation>(
+    db,
+    "corporations",
+    turn,
+    async (tx) =>
+      allCorpIds.size === 0
+        ? []
+        : (await getCorporationsCollection(tx))
+            .find({ _id: { $in: [...allCorpIds].map((id) => new ObjectId(id)) } })
+            .project<Corporation>(SETTLEMENT_HISTORY_EXCLUDED)
+            .toArray()
+  );
   const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
   // Natcorp set is consulted in every later phase (coupon-cost skip, default
   // detection, issuer-coupon ledger row); compute once up-front so Phase 1
@@ -270,7 +313,7 @@ async function processBondTurnInScope(
   const quoteContext = forexEnabled
     ? await loadConversionQuoteContext(db, gameState?.euroMonetaryUnion)
     : undefined;
-  const fxByCurrency = quoteContext
+  let fxByCurrency = quoteContext
     ? euroSettlementRates(
         quoteContext.union,
         Object.fromEntries(
@@ -283,11 +326,22 @@ async function processBondTurnInScope(
   }
   // USD remains the shared accounting anchor when no explicit quote is stored.
   if (!fxByCurrency.has("USD")) fxByCurrency.set("USD", 1);
+  fxByCurrency = new Map(
+    (
+      await frozenBondTurnInput(db, "rates", turn, async () =>
+        [...fxByCurrency].map(([currency, rate]) => ({ currency, rate }))
+      )
+    ).map((row) => [row.currency, row.rate])
+  );
   const spreadStrengths = Object.fromEntries(
-    [...(quoteContext?.quotes ?? [])].map(([currency, quote]) => [
-      currency,
-      quote.forexSpreadStrength,
-    ])
+    (
+      await frozenBondTurnInput(db, "spreads", turn, async () =>
+        [...(quoteContext?.quotes ?? [])].map(([currency, quote]) => ({
+          currency,
+          strength: quote.forexSpreadStrength,
+        }))
+      )
+    ).map((row) => [row.currency, row.strength])
   );
 
   // Primary market: place unsold units from earlier issues as the pools'
@@ -302,9 +356,18 @@ async function processBondTurnInScope(
   // Get central bank rates for price calculations
   const centralBanks = await centralBanksCollection(db)
     .find({})
-    .project<Pick<CentralBank, "_id" | "countryId" | "primeRate">>({ countryId: 1, primeRate: 1 })
+    .project<Pick<CentralBank, "_id" | "countryId" | "primeRate" | "monetaryAuthorityId">>({
+      countryId: 1,
+      primeRate: 1,
+      monetaryAuthorityId: 1,
+    })
     .toArray();
-  const cbByCountry = new Map(centralBanks.map((cb) => [cb.countryId, cb]));
+  const cbByCountry = new Map(
+    [...buildPrimeRateByCountry(centralBanks)].map(([countryId, primeRate]) => [
+      countryId,
+      { _id: countryId, countryId, primeRate },
+    ])
+  );
 
   // Track payments — currency-aware for forex support.
   // `amountAnchor` is ₳ (bond face × units for maturity, or perTurnCouponPayment × units for
@@ -433,6 +496,7 @@ async function processBondTurnInScope(
     poolCreditsLocal.set(currency, row);
   }
 
+  const couponClaimsByBond = new Map<string, number>();
   let couponsPaid = 0;
   let totalCouponsPaid = 0;
 
@@ -470,6 +534,7 @@ async function processBondTurnInScope(
     addPoolCredit,
     corpCouponCosts,
     govCouponByCountry,
+    couponClaimsByBond,
   }));
 
   // ── Phase 1.5: Pre-compute maturity flows for the unified delta ───────────
@@ -572,7 +637,9 @@ async function processBondTurnInScope(
     });
   }
   if (corpDeltaOps.length > 0) {
-    await corporationsCollection(db).bulkWrite(corpDeltaOps);
+    await settleBondTurnBatches(db, "corporations", turn, corpDeltaOps, (tx, ops) =>
+      corporationsCollection(tx).bulkWrite(ops)
+    );
   }
 
   // ── Phase 3: Check for defaults (negative liquidCapital) ──────────────────
@@ -591,70 +658,95 @@ async function processBondTurnInScope(
   // held until corporations are live again; a genuinely insolvent corp will
   // still be caught on the first unpaused turn. Escrow cover is inside the
   // skip on purpose, since it exists only as a pre-default mitigation.
-  if (corporationActionsPaused && corpIds.length > 0) {
-    console.log(
-      `[bondTurn] corporation actions paused — skipping default detection and ` +
-        `auto-resolution for ${corpIds.length} bond-issuing corp(s). ` +
-        `Coupons and maturities still settled.`
+  const components = bondSettlementComponents(
+    corpIds,
+    bondMaturityFlows.map((flow) => ({
+      issuer: String(flow.bond.corporationId),
+      holders: [...flow.holderCorpCreditsAnchor.keys()],
+    }))
+  );
+  for (const ids of packBondSettlementComponents(components)) {
+    const component = new Set(ids);
+    const componentIssuers = corpIds.filter((id) => component.has(id));
+    const componentFlows = bondMaturityFlows.filter((flow) =>
+      component.has(String(flow.bond.corporationId))
     );
-  }
-  if (!corporationActionsPaused && corpIds.length > 0) {
-    const updatedCorps = await (
-      await getCorporationsCollection(db)
-    )
-      .find({ _id: { $in: corpIds.map((id) => new ObjectId(id)) } })
-      .project<{ _id: ObjectId; liquidCapital: number; shareEscrowBalance?: number }>({
-        _id: 1,
-        liquidCapital: 1,
-        shareEscrowBalance: 1,
-      })
-      .toArray();
+    const settledDefaults = await withTurnValueSettlement(
+      db,
+      "bond-default-cascade",
+      turn,
+      async (db) => {
+        const defaultedCorps = new Set<string>();
+        if (corporationActionsPaused && componentIssuers.length > 0) {
+          logger.info("bondTurn", "Default detection paused; contractual payments remain active", {
+            issuers: componentIssuers.length,
+          });
+        }
+        if (!corporationActionsPaused && componentIssuers.length > 0) {
+          const updatedCorps = await (
+            await getCorporationsCollection(db)
+          )
+            .find({ _id: { $in: componentIssuers.map((id) => new ObjectId(id)) } })
+            .project<{ _id: ObjectId; liquidCapital: number; shareEscrowBalance?: number }>({
+              _id: 1,
+              liquidCapital: 1,
+              shareEscrowBalance: 1,
+            })
+            .toArray();
 
-    // Bonds-only escrow fallback: a corp that went negative on bond obligations
-    // may cover the shortfall from a positive buyback escrow before defaulting.
-    const negativeNonNatcorp = updatedCorps.filter(
-      (corp) => corp.liquidCapital < 0 && !natcorpIds.has(corp._id.toString())
+          // Bonds-only escrow fallback: a corp that went negative on bond obligations
+          // may cover the shortfall from a positive buyback escrow before defaulting.
+          const negativeNonNatcorp = updatedCorps.filter(
+            (corp) => corp.liquidCapital < 0 && !natcorpIds.has(corp._id.toString())
+          );
+          const stillNegative = await coverBondShortfallsFromEscrow(db, negativeNonNatcorp, now);
+
+          // SOLVENCY GATE. `liquidCapital < 0` is a liquidity snapshot, not
+          // insolvency: a corp that converted cash into plant is short of cash by
+          // construction, not unable to pay. The test is whether the corp's assets
+          // could cover its debt on the SAME exit basis the restructure planner uses
+          // to decide what to sell. If restructuring could have covered the debt, the
+          // corp was illiquid, not insolvent, and the ladder should not start. A corp
+          // whose assets fall short is insolvent and defaults as before.
+          //
+          // An illiquid corp still cannot spend what it does not have, so it is under
+          // real pressure; it is simply not liquidated over a cash dip.
+          //
+          // Scope: initial detection only. Cascade defaults (Phase 3.5) are a
+          // counterparty genuinely failing to pay, so they are left untouched.
+          const solvencyChecked = await filterInsolventCorps(db, stillNegative, {
+            corpMap,
+            fxByCurrency,
+            centralBanks,
+            activeBonds,
+          });
+          for (const idStr of solvencyChecked) {
+            defaultedCorps.add(idStr);
+          }
+        }
+
+        // ── Phase 3.5: Roll back maturity flows for newly-defaulted issuers ───────
+        // Mutates `defaultedCorps` with cascade-defaulted holder corps; see
+        // rollbackDefaultedIssuerMaturityFlows in ./bondTurnHelpers for the full
+        // optimistic-write reversal + cascade semantics.
+
+        await rollbackDefaultedIssuerMaturityFlows({
+          db,
+          bondMaturityFlows: componentFlows,
+          defaultedCorps,
+          corpMap,
+          natcorpIds,
+          fxByCurrency,
+          now,
+        });
+
+        return [...defaultedCorps];
+      },
+      { sourceKey: `${turn}:${ids[0]}` }
     );
-    const stillNegative = await coverBondShortfallsFromEscrow(db, negativeNonNatcorp, now);
-
-    // SOLVENCY GATE. `liquidCapital < 0` is a liquidity snapshot, not
-    // insolvency: a corp that converted cash into plant is short of cash by
-    // construction, not unable to pay. The test is whether the corp's assets
-    // could cover its debt on the SAME exit basis the restructure planner uses
-    // to decide what to sell. If restructuring could have covered the debt, the
-    // corp was illiquid, not insolvent, and the ladder should not start. A corp
-    // whose assets fall short is insolvent and defaults as before.
-    //
-    // An illiquid corp still cannot spend what it does not have, so it is under
-    // real pressure; it is simply not liquidated over a cash dip.
-    //
-    // Scope: initial detection only. Cascade defaults (Phase 3.5) are a
-    // counterparty genuinely failing to pay, so they are left untouched.
-    const solvencyChecked = await filterInsolventCorps(db, stillNegative, {
-      corpMap,
-      fxByCurrency,
-      centralBanks,
-      activeBonds,
-    });
-    for (const idStr of solvencyChecked) {
-      defaultedCorps.add(idStr);
-    }
+    for (const id of settledDefaults) defaultedCorps.add(id);
   }
-
-  // ── Phase 3.5: Roll back maturity flows for newly-defaulted issuers ───────
-  // Mutates `defaultedCorps` with cascade-defaulted holder corps; see
-  // rollbackDefaultedIssuerMaturityFlows in ./bondTurnHelpers for the full
-  // optimistic-write reversal + cascade semantics.
   steps.mark("couponsAndMaturities");
-  await rollbackDefaultedIssuerMaturityFlows({
-    db,
-    bondMaturityFlows,
-    defaultedCorps,
-    corpMap,
-    natcorpIds,
-    fxByCurrency,
-    now,
-  });
 
   // ── Phase 3.6: Apply credit penalty to all defaulted corps ────────────────
   // Run once after cascade resolution so initial + cascaded defaults all get
@@ -706,7 +798,16 @@ async function processBondTurnInScope(
   }));
 
   for (const issuerCorpId of newlyDefaultedIssuerCorpIds) {
-    await fireBondDefaultPulse(db, issuerCorpId);
+    await withTurnValueSettlement(
+      db,
+      "bond-default-sentiment",
+      turn,
+      async (tx) => {
+        await fireBondDefaultPulse(tx, issuerCorpId);
+        return true;
+      },
+      { sourceKey: `${turn}:${issuerCorpId}` }
+    );
   }
 
   // ── Phase 5: Settle matured bonds ─────────────────────────────────────────
@@ -845,16 +946,22 @@ async function processBondTurnInScope(
     await bondsCollection(db).bulkWrite(bondOps);
   }
 
-  await withBondPoolLedgerBatch(db, poolLedgerContext, async (batch) => {
-    for (const [currency, credit] of poolCreditsLocal) {
-      await creditBondPool(db, currency, credit.couponsIn, "couponsIn", now, {
-        ledgerContext: batch,
-      });
-      await creditBondPool(db, currency, credit.maturitiesIn, "maturitiesIn", now, {
-        ledgerContext: batch,
-      });
-    }
-  });
+  for (const [currency, credit] of poolCreditsLocal)
+    await withTurnValueSettlement(
+      db,
+      "bond-pool-payout",
+      turn,
+      async (tx) => {
+        await creditBondPool(tx, currency, credit.couponsIn, "couponsIn", now, {
+          ledgerContext: poolLedgerContext,
+        });
+        await creditBondPool(tx, currency, credit.maturitiesIn, "maturitiesIn", now, {
+          ledgerContext: poolLedgerContext,
+        });
+        return true;
+      },
+      { sourceKey: `${turn}:${currency}` }
+    );
 
   if (fundPaymentsAnchor.size > 0) {
     const fundPaymentOps = [...fundPaymentsAnchor]
@@ -869,7 +976,9 @@ async function processBondTurnInScope(
         },
       }));
     if (fundPaymentOps.length > 0) {
-      await indexFundsCollection<Document>(db).bulkWrite(fundPaymentOps);
+      await settleBondTurnBatches(db, "funds", turn, fundPaymentOps, (tx, ops) =>
+        indexFundsCollection<Document>(tx).bulkWrite(ops)
+      );
     }
   }
 
@@ -877,9 +986,10 @@ async function processBondTurnInScope(
   // personal forex account (nppInvestmentCashAnchor, ₳) — investment returns,
   // NOT campaign funds. Isolated bulkWrite — no LoC garnish / national
   // accounting (mirrors the NPP investment-account isolation).
-  if (nppPaymentsAnchor.size > 0) {
-    await payNppBondReturns(db, nppReturnKinds, turn, now);
-  }
+  if (nppPaymentsAnchor.size > 0)
+    await settleBondTurnBatches(db, "npp-holders", turn, [...nppReturnKinds], (tx, rows) =>
+      payNppBondReturns(tx, new Map(rows), turn, now)
+    );
 
   // Coupons are taxable earnings; maturity principal is neither taxed nor
   // garnished as income. Both destinations share an atomic net credit.
@@ -948,6 +1058,7 @@ async function processBondTurnInScope(
             amount,
             turn,
             source: "auto_coupon",
+            commandId: `bond-coupon:${turn}:${charIdStr}:${currency}`,
             quoteContext,
           });
         }
@@ -961,17 +1072,56 @@ async function processBondTurnInScope(
   // Phase 3 default check. Newly-defaulted issuers' maturity flows are rolled
   // back in Phase 3.5 — by here the corp ledger is fully settled.
 
-  // ── Phase 7: Snapshot bond price history ───────────────────────────────────
-  const bondHistorySnapshots = await snapshotBondHistory({
+  const settledCouponClaims = await withTurnValueSettlement(
     db,
-    activeBonds,
-    fxByCurrency,
+    "bond-paid-coupons",
     turn,
-    now,
-  });
+    async (tx) => {
+      const paid = new Map(couponClaimsByBond);
+      if (config?.treasuryCashLedgerEnabled === true) {
+        const rows = await sovereignCouponClaimsCollection<SovereignCouponClaimRecord>(tx)
+          .find(
+            { settledTurn: turn },
+            {
+              projection: {
+                "claim.bondId": 1,
+                "claim.amountLocal": 1,
+                "claim.anchorRate": 1,
+                bondAmountsAnchor: 1,
+              },
+            }
+          )
+          .toArray();
+        for (const row of rows) {
+          const { claim } = row;
+          if (!Number.isFinite(claim.anchorRate) || claim.anchorRate <= 0)
+            throw new Error("Paid sovereign coupon valuation is invalid");
+          for (const part of row.bondAmountsAnchor ?? [
+            { bondId: claim.bondId, amountAnchor: claim.amountLocal / claim.anchorRate },
+          ])
+            paid.set(part.bondId, (paid.get(part.bondId) ?? 0) + part.amountAnchor);
+        }
+      }
+      return [...paid];
+    }
+  );
+  // ── Phase 7: Snapshot bond price history ───────────────────────────────────
+  const bondHistorySnapshots = await withTurnValueSettlement(db, "bond-history", turn, (tx) =>
+    snapshotBondHistory({
+      db: tx,
+      activeBonds,
+      fxByCurrency,
+      paidInterestAnchorByBond: new Map(settledCouponClaims),
+      turn,
+      now,
+    })
+  );
 
   // Emit bond_coupon / bond_maturity for character holders + gov_coupon_payment
-  await emitBondTurnLedger({ db, txBondEntries, govCouponByCountry, turn, now });
+  await withTurnValueSettlement(db, "bond-financial-log", turn, async (tx) => {
+    await emitBondTurnLedger({ db: tx, txBondEntries, govCouponByCountry, turn, now });
+    return true;
+  });
 
   const couponFeesByCorp = new Map<string, number>();
   for (const entry of txBondEntries) {
@@ -998,14 +1148,17 @@ async function processBondTurnInScope(
   // Route the FX spreads skimmed from corp foreign-coupon income into the CB
   // system (reserve slice → recipient corp's CB; revenue → bond-currency CB),
   // matching how player auto_coupon conversions build reserves.
-  await distributeConversionSpreadsBatch(
-    db,
-    corpCouponSpreadFees.map(({ fromCurrency, toCurrency, fee }) => ({
-      fromCurrency,
-      toCurrency,
-      fee: Math.round(fee),
-    }))
-  );
+  await withTurnValueSettlement(db, "bond-fx-fees", turn, async (tx) => {
+    await distributeConversionSpreadsBatch(
+      tx,
+      corpCouponSpreadFees.map(({ fromCurrency, toCurrency, fee }) => ({
+        fromCurrency,
+        toCurrency,
+        fee: Math.round(fee),
+      }))
+    );
+    return true;
+  });
 
   // Phase 7: auto-resolve lingering corporate defaults. This phase can
   // SELL a corporation's sectors, justified by the CEO having had at least one

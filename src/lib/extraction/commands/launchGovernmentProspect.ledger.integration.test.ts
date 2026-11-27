@@ -1,7 +1,8 @@
 import { ObjectId, type Db } from "mongodb";
 import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { ProspectingSurvey } from "@/lib/db/types/prospectingSurvey";
 import type { CountryId } from "@/lib/constants/countries";
@@ -23,7 +24,16 @@ const ACTOR = { characterId: new ObjectId(), userId: "admin", isAdmin: true };
 function setup() {
   const db = createInMemoryDb();
   db.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
-  db.seed("gameState", [{ _id: "current", currentTurn: TURN, preset: "2019-default" }]);
+  db.seed("gameState", [
+    {
+      _id: "current",
+      currentTurn: TURN,
+      preset: "2019-default",
+      isProcessing: false,
+      resetAdmissionId: null,
+      worldEpochId: "prospect-test",
+    },
+  ]);
   db.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
   db.seed("stateResourceCapacity", [
     { _id: "TX", countryId: "US", stateId: "TX", resources: { oil: 1000 } },
@@ -67,24 +77,20 @@ describe("funded national government prospect", () => {
     await expect(launchGovernmentProspect(fault.db, args, ACTOR, TURN, NOW, true)).rejects.toThrow(
       "crash after"
     );
-    expect(db.collection("federalBudget").docs[0]?.treasuryCashLocal).toBe(4_500_000);
-    const frozenClaim = db.collection("prospectingSurveys").docs[0];
-    expect(frozenClaim).toMatchObject({
-      status: "funding",
-      costLocal: 500_000,
-      fundingKey: expect.any(String),
-    });
+    expect(db.collection("federalBudget").docs[0]?.treasuryCashLocal).toBe(5_000_000);
+    expect(db.collection("prospectingSurveys").docs).toHaveLength(0);
+    expect(db.collection("bankMoneyMoves").docs).toHaveLength(0);
 
     fault.disarm();
     const retried = await launchGovernmentProspect(
       fault.db,
       args,
       ACTOR,
-      TURN + 1,
+      TURN,
       new Date(NOW.getTime() + 60_000),
       true
     );
-    expect(retried.ok).toBe(true);
+    expect(retried, JSON.stringify(retried)).toMatchObject({ ok: true });
     expect(db.collection("federalBudget").docs[0]).toMatchObject({
       treasuryCashLocal: 4_500_000,
       treasuryBalance: -500_000,
@@ -128,6 +134,7 @@ describe("funded national government prospect", () => {
     const realCollection = db.collection.bind(db);
     let hideInitialClaim = true;
     const concurrentDb = {
+      client: (db as unknown as Db).client,
       collection(name: string) {
         const collection = realCollection(name);
         if (name !== "prospectingSurveys") return collection;

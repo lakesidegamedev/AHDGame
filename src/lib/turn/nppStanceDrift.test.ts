@@ -41,7 +41,9 @@ describe("processNppStanceDrift phase (#101)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     db = createMockDb();
-    db.collection("npps");
+    db.collection("npps").bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      modifiedCount: ops.length,
+    }));
     db.collection("states");
     db.collection("legislationTypes");
     db.collectionMocks.legislationTypes.find.mockReturnValue(cursor([])); // no domain types

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { NATIONAL_GEOGRAPHY_SENTINEL, spendPoliticalStrength } from "./spendPoliticalStrength";
 import {
@@ -349,3 +349,7 @@ describe("spendPoliticalStrength — pure national scope", () => {
     expect(db.ledger[0].stateId).toBeUndefined();
   });
 });
+
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);

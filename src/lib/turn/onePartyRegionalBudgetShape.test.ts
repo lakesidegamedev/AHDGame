@@ -19,7 +19,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import { buildRegionalRevenueShape } from "@/lib/budget/regionalRevenueShape";
+import { buildRegionalRevenueShape } from "@/lib/countries/rules/regionalRevenueShape";
 
 vi.mock("@/lib/subsidies/subsidyBudgetCosts", () => ({
   loadAnnualSubsidyCostMaps: vi.fn().mockResolvedValue({ stateCostByStateId: new Map() }),

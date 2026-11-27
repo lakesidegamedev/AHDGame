@@ -5,7 +5,7 @@ import type { LendingProfileId } from "@/lib/banking/creditBands";
 import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 import { domesticDepositRetention } from "@/lib/centralBank/marketEffects";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { isDepositTakingCharter } from "@/lib/banking/charterKinds";

@@ -1,7 +1,10 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { redenominateRegionalFinancing } from "@/lib/currency/rules/redenominate";
+import type { RegionalDebtLedger } from "@/lib/budget/rules/regionalDebt";
 import { redenominatePublicRegion } from "./rules/publicCurrency";
 /** Reunification redenominates regional public stocks without changing people, rates or turn stamps. */
 import type { Db } from "mongodb";
-import type { State } from "@/lib/db/types/state";
+
 import { scaleDeep } from "../secede/docScale";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
@@ -14,6 +17,10 @@ export async function convertPublicCurrency(
   regionId: string,
   scale: number
 ): Promise<void> {
+  return withSessionDb(db, (transactionDb) => convertInTransaction(transactionDb, regionId, scale));
+}
+
+async function convertInTransaction(db: Db, regionId: string, scale: number): Promise<void> {
   if (scale === 1) return;
   const state = await statesCollection(db).findOne({ _id: regionId });
   if (!state) throw new Error("Missing transferred region");
@@ -71,6 +78,8 @@ async function convertBudgetMoney(
       .filter((field) => doc[field] !== undefined)
       .map((field) => [field, scaleDeep(doc[field], scale)])
   );
+  if (doc.financing)
+    money.financing = redenominateRegionalFinancing(doc.financing as RegionalDebtLedger, scale);
   await db
     .collection<Record<string, unknown> & { _id: string }>(name)
     .updateOne({ _id: regionId }, { $set: money });

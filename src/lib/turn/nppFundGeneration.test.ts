@@ -1,3 +1,11 @@
+vi.mock("./withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";

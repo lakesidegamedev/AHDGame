@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import StrategyChangeConfirm from "./StrategyChangeConfirm";
 
 const world = vi.hoisted(() => ({ preset: "1991-default" }));
@@ -11,8 +11,20 @@ vi.mock("@/contexts/CurrencyContext", () => ({
     toInternalFrom: (n: number) => n,
   }),
 }));
+const requests = vi.hoisted(() => ({ quote: null as unknown }));
 vi.mock("@/lib/observability/fetchJson", () => ({
-  fetchJson: () => Promise.resolve({ commodities: [] }),
+  fetchJson: (url: string) =>
+    Promise.resolve(
+      url === "/api/commodities"
+        ? { commodities: [] }
+        : {
+            strategy: {
+              availableStrategies: requests.quote
+                ? [{ id: "vehicle_assembly", ...(requests.quote as object) }]
+                : [],
+            },
+          }
+    ),
 }));
 
 afterEach(cleanup);
@@ -23,8 +35,19 @@ function renderConfirm(props: { targetStrategyId: string; retoolCostMultiplier?:
       sectorType="manufacturing"
       currentStrategyId="standard"
       targetStrategyId={props.targetStrategyId}
-      dailyRevenue={1000}
-      retoolCostMultiplier={props.retoolCostMultiplier}
+      quote={{
+        retoolCost:
+          props.targetStrategyId === "humanoid_robotics"
+            ? 550
+            : 250 * (props.retoolCostMultiplier ?? 1),
+        baseRetoolCost: 250 * (props.retoolCostMultiplier ?? 1),
+        downsideCharge: props.targetStrategyId === "humanoid_robotics" ? 300 : 0,
+        foreignSpread: 0,
+        retoolCostMultiplier: props.retoolCostMultiplier ?? 1,
+        freeConversion: false,
+        shortageDiscount: false,
+        transitionTurns: 36,
+      }}
       onConfirm={() => {}}
       onCancel={() => {}}
     />
@@ -62,4 +85,78 @@ describe("StrategyChangeConfirm build time and downside", () => {
     expect(screen.queryByText(/Downside charge/)).toBeNull();
     expect(screen.getByText(/Phases in/).textContent).not.toContain("while it is built");
   });
+});
+
+describe("authoritative retool quote", () => {
+  it("shows the quoted total and charges rather than rebuilding them from sector revenue", () => {
+    render(
+      <StrategyChangeConfirm
+        sectorType="manufacturing"
+        currentStrategyId="standard"
+        targetStrategyId="vehicle_assembly"
+        quote={{
+          retoolCost: 123,
+          baseRetoolCost: 100,
+          downsideCharge: 20,
+          foreignSpread: 3,
+          retoolCostMultiplier: 1,
+          freeConversion: false,
+          shortageDiscount: false,
+          transitionTurns: 36,
+        }}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+    );
+    expect(screen.getByText(/Retooling cost/).textContent).toContain("M123");
+    expect(screen.getByText(/Downside charge/).textContent).toContain("M20");
+    expect(screen.getByText(/Currency conversion charge/).textContent).toContain("M3");
+  });
+  it("does not permit switching while the current quote is unavailable", () => {
+    render(
+      <StrategyChangeConfirm
+        sectorType="manufacturing"
+        currentStrategyId="standard"
+        targetStrategyId="vehicle_assembly"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+    );
+    expect(
+      (screen.getByRole("button", { name: "Switch strategy" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    expect(screen.queryByText(/Retooling cost/)).toBeNull();
+  });
+});
+
+it("loads the method's server quote before enabling the paid confirmation", async () => {
+  requests.quote = {
+    retoolCost: 12,
+    baseRetoolCost: 0,
+    downsideCharge: 10,
+    foreignSpread: 2,
+    retoolCostMultiplier: 1,
+    freeConversion: false,
+    shortageDiscount: true,
+    transitionTurns: 18,
+  };
+  render(
+    <StrategyChangeConfirm
+      sectorType="manufacturing"
+      currentStrategyId="standard"
+      targetStrategyId="vehicle_assembly"
+      quoteUrl="/api/corporations/synthetic/sectors/synthetic"
+      onConfirm={() => {}}
+      onCancel={() => {}}
+    />
+  );
+  expect(
+    (screen.getByRole("button", { name: "Switch strategy" }) as HTMLButtonElement).disabled
+  ).toBe(true);
+  await waitFor(() => expect(screen.getByText(/Retooling cost/).textContent).toContain("M12"));
+  expect(
+    (screen.getByRole("button", { name: "Switch strategy" }) as HTMLButtonElement).disabled
+  ).toBe(false);
+  expect(screen.getByText(/Phases in/).textContent).toContain("over 18 turns");
+  requests.quote = null;
 });

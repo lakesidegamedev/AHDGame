@@ -1,3 +1,5 @@
+import { supportsManualElectionTemplate } from "@/lib/countries/us/rules/manualElectionTemplate";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 /**
  * GET    /api/admin/country/[code]/elections — list elections (filtered by country from path)
  * POST   /api/admin/country/[code]/elections — create elections for a cycle
@@ -101,8 +103,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    // Consume path param (POST creates US elections per original logic)
-    await params;
+    const { code } = await params;
+    const countryId = code.toUpperCase() as CountryId;
+    if (!COUNTRY_CONFIGS[countryId]) return errorResponse(400, "Invalid country code");
+    if (!supportsManualElectionTemplate(countryId))
+      return errorResponse(
+        400,
+        "This manual cycle template supports US elections only. Use the country's election scheduler."
+      );
 
     const parsed = await parseJsonBody(request, adminElectionsCreateSchema);
     if (!parsed.success) {
@@ -111,128 +119,133 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     const { cycle, senateClass, includeHouse, includeStateSenate, includeGovernor } = parsed.data;
 
     const db = await getDb();
-    const now = new Date();
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const now = new Date();
 
-    // Get all US electoral states. Federal districts like DC live in `states`
-    // for economy/presidential electoral votes but elect no House/Senate/
-    // Governor/state-legislature seats, so exclude them.
-    const states = (await statesCollection(db).find({}).toArray()).filter((s) =>
-      isUsElectoralState(s._id)
-    );
-
-    if (states.length === 0) {
-      return errorResponse(400, "No states found. Please seed states first.");
-    }
-
-    // Check if elections for this cycle already exist
-    const existingCount = await electionsCollection<Document>(db).countDocuments({ cycle });
-    if (existingCount > 0) {
-      return errorResponse(
-        409,
-        `Elections for cycle ${cycle} already exist. Delete them first to recreate.`
+      // Get all US electoral states. Federal districts like DC live in `states`
+      // for economy/presidential electoral votes but elect no House/Senate/
+      // Governor/state-legislature seats, so exclude them.
+      const states = (await statesCollection(db).find({ countryId }).toArray()).filter((s) =>
+        isUsElectoralState(s._id)
       );
-    }
 
-    // Read the active preset so each spawned doc's electionYear anchors to
-    // the right calendar regardless of preset (1991-default vs 2019-default).
-    const gameStateForCtx = await gameStateCollection(db).findOne({ _id: "current" });
-    const ctx = cycleAnchorContextFromGameState(gameStateForCtx);
+      if (states.length === 0) {
+        return errorResponse(400, "No states found. Please seed states first.");
+      }
 
-    const electionsToInsert: Omit<Election, "_id">[] = [];
+      // Check if elections for this cycle already exist
+      const existingCount = await electionsCollection<Document>(db).countDocuments({
+        cycle,
+        countryId,
+      });
+      if (existingCount > 0) {
+        return errorResponse(
+          409,
+          `Elections for cycle ${cycle} already exist. Delete them first to recreate.`
+        );
+      }
 
-    for (const state of states) {
-      const stateId = state._id;
-      const stateClasses = SENATE_CLASSES[stateId] || [1, 2];
+      // Read the active preset so each spawned doc's electionYear anchors to
+      // the right calendar regardless of preset (1991-default vs 2019-default).
+      const gameStateForCtx = await gameStateCollection(db).findOne({ _id: "current" });
+      const ctx = cycleAnchorContextFromGameState(gameStateForCtx);
 
-      // Create Senate elections for states with the specified class
-      if (senateClass && stateClasses.includes(senateClass as SenateClass)) {
-        electionsToInsert.push({
-          electionType: "senate",
-          state: stateId,
-          countryId: "US",
-          senateClass: senateClass as SenateClass,
-          cycle,
-          electionYear: electionToLarpYear(
-            "senate",
+      const electionsToInsert: Omit<Election, "_id">[] = [];
+
+      for (const state of states) {
+        const stateId = state._id;
+        const stateClasses = SENATE_CLASSES[stateId] || [1, 2];
+
+        // Create Senate elections for states with the specified class
+        if (senateClass && stateClasses.includes(senateClass as SenateClass)) {
+          electionsToInsert.push({
+            electionType: "senate",
+            state: stateId,
+            countryId: "US",
+            senateClass: senateClass as SenateClass,
             cycle,
-            senateClass as SenateClass,
-            undefined,
-            ctx
-          ),
-          status: "upcoming",
-          createdAt: now,
-          updatedAt: now,
-        });
+            electionYear: electionToLarpYear(
+              "senate",
+              cycle,
+              senateClass as SenateClass,
+              undefined,
+              ctx
+            ),
+            status: "upcoming",
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        // Create House election for this state if requested
+        if (includeHouse) {
+          electionsToInsert.push({
+            electionType: "house",
+            state: stateId,
+            countryId: "US",
+            cycle,
+            electionYear: electionToLarpYear("house", cycle, undefined, undefined, ctx),
+            status: "upcoming",
+            // Seeded `houseDistricts` is the preset-correct apportionment SSOT
+            // (1990 census for 1991 games, 2020 census otherwise).
+            totalSeats: state.houseDistricts || 1,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        // Create State Senate election for this state if requested
+        if (includeStateSenate) {
+          electionsToInsert.push({
+            electionType: "stateSenate",
+            state: stateId,
+            countryId: "US",
+            cycle,
+            electionYear: electionToLarpYear("stateSenate", cycle, undefined, undefined, ctx),
+            status: "upcoming",
+            totalSeats: STATE_SENATE_SEATS[stateId] || 30,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        // Create Governor election for this state if requested
+        if (includeGovernor) {
+          electionsToInsert.push({
+            electionType: "governor",
+            state: stateId,
+            countryId: "US",
+            cycle,
+            electionYear: electionToLarpYear("governor", cycle, undefined, undefined, ctx),
+            status: "upcoming",
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
       }
 
-      // Create House election for this state if requested
-      if (includeHouse) {
-        electionsToInsert.push({
-          electionType: "house",
-          state: stateId,
-          countryId: "US",
-          cycle,
-          electionYear: electionToLarpYear("house", cycle, undefined, undefined, ctx),
-          status: "upcoming",
-          // Seeded `houseDistricts` is the preset-correct apportionment SSOT
-          // (1990 census for 1991 games, 2020 census otherwise).
-          totalSeats: state.houseDistricts || 1,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+      const result = await electionsCollection<Document>(db).insertMany(
+        electionsToInsert.map(withCampaignRules)
+      );
 
-      // Create State Senate election for this state if requested
-      if (includeStateSenate) {
-        electionsToInsert.push({
-          electionType: "stateSenate",
-          state: stateId,
-          countryId: "US",
-          cycle,
-          electionYear: electionToLarpYear("stateSenate", cycle, undefined, undefined, ctx),
-          status: "upcoming",
-          totalSeats: STATE_SENATE_SEATS[stateId] || 30,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+      const senateCount = electionsToInsert.filter((e) => e.electionType === "senate").length;
+      const houseCount = electionsToInsert.filter((e) => e.electionType === "house").length;
+      const stateSenateCount = electionsToInsert.filter(
+        (e) => e.electionType === "stateSenate"
+      ).length;
+      const governorCount = electionsToInsert.filter((e) => e.electionType === "governor").length;
 
-      // Create Governor election for this state if requested
-      if (includeGovernor) {
-        electionsToInsert.push({
-          electionType: "governor",
-          state: stateId,
-          countryId: "US",
-          cycle,
-          electionYear: electionToLarpYear("governor", cycle, undefined, undefined, ctx),
-          status: "upcoming",
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-    }
-
-    const result = await electionsCollection<Document>(db).insertMany(
-      electionsToInsert.map(withCampaignRules)
-    );
-
-    const senateCount = electionsToInsert.filter((e) => e.electionType === "senate").length;
-    const houseCount = electionsToInsert.filter((e) => e.electionType === "house").length;
-    const stateSenateCount = electionsToInsert.filter(
-      (e) => e.electionType === "stateSenate"
-    ).length;
-    const governorCount = electionsToInsert.filter((e) => e.electionType === "governor").length;
-
-    return NextResponse.json({
-      success: true,
-      message: `Created ${result.insertedCount} elections for cycle ${cycle}`,
-      counts: {
-        total: result.insertedCount,
-        senate: senateCount,
-        house: houseCount,
-        stateSenate: stateSenateCount,
-        governor: governorCount,
-      },
+      return NextResponse.json({
+        success: true,
+        message: `Created ${result.insertedCount} elections for cycle ${cycle}`,
+        counts: {
+          total: result.insertedCount,
+          senate: senateCount,
+          house: houseCount,
+          stateSenate: stateSenateCount,
+          governor: governorCount,
+        },
+      });
     });
   } catch (error) {
     return handleRouteError(error);
@@ -357,8 +370,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    // Consume path param
-    await params;
+    const { code } = await params;
+    const countryId = code.toUpperCase() as CountryId;
+    if (!COUNTRY_CONFIGS[countryId]) return errorResponse(400, "Invalid country code");
 
     const { searchParams } = new URL(request.url);
     const cycle = searchParams.get("cycle");
@@ -367,29 +381,49 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
       return errorResponse(400, "Cycle parameter is required");
     }
 
+    const cycleNum = Number(cycle);
+    if (!Number.isSafeInteger(cycleNum) || cycle.trim() === "")
+      return errorResponse(400, "Invalid cycle");
     const db = await getDb();
-    const cycleNum = parseInt(cycle, 10);
+    return await withAtomicEconomicCommand(db, async (db) => {
+      // Get election IDs for this cycle
+      const elections = await electionsCollection(db)
+        .find({ cycle: cycleNum, countryId })
+        .toArray();
 
-    // Get election IDs for this cycle
-    const elections = await electionsCollection(db).find({ cycle: cycleNum }).toArray();
+      const electionIds = elections.map((e) => e._id);
 
-    const electionIds = elections.map((e) => e._id);
+      const campaignBalances = await campaignsCollection(db)
+        .find({ electionId: { $in: electionIds } }, { projection: { funds: 1, actions: 1 } })
+        .toArray();
+      if (
+        campaignBalances.some(
+          (campaign) => Number(campaign.funds ?? 0) !== 0 || Number(campaign.actions ?? 0) !== 0
+        )
+      )
+        return errorResponse(409, "Reconcile campaign balances before deleting this cycle.");
 
-    // Delete all election-linked data for this cycle
-    const [candidatesResult, talliesResult, campaignsResult] = await Promise.all([
-      electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
-      electionVoteTalliesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
-      campaignsCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
-    ]);
+      // Delete all election-linked data for this cycle
+      const [candidatesResult, talliesResult, campaignsResult] = await Promise.all([
+        electionCandidatesCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
+        electionVoteTalliesCollection<Document>(db).deleteMany({
+          electionId: { $in: electionIds },
+        }),
+        campaignsCollection<Document>(db).deleteMany({ electionId: { $in: electionIds } }),
+      ]);
 
-    // Delete all elections for this cycle
-    const electionsResult = await electionsCollection<Document>(db).deleteMany({ cycle: cycleNum });
+      // Delete all elections for this cycle
+      const electionsResult = await electionsCollection<Document>(db).deleteMany({
+        cycle: cycleNum,
+        countryId,
+      });
 
-    return NextResponse.json({
-      success: true,
-      message: `Deleted ${electionsResult.deletedCount} elections, ${candidatesResult.deletedCount} candidates, ${talliesResult.deletedCount} tallies, ${campaignsResult.deletedCount} campaigns for cycle ${cycle}`,
-      deletedElections: electionsResult.deletedCount,
-      deletedCandidates: candidatesResult.deletedCount,
+      return NextResponse.json({
+        success: true,
+        message: `Deleted ${electionsResult.deletedCount} elections, ${candidatesResult.deletedCount} candidates, ${talliesResult.deletedCount} tallies, ${campaignsResult.deletedCount} campaigns for cycle ${cycle}`,
+        deletedElections: electionsResult.deletedCount,
+        deletedCandidates: candidatesResult.deletedCount,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

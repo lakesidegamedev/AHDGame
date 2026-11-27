@@ -10,11 +10,10 @@ import {
   castCorporationVote,
   resolveCorporationVoteIfReady,
 } from "@/lib/corporations/votes/voteService";
-import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { notifyVoteEvent } from "@/lib/corporations/votes/voteNotifications";
 import { getGameState } from "@/lib/gameState";
 import { shareholderVotingPower, totalVotingPower } from "@/lib/corporations/superShares";
-import type { CorporationVote } from "@/lib/db/types/corporationVote";
+
 import type { Corporation } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { corporationVotesCollection } from "@/lib/db/repositories/corporationVotes";
@@ -144,9 +143,6 @@ export async function POST(request: Request, { params }: RouteParams) {
         currentTurn,
       });
       if (claimed && outcome !== "open") {
-        if (outcome === "passed") {
-          await applyPassedVoteEffects({ db, vote: updatedVote, corporation, currentTurn });
-        }
         const notificationType =
           outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
         await notifyVoteEvent({

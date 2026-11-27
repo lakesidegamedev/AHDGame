@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import type { AnyBulkWriteOperation } from "mongodb";
 import type { ShareDelta, PendingHistoryEmit } from "@/lib/turn/corporation/shareOrderTypes";
 import {
   loadStockWithholdingContexts,
@@ -61,6 +63,17 @@ import { equityMarketPoolsCollection } from "@/lib/db/repositories/equityMarketP
  * `turn` is stamped on every emitted `shareTradeHistory` row.
  */
 export async function fillPendingShareOrders(
+  db: Db,
+  now: Date,
+  turn: number,
+  holdingTaxStartTurn?: number
+): Promise<void> {
+  await withTurnValueSettlement(db, "queued-share-order-fill", turn, (db) =>
+    settlePendingShareOrders(db, now, turn, holdingTaxStartTurn)
+  );
+}
+
+async function settlePendingShareOrders(
   db: Db,
   now: Date,
   turn: number,
@@ -604,28 +617,34 @@ export async function fillPendingShareOrders(
   // Commit each currency's net dealer cash leg before any shares move. The
   // turn lock prevents API trades from interleaving; the filter is still a
   // final guard against an unexpected concurrent debit.
+  const poolOps: AnyBulkWriteOperation<EquityMarketPool>[] = [];
   for (const [currency, flow] of poolFlows) {
     const purchasesIn = Math.round(flow.purchasesIn * 100) / 100;
     const salesOut = Math.round(flow.salesOut * 100) / 100;
     const net = Math.round((purchasesIn - salesOut) * 100) / 100;
-    const update = await equityMarketPoolsCollection<EquityMarketPool>(db).updateOne(
-      {
-        _id: currency,
-        ...(net < 0 ? { cashLocal: { $gte: -net } } : {}),
-      },
-      {
-        $inc: {
-          cashLocal: net,
-          ...(purchasesIn > 0 ? { "lifetime.purchasesIn": purchasesIn } : {}),
-          ...(salesOut > 0 ? { "lifetime.salesOut": salesOut } : {}),
+    poolOps.push({
+      updateOne: {
+        filter: {
+          _id: currency,
+          ...(net < 0 ? { cashLocal: { $gte: -net } } : {}),
         },
-        $set: { updatedAt: now },
-      }
-    );
-    if (update.matchedCount !== 1) {
-      throw new Error(`Equity market pool ${currency} could not settle queued share orders`);
-    }
+        update: {
+          $inc: {
+            cashLocal: net,
+            ...(purchasesIn > 0 ? { "lifetime.purchasesIn": purchasesIn } : {}),
+            ...(salesOut > 0 ? { "lifetime.salesOut": salesOut } : {}),
+          },
+          $set: { updatedAt: now },
+        },
+      },
+    });
   }
+  if (
+    poolOps.length &&
+    (await equityMarketPoolsCollection<EquityMarketPool>(db).bulkWrite(poolOps)).matchedCount !==
+      poolOps.length
+  )
+    throw new Error("Equity market pools could not settle queued share orders");
 
   // Apply corporation shareholder updates atomically (per-character positional ops)
   // Phase 1: $inc existing shareholder entries + float/trade updates per corp
@@ -741,7 +760,7 @@ export async function fillPendingShareOrders(
               characterId: charId,
               shares: delta,
               ...(pricePerShare !== undefined
-                ? { avgCostPerShare: pricePerShare, avgCostBasisUnit: "anchor" }
+                ? { avgCostPerShare: pricePerShare, avgCostBasisUnit: "anchor" as const }
                 : {}),
               ...(holdingTerms && holdingTaxActive
                 ? {
@@ -757,8 +776,7 @@ export async function fillPendingShareOrders(
         },
       },
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await corporationsCollection(db).bulkWrite(pushOps as any[]);
+    await corporationsCollection(db).bulkWrite(pushOps);
   }
   if (charCashAdjustments.size > 0) {
     const forexEnabled = await isForexEnabled();
@@ -836,8 +854,7 @@ export async function fillPendingShareOrders(
         },
       };
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await charactersCollection(db).bulkWrite(charOps as any);
+    await charactersCollection(db).bulkWrite(charOps);
   }
 
   // Pay corporations that had sell orders filled (proceeds → liquidCapital).

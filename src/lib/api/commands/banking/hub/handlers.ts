@@ -1,3 +1,4 @@
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -39,7 +40,7 @@ import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { Corporation } from "@/lib/db/types";
 import type { Character } from "@/lib/db/types";
 import type { BankCharterType } from "@/lib/db/types/bank";
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import type { ObjectId } from "mongodb";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
@@ -131,7 +132,7 @@ async function handleGET() {
           countryId: 1,
           name: 1,
           primeRate: 1,
-          inflationHistory: { $slice: -1 },
+          inflationHistory: 1,
           intorgId: 1,
           bankReserveRequirement: 1,
         })
@@ -166,7 +167,7 @@ async function handleGET() {
       const bank = bankById.get(getBankId(getCountryIdForCurrency(currency)));
       const prime =
         typeof bank?.primeRate === "number" && Number.isFinite(bank.primeRate) ? bank.primeRate : 0;
-      const latestInflation = bank?.inflationHistory?.at(-1)?.rate;
+      const latestInflation = uniqueTurnHistory(bank?.inflationHistory ?? []).at(-1)?.rate;
       const inflation =
         typeof latestInflation === "number" && Number.isFinite(latestInflation)
           ? latestInflation

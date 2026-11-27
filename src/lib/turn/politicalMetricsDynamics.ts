@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { appendTurnHistory } from "./rules/turnHistory";
 import { loadPandemicSignal } from "@/lib/livingConflict/pandemicSignal";
 import { pandemicPoliticalEffects } from "@/lib/livingConflict/rules/pandemic";
 import { loadTerrorismSignal } from "@/lib/livingConflict/terrorismSignal";
@@ -25,8 +27,7 @@ import type {
   PoliticalMetricsHistoryDoc,
   PoliticalMetricsRegionHistoryDoc,
 } from "@/lib/db/types/politicalMetrics";
-import type { State } from "@/lib/db/types/state";
-import type { StatePolicy } from "@/lib/db/types/statePolicy";
+
 import { aggregateNationalPoliticalMetrics } from "@/lib/politicalMetrics/aggregate";
 import {
   HISTORY_CADENCE_TURNS,
@@ -125,6 +126,15 @@ export async function processPoliticalMetricsDynamics(
   db: Db,
   turnNumber: number
 ): Promise<{ countriesProcessed: number; regionsDrifted: number }> {
+  return withTurnValueSettlement(db, "political-metric-dynamics", turnNumber, (db) =>
+    processPoliticalMetricsDynamicsWork(db, turnNumber)
+  );
+}
+
+async function processPoliticalMetricsDynamicsWork(
+  db: Db,
+  turnNumber: number
+): Promise<{ countriesProcessed: number; regionsDrifted: number }> {
   let countriesProcessed = 0;
   let regionsDrifted = 0;
 
@@ -184,25 +194,51 @@ export async function processPoliticalMetricsDynamics(
     loadRegionalDeliveryMultipliersByRegion(db, turnNumber, true),
   ]);
 
+  const [allDocs, allMacroDocs, allRegionalRecords, allStates] = await Promise.all([
+    politicalMetricsCollection(db)
+      .find({ countryId: { $in: countryIds } })
+      .toArray(),
+    macroMetricsCollection<MacroMetricsDoc>(db)
+      .find(
+        { countryId: { $in: countryIds } },
+        { projection: { countryId: 1, economic: 1, population: 1 } }
+      )
+      .toArray(),
+    statePoliciesCollection(db)
+      .find(
+        {
+          scope: "state",
+          legislationTypeId: {
+            $in: [
+              ...new Set(
+                countryIds.flatMap((countryId) =>
+                  getCatalog(countryId)
+                    .filter((law) => law.kind !== "tax")
+                    .map((law) => law.id)
+                )
+              ),
+            ],
+          },
+        },
+        { projection: { countryId: 1, stateId: 1, legislationTypeId: 1, policyOptionIndex: 1 } }
+      )
+      .toArray(),
+    turnNumber % HISTORY_CADENCE_TURNS === 0
+      ? statesCollection(db)
+          .find({ countryId: { $in: countryIds } }, { projection: { countryId: 1, population: 1 } })
+          .toArray()
+      : [],
+  ]);
+  const allMetricOps: AnyBulkWriteOperation<PoliticalMetricsDoc>[] = [];
+  const allHistoryOps: AnyBulkWriteOperation<PoliticalMetricsHistoryDoc>[] = [];
+  const allRegionHistoryOps: AnyBulkWriteOperation<PoliticalMetricsRegionHistoryDoc>[] = [];
   await Promise.all(
     countryIds.map(async (countryId) => {
-      // Countries are independent: each reads and writes only its own docs, so
-      // the whole fan-out runs concurrently. The four country-scoped reads are
-      // independent of one another too.
-      const [docs, nationalLevels, cabinetSnapshot, macroDocs] = await Promise.all([
-        politicalMetricsCollection(db).find({ countryId }).toArray(),
+      const docs = allDocs.filter((doc) => doc.countryId === countryId);
+      const macroDocs = allMacroDocs.filter((doc) => doc.countryId === countryId);
+      const [nationalLevels, cabinetSnapshot] = await Promise.all([
         getEnactedLevels(db, countryId),
-        // Standing cabinet effects (momentum driver channel): the contribution
-        // snapshot the ministerial step persisted last turn. National standing
-        // effects apply to every region; `regional[id]` is the extra from
-        // sited assets (estates, regional orders). Folded into each region
-        // doc's decaying `cabinetResiduals` and added on top of the day-one
-        // `residuals` in composeTarget. Empty snapshot → residual decays to 0.
         getPoliticalCabinetContribution(db, countryId),
-        // Bridge B: the region's macro reality, flattened to "category.metricId".
-        // Only the macro-owned categories matter — the political board supplies
-        // everything else.
-        macroMetricsCollection<MacroMetricsDoc>(db).find({ countryId }).toArray(),
       ]);
       if (docs.length === 0) return;
       countriesProcessed++;
@@ -239,16 +275,14 @@ export async function processPoliticalMetricsDynamics(
       const catalogLawIds = getCatalog(countryId)
         .filter((law) => law.kind !== "tax")
         .map((law) => law.id);
-      const regionalRecords = await statePoliciesCollection(db)
-        .find(
-          {
-            scope: "state",
-            stateId: { $in: docs.map((d) => d._id) },
-            legislationTypeId: { $in: catalogLawIds },
-          },
-          { projection: { stateId: 1, legislationTypeId: 1, policyOptionIndex: 1 } }
-        )
-        .toArray();
+      const regionIds = new Set(docs.map((doc) => doc._id));
+      const lawIds = new Set(catalogLawIds);
+      const regionalRecords = allRegionalRecords.filter(
+        (record) =>
+          regionIds.has(record.stateId) &&
+          lawIds.has(record.legislationTypeId) &&
+          (!record.countryId || record.countryId === countryId)
+      );
       const regionalLevelsByRegion = new Map<string, Map<string, number>>();
       for (const record of regionalRecords) {
         const levels = regionalLevelsByRegion.get(record.stateId) ?? new Map<string, number>();
@@ -459,28 +493,32 @@ export async function processPoliticalMetricsDynamics(
         }
       }
 
-      if (ops.length > 0) {
-        await politicalMetricsCollection(db).bulkWrite(ops);
-      }
+      allMetricOps.push(...ops);
 
       // §5 trend history: national aggregate snapshot on cadence.
       if (turnNumber % HISTORY_CADENCE_TURNS === 0) {
-        const states = await statesCollection(db)
-          .find({ countryId: countryId as State["countryId"] }, { projection: { population: 1 } })
-          .toArray();
+        const states = allStates.filter((state) => state.countryId === countryId);
         const populationByRegion = new Map(states.map((s) => [s._id, s.population ?? 0]));
         const values = aggregateNationalPoliticalMetrics(docs, populationByRegion);
         const now = new Date();
-        await politicalMetricsHistoryCollection(db).updateOne(
-          { _id: countryId },
-          {
-            $push: {
-              entries: { $each: [{ turn: turnNumber, values }], $slice: -HISTORY_MAX_ENTRIES },
-            },
-            $set: { updatedAt: now },
+        allHistoryOps.push({
+          updateOne: {
+            filter: { _id: countryId },
+            update: [
+              {
+                $set: {
+                  entries: appendTurnHistory(
+                    "entries",
+                    { turn: turnNumber, values },
+                    HISTORY_MAX_ENTRIES
+                  ),
+                  updatedAt: now,
+                },
+              },
+            ],
+            upsert: true,
           },
-          { upsert: true }
-        );
+        });
 
         // Per-region series. `doc.values` is the POST-drift map: the loop above
         // assigned it before this point, which is why the national aggregate computed
@@ -493,27 +531,30 @@ export async function processPoliticalMetricsDynamics(
           docs.map((doc) => ({
             updateOne: {
               filter: { _id: String(doc._id) },
-              update: {
-                $push: {
-                  entries: {
-                    $each: [{ turn: turnNumber, values: doc.values }],
-                    $slice: -REGION_HISTORY_MAX_ENTRIES,
+              update: [
+                {
+                  $set: {
+                    entries: appendTurnHistory(
+                      "entries",
+                      { turn: turnNumber, values: doc.values },
+                      REGION_HISTORY_MAX_ENTRIES
+                    ),
+                    countryId: countryId as PoliticalMetricsRegionHistoryDoc["countryId"],
+                    updatedAt: now,
                   },
                 },
-                $set: {
-                  countryId: countryId as PoliticalMetricsRegionHistoryDoc["countryId"],
-                  updatedAt: now,
-                },
-              },
+              ],
               upsert: true,
             },
           }));
-        if (regionHistoryOps.length > 0) {
-          await politicalMetricsRegionHistoryCollection(db).bulkWrite(regionHistoryOps);
-        }
+        allRegionHistoryOps.push(...regionHistoryOps);
       }
     })
   );
 
+  if (allMetricOps.length) await politicalMetricsCollection(db).bulkWrite(allMetricOps);
+  if (allHistoryOps.length) await politicalMetricsHistoryCollection(db).bulkWrite(allHistoryOps);
+  if (allRegionHistoryOps.length)
+    await politicalMetricsRegionHistoryCollection(db).bulkWrite(allRegionHistoryOps);
   return { countriesProcessed, regionsDrifted };
 }

@@ -340,6 +340,8 @@ type SectorPurchaseBlockReason =
 
 /** Strategy panel: current/available strategies, transition and cost fields. */
 export function buildSectorStrategySection(args: {
+  firstFundedTurn?: number;
+  corporationLiquidCode?: CurrencyCode;
   preset?: string;
   sector: CorporateSector;
   sectorType: OperatingSectorType;

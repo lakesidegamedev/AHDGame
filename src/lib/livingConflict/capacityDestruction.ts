@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Conflict outcomes that promise physical destruction write one obligation per
  * damaged region. The metric engine folds destruction and repair into
@@ -101,11 +102,28 @@ export async function applyCapacityDestructionSpec(
   db: Db,
   request: CapacityDestructionRequest
 ): Promise<CapacityDestructionSummary | undefined> {
-  const { spec, conflictKey, resolutionId } = request;
   await ensureCapacityIndexes(db);
+  const world = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { currentTurn: 1, isProcessing: 1, processingTargetTurn: 1 } }
+  );
+  if (!world) return undefined;
+  return withTurnValueSettlement(
+    db,
+    "capacity-destruction",
+    clockTurn(world),
+    (db) => applyCapacityDestructionInTransaction(db, request),
+    { sourceKey: `${request.conflictKey}:${request.resolutionId}` }
+  );
+}
+async function applyCapacityDestructionInTransaction(
+  db: Db,
+  request: CapacityDestructionRequest
+): Promise<CapacityDestructionSummary | undefined> {
+  const { spec, conflictKey, resolutionId } = request;
   const obligations = conflictCapacityObligationsCollection<ConflictCapacityObligation>(db);
   const existing = await obligations.find({ resolutionId, conflictKey }).toArray();
-  if (existing.length > 0 && existing.length >= spec.regions.length) return summarize(existing);
+  if (existing.length > 0) return summarize(existing);
 
   const world = await gameStateCollection(db).findOne(
     { _id: "current" },

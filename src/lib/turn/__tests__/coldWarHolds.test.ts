@@ -150,18 +150,22 @@ describe("resolveColdWarHolds", () => {
     expect(resolveConflict).not.toHaveBeenCalled();
   });
 
-  it("resolves nothing when another runner already claimed the war", async () => {
-    // Overlapping turn runs are a thing here (rolling deploys). Admission is
-    // idempotent and resolveConflict effectively so, but the ALIGNMENT SWING is not
-    // — without the claim a double run moves both hosts twice.
-    const db2 = seed([held()]);
-    db2.collectionMocks.conflicts.updateOne.mockResolvedValue({ modifiedCount: 0 });
-
+  it("resolves nothing when a fresh transactional read sees the war already resolved", async () => {
+    const db2 = seed([]);
     const res = await resolveColdWarHolds(db2 as unknown as Db, TURN);
-
     expect(res.resolved).toBe(0);
     expect(resolveConflict).not.toHaveBeenCalled();
     expect(admitMember).not.toHaveBeenCalled();
     expect(applyConflictOutcomeAlignment).not.toHaveBeenCalled();
   });
 });
+
+// Intent-mapping fixture; atomic hold tests use the real transaction.
+vi.mock("../withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

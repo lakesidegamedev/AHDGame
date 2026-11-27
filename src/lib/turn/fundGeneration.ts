@@ -1,13 +1,10 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { getCurrentTurn } from "./currentTurn";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import * as Sentry from "@sentry/nextjs";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type {
-  Character,
-  State,
-  PoliticalParty as PoliticalPartyType,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { Character, State, PoliticalParty as PoliticalPartyType } from "@/lib/db/types";
 import { projectCharacterGeneration, calculateTaxAmount } from "@/lib/utils/fundGeneration";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
@@ -25,7 +22,6 @@ import {
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getStatesCollection } from "@/lib/db/collections/states";
 import { getCharactersCollection } from "@/lib/db/collections/characters";
 import { politicalPartiesCollection } from "@/lib/db/repositories/politicalParties";
@@ -59,272 +55,291 @@ export async function processFundGeneration(
       attributes: { turn: turn ?? 0, characterCount: characters.length },
     },
     async () => {
-      const db = await getDb();
-      const campaignRates = await loadCampaignCurrencyRates(db);
-      // GDP-baseline era for income math: the world's reset preset, so
-      // historical worlds scale against their own denomination (issue #798).
-      const preset = await getGameStatePresetOrDefault(db);
-      const gameConfig = await gameConfigCollection(db).findOne(
-        { _id: "default" },
-        { projection: { campaignEraPriceLevelEnabled: 1, campaignLiveGdpBasisEnabled: 1 } }
-      );
-      const priceLevel = resolveCampaignPriceLevel(
-        gameConfig?.campaignEraPriceLevelEnabled,
-        preset
-      );
-
-      const stateMap =
-        preloadedStateMap ??
-        new Map((await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s]));
-
-      const nationalGdpIndex = campaignGdpPerCapitaIndex(stateMap.values(), {
-        live: gameConfig?.campaignLiveGdpBasisEnabled === true,
-        preset,
-      });
-
-      // Use composite keys to avoid cross-country sequential ID collisions
-      const parties = await politicalPartiesCollection<PoliticalPartyType>(db).find({}).toArray();
-      const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
-
-      const statePartyOrgs = await statePartyOrgCollection(db).find({}).toArray();
-      const statePartyMap = new Map(
-        statePartyOrgs.map((sp) => [`${sp.stateId}_${sp.partyId}`, sp])
-      );
-
-      let totalGenerated = 0;
-      let totalStateTaxes = 0;
-      let totalNationalTaxes = 0;
-
-      const nationalTreasuryUpdates = new Map<string, { amount: number; _id: ObjectId }>();
-      const stateTreasuryUpdates = new Map<string, number>();
-      const characterOps: AnyBulkWriteOperation<Character>[] = [];
-      // Both branches write the credit (totalFundGeneration / characterReceives) to
-      // whichever local-currency field holds the truth. Forex on → the home-
-      // currency stored balance; forex off → the legacy `funds` field. Phase 5 of
-      // cf-inconsistency-fix dropped the dual-write to the anchor mirror entirely.
-      const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
-      // tx log accumulators
-      const txCharEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
-      const partyDuesTxEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
-      const nationalTreasuryTxEntries: BulkTreasuryTransactionArgs[] = [];
-      const stateTreasuryTxEntries: BulkTreasuryTransactionArgs[] = [];
-
-      for (const character of characters) {
-        const state = stateMap.get(character.homeState);
-        if (!state) continue;
-
-        // Generation constants are anchor (₳); campaign funds are stored LOCAL and
-        // are decoupled from live forex. Denominate to local at the frozen base
-        // world-seeded currency basis (US ×1.0). All downstream math (taxes, characterReceives,
-        // tx amounts, treasury credits) then operates in local.
-        const totalFundGenerationAnchor = projectCharacterGeneration({
-          population: state.population,
-          donorBaseLevel: character.donorBaseLevel,
-          currentOffice: character.currentOffice,
-          stateGdpMillions: state.gdp,
-          countryId: character.countryId,
-          politicalInfluence: character.politicalInfluence ?? 0,
-          preset,
-          priceLevel,
-          nationalGdpPerCapita: requireNationalGdpPerCapita(
-            nationalGdpIndex,
-            character.countryId ?? "US"
-          ),
-        });
-        const totalFundGeneration = campaignAnchorToLocal(
-          totalFundGenerationAnchor,
-          character.countryId ?? "US",
-          campaignRates
-        );
-
-        if (character.party === "independent") {
-          totalGenerated += totalFundGeneration;
-          characterOps.push({
-            updateOne: {
-              filter: { _id: character._id },
-              update: { $inc: { [campaignFundsField]: totalFundGeneration } },
-            },
-          });
-          if (totalFundGeneration > 0) {
-            txCharEntries.push({
-              type: "office_income",
-              turn: turn ?? 0,
-              createdAt: now,
-              subjectType: "character",
-              subjectId: character._id,
-              subjectName: character.name,
-              amount: totalFundGeneration,
-              currencyCode: getHomeCurrency(character),
-              meta: { source: "income" },
-            });
-          }
-          continue;
-        }
-
-        const partyKey = `${character.countryId ?? "US"}:${character.party}`;
-        const party = partyMap.get(partyKey);
-        const nationalTaxRate = party?.nationalTaxRate ?? 0;
-
-        const statePartyKey = `${character.homeState}_${character.party}`;
-        const stateParty = statePartyMap.get(statePartyKey);
-        const stateTaxRate = stateParty?.stateTaxRate ?? 0;
-
-        const stateTaxAmount = calculateTaxAmount(totalFundGeneration, stateTaxRate);
-        const nationalTaxAmount = calculateTaxAmount(totalFundGeneration, nationalTaxRate);
-        const characterReceives = totalFundGeneration - stateTaxAmount - nationalTaxAmount;
-
-        totalGenerated += totalFundGeneration;
-        totalStateTaxes += stateTaxAmount;
-        totalNationalTaxes += nationalTaxAmount;
-
-        characterOps.push({
-          updateOne: {
-            filter: { _id: character._id },
-            update: { $inc: { [campaignFundsField]: characterReceives } },
-          },
-        });
-
-        if (characterReceives > 0) {
-          txCharEntries.push({
-            type: "office_income",
-            turn: turn ?? 0,
-            createdAt: now,
-            subjectType: "character",
-            subjectId: character._id,
-            subjectName: character.name,
-            amount: characterReceives,
-            currencyCode: getHomeCurrency(character),
-            meta: { source: "income" },
-          });
-        }
-        if (stateTaxAmount > 0) {
-          stateTreasuryUpdates.set(
-            statePartyKey,
-            (stateTreasuryUpdates.get(statePartyKey) ?? 0) + stateTaxAmount
+      const rootDb = await getDb();
+      const generationTurn = turn ?? (await getCurrentTurn(rootDb));
+      return withTurnValueSettlement(
+        rootDb,
+        "player-fund-generation",
+        generationTurn,
+        async (db) => {
+          const freshCharacters = await (
+            await getCharactersCollection(db)
+          )
+            .find({ _id: { $in: characters.map((character) => character._id) } })
+            .toArray();
+          const campaignRates = await loadCampaignCurrencyRates(db);
+          // GDP-baseline era for income math: the world's reset preset, so
+          // historical worlds scale against their own denomination (issue #798).
+          const preset = await getGameStatePresetOrDefault(db);
+          const gameConfig = await gameConfigCollection(db).findOne(
+            { _id: "default" },
+            { projection: { campaignEraPriceLevelEnabled: 1, campaignLiveGdpBasisEnabled: 1 } }
           );
+          const priceLevel = resolveCampaignPriceLevel(
+            gameConfig?.campaignEraPriceLevelEnabled,
+            preset
+          );
+
+          const stateMap =
+            preloadedStateMap ??
+            new Map(
+              (await (await getStatesCollection(db)).find({}).toArray()).map((s) => [s._id, s])
+            );
+
+          const nationalGdpIndex = campaignGdpPerCapitaIndex(stateMap.values(), {
+            live: gameConfig?.campaignLiveGdpBasisEnabled === true,
+            preset,
+          });
+
+          // Use composite keys to avoid cross-country sequential ID collisions
+          const parties = await politicalPartiesCollection<PoliticalPartyType>(db)
+            .find({})
+            .toArray();
+          const partyMap = new Map(
+            parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p])
+          );
+
+          const statePartyOrgs = await statePartyOrgCollection(db).find({}).toArray();
+          const statePartyMap = new Map(
+            statePartyOrgs.map((sp) => [`${sp.stateId}_${sp.partyId}`, sp])
+          );
+
+          let totalGenerated = 0;
+          let totalStateTaxes = 0;
+          let totalNationalTaxes = 0;
+
+          const nationalTreasuryUpdates = new Map<string, { amount: number; _id: ObjectId }>();
+          const stateTreasuryUpdates = new Map<string, number>();
+          const characterOps: AnyBulkWriteOperation<Character>[] = [];
+          // Both branches write the credit (totalFundGeneration / characterReceives) to
+          // whichever local-currency field holds the truth. Forex on → the home-
+          // currency stored balance; forex off → the legacy `funds` field. Phase 5 of
+          // cf-inconsistency-fix dropped the dual-write to the anchor mirror entirely.
+          const campaignFundsField = forexEnabled ? "currencyBalances.campaign" : "funds";
+          // tx log accumulators
+          const txCharEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
+          const partyDuesTxEntries: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] =
+            [];
+          const nationalTreasuryTxEntries: BulkTreasuryTransactionArgs[] = [];
+          const stateTreasuryTxEntries: BulkTreasuryTransactionArgs[] = [];
+
+          for (const character of freshCharacters) {
+            const state = stateMap.get(character.homeState);
+            if (!state) continue;
+
+            // Generation constants are anchor (₳); campaign funds are stored LOCAL and
+            // are decoupled from live forex. Denominate to local at the frozen base
+            // world-seeded currency basis (US ×1.0). All downstream math (taxes, characterReceives,
+            // tx amounts, treasury credits) then operates in local.
+            const totalFundGenerationAnchor = projectCharacterGeneration({
+              population: state.population,
+              donorBaseLevel: character.donorBaseLevel,
+              currentOffice: character.currentOffice,
+              stateGdpMillions: state.gdp,
+              countryId: character.countryId,
+              politicalInfluence: character.politicalInfluence ?? 0,
+              preset,
+              priceLevel,
+              nationalGdpPerCapita: requireNationalGdpPerCapita(
+                nationalGdpIndex,
+                character.countryId ?? "US"
+              ),
+            });
+            const totalFundGeneration = campaignAnchorToLocal(
+              totalFundGenerationAnchor,
+              character.countryId ?? "US",
+              campaignRates
+            );
+
+            if (character.party === "independent") {
+              totalGenerated += totalFundGeneration;
+              characterOps.push({
+                updateOne: {
+                  filter: { _id: character._id },
+                  update: { $inc: { [campaignFundsField]: totalFundGeneration } },
+                },
+              });
+              if (totalFundGeneration > 0) {
+                txCharEntries.push({
+                  type: "office_income",
+                  turn: generationTurn,
+                  createdAt: now,
+                  subjectType: "character",
+                  subjectId: character._id,
+                  subjectName: character.name,
+                  amount: totalFundGeneration,
+                  currencyCode: getHomeCurrency(character),
+                  meta: { source: "income" },
+                });
+              }
+              continue;
+            }
+
+            const partyKey = `${character.countryId ?? "US"}:${character.party}`;
+            const party = partyMap.get(partyKey);
+            const nationalTaxRate = party?.nationalTaxRate ?? 0;
+
+            const statePartyKey = `${character.homeState}_${character.party}`;
+            const stateParty = statePartyMap.get(statePartyKey);
+            const stateTaxRate = stateParty?.stateTaxRate ?? 0;
+
+            const stateTaxAmount = calculateTaxAmount(totalFundGeneration, stateTaxRate);
+            const nationalTaxAmount = calculateTaxAmount(totalFundGeneration, nationalTaxRate);
+            const characterReceives = totalFundGeneration - stateTaxAmount - nationalTaxAmount;
+
+            totalGenerated += totalFundGeneration;
+            totalStateTaxes += stateTaxAmount;
+            totalNationalTaxes += nationalTaxAmount;
+
+            characterOps.push({
+              updateOne: {
+                filter: { _id: character._id },
+                update: { $inc: { [campaignFundsField]: characterReceives } },
+              },
+            });
+
+            if (characterReceives > 0) {
+              txCharEntries.push({
+                type: "office_income",
+                turn: generationTurn,
+                createdAt: now,
+                subjectType: "character",
+                subjectId: character._id,
+                subjectName: character.name,
+                amount: characterReceives,
+                currencyCode: getHomeCurrency(character),
+                meta: { source: "income" },
+              });
+            }
+            if (stateTaxAmount > 0) {
+              stateTreasuryUpdates.set(
+                statePartyKey,
+                (stateTreasuryUpdates.get(statePartyKey) ?? 0) + stateTaxAmount
+              );
+            }
+            if (nationalTaxAmount > 0 && party) {
+              const key = String(party._id);
+              const existing = nationalTreasuryUpdates.get(key);
+              nationalTreasuryUpdates.set(key, {
+                amount: (existing?.amount ?? 0) + nationalTaxAmount,
+                _id: party._id,
+              });
+            }
+          }
+
+          if (characterOps.length > 0) {
+            await (await getCharactersCollection(db)).bulkWrite(characterOps);
+          }
+
+          // Character income and party tax receipts share the phase's commit.
+          if (txCharEntries.length > 0) {
+            await emitTxBulk(db, txCharEntries, await loadTxThresholds(db));
+          }
+
+          if (nationalTreasuryUpdates.size > 0) {
+            const partyOps = [...nationalTreasuryUpdates.values()].map(({ amount, _id }) => ({
+              updateOne: {
+                filter: { _id },
+                update: { $inc: { treasury: amount }, $set: { updatedAt: now } },
+              },
+            }));
+            await politicalPartiesCollection<PoliticalPartyType>(db).bulkWrite(partyOps);
+
+            // Emit per-party treasury audit rows. Fund-generation aggregates a
+            // turn's worth of national-tax dues; one credit row per party.
+            const partyById = new Map(parties.map((p) => [String(p._id), p]));
+            for (const { amount, _id } of nationalTreasuryUpdates.values()) {
+              const party = partyById.get(String(_id));
+              if (!party) continue;
+              nationalTreasuryTxEntries.push({
+                countryId: (party.countryId ?? "US") as BulkTreasuryTransactionArgs["countryId"],
+                partyId: String(party.sequentialId),
+                holderType: "party",
+                holderId: String(party.sequentialId),
+                category: "fund_generation",
+                direction: "credit",
+                amount,
+                memo: `National tax (${party.nationalTaxRate ?? 0}%) on member fund generation`,
+                turn: generationTurn,
+                now,
+              });
+              const countryId = party.countryId ?? "US";
+              partyDuesTxEntries.push({
+                type: "party_dues_received",
+                turn: generationTurn,
+                createdAt: now,
+                subjectType: "party",
+                subjectId: party._id,
+                subjectName: party.name,
+                amount,
+                currencyCode: (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode,
+                counterpartyType: "system",
+                counterpartyName: "Member fund generation tax",
+                meta: { scope: "national", source: "player_national_tax" },
+              });
+            }
+            await emitTreasuryTransactionsBulk(db, nationalTreasuryTxEntries);
+          }
+
+          if (stateTreasuryUpdates.size > 0) {
+            const statePartyOps = [...stateTreasuryUpdates.entries()].map(
+              ([statePartyKey, amount]) => ({
+                updateOne: {
+                  filter: { _id: statePartyKey },
+                  update: { $inc: { treasury: amount }, $set: { updatedAt: now } },
+                },
+              })
+            );
+            await statePartyOrgCollection(db).bulkWrite(statePartyOps);
+
+            for (const [statePartyKey, amount] of stateTreasuryUpdates.entries()) {
+              const sp = statePartyMap.get(statePartyKey);
+              if (!sp) continue;
+              stateTreasuryTxEntries.push({
+                countryId: (sp.countryId ?? "US") as BulkTreasuryTransactionArgs["countryId"],
+                partyId: sp.partyId,
+                holderType: "state_party",
+                holderId: statePartyKey,
+                category: "fund_generation",
+                direction: "credit",
+                amount,
+                memo: `State tax (${sp.stateTaxRate ?? 0}%) on member fund generation`,
+                turn: generationTurn,
+                now,
+              });
+              const countryId = sp.countryId ?? stateMap.get(sp.stateId)?.countryId ?? "US";
+              partyDuesTxEntries.push({
+                type: "party_dues_received",
+                turn: generationTurn,
+                createdAt: now,
+                subjectType: "party",
+                subjectName: `${sp.stateId}:${sp.partyId}`,
+                amount,
+                currencyCode: (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode,
+                counterpartyType: "system",
+                counterpartyName: "Member fund generation tax",
+                meta: {
+                  scope: "state",
+                  statePartyKey,
+                  stateId: sp.stateId,
+                  partyId: sp.partyId,
+                  source: "player_state_tax",
+                },
+              });
+            }
+            await emitTreasuryTransactionsBulk(db, stateTreasuryTxEntries);
+          }
+
+          // Party taxes fund party treasuries, not the federal budget. Emit the
+          // same party accounts changed above so stock-flow follows real balances.
+          if (partyDuesTxEntries.length > 0) {
+            const thresholds = await loadTxThresholds(db);
+            await emitTxBulk(db, partyDuesTxEntries, thresholds);
+          }
+
+          return { totalGenerated, totalStateTaxes, totalNationalTaxes };
         }
-        if (nationalTaxAmount > 0 && party) {
-          const key = String(party._id);
-          const existing = nationalTreasuryUpdates.get(key);
-          nationalTreasuryUpdates.set(key, {
-            amount: (existing?.amount ?? 0) + nationalTaxAmount,
-            _id: party._id,
-          });
-        }
-      }
-
-      if (characterOps.length > 0) {
-        await (await getCharactersCollection(db)).bulkWrite(characterOps);
-      }
-
-      // Record each credit as soon as it lands so a later party-side failure
-      // cannot leave funds added to a character with no history row.
-      if (txCharEntries.length > 0) {
-        await emitTxBulk(db, txCharEntries, await loadTxThresholds(db));
-      }
-
-      if (nationalTreasuryUpdates.size > 0) {
-        const partyOps = [...nationalTreasuryUpdates.values()].map(({ amount, _id }) => ({
-          updateOne: {
-            filter: { _id },
-            update: { $inc: { treasury: amount }, $set: { updatedAt: now } },
-          },
-        }));
-        await politicalPartiesCollection<PoliticalPartyType>(db).bulkWrite(partyOps);
-
-        // Emit per-party treasury audit rows. Fund-generation aggregates a
-        // turn's worth of national-tax dues; one credit row per party.
-        const partyById = new Map(parties.map((p) => [String(p._id), p]));
-        for (const { amount, _id } of nationalTreasuryUpdates.values()) {
-          const party = partyById.get(String(_id));
-          if (!party) continue;
-          nationalTreasuryTxEntries.push({
-            countryId: (party.countryId ?? "US") as BulkTreasuryTransactionArgs["countryId"],
-            partyId: String(party.sequentialId),
-            holderType: "party",
-            holderId: String(party.sequentialId),
-            category: "fund_generation",
-            direction: "credit",
-            amount,
-            memo: `National tax (${party.nationalTaxRate ?? 0}%) on member fund generation`,
-            turn: turn ?? 0,
-            now,
-          });
-          const countryId = party.countryId ?? "US";
-          partyDuesTxEntries.push({
-            type: "party_dues_received",
-            turn: turn ?? 0,
-            createdAt: now,
-            subjectType: "party",
-            subjectId: party._id,
-            subjectName: party.name,
-            amount,
-            currencyCode: (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode,
-            counterpartyType: "system",
-            counterpartyName: "Member fund generation tax",
-            meta: { scope: "national", source: "player_national_tax" },
-          });
-        }
-        await emitTreasuryTransactionsBulk(db, nationalTreasuryTxEntries);
-      }
-
-      if (stateTreasuryUpdates.size > 0) {
-        const statePartyOps = [...stateTreasuryUpdates.entries()].map(
-          ([statePartyKey, amount]) => ({
-            updateOne: {
-              filter: { _id: statePartyKey },
-              update: { $inc: { treasury: amount }, $set: { updatedAt: now } },
-            },
-          })
-        );
-        await statePartyOrgCollection(db).bulkWrite(statePartyOps);
-
-        for (const [statePartyKey, amount] of stateTreasuryUpdates.entries()) {
-          const sp = statePartyMap.get(statePartyKey);
-          if (!sp) continue;
-          stateTreasuryTxEntries.push({
-            countryId: (sp.countryId ?? "US") as BulkTreasuryTransactionArgs["countryId"],
-            partyId: sp.partyId,
-            holderType: "state_party",
-            holderId: statePartyKey,
-            category: "fund_generation",
-            direction: "credit",
-            amount,
-            memo: `State tax (${sp.stateTaxRate ?? 0}%) on member fund generation`,
-            turn: turn ?? 0,
-            now,
-          });
-          const countryId = sp.countryId ?? stateMap.get(sp.stateId)?.countryId ?? "US";
-          partyDuesTxEntries.push({
-            type: "party_dues_received",
-            turn: turn ?? 0,
-            createdAt: now,
-            subjectType: "party",
-            subjectName: `${sp.stateId}:${sp.partyId}`,
-            amount,
-            currencyCode: (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") as CurrencyCode,
-            counterpartyType: "system",
-            counterpartyName: "Member fund generation tax",
-            meta: {
-              scope: "state",
-              statePartyKey,
-              stateId: sp.stateId,
-              partyId: sp.partyId,
-              source: "player_state_tax",
-            },
-          });
-        }
-        await emitTreasuryTransactionsBulk(db, stateTreasuryTxEntries);
-      }
-
-      // Party taxes fund party treasuries, not the federal budget. Emit the
-      // same party accounts changed above so stock-flow follows real balances.
-      if (partyDuesTxEntries.length > 0) {
-        const thresholds = await loadTxThresholds(db);
-        await emitTxBulk(db, partyDuesTxEntries, thresholds);
-      }
-
-      return { totalGenerated, totalStateTaxes, totalNationalTaxes };
+      );
     }
   );
 }

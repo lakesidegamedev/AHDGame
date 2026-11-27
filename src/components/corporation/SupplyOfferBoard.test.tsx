@@ -103,7 +103,11 @@ it("takes a listed offer for a chosen quantity", async () => {
   );
   const call = fetcher.mock.calls.find((c) => c[1]?.method === "POST");
   expect(call![0]).toBe("/api/corporations/self/supply-listings/take");
-  expect(JSON.parse(call![1].body)).toEqual({ listingId: "other:0", volume: 40 });
+  expect(JSON.parse(call![1].body)).toEqual({
+    requestId: expect.any(String),
+    listingId: "other:0",
+    volume: 40,
+  });
 });
 it("explains an offer this corporation could never receive and hides its take controls", async () => {
   const reason =

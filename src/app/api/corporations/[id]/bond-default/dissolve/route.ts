@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -43,50 +44,50 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(parsed.status, parsed.error);
     }
 
-    const db = await getDb();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      // Dissolving the corporation to resolve a bond default is a corporation
+      // action: blocked while an admin has paused corporation actions.
+      const pausedGuard = await requireCorporationActionsEnabled(db);
+      if (pausedGuard) return pausedGuard;
 
-    // Dissolving the corporation to resolve a bond default is a corporation
-    // action: blocked while an admin has paused corporation actions.
-    const pausedGuard = await requireCorporationActionsEnabled(db);
-    if (pausedGuard) return pausedGuard;
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const currentTurn = await getCurrentTurn(db);
+      const ageBlock = corporationDissolutionAgeBlock(corporation.foundedAtTurn, currentTurn);
+      if (ageBlock.blocked) {
+        return errorResponse(400, dissolutionAgeBlockedMessage(ageBlock.turnsRemaining));
+      }
 
-    const currentTurn = await getCurrentTurn(db);
-    const ageBlock = corporationDissolutionAgeBlock(corporation.foundedAtTurn, currentTurn);
-    if (ageBlock.blocked) {
-      return errorResponse(400, dissolutionAgeBlockedMessage(ageBlock.turnsRemaining));
-    }
+      const now = new Date();
+      const result = await withCorporationSettlementLock(
+        db,
+        corporation._id,
+        "bondSettlementInProgressAt",
+        now,
+        async () =>
+          executeCorporationBondDefaultDissolution(db, corporation, {
+            requireDefaultedBonds: true,
+          })
+      );
 
-    const now = new Date();
-    const result = await withCorporationSettlementLock(
-      db,
-      corporation._id,
-      "bondSettlementInProgressAt",
-      now,
-      async () =>
-        executeCorporationBondDefaultDissolution(db, corporation, {
-          requireDefaultedBonds: true,
-        })
-    );
+      if (!result) {
+        return errorResponse(409, "Bond settlement is already in progress for this corporation");
+      }
 
-    if (!result) {
-      return errorResponse(409, "Bond settlement is already in progress for this corporation");
-    }
-
-    return NextResponse.json({
-      success: true,
-      bondRecoveryPool: result.bondRecoveryPool,
-      shareholderPool: result.shareholderPool,
-      shareholderPayouts: result.shareholderPayouts,
-      corporateShareholderPayouts: result.corporateShareholderPayouts,
-      publicFloatPayout: result.publicFloatPayout,
-      message: `${corporation.name} has been dissolved. Bondholders and shareholders were paid from liquid capital and sector NPV (see response for breakdown).`,
+      return NextResponse.json({
+        success: true,
+        bondRecoveryPool: result.bondRecoveryPool,
+        shareholderPool: result.shareholderPool,
+        shareholderPayouts: result.shareholderPayouts,
+        corporateShareholderPayouts: result.corporateShareholderPayouts,
+        publicFloatPayout: result.publicFloatPayout,
+        message: `${corporation.name} has been dissolved. Bondholders and shareholders were paid from liquid capital and sector NPV (see response for breakdown).`,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

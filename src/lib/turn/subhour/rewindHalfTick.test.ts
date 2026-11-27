@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { rewindHalfTick } from "./rewindHalfTick";

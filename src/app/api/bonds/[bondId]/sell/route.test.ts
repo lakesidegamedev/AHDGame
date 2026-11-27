@@ -3,6 +3,17 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+// Isolated settlement leg fixtures; buy-transaction tests exercise the atomic route boundary.
+vi.mock("@/lib/api/withRecordedEconomicCommand", () => ({
+  withRecordedEconomicCommand: async (
+    db: Db,
+    _phase: string,
+    _actor: string,
+    _id: string | undefined,
+    _input: unknown,
+    work: (db: Db) => Promise<Response>
+  ) => work(db),
+}));
 vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
   getMongoClient: vi.fn(async () => ({
@@ -262,7 +273,7 @@ describe("POST /api/bonds/[bondId]/sell", () => {
     );
   });
 
-  it("keeps a completed fallback sale when zero-unit holder cleanup fails", async () => {
+  it("reports a cleanup failure so the command boundary can roll back its complete sale", async () => {
     const bondId = new ObjectId();
     const characterId = new ObjectId();
     const userId = new ObjectId();
@@ -309,7 +320,7 @@ describe("POST /api/bonds/[bondId]/sell", () => {
       { params: Promise.resolve({ bondId: bondId.toString() }) }
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(500);
     expect(db.collectionMocks.characters.updateOne).toHaveBeenCalledOnce();
     expect(db.collectionMocks.bondMarketPools.updateOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.bonds.updateOne).toHaveBeenCalledTimes(2);
@@ -384,7 +395,7 @@ describe("POST /api/bonds/[bondId]/sell", () => {
         meta: expect.objectContaining({
           bondId: bondId.toString(),
           units: 3,
-          pricePerUnit: 1.176,
+          pricePerUnit: 1176,
         }),
       })
     );

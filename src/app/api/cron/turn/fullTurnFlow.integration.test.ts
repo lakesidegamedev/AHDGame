@@ -332,7 +332,13 @@ describe("processTurn() — full turn flow", () => {
 
     const updateOne = db.collectionMocks["gameState"].updateOne;
     expect(updateOne).toHaveBeenCalledWith(
-      { _id: "current" },
+      expect.objectContaining({
+        _id: "current",
+        currentTurn: 99,
+        processingHolderId: expect.any(String),
+        resetWorldId: null,
+        worldEpochId: "full-turn-fixture-world",
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({ currentTurn: 100 }),
       })
@@ -375,7 +381,12 @@ describe("processTurn() — full turn flow", () => {
       expect(lockSet).not.toHaveProperty(field);
     }
     expect(db.collectionMocks["gameState"].updateOne).toHaveBeenCalledWith(
-      { _id: "current", isProcessing: true },
+      expect.objectContaining({
+        _id: "current",
+        isProcessing: true,
+        currentTurn: 99,
+        processingHolderId: expect.any(String),
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({
           processingTargetTurn: 100,
@@ -544,7 +555,12 @@ describe("processTurn() — full turn flow", () => {
       await processTurn();
       expect(bondSpy).toHaveBeenCalledTimes(1);
       expect(db.collectionMocks["gameState"].updateOne).toHaveBeenCalledWith(
-        { _id: "current", isProcessing: true },
+        expect.objectContaining({
+          _id: "current",
+          isProcessing: true,
+          currentTurn: 99,
+          processingHolderId: expect.any(String),
+        }),
         { $set: expect.objectContaining({ processingPhaseStatuses: null }) }
       );
     });
@@ -575,7 +591,13 @@ describe("processTurn() — full turn flow", () => {
     await processTurn();
 
     expect(db.collectionMocks["gameState"].updateOne).toHaveBeenCalledWith(
-      { _id: "current" },
+      expect.objectContaining({
+        _id: "current",
+        currentTurn: 99,
+        processingHolderId: expect.any(String),
+        resetWorldId: null,
+        worldEpochId: "full-turn-fixture-world",
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({
           isProcessing: false,

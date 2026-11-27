@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { CORPORATION_STARTING_CAPITAL } from "@/lib/constants/corporations";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -20,87 +21,24 @@ vi.mock("@/lib/wireEvent", () => ({
 }));
 
 function makeDb(countryId: string, baseRate?: number) {
-  const corpInsertedId = new ObjectId();
-  const corpInsertOne = vi.fn().mockResolvedValue({ insertedId: corpInsertedId });
-
-  // Typed rather than inferred: a test below funds GBP, and the inferred
-  // union of the two literals below would refuse any third currency.
-  const charFunds: { personal: Partial<Record<string, number>> } =
-    countryId === "JP" ? { personal: { JPY: 2_000_000_000 } } : { personal: { USD: 2_000_000 } };
-
-  const db = {
-    corpInsertOne,
-    collection: vi.fn().mockImplementation((name: string) => {
-      // The founding route's command-economy gate reads these two. It fails
-      // CLOSED, so a db that does not serve them refuses every founding with a
-      // 403 - including in market economies like JP/US/UK.
-      if (name === "gameState") {
-        return { findOne: async () => ({ _id: "current", currentYear: 1970 }) };
-      }
-      if (name === "federalBudget") {
-        // `find` serves the gate's marketization read; `findOne` serves
-        // readInvestorConfidence further down the founding path.
-        return {
-          find: () => ({ toArray: async () => [] }),
-          findOne: async () => null,
-        };
-      }
-      if (name === "exchangeRates")
-        return {
-          find: () => ({
-            toArray: async () =>
-              baseRate == null ? [] : [{ currencyCode: "JPY", baseRate, rate: 106 }],
-          }),
-        };
-      if (name === "corporations") {
-        return {
-          findOne: vi.fn().mockResolvedValue(null),
-          insertOne: corpInsertOne,
-          // openCeoTenure (founding) writes the founder's CEO tenure.
-          updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
-        };
-      }
-      if (name === "counters") {
-        return { findOneAndUpdate: vi.fn().mockResolvedValue({ seq: 1 }) };
-      }
-      if (name === "states") {
-        return {
-          findOne: vi.fn().mockResolvedValue({ _id: "jp_tokyo", name: "Tokyo" }),
-        };
-      }
-      if (name === "corporationCeoVotes") {
-        return { insertOne: vi.fn().mockResolvedValue({ acknowledged: true }) };
-      }
-      if (name === "characters") {
-        // atomicallyDebitCharacterCash uses findOneAndUpdate — return the
-        // post-debit character doc so the helper sees `ok: true`.
-        return {
-          findOne: vi.fn().mockResolvedValue(null),
-          findOneAndUpdate: vi.fn().mockResolvedValue({
-            _id: new ObjectId(),
-            countryId,
-            currencyBalances: charFunds,
-          }),
-          updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-        };
-      }
-      return {
-        findOne: vi.fn().mockResolvedValue(null),
-        insertOne: vi.fn().mockResolvedValue({ acknowledged: true }),
-        updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-      };
-    }),
-  };
-
+  const f = createTransactionalMemoryDb();
+  const currencyCode = countryId === "JP" ? "JPY" : countryId === "UK" ? "GBP" : "USD";
   const character = {
     _id: new ObjectId(),
     countryId,
-    homeState: countryId === "JP" ? "jp_tokyo" : "california",
-    currencyBalances: charFunds,
+    homeState: countryId === "JP" ? "jp_tokyo" : countryId === "UK" ? "london" : "california",
+    currencyBalances: {
+      personal: { [currencyCode]: countryId === "JP" ? 2_000_000_000 : 2_000_000 },
+    },
     shareholders: [],
   };
-
-  return { db, corpInsertOne, character };
+  f.memory.seed("gameState", [{ _id: "current", currentYear: 1970, currentTurn: 56 }]);
+  f.memory.seed("characters", [character]);
+  f.memory.seed("states", [{ _id: character.homeState, countryId, name: "Synthetic region" }]);
+  if (baseRate != null)
+    f.memory.seed("exchangeRates", [{ currencyCode: "JPY", baseRate, rate: 106 }]);
+  const corpInsertOne = vi.spyOn(f.memory.collection("corporations"), "insertOne");
+  return { db: f.db, memory: f.memory, corpInsertOne, character };
 }
 
 describe("POST /api/corporations — forex enabled", () => {
@@ -207,58 +145,6 @@ describe("POST /api/corporations — forex enabled", () => {
     const { getDb } = await import("@/lib/mongodb");
     const { requireAuth } = await import("@/lib/api/requireAuth");
     const { db, corpInsertOne, character } = makeDb("UK");
-    // makeDb only funds USD/JPY; UK founder needs GBP cash for the debit.
-    character.currencyBalances = { personal: { GBP: 2_000_000 } };
-    db.collection = vi.fn().mockImplementation((name: string) => {
-      // This test replaces `db.collection` wholesale, so it needs the
-      // command-economy gate's two reads as well; the gate fails CLOSED and
-      // would otherwise refuse UK founding with a 403.
-      if (name === "gameState") {
-        return { findOne: async () => ({ _id: "current", currentYear: 1970 }) };
-      }
-      if (name === "federalBudget") {
-        return {
-          find: () => ({ toArray: async () => [] }),
-          findOne: async () => null,
-        };
-      }
-      if (name === "exchangeRates") return { find: () => ({ toArray: async () => [] }) };
-      if (name === "corporations") {
-        return {
-          findOne: vi.fn().mockResolvedValue(null),
-          insertOne: corpInsertOne,
-          updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
-        };
-      }
-      if (name === "counters") {
-        return { findOneAndUpdate: vi.fn().mockResolvedValue({ seq: 1 }) };
-      }
-      if (name === "states") {
-        return {
-          findOne: vi.fn().mockResolvedValue({ _id: "london", name: "London" }),
-        };
-      }
-      if (name === "corporationCeoVotes") {
-        return { insertOne: vi.fn().mockResolvedValue({ acknowledged: true }) };
-      }
-      if (name === "characters") {
-        return {
-          findOne: vi.fn().mockResolvedValue(null),
-          findOneAndUpdate: vi.fn().mockResolvedValue({
-            _id: character._id,
-            countryId: "UK",
-            currencyBalances: character.currencyBalances,
-          }),
-          updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-        };
-      }
-      return {
-        findOne: vi.fn().mockResolvedValue(null),
-        insertOne: vi.fn().mockResolvedValue({ acknowledged: true }),
-        updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-      };
-    });
-    character.homeState = "london";
 
     vi.mocked(getDb).mockResolvedValue(db as never);
     vi.mocked(requireAuth).mockResolvedValue({
@@ -295,29 +181,17 @@ it.each([
   async ({ founding, lastCorporationFoundedTurn, expectedStatus }) => {
     const { getDb } = await import("@/lib/mongodb");
     const { requireAuth } = await import("@/lib/api/requireAuth");
-    const { db, corpInsertOne, character } = makeDb("US");
-    const original = db.collection.getMockImplementation()!;
-    db.collection.mockImplementation((name: string) => {
-      if (name === "gameState") {
-        return {
-          findOne: async () => ({
-            _id: "current",
-            currentYear: 1970,
-            currentTurn: 56,
-            preIteration: { active: founding },
-          }),
-        };
-      }
-      if (name === "users") {
-        return { findOne: async () => ({ lastCorporationFoundedTurn }) };
-      }
-      return original(name);
-    });
+    const { db, memory, corpInsertOne, character } = makeDb("US");
+    memory.seed("gameState", [
+      { _id: "current", currentYear: 1970, currentTurn: 56, preIteration: { active: founding } },
+    ]);
+    const userId = new ObjectId().toHexString();
+    memory.seed("users", [{ _id: new ObjectId(userId), lastCorporationFoundedTurn }]);
     vi.mocked(getDb).mockResolvedValue(db as never);
     vi.mocked(requireAuth).mockResolvedValue({
       ok: true,
       user: {
-        userId: new ObjectId().toString(),
+        userId,
         hasCharacter: true,
         character: { ...character, createdTurn: 54 },
       },

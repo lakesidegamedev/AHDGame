@@ -4,10 +4,6 @@ import { type Db, ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { makeCharacter, makeCorporation } from "@/lib/test-utils/factories";
 import type { BankCharter } from "@/lib/db/types/bank";
-import {
-  DOMINANCE_MARGIN_PENALTY_AT_FULL,
-  DOMINANCE_MARKET_SHARE_THRESHOLD,
-} from "@/lib/constants/corporations";
 
 vi.mock("@/lib/corporations/turnReferenceData", () => ({
   getTurnReferenceData: vi.fn().mockResolvedValue({
@@ -414,7 +410,7 @@ describe("loadCorporationDetailView", () => {
     expect(view.financials.freightIncome).toBe(120);
     expect(view.financials.regulatoryBurden).toBe(60);
     expect(view.financials.operatingIncome).toBe(-1284);
-    expect(view.financials.realizedIncome).toBe(-1284);
+    expect(view.financials.realizedIncome).toBeUndefined();
   });
 
   it("splits revenue and sector costs by country, adding up to the statement", async () => {

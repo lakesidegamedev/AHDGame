@@ -7,7 +7,7 @@
  * throws on unsupported query syntax rather than silently matching nothing.
  */
 
-import { MongoServerError, ObjectId } from "mongodb";
+import { BSON, MongoServerError, ObjectId } from "mongodb";
 
 type Doc = Record<string, unknown>;
 type Update = Doc | Doc[];
@@ -107,6 +107,14 @@ function sameValue(a: unknown, b: unknown): boolean {
   if (a instanceof ObjectId && typeof b === "string") return a.toString() === b;
   if (b instanceof ObjectId && typeof a === "string") return b.toString() === a;
   if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  if (
+    (typeof a === "object" && a !== null && "_bsontype" in a) ||
+    (typeof b === "object" && b !== null && "_bsontype" in b)
+  ) {
+    return Buffer.from(BSON.serialize({ value: a })).equals(
+      Buffer.from(BSON.serialize({ value: b }))
+    );
+  }
   if (a === b) return true;
   // Mongo matches an embedded document or array by VALUE, which is what a
   // compare-and-swap filter (`{ lineOfCredit: <the doc we read> }`) relies on.
@@ -248,6 +256,7 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
 
 /** Tiny aggregation-expression evaluator, enough for the `$expr` guards. */
 function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
+  if (expr === "$$ROOT") return doc;
   if (expr === "$REMOVE" || expr === "$$REMOVE") return REMOVE_FIELD;
   if (typeof expr === "string" && expr.startsWith("$$")) return getPath(variables, expr.slice(2));
   if (typeof expr === "string" && expr.startsWith("$")) return getPath(doc, expr.slice(1));
@@ -378,6 +387,28 @@ function evalExpr(expr: unknown, doc: Doc, variables: Doc = {}): unknown {
       return args[0] === undefined || args[0] === null ? args[1] : args[0];
     case "$abs":
       return typeof args[0] === "number" ? Math.abs(args[0]) : null;
+    case "$objectToArray": {
+      const value = args[0];
+      if (value == null) return null;
+      if (!isPlainObject(value)) throw new Error("inMemoryDb: $objectToArray requires an object");
+      return Object.entries(value).map(([k, v]) => ({ k, v }));
+    }
+    case "$arrayToObject": {
+      const value = args[0];
+      if (value == null) return null;
+      if (!Array.isArray(value)) throw new Error("inMemoryDb: $arrayToObject requires an array");
+      return Object.fromEntries(
+        value.map((entry) => {
+          if (Array.isArray(entry) && entry.length === 2 && typeof entry[0] === "string")
+            return entry;
+          if (isPlainObject(entry) && typeof entry.k === "string" && "v" in entry)
+            return [entry.k, entry.v];
+          throw new Error("inMemoryDb: invalid $arrayToObject entry");
+        })
+      );
+    }
+    case "$isNumber":
+      return typeof args[0] === "number";
     case "$type": {
       const value = args[0];
       if (value === undefined) return "missing";
@@ -516,7 +547,7 @@ function applyUpdate(doc: Doc, update: Update): void {
       // All expressions in one stage read the same input document. Only the
       // following stage sees these writes, matching Mongo's pipeline semantics.
       const values = Object.entries(entries[0][1] as Doc).map(
-        ([path, expression]) => [path, evalExpr(expression, doc)] as const
+        ([path, expression]) => [path, clone(evalExpr(expression, doc))] as const
       );
       for (const [path, value] of values) {
         if (value === REMOVE_FIELD) unsetPath(doc, path);
@@ -581,12 +612,22 @@ function applyUpdate(doc: Doc, update: Update): void {
           throw new Error(`inMemoryDb: $pull target "${path}" is not an array`);
         }
         if (!isPlainObject(selector)) {
-          throw new Error(`inMemoryDb: $pull selector for "${path}" is not supported`);
+          setPath(
+            doc,
+            path,
+            current.filter((item) => !sameValue(item, selector))
+          );
+          continue;
         }
         setPath(
           doc,
           path,
-          current.filter((item) => !(isPlainObject(item) && matchesFilter(item as Doc, selector)))
+          current.filter(
+            (item) =>
+              !(Object.keys(selector).some((key) => key.startsWith("$"))
+                ? matchesCondition(item, selector)
+                : isPlainObject(item) && matchesFilter(item as Doc, selector))
+          )
         );
       }
     } else if (op === "$max") {
@@ -874,9 +915,11 @@ class InMemoryCollection {
     matchedCount: number;
     modifiedCount: number;
     upsertedCount: number;
+    deletedCount: number;
     upsertedIds: Record<number, unknown>;
   }> {
     let inserted = 0;
+    let deleted = 0;
     let matched = 0;
     let modified = 0;
     let upserted = 0;
@@ -914,11 +957,10 @@ class InMemoryCollection {
         modified += res.modifiedCount;
       } else if (op.deleteMany) {
         const { filter } = op.deleteMany as { filter: Doc };
-        await this.deleteMany(filter);
+        deleted += (await this.deleteMany(filter)).deletedCount;
       } else if (op.deleteOne) {
         const { filter } = op.deleteOne as { filter: Doc };
-        const [target] = this.docs.filter((d) => matchesFilter(d, filter));
-        if (target) this.docs = this.docs.filter((d) => d !== target);
+        deleted += (await this.deleteOne(filter)).deletedCount;
       } else {
         // Still throws on anything it does not understand. Returning silently
         // would make a seeder that writes nothing look like one that worked.
@@ -927,6 +969,7 @@ class InMemoryCollection {
     }
     return {
       insertedCount: inserted,
+      deletedCount: deleted,
       matchedCount: matched,
       modifiedCount: modified,
       upsertedCount: upserted,
