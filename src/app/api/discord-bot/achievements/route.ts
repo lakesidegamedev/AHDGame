@@ -6,6 +6,7 @@ import { lookupBotCharacter } from "@/lib/discord/botCharacterLookup";
 import type { Achievement, CharacterAchievement } from "@/lib/db/types";
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
+import { earnedAsName } from "@/lib/achievements/earnedAs";
 
 // GET /api/discord-bot/achievements — Returns a character's earned achievements, looked up by characterId, discordId, or name.
 // Auth: requireAdminOrApiKey
@@ -67,6 +68,7 @@ export async function GET(request: Request) {
         isHidden: def?.isHidden ?? false,
         isHighlighted: highlightedIds.has(e.achievementId.toString()),
         earnedAt: e.earnedAt instanceof Date ? e.earnedAt.toISOString() : e.earnedAt,
+        earnedAs: earnedAsName(e.characterName, character.name),
       };
     });
 

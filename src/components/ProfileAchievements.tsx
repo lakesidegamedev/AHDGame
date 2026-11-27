@@ -19,6 +19,8 @@ interface AchievementItem {
   icon: string;
   category: string;
   earnedAt: string | null;
+  /** Earlier character's name when the award was earned under another name. */
+  earnedAs?: string | null;
   rarity: number;
   isHighlighted: boolean;
   earned: boolean;
@@ -45,6 +47,7 @@ const CATEGORY_ORDER = ["special", "election", "legislation", "action", "social"
 
 /** Labeled badge tile, used in both the showcase and the expanded view. */
 function AchievementTile({ achievement }: { achievement: AchievementItem }) {
+  const t = useTranslations("profile.achievements");
   const rarity = getRarityStyle(achievement.rarity);
   const locked = !achievement.earned;
   const hidden = locked && achievement.isHidden;
@@ -61,6 +64,11 @@ function AchievementTile({ achievement }: { achievement: AchievementItem }) {
               <p className="mt-1.5 text-body-sm text-muted">
                 {rarity.label}
                 {achievement.rarity > 0 && <span> · {achievement.rarity.toFixed(1)}%</span>}
+              </p>
+            )}
+            {!locked && achievement.earnedAs && (
+              <p className="mt-1 text-body-sm font-medium text-foreground">
+                {t("earnedAs", { name: achievement.earnedAs })}
               </p>
             )}
             {achievement.earnedAt && (

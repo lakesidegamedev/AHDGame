@@ -70,6 +70,30 @@ describe("GET /api/achievements/[achievementId]/recent-holders", () => {
     expect(body.holders.map((h) => h.name)).toEqual(["ada", "Player"]);
   });
 
+  it("shows the name the award was earned under over the character's name today", async () => {
+    mockCollections(
+      [
+        {
+          userId,
+          characterId,
+          achievementId,
+          characterName: "Ronald Reagan",
+          earnedAt: new Date("2026-06-01T00:00:00.000Z"),
+        },
+      ],
+      [{ _id: userId, username: "ada" }],
+      [{ _id: characterId, name: "Dwight David Eisenhower" }]
+    );
+
+    const { GET } = await import("./route");
+    const res = await GET(new Request("http://t/"), {
+      params: Promise.resolve({ achievementId: achievementId.toString() }),
+    });
+
+    const body = (await res.json()) as { holders: { name: string }[] };
+    expect(body.holders.map((h) => h.name)).toEqual(["Ronald Reagan"]);
+  });
+
   it("rejects an invalid achievement id", async () => {
     const { GET } = await import("./route");
     const res = await GET(new Request("http://t/"), {

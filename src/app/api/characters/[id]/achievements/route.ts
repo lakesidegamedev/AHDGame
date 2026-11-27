@@ -13,6 +13,7 @@ import { isAdditionalCharacter } from "@/lib/character/additionalCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { campaignLocalRate, loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
 import { charactersCollection } from "@/lib/db/repositories/characters";
+import { earnedAsName } from "@/lib/achievements/earnedAs";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,7 +56,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const highlights = character.highlightedAchievementIds ?? [];
     const highlightSet = new Set(highlights.map((h) => h.toString()));
 
-    const items = earned.map(({ achievement, earnedAt }) => ({
+    const items = earned.map(({ achievement, earnedAt, characterName }) => ({
       id: achievement._id.toString(),
       slug: achievement.slug,
       name: achievement.name,
@@ -63,6 +64,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       icon: achievement.icon,
       category: achievement.category,
       earnedAt: earnedAt.toISOString(),
+      earnedAs: earnedAsName(characterName, character.name),
       rarity: rarityMap.get(achievement._id.toString()) ?? 0,
       isHighlighted: highlightSet.has(achievement._id.toString()),
     }));
@@ -105,6 +107,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         order: a.order,
         earned: !!earnedEntry,
         earnedAt: earnedEntry ? earnedEntry.earnedAt.toISOString() : null,
+        earnedAs: earnedEntry ? earnedAsName(earnedEntry.characterName, character.name) : null,
         rarity: rarityMap.get(a._id.toString()) ?? 0,
         isHighlighted: highlightSet.has(a._id.toString()),
         progress: progressMap.get(a._id.toString()) ?? null,

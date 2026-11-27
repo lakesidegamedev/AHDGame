@@ -6,6 +6,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import { awardAchievement } from "@/lib/achievements";
+import { EARNED_AS_NAME_MAX_LENGTH } from "@/lib/achievements/earnedAs";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import type { Document } from "mongodb";
@@ -13,6 +14,8 @@ import type { Document } from "mongodb";
 const grantSchema = z.object({
   characterId: z.string().refine((s) => ObjectId.isValid(s), "Invalid character ID"),
   achievementSlug: z.string().min(1),
+  /** Optional name to show the award under, for awards earned by an earlier character. */
+  earnedAs: z.string().trim().max(EARNED_AS_NAME_MAX_LENGTH).optional(),
 });
 
 // POST /api/admin/achievements/grant — Grants a specified achievement to a single character by ID.
@@ -29,6 +32,7 @@ export async function POST(request: Request) {
     }
 
     const { characterId, achievementSlug } = parsed.data;
+    const earnedAs = parsed.data.earnedAs || undefined;
     const db = await getDb();
 
     const character = await charactersCollection(db).findOne({ _id: new ObjectId(characterId) });
@@ -47,14 +51,17 @@ export async function POST(request: Request) {
       character.userId,
       achievementSlug,
       new ObjectId(characterId),
-      auth.admin.character?._id
+      auth.admin.character?._id,
+      { characterName: earnedAs }
     );
 
     return NextResponse.json({
       success: true,
       granted,
       message: granted
-        ? `Achievement "${achievementSlug}" granted to ${character.name}.`
+        ? `Achievement "${achievementSlug}" granted to ${character.name}${
+            earnedAs ? ` (earned as ${earnedAs})` : ""
+          }.`
         : "Character already had this achievement.",
     });
   } catch (error) {
