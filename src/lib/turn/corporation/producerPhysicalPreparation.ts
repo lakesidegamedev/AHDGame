@@ -1,5 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
-import { STORE_THROUGHPUT_BASIS, type StoreTransition } from "@/lib/stores/rules/storeRules";
+import { STORE_THROUGHPUT_BASIS } from "@/lib/stores/rules/storeRules";
 import { costPlusUnitCosts } from "@/lib/market/costPlusPricing/rules";
 import { legacyTechContextFromLookups } from "./sectorTurn/legacyTechContext";
 import { operatingCrewFactor } from "@/lib/societyPressures/rules/automation";
@@ -144,10 +144,8 @@ export type ProducerPhysicalEnv = Pick<
   householdSpendingPowerShare?: number;
   householdSpendingPowerRampTurns?: number;
   householdSpendingPowerStartTurn?: number;
-  /** gameConfig.storeMarkup, already kept inside its allowed band: the standing markup. */
+  /** gameConfig.storeMarkup, already kept inside its allowed band. */
   storeMarkup?: number;
-  /** gameConfig.storeTransition: the changeover markup schedule, read with the turn. */
-  storeTransition?: StoreTransition;
   /** gameConfig.wideEconomyPricingStage: >= 1 (absent = 1) the price counts wider-economy sales as supply. */
   wideEconomyPricingStage?: number;
   /** gameConfig.fiscalScaleStage: >= 2 pays public buyers from Treasury cash instead of minting. */
@@ -645,10 +643,17 @@ export function prepareProducerPhysicalSector(input: {
     runFloor,
     runPlan
   );
-  const runShare =
-    operatingType === "extraction" &&
-    lookups.preset === "2027-default" &&
-    (env.runPlanStage ?? 0) >= 3
+  // A store always plans its full run. Its sell-through reads resale against
+  // capacity, so cutting the run on it would shrink the capacity that decides
+  // how much household spending reaches the state's stores, cutting resale and
+  // the next run in turn. The settlement bills a store only for the share its
+  // sales used, so a full plan costs nothing extra.
+  const isStore = sector.sectorType === "retail" && plan.store != null;
+  const runShare = isStore
+    ? 1
+    : operatingType === "extraction" &&
+        lookups.preset === "2027-default" &&
+        (env.runPlanStage ?? 0) >= 3
       ? stockBackedExtractionRunShare({
           runShare: normalRunShare,
           minimumRunShare: Math.max(runFloor, ownDemandFloor),

@@ -490,6 +490,12 @@ export interface CorpSnapshot {
   corpId: ObjectId;
   revenue: number;
   totalCosts: number;
+  /**
+   * Stores' goods resold (₳/turn). The history records revenue at the full
+   * value of goods sold, so this is added to revenue and, as cost of goods, to
+   * costs; `revenue` and `totalCosts` here stay economic.
+   */
+  storeGoods?: number;
   /** Where `totalCosts` went (₳/turn); the parts sum to the total. */
   costBreakdown?: import("@/lib/corporations/rules/costBreakdown").CostBreakdown;
   /** Workers across the company's sectors this turn. */

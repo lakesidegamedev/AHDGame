@@ -93,6 +93,8 @@ function prepareProcessCorporationAccount(
   let corpSectorNPV = 0; // Sum of sector NPVs for balance sheet price
   // Funded valuation: units sold at base prices, for the real growth premium.
   let corpRealOutput = 0;
+  // Stores' goods resold (anchor per turn): reported revenue and cost of goods, outside every economic base.
+  let corpStoreGoods = 0;
   // Diagnostic accumulators (revenue-weighted)
   let diagWeightedMargin = 0;
   let diagWeightedCommodityInput = 0;
@@ -174,6 +176,7 @@ function prepareProcessCorporationAccount(
     }
 
     corpRevenue += r.hourlyRevenue;
+    corpStoreGoods += r.storeGoodsResold ?? 0;
     corpSubsidyReceived += r.fundedSubsidyReceived ?? 0;
     // Weight worker morale (wageLevel) by sector revenue for the R&D factor.
     corpWageWeighted += r.hourlyRevenue * (sector.wageLevel ?? 1);
@@ -699,6 +702,7 @@ function prepareProcessCorporationAccount(
       corpId,
       corpLegalStructure,
       corpRealOutput,
+      corpStoreGoods,
       corpRevenue,
       corpSectorNPV,
       corpWageWeight,

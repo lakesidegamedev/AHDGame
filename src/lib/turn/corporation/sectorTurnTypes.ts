@@ -50,6 +50,8 @@ export interface SectorTurnEnv {
 
 /** Per-sector contributions accumulated by processSectors. */
 export interface SectorTurnResult {
+  /** Stores only, ₳ per turn: goods resold, reported beside revenue, never inside it. */
+  storeGoodsResold?: number;
   /** Size costs the margin stack carried, in points of revenue, for the funded path to charge. */
   fundedSizeCostPp?: number;
   /**

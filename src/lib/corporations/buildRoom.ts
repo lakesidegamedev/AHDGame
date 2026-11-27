@@ -48,6 +48,16 @@ export interface BuildRoomContext {
   ): number;
 }
 
+/**
+ * Whether a strategy lists anything it makes. A store lists nothing: it has no
+ * per-product demand rows, so its room comes from the household demand its
+ * state's stores could not serve (`demandGapUnits`), and per-product rows for
+ * it would only ever read as "no figure".
+ */
+export function listsBuildOutputs(supply: Partial<Record<CommodityType, number>>): boolean {
+  return Object.values(supply).some((rate) => typeof rate === "number" && rate > 0);
+}
+
 export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
   const [reachableBooks, priceDocs, funded] = await Promise.all([
     loadReachableBooks(db),
@@ -85,7 +95,7 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
     countryId: string,
     outputMultiplier = 1
   ) =>
-    funded && capacity
+    funded && capacity && listsBuildOutputs(supply)
       ? sizeBuildDemand({
           rows: funded.rows(supply, stateId, countryId),
           supply,
@@ -119,7 +129,7 @@ export async function loadBuildRoomContext(db: Db): Promise<BuildRoomContext> {
     demandRows,
     demandTurn: funded?.turn,
     demandGapUnits(supplyMix, stateId, countryId) {
-      if (Object.keys(supplyMix).length === 0)
+      if (!listsBuildOutputs(supplyMix))
         return storeSales
           ? (storeUnmetRunUnits(storeSales.sales.coverageByState, stateId) ?? 0)
           : 0;
