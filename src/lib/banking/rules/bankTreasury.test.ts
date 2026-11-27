@@ -305,6 +305,41 @@ describe("bank treasury rules", () => {
     ).toEqual([{ bondId: "affordable", units: 1, askPerUnitLocal: 1_000, costLocal: 1_000 }]);
   });
 
+  it("never books an ask-to-bid loss larger than the bank's net assets", () => {
+    // A bank reopened at zero net assets swept 554.55M into bills at 980.7 that
+    // were marked at 960.9 the same turn: an 11.15M loss on a bank with none to give.
+    const bill = {
+      bondId: "bill",
+      remainingTurns: 13,
+      publicFloatUnits: 500_000_000,
+      bidPerUnitLocal: 960.9,
+      askPerUnitLocal: 980.7,
+      annualizedContractYieldPercent: 20,
+      eligible: true,
+    };
+    const cash = 696_134_499;
+    const floor = 141_000_000;
+    expect(planBankTreasurySweep([bill], cash, floor, 3, 0)).toEqual([]);
+    const [budgeted] = planBankTreasurySweep([bill], cash, floor, 3, 1_000_000);
+    expect(budgeted.units).toBe(Math.floor(1_000_000 / (980.7 - 960.9)));
+    expect(budgeted.units * (980.7 - 960.9)).toBeLessThanOrEqual(1_000_000);
+    // Ample net assets: cash, not the budget, binds.
+    const [unbounded] = planBankTreasurySweep([bill], cash, floor, 3, 1_000_000_000);
+    expect(unbounded.units).toBe(Math.floor((cash - floor) / 980.7));
+    // The budget is shared across bills, and a bill with no bid counts its whole ask.
+    const plans = planBankTreasurySweep(
+      [bill, { ...bill, bondId: "second", annualizedContractYieldPercent: 10 }],
+      cash,
+      floor,
+      3,
+      1_000_000
+    );
+    expect(plans).toHaveLength(1);
+    expect(
+      planBankTreasurySweep([{ ...bill, bidPerUnitLocal: undefined }], cash, floor, 3, 900)
+    ).toEqual([]);
+  });
+
   it("uses the same interest-bearing deposit balances as the liability hurdle", () => {
     const input = {
       currency: "USD" as const,
