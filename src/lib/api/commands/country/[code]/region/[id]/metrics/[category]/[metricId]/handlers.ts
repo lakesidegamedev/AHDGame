@@ -377,6 +377,10 @@ export async function GET(
         value: metricVal.value,
         trend: metricVal.trend,
         nationalAverage,
+        realizedMigrationRate:
+          category === "population" && metricId === "migrationRate"
+            ? metrics.population?.realizedMigrationRate?.value
+            : undefined,
         tickRate,
         history,
         affectingPolicies,

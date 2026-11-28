@@ -120,6 +120,8 @@ export default function MetricDetailPage({
 
   const { value, nationalAverage, globalAverage, tickRate, history, stateName, affectingPolicies } =
     data;
+  const isRegionalMigration =
+    !isNationalScope && category === "population" && metricId === "migrationRate";
   const hasTickRate = tickRate !== undefined && Math.abs(tickRate) > 0.0001;
   const tickIsGood = hasTickRate && (def.isHigherBetter ? tickRate! > 0 : tickRate! < 0);
   const tickAbs = Math.abs(tickRate ?? 0);
@@ -128,7 +130,12 @@ export default function MetricDetailPage({
   const projectedYearValue = hasTickRate ? value + yearlyChange : value;
 
   const comparisonValue = nationalAverage ?? globalAverage;
-  const comparisonLabel = nationalAverage !== undefined ? "National Average" : "Global Average";
+  const comparisonLabel =
+    nationalAverage !== undefined
+      ? isRegionalMigration
+        ? "Average regional baseline"
+        : "National Average"
+      : "Global Average";
   const comparisonDiff = comparisonValue !== undefined ? value - comparisonValue : undefined;
   const comparisonPct =
     comparisonDiff !== undefined && comparisonValue
@@ -198,9 +205,14 @@ export default function MetricDetailPage({
                 <h1 className="mt-1 text-heading font-bold tracking-tight text-white sm:text-display">
                   {def.name}
                 </h1>
-                {def.description && (
+                {isRegionalMigration ? (
+                  <p className="mt-1 max-w-2xl text-body-sm text-white/70">
+                    The baseline is a starting rate. Recorded net migration includes the effects of
+                    migration policy and movement between regions.
+                  </p>
+                ) : def.description ? (
                   <p className="mt-1 max-w-2xl text-body-sm text-white/70">{def.description}</p>
-                )}
+                ) : null}
               </div>
               {score !== null && badge && (
                 <div className="shrink-0">
@@ -217,7 +229,9 @@ export default function MetricDetailPage({
           {/* Stats row */}
           <div className="grid grid-cols-1 divide-y divide-card-border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <div className="px-6 py-4">
-              <p className="text-body-sm font-medium text-muted">Current value</p>
+              <p className="text-body-sm font-medium text-muted">
+                {isRegionalMigration ? "Regional baseline /yr" : "Current value"}
+              </p>
               <p className="mt-1 text-display font-bold tabular-nums text-foreground">
                 {fmt(value)}
               </p>
@@ -244,30 +258,41 @@ export default function MetricDetailPage({
                 )}
               </div>
             )}
-            <div className="px-6 py-4">
-              <p className="text-body-sm font-medium text-muted">Active policy effect</p>
-              {hasTickRate ? (
-                <>
-                  <p
-                    className={`mt-1 text-display font-bold tabular-nums ${tickIsGood ? "text-success" : "text-error"}`}
-                  >
-                    {tickRate! > 0 ? "+" : "−"}
-                    {tickAbs.toFixed(tickDecimals)}
-                    {def.formatSuffix ?? ""}/turn
-                  </p>
-                  <p
-                    className={`mt-1 text-body-sm font-medium ${tickIsGood ? "text-success/70" : "text-error/70"}`}
-                  >
-                    {tickIsGood ? "Improving" : "Worsening"}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="mt-1 text-display font-bold tabular-nums text-muted">Stable</p>
-                  <p className="mt-1 text-body-sm text-muted/60">No direct policy push</p>
-                </>
-              )}
-            </div>
+            {isRegionalMigration ? (
+              <div className="px-6 py-4">
+                <p className="text-body-sm font-medium text-muted">Recorded net migration /yr</p>
+                <p className="mt-1 text-display font-bold tabular-nums text-foreground">
+                  {data.realizedMigrationRate === undefined
+                    ? "Unavailable"
+                    : fmt(data.realizedMigrationRate)}
+                </p>
+              </div>
+            ) : (
+              <div className="px-6 py-4">
+                <p className="text-body-sm font-medium text-muted">Active policy effect</p>
+                {hasTickRate ? (
+                  <>
+                    <p
+                      className={`mt-1 text-display font-bold tabular-nums ${tickIsGood ? "text-success" : "text-error"}`}
+                    >
+                      {tickRate! > 0 ? "+" : "−"}
+                      {tickAbs.toFixed(tickDecimals)}
+                      {def.formatSuffix ?? ""}/turn
+                    </p>
+                    <p
+                      className={`mt-1 text-body-sm font-medium ${tickIsGood ? "text-success/70" : "text-error/70"}`}
+                    >
+                      {tickIsGood ? "Improving" : "Worsening"}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-1 text-display font-bold tabular-nums text-muted">Stable</p>
+                    <p className="mt-1 text-body-sm text-muted/60">No direct policy push</p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -275,7 +300,11 @@ export default function MetricDetailPage({
         <div className="rounded-2xl border border-card-border bg-card p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-body font-semibold">
-              {hasHistory ? "Historical + projected trend" : "48-Turn forward projection"}
+              {isRegionalMigration
+                ? "Migration baseline trend"
+                : hasHistory
+                  ? "Historical + projected trend"
+                  : "48-Turn forward projection"}
             </h2>
             <div className="flex items-center gap-3 text-body-sm text-muted">
               {hasHistory && <span>{history.length} turns of history</span>}
@@ -297,12 +326,15 @@ export default function MetricDetailPage({
               isHigherBetter={def.isHigherBetter}
               formatSuffix={def.formatSuffix ?? ""}
               decimals={def.decimals ?? 1}
+              minimum={metricId === "migrationRate" ? -5 : undefined}
             />
           </div>
           <p className="mt-2 text-center text-body-sm text-muted/50">
-            {hasHistory
-              ? "Blue = actual recorded values. Dashed = projection assuming current policies unchanged."
-              : "No history recorded yet — chart shows forward projection only. History accumulates each game turn."}
+            {isRegionalMigration
+              ? "Dashed = baseline projection. Recorded net migration can vary."
+              : hasHistory
+                ? "Blue = actual recorded values. Dashed = projection assuming current policies unchanged."
+                : "No history recorded yet — chart shows forward projection only. History accumulates each game turn."}
           </p>
         </div>
 
