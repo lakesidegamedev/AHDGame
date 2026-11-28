@@ -20,7 +20,7 @@ The numbers that matter most, in one place:
 | Founding fee and starting capital | ₳1,000,000 each in modern money (deflated in a 1953 world); starting treasury up to ₳50,000,000, with everything above ₳1,000,000 paid from your own cash |
 | Wait before founding again | 96 turns after your last corporation ends |
 | Starting shares | 10,000,000 to the CEO (scaled with era money); opening price is treasury divided by shares, ₳0.10 at the ₳1,000,000 baseline |
-| IPO float | 10% to 49% of the company (75% with dual-class stock); 96-turn wait after a privatization |
+| IPO float | 1% to 49% of the company (90% with dual-class stock); 96-turn wait after a privatization |
 | Primary / secondary / unrelated sector margin | +5 / +2.5 / -15 percentage points |
 | Home state / home country bonus | +5 / +2.5 points |
 | Sprawl starts above | 15 sectors at zero logistics strength (-0.5 points per 2 sectors, doubled with a secondary type); logistics strength raises the threshold |
@@ -112,7 +112,7 @@ When you found a corporation, you choose between two structures:
 - **Private**: you own 100% of shares. Other players still see the name, headquarters, sectors, shareholder list, credit rating and each sector's profit. Your treasury, income, budgets, dividend rate, share price, and per-sector revenue, margins, workforce and plant output are **not** visible to non-CEO viewers.
 - **Public IPO**: additional shares are offered to the public float at the same per-share price as your founding commitment. The equity market buys what it can fund straight away and places the rest gradually over later turns; the cash reaches your treasury as shares are placed. You keep your founder shares (10,000,000) but your ownership share drops as the new shares are placed.
 
-A single-class float is capped at 49% so a founder keeps majority ownership; dual-class stock (below) allows up to 75%. After founding, a private corporation can also IPO later via the **Go Public** action in the CEO panel, as long as it has no minority shareholders and 96 turns have passed since any earlier privatization. Founding private does not start a cooldown.
+A single-class float is capped at 49% so a founder keeps majority ownership; dual-class stock (below) allows up to 90%. After founding, a private corporation can also IPO later via the **Go Public** action in the CEO panel, as long as it has no minority shareholders and 96 turns have passed since any earlier privatization. Founding private does not start a cooldown.
 
 You found a manufacturing corporation with a ₳1,000,000 fee and ₳1,000,000 of capital. You hold 10,000,000 shares at ₳0.10. You go public with a 25% float: the game offers 10,000,000 x 25 / 75 = 3,333,333 new shares, which raise about ₳333,333 for the treasury and leave you with 75% of the company once all of them are placed.
 
@@ -127,7 +127,7 @@ Supershares never transfer. A buyer always receives common stock. If the
 founder sells below the number of supershares originally marked, their
 effective supershare count falls with the remaining holding. It never rises above
 the number originally marked, but buying shares back restores it up to that number
-unless the founder sold out completely. A dual-class IPO may float up to 75%
+unless the founder sold out completely. A dual-class IPO may float up to 90%
 instead of the normal 49% because voting control is measured separately from
 economic ownership.
 
