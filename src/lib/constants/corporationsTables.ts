@@ -952,7 +952,7 @@ export interface MacroEconomicValues {
 // --- Private vs Public IPO ---
 
 /** Minimum % of total shares the founder may float to the public at IPO */
-export const IPO_MIN_FLOAT_PCT = 10;
+export const IPO_MIN_FLOAT_PCT = 1;
 
 /** Maximum % of total shares the founder may float to the public at IPO (keeps founder above 50% control) */
 export const IPO_MAX_FLOAT_PCT = 49;
