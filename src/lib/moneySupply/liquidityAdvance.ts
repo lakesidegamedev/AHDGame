@@ -4,6 +4,7 @@
  */
 import { type Db, type Document } from "mongodb";
 import type { CentralBank, MonetaryOperationRecord } from "@/lib/db/types";
+import type { BankCharter } from "@/lib/db/types/bank";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
@@ -20,7 +21,10 @@ import {
 } from "@/lib/financialTxLog/emit";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
-import { allocateLiquidityAdvance } from "./rules/liquidityAdvance";
+import {
+  allocateLiquidityAdvance,
+  LIQUIDITY_ADVANCE_MAX_DEPOSIT_FRACTION,
+} from "./rules/liquidityAdvance";
 import { releaseMonetaryCommandReservation } from "./commandReservation";
 import { centralBanksCollection } from "@/lib/db/repositories/centralBanks";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -47,7 +51,13 @@ interface Receipt extends Document {
   bankId: string;
   createdAt: Date;
   status: "planning" | "admitted" | "applied" | "rejected";
-  recipients: { bankId: string; amount: number; transaction: FinancialTxLogEntry }[];
+  recipients: {
+    bankId: string;
+    amount: number;
+    charteredTurn?: number;
+    charterType?: BankCharter["type"];
+    transaction: FinancialTxLogEntry;
+  }[];
   fallback: boolean;
   result?: MonetaryOperationRecord;
   error?: string;
@@ -115,6 +125,8 @@ export async function executeLiquidityAdvance(
                 _id: 1,
                 name: 1,
                 "bankCharter.totalDeposits": 1,
+                "bankCharter.charteredTurn": 1,
+                "bankCharter.type": 1,
                 "bankCharter.cbLiquidityAdvanceDebt": 1,
               },
             }
@@ -179,6 +191,8 @@ export async function executeLiquidityAdvance(
       recipients: recipients.map(({ bank, amount }, index) => ({
         bankId: bank._id.toString(),
         amount,
+        charteredTurn: bank.bankCharter?.charteredTurn,
+        charterType: bank.bankCharter?.type,
         transaction: transactions[index],
       })),
       fallback: banks.length === 0,
@@ -275,6 +289,8 @@ async function finishLiquidityAdvance(
   let distributed = 0,
     banksCredited = 0;
   for (const recipient of receipt.recipients) {
+    if (!Number.isSafeInteger(recipient.charteredTurn) || !recipient.charterType)
+      throw new Error("Legacy liquidity recipient requires charter identity reconciliation");
     const identity = { _id: oid(recipient.bankId) };
     const transition: BankingTransition = {
       key: `liquidity:${receipt._id}:bank:${recipient.bankId}`,
@@ -320,7 +336,23 @@ async function finishLiquidityAdvance(
     };
     const settled = await settleAtomicDocumentTransition(db, transition, {
       identity,
-      guard: { "bankCharter.status": "active", "bankCharter.currency": currency },
+      guard: {
+        "bankCharter.status": "active",
+        "bankCharter.currency": currency,
+        "bankCharter.charteredTurn": recipient.charteredTurn,
+        "bankCharter.type": recipient.charterType,
+        $expr: {
+          $lte: [
+            { $add: [{ $ifNull: ["$bankCharter.cbLiquidityAdvanceDebt", 0] }, recipient.amount] },
+            {
+              $multiply: [
+                { $ifNull: ["$bankCharter.totalDeposits", 0] },
+                LIQUIDITY_ADVANCE_MAX_DEPOSIT_FRACTION,
+              ],
+            },
+          ],
+        },
+      },
     });
     if (settled.status === "partial") throw new Error("Liquidity delivery remains unfinished");
     if (settled.status === "rejected") continue;

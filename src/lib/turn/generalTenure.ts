@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 /**
  * Turn step: pay commissioned generals their tenure skill points.
  *
@@ -27,23 +28,40 @@ export async function processGeneralTenure(
   db: Db,
   currentTurn: number
 ): Promise<GeneralTenureResult> {
-  const col = getCharacterGeneralsCollection(db);
-  const docs = await col.find({}).toArray();
+  return withTurnValueSettlement(db, "general-tenure", currentTurn, async (db) => {
+    const col = getCharacterGeneralsCollection(db);
+    const docs = await col.find({}).toArray();
 
-  const ops = [];
-  let pointsGranted = 0;
-  for (const doc of docs) {
-    if (!isCommissioned(doc) || !doc.general) continue;
-    const next = accrueTenurePoints(doc.general, currentTurn);
-    if (!next) continue;
-    pointsGranted += (next.pts ?? 0) - (doc.general.pts ?? 0);
-    ops.push({
-      updateOne: {
-        filter: { characterId: doc.characterId },
-        update: { $set: { general: next } },
-      },
-    });
-  }
-  if (ops.length) await col.bulkWrite(ops);
-  return { updated: ops.length, pointsGranted };
+    const ops = [];
+    let pointsGranted = 0;
+    for (const doc of docs) {
+      if (!isCommissioned(doc) || !doc.general) continue;
+      const next = accrueTenurePoints(doc.general, currentTurn);
+      if (!next) continue;
+      pointsGranted += (next.pts ?? 0) - (doc.general.pts ?? 0);
+      ops.push({
+        updateOne: {
+          filter: {
+            characterId: doc.characterId,
+            commissioned: { $ne: false },
+            general: doc.general,
+          },
+          update: {
+            $inc: {
+              "general.pts": (next.pts ?? 0) - (doc.general.pts ?? 0),
+              "general.tenurePointsEarned":
+                (next.tenurePointsEarned ?? 0) - (doc.general.tenurePointsEarned ?? 0),
+            },
+            $set: { "general.lastTenurePointTurn": next.lastTenurePointTurn },
+          },
+        },
+      });
+    }
+    if (ops.length) {
+      const result = await col.bulkWrite(ops);
+      if (result.matchedCount !== ops.length)
+        throw new Error("General commissions changed during tenure accrual");
+    }
+    return { updated: ops.length, pointsGranted };
+  });
 }

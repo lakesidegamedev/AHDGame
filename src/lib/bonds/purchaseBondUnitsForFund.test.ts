@@ -1,3 +1,8 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+  afterCommit: async (_db: unknown, work: () => unknown) => work(),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { Bond, IndexFund } from "@/lib/db/types";
@@ -48,12 +53,12 @@ describe("purchaseBondUnitsForFund", () => {
       quotedNav: 100,
       anchorCurrencyCode: "USD",
     } as IndexFund;
-    const collection = vi.fn();
+    const collection = vi.fn(() => ({ findOne: async () => bond }));
 
     await expect(
       purchaseBondUnitsForFund({ collection } as unknown as Db, fund, bond, 51)
     ).resolves.toEqual({ ok: false, reason: "position_limit" });
-    expect(collection).not.toHaveBeenCalled();
+    expect(collection).toHaveBeenCalledWith("bonds");
   });
 
   describe("fund-subject ledger leg (#992 tranche 6)", () => {
@@ -81,6 +86,7 @@ describe("purchaseBondUnitsForFund", () => {
       vi.clearAllMocks();
       vi.mocked(reserveBondUnitsForHolder).mockResolvedValue(true);
       db = createMockDb();
+      db.collection("bonds").findOne.mockResolvedValue(bond);
       db.collection("indexFunds");
       db.collectionMocks.indexFunds.findOneAndUpdate.mockResolvedValue({ cashAnchor: 5_000 });
       db.collectionMocks.indexFunds.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -124,7 +130,7 @@ describe("purchaseBondUnitsForFund", () => {
       expect(emitTx).not.toHaveBeenCalled();
     });
 
-    it("emits no ledger row when the reservation fails and cash is refunded", async () => {
+    it("emits no ledger row when the reservation fails and the transaction aborts", async () => {
       vi.mocked(reserveBondUnitsForHolder).mockResolvedValue(false);
 
       const result = await purchaseBondUnitsForFund(db as unknown as Db, fund, bond, 5, {
@@ -132,10 +138,7 @@ describe("purchaseBondUnitsForFund", () => {
       });
 
       expect(result).toEqual({ ok: false, reason: "reservation_failed" });
-      expect(db.collectionMocks.indexFunds.updateOne).toHaveBeenCalledWith(
-        { _id: fundId },
-        expect.objectContaining({ $inc: { cashAnchor: 5_000 } })
-      );
+      expect(db.collectionMocks.indexFunds.updateOne).not.toHaveBeenCalled();
       expect(emitTx).not.toHaveBeenCalled();
     });
 

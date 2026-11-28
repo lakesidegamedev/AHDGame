@@ -1,4 +1,5 @@
 "use client";
+import { useEconomicIntent } from "@/hooks/useEconomicIntent";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -52,6 +53,7 @@ export function CyberOperationsPanel({
   const [view, setView] = useState<CyberView | null>(null);
   const [failed, setFailed] = useState(false);
   const [target, setTarget] = useState("");
+  const requestEconomic = useEconomicIntent();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -76,11 +78,7 @@ export function CyberOperationsPanel({
     setProblem(null);
     setNotice(null);
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetCountryId: target, action }),
-      });
+      const res = await requestEconomic(url, { targetCountryId: target, action });
       const payload = (await res.json().catch(() => ({}))) as {
         error?: string;
         message?: string;

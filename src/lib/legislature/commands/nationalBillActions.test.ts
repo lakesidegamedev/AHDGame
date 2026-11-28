@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -39,7 +44,7 @@ describe("performNationalBillAction — CN chamber/office eligibility", () => {
   const authUser = { userId: new ObjectId().toString(), isAdmin: false } as AuthUser;
 
   function cnBill(overrides: Partial<Bill> = {}): Bill {
-    return {
+    const bill = {
       _id: new ObjectId(),
       title: "Public Security Act",
       summary: "Summary",
@@ -59,6 +64,8 @@ describe("performNationalBillAction — CN chamber/office eligibility", () => {
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
       ...overrides,
     } as Bill;
+    db.collection("bills").findOne.mockResolvedValue(bill).mockResolvedValueOnce(bill);
+    return bill;
   }
 
   function officialsFilter() {
@@ -118,7 +125,7 @@ describe("performNationalBillAction - active_both", () => {
   });
 
   function usBill(overrides: Partial<Bill> = {}): Bill {
-    return {
+    const bill = {
       _id: new ObjectId(),
       title: "Entry into the Vietnam War (NATO)",
       summary: "Summary",
@@ -140,6 +147,8 @@ describe("performNationalBillAction - active_both", () => {
       updatedAt: new Date(),
       ...overrides,
     } as Bill;
+    db.collection("bills").findOne.mockResolvedValue(bill).mockResolvedValueOnce(bill);
+    return bill;
   }
 
   function seatedAs(officeType: string) {
@@ -299,20 +308,23 @@ describe("Russian runtime bill actions", () => {
         seatsHeld: 1,
       });
       db.collection("bills").updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+      const bill = {
+        _id: new ObjectId(),
+        countryId: "RU",
+        status: "active",
+        currentChamber: chamber,
+        originChamber: chamber,
+        votingEndsOnTurn: 99,
+        votes: {},
+        provisions: [],
+      } as unknown as Bill;
+
+      db.collection("bills").findOne.mockResolvedValue(bill);
       const result = await performNationalBillAction(db as unknown as Db, {
         authUser: { userId: new ObjectId().toString(), isAdmin: false } as AuthUser,
         character: { _id: characterId } as Character,
         countryId: "RU",
-        bill: {
-          _id: new ObjectId(),
-          countryId: "RU",
-          status: "active",
-          currentChamber: chamber,
-          originChamber: chamber,
-          votingEndsOnTurn: 99,
-          votes: {},
-          provisions: [],
-        } as unknown as Bill,
+        bill,
         input: { action: "vote", vote: "for" },
       });
       expect(result.status).toBe(200);
@@ -334,6 +346,12 @@ describe("Russian runtime bill actions", () => {
       db.collection("countryGameStates").findOne.mockResolvedValue({
         _id: "RU",
         ruCongressDissolvedSinceTurn: 4,
+      });
+      db.collection("bills").findOne.mockResolvedValue({
+        _id: new ObjectId(),
+        countryId: "RU",
+        status: "active",
+        currentChamber: "unionCongress",
       });
       const result = await performNationalBillAction(db as unknown as Db, {
         authUser: { isAdmin: true } as AuthUser,
@@ -357,6 +375,13 @@ describe("Russian runtime bill actions", () => {
     db.collection("countryGameStates").findOne.mockResolvedValue({
       _id: "RU",
       ruSovietSuccessionSinceTurn: 4,
+    });
+    db.collection("bills").findOne.mockResolvedValue({
+      _id: new ObjectId(),
+      countryId: "RU",
+      status: "active",
+      currentChamber: "unionCongress",
+      votingEndsOnTurn: 99,
     });
     const result = await performNationalBillAction(db as unknown as Db, {
       authUser: {} as AuthUser,

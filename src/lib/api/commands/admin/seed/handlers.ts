@@ -16,7 +16,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/api/requireAdmin";
-import { countryIdSchema } from "@/lib/api/schemas/country";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -262,20 +261,20 @@ function isValidTarget(t: string): t is SeedTarget {
   return (ALL_TARGETS as readonly string[]).includes(canonicalTarget(t));
 }
 
-import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { SEED_PRESET_IDS } from "@/lib/constants/turnTime";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 
-type SeedScope = CountryId | "both";
+const SEED_SCOPES = ["US", "UK", "JP", "DE", "IE", "BR", "CN", "NG", "both"] as const;
+type SeedScope = (typeof SEED_SCOPES)[number];
 
-const seedSchema = z.object({
-  targets: z.array(z.string()).optional(),
-  reset: z.boolean().optional(),
-  scope: z.union([countryIdSchema, z.literal("both")]).optional(),
-  // Era/preset baseline. Selects which year's reference data each preset-aware
-  // seeder writes. Unknown values fall back to "2019-default" inside the
-  // seeders (see presetSelector), so a free string is safe here.
-  preset: z.string().optional(),
-});
+const seedSchema = z
+  .object({
+    targets: z.array(z.string()).optional(),
+    reset: z.boolean().optional(),
+    scope: z.enum(SEED_SCOPES).optional(),
+    preset: z.enum([...SEED_PRESET_IDS, "empty", "2019-no-parties"]).optional(),
+  })
+  .strict();
 
 export async function GET() {
   try {
@@ -284,7 +283,7 @@ export async function GET() {
 
     return NextResponse.json({
       availableTargets: ALL_TARGETS,
-      scope: [...COUNTRY_ORDER, "both"],
+      scope: SEED_SCOPES,
       description: {
         states: "50 US states + DC",
         policies: "Base policy definitions",
@@ -397,7 +396,8 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const parsed = await parseJsonBody(request, seedSchema);
-    const body = parsed.success ? parsed.data : {};
+    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+    const body = parsed.data;
     const rawTargets: string[] = Array.isArray(body.targets) ? body.targets : [];
     const reset: boolean = body.reset === true;
     const scope: SeedScope = body.scope ?? "US";
@@ -442,7 +442,7 @@ export async function POST(request: Request) {
 
     if (targets.includes("states")) await seedStates(db, reset, log, preset);
     if (targets.includes("policies")) await seedPolicies(db, reset, log);
-    if (targets.includes("demographics")) await seedDemographics(db, reset, log);
+    if (targets.includes("demographics")) await seedDemographics(db, reset, log, body.preset, true);
     if (targets.includes("gameConfig")) await seedGameConfig(db, reset, log, preset);
     if (targets.includes("parties")) await seedParties(db, log);
     if (targets.includes("statePartyOrg")) await seedStatePartyOrg(db, log, preset);

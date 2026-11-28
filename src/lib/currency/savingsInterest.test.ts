@@ -7,7 +7,7 @@ import {
   SAVINGS_POOL_SHARE_CAP,
   savingsApyPercent,
   SAVINGS_REAL_RATE_FLOOR_PERCENT,
-} from "./savingsInterest";
+} from "./rules/savingsInterest";
 import { savingsInterestContent } from "@/lib/seeds/wiki/content/savingsInterest";
 
 describe("interestEligibleBalance (pool-share cap #3064)", () => {
@@ -74,7 +74,7 @@ describe("savingsApyPercent", () => {
   });
   it("floors uniformly so no currency pays a negative real rate", () => {
     expect(savingsApyPercent(12, 20)).toBe(SAVINGS_REAL_RATE_FLOOR_PERCENT / 2);
-    expect(savingsApyPercent(0, 0)).toBe(SAVINGS_REAL_RATE_FLOOR_PERCENT / 2);
+    expect(savingsApyPercent(0, 0)).toBe(0);
   });
 });
 
@@ -113,4 +113,12 @@ describe("APY is the real rate, not half of nominal prime (ticket #1122)", () =>
     expect(savingsInterestContent).not.toContain("APY = primeRate / 2");
     expect(savingsInterestContent).toContain("realRate");
   });
+});
+
+it("uses a resolved private-bank APY without applying the central-bank floor again", () => {
+  expect(estimateSavingsAccrualFromApy(10000, 0.05, "USD")).toBe(0.1);
+  expect(estimateSavingsAccrualFromApy(10000, 0, "USD")).toBe(0);
+  expect(estimateSavingsAccrualFromApy(10000, savingsApyPercent(0, 0, 0.25), "USD")).toBe(
+    computeSavingsInterestForTurn(10000, 0, "USD", 0, 0.25)
+  );
 });

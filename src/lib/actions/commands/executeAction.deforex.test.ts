@@ -1,3 +1,5 @@
+vi.mock("@/lib/audit/recordAudit", () => ({ recordAuditBulk: vi.fn() }));
+import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -82,6 +84,8 @@ describe("executeCharacterAction — campaign-fund de-forex", () => {
             }),
           };
         }
+        if (name === "actionLogs")
+          return { insertMany: async () => ({ insertedIds: { 0: new ObjectId() } }) };
         if (name === "characters") {
           return { findOne: vi.fn().mockResolvedValue(character), findOneAndUpdate };
         }
@@ -127,9 +131,13 @@ describe("executeCharacterAction — campaign-fund de-forex", () => {
       character,
       characterQuery: { _id: character._id },
       actionType: "advertise",
-      actor: { userId: null },
+      actor: { userId: new ObjectId() },
     });
     expect(res.ok).toBe(true);
+    const audit = vi.mocked(recordAuditBulk).mock.calls.at(-1)![0][0];
+    expect(audit.anchorAmount).toBeLessThan(0);
+    expect(audit.amount).toBeUndefined();
+    expect(audit.currencyCode).toBeUndefined();
     const pipeline = findOneAndUpdate.mock.calls[0]![1] as [{ $set: Record<string, unknown> }];
     const campaignAdd = (pipeline[0].$set["currencyBalances.campaign"] as { $add: unknown[] }).$add;
     return campaignAdd[1] as number;

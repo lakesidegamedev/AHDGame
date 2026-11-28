@@ -107,3 +107,10 @@ export function buildDepletionInc(
   }
   return inc;
 }
+
+/** Preserve the opening reserve when a commodity phase resumes within its turn. */
+export function extractionOpeningDoc<T extends StateResourceCapacity>(doc: T, turn: number): T {
+  return doc.extractionDepletionTurn === turn
+    ? { ...doc, extractedUnits: doc.extractionOpeningUnits ?? {} }
+    : doc;
+}

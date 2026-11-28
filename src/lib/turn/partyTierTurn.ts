@@ -1,6 +1,6 @@
 import type { AnyBulkWriteOperation, Db, UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { GameState, PoliticalParty, StatePartyOrg } from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import {
   REGION_COUNT_BY_COUNTRY,
   nationalCapForCountry,
@@ -149,7 +149,6 @@ export async function processPartyTierTurn(
       changed = true;
     }
     if (clampedPS < currentPS) {
-      set.politicalStrength = clampedPS;
       changed = true;
       result.psClampedDown++;
     }
@@ -157,10 +156,15 @@ export async function processPartyTierTurn(
     if (!changed) continue;
 
     set.updatedAt = now;
-    const update: { $set: Record<string, unknown>; $unset?: Record<string, unknown> } = {
+    const update: {
+      $set: Record<string, unknown>;
+      $unset?: Record<string, unknown>;
+      $min?: Record<string, number>;
+    } = {
       $set: set,
     };
     if (Object.keys(unset).length > 0) update.$unset = unset;
+    if (clampedPS < currentPS) update.$min = { politicalStrength: cap };
     ops.push({
       updateOne: { filter: { _id: party._id }, update: update as UpdateFilter<PoliticalParty> },
     });

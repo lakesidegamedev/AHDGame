@@ -1,3 +1,9 @@
+import {
+  loadValuationFxRates,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
+import { restitutionQuote } from "@/lib/currency/rules/restitutionQuote";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -52,19 +58,32 @@ const MOVE_KEY = `remediation:${DEFECT_ID}:${CORPORATION_ID}`;
 interface Marker {
   ticket: number;
   refund: number;
+  quote?: ReturnType<typeof restitutionQuote>;
   reopen: "pending" | "done" | `refused: ${string}`;
   creditedAt?: Date;
   runId?: string | null;
 }
 
-type CorpDoc = Pick<Corporation, "_id" | "name" | "bankCharter" | "liquidCapital"> & {
+type CorpDoc = Pick<
+  Corporation,
+  "_id" | "name" | "bankCharter" | "liquidCapital" | "countryId" | "liquidCurrencyCode"
+> & {
   remediation?: Record<string, Marker | undefined>;
 };
 
 async function load(db: Db): Promise<CorpDoc | null> {
   return corporationsCollection<CorpDoc>(db).findOne(
     { _id: new ObjectId(CORPORATION_ID) },
-    { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
+    {
+      projection: {
+        name: 1,
+        bankCharter: 1,
+        liquidCapital: 1,
+        countryId: 1,
+        liquidCurrencyCode: 1,
+        remediation: 1,
+      },
+    }
   );
 }
 
@@ -111,9 +130,15 @@ async function plan(db: Db): Promise<HealPlan> {
   const notes: string[] = [];
   if (doc && o.reopen) {
     const corp = (await corporationsCollection(db).findOne({ _id: doc._id })) as Corporation;
+    const quote = restitutionQuote(
+      REFUND,
+      CURRENCY,
+      resolveCorpLiquidCurrencyCode(corp) ?? "USD",
+      await loadValuationFxRates(db)
+    );
     const eligibility = await checkCharterEligibility(
       db,
-      { ...corp, liquidCapital: (corp.liquidCapital ?? 0) + (o.refund ? REFUND : 0) },
+      { ...corp, liquidCapital: (corp.liquidCapital ?? 0) + (o.refund ? quote.amountLocal : 0) },
       "retail",
       CURRENCY
     );
@@ -142,6 +167,10 @@ async function plan(db: Db): Promise<HealPlan> {
 }
 
 async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
+  return withSessionDb(db, (db) => applyRestoration(db, healPlan, ctx));
+}
+
+async function applyRestoration(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
   const payload = healPlan.payload as { refund: boolean; reopen: boolean } | undefined;
   const notes: string[] = [];
   const id = new ObjectId(CORPORATION_ID);
@@ -149,6 +178,14 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   let credited = false;
 
   if (payload?.refund) {
+    const corp = await load(db);
+    if (!corp) throw new Error("Restitution recipient is missing");
+    const quote = restitutionQuote(
+      REFUND,
+      CURRENCY,
+      resolveCorpLiquidCurrencyCode(corp) ?? "USD",
+      await loadValuationFxRates(db)
+    );
     // Claim the marker first so a retry can never pay twice; the journal key
     // makes the transfer itself idempotent as well.
     const claimed = await corporationsCollection<CorpDoc>(db).updateOne(
@@ -158,6 +195,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
           [MARKER_PATH]: {
             ticket: TICKET,
             refund: REFUND,
+            quote,
             reopen: "pending",
             creditedAt: ctx.now,
             runId: ctx.runId ?? null,
@@ -176,6 +214,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
           {
             kind: "debit",
             amount: REFUND,
+            valuation: { currencyCode: CURRENCY, localPerAnchor: quote.sourceRate },
             collection: "depositInsuranceFunds",
             filter: { _id: FUND_ID },
             path: "balance",
@@ -183,7 +222,8 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
           },
           {
             kind: "credit",
-            amount: REFUND,
+            amount: quote.amountLocal,
+            valuation: { currencyCode: quote.currencyCode, localPerAnchor: quote.localRate },
             collection: "corporations",
             filter: { _id: id },
             path: "liquidCapital",
@@ -193,7 +233,7 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         projections: [],
         event: { kind: "bank.resolved", command: "remediation.greenbaum", amount: REFUND },
       });
-      if (move.status !== "applied" || move.error) {
+      if ((move.status !== "applied" && move.status !== "replayed") || move.error) {
         await corporationsCollection<CorpDoc>(db).updateOne(
           { _id: id },
           { $unset: { [MARKER_PATH]: "" } }
@@ -212,9 +252,9 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         subjectType: "corporation" as const,
         subjectId: id,
         subjectName: NAME,
-        amount: REFUND,
-        currencyCode: CURRENCY,
-        anchorAmount: REFUND,
+        amount: quote.amountLocal,
+        currencyCode: quote.currencyCode,
+        anchorAmount: quote.anchorAmount,
         meta: {
           ticket: TICKET,
           defectId: DEFECT_ID,

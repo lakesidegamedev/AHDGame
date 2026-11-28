@@ -1,3 +1,11 @@
+// Formula fixtures isolate transaction transport; atomic suites exercise rollback and races.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -231,7 +239,7 @@ describe("hostile takeover bank-NAV floor (issue #1750)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.bankNavFloorApplied).toBe(true);
 
@@ -272,7 +280,7 @@ describe("hostile takeover bank-NAV floor (issue #1750)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.bankNavFloorApplied).toBe(true);
     const expectedPayout = MINORITY_SHARES * (nav / TOTAL_SHARES);
@@ -288,7 +296,7 @@ describe("hostile takeover bank-NAV floor (issue #1750)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.bankNavFloorApplied).toBe(false);
     expect(body.minorityPayoutAnchorTotal).toBe(MINORITY_SHARES * 10 * 1.25);
@@ -316,7 +324,7 @@ describe("hostile takeover bank-NAV floor (issue #1750)", () => {
 
     const response = await postTakeover(targetId, parentId);
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
     expect(body.bankNavFloorApplied).toBe(true);
     const expectedPayout = MINORITY_SHARES * ((BANK_EQUITY - playerDeposits) / TOTAL_SHARES);
@@ -334,7 +342,7 @@ it("applies the shared net-asset floor to a non-bank minority buyout", async () 
     portfolioAnchor: 0,
   } as never);
   const response = await postTakeover(targetId, parentId);
-  expect(response.status).toBe(200);
+  expect(response.status, await response.clone().text()).toBe(200);
   expect((await response.json()).minorityPayoutAnchorTotal).toBe(3_600);
 });
 
@@ -348,7 +356,7 @@ it("refuses to delete investment holdings during a forced merger", async () => {
     portfolioAnchor: 100_000,
   } as never);
   const response = await postTakeover(targetId, parentId);
-  expect(response.status).toBe(400);
+  expect(response.status, await response.clone().text()).toBe(400);
   expect((await response.json()).error).toContain("investment holdings");
   expect(db.collectionMocks.corporations.deleteOne).not.toHaveBeenCalled();
   const moneyWrites = db.collectionMocks.corporations.updateOne.mock.calls.filter(

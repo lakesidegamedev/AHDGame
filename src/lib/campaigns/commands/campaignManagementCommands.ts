@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import {
   loadCampaignCurrencyRates,
   loadCampaignPriceLevel,
@@ -18,7 +19,7 @@ import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { createNotification } from "@/lib/notifications";
-import type { Campaign, Character, Election, ElectionCandidate, NPP } from "@/lib/db/types";
+import type { Campaign, Character, Election } from "@/lib/db/types";
 import {
   SUPPORT_RALLY_FULL_VALUE,
   SUPPORT_RALLY_ACTION_COST,
@@ -151,7 +152,15 @@ export async function appointCampaignManager(params: {
   };
 }
 
-export async function contributeCampaignStrength(params: {
+export async function contributeCampaignStrength(
+  params: Parameters<typeof contributeCampaignStrengthInTransaction>[0]
+) {
+  return withSessionDb(params.db, (db) =>
+    contributeCampaignStrengthInTransaction({ ...params, db })
+  );
+}
+
+async function contributeCampaignStrengthInTransaction(params: {
   db: Db;
   campaignId: ObjectId;
   user: AuthUserWithCharacter & { hasCharacter: true; character: Character };
@@ -317,7 +326,7 @@ export async function contributeCampaignStrength(params: {
   // say how many clicks it stood in for or the ledger reads as a single
   // implausibly large donation.
   const batchSuffix = clicks > 1 ? ` (x${clicks})` : "";
-  void activityLogCollection<Document>(db).insertOne({
+  await activityLogCollection<Document>(db).insertOne({
     type: "game_action",
     timestamp: now,
     userId: new ObjectId(user.userId),

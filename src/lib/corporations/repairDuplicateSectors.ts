@@ -1,5 +1,8 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { ApiError } from "@/lib/api/errors";
 import type { Db } from "mongodb";
-import type { CorporateSector, State } from "@/lib/db/types";
+import type { CorporateSector } from "@/lib/db/types";
 import {
   buildSectorStateCountryMap,
   getCorporateSectorLocationKey,
@@ -41,164 +44,178 @@ export async function normalizeAndMergeCorporateSectors(
   normalizedSectors: NormalizedSectorSummary[];
   mergedGroups: MergedSectorSummary[];
 }> {
-  const allSectors = await corporateSectorsCollection(db).find({}).sort({ createdAt: 1 }).toArray();
-  const states = await statesCollection(db)
-    .find({}, { projection: { _id: 1, countryId: 1 } })
-    .toArray();
-  const stateCountryByStateId = buildSectorStateCountryMap(states);
-  // Resolved once for the whole heal. This is an admin/seed path, not a turn
-  // phase, so a single read is the right cost.
-  const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+  return withSessionDb(db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) throw new ApiError(refusal.status, refusal.error);
+    const allSectors = await corporateSectorsCollection(db)
+      .find({})
+      .sort({ createdAt: 1 })
+      .toArray();
+    const states = await statesCollection(db)
+      .find({}, { projection: { _id: 1, countryId: 1 } })
+      .toArray();
+    const stateCountryByStateId = buildSectorStateCountryMap(states);
+    // Resolved once for the whole heal. This is an admin/seed path, not a turn
+    // phase, so a single read is the right cost.
+    const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
 
-  const normalizedSectors: NormalizedSectorSummary[] = [];
+    const normalizedSectors: NormalizedSectorSummary[] = [];
 
-  for (const sector of allSectors) {
-    const operatingCountryId = getSectorOperatingCountryId(sector, stateCountryByStateId);
-    if (sector.countryId === operatingCountryId) continue;
-    const previousCountryId = sector.countryId;
-    await corporateSectorsCollection(db).updateOne(
-      { _id: sector._id },
-      { $set: { countryId: operatingCountryId, updatedAt: now } }
-    );
-    sector.countryId = operatingCountryId;
-    sector.updatedAt = now;
-    normalizedSectors.push({
-      sectorId: sector._id.toString(),
-      stateId: sector.stateId,
-      fromCountryId: previousCountryId,
-      toCountryId: operatingCountryId,
-    });
-  }
+    for (const sector of allSectors) {
+      const operatingCountryId = getSectorOperatingCountryId(sector, stateCountryByStateId);
+      if (sector.countryId === operatingCountryId) continue;
+      const previousCountryId = sector.countryId;
+      await corporateSectorsCollection(db).updateOne(
+        { _id: sector._id },
+        { $set: { countryId: operatingCountryId, updatedAt: now } }
+      );
+      sector.countryId = operatingCountryId;
+      sector.updatedAt = now;
+      normalizedSectors.push({
+        sectorId: sector._id.toString(),
+        stateId: sector.stateId,
+        fromCountryId: previousCountryId,
+        toCountryId: operatingCountryId,
+      });
+    }
 
-  const groups = new Map<string, CorporateSector[]>();
-  for (const sector of allSectors) {
-    const key = getCorporateSectorLocationKey(sector, stateCountryByStateId);
-    const group = groups.get(key) ?? [];
-    group.push(sector);
-    groups.set(key, group);
-  }
+    const groups = new Map<string, CorporateSector[]>();
+    for (const sector of allSectors) {
+      const key = getCorporateSectorLocationKey(sector, stateCountryByStateId);
+      const group = groups.get(key) ?? [];
+      group.push(sector);
+      groups.set(key, group);
+    }
 
-  const mergedGroups: MergedSectorSummary[] = [];
+    const mergedGroups: MergedSectorSummary[] = [];
 
-  for (const group of groups.values()) {
-    if (group.length < 2) continue;
+    for (const group of groups.values()) {
+      if (group.length < 2) continue;
 
-    const [keeper, ...duplicates] = group;
-    const transitionKeys = await reserveSectorsForTransition(
-      db,
-      group,
-      "duplicate_repair",
-      `duplicate:${keeper._id.toHexString()}`
-    );
-    // A duplicate group with a live lender pledge is not repairable by deleting
-    // a row. Leave the whole group intact for an explicit secured settlement.
-    if (!transitionKeys) continue;
-    const keyById = new Map(
-      group.map((sector, index) => [sector._id.toString(), transitionKeys[index]])
-    );
-    const combinedRevenue = group.reduce((sum, sector) => sum + sector.revenue, 0);
-    const combinedWorkers = group.reduce((sum, sector) => sum + sector.workers, 0);
-    const weightedMargin =
-      combinedRevenue > 0
-        ? group.reduce((sum, sector) => sum + sector.profitMargin * sector.revenue, 0) /
-          combinedRevenue
-        : keeper.profitMargin;
-    const weightedProductionPolicyLevel =
-      combinedRevenue > 0
-        ? clampProductionPolicy(
-            Math.round(
+      // A single sector cannot retain two different production methods.
+      if (new Set(group.map((sector) => sector.strategyId ?? "")).size !== 1) continue;
+      const [keeper, ...duplicates] = group;
+      const transitionKeys = await reserveSectorsForTransition(
+        db,
+        group,
+        "duplicate_repair",
+        `duplicate:${keeper._id.toHexString()}`
+      );
+      // A duplicate group with a live lender pledge is not repairable by deleting
+      // a row. Leave the whole group intact for an explicit secured settlement.
+      if (!transitionKeys) continue;
+      const keyById = new Map(
+        group.map((sector, index) => [sector._id.toString(), transitionKeys[index]])
+      );
+      const combinedRevenue = group.reduce((sum, sector) => sum + sector.revenue, 0);
+      const combinedWorkers = group.reduce((sum, sector) => sum + sector.workers, 0);
+      const weightedMargin =
+        combinedRevenue > 0
+          ? group.reduce((sum, sector) => sum + sector.profitMargin * sector.revenue, 0) /
+            combinedRevenue
+          : keeper.profitMargin;
+      const weightedProductionPolicyLevel =
+        combinedRevenue > 0
+          ? clampProductionPolicy(
+              Math.round(
+                group.reduce(
+                  (sum, sector) => sum + (sector.productionPolicyLevel ?? 0) * sector.revenue,
+                  0
+                ) / combinedRevenue
+              )
+            )
+          : (keeper.productionPolicyLevel ?? 0);
+      const weightedNegativeProductionTurns =
+        combinedRevenue > 0
+          ? Math.round(
               group.reduce(
-                (sum, sector) => sum + (sector.productionPolicyLevel ?? 0) * sector.revenue,
+                (sum, sector) =>
+                  sum + (sector.negativeProductionSustainedTurns ?? 0) * sector.revenue,
                 0
               ) / combinedRevenue
             )
-          )
-        : (keeper.productionPolicyLevel ?? 0);
-    const weightedNegativeProductionTurns =
-      combinedRevenue > 0
-        ? Math.round(
-            group.reduce(
-              (sum, sector) =>
-                sum + (sector.negativeProductionSustainedTurns ?? 0) * sector.revenue,
-              0
-            ) / combinedRevenue
-          )
-        : (keeper.negativeProductionSustainedTurns ?? 0);
+          : (keeper.negativeProductionSustainedTurns ?? 0);
 
-    // PLANTS-GATED: the duplicate-row heal is a MERGE, and losing rows are
-    // deleted below, so under plants their plant state (`capitalStock`,
-    // `buildQueue`, `constructionInProgressAnchor`, `mothballed`,
-    // `plantsStartTurn`) must be folded into the keeper first. Without the fold
-    // the heal destroys built capacity and in-flight ₳.
-    //
-    // The fold is GATED: under CAPITAL mode `sectorTurn` owns `capitalStock`
-    // and re-derives it, so summing here would double it, and folding would
-    // stamp plant-only fields onto rows that carry none, waking mothballed
-    // sectors. Below plants this heal must stay byte-identical.
-    const mergedPlantFields: SectorPlantFieldsUpdate | null = plantsEnabled
-      ? group
-          .filter((sector) => !sector._id.equals(keeper._id))
-          .reduce<SectorPlantFieldsUpdate>(
-            (survivor, incoming) =>
-              mergeSectorPlantFields(survivor, readSectorPlantFields(incoming)),
-            // `identitySectorPlantFields`, NOT `mergeSectorPlantFields(keeper, {})`.
-            // The latter looks like a harmless way to normalise the seed, but
-            // `mothballed` folds with AND, so `keeper.mothballed && undefined`
-            // evaluates false and no later fold can bring it back: every healed
-            // group came out of the de-duplication RUNNING and paying full
-            // upkeep, whatever its operating state was going in. The identity
-            // helper exists precisely to make a one-sided normalisation safe.
-            identitySectorPlantFields(readSectorPlantFields(keeper))
-          )
-      : null;
+      // PLANTS-GATED: the duplicate-row heal is a MERGE, and losing rows are
+      // deleted below, so under plants their plant state (`capitalStock`,
+      // `buildQueue`, `constructionInProgressAnchor`, `mothballed`,
+      // `plantsStartTurn`) must be folded into the keeper first. Without the fold
+      // the heal destroys built capacity and in-flight ₳.
+      //
+      // The fold is GATED: under CAPITAL mode `sectorTurn` owns `capitalStock`
+      // and re-derives it, so summing here would double it, and folding would
+      // stamp plant-only fields onto rows that carry none, waking mothballed
+      // sectors. Below plants this heal must stay byte-identical.
+      const mergedPlantFields: SectorPlantFieldsUpdate | null = plantsEnabled
+        ? group
+            .filter((sector) => !sector._id.equals(keeper._id))
+            .reduce<SectorPlantFieldsUpdate>(
+              (survivor, incoming) =>
+                mergeSectorPlantFields(survivor, readSectorPlantFields(incoming)),
+              // `identitySectorPlantFields`, NOT `mergeSectorPlantFields(keeper, {})`.
+              // The latter looks like a harmless way to normalise the seed, but
+              // `mothballed` folds with AND, so `keeper.mothballed && undefined`
+              // evaluates false and no later fold can bring it back: every healed
+              // group came out of the de-duplication RUNNING and paying full
+              // upkeep, whatever its operating state was going in. The identity
+              // helper exists precisely to make a one-sided normalisation safe.
+              identitySectorPlantFields(readSectorPlantFields(keeper))
+            )
+        : null;
 
-    const keeperWrite = await corporateSectorsCollection(db).updateOne(
-      {
-        _id: keeper._id,
-        "constructionPropertyTransition.key": keyById.get(keeper._id.toString()),
-      },
-      {
-        $set: {
-          countryId: getSectorOperatingCountryId(keeper, stateCountryByStateId),
-          revenue: combinedRevenue,
-          workers: combinedWorkers,
-          profitMargin: weightedMargin,
-          productionPolicyLevel: weightedProductionPolicyLevel,
-          negativeProductionSustainedTurns: weightedNegativeProductionTurns,
-          updatedAt: now,
-          ...(mergedPlantFields ?? {}),
+      const keeperWrite = await corporateSectorsCollection(db).updateOne(
+        {
+          _id: keeper._id,
+          "constructionPropertyTransition.key": keyById.get(keeper._id.toString()),
         },
-      }
-    );
-    if (keeperWrite.matchedCount !== 1) {
-      await Promise.all(
-        group.map((sector) =>
-          releaseConstructionPropertyTransition(db, sector._id, keyById.get(sector._id.toString())!)
-        )
+        {
+          $set: {
+            countryId: getSectorOperatingCountryId(keeper, stateCountryByStateId),
+            revenue: combinedRevenue,
+            workers: combinedWorkers,
+            profitMargin: weightedMargin,
+            productionPolicyLevel: weightedProductionPolicyLevel,
+            negativeProductionSustainedTurns: weightedNegativeProductionTurns,
+            updatedAt: now,
+            ...(mergedPlantFields ?? {}),
+          },
+        }
       );
-      continue;
+      if (keeperWrite.matchedCount !== 1) {
+        await Promise.all(
+          group.map((sector) =>
+            releaseConstructionPropertyTransition(
+              db,
+              sector._id,
+              keyById.get(sector._id.toString())!
+            )
+          )
+        );
+        continue;
+      }
+
+      const deleteResult = await corporateSectorsCollection(db).deleteMany({
+        $or: duplicates.map((sector) => ({
+          _id: sector._id,
+          "constructionPropertyTransition.key": keyById.get(sector._id.toString()),
+        })),
+      });
+      if (deleteResult.deletedCount !== duplicates.length)
+        throw new Error("Duplicate sector group changed during repair");
+      await releaseConstructionPropertyTransition(
+        db,
+        keeper._id,
+        keyById.get(keeper._id.toString())!
+      );
+
+      mergedGroups.push({
+        corporationId: keeper.corporationId.toString(),
+        stateId: keeper.stateId,
+        sectorType: keeper.sectorType,
+        count: group.length,
+      });
     }
 
-    const deleteResult = await corporateSectorsCollection(db).deleteMany({
-      $or: duplicates.map((sector) => ({
-        _id: sector._id,
-        "constructionPropertyTransition.key": keyById.get(sector._id.toString()),
-      })),
-    });
-    if (deleteResult.deletedCount !== duplicates.length) continue;
-    await releaseConstructionPropertyTransition(
-      db,
-      keeper._id,
-      keyById.get(keeper._id.toString())!
-    );
-
-    mergedGroups.push({
-      corporationId: keeper.corporationId.toString(),
-      stateId: keeper.stateId,
-      sectorType: keeper.sectorType,
-      count: group.length,
-    });
-  }
-
-  return { normalizedSectors, mergedGroups };
+    return { normalizedSectors, mergedGroups };
+  });
 }

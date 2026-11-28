@@ -14,10 +14,10 @@
 export interface ExchangeListingSlice {
   marketCap?: number;
   marketCapAnchor?: number;
-  totalRevenue?: number;
-  totalRevenueAnchor?: number;
-  income?: number;
-  incomeAnchor?: number;
+  totalRevenue?: number | null;
+  totalRevenueAnchor?: number | null;
+  income?: number | null;
+  incomeAnchor?: number | null;
   priceChange1h?: number;
   priceChange24h?: number;
   priceChange48h?: number;
@@ -25,8 +25,8 @@ export interface ExchangeListingSlice {
 
 export interface ExchangeTotals {
   marketCap: number;
-  revenue: number;
-  income: number;
+  revenue: number | null;
+  income: number | null;
   weightedChange1h: number;
   weightedChange24h: number;
   weightedChange48h: number;

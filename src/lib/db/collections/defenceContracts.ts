@@ -133,8 +133,13 @@ export async function advanceContract(db: Db, contractId: ObjectId, lots: number
   }
 
   const nowComplete = contract.lotsDelivered + recorded >= contract.lotsOrdered;
-  await contracts(db).updateOne(
-    { _id: contractId, status: "active" },
+  const advanced = await contracts(db).updateOne(
+    {
+      _id: contractId,
+      status: "active",
+      lotsDelivered: contract.lotsDelivered,
+      lotsOrdered: contract.lotsOrdered,
+    },
     {
       $inc: { lotsDelivered: recorded },
       $set: { updatedAt: new Date(), ...(nowComplete ? { status: "complete" as const } : {}) },
@@ -145,7 +150,7 @@ export async function advanceContract(db: Db, contractId: ObjectId, lots: number
   // and drive the contract's own commitment negative. `applyDefenceDeliveries` releases the
   // residue after `recordContractPayment`, which is the only point at which the remaining
   // commitment is actually known.
-  return recorded;
+  return advanced.matchedCount === 1 ? recorded : 0;
 }
 
 /**

@@ -7,7 +7,7 @@ import {
   computeBankTreasuryDueInterest,
   computeBankTreasuryFundingRatePercent,
 } from "@/lib/banking/rules/bankTreasury";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import type { BondHolder } from "@/lib/db/types/bond";
 import type {
   BankTreasuryHolderSnapshot,

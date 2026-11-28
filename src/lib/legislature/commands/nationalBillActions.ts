@@ -1,3 +1,4 @@
+import { withAtomicStatusResult } from "@/lib/api/withAtomicStatusResult";
 import { applyV2BillVotePolicyShift } from "@/lib/legislature/v2VotePolicyShift";
 import { billVotePositions } from "@/lib/legislature/votePositions";
 /**
@@ -26,7 +27,7 @@ import { buildEmbeddedVoteTallyUpdate } from "@/lib/votes/embeddedVoteTally";
 import { isVotingDeadlinePassed } from "@/lib/legislature/billVotingWindow";
 import { getGameState } from "@/lib/gameState";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
-import type { Bill, Character, ElectedOfficial, PoliticalParty } from "@/lib/db/types";
+import type { Bill, Character } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";
 import { getCountryState } from "@/lib/countryState";
 import { statMultiplier } from "@/lib/stats/statMultiplier";
@@ -52,6 +53,17 @@ export type NationalBillActionInput =
   | { action: "filibuster" };
 
 export async function performNationalBillAction(
+  db: Db,
+  params: Parameters<typeof performNationalBillActionInTransaction>[1]
+): Promise<LegislatureCommandResult> {
+  return withAtomicStatusResult(db, async (db) => {
+    const bill = await billsCollection(db).findOne({ _id: params.bill._id });
+    if (!bill) return { status: 404, body: { error: "Bill not found" } };
+    return performNationalBillActionInTransaction(db, { ...params, bill });
+  });
+}
+
+async function performNationalBillActionInTransaction(
   db: Db,
   {
     authUser,

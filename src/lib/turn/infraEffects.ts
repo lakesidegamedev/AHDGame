@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { InfraProject } from "@/lib/db/types/infraProject";
 import type { CountryId } from "@/lib/constants/countries";
@@ -39,6 +40,37 @@ export function advanceProgress(
  * spend vs the transportation envelope. Read-only on the budget.
  */
 export async function applyInfraEffects(
+  db: Db,
+  countryId: string,
+  positionId: string,
+  bucket: { national: Record<string, number>; regional: Record<string, Record<string, number>> },
+  currentTurn: number
+): Promise<void> {
+  if (!resolveInfraPosition(countryId, positionId)) return;
+  const settled = await withTurnValueSettlement(
+    db,
+    "infrastructure-effects",
+    currentTurn,
+    async (db) => {
+      const output = {
+        national: {} as Record<string, number>,
+        regional: {} as Record<string, Record<string, number>>,
+      };
+      await calculateInfraEffects(db, countryId, positionId, output, currentTurn);
+      return output;
+    },
+    { sourceKey: `${countryId}:${positionId}:${currentTurn}` }
+  );
+  for (const [key, value] of Object.entries(settled.national))
+    bucket.national[key] = (bucket.national[key] ?? 0) + value;
+  for (const [region, effects] of Object.entries(settled.regional))
+    for (const [key, value] of Object.entries(effects)) {
+      const target = (bucket.regional[region] ??= {});
+      target[key] = (target[key] ?? 0) + value;
+    }
+}
+
+async function calculateInfraEffects(
   db: Db,
   countryId: string,
   positionId: string,

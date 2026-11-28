@@ -5,6 +5,7 @@ import { discoverCollectionCalls } from "../../../../scripts/architecture/collec
 import {
   LEGACY_DYNAMIC_COLLECTION_SITES,
   SESSION_COLLECTION_FORWARDERS,
+  MONEY_MOVE_COHORT_READS,
 } from "../../../../scripts/architecture/collectionDiscoveryExceptions";
 import { getCollectionCategory, SEED_MANIFEST } from "./seedManifest";
 
@@ -132,7 +133,11 @@ describe("seed manifest source discovery", () => {
     const actual = [...counts]
       .map(([key, count]) => ({ key, count }))
       .sort((a, b) => a.key.localeCompare(b.key));
-    const expected = [...LEGACY_DYNAMIC_COLLECTION_SITES, ...SESSION_COLLECTION_FORWARDERS]
+    const expected = [
+      ...LEGACY_DYNAMIC_COLLECTION_SITES,
+      ...SESSION_COLLECTION_FORWARDERS,
+      ...MONEY_MOVE_COHORT_READS,
+    ]
       .map(({ file, owner, argument, scopeHash, count }) => ({
         key: JSON.stringify([file, owner, argument, scopeHash]),
         count,

@@ -306,6 +306,7 @@ describe("manufacturing completed-turn lifecycle persistence", () => {
       );
       return {
         insertedCount: 0,
+        deletedCount: 0,
         matchedCount: 0,
         modifiedCount: 0,
         upsertedCount: 0,

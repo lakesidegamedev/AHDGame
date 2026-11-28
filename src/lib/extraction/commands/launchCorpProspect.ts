@@ -1,6 +1,7 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { getEraContext } from "@/lib/era/context";
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { ProspectingSurvey } from "@/lib/db/types/prospectingSurvey";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -43,10 +44,21 @@ export type LaunchCorpProspectResult =
  * Caller handles auth (requireCeo), the prospecting feature gate, corp-actions
  * pause, and resolving the corporation. This command owns eligibility, cost
  * escalation, the atomic guarded liquidCapital debit, the tx emit, and the
- * survey insert. Designed to be correct on the standalone-Mongo (no-transaction)
- * path: the only balance-critical write is the single guarded `updateOne`.
+ * survey insert in one required transaction.
  */
 export async function launchCorpProspect(
+  db: Db,
+  corporation: Corporation,
+  args: { stateId: string; resource: ExtractableResource },
+  turn: number,
+  now: Date
+): Promise<LaunchCorpProspectResult> {
+  return withSessionDb(db, (transactionDb) =>
+    launchInTransaction(transactionDb, corporation, args, turn, now)
+  );
+}
+
+async function launchInTransaction(
   db: Db,
   corporation: Corporation,
   args: { stateId: string; resource: ExtractableResource },
@@ -122,6 +134,7 @@ export async function launchCorpProspect(
   const dup = await surveysCol.findOne({
     corporationId: corporation._id,
     stateId,
+    countryId,
     resource,
     status: "active",
   });
@@ -136,6 +149,7 @@ export async function launchCorpProspect(
   // Cost escalation: succeeded surveys (any initiator) for this (state, resource).
   const priorSuccessCount = await surveysCol.countDocuments({
     stateId,
+    countryId,
     resource,
     status: "succeeded",
   });
@@ -150,7 +164,12 @@ export async function launchCorpProspect(
   // Atomic guarded debit — the affordability guard lives in the filter so the
   // $inc can never overdraw under concurrency.
   const debit = await corporationsCollection(db).updateOne(
-    { _id: corporation._id, liquidCapital: { $gte: costLocal } },
+    {
+      _id: corporation._id,
+      countryId: corporation.countryId,
+      liquidCurrencyCode: corporation.liquidCurrencyCode ?? { $exists: false },
+      liquidCapital: { $gte: costLocal },
+    },
     { $inc: { liquidCapital: -costLocal }, $set: { updatedAt: now } }
   );
   if (debit.modifiedCount === 0) {
@@ -166,7 +185,7 @@ export async function launchCorpProspect(
     };
   }
 
-  void emitTx(db, {
+  await emitTx(db, {
     type: "corp_prospecting_cost",
     turn,
     createdAt: now,

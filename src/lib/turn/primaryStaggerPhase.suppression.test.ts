@@ -19,6 +19,12 @@ import type { Election } from "@/lib/db/types";
 // one the stagger was given, so the stub has to be installed here too.
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
+// Intent/formula fixture; the separate atomic suite exercises real sessions.
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: unknown, work: (db: unknown) => unknown) => work(db),
+  afterCommit: async (_db: unknown, work: () => unknown) => work(),
+}));
+
 const ELECTION_ID = new ObjectId();
 const TARGET_ROW = new ObjectId();
 const RIVAL_ROW = new ObjectId();

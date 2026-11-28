@@ -1,3 +1,4 @@
+import { observedSupplyOffer } from "@/lib/corporations/supplyExchange/observedOffer";
 import { controllerTransferBarrierError } from "./acquisitions/controllerTransferBarrier";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { ObjectId, type Db, type UpdateFilter } from "mongodb";
@@ -12,9 +13,8 @@ import {
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { createNotification } from "@/lib/notifications";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { GameState } from "@/lib/db/types/gameState";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
+import type { Corporation } from "@/lib/db/types";
+
 import {
   contractCancelEffectiveTurn,
   type SupplyAgreementOffer,
@@ -32,7 +32,7 @@ import {
   isStateScopedCommodity,
   supplyAgreementRequiresState,
 } from "@/lib/market/commodityMarketScope";
-import type { State } from "@/lib/db/types/state";
+
 import {
   checkSupplyAgreementReach,
   checkSupplyContractParties,
@@ -556,7 +556,12 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
         ...(durationTurns !== undefined ? { durationTurns } : {}),
       };
       const accepted = await supplyAgreementsCollection(db).updateOne(
-        { _id: agreement._id, status: "pending", proposedByCorpId: currentOfferAuthor },
+        {
+          _id: agreement._id,
+          status: "pending",
+          proposedByCorpId: currentOfferAuthor,
+          ...observedSupplyOffer(agreement),
+        },
         {
           $set: {
             ...acceptedTerms,
@@ -689,6 +694,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
           _id: agreement._id,
           status: "pending",
           proposedByCorpId: currentOfferAuthor,
+          ...observedSupplyOffer(agreement),
           // An amendment rewrites the author's own offer, so it must lose to
           // any counter that landed after this agreement was read.
           ...(amending ? { updatedAt: agreement.updatedAt } : {}),
@@ -760,8 +766,8 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       // Notice scales with the term left on a fixed-term contract.
       const cancelEffectiveTurn = contractCancelEffectiveTurn(currentTurn, agreement.expiresAtTurn);
       const noticeTurns = cancelEffectiveTurn - currentTurn;
-      await supplyAgreementsCollection(db).updateOne(
-        { _id: agreement._id, status: agreement.status },
+      const cancelled = await supplyAgreementsCollection(db).updateOne(
+        { _id: agreement._id, status: agreement.status, ...observedSupplyOffer(agreement) },
         {
           $set: {
             status: nextStatus,
@@ -770,6 +776,8 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
           },
         }
       );
+      if (cancelled.matchedCount !== 1)
+        return errorResponse(409, "This agreement changed. Refresh and review its current terms.");
       recordAudit({
         source: "api",
         action: "commodity.trade",

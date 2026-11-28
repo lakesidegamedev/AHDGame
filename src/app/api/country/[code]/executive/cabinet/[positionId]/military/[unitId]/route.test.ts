@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -87,8 +90,8 @@ describe("DELETE military/[unitId] (disband)", () => {
     expect(res.status).toBe(200);
     // Guarded $inc, not a read-modify-write.
     expect(db.collectionMocks.nationalManpower.updateOne).toHaveBeenCalledWith(
-      { countryId: "US", pool: { $lte: expect.any(Number) } },
-      { $inc: { pool: 12000 } }
+      { countryId: "US", pool: { $lt: expect.any(Number) } },
+      [{ $set: { pool: { $min: [expect.any(Number), { $add: ["$pool", 12000] }] } } }]
     );
   });
 

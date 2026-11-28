@@ -1,3 +1,7 @@
+import { logger } from "@/lib/observability/logger";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { applyPassedVoteEffects } from "./voteEffects";
 import { captureServerGameEvent } from "@/lib/analytics/serverPosthog";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
@@ -213,13 +217,7 @@ export async function cancelCorporationVote(opts: {
   );
 }
 
-/**
- * Lazy resolver for a single corp vote. Idempotent: parallel callers will
- * compute the same outcome but only ONE wins the atomic status flip. Callers
- * MUST gate side effects (notifications, applyPassedVoteEffects) on
- * `claimed === true` — otherwise double-apply will issue shares / dilute caps
- * twice.
- */
+/** Resolve the current ballot and its approved effects in one transaction. */
 export async function resolveCorporationVoteIfReady(opts: {
   db: Db;
   vote: CorporationVote;
@@ -227,28 +225,111 @@ export async function resolveCorporationVoteIfReady(opts: {
   currentTurn: number;
   nationId?: string;
   flushTelemetry?: boolean;
+  allowDuringTurn?: boolean;
 }): Promise<{ outcome: VoteOutcome; claimed: boolean }> {
-  const { db, vote, totalEligibleShares, currentTurn } = opts;
+  return withSessionDb(opts.db, async (db) => {
+    if (!opts.allowDuringTurn && (await fenceEconomicTurn(db)))
+      return { outcome: "open", claimed: false };
+    const vote = await corporationVotesCollection(db).findOne({
+      _id: opts.vote._id,
+      corporationId: opts.vote.corporationId,
+    });
+    if (!vote) return { outcome: "cancelled", claimed: false };
+    const corporation = await corporationsCollection(db).findOne({ _id: vote.corporationId });
+    if (!corporation) return { outcome: "cancelled", claimed: false };
+    const totalEligibleShares = totalVotingPower(corporation),
+      currentTurn = opts.currentTurn;
 
-  if (vote.status !== "open") return { outcome: vote.status as VoteOutcome, claimed: false };
+    if (vote.status !== "open") return { outcome: vote.status as VoteOutcome, claimed: false };
 
-  if (
-    vote.totalEligibleSharesAtOpen != null &&
-    vote.totalEligibleSharesAtOpen !== totalEligibleShares
-  ) {
+    if (
+      vote.totalEligibleSharesAtOpen != null &&
+      vote.totalEligibleSharesAtOpen !== totalEligibleShares
+    ) {
+      const now = new Date();
+      const claim = await corporationVotesCollection(db).updateOne(
+        { _id: vote._id, status: "open" },
+        {
+          $set: {
+            status: "cancelled",
+            resolvedAt: now,
+            updatedAt: now,
+          },
+        }
+      );
+      if (claim.matchedCount > 0) {
+        await captureVoteResolutionAfterCommit({
+          db,
+          turn: currentTurn,
+          event: "corporation_vote_resolved",
+          distinctId: "system:turn-processor",
+          insertId: `corporation-vote:${vote._id}`,
+          nationId: opts.nationId,
+          flush: opts.flushTelemetry,
+          properties: {
+            corporation_id: vote.corporationId.toString(),
+            vote_id: vote._id.toString(),
+            vote_type: vote.type,
+            outcome: "cancelled",
+            failure_code: "voting_structure_changed",
+          },
+        });
+      }
+      return { outcome: "cancelled", claimed: claim.matchedCount > 0 };
+    }
+
+    const castYes = vote.votes
+      .filter((v) => v.vote === "yes")
+      .reduce((s, v) => s + v.voteShares, 0);
+    const castNo = vote.votes.filter((v) => v.vote === "no").reduce((s, v) => s + v.voteShares, 0);
+
+    // Fund stewardship: index funds hold real stakes that already sit in the
+    // denominator but could never be cast, so a fund-heavy corporation drifted
+    // toward permanent deadlock. Directed funds follow their controlling unit
+    // holder; passive ones mirror the majority actually cast; a fund with neither
+    // abstains AND drops out of the denominator, because measuring a threshold
+    // against shares nobody can cast is what caused the deadlock.
+    const stewardship = corporation
+      ? await resolveFundStewardship(db, {
+          corporation,
+          castYes,
+          castNo,
+          directions: fundDirectionsFrom(vote),
+        })
+      : { yes: 0, no: 0, excludedFromDenominator: 0 };
+
+    const yesShares = castYes + stewardship.yes;
+    const noShares = castNo + stewardship.no;
+    const eligibleShares = Math.max(1, totalEligibleShares - stewardship.excludedFromDenominator);
+
+    let outcome: VoteOutcome;
+    if (currentTurn < vote.deadlineAtTurn) {
+      outcome = checkAutoResolve({
+        yesShares,
+        noShares,
+        totalEligibleShares: eligibleShares,
+        passThreshold: vote.passThreshold,
+      });
+      if (outcome === "open") return { outcome: "open", claimed: false };
+    } else {
+      outcome = computeVoteOutcome({
+        yesShares,
+        totalEligibleShares: eligibleShares,
+        passThreshold: vote.passThreshold,
+      });
+    }
+
+    // Atomic claim: only one caller wins the open→terminal transition. The
+    // loser sees matchedCount === 0 and must not apply side effects.
     const now = new Date();
     const claim = await corporationVotesCollection(db).updateOne(
       { _id: vote._id, status: "open" },
-      {
-        $set: {
-          status: "cancelled",
-          resolvedAt: now,
-          updatedAt: now,
-        },
-      }
+      { $set: { status: outcome, resolvedAt: now, updatedAt: now } }
     );
     if (claim.matchedCount > 0) {
-      await captureServerGameEvent({
+      if (outcome === "passed")
+        await applyPassedVoteEffects({ db, vote, corporation, currentTurn });
+      await captureVoteResolutionAfterCommit({
         db,
         turn: currentTurn,
         event: "corporation_vote_resolved",
@@ -260,79 +341,26 @@ export async function resolveCorporationVoteIfReady(opts: {
           corporation_id: vote.corporationId.toString(),
           vote_id: vote._id.toString(),
           vote_type: vote.type,
-          outcome: "cancelled",
-          failure_code: "voting_structure_changed",
+          outcome,
+          yes_share_pct: (yesShares / eligibleShares) * 100,
+          no_share_pct: (noShares / eligibleShares) * 100,
         },
       });
     }
-    return { outcome: "cancelled", claimed: claim.matchedCount > 0 };
-  }
+    return { outcome, claimed: claim.matchedCount > 0 };
+  });
+}
 
-  const castYes = vote.votes.filter((v) => v.vote === "yes").reduce((s, v) => s + v.voteShares, 0);
-  const castNo = vote.votes.filter((v) => v.vote === "no").reduce((s, v) => s + v.voteShares, 0);
-
-  // Fund stewardship: index funds hold real stakes that already sit in the
-  // denominator but could never be cast, so a fund-heavy corporation drifted
-  // toward permanent deadlock. Directed funds follow their controlling unit
-  // holder; passive ones mirror the majority actually cast; a fund with neither
-  // abstains AND drops out of the denominator, because measuring a threshold
-  // against shares nobody can cast is what caused the deadlock.
-  const corporation = await corporationsCollection(db).findOne({ _id: vote.corporationId });
-  const stewardship = corporation
-    ? await resolveFundStewardship(db, {
-        corporation,
-        castYes,
-        castNo,
-        directions: fundDirectionsFrom(vote),
-      })
-    : { yes: 0, no: 0, excludedFromDenominator: 0 };
-
-  const yesShares = castYes + stewardship.yes;
-  const noShares = castNo + stewardship.no;
-  const eligibleShares = Math.max(1, totalEligibleShares - stewardship.excludedFromDenominator);
-
-  let outcome: VoteOutcome;
-  if (currentTurn < vote.deadlineAtTurn) {
-    outcome = checkAutoResolve({
-      yesShares,
-      noShares,
-      totalEligibleShares: eligibleShares,
-      passThreshold: vote.passThreshold,
-    });
-    if (outcome === "open") return { outcome: "open", claimed: false };
-  } else {
-    outcome = computeVoteOutcome({
-      yesShares,
-      totalEligibleShares: eligibleShares,
-      passThreshold: vote.passThreshold,
-    });
-  }
-
-  // Atomic claim: only one caller wins the open→terminal transition. The
-  // loser sees matchedCount === 0 and must not apply side effects.
-  const now = new Date();
-  const claim = await corporationVotesCollection(db).updateOne(
-    { _id: vote._id, status: "open" },
-    { $set: { status: outcome, resolvedAt: now, updatedAt: now } }
-  );
-  if (claim.matchedCount > 0) {
-    await captureServerGameEvent({
-      db,
-      turn: currentTurn,
-      event: "corporation_vote_resolved",
-      distinctId: "system:turn-processor",
-      insertId: `corporation-vote:${vote._id}`,
-      nationId: opts.nationId,
-      flush: opts.flushTelemetry,
-      properties: {
-        corporation_id: vote.corporationId.toString(),
-        vote_id: vote._id.toString(),
-        vote_type: vote.type,
-        outcome,
-        yes_share_pct: (yesShares / eligibleShares) * 100,
-        no_share_pct: (noShares / eligibleShares) * 100,
-      },
-    });
-  }
-  return { outcome, claimed: claim.matchedCount > 0 };
+async function captureVoteResolutionAfterCommit(
+  input: Parameters<typeof captureServerGameEvent>[0] & { db: Db }
+) {
+  await afterCommit(input.db, async () => {
+    try {
+      await captureServerGameEvent({ ...input, db: unboundDb(input.db) });
+    } catch (error) {
+      logger.warn("corporationVote", "resolution telemetry unavailable after commit", {
+        error: String(error),
+      });
+    }
+  });
 }

@@ -1,3 +1,4 @@
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 // GET /api/country/[code]/central-bank/savings — National savings totals, prime/APY, character balances, ledger, chart history
 // Auth: requireBasicAuth
 // Errors: 401, 404
@@ -8,7 +9,7 @@ import { getDb } from "@/lib/mongodb";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { PortfolioHistory } from "@/lib/db/types";
+
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { FOREX_ACTIVE_COUNTRIES, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -22,8 +23,10 @@ import { fetchSavingsLedgerForCharacter } from "@/lib/savings/ledger";
 import {
   estimateSavingsAccrualFromApy,
   savingsApyPercent,
+  interestEligibleBalance,
+  SAVINGS_CREDIT_INTERVAL_TURNS,
   turnsUntilSavingsCredit,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 import { getGameState } from "@/lib/gameState";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
@@ -71,7 +74,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     // was already loaded here, so no new read.
     const nationalCurrency = getSeedCurrencyCode(countryId, gameState?.preset ?? "");
     const primeRate = bank?.primeRate ?? DEFAULT_PRIME;
-    const inflationRate = bank?.inflationHistory?.at(-1)?.rate ?? 0;
+    const inflationRate = uniqueTurnHistory(bank?.inflationHistory ?? []).at(-1)?.rate ?? 0;
 
     const [totalNationalSavings, ledger, history] = await Promise.all([
       sumSavingsInCurrency(db, nationalCurrency),
@@ -96,11 +99,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       db,
       gameState?.currentTurn ?? 0
     );
-    const centralBankApyPercent =
-      Math.round(
-        savingsApyPercent(primeRate, inflationRate, centralBankPricing.depositBonusPercentPoints) *
-          100
-      ) / 100;
+    const centralBankApyPercent = savingsApyPercent(
+      primeRate,
+      inflationRate,
+      centralBankPricing.depositBonusPercentPoints
+    );
 
     const holder = character.currencyBalances?.savingsHolder?.[nationalCurrency];
     const holderIsCentralBank =
@@ -154,10 +157,20 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     );
     const pendingInterest =
       character.currencyBalances?.pendingSavingsInterest?.[nationalCurrency] ?? 0;
-    const turnsUntilCredit = turnsUntilSavingsCredit(gameState?.currentTurn ?? 0);
+    const creditIntervalTurns =
+      savingsHolderType === "private-bank" &&
+      savingsReadsAuthoritative(bankingPolicy, nationalCurrency)
+        ? 1
+        : SAVINGS_CREDIT_INTERVAL_TURNS;
+    const turnsUntilCredit =
+      creditIntervalTurns === 1 ? 1 : turnsUntilSavingsCredit(gameState?.currentTurn ?? 0);
+    const eligibleBalance =
+      savingsHolderType === "central-bank"
+        ? interestEligibleBalance(savingsBalance, bank?.nationalSavingsBalance ?? 0)
+        : savingsBalance;
     const estimatedAccrualThisTurn =
       forexEnabled && savingsBalance > 0
-        ? estimateSavingsAccrualFromApy(savingsBalance, accrualApyPercent, nationalCurrency)
+        ? estimateSavingsAccrualFromApy(eligibleBalance, accrualApyPercent, nationalCurrency)
         : 0;
 
     return NextResponse.json({
@@ -165,7 +178,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       currencyCode: nationalCurrency,
       primeRate,
       inflationRate,
-      apyPercent,
+      apyPercent: Math.round(apyPercent * 100) / 100,
+      creditIntervalTurns,
+      interestEligibleBalance: eligibleBalance,
       savingsHolderType,
       savingsHolderName,
       centralBankDepositBonusPercentPoints: centralBankPricing.depositBonusPercentPoints,

@@ -11,7 +11,7 @@
  */
 import type { AnyBulkWriteOperation } from "mongodb";
 import type { Db } from "@/lib/mongodb";
-import type { LegislationType, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import { deriveDomainPositions } from "@/lib/npp/domainPositions";
 import { nppStanceTarget } from "@/lib/npp/stanceTarget";
 import { getNppsCollection } from "@/lib/db/collections/npps";
@@ -63,7 +63,7 @@ export async function processNppStanceDrift(
     await getNppsCollection(db)
   )
     .find(
-      { retiredAt: null },
+      { retiredAt: null, lastStanceDriftTurn: { $not: { $gte: currentTurn } } },
       {
         projection: {
           _id: 1,
@@ -154,12 +154,18 @@ export async function processNppStanceDrift(
     );
     ops.push({
       updateOne: {
-        filter: { _id: npp._id },
+        filter: {
+          _id: npp._id,
+          lastStanceDriftTurn: { $not: { $gte: currentTurn } },
+          "policies.economic": npp.policies?.economic ?? { $exists: false },
+          "policies.social": npp.policies?.social ?? { $exists: false },
+        },
         update: {
           $set: {
             "policies.economic": economic,
             "policies.social": social,
             "policies.domainPositions": domainPositions,
+            lastStanceDriftTurn: currentTurn,
             updatedAt: now,
           },
         },
@@ -171,8 +177,10 @@ export async function processNppStanceDrift(
   // bulkWrite crosses MongoDB's 16MB BSON command limit at scale, and the phase
   // throw is downgraded to a warning so drift silently stops. Chunking keeps
   // command size bounded as NPP count grows.
+  let drifted = 0;
   for (let i = 0; i < ops.length; i += STANCE_DRIFT_BULK_CHUNK) {
-    await nppsCollection(db).bulkWrite(ops.slice(i, i + STANCE_DRIFT_BULK_CHUNK));
+    drifted += (await nppsCollection(db).bulkWrite(ops.slice(i, i + STANCE_DRIFT_BULK_CHUNK)))
+      .modifiedCount;
   }
-  return { drifted: ops.length };
+  return { drifted };
 }

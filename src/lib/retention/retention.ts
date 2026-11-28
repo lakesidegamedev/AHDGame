@@ -1,3 +1,5 @@
+import { BSON } from "mongodb";
+import { archivedDeletionFilter } from "./rules/archivedDeletionFilter";
 /**
  * Retention orchestrator: archive old history rows to R2, then delete or
  * downsample them per {@link RETENTION_POLICIES}.
@@ -185,6 +187,29 @@ export async function runRetention(
         policy.mode === RetentionMode.ARCHIVE_ONLY_NO_DELETE
           ? base
           : del;
+      let deletedCount = 0;
+      const removeArchived = async (snapshots: Document[]) => {
+        const currentGuards = policy.guard ? await guardIds(db, policy) : [];
+        const currentDeleteFilter = deleteFilter(policy, base, cutoff, currentGuards);
+        let group: Document[] = [],
+          bytes = 0;
+        const removeGroup = async () => {
+          if (!group.length) return;
+          const result = await col.deleteMany(archivedDeletionFilter(currentDeleteFilter, group));
+          deletedCount += result.deletedCount ?? 0;
+          group = [];
+          bytes = 0;
+        };
+        for (const snapshot of snapshots) {
+          const size = BSON.calculateObjectSize(snapshot) + 200;
+          // A large document remains online rather than exceeding Mongo's command limit.
+          if (size > 4_000_000) continue;
+          if (bytes + size > 4_000_000) await removeGroup();
+          group.push(snapshot);
+          bytes += size;
+        }
+        await removeGroup();
+      };
       const archived = await archiveDocs({
         db,
         dbName: db.databaseName,
@@ -192,13 +217,15 @@ export async function runRetention(
         filter: archiveSet,
         cutoff,
         stamp,
+        ...(policy.mode !== RetentionMode.ARCHIVE_ONLY_NO_DELETE
+          ? { onArchivedBatch: removeArchived }
+          : {}),
       });
       res.archivedCount = archived.archivedCount;
       res.archiveKeys = archived.keys;
 
       if (policy.mode !== RetentionMode.ARCHIVE_ONLY_NO_DELETE) {
-        const dr = await col.deleteMany(del);
-        res.deletedCount = dr.deletedCount ?? 0;
+        res.deletedCount = deletedCount;
         if (opts.compact) {
           await db.command({ compact: policy.collection }).catch(() => {});
           res.compacted = true;

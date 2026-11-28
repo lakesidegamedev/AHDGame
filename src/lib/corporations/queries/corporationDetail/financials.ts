@@ -1,4 +1,7 @@
-import { historyBondSettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
+import {
+  historyBondSettlementUnavailable,
+  historySettlementUnavailable,
+} from "@/lib/corporations/rules/historyFinancials";
 import {
   realizedNetIncomePerTurn,
   historyIncomeBase,
@@ -93,7 +96,9 @@ export function buildFinancials(inputs: FinancialsInputs) {
   );
 
   return {
-    historicalIncomeUnavailable: portfolio.historicalIncomeUnavailable,
+    historicalIncomeUnavailable:
+      portfolio.historicalIncomeUnavailable ||
+      (latestCorpIncomeRow != null && historySettlementUnavailable(latestCorpIncomeRow)),
     historicalBondFeesUnavailable:
       latestCorpIncomeRow != null && historyBondSettlementUnavailable(latestCorpIncomeRow),
     totalRevenue: Math.round(totals.totalRevenue),
@@ -132,8 +137,8 @@ export function buildFinancials(inputs: FinancialsInputs) {
     bondCouponIncome: Math.round(inc.dailyCouponIncomeLocal),
     dividendIncomeReceived: portfolio.dividendIncomeReceivedDaily,
     governmentBondSubsidy: Math.round(inc.governmentBondSubsidyLocal),
-    imfFacilityPaymentDaily: Math.round(inc.imfFacilityPaymentDailyLocal),
-    imfFacilityReceiptsDaily: Math.round(inc.imfFacilityReceiptsDailyLocal),
+    imfFacilityInterestPaidDaily: Math.round(inc.imfFacilityInterestPaidDailyLocal),
+    imfFacilityInterestReceivedDaily: Math.round(inc.imfFacilityInterestReceivedDailyLocal),
     supplyAgreementSettlementDaily: portfolio.supplyAgreementSettlementDaily,
     supplyAgreementUnpaidAnchor: portfolio.supplyAgreementUnpaidAnchor,
     totalCosts: Math.round(inc.totalCostsLocal),
@@ -147,7 +152,8 @@ export function buildFinancials(inputs: FinancialsInputs) {
     // Ground-truth realized net income from the engine's last snapshot,
     // converted from per-turn to daily display units. Reflects embargo, tariff
     // and clearing haircuts the projection above cannot fully reproduce.
-    ...(typeof latestCorpIncomeRow?.income === "number"
+    ...(typeof latestCorpIncomeRow?.income === "number" &&
+    !historySettlementUnavailable(latestCorpIncomeRow)
       ? {
           // Matches the Financials headline (operating + bond coupons −
           // bond interest + dividends received): history.income is

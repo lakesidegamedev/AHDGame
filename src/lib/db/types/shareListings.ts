@@ -2,6 +2,8 @@ import type { ObjectId } from "mongodb";
 import type { ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 
 export interface ShareListing {
+  /** Changes with each committed offer so expiry cannot miss newly held escrow. */
+  offerRevision?: number;
   activeShareFillKey?: string;
   lastShareFillKey?: string;
   /** Personal inventory held in escrow, including purchase ages and cost basis. */

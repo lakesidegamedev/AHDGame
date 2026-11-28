@@ -62,6 +62,7 @@ import {
   CorporationTurnStepRefusedError,
   runJournaledStep,
   runJournaledStepWithOutput,
+  readJournal,
   type JournalContext,
 } from "./resume/journal";
 import { resilienceStageOf } from "./resume/rules";
@@ -249,17 +250,15 @@ export async function settleCorporationTurnPayouts({
   // reflects this turn's result, within the corp turn so metric writes
   // precede the late state-metrics phase.
   mark("acumen+fxSpread+newSectors");
-  const soeSweepAudit = await runJournaledStepWithOutput(journal, "soeBackingSweep", "refuse", () =>
-    runSoeBackingSweep({
-      db,
-      now,
-      turn: turn ?? gameState?.currentTurn,
-      currentYear,
-      corpSnapshots,
-      corpById: lookups.corpById,
-      mark,
-    })
-  );
+  const soeSweepAudit = await runSoeBackingSweep({
+    db,
+    now,
+    turn: turn ?? gameState?.currentTurn,
+    currentYear,
+    corpSnapshots,
+    corpById: lookups.corpById,
+    mark,
+  });
   if (soeSweepAudit) corpAuditEntries.push(soeSweepAudit);
 
   // Phase 3b: R&D innovation, every 6 turns, corps with accumulated R&D score
@@ -331,12 +330,13 @@ export async function settleCorporationTurnPayouts({
   // supplier is credited and the buyer debited the same ₳ premium delta.
   if (supplyAgreementsEnabled && settleableAgreements && settleableAgreements.length > 0) {
     try {
+      const legacyStep = (await readJournal(journal))?.phases?.supplyAgreementSettlement;
       const { settledCount, settledPremiums } = await runJournaledStepWithOutput(
         journal,
-        "supplyAgreementSettlement",
-        "refuse",
-        () =>
-          settleSupplyAgreements({
+        legacyStep ? "supplyAgreementSettlement" : "supplyAgreementSettlementV2",
+        legacyStep ? "refuse" : "rerun",
+        async () => {
+          const settled = await settleSupplyAgreements({
             db,
             lookups,
             agreements: settleableAgreements,
@@ -359,7 +359,9 @@ export async function settleCorporationTurnPayouts({
             turn: turn ?? 0,
             now,
             thresholds,
-          })
+          });
+          return { settledCount: settled.settledCount, settledPremiums: settled.settledPremiums };
+        }
       );
       if (settledCount > 0) {
         console.log(`[corporationTurn] settled ${settledCount} supply-agreement premium(s)`);
@@ -368,7 +370,7 @@ export async function settleCorporationTurnPayouts({
       // C5: intra-group cross-border pricing. Runs off the same settled premiums
       // rather than re-deriving them, so what the tax authority sees is exactly
       // what the contract priced. Best-effort.
-      if (settledPremiums.length > 0) {
+      {
         try {
           const { applyTransferPricingAudit } =
             await import("@/lib/corporations/groups/applyTransferPricingAudit");
@@ -474,7 +476,7 @@ export async function settleCorporationTurnPayouts({
   if (typeof turn === "number") {
     try {
       const { applyGroupSynergies } = await import("@/lib/corporations/groups/applySynergies");
-      const synergies = await runJournaledStepWithOutput(journal, "groupSynergies", "refuse", () =>
+      const synergies = await runJournaledStepWithOutput(journal, "groupSynergies", "rerun", () =>
         applyGroupSynergies(db, turn)
       );
       if (synergies.corpsLifted > 0) {

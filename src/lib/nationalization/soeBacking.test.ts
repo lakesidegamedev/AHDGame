@@ -488,8 +488,10 @@ describe("corporationHistory persistence", () => {
         if (name === "corporationHistory") {
           return {
             aggregate: () => ({ toArray: async () => [] }),
-            insertMany: async (docs: Record<string, unknown>[]) => {
-              inserted.push(...docs);
+            bulkWrite: async (
+              ops: { updateOne: { update: { $setOnInsert: Record<string, unknown> } } }[]
+            ) => {
+              inserted.push(...ops.map((op) => op.updateOne.update.$setOnInsert));
               return {};
             },
           };

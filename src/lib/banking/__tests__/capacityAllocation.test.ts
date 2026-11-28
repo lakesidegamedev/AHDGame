@@ -8,7 +8,6 @@ import {
   financialSectorCapacityUnits,
   getBranchCapacityShare,
 } from "../capacityAllocation";
-import type { BankCharter } from "@/lib/db/types/bank";
 
 describe("capacityAllocation pure math", () => {
   it("defaults unset branchCapacityShare to 0.5", () => {
@@ -53,4 +52,15 @@ describe("capacityAllocation pure math", () => {
     expect(MIN_BRANCH_CAPACITY_SHARE).toBe(0.1);
     expect(MAX_BRANCH_CAPACITY_SHARE).toBe(0.9);
   });
+  it.each([0, -1, NaN, Infinity])(
+    "does not count undelivered or invalid explicit stock %s as revenue-based capacity",
+    (stock) => {
+      expect(
+        financialSectorCapacityUnits(
+          { capitalStock: stock, revenue: 1000000, sectorType: "financial" },
+          1
+        )
+      ).toBe(0);
+    }
+  );
 });

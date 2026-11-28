@@ -3,11 +3,9 @@ import { loadTxThresholds, emitTxBulk } from "@/lib/financialTxLog/emit";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import type { Bond, Character } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
-import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
-import { perTurnCouponPayment } from "@/lib/constants/bonds";
-import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
+
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { resolveBondCurrency } from "./bondTurnHelpers";
+
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
@@ -41,10 +39,18 @@ export const BOND_HISTORY_INTEREST_INDEX_KEY = { bondId: 1, totalInterestPaid: -
  */
 export async function loadPriorBondInterest(
   db: Db,
-  bondIds: ObjectId[]
+  bondIds: ObjectId[],
+  beforeTurn?: number,
+  settledOnly = false
 ): Promise<Array<{ _id: ObjectId; maxInterest: number }>> {
   const collection = bondHistoryCollection<Document>(db);
-  const match = { $match: { bondId: { $in: bondIds } } };
+  const match = {
+    $match: {
+      bondId: { $in: bondIds },
+      ...(beforeTurn === undefined ? {} : { turn: { $lt: beforeTurn } }),
+      ...(settledOnly ? { interestPaidSource: "settlement" } : {}),
+    },
+  };
   try {
     return await collection
       .aggregate<{ _id: ObjectId; maxInterest: number }>(
@@ -74,11 +80,12 @@ export async function loadPriorBondInterest(
 export async function snapshotBondHistory(args: {
   db: Db;
   activeBonds: Bond[];
+  paidInterestAnchorByBond?: ReadonlyMap<string, number>;
   fxByCurrency: Map<CurrencyCode, number>;
   turn: number;
   now: Date;
 }): Promise<number> {
-  const { db, activeBonds, fxByCurrency, turn, now } = args;
+  const { db, turn, now } = args;
   // Get updated bonds after all price changes
   const updatedBonds = await bondsCollection(db)
     .find({ matured: false })
@@ -88,41 +95,35 @@ export async function snapshotBondHistory(args: {
   // Calculate cumulative interest paid per bond from existing history
   const existingHistory = await loadPriorBondInterest(
     db,
-    updatedBonds.map((b) => b._id as ObjectId)
+    updatedBonds.map((b) => b._id as ObjectId),
+    turn,
+    true
   );
   const prevInterestMap = new Map(existingHistory.map((h) => [h._id.toString(), h.maxInterest]));
-  const activeBondById = new Map(activeBonds.map((bond) => [bond._id.toString(), bond]));
 
   if (updatedBonds.length > 0) {
     const historyDocs = updatedBonds.map((bond) => {
-      // Find this bond's coupon cost this turn from all active bonds.
-      // `couponPerUnit × totalUnits` is LOCAL (bond.currencyCode per Task-18B).
-      // Anchor-normalize before accumulating `totalInterestPaid` so cross-bond
-      // aggregations at read time can sum in ₳ without mixing currencies. (A16)
-      const originalBond = activeBondById.get(bond._id.toString());
-      const couponPerUnitLocal = originalBond
-        ? perTurnCouponPayment(originalBond.couponRate, BOND_UNIT_FACE_VALUE)
-        : 0;
-      const bondCcy = originalBond ? resolveBondCurrency(originalBond) : undefined;
-      const bondFxRate = bondCcy ? (fxByCurrency.get(bondCcy) ?? 1) : 1;
-      const couponPerUnitAnchor = corpCapitalToAnchor(couponPerUnitLocal, bondCcy, bondFxRate);
-      const totalUnits = originalBond
-        ? originalBond.holders.reduce((sum, h) => sum + h.units, 0)
-        : 0;
-      const turnInterestAnchor = couponPerUnitAnchor * totalUnits;
+      const turnInterestAnchor = args.paidInterestAnchorByBond?.get(String(bond._id)) ?? 0;
       const prevInterest = prevInterestMap.get(bond._id.toString()) ?? 0;
 
       return {
         bondId: bond._id,
         turn,
         marketPrice: bond.marketPrice,
+        interestPaidSource: "settlement",
         totalInterestPaid: Math.round((prevInterest + turnInterestAnchor) * 100) / 100,
         createdAt: now,
       };
     });
-    // Unordered: a duplicate on a retried turn must not stop the other live
-    // bond snapshots from landing.
-    await bondHistoryCollection<Document>(db).insertMany(historyDocs, { ordered: false });
+    await bondHistoryCollection<Document>(db).bulkWrite(
+      historyDocs.map((doc) => ({
+        updateOne: {
+          filter: { bondId: doc.bondId, turn: doc.turn },
+          update: { $setOnInsert: { _id: `bond-history:${doc.bondId}:${doc.turn}`, ...doc } },
+          upsert: true,
+        },
+      }))
+    );
   }
 
   return updatedBonds.length;

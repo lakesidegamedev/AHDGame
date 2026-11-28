@@ -2,7 +2,7 @@
 import { deriveCeoArchetype } from "@/lib/turn/ceoArchetype";
 import type { Db, ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { StatePartyOrg, NPP } from "@/lib/db/types";
+import type { NPP } from "@/lib/db/types";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import {
   preloadNppBuildOrgSweepCache,
@@ -21,7 +21,7 @@ import {
   OPPORTUNITY_SELL_CAP,
 } from "@/lib/nppAutonomy/v6/rules/opportunityInvesting";
 import { loadPrivateEnterpriseBlockedCountries } from "@/lib/economy/queries/privateEnterpriseGate";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+
 import {
   foundingShortagePressure,
   foundingSweepCap,
@@ -361,9 +361,9 @@ export async function sellNppStockSurplus(
     groupInOrder(sales, (sale) => equityPoolCurrency(sale.corp)),
     NPP_SWEEP_PARTITION_CONCURRENCY,
     async (currencySales) => {
-      for (const { corp, holding, nppId, countryId, sharesToSell, homeRate } of currencySales) {
+      for (const { corp, nppId, countryId, sharesToSell, homeRate } of currencySales) {
         // Proceeds credit nppInvestmentCashAnchor (the forex account), not funds.
-        const result = await nppSellShares(
+        await nppSellShares(
           db,
           { _id: nppId, countryId },
           corp._id,
@@ -373,10 +373,6 @@ export async function sellNppStockSurplus(
           corp,
           preset
         );
-        if (result.ok) {
-          corp.publicFloat = (corp.publicFloat ?? 0) + sharesToSell;
-          holding.shares -= sharesToSell;
-        }
       }
     }
   );

@@ -1,3 +1,15 @@
+import { afterCommit } from "@/lib/db/sessionDb";
+import { logger } from "@/lib/observability/logger";
+async function afterInfluenceCommit(db: import("mongodb").Db, effect: () => Promise<unknown>) {
+  await afterCommit(db, async () => {
+    try {
+      await effect();
+    } catch (error) {
+      logger.warn("influence", "Notification failed", { error });
+    }
+  });
+}
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Player influence boosts. Barnstorm raises political influence and support or attack shifts favorability.
  * Costs use the actor's equivalent self-action quotes with a premium; see executeSimpleInfluence.
@@ -5,7 +17,7 @@
 
 import { loadNationalGdpPerCapita } from "@/lib/campaigns/nationalGdpBasis";
 import { ObjectId, Db } from "mongodb";
-import type { Campaign, Character, Election, GameConfig, NPP, State } from "@/lib/db/types";
+import type { Character, NPP } from "@/lib/db/types";
 import { getGameState } from "@/lib/gameState";
 import { getActionCostMultiplier } from "@/lib/states/adjacency";
 import { createNotification } from "@/lib/notifications";
@@ -276,7 +288,7 @@ export async function getSimpleInfluenceInfo(
   targetType: TargetType,
   forexEnabled = false
 ): Promise<{ info?: SimpleInfluenceInfo; error?: { message: string; status: number } }> {
-  const gameState = await getGameState();
+  const gameState = await getGameState(db);
   const homeFxRate = forexEnabled
     ? (await loadCharacterFxRate(db, getHomeCurrency(myCharacter))).rate
     : 1;
@@ -372,7 +384,7 @@ export async function getSimpleInfluenceInfo(
 /**
  * Execute a simple influence action (raise or lower)
  */
-export async function executeSimpleInfluence(
+async function executeSimpleInfluenceInTransaction(
   db: Db,
   userId: string,
   myCharacter: Character,
@@ -384,7 +396,7 @@ export async function executeSimpleInfluence(
   // Match executeAction: block support/attack/barnstorm while the world is paused.
   // Without this, reputation attacks stayed executable during admin stop / pre-launch
   // pause even though Actions-page spends were already gated on isActive.
-  const gameState = await getGameState();
+  const gameState = await getGameState(db);
   if (gameState && gameState.isActive === false) {
     return { error: { message: "The game is currently paused.", status: 409 } };
   }
@@ -576,13 +588,15 @@ export async function executeSimpleInfluence(
     if (targetType === "character") {
       const targetChar = target as Character;
       if (targetChar.userId) {
-        await createNotification({
-          userId: targetChar.userId,
-          type: "player_support",
-          title: "Campaign Barnstorm!",
-          message: `${myCharacter.name} barnstormed for you! (+${influenceGain}% influence).`,
-          metadata: { attackerId: myCharacter._id.toString(), attackerName: myCharacter.name },
-        });
+        await afterInfluenceCommit(db, () =>
+          createNotification({
+            userId: targetChar.userId,
+            type: "player_support",
+            title: "Campaign Barnstorm!",
+            message: `${myCharacter.name} barnstormed for you! (+${influenceGain}% influence).`,
+            metadata: { attackerId: myCharacter._id.toString(), attackerName: myCharacter.name },
+          })
+        );
       }
     }
 
@@ -736,21 +750,25 @@ export async function executeSimpleInfluence(
     const targetChar = target as Character;
     if (targetChar.userId) {
       if (action === "raise") {
-        await createNotification({
-          userId: targetChar.userId,
-          type: "player_support",
-          title: "You received support",
-          message: `${myCharacter.name} supported your reputation (+1%).`,
-          metadata: { attackerId: myCharacter._id.toString(), attackerName: myCharacter.name },
-        });
+        await afterInfluenceCommit(db, () =>
+          createNotification({
+            userId: targetChar.userId,
+            type: "player_support",
+            title: "You received support",
+            message: `${myCharacter.name} supported your reputation (+1%).`,
+            metadata: { attackerId: myCharacter._id.toString(), attackerName: myCharacter.name },
+          })
+        );
       } else if (!attackFailed) {
-        await createNotification({
-          userId: targetChar.userId,
-          type: "player_attack",
-          title: "You were attacked",
-          message: `${myCharacter.name} attacked your reputation (−1%).`,
-          metadata: { attackerId: myCharacter._id.toString(), attackerName: myCharacter.name },
-        });
+        await afterInfluenceCommit(db, () =>
+          createNotification({
+            userId: targetChar.userId,
+            type: "player_attack",
+            title: "You were attacked",
+            message: `${myCharacter.name} attacked your reputation (−1%).`,
+            metadata: { attackerId: myCharacter._id.toString(), attackerName: myCharacter.name },
+          })
+        );
       }
     }
   }
@@ -795,4 +813,26 @@ function getUserMessage(
   if (attackFailed)
     return `Your attack on ${targetName} failed! Your infamy preceded you. (+2% infamy)`;
   return `You attacked ${targetName}'s reputation (-1% favorability, +2% infamy to you)`;
+}
+
+export async function executeSimpleInfluence(
+  db: Db,
+  userId: string,
+  myCharacter: Character,
+  targetId: string,
+  targetType: TargetType,
+  action: "raise" | "lower" | "barnstorm",
+  forexEnabled = false
+) {
+  return withSessionDb(db, (tx) =>
+    executeSimpleInfluenceInTransaction(
+      tx,
+      userId,
+      myCharacter,
+      targetId,
+      targetType,
+      action,
+      forexEnabled
+    )
+  );
 }

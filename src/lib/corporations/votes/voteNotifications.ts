@@ -12,7 +12,7 @@ export function proposalSummary(vote: CorporationVote): string {
     case "dissolution":
       return "dissolve the corporation";
     case "relocation":
-      return `relocate HQ to ${vote.payload.destinationCountryId ?? "new country"}`;
+      return `authorize a paid HQ relocation to ${vote.payload.destinationCountryId ?? "new country"}`;
     case "share_issuance":
       return `issue ${vote.payload.newShareCount?.toLocaleString() ?? "?"} new shares`;
     case "adopt_supershares":

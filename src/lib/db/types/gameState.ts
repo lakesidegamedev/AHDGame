@@ -91,6 +91,8 @@ export interface IterationStampFields {
 }
 
 export interface GameState {
+  /** Changed by atomic player actions so turn acquisition cannot overlap their writes. */
+  economicCommandRevision?: number;
   /** Set only after the stock holding and capital-gains migration completes. */
   stockHoldingTaxStartTurn?: number;
   /**
@@ -478,6 +480,8 @@ export interface GameState {
   sectorTechTreesEnabledAt?: string;
   /** Reset-era metrics engine. Absent and invalid values run the live v1 path. */
   /** Changes on every world reset; an opening-seed receipt is valid only for this world. */
+  /** Admission token preventing turn acquisition during world teardown and bootstrap. */
+  resetAdmissionId?: string | null;
   resetWorldId?: string;
   /** Per-system, per-world proof that v2 data was populated and verified. */
   resetVersionSeeds?: Partial<Record<ResetSystem, ResetSystemSeedReceipt>>;

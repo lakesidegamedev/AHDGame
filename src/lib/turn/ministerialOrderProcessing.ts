@@ -436,14 +436,14 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     // delivery is: materiel has to arrive before it can be issued. A no-op for every
     // country not on the state-arms roster.
     const knownUnits = defenseUnitsByCountry.get(cid) ?? [];
-    await applyStateArmsProduction(db, cid, knownUnits);
+    await applyStateArmsProduction(db, cid, knownUnits, currentTurn);
     // Before refit, and deliberately so: a wreck restored to service is worth far more per
     // lot than topping up a working hull's racks, which `computeEffectivePower` caps at a
     // few percent. When the store is short, the lots go where they buy the most fighting
     // strength. Free repair has already run this turn in the naval and air pass, so this
     // is buying only what the ceiling there would not give away.
-    await applyNavalRepair(db, cid, knownUnits);
-    await applyDefenceRefit(db, cid, knownUnits);
+    await applyNavalRepair(db, cid, knownUnits, currentTurn);
+    await applyDefenceRefit(db, cid, knownUnits, currentTurn);
     // Nuclear stockpile accrual, right after refit so it competes for the same
     // appropriation AFTER conventional deliveries have settled: a nation short
     // of rifles equips the army before it grows the arsenal of last resort.
@@ -535,7 +535,7 @@ export async function processMinisterialOrders(currentTurn: number): Promise<{
     reinforcementUnitsByCountry.set(unit.countryId, units);
   }
   for (const cid of Object.keys(DEFENSE_POSITION_BY_COUNTRY)) {
-    await applyReinforcement(db, cid, reinforcementUnitsByCountry.get(cid) ?? []);
+    await applyReinforcement(db, cid, reinforcementUnitsByCountry.get(cid) ?? [], currentTurn);
   }
 
   // 4c. Cabinet estates — per in-scope (country, seat): domestic estates tilt their

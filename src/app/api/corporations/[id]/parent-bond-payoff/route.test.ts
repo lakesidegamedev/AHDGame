@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 /**
  * Regression tests for POST /api/corporations/[id]/parent-bond-payoff —
  * specifically the financial-ledger emission added to fix the gap where
@@ -24,12 +42,12 @@ vi.mock("@/lib/currency/featureFlag", () => ({
 vi.mock("@/lib/corporations/settlementLock", () => ({
   withCorporationSettlementLock: vi.fn(
     async (
-      _db: unknown,
+      db: unknown,
       _corpId: unknown,
       _field: unknown,
       _now: unknown,
-      run: () => Promise<unknown>
-    ) => run()
+      run: (db: unknown) => Promise<unknown>
+    ) => run(db)
   ),
 }));
 vi.mock("@/lib/corporations/corporateOwnership", () => ({
@@ -460,7 +478,7 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — ledger emission", (
  * money-safe via explicit compensation — instead of returning the old 503
  * ("requires MongoDB transactions; run against a replica set").
  */
-describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback", () => {
+describe("POST /api/corporations/[id]/parent-bond-payoff — unsupported transactions", () => {
   /** A mongo client whose transactions are rejected as on a standalone mongod. */
   function mockStandaloneClient() {
     const err = Object.assign(new Error("Transaction numbers are only allowed on a replica set"), {
@@ -496,7 +514,7 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback
     return { parentCorpId, targetCorpId, target, parent };
   }
 
-  it("falls back to sequential writes and completes the payoff (no replica set)", async () => {
+  it("refuses unsupported transactions before paying any holder", async () => {
     const { parentCorpId, targetCorpId, target, parent } = makeParentAndTarget();
     const charId = new ObjectId();
     const bondId = new ObjectId();
@@ -543,22 +561,13 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback
     );
     const { POST } = await import("./route");
     const res = await POST(req, { params: Promise.resolve({ id: targetCorpId.toString() }) });
-    expect(res.status).toBe(200);
-
-    // Parent was debited once (no compensating refund on success).
-    const debitCalls = db.collectionMocks["corporations"]!.updateOne.mock.calls;
-    expect(debitCalls).toHaveLength(1);
-    expect(
-      (debitCalls[0][1] as { $inc?: { liquidCapital?: number } }).$inc?.liquidCapital
-    ).toBeLessThan(0);
-    // Holder credited, bonds matured, ledger emitted.
-    expect(db.collectionMocks["characters"]!.bulkWrite).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks["bonds"]!.updateMany).toHaveBeenCalledTimes(1);
-    const { emitTxBulk } = await import("@/lib/financialTxLog/emit");
-    expect(vi.mocked(emitTxBulk)).toHaveBeenCalled();
+    expect(res.status).toBe(500);
+    expect(db.collectionMocks["corporations"]!.updateOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["characters"]!.bulkWrite).not.toHaveBeenCalled();
+    expect(db.collectionMocks["bonds"]!.updateMany).not.toHaveBeenCalled();
   });
 
-  it("refunds the parent debit when a credit fails mid-sequence (money-safe)", async () => {
+  it("refuses unsupported transactions before debiting the parent", async () => {
     const { parentCorpId, targetCorpId, target, parent } = makeParentAndTarget();
     const charId = new ObjectId();
 
@@ -610,14 +619,7 @@ describe("POST /api/corporations/[id]/parent-bond-payoff — standalone fallback
     const res = await POST(req, { params: Promise.resolve({ id: targetCorpId.toString() }) });
     expect(res.status).toBe(500);
 
-    // Two updateOne calls on corporations: the debit, then a compensating refund
-    // that exactly reverses it — net zero money movement on the parent.
-    const calls = db.collectionMocks["corporations"]!.updateOne.mock.calls;
-    expect(calls).toHaveLength(2);
-    const debit = (calls[0][1] as { $inc?: { liquidCapital?: number } }).$inc?.liquidCapital ?? 0;
-    const refund = (calls[1][1] as { $inc?: { liquidCapital?: number } }).$inc?.liquidCapital ?? 0;
-    expect(debit).toBeLessThan(0);
-    expect(refund).toBeCloseTo(-debit);
+    expect(db.collectionMocks["corporations"]!.updateOne).not.toHaveBeenCalled();
     // Bonds never matured; no ledger rows emitted for a rolled-back payoff.
     expect(db.collectionMocks["bonds"]!.updateMany).not.toHaveBeenCalled();
     const { emitTxBulk } = await import("@/lib/financialTxLog/emit");

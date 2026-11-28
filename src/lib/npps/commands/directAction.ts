@@ -1,17 +1,10 @@
+import { withSessionDb, runWithDbSession } from "@/lib/db/sessionDb";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
-import type {
-  CapitalActionLog,
-  Election,
-  ElectionCandidate,
-  GameState,
-  NPP,
-  NPPEndorsement,
-  NPPRelationship,
-} from "@/lib/db/types";
+
+import type { CapitalActionLog } from "@/lib/db/types";
 import {
   buildCapitalActionPlan,
   validateCapitalAction,
@@ -31,19 +24,13 @@ import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { nppsCollection } from "@/lib/db/repositories/npps";
 import { electionsCollection } from "@/lib/db/repositories/elections";
 import { electionCandidatesCollection } from "@/lib/db/repositories/electionCandidates";
-import { nppEndorsementsCollection } from "@/lib/db/repositories/nppEndorsements";
+
 import { nppRelationshipsCollection } from "@/lib/db/repositories/nppRelationships";
 import { capitalActionLogsCollection } from "@/lib/db/repositories/capitalActionLogs";
 
 export class DirectActionBalanceConflictError extends Error {}
 
-interface DirectActionRollbackSnapshot {
-  relationship: NPPRelationship | null;
-  endorsementElectionId?: ObjectId;
-  endorsements?: NPPEndorsement[];
-}
-
-export async function applyNppDirectAction(
+async function applyNppDirectActionInTransaction(
   db: Db,
   {
     nppId,
@@ -313,77 +300,8 @@ export async function applyNppDirectAction(
     };
   };
 
-  const remainingBalances = await runWithOptionalTransaction(
-    async (session) => applyDirectAction(session),
-    async () => {
-      const rollbackSnapshot: DirectActionRollbackSnapshot = { relationship: relationshipDoc };
-      if (plan.sideEffects.createEndorsement) {
-        const candidacy = await electionCandidatesCollection(db).findOne({
-          _id: new ObjectId(plan.sideEffects.createEndorsement.candidacyId),
-        });
-        if (candidacy) {
-          rollbackSnapshot.endorsementElectionId = candidacy.electionId;
-          rollbackSnapshot.endorsements = await nppEndorsementsCollection(db)
-            .find({ nppId, electionId: candidacy.electionId })
-            .toArray();
-        }
-      }
-
-      let actionSpent = false;
-      try {
-        return await applyDirectAction(undefined, () => {
-          actionSpent = true;
-        });
-      } catch (error) {
-        if (actionSpent) {
-          await charactersCollection(db).updateOne(
-            { _id: characterId },
-            {
-              $inc: {
-                actions: plan.actionCost,
-                [campaignFundsField]: fundCostLocal,
-              },
-            }
-          );
-        }
-        if (rollbackSnapshot.relationship) {
-          await nppRelationshipsCollection(db).replaceOne(
-            { _id: relationshipKey },
-            rollbackSnapshot.relationship,
-            {
-              upsert: true,
-            }
-          );
-        } else {
-          await nppRelationshipsCollection(db).deleteOne({ _id: relationshipKey });
-        }
-        if (
-          plan.sideEffects.favorabilityDelta !== undefined ||
-          plan.sideEffects.politicalInfluenceDelta !== undefined
-        ) {
-          await nppsCollection(db).updateOne(
-            { _id: nppId },
-            {
-              $set: {
-                favorability: npp.favorability,
-                politicalInfluence: npp.politicalInfluence,
-                updatedAt: npp.updatedAt,
-              },
-            }
-          );
-        }
-        if (rollbackSnapshot.endorsementElectionId) {
-          await nppEndorsementsCollection(db).deleteMany({
-            nppId,
-            electionId: rollbackSnapshot.endorsementElectionId,
-          });
-          if ((rollbackSnapshot.endorsements?.length ?? 0) > 0) {
-            await nppEndorsementsCollection(db).insertMany(rollbackSnapshot.endorsements!);
-          }
-        }
-        throw error;
-      }
-    }
+  const remainingBalances = await runWithDbSession(db, async (session) =>
+    applyDirectAction(session)
   );
 
   const homeCurrency = getHomeCurrency(characterDoc);
@@ -410,4 +328,11 @@ export async function applyNppDirectAction(
       delta: relationshipDelta,
     },
   } as const;
+}
+
+export async function applyNppDirectAction(
+  db: Db,
+  input: Parameters<typeof applyNppDirectActionInTransaction>[1]
+) {
+  return withSessionDb(db, (tx) => applyNppDirectActionInTransaction(tx, input));
 }

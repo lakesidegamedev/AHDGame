@@ -1,3 +1,7 @@
+vi.mock("@/lib/corporations/shareCancellationTransaction", () => ({
+  withShareCancellationTransaction: (db: unknown, work: (db: unknown) => Promise<unknown>) =>
+    work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -10,7 +14,8 @@ vi.mock("@/lib/corporations/shareholderOps", () => ({
   debitSharesFromCorp: vi.fn(),
 }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
-  emitTx: vi.fn().mockResolvedValue(undefined),
+  emitTxBulk: vi.fn().mockResolvedValue(undefined),
+  loadTxThresholds: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("@/lib/turn/currentTurn", () => ({
   getCurrentTurn: vi.fn().mockResolvedValue(23),
@@ -21,6 +26,13 @@ let db: MockDb;
 beforeEach(() => {
   db = createMockDb();
   vi.clearAllMocks();
+  for (const name of ["shareOffers", "characters", "corporations"]) {
+    db.collection(name);
+    db.collectionMocks[name].bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+      matchedCount: ops.length,
+      modifiedCount: ops.length,
+    }));
+  }
 });
 
 describe("cancelShareListingAndRefund", () => {
@@ -50,10 +62,7 @@ describe("cancelShareListingAndRefund", () => {
       } as never)
     ).rejects.toThrow("restore seller shares");
     expect(debitShares).not.toHaveBeenCalled();
-    expect(db.collectionMocks.shareListings.updateOne).toHaveBeenLastCalledWith(
-      { _id: id, status: "cancelled" },
-      expect.objectContaining({ $set: expect.objectContaining({ status: "open" }) })
-    );
+    expect(db.collectionMocks.shareListings.updateOne).toHaveBeenCalledTimes(1);
   });
   it("restores the listing when buyer FX data is unavailable", async () => {
     const listingId = new ObjectId();
@@ -79,7 +88,7 @@ describe("cancelShareListingAndRefund", () => {
       .mockResolvedValueOnce({ matchedCount: 1 });
 
     db.collection("shareOffers");
-    db.collectionMocks["shareOffers"].find.mockReturnValueOnce({
+    db.collectionMocks["shareOffers"].find.mockReturnValue({
       toArray: async () => [
         {
           _id: new ObjectId(),
@@ -153,7 +162,7 @@ describe("cancelShareListingAndRefund", () => {
 
     const offerId = new ObjectId();
     db.collection("shareOffers");
-    db.collectionMocks["shareOffers"].find.mockReturnValueOnce({
+    db.collectionMocks["shareOffers"].find.mockReturnValue({
       toArray: async () => [
         {
           _id: offerId,
@@ -189,7 +198,7 @@ describe("cancelShareListingAndRefund", () => {
       }
     );
 
-    const { emitTx } = await import("@/lib/financialTxLog/emit");
+    const { emitTxBulk } = await import("@/lib/financialTxLog/emit");
 
     const result = await cancelShareListingAndRefund(
       db as never,
@@ -200,18 +209,21 @@ describe("cancelShareListingAndRefund", () => {
     );
 
     expect(result).toEqual({ ok: true, refundedOffers: 1, sharesReturned: 50 });
-    expect(db.collectionMocks["characters"].updateOne).toHaveBeenCalled();
-    expect(emitTx).toHaveBeenCalledWith(
+    expect(db.collectionMocks["characters"].bulkWrite).toHaveBeenCalled();
+    expect(emitTxBulk).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({
-        type: "share_listing_refund",
-        subjectType: "character",
-        subjectId: buyerId,
-      })
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "share_listing_refund",
+          subjectType: "character",
+          subjectId: buyerId,
+        }),
+      ]),
+      expect.anything()
     );
   });
 
-  it("reopens the listing and reverses refunded cash if a late refund step fails", async () => {
+  it("propagates a late refund error for the transaction to abort", async () => {
     const listingId = new ObjectId();
     const listingCorpId = new ObjectId();
     const sellerId = new ObjectId();
@@ -236,7 +248,7 @@ describe("cancelShareListingAndRefund", () => {
       .mockResolvedValueOnce({ matchedCount: 1 });
 
     db.collection("shareOffers");
-    db.collectionMocks["shareOffers"].find.mockReturnValueOnce({
+    db.collectionMocks["shareOffers"].find.mockReturnValue({
       toArray: async () => [
         {
           _id: offerId,
@@ -269,8 +281,8 @@ describe("cancelShareListingAndRefund", () => {
     db.collection("exchangeRates");
     db.collectionMocks["exchangeRates"].findOne.mockResolvedValue(null);
 
-    const { emitTx } = await import("@/lib/financialTxLog/emit");
-    vi.mocked(emitTx).mockRejectedValueOnce(new Error("ledger failed"));
+    const { emitTxBulk } = await import("@/lib/financialTxLog/emit");
+    vi.mocked(emitTxBulk).mockRejectedValueOnce(new Error("ledger failed"));
 
     await expect(
       cancelShareListingAndRefund(db as never, listing as never, new Date(), false, {
@@ -280,17 +292,8 @@ describe("cancelShareListingAndRefund", () => {
       } as never)
     ).rejects.toThrow("ledger failed");
 
-    expect(db.collectionMocks["characters"].updateOne).toHaveBeenCalledTimes(2);
-    expect(db.collectionMocks["characters"].updateOne.mock.calls[1]?.[1]).toMatchObject({
-      $inc: expect.objectContaining({
-        cashOnHand: -50000,
-      }),
-    });
-    expect(db.collectionMocks["shareOffers"].updateOne.mock.calls[1]?.[1]).toMatchObject({
-      $set: { status: "pending" },
-    });
-    expect(db.collectionMocks["shareListings"].updateOne.mock.calls[1]?.[1]).toMatchObject({
-      $set: { status: "open" },
-    });
+    expect(db.collectionMocks["characters"].bulkWrite).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks["shareOffers"].bulkWrite).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks["shareListings"].updateOne).toHaveBeenCalledTimes(1);
   });
 });

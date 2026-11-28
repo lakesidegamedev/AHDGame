@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import type { Db } from "mongodb";
 import type { UKNhsState } from "@/lib/db/types/ukNhsState";
 import {
@@ -35,16 +37,25 @@ export async function getNhsState(db: Db): Promise<UKNhsState | null> {
  */
 export async function tickNhsFromBudget(
   db: Db,
-  args: { fiscalYear: number; now: Date }
+  args: { fiscalYear: number; now: Date; currentTurn?: number }
 ): Promise<number> {
+  const turn =
+    args.currentTurn ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn;
+  if (turn === undefined) throw new Error("NHS quality requires a processing turn");
+  return withTurnValueSettlement(db, "uk-nhs-quality", turn, (db) => applyNhsBudget(db, args));
+}
+
+async function applyNhsBudget(db: Db, args: { fiscalYear: number; now: Date }): Promise<number> {
   const budget = await federalBudgetCollection(db).findOne(
     { _id: "UK" },
     { projection: { spending: 1 } }
   );
   const healthSpending =
-    budget?.spending.byCategory.health ?? budget?.spending.byCategory.healthcare;
+    budget?.spending?.byCategory?.health ?? budget?.spending?.byCategory?.healthcare;
   const healthcareShare =
-    budget && budget.spending.total > 0 && typeof healthSpending === "number"
+    budget?.spending && budget.spending.total > 0 && typeof healthSpending === "number"
       ? (healthSpending / budget.spending.total) * 100
       : NHS_BASELINE_HEALTHCARE_SHARE;
 

@@ -1,10 +1,17 @@
+import { auctionEscrowRefundLocal } from "./rules/auctionEscrow";
+import { withSessionDb, afterCommit, unboundDb } from "@/lib/db/sessionDb";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import {
+  resolveCorpLiquidCurrencyCode,
+  loadFxRatesRecord,
+} from "@/lib/currency/corporationCapital";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type {
   AuctionBid,
   AuctionBidHistoryEntry,
   Corporation,
-  CorporateSector,
   NationalizationAuction,
   Shareholder,
 } from "@/lib/db/types";
@@ -84,6 +91,45 @@ async function witnessBidEscrow(
   });
 }
 
+async function refundAuctionEscrow(
+  db: Db,
+  bid: AuctionBid,
+  forexEnabled: boolean,
+  ledger: TreasuryCashOptions,
+  now: Date,
+  site: string
+): Promise<void> {
+  let amount = bid.amount;
+  let currency = bid.escrowCurrency;
+  if (bid.corporationId) {
+    const corporation = await corporationsCollection(db).findOne({ _id: bid.corporationId });
+    if (!corporation) throw new Error("Escrow refund requires its receiving corporation");
+    currency = resolveCorpLiquidCurrencyCode(corporation) ?? bid.escrowCurrency;
+    if (forexEnabled && currency !== bid.escrowCurrency) {
+      const rates = await loadFxRatesRecord(db);
+      const sourceRate = rates[bid.escrowCurrency],
+        targetRate = rates[currency];
+      amount = auctionEscrowRefundLocal(bid.amount, sourceRate ?? NaN, targetRate ?? NaN);
+    }
+  }
+  if (!(amount > 0) || !Number.isFinite(amount)) throw new Error("Invalid auction escrow refund");
+  const landed = bid.corporationId
+    ? await refundCorpLiquidCapital(db, bid.corporationId, amount)
+    : bid.characterId
+      ? await refundCharacterCash(db, bid.characterId, currency, amount, forexEnabled)
+      : false;
+  if (!landed) throw new Error("Auction escrow refund was not delivered");
+  await witnessBidEscrow(
+    db,
+    ledger,
+    { ...bid, escrowCurrency: currency },
+    "privatization_bid_refund",
+    amount,
+    now,
+    site
+  );
+}
+
 export interface PlaceBidParams {
   auctionId: ObjectId;
   /** The acting character (bidder, or the CEO placing a corp bid). */
@@ -102,6 +148,18 @@ export interface PlaceBidParams {
  * escrow per bidder. Throws on any rejection (the route maps it to a 400).
  */
 export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<void> {
+  return withSessionDb(db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) throw new Error(refusal.error);
+    const state = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { currentTurn: 1 } }
+    );
+    await placeAuctionBidInSession(db, { ...params, turn: state?.currentTurn ?? params.turn });
+  });
+}
+
+async function placeAuctionBidInSession(db: Db, params: PlaceBidParams): Promise<void> {
   const auctions = nationalizationAuctionsCollection(db);
   const auction = await auctions.findOne({ _id: params.auctionId });
   if (!auction || auction.status !== "open") throw new Error("Auction is not open");
@@ -243,16 +301,7 @@ export async function placeAuctionBid(db: Db, params: PlaceBidParams): Promise<v
   // We won the leadership transition → release every displaced escrow, exactly
   // once (only the writer that flipped `bids` reaches here). Uses each bid's
   // stored escrowCurrency so a refund can't drift from how it was taken.
-  for (const o of outbid) {
-    const landed = o.corporationId
-      ? await refundCorpLiquidCapital(db, o.corporationId, o.amount)
-      : o.characterId
-        ? await refundCharacterCash(db, o.characterId, o.escrowCurrency, o.amount, forexEnabled)
-        : false;
-    if (landed) {
-      await witnessBidEscrow(db, ledger, o, "privatization_bid_refund", o.amount, now, "outbid");
-    }
-  }
+  for (const o of outbid) await refundAuctionEscrow(db, o, forexEnabled, ledger, now, "outbid");
 }
 
 /**
@@ -412,15 +461,30 @@ export async function resolveNationalizationAuction(
   auction: NationalizationAuction,
   turn: number
 ): Promise<"sold" | "passedIn"> {
+  return withSessionDb(db, async (db) => {
+    const current = await nationalizationAuctionsCollection(db).findOne({ _id: auction._id });
+    if (!current) throw new Error("Auction no longer exists");
+    if (current.status === "sold" || current.status === "passedIn") return current.status;
+    return resolveAuctionInSession(db, current, turn);
+  });
+}
+
+async function resolveAuctionInSession(
+  db: Db,
+  auction: NationalizationAuction,
+  turn: number
+): Promise<"sold" | "passedIn"> {
   const auctions = nationalizationAuctionsCollection(db);
   const corps = corporationsCollection(db);
   const now = new Date();
   const forexEnabled = await isForexEnabled();
 
-  const winner =
-    [...auction.bids]
-      .sort((a, b) => b.amount - a.amount)
-      .find((b) => b.amount >= auction.reservePrice) ?? null;
+  const shell = await corps.findOne({ _id: auction.corporationId });
+  const winner = shell
+    ? ([...auction.bids]
+        .sort((a, b) => b.amount - a.amount)
+        .find((b) => b.amount >= auction.reservePrice) ?? null)
+    : null;
   const finalStatus: "sold" | "passedIn" = winner ? "sold" : "passedIn";
 
   // Atomic claim — only the resolver that flips open→terminal runs the effects.
@@ -444,30 +508,22 @@ export async function resolveNationalizationAuction(
   if (claim.matchedCount === 0) return finalStatus; // a concurrent sweep already settled it
 
   const ledger: TreasuryCashOptions = { context: await loadTreasuryCashContext(db, turn) };
-  const refund = async (b: AuctionBid): Promise<void> => {
-    const landed = b.corporationId
-      ? await refundCorpLiquidCapital(db, b.corporationId, b.amount)
-      : b.characterId
-        ? await refundCharacterCash(db, b.characterId, b.escrowCurrency, b.amount, forexEnabled)
-        : false;
-    if (landed) {
-      await witnessBidEscrow(db, ledger, b, "privatization_bid_refund", b.amount, now, "resolve");
-    }
-  };
-
-  const shell = await corps.findOne({ _id: auction.corporationId });
+  const refund = (b: AuctionBid) =>
+    refundAuctionEscrow(db, b, forexEnabled, ledger, now, "resolve");
 
   if (!winner || !shell) {
     // Pass-in (or the shell vanished): refund everyone; re-absorb if it still exists.
     for (const b of auction.bids) await refund(b);
     if (shell) {
       await reabsorbSpunOutCorp(db, shell, auction.primaryNationalCorporationId, turn, ledger);
-      await notifyCountryResidents(db, auction.countryId, {
-        type: "corp_privatization_resolved",
-        title: "Auction passed in",
-        message: `${shell.name} did not sell at auction — it returned to state ownership.`,
-        metadata: { href: `/country/${auction.countryId.toLowerCase()}/nationalization` },
-      });
+      await afterCommit(db, () =>
+        notifyCountryResidents(unboundDb(db), auction.countryId, {
+          type: "corp_privatization_resolved",
+          title: "Auction passed in",
+          message: `${shell.name} did not sell at auction — it returned to state ownership.`,
+          metadata: { href: `/country/${auction.countryId.toLowerCase()}/nationalization` },
+        })
+      );
     }
     return "passedIn";
   }
@@ -553,8 +609,8 @@ export async function resolveNationalizationAuction(
     turn,
   });
 
-  // Public State Ownership Register row (best-effort — never abort the sale).
-  try {
+  // The public register commits with the ownership transfer.
+  {
     const soldSectors = await corporateSectorsCollection(db)
       .find({ corporationId: shell._id }, { projection: { sectorType: 1 } })
       .toArray();
@@ -573,28 +629,32 @@ export async function resolveNationalizationAuction(
       legitimacyDelta: consequence?.legitimacyDelta,
       turn,
     });
-  } catch (err) {
-    console.error("[nationalizationLedger] auction privatization ledger write failed:", err);
   }
 
-  logWireEvent("corporation_privatized", wireHeadlineCorpPrivatized(shell.name), {
-    href: `/corporation/${shell.sequentialId ?? shell._id}`,
-  });
+  await afterCommit(db, () =>
+    logWireEvent("corporation_privatized", wireHeadlineCorpPrivatized(shell.name), {
+      href: `/corporation/${shell.sequentialId ?? shell._id}`,
+    })
+  );
   // Tell the country's residents the auction settled.
-  await notifyCountryResidents(db, auction.countryId, {
-    type: "corp_privatization_resolved",
-    title: "Auction sold",
-    message: `${shell.name} was sold at auction and is now privately held.`,
-    metadata: { href: `/corporation/${shell.sequentialId ?? shell._id}` },
-  });
+  await afterCommit(db, () =>
+    notifyCountryResidents(unboundDb(db), auction.countryId, {
+      type: "corp_privatization_resolved",
+      title: "Auction sold",
+      message: `${shell.name} was sold at auction and is now privately held.`,
+      metadata: { href: `/corporation/${shell.sequentialId ?? shell._id}` },
+    })
+  );
   if (winnerUserId) {
-    await createNotification({
-      userId: winnerUserId,
-      type: "ceo_vote_offer",
-      title: "Auction won",
-      message: `You won the privatization auction for ${shell.name}.`,
-      metadata: { corporationId: shell._id.toString(), corporationName: shell.name },
-    });
+    await afterCommit(db, () =>
+      createNotification({
+        userId: winnerUserId,
+        type: "ceo_vote_offer",
+        title: "Auction won",
+        message: `You won the privatization auction for ${shell.name}.`,
+        metadata: { corporationId: shell._id.toString(), corporationName: shell.name },
+      })
+    );
   }
   return "sold";
 }

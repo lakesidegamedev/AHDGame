@@ -2,7 +2,8 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { writeFileSync } from "node:fs";
-import { createInMemoryDb } from "../../src/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "../../src/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { withInjectedCrash } from "../../src/lib/test-utils/faultyDb";
 import { creditIncomeAfterTax, type IncomeCredit } from "../../src/lib/budget/incomePayout";
 import { settleCorporateTaxPriority } from "../../src/lib/turn/corporation/corporateTaxPriority";

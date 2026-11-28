@@ -7,6 +7,19 @@ import {
   getPlay,
 } from "@/lib/constants/settlementCrisis";
 
+// These rule/shape fixtures isolate transaction plumbing; commitPlayAtomic tests the real boundary.
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({ fenceEconomicTurn: async () => null }));
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("../actorContext", () => ({ loadSettlementActorContext: vi.fn() }));
 vi.mock("../playCost", () => ({
@@ -162,7 +175,7 @@ describe("commitSettlementPlay", () => {
     expect(vi.mocked(spendFromTreasury)).toHaveBeenCalledWith(expect.anything(), "DD", 45_000_000, {
       witness: {
         flow: "settlement_play",
-        key: "settlement-play:aid:DD",
+        key: expect.stringMatching(/^settlement-play:[a-f0-9]{24}$/),
         site: "settlement/commitPlay",
       },
     });
@@ -430,7 +443,7 @@ describe("commitSettlementPlay", () => {
       expect(res).toMatchObject({ ok: false, status: 409 });
     });
 
-    it("gives the action points back when the index refuses the race", async () => {
+    it("leaves rollback to the transaction when the index refuses the race", async () => {
       // The debit already happened, and there is no effect to pay for.
       prime(db, "settlementPlays").insertOne.mockRejectedValue(
         Object.assign(new Error("E11000 duplicate key"), { code: 11000 })
@@ -444,8 +457,8 @@ describe("commitSettlementPlay", () => {
         direction: 1,
       });
 
-      const refund = prime(db, "characters").updateOne.mock.calls.at(-1)![1];
-      expect(refund.$inc.actions).toBeGreaterThan(0);
+      expect(prime(db, "characters").updateOne).toHaveBeenCalledTimes(1);
+      expect(prime(db, "characters").updateOne.mock.calls[0][1].$inc.actions).toBeLessThan(0);
     });
 
     it("does not swallow an unrelated write failure", async () => {
@@ -548,7 +561,7 @@ describe("commitSettlementPlay", () => {
         {
           witness: {
             flow: "settlement_play",
-            key: "settlement-play:aid:DD",
+            key: expect.stringMatching(/^settlement-play:[a-f0-9]{24}$/),
             site: "settlement/commitPlay",
           },
         }

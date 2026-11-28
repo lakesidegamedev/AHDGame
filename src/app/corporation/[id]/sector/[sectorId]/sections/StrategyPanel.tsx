@@ -429,8 +429,8 @@ export default function StrategyPanel({
 
           <p className="text-body-sm leading-snug text-muted">
             Projections use today&apos;s commodity prices and assume your current market share.
-            Prices move, so treat these as direction and rough size, not a promise. Switching costs{" "}
-            {formatAmount(strategy.retoolCost, liquidCode)} and runs a{" "}
+            Prices move, so treat these as direction and rough size, not a promise. The confirmation
+            shows the current retool quote, including waivers and currency charges. Switching runs a{" "}
             {strategy.transitionMarginPenalty.toFixed(1)}% margin penalty for{" "}
             {STRATEGY_TRANSITION_TURNS} turns.
           </p>
@@ -441,12 +441,8 @@ export default function StrategyPanel({
               mediaOperatingModelsEnabled={strategy.mediaOperatingModelsEnabled === true}
               currentStrategyId={strategy.currentStrategyId}
               targetStrategyId={pendingStrategyId}
-              dailyRevenue={sector.revenue ?? 0}
+              quoteUrl={`/api/corporations/${encodeURIComponent(String(corporation.sequentialId ?? corporation._id))}/sectors/${encodeURIComponent(sector._id)}`}
               liquidCurrencyCode={corporation.liquidCurrencyCode}
-              retoolCostMultiplier={
-                strategy.availableStrategies.find((s) => s.id === pendingStrategyId)
-                  ?.retoolCostMultiplier
-              }
               loading={strategyUpdating}
               onConfirm={() => {
                 onStrategyChange(pendingStrategyId);

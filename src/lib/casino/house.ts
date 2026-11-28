@@ -1,6 +1,8 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { getCurrentTurn } from "@/lib/currentTurn";
 import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
-import type { GameState, User } from "@/lib/db/types";
+
 import type { DiscordBotFund, CasinoGameStats } from "@/lib/db/types/discordBotFund";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -55,7 +57,10 @@ export async function resolveCasinoPlayer(db: Db, discordId: string): Promise<Re
   const user = await usersCollection(db).findOne({ discordId });
   if (!user) return { ok: false, status: 404, error: "No user found with that Discord ID" };
   if (user.isBanned) return { ok: false, status: 403, error: "This account is banned" };
-  const character = await charactersCollection(db).findOne({ userId: user._id });
+  const character = await charactersCollection(db).findOne({
+    userId: user._id,
+    ...(user.activeCharacterId ? { _id: user.activeCharacterId } : {}),
+  });
   if (!character) {
     return { ok: false, status: 404, error: "User has no character. Create a character first." };
   }
@@ -294,17 +299,17 @@ export function capPayout(
 }
 
 /** Ledger rows for one finished bet: the stake out and, when there is one, the return. */
-export function recordCasinoTx(
+export async function recordCasinoTx(
   db: Db,
   player: Pick<CasinoPlayer, "characterId" | "characterName" | "currency" | "rate">,
   game: CasinoGame,
   stakeLocal: number,
   payoutLocal: number,
   meta: Record<string, unknown>
-): void {
+): Promise<void> {
   const now = new Date();
   const base = {
-    turn: 0,
+    turn: await getCurrentTurn(db),
     createdAt: now,
     subjectType: "character" as const,
     subjectId: player.characterId,
@@ -314,7 +319,7 @@ export function recordCasinoTx(
     counterpartyName: "Casino",
   };
   if (stakeLocal > 0) {
-    void emitTx(db, {
+    await emitTx(db, {
       ...base,
       type: "casino_wager",
       amount: -stakeLocal,
@@ -323,7 +328,7 @@ export function recordCasinoTx(
     });
   }
   if (payoutLocal > 0) {
-    void emitTx(db, {
+    await emitTx(db, {
       ...base,
       type: "casino_payout",
       amount: payoutLocal,
@@ -358,6 +363,13 @@ export async function settleHouseBet(
     meta: Record<string, unknown>;
   }
 ): Promise<HouseBetResult> {
+  return withSessionDb(db, (db) => settleHouseBetWork(db, args));
+}
+
+async function settleHouseBetWork(
+  db: Db,
+  args: Parameters<typeof settleHouseBet>[1]
+): Promise<HouseBetResult> {
   const { player, game, stakeLocal, limits } = args;
   const { payout, capped } = capPayout(player, stakeLocal * args.multiplier, limits);
   const stakeAnchor = toAnchor(stakeLocal, player.rate);
@@ -365,7 +377,8 @@ export async function settleHouseBet(
 
   const applied = await applyHouseResult(db, game, stakeAnchor, paidAnchor);
   if (!applied) {
-    await returnStake(db, player, stakeLocal);
+    if (!(await returnStake(db, player, stakeLocal)))
+      throw new Error("Casino stake refund recipient unavailable");
     return {
       ok: false,
       status: 503,
@@ -373,10 +386,9 @@ export async function settleHouseBet(
     };
   }
   if (payout > 0 && !(await creditPlayer(db, player, payout))) {
-    await reverseHouseResult(db, game, stakeAnchor, paidAnchor);
-    return { ok: false, status: 500, error: "Failed to credit winnings" };
+    throw new Error("Casino payout recipient unavailable; settlement retained for retry");
   }
-  recordCasinoTx(db, player, game, stakeLocal, payout, args.meta);
+  await recordCasinoTx(db, player, game, stakeLocal, payout, args.meta);
   return {
     ok: true,
     stake: stakeLocal,

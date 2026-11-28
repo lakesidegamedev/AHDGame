@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -7,13 +25,7 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
   getMongoClient: vi.fn(async () => ({
     startSession: () => ({
-      withTransaction: vi.fn(async () => {
-        const err = new Error("transactions not supported on standalone") as Error & {
-          code?: number;
-        };
-        err.code = 20;
-        throw err;
-      }),
+      withTransaction: vi.fn(async (work: (session: unknown) => Promise<unknown>) => work({})),
       endSession: vi.fn(async () => {}),
     }),
   })),
@@ -407,7 +419,7 @@ describe("POST /api/campaigns/[id]/donate - fallback insufficient funds", () => 
 });
 
 describe("POST /api/campaigns/[id]/donate - fallback missing campaign", () => {
-  it("refunds the treasury and returns 404 when the campaign disappears after debit", async () => {
+  it("rolls back the treasury debit and returns 404 when the campaign disappears after debit", async () => {
     await setupRoute();
 
     db.collectionMocks["campaigns"]!.updateOne.mockResolvedValue({
@@ -423,17 +435,14 @@ describe("POST /api/campaigns/[id]/donate - fallback missing campaign", () => {
     const body = await res.json();
     expect(body.error).toMatch(/campaign not found/i);
 
-    expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledTimes(1);
 
     const debitCall = db.collectionMocks["politicalParties"]!.updateOne.mock.calls[0];
     expect((debitCall[1] as Record<string, Record<string, number>>)["$inc"]).toMatchObject({
       treasury: -5_000,
     });
 
-    const refundCall = db.collectionMocks["politicalParties"]!.updateOne.mock.calls[1];
-    expect((refundCall[1] as Record<string, Record<string, number>>)["$inc"]).toMatchObject({
-      treasury: 5_000,
-    });
+    // The owning transaction rolls back the debit; no compensating credit is issued.
   });
 });
 
@@ -456,7 +465,7 @@ describe("POST /api/campaigns/[id]/donate - character fallback insufficient fund
 });
 
 describe("POST /api/campaigns/[id]/donate - character fallback missing campaign", () => {
-  it("refunds the character when the campaign disappears after debit", async () => {
+  it("rolls back the character debit when the campaign disappears after debit", async () => {
     await setupRoute();
 
     db.collectionMocks["campaigns"]!.updateOne.mockResolvedValue({
@@ -469,11 +478,8 @@ describe("POST /api/campaigns/[id]/donate - character fallback missing campaign"
     const res = await POST(makeRequest({ amount: 5_000 }), { params });
 
     expect(res.status).toBe(404);
-    expect(db.collectionMocks["characters"]!.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks["characters"]!.updateOne).toHaveBeenCalledTimes(1);
 
-    const refundCall = db.collectionMocks["characters"]!.updateOne.mock.calls[1];
-    expect((refundCall[1] as Record<string, Record<string, number>>)["$inc"]).toMatchObject({
-      "currencyBalances.campaign": 5_000,
-    });
+    // The owning transaction rolls back the debit; no compensating credit is issued.
   });
 });

@@ -38,6 +38,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   "settlement_mobilisation_levy",
   "peace_indemnity",
   "fund_credit", // legacy mixed source — still emitted by older paths
+  "sponsored_post_payment",
   "fund_debit",
   "office_income",
   "fundraise_credit",
@@ -122,6 +123,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
 
   // ── Admin / system ─────────────────────────────────────────────────────
   "admin_transfer",
+  "referral_reward",
   "onboarding_reward",
   "starting_capital",
   "contest_prize",
@@ -147,6 +149,8 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   "gov_grant_paid",
   "gov_budget_transfer",
   "gov_defense_overdraft",
+  "sovereign_bailout_disbursement",
+  "sovereign_monetization",
   "monetary_treasury_advance",
   "monetary_qe",
   "monetary_qt",
@@ -201,6 +205,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
   settlement_mobilisation_levy: "Mobilisation Levy",
   peace_indemnity: "Peace Indemnity",
   fund_credit: "Fund Credit (legacy)",
+  sponsored_post_payment: "Sponsored Post Payment",
   fund_debit: "Fund Debit (legacy)",
   office_income: "Campaign Fund Income",
   fundraise_credit: "Fundraise",
@@ -281,6 +286,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
   loc_garnishment: "LOC Garnishment",
 
   admin_transfer: "Admin Transfer",
+  referral_reward: "Referral Reward",
   onboarding_reward: "Onboarding Reward",
   starting_capital: "Starting Capital",
   contest_prize: "Contest Prize",
@@ -302,6 +308,8 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
   gov_grant_paid: "Govt Grant Paid",
   gov_budget_transfer: "Govt Budget Transfer",
   gov_defense_overdraft: "Govt Defence Appropriation Overdraft",
+  sovereign_bailout_disbursement: "IMF Sovereign Bailout Disbursement",
+  sovereign_monetization: "Sovereign Monetization Proceeds",
   monetary_treasury_advance: "Central Bank Treasury Advance",
   monetary_qe: "Central Bank Bond Purchase (QE)",
   monetary_qt: "Central Bank Bond Sale (QT)",

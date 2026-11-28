@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 // POST /api/prospecting/corporation - Launch a corporation-funded geological survey.
 // Auth: requireBasicAuth + requireCeo of the target corporation
 // Errors: 400, 401, 402, 403, 404, 409, 429
@@ -33,29 +34,29 @@ export async function POST(request: Request) {
     }
     const { corporationId, stateId, resource } = parsed.data;
 
-    const db = await getDb();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      const pausedGuard = await requireCorporationActionsEnabled(db);
+      if (pausedGuard) return pausedGuard;
 
-    const pausedGuard = await requireCorporationActionsEnabled(db);
-    if (pausedGuard) return pausedGuard;
+      const resolved = await resolveCorporation(db, corporationId);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const resolved = await resolveCorporation(db, corporationId);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+      const ceoErr = requireCeo(corporation, auth.user);
+      if (ceoErr) return ceoErr;
 
-    const ceoErr = requireCeo(corporation, auth.user);
-    if (ceoErr) return ceoErr;
+      const turn = await getCurrentTurn(db);
+      const now = new Date();
+      const result = await launchCorpProspect(db, corporation, { stateId, resource }, turn, now);
+      if (!result.ok) {
+        return errorResponse(result.status, result.error);
+      }
 
-    const turn = await getCurrentTurn(db);
-    const now = new Date();
-    const result = await launchCorpProspect(db, corporation, { stateId, resource }, turn, now);
-    if (!result.ok) {
-      return errorResponse(result.status, result.error);
-    }
-
-    return NextResponse.json({
-      success: true,
-      survey: { ...result.survey, _id: result.survey._id.toString() },
-      costs: result.costs,
+      return NextResponse.json({
+        success: true,
+        survey: { ...result.survey, _id: result.survey._id.toString() },
+        costs: result.costs,
+      });
     });
   } catch (error) {
     return handleRouteError(error);

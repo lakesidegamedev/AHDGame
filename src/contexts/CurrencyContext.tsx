@@ -12,11 +12,11 @@ import {
   type ReactNode,
 } from "react";
 import {
-  COUNTRY_CURRENCY_MAP,
   FOREX_ACTIVE_CURRENCIES,
   getEraAwareCurrencySymbol,
   type CurrencyCode,
 } from "@/lib/constants/currencyCodes";
+import { getSeedCurrencyCode } from "@/lib/currency/rules/currencyRates";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { useAuthMe } from "@/contexts/AuthDataContext";
@@ -313,7 +313,7 @@ export function CurrencyProvider({
     navData?.characterCountryId ??
     null;
   const currencyCode: CurrencyCode = countryId
-    ? (COUNTRY_CURRENCY_MAP[countryId as keyof typeof COUNTRY_CURRENCY_MAP] ?? "USD")
+    ? (getSeedCurrencyCode(countryId as CountryId, worldFlags.preset) ?? "USD")
     : "USD";
   const currencySymbol =
     getEraAwareCurrencySymbol(
@@ -421,11 +421,11 @@ export function CurrencyProvider({
 
   const convert = useCallback(
     (internalAmount: number): number => {
-      if (!effectiveRates) return internalAmount;
-      const rate = effectiveRates[currencyCode] ?? 1;
-      return internalAmount * rate;
+      if (!forexEnabled) return internalAmount;
+      const rate = effectiveRates?.[currencyCode];
+      return validDisplayRate(rate) ? internalAmount * rate : Number.NaN;
     },
-    [effectiveRates, currencyCode]
+    [effectiveRates, currencyCode, forexEnabled]
   );
 
   const quoteDisplay = useCallback(
@@ -460,33 +460,34 @@ export function CurrencyProvider({
 
   const toInternalFrom = useCallback(
     (amount: number, fromCurrency: CurrencyCode): number => {
-      if (!effectiveRates) return amount;
-      const rate = effectiveRates[fromCurrency] ?? 1;
-      return rate > 0 ? amount / rate : amount;
+      if (!forexEnabled) return amount;
+      const rate = effectiveRates?.[fromCurrency];
+      return validDisplayRate(rate) ? amount / rate : Number.NaN;
     },
-    [effectiveRates]
+    [effectiveRates, forexEnabled]
   );
 
   const toLocalOf = useCallback(
     (displayAmount: number, targetCurrency: CurrencyCode): number => {
-      if (!effectiveRates) return displayAmount;
+      if (!forexEnabled) return displayAmount;
       const sourceRate = quoteDisplay().rate;
-      const targetRate = effectiveRates[targetCurrency] ?? 1;
-      if (sourceRate <= 0) return displayAmount;
+      const targetRate = effectiveRates?.[targetCurrency];
+      if (!validDisplayRate(sourceRate) || !validDisplayRate(targetRate)) return Number.NaN;
       return (displayAmount / sourceRate) * targetRate;
     },
-    [effectiveRates, quoteDisplay]
+    [effectiveRates, quoteDisplay, forexEnabled]
   );
 
   const convertFrom = useCallback(
     (amount: number, fromCurrency: CurrencyCode): number => {
-      if (!effectiveRates) return amount;
-      const fromRate = effectiveRates[fromCurrency] ?? 1;
-      const toRate = effectiveRates[currencyCode] ?? 1;
-      // amount / fromRate = internal units; internal * toRate = home currency
-      return (amount / fromRate) * toRate;
+      if (!forexEnabled || fromCurrency === currencyCode) return amount;
+      const fromRate = effectiveRates?.[fromCurrency];
+      const toRate = effectiveRates?.[currencyCode];
+      return validDisplayRate(fromRate) && validDisplayRate(toRate)
+        ? (amount / fromRate) * toRate
+        : Number.NaN;
     },
-    [effectiveRates, currencyCode]
+    [effectiveRates, currencyCode, forexEnabled]
   );
 
   const resolveDisplay = useCallback(

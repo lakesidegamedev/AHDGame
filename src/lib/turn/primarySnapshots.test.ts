@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 /**
  * The per-turn idempotency read: which parts of this turn's primary snapshots
  * have already been recorded. It runs on every turn and every half-hour tick,

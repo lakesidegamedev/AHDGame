@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Db } from "mongodb";
@@ -60,6 +68,11 @@ describe("dividendPassThrough", () => {
     beforeEach(async () => {
       vi.clearAllMocks();
       db = createMockDb();
+      for (const name of ["indexFunds", "corporations", "npps"])
+        db.collection(name).bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+          matchedCount: ops.length,
+          modifiedCount: ops.length,
+        }));
       db.collection("exchangeRates").findOne.mockResolvedValue({ currencyCode: "USD", rate: 1 });
       for (const name of [
         "indexFunds",
@@ -193,7 +206,7 @@ describe("dividendPassThrough", () => {
       expect(paidNative).toBeCloseTo(250_000 * 102.23, 0);
     });
 
-    it("returns zero distribution when fund has no unit supply", async () => {
+    it("retains all received cash when fund has no unit supply", async () => {
       const fundId = new ObjectId();
       const corporationId = new ObjectId();
 
@@ -218,8 +231,8 @@ describe("dividendPassThrough", () => {
       );
 
       expect(result.totalGrossAnchor).toBe(1_000_000);
-      expect(result.reinvestedAnchor).toBe(750_000);
-      expect(result.passedThroughAnchor).toBe(250_000);
+      expect(result.reinvestedAnchor).toBe(1_000_000);
+      expect(result.passedThroughAnchor).toBe(0);
       expect(result.holdersPaid).toBe(0);
       expect(db.collectionMocks["characters"]!.bulkWrite).not.toHaveBeenCalled();
     });
@@ -245,6 +258,11 @@ describe("dividendPassThrough", () => {
     beforeEach(async () => {
       vi.clearAllMocks();
       db = createMockDb();
+      for (const name of ["indexFunds", "corporations", "npps"])
+        db.collection(name).bulkWrite.mockImplementation(async (ops: unknown[]) => ({
+          matchedCount: ops.length,
+          modifiedCount: ops.length,
+        }));
       db.collection("exchangeRates").findOne.mockResolvedValue({ currencyCode: "USD", rate: 1 });
       for (const name of [
         "indexFunds",

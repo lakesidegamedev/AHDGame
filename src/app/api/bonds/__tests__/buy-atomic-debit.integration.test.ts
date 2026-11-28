@@ -23,6 +23,17 @@ import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Db } from "mongodb";
 
+// Isolated guard/shape fixtures; buy-transaction tests exercise the required transaction.
+vi.mock("@/lib/api/withRecordedEconomicCommand", () => ({
+  withRecordedEconomicCommand: async (
+    db: unknown,
+    _phase: string,
+    _actor: string,
+    _id: string | undefined,
+    _input: unknown,
+    work: (db: unknown) => Promise<Response>
+  ) => work(db),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({

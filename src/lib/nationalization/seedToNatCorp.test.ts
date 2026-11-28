@@ -8,7 +8,7 @@ vi.mock("./nationalCorporation", () => ({
 }));
 
 import { resolveNationalCorporationForSector } from "./nationalCorporation";
-import { absorbOwnedSectorIntoNatCorp, incrementNatCorpSectorRevenue } from "./seedToNatCorp";
+import { incrementNatCorpSectorRevenue } from "./seedToNatCorp";
 
 const NAT_ID = new ObjectId();
 
@@ -47,41 +47,5 @@ describe("incrementNatCorpSectorRevenue", () => {
     });
     expect(result).toBe("inc");
     expect(db.collectionMocks.corporateSectors.updateOne).toHaveBeenCalled();
-  });
-});
-
-describe("absorbOwnedSectorIntoNatCorp", () => {
-  let db: MockDb;
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(resolveNationalCorporationForSector).mockResolvedValue({ _id: NAT_ID } as never);
-    db = createMockDb();
-    db.collection("corporateSectors");
-    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
-      _id: new ObjectId(),
-      revenue: 2_000_000,
-    });
-  });
-
-  it("merges a private sector into the nat corp holding and deletes the donor row", async () => {
-    const donorId = new ObjectId();
-    const natRowId = new ObjectId();
-    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
-      _id: natRowId,
-      revenue: 2_000_000,
-    });
-    const transferred = await absorbOwnedSectorIntoNatCorp(db as unknown as Db, {
-      _id: donorId,
-      stateId: "BJ",
-      sectorType: "energy",
-      countryId: "CN",
-      revenue: 750_000,
-      workers: 10,
-      currentGrowthCost: 5_000,
-      corporationId: new ObjectId(),
-    });
-    expect(transferred).toBe(750_000);
-    expect(db.collectionMocks.corporateSectors.updateOne).toHaveBeenCalled();
-    expect(db.collectionMocks.corporateSectors.deleteOne).toHaveBeenCalledWith({ _id: donorId });
   });
 });

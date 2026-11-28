@@ -41,7 +41,6 @@ import { campaignLocalRate, getCampaignCurrency } from "@/lib/campaigns/campaign
 import { checkActionAchievements, checkFundsAchievements } from "@/lib/achievements/triggers";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { fundPoliticalMediaOrder } from "@/lib/politicalMedia/journal";
 import { applySlantToAdvertise, loadStateSlant } from "@/lib/mediaEditorial/slant";
@@ -597,8 +596,7 @@ async function executeCharacterActionImpl(
         category: "character",
         actor: { kind: "player", userId: userOid, characterId: current._id, name: actor.username },
         subject: { type: "character", id: current._id, name: current.name },
-        amount: actionFundsChange || undefined,
-        currencyCode: actionFundsChange !== 0 ? homeCurrency : undefined,
+        anchorAmount: actionFundsChange || undefined,
         refs: {},
         outcome: "ok",
         meta: {

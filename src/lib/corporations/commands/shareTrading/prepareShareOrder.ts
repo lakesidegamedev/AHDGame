@@ -2,7 +2,7 @@ import type { RouteParams } from "@/lib/corporations/commands/shareTrading/place
 
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/lib/mongodb";
+import type { Db } from "mongodb";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
@@ -38,7 +38,7 @@ import { equityPoolDepthMessage, loadEquityQuote } from "@/lib/equities/marketPo
 
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 
-export async function prepareShareOrder(request: Request, { params }: RouteParams) {
+export async function parseShareOrderRequest(request: Request, { params }: RouteParams) {
   const auth = await requireBasicAuth();
   if (!auth.ok) return { kind: "early" as const, value: auth.response };
 
@@ -56,8 +56,15 @@ export async function prepareShareOrder(request: Request, { params }: RouteParam
     return { kind: "early" as const, value: errorResponse(parsed.status, parsed.error) };
   }
 
+  return { kind: "input" as const, context: { auth, id, parsed } };
+}
+
+export async function prepareShareOrder(
+  db: Db,
+  input: Extract<Awaited<ReturnType<typeof parseShareOrderRequest>>, { kind: "input" }>["context"]
+) {
+  const { auth, id, parsed } = input;
   const { type, shares, pricePerShare, placeAsCorporation } = parsed.data;
-  const db = await getDb();
   const corpGuard = await requireCorporationActionsEnabled(db);
   if (corpGuard) return { kind: "early" as const, value: corpGuard };
   const turnGuard = await rejectDuringTurn(db);

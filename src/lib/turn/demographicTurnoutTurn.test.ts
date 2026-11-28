@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   applyDecayToAllStates,
@@ -321,7 +329,16 @@ describe("demographicTurnoutTurn", () => {
         cursorFor([{ _id: stateId, population: statePopulation }])
       );
 
-      await processPartyGOTV();
+      await processPartyGOTV(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        100
+      );
 
       const bulkCalls = db.collectionMocks["politicalParties"]!.bulkWrite.mock.calls;
       expect(bulkCalls.length).toBeGreaterThan(0);
@@ -420,7 +437,16 @@ describe("demographicTurnoutTurn", () => {
         cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "US" }])
       );
 
-      await processPartyGOTV();
+      await processPartyGOTV(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        100
+      );
 
       expect(db.collectionMocks["partyBudget"]!.bulkWrite).toHaveBeenCalled();
       const backfillOps = db.collectionMocks["partyBudget"]!.bulkWrite.mock.calls[0][0] as Array<{
@@ -535,7 +561,16 @@ describe("demographicTurnoutTurn", () => {
         cursorFor([{ _id: stateId, population: 100_000, gdp: 100_000, countryId: "US" }])
       );
 
-      await processPartyGOTV();
+      await processPartyGOTV(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        100
+      );
 
       // The national GDP index groups by countryId; a projection without it
       // files every region under the US and prices other countries as unknown.
@@ -672,7 +707,16 @@ describe("demographicTurnoutTurn", () => {
         ])
       );
 
-      await processPartyGOTV();
+      await processPartyGOTV(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        100
+      );
 
       const treasuryOps = db.collectionMocks["politicalParties"]!.bulkWrite.mock
         .calls[0][0] as Array<{
@@ -787,7 +831,16 @@ describe("demographicTurnoutTurn", () => {
 
       const { emitTreasuryTransactionsBulk } = await import("@/lib/treasury/emit");
 
-      await processPartyGOTV();
+      await processPartyGOTV(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        100
+      );
 
       // All treasury rows for the pass go out in one bulk insert.
       expect(emitTreasuryTransactionsBulk).toHaveBeenCalledTimes(1);

@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 import { creditIncomeAfterTax } from "@/lib/budget/incomePayout";
 /**
  * Savings earn interest from their currency's central bank and settle quarterly.
@@ -19,7 +20,7 @@ import {
   interestEligibleBalance,
   roundSavingsAmount,
   SAVINGS_CREDIT_INTERVAL_TURNS,
-} from "@/lib/currency/savingsInterest";
+} from "@/lib/currency/rules/savingsInterest";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { buildSavingsInterestAccrualBulkOp } from "@/lib/currency/characterFunds";
@@ -93,8 +94,17 @@ async function bookCentralBankInterestCreation(
 export async function processSavingsInterestTurn(
   db: Db,
   turn: number,
-  /** Turn resilience stage 2 and above: accrual is stamped per turn so a rerun cannot double it. */
-  rerunSafe = false
+  _rerunSafe = false
+): Promise<{ charactersProcessed: number; totalInterest: number }> {
+  return withTurnValueSettlement(db, "savings-interest", turn, (db) =>
+    settleSavingsInterestTurn(db, turn, true)
+  );
+}
+
+async function settleSavingsInterestTurn(
+  db: Db,
+  turn: number,
+  rerunSafe: boolean
 ): Promise<{ charactersProcessed: number; totalInterest: number }> {
   const centralBankPricing = await ensureCentralBankPricingPhaseIn(db, turn);
   const forexEnabled = await isForexEnabled();
@@ -102,7 +112,6 @@ export async function processSavingsInterestTurn(
   // mirrored onto the account record; the character fields stay as the
   // projection existing readers use.
   const bankingPolicy = await loadBankingPolicy(db);
-  const accountsAuthoritative = bankingPolicy.savingsAccounts === "authoritative";
 
   const banks = await centralBanksCollection(db)
     .find({})
@@ -150,6 +159,7 @@ export async function processSavingsInterestTurn(
 
     // Phase 1: accrue this turn's interest into the pending bucket
     const accrualFilter = {
+      savingsAccrualTurn: { $ne: turn },
       $or: FOREX_ACTIVE_CURRENCIES.map((c) => ({
         [`currencyBalances.savings.${c}`]: { $gt: 0 },
       })),
@@ -201,7 +211,7 @@ export async function processSavingsInterestTurn(
         );
         if (interest <= 0) continue;
         perCharInc[`currencyBalances.pendingSavingsInterest.${currency}`] = interest;
-        if (accountsAuthoritative) {
+        if (savingsReadsAuthoritative(bankingPolicy, currency)) {
           accountAccrualOps.push({
             updateOne: {
               filter: {
@@ -238,10 +248,14 @@ export async function processSavingsInterestTurn(
       }
     }
     if (accrualOps.length > 0) {
-      await charactersCollection(db).bulkWrite(accrualOps);
+      const accrued = await charactersCollection(db).bulkWrite(accrualOps);
+      if (accrued.matchedCount !== accrualOps.length)
+        throw new Error("Savings accrual source changed");
     }
     if (accountAccrualOps.length > 0) {
-      await savingsAccountsCollection<Document>(db).bulkWrite(accountAccrualOps);
+      const accrued = await savingsAccountsCollection<Document>(db).bulkWrite(accountAccrualOps);
+      if (accrued.matchedCount !== accountAccrualOps.length)
+        throw new Error("Savings account accrual source changed");
     }
 
     // Write national savings balances to centralBanks for inflationRecalc to read.
@@ -315,7 +329,7 @@ export async function processSavingsInterestTurn(
           );
           perCharInc[`currencyBalances.savings.${currency}`] = amount;
           perCharInc[`currencyBalances.interestEarned.${currency}`] = amount;
-          if (accountsAuthoritative) {
+          if (savingsReadsAuthoritative(bankingPolicy, currency)) {
             accountCreditOps.push({
               updateOne: {
                 filter: { ownerType: "character", ownerId: char._id, currency },
@@ -366,7 +380,7 @@ export async function processSavingsInterestTurn(
           destination: "currencyBalances.savings." + entry.currencyCode,
           interest: {
             pendingPath: "currencyBalances.pendingSavingsInterest." + entry.currencyCode,
-            authoritative: accountsAuthoritative,
+            authoritative: savingsReadsAuthoritative(bankingPolicy, entry.currencyCode),
             centralBankId: getBankId(getCountryIdForCurrency(entry.currencyCode)),
           },
         }));

@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 /**
  * The reunification pipeline end to end, with the real functions wired together.
  *
@@ -78,6 +83,18 @@ describe("reunification pipeline, end to end", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 120,
+      currentYear: 1991,
+      preset: "1991-default",
+      worldEpochId: "synthetic",
+    });
+    db.collection("exchangeRates").find.mockReturnValue({
+      toArray: async () =>
+        ["DEM", "DDM", "EUR", "USD", "GBP"].map((currencyCode) => ({ currencyCode, rate: 1 })),
+    });
+
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
 
@@ -156,7 +173,12 @@ describe("reunification pipeline, end to end", () => {
   it("renumbers the western parties instead of colliding with the eastern ones", async () => {
     const { actuateSettlementOutcome } = await import("./actuate");
     await actuateSettlementOutcome(db as unknown as Db, crisis(), 470);
-    const moves = db.collectionMocks["politicalParties"].updateOne.mock.calls;
+    const moves = db.collectionMocks["politicalParties"].bulkWrite.mock.calls.flatMap(([ops]) =>
+      ops.map((op: { updateOne: { filter: unknown; update: unknown } }) => [
+        op.updateOne.filter,
+        op.updateOne.update,
+      ])
+    );
     const spd = moves.find((c) => String(c[0]._id) === String(SPD_DOC));
     // The SPD is sequentialId 1 in Germany, and so is the SED in the GDR. The
     // loser's party is the one that moves, and it must not land on the winner's

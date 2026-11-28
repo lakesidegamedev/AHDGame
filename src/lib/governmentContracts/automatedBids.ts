@@ -1,9 +1,10 @@
+import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 /**
  * State and NPP suppliers compete through the same defence tenders as players.
  * Their initial quote uses the existing suggested lot price, with no direct-award shortcut.
  */
 import type { Db } from "mongodb";
-import type { CorporateSector } from "@/lib/db/types";
+
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isNppOwned } from "@/lib/corporations/nppOwned";
 import { resolveFillEligibility } from "@/lib/military/defenceFillEligibility";
@@ -68,6 +69,7 @@ export async function automatedDefenceBids(
         corp,
         sector,
         countryId: t.countryId,
+        paymentCurrency: resolveCountryCurrencyCode(budget) ?? null,
         currentYear:
           resolveGameYear(state ?? {}) ??
           getStartingYearForPreset(state?.preset ?? DEFAULT_SEED_PRESET) +

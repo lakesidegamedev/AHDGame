@@ -842,6 +842,12 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         : null,
       forSaleInfo,
       strategy: buildSectorStrategySection({
+        corporationLiquidCode: resolveCorpLiquidCurrencyCode(corporation) ?? undefined,
+        firstFundedTurn:
+          gameState?.producerOpening &&
+          gameState.producerOpening.worldEpoch === gameState.worldEpochId
+            ? gameState.producerOpening.turn + 1
+            : undefined,
         preset: sectorDetailPreset,
         sector,
         sectorType,

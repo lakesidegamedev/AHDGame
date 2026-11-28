@@ -43,7 +43,7 @@ const FLAT: CrisisEffect = { ...TICK, effectType: "flat", value: -5, label: "Sho
 const DECAY: CrisisEffect = { ...TICK, effectType: "decay", value: -9, label: "Margin" };
 
 function makeDb(crises: Record<string, unknown>[]) {
-  const bulkWrite = vi.fn(async () => ({}));
+  const bulkWrite = vi.fn(async () => ({ matchedCount: 1 }));
   const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
   const db = {
     collection(name: string) {
@@ -55,6 +55,10 @@ function makeDb(crises: Record<string, unknown>[]) {
         },
         bulkWrite,
         updateOne: vi.fn(async () => ({ matchedCount: 1 })),
+        findOneAndUpdate: vi.fn(
+          async (filter: { _id: ObjectId }) =>
+            crises.find((row) => String(row._id) === String(filter._id)) ?? null
+        ),
         updateMany: vi.fn(),
         insertMany: vi.fn(),
       };

@@ -64,10 +64,21 @@ export async function abandonTechDecade(
   };
   if (Object.keys(dec).length > 0) update.$inc = dec;
 
-  const res = await corporationsCollection(db).updateOne({ _id: corporation._id }, update);
+  const observed: Record<string, unknown> = {
+    _id: corporation._id,
+    [`techDecadeLane.${decadeId}`]: getCommittedLane(corpView, decadeId),
+    unlockedTechNodeIds: corporation.unlockedTechNodeIds ?? { $exists: false },
+    marketingStrength: corporation.marketingStrength ?? { $exists: false },
+    logisticsStrength: corporation.logisticsStrength ?? { $exists: false },
+  };
+  const res = await corporationsCollection(db).updateOne(observed, update);
 
   if (res.modifiedCount === 0) {
-    return { ok: false, status: 409, error: "Abandon could not be completed — please retry." };
+    return {
+      ok: false,
+      status: 409,
+      error: "Technology or strength changed. Refresh and try again.",
+    };
   }
 
   return { ok: true, status: 200, decadeId, removedNodeIds };

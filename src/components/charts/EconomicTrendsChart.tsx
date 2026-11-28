@@ -1,5 +1,6 @@
 "use client";
 
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 import { useState, useMemo } from "react";
 
 export type TrendSeries = "rate" | "inflation" | "gdpGrowth" | "savings";
@@ -76,10 +77,10 @@ function computeRealGdp(gdpData: DataPoint[], inflData: DataPoint[]): DataPoint[
 }
 
 export function EconomicTrendsChart({
-  interestRateHistory,
-  inflationHistory,
-  gdpGrowthHistory,
-  savingsFlowHistory = [],
+  interestRateHistory: rawInterestRateHistory,
+  inflationHistory: rawInflationHistory,
+  gdpGrowthHistory: rawGdpGrowthHistory,
+  savingsFlowHistory: rawSavingsFlowHistory = [],
   defaultSeries = "rate",
 }: Props) {
   const [activeSeries, setActiveSeries] = useState<TrendSeries>(defaultSeries);
@@ -87,6 +88,22 @@ export function EconomicTrendsChart({
   const [gdpMode, setGdpMode] = useState<"nominal" | "real">("nominal");
   const [view, setView] = useState<"chart" | "table">("chart");
 
+  const interestRateHistory = useMemo(
+    () => uniqueTurnHistory(rawInterestRateHistory),
+    [rawInterestRateHistory]
+  );
+  const inflationHistory = useMemo(
+    () => uniqueTurnHistory(rawInflationHistory),
+    [rawInflationHistory]
+  );
+  const gdpGrowthHistory = useMemo(
+    () => uniqueTurnHistory(rawGdpGrowthHistory),
+    [rawGdpGrowthHistory]
+  );
+  const savingsFlowHistory = useMemo(
+    () => uniqueTurnHistory(rawSavingsFlowHistory),
+    [rawSavingsFlowHistory]
+  );
   const realGdpData = useMemo(
     () => computeRealGdp(gdpGrowthHistory, inflationHistory),
     [gdpGrowthHistory, inflationHistory]

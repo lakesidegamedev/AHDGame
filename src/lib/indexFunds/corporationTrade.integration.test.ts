@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { IndexFund } from "@/lib/db/types";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { runTransactionWithSessionRetry } from "@/lib/db/transactionWithRetry";
 import { tradeCorporationFund } from "./corporationTrade";
 import { loadCorporationFundPortfolio } from "./corporationPortfolio";
 import { POST as subscribeRoute } from "@/app/api/investment-funds/[slug]/subscribe/route";
@@ -81,7 +82,7 @@ function setup(capital = 1000, currency = "USD") {
   ]);
   memory.seed("characters", [{ _id: character, cashOnHand: 500 }]);
   memory.seed("indexFunds", [{ ...fund }]);
-  return { memory, db: memory as unknown as Db };
+  return { memory, db: Object.assign(memory, { client: {} }) as unknown as Db };
 }
 function order(units = 2) {
   return { corporationId: corporationId.toString(), units, operationId: crypto.randomUUID() };
@@ -415,4 +416,33 @@ describe("sponsor unit withdrawal lock", () => {
     expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1000);
     expect(memory.collection("indexFundPositions").docs[0].units).toBe(10);
   });
+});
+
+describe("corporate fund denomination races", () => {
+  it.each(["subscribe", "redeem"] as const)(
+    "refuses a stale native %s quote after currency changes",
+    async (kind) => {
+      const { memory, db } = setup();
+      vi.mocked(isForexEnabled).mockResolvedValue(true);
+      const transaction = vi.mocked(runTransactionWithSessionRetry);
+      transaction.mockImplementationOnce(async (_get, run) => {
+        await memory
+          .collection("corporations")
+          .updateOne({ _id: corporationId }, { $set: { liquidCurrencyCode: "JPY" } });
+        return run(undefined);
+      });
+      const response = await tradeCorporationFund(
+        db,
+        user.toString(),
+        character,
+        fund,
+        order(1),
+        kind
+      );
+      expect(response.status).toBe(400);
+      expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1000);
+      expect(memory.collection("indexFunds").docs[0].cashAnchor).toBe(10000);
+      expect(memory.collection("indexFundTransactions").docs).toHaveLength(0);
+    }
+  );
 });

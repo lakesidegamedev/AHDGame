@@ -1,3 +1,5 @@
+import type { CentralBank } from "@/lib/db/types";
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
 /**
  * Inflation is recalculated every turn. recalculateInflationPerTurn reads each
@@ -18,10 +20,9 @@ import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
  * and before the interest-rate snapshot captures the value for history.
  */
 
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
-import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+
 import { calculateCountryInflation, PEGGED_MONEY_GROWTH_COEFF } from "@/lib/budget/inflation";
 import { moneyGrowthCoefficient, resolveMonetaryRegime } from "@/lib/monetary/brettonWoods";
 import { savingsFlowPressureRatio } from "@/lib/budget/savingsFlowPressure";
@@ -104,6 +105,23 @@ export async function runInflationRecalc(
   options: InflationRecalcOptions = {}
 ): Promise<InflationRecalcStats> {
   const fraction = options.stepFraction;
+  const partial =
+    typeof fraction === "number" && Number.isFinite(fraction) && fraction > 0 && fraction < 1;
+  return withTurnValueSettlement(
+    db,
+    "inflation-recalculation",
+    turn,
+    (db) => applyInflationRecalc(db, turn, options),
+    { sourceKey: `${partial ? `partial:${fraction}` : "full"}:${turn}` }
+  );
+}
+
+async function applyInflationRecalc(
+  db: Db,
+  turn: number,
+  options: InflationRecalcOptions
+): Promise<InflationRecalcStats> {
+  const fraction = options.stepFraction;
   const halfStep =
     typeof fraction === "number" && Number.isFinite(fraction) && fraction > 0 && fraction < 1;
   const stepFraction = halfStep ? fraction : undefined;
@@ -128,6 +146,10 @@ export async function runInflationRecalc(
     budget: FederalBudget,
     compute: (start: FederalBudget) => Promise<number>
   ): Promise<boolean> => {
+    if (budget.inflationAppliedTurn != null && budget.inflationAppliedTurn >= turn) {
+      stats.alreadyStepped++;
+      return false;
+    }
     const stamped = activeSubhourBase(budget.subhourStep, budget.subhourBase?.inflation, turn);
     if (halfStep) {
       // Already half-stepped this hour (a retried tick): never apply it twice.
@@ -197,6 +219,7 @@ export async function runInflationRecalc(
       newInflation
     );
     const set = {
+      inflationAppliedTurn: turn,
       "economicFactors.inflationRate": newInflation,
       "economicFactors.householdPriceIndex": householdPriceIndex,
       "economicFactors.lastUpdated": new Date(),
@@ -304,6 +327,19 @@ export async function runInflationRecalc(
   const finiteOr = (v: unknown, fallback: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : fallback;
 
+  const nationalIds = [
+    ...new Set(
+      Object.keys(COUNTRY_CONFIGS)
+        .map((id) => getNationalDocId(id as CountryId))
+        .filter((id): id is string => !!id)
+    ),
+  ];
+  const nationalRows = await macroMetricsCollection(db)
+    .find({ _id: { $in: nationalIds } }, { projection: { "economic.gdpGrowth.value": 1 } })
+    .toArray();
+  const nationalById = new Map(nationalRows.map((row) => [String(row._id), row]));
+  const pressureOps: AnyBulkWriteOperation<CentralBank>[] = [];
+
   // Countries covered by a central bank, collected as we go so the unbanked
   // pass below knows who it still has to recompute.
   const bankedCountries = new Set<string>();
@@ -380,9 +416,7 @@ export async function runInflationRecalc(
           if (!budget) return;
 
           const nationalDocId = getNationalDocId(countryId);
-          const nationalMetrics = nationalDocId
-            ? await macroMetricsCollection(db).findOne({ _id: nationalDocId })
-            : null;
+          const nationalMetrics = nationalDocId ? nationalById.get(nationalDocId) : undefined;
           const gdpGrowth = finiteOr(nationalMetrics?.economic?.gdpGrowth?.value, 2.0);
           const policyStancePressure = finiteOr(bank.policyInflationPressure, 0);
           const moneySupplyGrowthPct = finiteOr(moneyGrowthByCurrency.get(currencyCode), gdpGrowth);
@@ -429,10 +463,12 @@ export async function runInflationRecalc(
         // y-axis convention. Keyed by the bank doc's _id — the previous
         // `{ _id: countryId }` write was a silent no-op for shared banks whose
         // _id ("ECB") differs from their countryId.
-        await centralBanksCollection(db).updateOne(
-          { _id: bank._id },
-          { $set: { currentSavingsPressure: savingsPressure * 100 } }
-        );
+        pressureOps.push({
+          updateOne: {
+            filter: { _id: bank._id },
+            update: { $set: { currentSavingsPressure: savingsPressure * 100 } },
+          },
+        });
       }
     })
   );
@@ -475,6 +511,7 @@ export async function runInflationRecalc(
     })
   );
 
+  if (pressureOps.length) await centralBanksCollection(db).bulkWrite(pressureOps);
   if (halfStepOps.length > 0) {
     await (await getFederalBudgetCollection(db)).bulkWrite(halfStepOps, { ordered: false });
   }

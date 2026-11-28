@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminPartyOrgPatchSchema } from "@/lib/api/schemas/admin";
-import type { StatePartyOrg, State, PoliticalParty } from "@/lib/db/types";
+import type { StatePartyOrg } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { validateOrganization } from "@/lib/utils/partyOrg";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -158,7 +158,7 @@ export async function PATCH(request: Request) {
           countryId: state.countryId,
           stateId: stateId.toUpperCase(),
           partyId,
-          organization: organization ?? 0,
+          ...(organization === undefined ? { organization: 0 } : {}),
           chairId: null,
           viceChairId: null,
           treasurerId: null,

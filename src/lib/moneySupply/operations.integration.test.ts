@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { bankBalanceSheet } from "@/lib/banking/balanceSheet";
 import { executeMonetaryOperation } from "./operations";
 
@@ -13,6 +14,7 @@ describe("liquidity injections reach the bank balance sheet", () => {
     const charter = {
       type: "retail" as const,
       status: "active" as const,
+      charteredTurn: 1,
       currency: "USD" as const,
       cashReserves: 1000,
       totalDeposits: 5_000,

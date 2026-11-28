@@ -1,3 +1,6 @@
+import { logger } from "@/lib/observability/logger";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 /**
  * Party renewal turn shell. Rules live in `./rules/partyRenewal`.
  *
@@ -14,16 +17,8 @@
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { loadCountryTiers } from "@/lib/country/countryTier";
-import type {
-  Election,
-  ElectedOfficial,
-  ElectionVoteTally,
-  GameState,
-  GovernmentFormation,
-  NPP,
-  PoliticalParty,
-} from "@/lib/db/types";
-import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
+import type { Election, PoliticalParty } from "@/lib/db/types";
+
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { PartyRenewalEvent, PartyRenewalState } from "@/lib/db/types/partyRenewal";
 import { getNextSequentialId } from "@/lib/db/sequentialId";
@@ -132,6 +127,18 @@ export async function processPartyRenewal(
 ): Promise<PartyRenewalSummary> {
   const summary: PartyRenewalSummary = { countries: 0, splinters: 0, foundings: 0, folds: 0 };
   if (currentTurn % PARTY_RENEWAL_CHECK_INTERVAL_TURNS !== 0) return summary;
+  const game = await gameStateCollection(db).findOne(
+    { _id: "current" },
+    { projection: { nppPartyRenewalEnabled: 1, preset: 1, resetWorldId: 1 } }
+  );
+  if (game?.nppPartyRenewalEnabled !== true) return summary;
+  return withTurnValueSettlement(db, "party-renewal", currentTurn, (db) =>
+    settlePartyRenewal(db, currentTurn)
+  );
+}
+
+async function settlePartyRenewal(db: Db, currentTurn: number): Promise<PartyRenewalSummary> {
+  const summary: PartyRenewalSummary = { countries: 0, splinters: 0, foundings: 0, folds: 0 };
   const game = await gameStateCollection(db).findOne(
     { _id: "current" },
     { projection: { nppPartyRenewalEnabled: 1, preset: 1, resetWorldId: 1 } }
@@ -419,7 +426,11 @@ export async function processPartyRenewal(
         });
         summary.folds++;
       } catch (error) {
-        console.warn(`[Turn] party renewal: fold of ${w.countryId}/${fold.partyId} skipped`, error);
+        logger.error(
+          "party-renewal",
+          `[Turn] party renewal: fold of ${w.countryId}/${fold.partyId} skipped`,
+          error
+        );
       }
     }
     if (plan.splinter) {
@@ -456,7 +467,8 @@ export async function processPartyRenewal(
       summary.foundings++;
     }
     if (events.length > 0) {
-      console.log(
+      logger.info(
+        "party-renewal",
         `[Turn] party renewal ${w.countryId} cycle ${w.cycle}: ${events
           .map((e) => `${e.kind} ${e.partyId}`)
           .join(", ")}`
@@ -477,9 +489,15 @@ export async function processPartyRenewal(
   for (const event of news) {
     const { title, content } = renewalNewsPost(event);
     try {
-      await createSystemNewsPost(content, "election", { title, db });
+      await afterCommit(db, async () => {
+        try {
+          await createSystemNewsPost(content, "election", { title, db: unboundDb(db) });
+        } catch (error) {
+          logger.error("party-renewal", "[Turn] party renewal: news post skipped", error);
+        }
+      });
     } catch (error) {
-      console.warn(`[Turn] party renewal: news post skipped`, error);
+      logger.error("party-renewal", `[Turn] party renewal: news post skipped`, error);
     }
   }
   return summary;
@@ -639,7 +657,7 @@ async function applyFounding(
   await statePartyOrgCollection(db).insertOne(baseOrgRow(countryId, base, partyId, currentTurn));
   const context: NPPGenerationContext = { existingNames: new Set(names.map((n) => n.name)) };
   for (let i = 0; i < FOUNDING_BENCH_SIZE; i++) {
-    await createNPP({ state: base, party: partyId, countryId }, context);
+    await createNPP({ state: base, party: partyId, countryId }, context, db);
   }
   return partyId;
 }

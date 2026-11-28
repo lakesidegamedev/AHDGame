@@ -129,5 +129,7 @@ export interface CommodityPrice {
    * `globalPrice - realBasePrice`. See `market/priceAttribution.ts`.
    */
   priceAttribution?: CommodityPriceAttribution;
+  /** Opening price inputs retained for same-turn recovery. */
+  pricingOpening?: Omit<CommodityPrice, "pricingOpening"> | null;
   updatedAt: Date;
 }

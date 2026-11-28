@@ -4,7 +4,7 @@ vi.mock("@/lib/unions/unionProsecutionBar", () => ({
   isUnionProsecutionBarred: vi.fn().mockResolvedValue(false),
   UNION_PROSECUTION_MESSAGE: "You are barred from union actions by prosecution.",
 }));
-import { ObjectId, type Db } from "mongodb";
+import { BSON, ObjectId, type ClientSession, type Db } from "mongodb";
 import type { BargainingCampaign, Character, Union } from "@/lib/db/types";
 import { actOnBargainingCampaignAsUnion, persistBargainingCounter } from "./bargaining";
 import {
@@ -103,7 +103,7 @@ interface FakeState {
  * upsert. `$set` is applied to the stored campaign so a follow-up read sees the
  * write, which is what the close path depends on.
  */
-function fakeDb(state: FakeState): Db {
+function fakeDb(state: FakeState, failAgreementInsert?: () => boolean): Db {
   const applySet = (target: Record<string, unknown>, set: Record<string, unknown>) => {
     for (const [key, value] of Object.entries(set)) {
       if (!key.includes(".")) {
@@ -122,6 +122,24 @@ function fakeDb(state: FakeState): Db {
     }
   };
   return {
+    client: {
+      writeConcern: { w: "majority" },
+      startSession: () => {
+        const session = {
+          withTransaction: async (work: (session: ClientSession) => Promise<unknown>) => {
+            const before = BSON.serialize(state);
+            try {
+              return await work(session as unknown as ClientSession);
+            } catch (error) {
+              Object.assign(state, BSON.deserialize(before));
+              throw error;
+            }
+          },
+          endSession: async () => {},
+        };
+        return session;
+      },
+    },
     collection: (name: string) => {
       if (name === "gameState") {
         return { findOne: vi.fn().mockResolvedValue({ isProcessing: false }) };
@@ -165,6 +183,7 @@ function fakeDb(state: FakeState): Db {
           findOne: vi.fn().mockResolvedValue(null),
           insertOne: vi.fn().mockImplementation((doc: Record<string, unknown>) => {
             state.agreements.push(doc);
+            if (failAgreementInsert?.()) throw new Error("agreement write interrupted");
             return Promise.resolve({ insertedId: doc._id });
           }),
           deleteOne: vi.fn().mockResolvedValue({ deletedCount: 1 }),
@@ -176,7 +195,10 @@ function fakeDb(state: FakeState): Db {
           find: () => ({
             toArray: () =>
               Promise.resolve(
-                state.campaign.ratification?.status === "open" ? [state.campaign] : []
+                ["open", "ratified"].includes(state.campaign.ratification?.status ?? "") &&
+                  ["negotiating", "dispute"].includes(state.campaign.status)
+                  ? [state.campaign]
+                  : []
               ),
           }),
           updateOne: vi.fn().mockImplementation((filter, update) => {
@@ -195,11 +217,11 @@ function fakeDb(state: FakeState): Db {
               }
               return actual === expected;
             });
-            if (!matches) return Promise.resolve({ modifiedCount: 0 });
+            if (!matches) return Promise.resolve({ modifiedCount: 0, matchedCount: 0 });
             const set = (update.$set ?? {}) as Record<string, unknown>;
             state.campaignUpdates.push(set);
             applySet(state.campaign as unknown as Record<string, unknown>, set);
-            return Promise.resolve({ modifiedCount: 1 });
+            return Promise.resolve({ modifiedCount: 1, matchedCount: 1 });
           }),
           updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
         };
@@ -524,5 +546,68 @@ describe("settlement ratification", () => {
     expect(closed.outcome).toBeNull();
     expect(state.campaign.ratification).toMatchObject({ status: "open", offerRevision: 4 });
     expect(state.agreements).toHaveLength(0);
+  });
+
+  it("rolls back a ratification and its agreement together, then the turn sweep can retry", async () => {
+    const state = baseState();
+    let fail = false;
+    const db = fakeDb(state, () => fail);
+    await actOnBargainingCampaignAsUnion(
+      db,
+      character(leaderId),
+      state.union._id.toString(),
+      state.campaign._id.toString(),
+      "accept",
+      104
+    );
+    fail = true;
+    await expect(closeDueRatificationVotes(db, 107)).rejects.toThrow("agreement write interrupted");
+    expect(state.campaign.status).toBe("negotiating");
+    expect(state.campaign.ratification?.status).toBe("open");
+    expect(state.agreements).toHaveLength(0);
+
+    fail = false;
+    await closeDueRatificationVotes(db, 108);
+    await closeDueRatificationVotes(db, 108);
+    expect(state.campaign.status).toBe("settled");
+    expect(state.campaign.ratification?.status).toBe("ratified");
+    expect(state.agreements).toHaveLength(1);
+  });
+
+  it("does not create a second agreement when two close requests overlap", async () => {
+    const state = baseState();
+    const db = fakeDb(state);
+    await actOnBargainingCampaignAsUnion(
+      db,
+      character(leaderId),
+      state.union._id.toString(),
+      state.campaign._id.toString(),
+      "accept",
+      104
+    );
+    await Promise.all([
+      closeRatificationVote(db, state.campaign, 107),
+      closeRatificationVote(db, state.campaign, 107),
+    ]);
+    expect(state.campaign.status).toBe("settled");
+    expect(state.agreements).toHaveLength(1);
+  });
+
+  it("recovers an already-ratified vote whose agreement was never created", async () => {
+    const state = baseState();
+    const db = fakeDb(state);
+    await actOnBargainingCampaignAsUnion(
+      db,
+      character(leaderId),
+      state.union._id.toString(),
+      state.campaign._id.toString(),
+      "accept",
+      104
+    );
+    state.campaign.ratification!.status = "ratified";
+    await closeDueRatificationVotes(db, 108);
+    await closeDueRatificationVotes(db, 108);
+    expect(state.campaign.status).toBe("settled");
+    expect(state.agreements).toHaveLength(1);
   });
 });

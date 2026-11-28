@@ -2,6 +2,7 @@
  * Governments publish tenders and choose corporate bids after bidding closes.
  * Publishing holds budget or capacity; award and cancellation preserve the existing contracts' accounting.
  */
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { isGovernmentContractsEnabled } from "./featureFlag";
 import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "./rules/featureGate";
 import { automatedDefenceBids } from "./automatedBids";
@@ -68,51 +69,57 @@ export async function raiseOpenDefenceTenderToLiveFloor(
   t: GovernmentTender,
   now: Date = new Date()
 ): Promise<GovernmentTender> {
-  if (t.status !== "open" || t.terms.type !== "defence") return t;
-  const state = await getGameState(db);
-  const budget = await ensureFederalBudget(db, t.countryId, state?.preset ?? DEFAULT_SEED_PRESET);
-  if (!budget) return t;
-  const anchor = lotPrice(
-    t.countryId,
-    militaryPriceAnchor(budget.gdp, budget.militaryPriceBaselineGdp)
-  );
-  if (anchor == null || !Number.isFinite(anchor) || !(anchor > 0)) return t;
-  const liveFloor = defenceLiveLotFloor({
-    component: t.terms.component,
-    grade: t.terms.grade,
-    anchor,
-    ratios: await loadDefencePriceRatios(db),
-  });
-  if (liveFloor == null || t.terms.maximumPricePerLot >= liveFloor) return t;
-  const newMax = liveFloor;
-  const newReserved = tenderReservationValue({
-    ...t.terms,
-    maximumPricePerLot: newMax,
-  });
-  if (newReserved == null || newReserved < t.reservedAmount) return t;
-  const defenseLine = resolveDefenseLineFrom(budget);
-  if (newReserved > t.reservedAmount) {
-    if (!(await topUpDefenceTenderReservation(db, t, newReserved, defenseLine))) return t;
-  }
-  const updated = await tenders(db).findOneAndUpdate(
-    {
-      _id: t._id,
-      status: "open",
-      "terms.type": "defence",
-      "terms.maximumPricePerLot": t.terms.maximumPricePerLot,
-      reservedAmount: t.reservedAmount,
-    },
-    {
-      $set: {
-        "terms.maximumPricePerLot": newMax,
-        reservedAmount: newReserved,
-        updatedAt: now,
+  return withSessionDb(db, async (db) => {
+    const current = await tenders(db).findOne({ _id: t._id });
+    if (!current) return t;
+    t = current;
+    if (t.status !== "open" || t.terms.type !== "defence") return t;
+    const state = await getGameState(db);
+    const budget = await ensureFederalBudget(db, t.countryId, state?.preset ?? DEFAULT_SEED_PRESET);
+    if (!budget) return t;
+    const anchor = lotPrice(
+      t.countryId,
+      militaryPriceAnchor(budget.gdp, budget.militaryPriceBaselineGdp)
+    );
+    if (anchor == null || !Number.isFinite(anchor) || !(anchor > 0)) return t;
+    const liveFloor = defenceLiveLotFloor({
+      component: t.terms.component,
+      grade: t.terms.grade,
+      anchor,
+      ratios: await loadDefencePriceRatios(db),
+    });
+    if (liveFloor == null || t.terms.maximumPricePerLot >= liveFloor) return t;
+    const newMax = liveFloor;
+    const newReserved = tenderReservationValue({
+      ...t.terms,
+      maximumPricePerLot: newMax,
+    });
+    if (newReserved == null || newReserved < t.reservedAmount) return t;
+    const defenseLine = resolveDefenseLineFrom(budget);
+    if (newReserved > t.reservedAmount) {
+      if (!(await topUpDefenceTenderReservation(db, t, newReserved, defenseLine))) return t;
+    }
+    const updated = await tenders(db).findOneAndUpdate(
+      {
+        _id: t._id,
+        status: "open",
+        "terms.type": "defence",
+        "terms.maximumPricePerLot": t.terms.maximumPricePerLot,
+        reservedAmount: t.reservedAmount,
       },
-      $inc: { revision: 1 },
-    },
-    { returnDocument: "after" }
-  );
-  return updated ?? t;
+      {
+        $set: {
+          "terms.maximumPricePerLot": newMax,
+          reservedAmount: newReserved,
+          updatedAt: now,
+        },
+        $inc: { revision: 1 },
+      },
+      { returnDocument: "after" }
+    );
+    if (!updated) throw new Error("Tender changed before its reservation was published");
+    return updated;
+  });
 }
 
 /** Refresh every open defence tender whose frozen maximum sits below the live floor. */

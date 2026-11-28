@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
-import type { CorporateSector } from "@/lib/db/types";
+
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { setSectorPolicySchema as setPolicySchema } from "@/lib/api/schemas/corporations";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
@@ -42,36 +43,40 @@ export async function setSectorPolicy(request: Request, { params }: RouteParams)
     const { productionPolicy } = parsed.data;
     const db = await getDb();
 
-    // Resolve corporation + CEO check
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      // Resolve corporation + CEO check
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    // Resolve sector
-    if (!ObjectId.isValid(sectorId)) {
-      return errorResponse(400, "Invalid sector ID");
-    }
+      // Resolve sector
+      if (!ObjectId.isValid(sectorId)) {
+        return errorResponse(400, "Invalid sector ID");
+      }
 
-    const sector = await corporateSectorsCollection(db).findOne({
-      _id: new ObjectId(sectorId),
-      corporationId: corporation._id,
+      const sector = await corporateSectorsCollection(db).findOne({
+        _id: new ObjectId(sectorId),
+        corporationId: corporation._id,
+      });
+
+      if (!sector) {
+        return errorResponse(404, "Sector not found");
+      }
+
+      const clamped = clampProductionPolicy(productionPolicy);
+
+      const changed = await corporateSectorsCollection(db).updateOne(
+        { _id: sector._id, corporationId: corporation._id },
+        { $set: { productionPolicy: clamped, updatedAt: new Date() } }
+      );
+
+      if (changed.matchedCount !== 1)
+        return errorResponse(409, "Sector ownership changed. Refresh and try again.");
+      return NextResponse.json({ success: true, productionPolicy: clamped });
     });
-
-    if (!sector) {
-      return errorResponse(404, "Sector not found");
-    }
-
-    const clamped = clampProductionPolicy(productionPolicy);
-
-    await corporateSectorsCollection(db).updateOne(
-      { _id: sector._id },
-      { $set: { productionPolicy: clamped, updatedAt: new Date() } }
-    );
-
-    return NextResponse.json({ success: true, productionPolicy: clamped });
   } catch (error) {
     return handleRouteError(error);
   }

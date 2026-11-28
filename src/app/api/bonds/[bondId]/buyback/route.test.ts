@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -43,7 +46,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/bonds/[bondId]/buyback", () => {
-  it("refunds the corporation when the public-float claim loses the race", async () => {
+  it("rejects a lost public-float claim for transaction rollback", async () => {
     const bondId = new ObjectId();
     const corpId = new ObjectId();
 
@@ -103,13 +106,7 @@ describe("POST /api/bonds/[bondId]/buyback", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(db.collectionMocks.corporations.updateOne).toHaveBeenNthCalledWith(
-      2,
-      { _id: corpId },
-      expect.objectContaining({
-        $inc: expect.objectContaining({ liquidCapital: expect.any(Number) }),
-      })
-    );
+    expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledTimes(1);
     // The debit was refunded, so the money history records nothing.
     const { emitTx } = await import("@/lib/financialTxLog/emit");
     expect(emitTx).not.toHaveBeenCalled();

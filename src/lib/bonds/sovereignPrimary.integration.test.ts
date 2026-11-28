@@ -2,7 +2,8 @@
 import { commitSovereignPrimary } from "./sovereignPrimarySettlement";
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import { resumeSettlement } from "@/lib/banking/settlementJournal";
 import {
@@ -24,7 +25,7 @@ vi.mock("@/lib/bonds/marketPool", async (original) => ({
 const TURN = 240;
 const NOW = new Date("2026-09-30T00:00:00Z");
 function world(poolCash = 1_000_000): InMemoryDb {
-  const db = createInMemoryDb();
+  const { memory: db } = createTransactionalMemoryDb();
   db.seed("gameConfig", [{ _id: "default", ledgerShadow: true }]);
   db.seed("gameState", [{ _id: "current", currentTurn: TURN }]);
   db.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);

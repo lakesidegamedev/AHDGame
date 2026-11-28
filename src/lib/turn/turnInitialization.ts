@@ -11,6 +11,7 @@ import { DEFAULT_GAME_STATE_FLAGS } from "@/lib/seeds/reference/featureFlagDefau
 import { DEFAULT_CYCLE_ANCHOR_CONTEXT } from "@/lib/elections/cycleAnchorContext";
 
 import { turnHasCommittedWrites } from "@/lib/turn/processingLock";
+import { TURN_HOLDER_ID } from "./turnLockHolder";
 
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 
@@ -98,7 +99,20 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
     // and a clean shutdown was defeating it.
     const live = await (
       await getGameStateCollection(db)
-    ).findOne({ _id: "current" }, { projection: { processingPhase: 1 } });
+    ).findOne(
+      { _id: "current", isProcessing: true, processingHolderId: TURN_HOLDER_ID },
+      { projection: { processingPhase: 1 } }
+    );
+    if (!live) {
+      localTurnLock.held = false;
+      return false;
+    }
+    const owned = {
+      _id: "current",
+      isProcessing: true,
+      processingHolderId: TURN_HOLDER_ID,
+      processingPhase: live.processingPhase ?? null,
+    };
     const committed = turnHasCommittedWrites(live?.processingPhase);
 
     if (committed) {
@@ -106,12 +120,10 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
       // lock read as stale IMMEDIATELY, so the next cron consumes this turn rather than
       // serving the full 20-minute wait first. A deploy then costs the remainder of one
       // turn instead of that turn plus the next slot.
-      await (
+      const abandoned = await (
         await getGameStateCollection(db)
-      ).updateOne(
-        { _id: "current", isProcessing: true },
-        { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } }
-      );
+      ).updateOne(owned, { $set: { processingAbandonedAt: new Date(), updatedAt: new Date() } });
+      if (abandoned.matchedCount !== 1) return false;
       localTurnLock.held = false;
       invalidateGameStateCache();
       console.warn(
@@ -124,25 +136,23 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
 
     // Nothing committed yet, so the turn is losslessly re-runnable: release outright and
     // let the next container simply run it.
-    await (
+    const released = await (
       await getGameStateCollection(db)
-    ).updateOne(
-      { _id: "current", isProcessing: true },
-      {
-        $set: {
-          isProcessing: false,
-          processingKind: null,
-          processingStartedAt: null,
-          processingTargetTurn: null,
-          processingHeartbeatAt: null,
-          processingPhase: null,
-          processingPhaseStatuses: null,
-          processingPhaseResults: null,
-          processingAbandonedAt: null,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    ).updateOne(owned, {
+      $set: {
+        isProcessing: false,
+        processingKind: null,
+        processingStartedAt: null,
+        processingTargetTurn: null,
+        processingHeartbeatAt: null,
+        processingPhase: null,
+        processingPhaseStatuses: null,
+        processingPhaseResults: null,
+        processingAbandonedAt: null,
+        updatedAt: new Date(),
+      },
+    });
+    if (released.matchedCount !== 1) return false;
     localTurnLock.held = false;
     invalidateGameStateCache();
     console.warn(`[Turn System] Released in-flight processing lock on ${reason}.`);

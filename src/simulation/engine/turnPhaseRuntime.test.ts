@@ -92,7 +92,7 @@ describe("createTurnPhaseRuntime", () => {
       resumeCarried: "completed",
     });
   });
-  it.each(["playerIncomeTax", "incomeTaxBases"])(
+  it.each(["playerIncomeTax", "incomeTaxBases", "fiscalYear"])(
     "replays the idempotent %s phase on resume",
     async (name) => {
       const execute = vi.fn().mockResolvedValue(42);

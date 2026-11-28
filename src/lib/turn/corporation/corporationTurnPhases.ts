@@ -1,4 +1,6 @@
-import { runJournaledStepWithOutput, type JournalContext } from "./resume/journal";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
+import { type JournalContext } from "./resume/journal";
 import { settleCorporateTaxPriority } from "./corporateTaxPriority";
 import { loadTreasuryCashContext } from "@/lib/nationalization/treasuryLedger";
 import { dividendStockTaxReceipt } from "@/lib/budget/rules/capitalGainsTax";
@@ -9,13 +11,7 @@ import { expireShareListings } from "./shareListings";
 import { snapshotMarketCap } from "./marketCapSnapshot";
 import { ObjectId } from "mongodb";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type {
-  Character,
-  Corporation,
-  FederalBudget,
-  StateBudget,
-  StateMetrics,
-} from "@/lib/db/types";
+import type { Character, Corporation, FederalBudget, StateBudget } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { GDP_DOMESTIC_CORPORATE_FACTOR, GDP_FOREIGN_CORPORATE_FACTOR } from "@/lib/budget/revenue";
 import { COUNTRY_CURRENCY_MAP, MARKET_MAKER_SPREAD } from "@/lib/constants/currencies";
@@ -53,6 +49,29 @@ export async function persistLabourIndices(args: {
   automationIndexByState: Map<string, number>;
   /** Stage 2: the prior values are captured once per turn so a rerun computes the same deltas. */
   journal?: JournalContext;
+  turn?: number;
+}): Promise<void> {
+  if (!args.wagesEnabled || args.labourWageIndexByState.size === 0) return;
+  const turn =
+    args.turn ??
+    args.journal?.turn ??
+    (
+      await gameStateCollection(args.db).findOne(
+        { _id: "current" },
+        { projection: { currentTurn: 1 } }
+      )
+    )?.currentTurn;
+  if (turn === undefined) throw new Error("Labour indices require a processing turn");
+  await withTurnValueSettlement(args.db, "corporate-labour-indices", turn, (db) =>
+    applyLabourIndices({ ...args, db })
+  );
+}
+
+async function applyLabourIndices(args: {
+  db: Db;
+  wagesEnabled: boolean;
+  labourWageIndexByState: Map<string, number>;
+  automationIndexByState: Map<string, number>;
 }): Promise<void> {
   const { db, wagesEnabled, labourWageIndexByState, automationIndexByState } = args;
   if (wagesEnabled && labourWageIndexByState.size > 0) {
@@ -78,9 +97,7 @@ export async function persistLabourIndices(args: {
           "economic.automationIndex.value": 1,
         })
         .toArray();
-    const priorDocs = args.journal
-      ? await runJournaledStepWithOutput(args.journal, "labourPriors", "rerun", readPriors)
-      : await readPriors();
+    const priorDocs = await readPriors();
     const priorWageIndexByState = new Map(
       priorDocs.map((d) => [d._id, d.economic?.labourWageIndex?.value])
     );
@@ -334,7 +351,10 @@ export async function creditCorpDividends(args: {
     }
     // Route the skimmed cross-currency dividend spreads into the CB system after
     // the credits land (reserve slice → recipient corp's CB; revenue → payer CB).
-    await distributeConversionSpreadsBatch(db, corpDividendSpreadFees);
+    await distributeConversionSpreadsBatch(db, corpDividendSpreadFees, {
+      key: `corporation-dividend-fx:${turn ?? 0}`,
+      turn: turn ?? 0,
+    });
     if (corpDividendRecipientTxEntries.length > 0) {
       void emitTxBulk(db, corpDividendRecipientTxEntries, thresholds);
     }

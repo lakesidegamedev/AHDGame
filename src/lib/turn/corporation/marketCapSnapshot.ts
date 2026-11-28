@@ -1,3 +1,4 @@
+import { publishCorporateTurnHistory } from "./publishCorporateTurnHistory";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, MarketCapHistory, CorporationHistory } from "@/lib/db/types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
@@ -495,6 +496,37 @@ export async function snapshotMarketCap(
         ),
         ...(s.headcount != null ? { headcount: Math.round(s.headcount) } : {}),
         income: Math.round(writeCorpEconomicLocal(s.income, code, rate)),
+        ...(s.settledImfInterestPaid != null
+          ? { settledImfInterestPaid: writeCorpEconomicLocal(s.settledImfInterestPaid, code, rate) }
+          : {}),
+        ...(s.settledImfInterestReceived != null
+          ? {
+              settledImfInterestReceived: writeCorpEconomicLocal(
+                s.settledImfInterestReceived,
+                code,
+                rate
+              ),
+            }
+          : {}),
+        ...(s.settledImfPrincipalPaid != null
+          ? {
+              settledImfPrincipalPaid: writeCorpEconomicLocal(
+                s.settledImfPrincipalPaid,
+                code,
+                rate
+              ),
+            }
+          : {}),
+        ...(s.settledImfPrincipalReceived != null
+          ? {
+              settledImfPrincipalReceived: writeCorpEconomicLocal(
+                s.settledImfPrincipalReceived,
+                code,
+                rate
+              ),
+            }
+          : {}),
+        ...(s.imfSettlementUnavailable ? { imfSettlementUnavailable: true } : {}),
         dividendPaidPerTurn: Math.round(writeCorpEconomicLocal(s.dividendPaidPerTurn, code, rate)),
         incomePreDividends: Math.round(writeCorpEconomicLocal(s.incomePreDividends, code, rate)),
         // Persisted so recomputeSharePricesAfterBondTurn can rebuild the
@@ -583,7 +615,7 @@ export async function snapshotMarketCap(
         createdAt: now,
       };
     });
-    await corporationHistoryCollection<Document>(db).insertMany(corpHistoryDocs);
+    await publishCorporateTurnHistory(db, corpHistoryDocs);
 
     for (const s of corpSnapshots) {
       const prev = prevRatingByCorp.get(s.corpId.toString());

@@ -1,24 +1,13 @@
+import { seedDemographics } from "./seedDemographics";
 import { isPartyValidForPreset } from "@/lib/seeds/ensureDefaultParties";
 import { ensureUSMinorPartyOrgs } from "@/lib/countries/us/seedMinorPartyOrgs";
 import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import { ObjectId, type Db } from "mongodb";
-import {
-  assertKnownSeedPreset,
-  selectPresetBundle,
-  strictEraForPreset,
-} from "@/lib/seeds/presetSelector";
+import { assertKnownSeedPreset, strictEraForPreset } from "@/lib/seeds/presetSelector";
 import { selectStatesBundleForPreset } from "./seedStates";
 import { policies } from "@/lib/seeds/reference/policies";
 import { gameConfig } from "@/lib/seeds/reference/gameConfig";
 import { STALE_PER_WORLD_GAME_CONFIG_UNSET, coreGameConfigUpdate } from "./coreGameConfigUpdate";
-import { registerAndGenerate, stateCensusData } from "@/lib/seeds/stateDemographics";
-import { stateCensusData1953 } from "@/lib/seeds/stateCensusData1953";
-import { stateCensusData1979 } from "@/lib/seeds/stateCensusData1979";
-import { stateCensusData1991 } from "@/lib/seeds/stateCensusData1991";
-import { stateCensusData1999 } from "@/lib/seeds/stateCensusData1999";
-import { stateCensusData2007 } from "@/lib/seeds/stateCensusData2007";
-import { stateCensusData2023 } from "@/lib/seeds/stateCensusData2023";
-import { stateCensusData2027 } from "@/lib/seeds/stateCensusData2027";
 import { politicalParties } from "@/lib/seeds/reference/politicalParties";
 import { resolveSeedPartyTier } from "@/lib/seeds/defaultPartyTiers";
 import { generateStatePartyOrg } from "@/lib/seeds/reference/statePartyOrg";
@@ -47,19 +36,7 @@ import { seedCabinetEstates } from "./seedCabinetEstates";
 import { seedEnergyPlants } from "./seedEnergyPlants";
 import { seedInfraProjects } from "./seedInfraProjects";
 import { seedCongressionalDistricts } from "@/lib/redistricting/seedDistricts";
-import type {
-  State,
-  Policy,
-  GameConfig,
-  StateDemographics,
-  StateDemographicTurnout,
-  PoliticalParty,
-  StatePartyOrg,
-  StateMetricBaseline,
-  LegislationType,
-  Achievement,
-  User,
-} from "@/lib/db/types";
+import type { PoliticalParty, Achievement } from "@/lib/db/types";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { statesCollection } from "@/lib/db/repositories/states";
@@ -70,13 +47,10 @@ import { statePartyOrgCollection } from "@/lib/db/repositories/statePartyOrg";
 import { legislationTypesCollection } from "@/lib/db/repositories/legislationTypes";
 import { usersCollection } from "@/lib/db/repositories/users";
 import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
-import { stateDemographicsCollection } from "@/lib/db/repositories/stateDemographics";
-import { stateDemographicTurnoutCollection } from "@/lib/db/repositories/stateDemographicTurnout";
 import { stateBaselinesCollection } from "@/lib/db/repositories/stateBaselines";
 import { achievementsCollection } from "@/lib/db/repositories/achievements";
 import { characterAchievementsCollection } from "@/lib/db/repositories/characterAchievements";
 import { formulaGrantsCollection } from "@/lib/db/repositories/formulaGrants";
-import { demographicDefaultsCollection } from "@/lib/db/repositories/demographicDefaults";
 import { policiesCollection } from "@/lib/db/repositories/policies";
 
 /**
@@ -413,110 +387,9 @@ export async function runSeed(
   }
   log(`Seeded ${policies.length} policies`);
 
-  // State demographics — era-aware. The preset's census bundle is generated
-  // through the Layer-1 pipeline with that era's composition (turnout rates,
-  // leans, weights from ERA_COMPOSITIONS). The post-hoc 1991 population
-  // multiplier (`applyEra1991DemographicAdjustments`) is no longer used for US;
-  // 1991 worlds now seed from independent 1991 Layer-1 census data.
-  const { calculateStateLeanForCache } = await import("@/lib/demographics/cachedStateLean");
   const is1991 = preset === "1991-default";
   const era = strictEraForPreset(preset);
-  const censusBundle = selectPresetBundle(
-    preset,
-    {
-      "1953-default": stateCensusData1953, // 1979 shares proxy with 1979-authored positions stripped
-      "1979-default": stateCensusData1979,
-      "1991-default": stateCensusData1991,
-      "1999-default": stateCensusData1999,
-      "2007-default": stateCensusData2007,
-      "2019-default": stateCensusData,
-      "2023-default": stateCensusData2023,
-      "2027-default": stateCensusData2027,
-    },
-    "runCoreSeed:stateCensusData1953"
-  );
-  const { loadEraFullOverride } = await import("@/lib/seeds/loadEraPositionOverride");
-  const override = (await loadEraFullOverride(era)) ?? undefined;
-  let seededDemographicsCount = 0;
-  for (const [censusStateId, censusConfig] of Object.entries(censusBundle)) {
-    const sd = registerAndGenerate(censusStateId, censusConfig, era, {
-      layer1Positions: true,
-      positions: override?.positions,
-      turnout: override?.turnout,
-    });
-    const calculatedLean = calculateStateLeanForCache(sd, [], {
-      countryId: "US",
-      stateId: sd._id,
-      preset,
-      demographicDefaults: sd,
-    });
-    const { groups: _groups, ...storedDemographics } = sd;
-    const cachedDemographics = {
-      ...storedDemographics,
-      cachedEconomicLean: calculatedLean.economicLean,
-      cachedSocialLean: calculatedLean.socialLean,
-    };
-    seededDemographicsCount++;
-    await stateDemographicsCollection(db).updateOne(
-      { _id: sd._id },
-      { $set: cachedDemographics },
-      { upsert: true }
-    );
-    await demographicDefaultsCollection(db).updateOne(
-      { _id: sd._id },
-      { $set: cachedDemographics },
-      { upsert: true }
-    );
-    await statesCollection(db).updateOne(
-      { _id: sd._id },
-      {
-        $set: {
-          cachedEconomicLean: calculatedLean.economicLean,
-          cachedSocialLean: calculatedLean.socialLean,
-          demographicsLastUpdated: new Date(),
-        },
-      }
-    );
-  }
-  log(`Seeded ${seededDemographicsCount} state demographics (preset: ${preset}, era: ${era})`);
-
-  // US stateDemographicTurnout (required for Turnout tab)
-  const { STATE_IDS } = await import("@/lib/constants/states");
-  const { DEMOGRAPHIC_TURNOUT_RATES } = await import("@/lib/seeds/demographicCategories");
-  const usStateIds = [...STATE_IDS];
-  const turnoutNow = new Date();
-  const emptyModifiers: Record<string, Record<string, number>> = {
-    race: Object.fromEntries(
-      (Object.keys(DEMOGRAPHIC_TURNOUT_RATES.race) as string[]).map((k) => [k, 0])
-    ),
-    age: Object.fromEntries(
-      (Object.keys(DEMOGRAPHIC_TURNOUT_RATES.age) as string[]).map((k) => [k, 0])
-    ),
-    education: Object.fromEntries(
-      (Object.keys(DEMOGRAPHIC_TURNOUT_RATES.education) as string[]).map((k) => [k, 0])
-    ),
-    wealth: Object.fromEntries(
-      (Object.keys(DEMOGRAPHIC_TURNOUT_RATES.wealth) as string[]).map((k) => [k, 0])
-    ),
-    ideology: Object.fromEntries(
-      (Object.keys(DEMOGRAPHIC_TURNOUT_RATES.ideology) as string[]).map((k) => [k, 0])
-    ),
-  };
-  for (const sid of usStateIds) {
-    await stateDemographicTurnoutCollection(db).updateOne(
-      { _id: sid },
-      {
-        $set: {
-          countryId: "US",
-          modifiers: emptyModifiers,
-          lastDecayApplied: turnoutNow,
-          lastUpdated: turnoutNow,
-        },
-      },
-      { upsert: true }
-    );
-  }
-  log(`Seeded ${usStateIds.length} US stateDemographicTurnout docs`);
+  const seededDemographicsCount = await seedDemographics(db, reset, log, preset);
 
   // Game config — persist seedYear so landing/login can read the active era
   // without a separate admin step. era is already in scope from strictEraForPreset(preset).

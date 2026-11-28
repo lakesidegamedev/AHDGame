@@ -2,7 +2,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { MongoClient, ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { getDb } from "@/lib/mongodb";
 import { resetLedgerShadowFlagCache } from "@/lib/ledger/featureFlag";
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 async function database(native: boolean): Promise<Db> {
-  if (!native) return createInMemoryDb() as unknown as Db;
+  if (!native) return createTransactionalMemoryDb().db;
   const uri = new URL(process.env.AHD_NPP_FUND_MIRROR_MONGO_URI ?? "mongodb://127.0.0.1:27018");
   if (
     uri.protocol !== "mongodb:" ||

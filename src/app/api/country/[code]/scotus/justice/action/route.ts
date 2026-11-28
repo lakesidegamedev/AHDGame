@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/scotus/justice/action
 // Auth: requireAuth: must be the seated (character-backed) Justice for the target seat
 // Errors: 400, 401, 403, 404, 409
@@ -8,7 +12,6 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import {
   initialJusticeActionFields,
   JUSTICE_ADDRESS_FAVORABILITY_GAIN,
@@ -47,72 +50,81 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { seatNumber, actionId } = parsed.data;
 
     const db = await getDb();
-    const seatsCol = supremeCourtSeatsCollection(db);
-    const seat = await seatsCol.findOne({ countryId, seatNumber });
+    return await withRecordedEconomicCommand(
+      db,
+      "justice-office-action",
+      `${auth.user.userId}:${auth.user.character?._id ?? "none"}`,
+      economicRequestId(request),
+      { countryId, ...parsed.data },
+      async (db) => {
+        const seatsCol = supremeCourtSeatsCollection(db);
+        const seat = await seatsCol.findOne({ countryId, seatNumber });
 
-    const isSeatedJustice =
-      !!seat?.justiceCharacterId &&
-      !!auth.user.character &&
-      seat.justiceCharacterId.toString() === auth.user.character._id.toString();
-    if (!isSeatedJustice) {
-      return errorResponse(403, "Only the sitting Justice for this seat can take this action");
-    }
-
-    if (seat!.justiceActionsRemaining == null || seat!.lastJusticeActionResetDay == null) {
-      await seatsCol.updateOne({ _id: seat!._id }, { $set: initialJusticeActionFields() });
-      seat!.justiceActionsRemaining = initialJusticeActionFields().justiceActionsRemaining;
-    }
-
-    const actionsRemaining = seat!.justiceActionsRemaining ?? 0;
-    if (actionsRemaining < 1) {
-      return errorResponse(400, "No Justice actions remaining");
-    }
-
-    const spend = await seatsCol.updateOne(
-      { _id: seat!._id, justiceActionsRemaining: { $gte: 1 } },
-      { $inc: { justiceActionsRemaining: -1 } }
-    );
-    if (spend.modifiedCount === 0) {
-      return errorResponse(409, "No Justice actions remaining");
-    }
-
-    const charactersCol = charactersCollection(db);
-    try {
-      const targetChar = await charactersCol.findOne({ _id: seat!.justiceCharacterId! });
-      if (!targetChar) {
-        throw new Error("Seated Justice's character record not found");
-      }
-
-      if (actionId === "public_address") {
-        const next = clamp100((targetChar.favorability ?? 0) + JUSTICE_ADDRESS_FAVORABILITY_GAIN);
-        await charactersCol.updateOne(
-          { _id: targetChar._id },
-          { $set: { favorability: next, updatedAt: new Date() } }
-        );
-        return NextResponse.json({
-          success: true,
-          actionsRemaining: actionsRemaining - 1,
-          message: `You spoke publicly on the Court's role. Your favorability is now ${next}.`,
-        });
-      }
-      // write_opinion: national standing, not a home-state machine
-      await charactersCol.updateOne(
-        { _id: targetChar._id },
-        {
-          $inc: { nationalInfluence: JUSTICE_OPINION_NATIONAL_INFLUENCE_GAIN },
-          $set: { updatedAt: new Date() },
+        const isSeatedJustice =
+          !!seat?.justiceCharacterId &&
+          !!auth.user.character &&
+          seat.justiceCharacterId.toString() === auth.user.character._id.toString();
+        if (!isSeatedJustice) {
+          return errorResponse(403, "Only the sitting Justice for this seat can take this action");
         }
-      );
-      const next = (targetChar.nationalInfluence ?? 0) + JUSTICE_OPINION_NATIONAL_INFLUENCE_GAIN;
-      return NextResponse.json({
-        success: true,
-        actionsRemaining: actionsRemaining - 1,
-        message: `You published a legal opinion. Your national influence is now ${next.toFixed(1)}.`,
-      });
-    } catch (error) {
-      await seatsCol.updateOne({ _id: seat!._id }, { $inc: { justiceActionsRemaining: 1 } });
-      throw error;
-    }
+
+        if (seat!.justiceActionsRemaining == null || seat!.lastJusticeActionResetDay == null) {
+          await seatsCol.updateOne({ _id: seat!._id }, { $set: initialJusticeActionFields() });
+          seat!.justiceActionsRemaining = initialJusticeActionFields().justiceActionsRemaining;
+        }
+
+        const actionsRemaining = seat!.justiceActionsRemaining ?? 0;
+        if (actionsRemaining < 1) {
+          return errorResponse(400, "No Justice actions remaining");
+        }
+
+        const spend = await seatsCol.updateOne(
+          { _id: seat!._id, justiceActionsRemaining: { $gte: 1 } },
+          { $inc: { justiceActionsRemaining: -1 } }
+        );
+        if (spend.modifiedCount === 0) {
+          return errorResponse(409, "No Justice actions remaining");
+        }
+
+        const charactersCol = charactersCollection(db);
+        {
+          const targetChar = await charactersCol.findOne({ _id: seat!.justiceCharacterId! });
+          if (!targetChar) {
+            throw new Error("Seated Justice's character record not found");
+          }
+
+          if (actionId === "public_address") {
+            const next = clamp100(
+              (targetChar.favorability ?? 0) + JUSTICE_ADDRESS_FAVORABILITY_GAIN
+            );
+            await charactersCol.updateOne(
+              { _id: targetChar._id },
+              { $set: { favorability: next, updatedAt: new Date() } }
+            );
+            return NextResponse.json({
+              success: true,
+              actionsRemaining: actionsRemaining - 1,
+              message: `You spoke publicly on the Court's role. Your favorability is now ${next}.`,
+            });
+          }
+          // write_opinion: national standing, not a home-state machine
+          await charactersCol.updateOne(
+            { _id: targetChar._id },
+            {
+              $inc: { nationalInfluence: JUSTICE_OPINION_NATIONAL_INFLUENCE_GAIN },
+              $set: { updatedAt: new Date() },
+            }
+          );
+          const next =
+            (targetChar.nationalInfluence ?? 0) + JUSTICE_OPINION_NATIONAL_INFLUENCE_GAIN;
+          return NextResponse.json({
+            success: true,
+            actionsRemaining: actionsRemaining - 1,
+            message: `You published a legal opinion. Your national influence is now ${next.toFixed(1)}.`,
+          });
+        }
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

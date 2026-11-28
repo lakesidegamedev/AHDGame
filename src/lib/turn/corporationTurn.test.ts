@@ -1,3 +1,8 @@
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 /**
  * Unit tests for processCorporationTurn — corporation revenue, income, and share price processing.
  * Focuses on return value shape and key processing behaviors since the function is very large.
@@ -323,14 +328,15 @@ describe("processCorporationTurn", () => {
     db.collectionMocks["shareOrders"]!.find.mockReturnValue(makeCursor([]));
 
     const { processCorporationTurn } = await import("./corporationTurn");
-    await processCorporationTurn(1);
+    const turnResult = await processCorporationTurn(1);
+    expect(turnResult.turnWarnings).toEqual([]);
 
     // Sectors should be updated via bulkWrite
     expect(db.collectionMocks["corporateSectors"]!.bulkWrite).toHaveBeenCalled();
     // Corps should be updated via bulkWrite
     expect(db.collectionMocks["corporations"]!.bulkWrite).toHaveBeenCalled();
     // History snapshots should be inserted
-    expect(db.collectionMocks["corporationHistory"]!.insertMany).toHaveBeenCalled();
+    expect(db.collectionMocks["corporationHistory"]!.bulkWrite).toHaveBeenCalled();
   });
 
   it("updates federal budget taxBases.corporateProfits with blended value when a profitable corp exists", async () => {
@@ -865,11 +871,16 @@ describe("processCorporationTurn", () => {
     );
 
     const { processCorporationTurn } = await import("./corporationTurn");
-    await processCorporationTurn(1);
+    const turnResult = await processCorporationTurn(1);
+    expect(turnResult.turnWarnings).toEqual([]);
 
-    const insertCalls = db.collectionMocks["corporationHistory"]!.insertMany.mock.calls;
+    const insertCalls = db.collectionMocks["corporationHistory"]!.bulkWrite.mock.calls;
     expect(insertCalls.length).toBe(1);
-    const doc = (insertCalls[0][0] as Array<Record<string, unknown>>)[0];
+    const doc = (
+      insertCalls[0][0] as Array<{
+        updateOne: { update: { $setOnInsert: Record<string, unknown> } };
+      }>
+    )[0].updateOne.update.$setOnInsert;
 
     // Two sectors (US, JP), profitMargin:100 with no overhead. Two engine effects
     // shape the taxed base: (1) the effective margin is soft-capped, so each sector

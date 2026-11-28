@@ -123,7 +123,7 @@ describe("logEconomicAction", () => {
         action: "corp.attackSector",
         category: "corp",
         amount: 45000,
-        currencyCode: "JPY",
+        anchorAmount: 45000,
         refs: { actionLogId: insertedId },
         outcome: "ok",
       })

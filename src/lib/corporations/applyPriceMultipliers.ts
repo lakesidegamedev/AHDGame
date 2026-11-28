@@ -5,8 +5,8 @@
  */
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { SentimentPulse } from "@/lib/db/types/sentimentPulse";
+import type { Corporation } from "@/lib/db/types";
+
 import { computeSentimentMultiplier, getHqConfidenceSentiment } from "./sentimentEngine";
 import { computeOrderFlowMultiplier } from "./orderFlowEngine";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
@@ -76,6 +76,7 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
             sharePrice: 1,
             publicFloat: 1,
             totalShares: 1,
+            priceMultiplierRevision: 1,
             orderFlowMultiplier: 1,
             orderFlowWindowBuyValue: 1,
             orderFlowWindowSellValue: 1,
@@ -165,16 +166,27 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
 
     ops.push({
       updateOne: {
-        // CAS on fundamentalSharePrice: if a writer updated the fundamental
-        // between our read and write, skip so we don't clobber the fresh price
-        // with a multiplier derived from the stale fundamental.
-        filter: { _id: corp._id, fundamentalSharePrice: fundamentalPrice },
+        // A pricing pass consumes only its observed flow window and observed valuation.
+        filter: {
+          _id: corp._id,
+          fundamentalSharePrice: fundamentalPrice,
+          priceMultiplierRevision:
+            corp.priceMultiplierRevision === undefined
+              ? { $exists: false }
+              : corp.priceMultiplierRevision,
+          sharePrice: corp.sharePrice === undefined ? { $exists: false } : corp.sharePrice,
+          publicFloat: corp.publicFloat === undefined ? { $exists: false } : corp.publicFloat,
+          totalShares: corp.totalShares === undefined ? { $exists: false } : corp.totalShares,
+        },
         update: {
+          $inc: {
+            priceMultiplierRevision: 1,
+            orderFlowWindowBuyValue: -(corp.orderFlowWindowBuyValue ?? 0),
+            orderFlowWindowSellValue: -(corp.orderFlowWindowSellValue ?? 0),
+          },
           $set: {
             sharePrice: newPrice,
             orderFlowMultiplier: newOrderFlowMultiplier,
-            orderFlowWindowBuyValue: 0,
-            orderFlowWindowSellValue: 0,
             updatedAt: now,
           },
         },
@@ -182,9 +194,6 @@ export async function applyPriceMultipliers(db?: Db): Promise<ApplyPriceMultipli
     });
   }
 
-  if (ops.length > 0) {
-    await corporationsCollection(database).bulkWrite(ops);
-  }
-
-  return { updated: ops.length, pulseCount: pulses.length };
+  const result = ops.length > 0 ? await corporationsCollection(database).bulkWrite(ops) : null;
+  return { updated: result?.matchedCount ?? 0, pulseCount: pulses.length };
 }

@@ -1,3 +1,5 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
 /**
  * Move CAMPAIGN FUNDS into the treasury of a union you lead.
  *
@@ -14,10 +16,10 @@
  * rings.
  */
 import type { Db } from "mongodb";
-import type { Character, Union } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
-import { rejectIfTurnProcessing, resolveOwnedUnion } from "./unionActions";
+import { resolveOwnedUnion } from "./unionActions";
 import type { UnionActionResult } from "./unionActions";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { unionsCollection } from "@/lib/db/repositories/unions";
@@ -43,7 +45,18 @@ export async function fundUnionTreasury(
   unionId: string,
   amount: number
 ): Promise<UnionActionResult> {
-  const turnBusy = await rejectIfTurnProcessing(db);
+  return withAtomicResult(db, (transactionDb) =>
+    runInTransaction(transactionDb, character, unionId, amount)
+  );
+}
+
+async function runInTransaction(
+  db: Db,
+  character: Character,
+  unionId: string,
+  amount: number
+): Promise<UnionActionResult> {
+  const turnBusy = await fenceEconomicTurn(db);
   if (turnBusy) return turnBusy;
 
   const resolved = await resolveOwnedUnion(db, character, unionId);
@@ -87,27 +100,11 @@ export async function fundUnionTreasury(
     };
   }
 
-  try {
-    const credited = await unionsCollection(db).updateOne(
-      { _id: union._id },
-      { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }
-    );
-    if (credited.modifiedCount === 0) {
-      throw new Error("union treasury credit matched no document");
-    }
-  } catch {
-    // Pure $inc back, never gated on balance, so the refund cannot itself fail
-    // the way the guarded debit can.
-    await charactersCollection(db).updateOne(
-      { _id: character._id },
-      { $inc: { [campaignFundsField]: contribution } }
-    );
-    return {
-      ok: false,
-      status: 500,
-      error: "The contribution did not go through, you have been refunded.",
-    };
-  }
+  const credited = await unionsCollection(db).updateOne(
+    { _id: union._id },
+    { $inc: { treasury: contribution }, $set: { updatedAt: new Date() } }
+  );
+  if (credited.matchedCount !== 1) throw new Error("Union treasury recipient is missing");
 
   return {
     ok: true,

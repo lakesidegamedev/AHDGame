@@ -1,3 +1,6 @@
+import { logger } from "@/lib/observability/logger";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 // POST /api/country/[code]/national-corporation/[id]/privatize
 // Treasury-gated (finance minister) privatization:
 // carve a new private corp out of this National Corporation and float it (IPO).
@@ -62,91 +65,97 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    // A sale moves plants to a new owner. The turn settles every plant against the image it read when the
-    // corporation phase started, so this waits until the turn finishes.
-    const turnBusy = await rejectDuringTurn(db);
-    if (turnBusy) return turnBusy;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      // A sale moves plants to a new owner. The turn settles every plant against the image it read when the
+      // corporation phase started, so this waits until the turn finishes.
+      const turnBusy = await rejectDuringTurn(db);
+      if (turnBusy) return turnBusy;
 
-    // Refuse before the authority check: a player in a command economy should be
-    // told the mechanic does not exist there, not that they hold the wrong
-    // office. privatizeAsset carries the authoritative guard; this is the clean
-    // error for the one caller that has a player on the other end.
-    if (await isPrivateEnterpriseBlocked(db, countryId)) {
-      return errorResponse(
-        403,
-        "Private corporations cannot be founded in a command economy. The state controls all enterprise."
-      );
-    }
-
-    // Authority: the seated finance minister only.
-    const authorized = await assertTreasuryAuthority(db, countryId, auth.user.character._id);
-    if (!authorized) {
-      return errorResponse(
-        403,
-        "Only the Secretary of the Treasury (or equivalent) may privatize a National Corporation asset."
-      );
-    }
-
-    const source = await corporationsCollection(db).findOne({
-      ...idQuery,
-      countryOwnerId: countryId,
-    });
-    if (!source || !isStateOwned(source)) {
-      return errorResponse(404, "National Corporation not found for this country.");
-    }
-
-    const turn = await getCurrentTurn(db);
-    try {
-      const result = await privatizeAsset(db, {
-        countryId,
-        sourceNationalCorporationId: source._id,
-        selections: parsed.data.selections.map((s) => ({
-          sectorId: new ObjectId(s.sectorId),
-          carveFraction: s.carveFraction,
-        })),
-        newCorpName: parsed.data.newCorpName,
-        goldenSharePercent: parsed.data.goldenSharePercent,
-        method: parsed.data.method,
-        reservePrice: parsed.data.reservePrice,
-        headquartersState: parsed.data.headquartersState,
-        turn,
-      });
-      // The completion wire is emitted by the engine at the moment a privatization
-      // actually completes (IPO in privatizeAsset; auction at sale in the resolver),
-      // so the route does not log here — an auction merely OPENS at this point.
-
-      // An IPO floats a tradable corp immediately. Rebuild the stock-exchange
-      // snapshot now so it appears on the Stock Market without waiting for the
-      // 15-min cron — otherwise only the privatizer knows it exists and could
-      // trade ahead of everyone else. Auctions list at sale (turn resolver), so
-      // they're skipped here. A snapshot hiccup must not fail the privatization.
-      if (parsed.data.method === "ipo") {
-        try {
-          await generateStockExchangeSnapshots(turn, db);
-        } catch (snapErr) {
-          console.error("[privatize] stock-exchange snapshot refresh failed:", snapErr);
-        }
+      // Refuse before the authority check: a player in a command economy should be
+      // told the mechanic does not exist there, not that they hold the wrong
+      // office. privatizeAsset carries the authoritative guard; this is the clean
+      // error for the one caller that has a player on the other end.
+      if (await isPrivateEnterpriseBlocked(db, countryId)) {
+        return errorResponse(
+          403,
+          "Private corporations cannot be founded in a command economy. The state controls all enterprise."
+        );
       }
 
-      return NextResponse.json({
-        success: true,
-        ...result,
-        newCorporationId: result.newCorporationId.toString(),
+      // Authority: the seated finance minister only.
+      const authorized = await assertTreasuryAuthority(db, countryId, auth.user.character._id);
+      if (!authorized) {
+        return errorResponse(
+          403,
+          "Only the Secretary of the Treasury (or equivalent) may privatize a National Corporation asset."
+        );
+      }
+
+      const source = await corporationsCollection(db).findOne({
+        ...idQuery,
+        countryOwnerId: countryId,
       });
-    } catch (err) {
-      // Engine validation failures (name taken, cooldown, bad sector) → 400,
-      // but genuine infra/programming faults must be captured, not masked.
-      if (isUnexpectedError(err)) {
-        return handleRouteError(err, {
-          request,
-          route: "/api/country/[code]/national-corporation/[id]/privatize",
+      if (!source || !isStateOwned(source)) {
+        return errorResponse(404, "National Corporation not found for this country.");
+      }
+
+      const turn = await getCurrentTurn(db);
+      try {
+        const result = await privatizeAsset(db, {
+          countryId,
+          sourceNationalCorporationId: source._id,
+          selections: parsed.data.selections.map((s) => ({
+            sectorId: new ObjectId(s.sectorId),
+            carveFraction: s.carveFraction,
+          })),
+          newCorpName: parsed.data.newCorpName,
+          goldenSharePercent: parsed.data.goldenSharePercent,
+          method: parsed.data.method,
+          reservePrice: parsed.data.reservePrice,
+          headquartersState: parsed.data.headquartersState,
+          turn,
         });
+        // The completion wire is emitted by the engine at the moment a privatization
+        // actually completes (IPO in privatizeAsset; auction at sale in the resolver),
+        // so the route does not log here — an auction merely OPENS at this point.
+
+        // An IPO floats a tradable corp immediately. Rebuild the stock-exchange
+        // snapshot now so it appears on the Stock Market without waiting for the
+        // 15-min cron — otherwise only the privatizer knows it exists and could
+        // trade ahead of everyone else. Auctions list at sale (turn resolver), so
+        // they're skipped here. A snapshot hiccup must not fail the privatization.
+        if (parsed.data.method === "ipo") {
+          try {
+            await afterCommit(db, () =>
+              generateStockExchangeSnapshots(turn, unboundDb(db)).catch((error) => {
+                logger.error("privatize", "Snapshot refresh failed", error);
+              })
+            );
+          } catch (snapErr) {
+            console.error("[privatize] stock-exchange snapshot refresh failed:", snapErr);
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          ...result,
+          newCorporationId: result.newCorporationId.toString(),
+        });
+      } catch (err) {
+        // Engine validation failures (name taken, cooldown, bad sector) → 400,
+        // but genuine infra/programming faults must be captured, not masked.
+        if (isUnexpectedError(err)) {
+          return handleRouteError(err, {
+            request,
+            route: "/api/country/[code]/national-corporation/[id]/privatize",
+          });
+        }
+        if (err instanceof PrivateEnterpriseBlockedError) {
+          return errorResponse(403, err.message);
+        }
+        return errorResponse(400, err instanceof Error ? err.message : "Privatization failed");
       }
-      if (err instanceof PrivateEnterpriseBlockedError) {
-        return errorResponse(403, err.message);
-      }
-      return errorResponse(400, err instanceof Error ? err.message : "Privatization failed");
-    }
+    });
   } catch (error) {
     return handleRouteError(error);
   }

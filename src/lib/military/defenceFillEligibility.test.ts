@@ -183,3 +183,9 @@ describe("deliveredGrade", () => {
     expect(deliveredGrade({ corpGradeCeiling: 2, eraMaxGrade: 3 })).toBe(2);
   });
 });
+
+it("uses the actual appropriation currency after redenomination and fails closed without a budget", () => {
+  expect(canSupply({ countryId: "FR", liquidCurrencyCode: "EUR" }, "FR", "EUR")).toBe(true);
+  expect(canSupply({ countryId: "FR", liquidCurrencyCode: "FRF" }, "FR", "EUR")).toBe(false);
+  expect(canSupply({ countryId: "FR", liquidCurrencyCode: "EUR" }, "FR", null)).toBe(false);
+});

@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 // POST /api/country/[code]/central-bank/resign — Player resigns as seated central bank chair
 // Auth: requireAuth
 // Errors: 400, 403, 404
@@ -40,48 +41,52 @@ export async function POST(request: Request, context: RouteContext) {
     const myChar = auth.user.character;
     if (!myChar) return errorResponse(400, "No character found");
 
-    const bank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
-    if (!bank)
-      return NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 });
+    return await withSessionDb(db, async (db) => {
+      const bank = await centralBanksCollection(db).findOne({ _id: getBankId(countryId) });
+      if (!bank)
+        return NextResponse.json(notFound("Central bank not found").toJson(), { status: 404 });
 
-    if (!bank.chairCharacterId || bank.chairCharacterId.toString() !== myChar._id.toString())
-      return NextResponse.json(forbidden("You are not the current chair").toJson(), {
-        status: 403,
+      if (!bank.chairCharacterId || bank.chairCharacterId.toString() !== myChar._id.toString())
+        return NextResponse.json(forbidden("You are not the current chair").toJson(), {
+          status: 403,
+        });
+
+      const chairName = myChar.name ?? bank.chairCharacterName ?? "Chair";
+      const gameNow = new Date();
+
+      await vacateCentralBankChairCharacter(db, bank.chairCharacterId);
+      // Also stand down from the committee's chair seat, or the resigned player
+      // keeps tabling its motions and keeps being named as chair on the page.
+      await vacateFomcChairSeat(db, bank._id);
+
+      await centralBanksCollection(db).updateOne(
+        { _id: bank._id, chairCharacterId: myChar._id },
+        {
+          $set: {
+            chairCharacterId: null,
+            chairCharacterName: null,
+            chairAppointedAt: null,
+            chairAppointedBy: null,
+            chairTermExpiresAtTurn: null,
+            vacancyAwaitingAutomaticSelection: true,
+            updatedAt: gameNow,
+          },
+        }
+      );
+
+      await afterCommit(db, async () => {
+        notifyCbChairResignedDiscord(countryId, chairName, myChar.avatarUrl).catch((err) =>
+          console.error("[central-bank/resign] Discord webhook failed:", err)
+        );
+
+        createSystemNewsPost(
+          `${chairName} resigned as ${config.centralBank.chairTitle} of the ${config.centralBank.name}.`,
+          "election"
+        ).catch((err) => console.error("[central-bank/resign] News post failed:", err));
       });
 
-    const chairName = myChar.name ?? bank.chairCharacterName ?? "Chair";
-    const gameNow = new Date();
-
-    await vacateCentralBankChairCharacter(db, bank.chairCharacterId);
-    // Also stand down from the committee's chair seat, or the resigned player
-    // keeps tabling its motions and keeps being named as chair on the page.
-    await vacateFomcChairSeat(db, bank._id);
-
-    await centralBanksCollection(db).updateOne(
-      { _id: bank._id },
-      {
-        $set: {
-          chairCharacterId: null,
-          chairCharacterName: null,
-          chairAppointedAt: null,
-          chairAppointedBy: null,
-          chairTermExpiresAtTurn: null,
-          vacancyAwaitingAutomaticSelection: true,
-          updatedAt: gameNow,
-        },
-      }
-    );
-
-    notifyCbChairResignedDiscord(countryId, chairName, myChar.avatarUrl).catch((err) =>
-      console.error("[central-bank/resign] Discord webhook failed:", err)
-    );
-
-    createSystemNewsPost(
-      `${chairName} resigned as ${config.centralBank.chairTitle} of the ${config.centralBank.name}.`,
-      "election"
-    ).catch((err) => console.error("[central-bank/resign] News post failed:", err));
-
-    return NextResponse.json({ success: true, message: "You have resigned as chair." });
+      return NextResponse.json({ success: true, message: "You have resigned as chair." });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

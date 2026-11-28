@@ -106,8 +106,8 @@ export interface IncomeStatementResult {
   totalDebtLocal: number;
   totalCostsLocal: number;
   governmentBondSubsidyLocal: number;
-  imfFacilityPaymentDailyLocal: number;
-  imfFacilityReceiptsDailyLocal: number;
+  imfFacilityInterestPaidDailyLocal: number;
+  imfFacilityInterestReceivedDailyLocal: number;
   income: number;
   currentLogisticsStrength: number;
   currentRdScore: number;
@@ -206,8 +206,8 @@ export async function computeIncomeStatement(
     imfReceivableRows,
     imfReceivablesPrincipal,
     dividendIncomeReceivedDaily,
-    imfFacilityPaymentDaily,
-    imfFacilityReceiptsDaily,
+    imfFacilityInterestPaidDaily,
+    imfFacilityInterestReceivedDaily,
     totalDebtAnchor,
     dailyInterestAnchor,
   } = portfolio;
@@ -461,13 +461,13 @@ export async function computeIncomeStatement(
   }
   const taxLossCarryforwardLocal = Math.round(lossBankLocal);
   const corporateTax = displayFederalTax + displayStateTax;
-  const imfFacilityPaymentDailyLocal = anchorToCorpCapital(
-    imfFacilityPaymentDaily,
+  const imfFacilityInterestPaidDailyLocal = anchorToCorpCapital(
+    imfFacilityInterestPaidDaily,
     corpCurrency,
     corpFxRate
   );
-  const imfFacilityReceiptsDailyLocal = anchorToCorpCapital(
-    imfFacilityReceiptsDaily,
+  const imfFacilityInterestReceivedDailyLocal = anchorToCorpCapital(
+    imfFacilityInterestReceivedDaily,
     corpCurrency,
     corpFxRate
   );
@@ -482,8 +482,8 @@ export async function computeIncomeStatement(
     dailyInterestLocal -
     dailyBankLoanInterestLocal +
     governmentBondSubsidyLocal -
-    imfFacilityPaymentDailyLocal +
-    imfFacilityReceiptsDailyLocal +
+    imfFacilityInterestPaidDailyLocal +
+    imfFacilityInterestReceivedDailyLocal +
     dividendIncomeReceivedDaily;
 
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
@@ -653,8 +653,8 @@ export async function computeIncomeStatement(
     totalDebtLocal,
     totalCostsLocal,
     governmentBondSubsidyLocal,
-    imfFacilityPaymentDailyLocal,
-    imfFacilityReceiptsDailyLocal,
+    imfFacilityInterestPaidDailyLocal,
+    imfFacilityInterestReceivedDailyLocal,
     income,
     currentLogisticsStrength,
     currentRdScore,

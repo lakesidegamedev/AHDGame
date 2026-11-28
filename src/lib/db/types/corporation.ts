@@ -284,6 +284,8 @@ export interface CorporationCeoPay {
 }
 
 export interface Corporation {
+  /** Revision fencing quoted share orders against treasury redenomination. */
+  shareMarketRevision?: number;
   /** Unified producer market: creditor claims, written only once the new market settles. */
   producerPayables?: import("./producerEconomy").ProducerPayablesState;
   /** Frozen migration fallback for unrecorded legacy personal cost basis. */
@@ -597,6 +599,8 @@ export interface Corporation {
    * Absent on legacy corps that have not yet completed a turn.
    */
   fundamentalSharePrice?: number;
+  /** CAS generation for consuming an observed order-flow window exactly once. */
+  priceMultiplierRevision?: number;
   /**
    * Carried order-flow multiplier from the previous 15-minute interval.
    * 1.0 = neutral. Decays 20% toward 1.0 each interval.

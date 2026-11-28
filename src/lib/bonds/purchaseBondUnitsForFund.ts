@@ -1,3 +1,4 @@
+import { withSessionDb, afterCommit, boundSession } from "@/lib/db/sessionDb";
 import { emitLedgerEntries } from "@/lib/ledger/emit";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 import { currentBondPoolLedgerContext, witnessBondPoolCash } from "./marketPoolLedger";
@@ -15,7 +16,6 @@ import { sovereignBondCapError } from "@/lib/bonds/holderCap";
 import { creditBondPool, loadBondQuote, advanceBondPoolSnapshot } from "@/lib/bonds/marketPool";
 import { bondsCollection } from "@/lib/db/repositories/bonds";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
-import type { Document } from "mongodb";
 import { bondMarketPoolsCollection } from "@/lib/db/repositories/bondMarketPools";
 
 export type PurchaseBondUnitsForFundResult =
@@ -51,15 +51,6 @@ async function atomicallyDebitFundCashAnchor(
   );
   if (!result) return { ok: false };
   return { ok: true, newCashAnchor: result.cashAnchor };
-}
-
-async function refundFundCashAnchor(db: Db, fundId: ObjectId, amountAnchor: number): Promise<void> {
-  if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return;
-  const rounded = Math.round(amountAnchor * 100) / 100;
-  await indexFundsCollection<Document>(db).updateOne(
-    { _id: fundId },
-    { $inc: { cashAnchor: rounded }, $set: { updatedAt: new Date() } }
-  );
 }
 
 type BondPurchaseFund = Pick<IndexFund, "_id" | "name" | "quotedNav" | "anchorCurrencyCode">;
@@ -189,6 +180,33 @@ export async function purchaseBondUnitsForFund(
   units: number,
   options?: BondPurchaseOptions
 ): Promise<PurchaseBondUnitsForFundResult> {
+  try {
+    return await withSessionDb(db, async (transactionDb) => {
+      const current = await bondsCollection(transactionDb).findOne({ _id: bond._id });
+      if (!current) return { ok: false, reason: "bond_missing" };
+      const result = await purchaseInTransaction(transactionDb, fund, current, units, options);
+      if (!result.ok) throw new BondPurchaseRefused(result);
+      return result;
+    });
+  } catch (error) {
+    if (error instanceof BondPurchaseRefused && !boundSession(db)) return error.result;
+    throw error;
+  }
+}
+
+class BondPurchaseRefused extends Error {
+  constructor(readonly result: Extract<PurchaseBondUnitsForFundResult, { ok: false }>) {
+    super(result.reason);
+  }
+}
+
+async function purchaseInTransaction(
+  db: Db,
+  fund: BondPurchaseFund,
+  bond: Bond,
+  units: number,
+  options?: BondPurchaseOptions
+): Promise<PurchaseBondUnitsForFundResult> {
   const planned = await planBondUnitsForFund(db, fund, bond, units, options);
   if (!planned.ok) return planned;
   const {
@@ -205,54 +223,45 @@ export async function purchaseBondUnitsForFund(
   if (!debit.ok) return { ok: false, reason: "insufficient_fund_cash" };
 
   const now = new Date();
-  try {
-    const reserved = await reserveBondUnitsForHolder(
-      db,
-      bond._id,
-      { field: "fundId", id: fund._id },
-      affordableUnits,
-      now,
-      { avgCostPerUnit: pricePerUnit }
-    );
-    if (!reserved) {
-      await refundFundCashAnchor(db, fund._id, costAnchor);
-      return { ok: false, reason: "reservation_failed" };
-    }
-
-    await creditBondPool(db, bondCurrency, costLocal, "purchasesIn", now);
-    advanceBondPoolSnapshot(options?.bondPools, bondCurrency, costLocal);
-
-    const transaction = bondPurchaseReceipt(fund, planned.plan, now);
-    if (options?.txSink) options.txSink.push(transaction);
-    else await insertFundTransaction(db, transaction);
-
-    // Fund-subject ledger leg for the cashAnchor debit above.
-    // The bond position is an asset account the shadow ledger does not carry,
-    // so the row is single-sided under the shared bond_principal_investment
-    // reason (the sale leg shares it, netting per currency). Fund-subject
-    // rows never mirror, so this is the only ledger row for the debit, and it
-    // fires only on the committed path — a refunded reservation emits nothing.
-    if (options?.turn !== undefined) {
-      const ledgerEntry = bondPurchaseLedgerEntry(fund, planned.plan, options.turn, now);
-      if (options.ledgerSink) options.ledgerSink.push(ledgerEntry);
-      else
-        await emitTx(db, ledgerEntry, options.thresholds, {
-          turnLengthMinutes: options.turnLengthMinutes,
-        });
-    }
-
-    return {
-      ok: true,
-      units: affordableUnits,
-      costAnchor,
-      markedValueAnchor,
-      pricePerUnit,
-      bondId: bond._id,
-    };
-  } catch (err) {
-    await refundFundCashAnchor(db, fund._id, costAnchor);
-    throw err;
+  const reserved = await reserveBondUnitsForHolder(
+    db,
+    bond._id,
+    { field: "fundId", id: fund._id },
+    affordableUnits,
+    now,
+    { avgCostPerUnit: pricePerUnit }
+  );
+  if (!reserved) {
+    return { ok: false, reason: "reservation_failed" };
   }
+
+  await creditBondPool(db, bondCurrency, costLocal, "purchasesIn", now);
+  await afterCommit(db, () => advanceBondPoolSnapshot(options?.bondPools, bondCurrency, costLocal));
+
+  const transaction = bondPurchaseReceipt(fund, planned.plan, now);
+  await insertFundTransaction(db, transaction);
+
+  // Fund-subject ledger leg for the cashAnchor debit above.
+  // The bond position is an asset account the shadow ledger does not carry,
+  // so the row is single-sided under the shared bond_principal_investment
+  // reason (the sale leg shares it, netting per currency). Fund-subject
+  // rows never mirror, so this is the only ledger row for the debit, and it
+  // fires only on the committed path — a refunded reservation emits nothing.
+  if (options?.turn !== undefined) {
+    const ledgerEntry = bondPurchaseLedgerEntry(fund, planned.plan, options.turn, now);
+    await emitTx(db, ledgerEntry, options.thresholds, {
+      turnLengthMinutes: options.turnLengthMinutes,
+    });
+  }
+
+  return {
+    ok: true,
+    units: affordableUnits,
+    costAnchor,
+    markedValueAnchor,
+    pricePerUnit,
+    bondId: bond._id,
+  };
 }
 
 function bondPurchaseReceipt(

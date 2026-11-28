@@ -4,6 +4,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { parseJsonBody } from "@/lib/api/validate";
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { getDb } from "@/lib/mongodb";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
@@ -29,71 +30,85 @@ export async function POST(request: Request, { params }: RouteParams) {
     const actionsGuard = await requireCorporationActionsEnabled(db);
     if (actionsGuard) return actionsGuard;
 
-    const resolved = await resolveCorporation(db, id);
-    if (!resolved.ok) return resolved.response;
-    const { corporation } = resolved;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const resolved = await resolveCorporation(db, id);
+      if (!resolved.ok) return resolved.response;
+      const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user);
-    if (ceoCheck) return ceoCheck;
+      const ceoCheck = requireCeo(corporation, auth.user);
+      if (ceoCheck) return ceoCheck;
 
-    if (!corporation.isPrivate) {
-      return errorResponse(
-        403,
-        "Public corporations must use the shareholder vote system to change legal structure."
-      );
-    }
-
-    const parsed = await parseJsonBody(request, Schema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-    const { legalStructure } = parsed.data;
-    const gameState = await getGameState();
-    const currentTurn = gameState?.currentTurn ?? 0;
-
-    if (
-      corporation.legalStructureChangeCooldownUntilTurn != null &&
-      currentTurn < corporation.legalStructureChangeCooldownUntilTurn
-    ) {
-      return errorResponse(
-        429,
-        `Legal structure change on cooldown until turn ${corporation.legalStructureChangeCooldownUntilTurn}.`
-      );
-    }
-
-    const structure = LEGAL_STRUCTURES.find(
-      (s) => s.id === legalStructure && s.countryId === corporation.countryId
-    );
-    if (!structure) {
-      return errorResponse(400, "Invalid legal structure for this corporation's country.");
-    }
-
-    // This route is private-only, so listed-only forms (acquired by going
-    // public) and state patronage forms (state-owned only) cannot be elected
-    // here.
-    if (structure.id === "cn_soe" && !corporation.countryOwnerId) {
-      return errorResponse(400, `${structure.name} is only available to state-owned companies.`);
-    }
-
-    if (isListedOnlyStructure(structure)) {
-      return errorResponse(
-        400,
-        `${structure.name} is a listed-company form — take the corporation public to adopt it.`
-      );
-    }
-
-    await corporationsCollection(db).updateOne(
-      { _id: corporation._id },
-      {
-        $set: {
-          legalStructure: legalStructure as LegalStructureId,
-          legalStructureChangeCooldownUntilTurn: currentTurn + 48,
-          updatedAt: new Date(),
-        },
+      if (!corporation.isPrivate) {
+        return errorResponse(
+          403,
+          "Public corporations must use the shareholder vote system to change legal structure."
+        );
       }
-    );
 
-    return NextResponse.json({ ok: true });
+      const parsed = await parseJsonBody(request, Schema);
+      if (!parsed.success) {
+        return errorResponse(parsed.status, parsed.error);
+      }
+      const { legalStructure } = parsed.data;
+      const gameState = await getGameState(db);
+      const currentTurn = gameState?.currentTurn ?? 0;
+
+      if (
+        corporation.legalStructureChangeCooldownUntilTurn != null &&
+        currentTurn < corporation.legalStructureChangeCooldownUntilTurn
+      ) {
+        return errorResponse(
+          429,
+          `Legal structure change on cooldown until turn ${corporation.legalStructureChangeCooldownUntilTurn}.`
+        );
+      }
+
+      const structure = LEGAL_STRUCTURES.find(
+        (s) => s.id === legalStructure && s.countryId === corporation.countryId
+      );
+      if (!structure) {
+        return errorResponse(400, "Invalid legal structure for this corporation's country.");
+      }
+
+      // This route is private-only, so listed-only forms (acquired by going
+      // public) and state patronage forms (state-owned only) cannot be elected
+      // here.
+      if (structure.id === "cn_soe" && !corporation.countryOwnerId) {
+        return errorResponse(400, `${structure.name} is only available to state-owned companies.`);
+      }
+
+      if (isListedOnlyStructure(structure)) {
+        return errorResponse(
+          400,
+          `${structure.name} is a listed-company form — take the corporation public to adopt it.`
+        );
+      }
+
+      const updated = await corporationsCollection(db).updateOne(
+        {
+          _id: corporation._id,
+          isPrivate: true,
+          countryId: corporation.countryId,
+          ...(corporation.legalStructureChangeCooldownUntilTurn == null
+            ? { legalStructureChangeCooldownUntilTurn: { $exists: false } }
+            : {
+                legalStructureChangeCooldownUntilTurn:
+                  corporation.legalStructureChangeCooldownUntilTurn,
+              }),
+        },
+        {
+          $set: {
+            legalStructure: legalStructure as LegalStructureId,
+            legalStructureChangeCooldownUntilTurn: currentTurn + 48,
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      if (updated.matchedCount !== 1)
+        return errorResponse(409, "Corporation governance changed. Refresh and try again.");
+      return NextResponse.json({ ok: true });
+    });
   } catch (e) {
     return handleRouteError(e);
   }

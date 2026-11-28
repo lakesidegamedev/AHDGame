@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Before resting share orders fill, a company whose cash is below its
  * operating reserve gets escrow back from its own open buy orders, newest
@@ -54,6 +55,23 @@ export async function trimCorporateBuyOrdersToReserve(
   now: Date,
   turn: number
 ): Promise<ReserveTrimSummary> {
+  const pending = await shareOrdersCollection(db).findOne(
+    {
+      type: "buy",
+      status: "open",
+      placerCorporationId: { $exists: true },
+      operatingReserveOverride: { $ne: true },
+      activeShareFillKey: { $exists: false },
+      sharesRemaining: { $gt: 0 },
+      escrowAmount: { $gt: 0 },
+    },
+    { projection: { _id: 1 } }
+  );
+  if (!pending) return { ordersTrimmed: 0, ordersReleased: 0 };
+  return withSessionDb(db, (transactionDb) => trimInTransaction(transactionDb, now, turn));
+}
+
+async function trimInTransaction(db: Db, now: Date, turn: number): Promise<ReserveTrimSummary> {
   const summary: ReserveTrimSummary = { ordersTrimmed: 0, ordersReleased: 0 };
   const orders = (await shareOrdersCollection(db)
     .find({
@@ -189,24 +207,9 @@ export async function trimCorporateBuyOrdersToReserve(
       },
     },
   }));
-  await shareOrdersCollection(db).bulkWrite(orderOps, { ordered: false });
-
-  // Pay back only the trims whose guarded write landed.
-  const written = await shareOrdersCollection(db)
-    .find(
-      { _id: { $in: planned.map((p) => p.order._id) }, "operatingReserveTrim.turn": turn },
-      { projection: { _id: 1, sharesRemaining: 1, escrowAmount: 1 } }
-    )
-    .toArray();
-  const landed = planned.filter((p) =>
-    written.some(
-      (w) =>
-        w._id.equals(p.order._id) &&
-        w.sharesRemaining === p.sharesAfter &&
-        w.escrowAmount === p.escrowAfter
-    )
-  );
-  if (landed.length === 0) return summary;
+  const claimed = await shareOrdersCollection(db).bulkWrite(orderOps, { ordered: false });
+  if (claimed.matchedCount !== planned.length) throw new Error("Order changed during reserve trim");
+  const landed = planned;
 
   const refundByPlacer = new Map<string, { id: ObjectId; amount: number }>();
   for (const p of landed) {

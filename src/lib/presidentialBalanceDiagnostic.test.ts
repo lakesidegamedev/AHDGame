@@ -521,6 +521,7 @@ describe("Electoral College — symmetric race competitiveness", () => {
         return {
           findOne: vi.fn().mockResolvedValue({
             electionId,
+            turnSnapshots: [],
             totalVotes: { [demId]: 0, [repId]: 0 },
             totalVotesByUnit: initialTotalVotesByUnit,
             unitTurnSnapshots: {},
@@ -1293,6 +1294,7 @@ describe("Electoral College — 7-way race EV amplification", () => {
         return {
           findOne: vi.fn().mockResolvedValue({
             electionId,
+            turnSnapshots: [],
             totalVotes: Object.fromEntries(allIds.map((id) => [id, 0])),
             totalVotesByUnit: initialTotalVotesByUnit,
             unitTurnSnapshots: {},

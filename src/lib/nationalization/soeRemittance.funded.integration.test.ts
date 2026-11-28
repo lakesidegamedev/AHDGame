@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { processSoeRemittance } from "./soeRemittance";
 import { remitToTreasury } from "./treasury";
 import { loadTreasuryCashContext } from "./treasuryLedger";
@@ -189,7 +190,7 @@ describe("funded SOE remittance against actual corporate cash", () => {
     // The debit already left the enterprise on the first attempt, so the
     // caller folds nothing for it; only the fresh flush corp is new cash.
     expect(perCorp.map((row) => [row.corpId.toHexString(), row.amountLocal])).toEqual([
-      [flushCorpId.toHexString(), 1500],
+      [flushCorpId.toHexString(), Math.floor(1500 * FX_SHIFT)],
     ]);
     expect(cash(db, shortCorpId)).toBe(4777);
     const receipt = db.collection("bankMoneyMoves").docs.find((doc) => doc._id === shortKey)!;
@@ -234,7 +235,7 @@ describe("funded SOE remittance against actual corporate cash", () => {
     // The frozen 1000 is what moved in this call, so that is what the caller folds.
     expect(perCorp.map((row) => [row.corpId.toHexString(), row.amountLocal])).toEqual([
       [shortCorpId.toHexString(), 1000],
-      [flushCorpId.toHexString(), 1500],
+      [flushCorpId.toHexString(), Math.floor(1500 * FX_SHIFT)],
     ]);
     expect(cash(db, shortCorpId)).toBe(5777 - 1000);
     expect(db.collection("bankMoneyMoves").docs.find((doc) => doc._id === shortKey)).toMatchObject({

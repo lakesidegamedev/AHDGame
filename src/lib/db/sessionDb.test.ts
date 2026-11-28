@@ -117,4 +117,20 @@ describe("session-bound domain shell", () => {
     expect(first).not.toHaveBeenCalled();
     expect(committed).toHaveBeenCalledOnce();
   });
+
+  it("aborts a domain transaction even if legacy code swallows its last failed write", async () => {
+    const db = Object.assign(createMockDb(), { client: {} }) as unknown as Db;
+    vi.mocked(db.collection("accounts").updateOne).mockRejectedValueOnce(
+      new Error("unacknowledged write")
+    );
+    await expect(
+      withSessionDb(db, async (tx) => {
+        await tx
+          .collection("accounts")
+          .updateOne({}, { $inc: { cash: 1 } })
+          .catch(() => undefined);
+        return "success";
+      })
+    ).rejects.toThrow("unacknowledged write");
+  });
 });

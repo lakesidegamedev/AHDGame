@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Phase 11b — system-driven no-confidence trigger.
  *
@@ -20,7 +21,7 @@ import {
   isParliamentarySystem,
   type CountryId,
 } from "@/lib/constants/countries";
-import type { GovernmentFormation, NoConfidenceVote } from "@/lib/db/types/governmentFormation";
+import type { NoConfidenceVote } from "@/lib/db/types/governmentFormation";
 import { governmentFormationsCollection } from "@/lib/db/repositories/governmentFormations";
 import { noConfidenceVotesCollection } from "@/lib/db/repositories/noConfidenceVotes";
 
@@ -34,6 +35,14 @@ export interface TriggerSystemNoConfidenceResult {
 }
 
 export async function triggerSystemNoConfidence(
+  db: Db,
+  countryId: CountryId,
+  reason: string,
+  currentTurn: number
+): Promise<TriggerSystemNoConfidenceResult> {
+  return withSessionDb(db, (db) => triggerInTransaction(db, countryId, reason, currentTurn));
+}
+async function triggerInTransaction(
   db: Db,
   countryId: CountryId,
   reason: string,
@@ -79,14 +88,17 @@ export async function triggerSystemNoConfidence(
     updatedAt: now,
   };
 
-  await noConfidenceVotesCollection<NoConfidenceVote>(db).insertOne(voteDoc);
-
-  // Stamp the active vote on the formation row so player-driven
-  // proposeNoConfidence can't double-fire while this is in progress.
-  await governmentFormationsCollection(db).updateOne(
-    { _id: countryId },
+  const claim = await governmentFormationsCollection(db).updateOne(
+    {
+      _id: countryId,
+      status: "formed",
+      pmCharacterId: formation.pmCharacterId,
+      activeVoteId: null,
+    },
     { $set: { activeVoteId: voteId, updatedAt: now } }
   );
+  if (claim.matchedCount !== 1) return { triggered: false, reason: "vote-already-active" };
+  await noConfidenceVotesCollection<NoConfidenceVote>(db).insertOne(voteDoc);
 
   return { triggered: true, voteId: voteId.toString() };
 }

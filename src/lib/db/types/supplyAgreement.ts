@@ -117,6 +117,8 @@ export interface SupplyAgreement extends SupplyAgreementPricing {
   currentOffer?: SupplyAgreementOffer;
   /** Complete offer history, including the current offer. */
   offers?: SupplyAgreementOffer[];
+  /** Receipt identifying the AI reply that actually won its offer revision claim. */
+  lastAiSupplyReplyKey?: string;
   /**
    * C5 transfer pricing: cumulative ₳ of profit this contract has shifted out
    * of one country and into another, while both parties were in the same
@@ -125,6 +127,15 @@ export interface SupplyAgreement extends SupplyAgreementPricing {
    */
   transferPricingExposureAnchor?: number;
   lastTransferPricingAuditTurn?: number;
+  transferPricingAccruedTurn?: number;
+  transferPricingClaim?: { liableCorpId: string; claimantCountryId: string };
+  transferPricingPendingAssessment?: {
+    agreementId: string;
+    liableCorpId: string;
+    claimantCountryId: string;
+    shiftedBaseAnchor: number;
+    assessmentAnchor: number;
+  };
   /** Newer modes: market price the latest settlement used, per unit. */
   lastMarketUnitPrice?: number;
   /** Newer modes: "realised" when it is the supplier's sale price that turn, else "published". */

@@ -247,22 +247,31 @@ export async function resolveFailedBankDepositors(
     return { ...empty, resolved: true, depositorsResolved: result.depositorsFlipped };
   }
 
-  if (result.fromInsuranceFund > 0 || result.fromTreasury > 0) {
+  for (const source of ["insurance", "treasury"] as const) {
+    const amount = source === "insurance" ? result.fromInsuranceFund : result.fromTreasury;
+    if (!(amount > 0)) continue;
     await emitTx(db, {
       type: "bank_insurance_payout",
       turn: claimTurn,
       createdAt: new Date(),
-      subjectType: "government",
-      countryId: getCountryIdForCurrency(currency),
-      subjectName: `${currency} deposit insurance`,
-      amount: -(result.fromInsuranceFund + result.fromTreasury),
+      subjectType: source === "insurance" ? "system" : "government",
+      ...(source === "treasury" ? { countryId: getCountryIdForCurrency(currency) } : {}),
+      subjectName:
+        source === "insurance"
+          ? `${currency} deposit insurance fund`
+          : `${currency} Treasury backstop`,
+      amount: -amount,
       currencyCode: currency,
       counterpartyType: "system",
       counterpartyName: "Household depositors",
       meta: {
         kind: "fund_payout",
         bankCorporationId: corporationId.toString(),
-        treasuryBackstop: result.fromTreasury,
+        treasuryBackstop: source === "treasury" ? amount : 0,
+        source: source === "insurance" ? "insurance_fund" : "treasury_backstop",
+        ...(source === "insurance"
+          ? { collection: "depositInsuranceFunds", cashPath: "balance" }
+          : {}),
       },
     });
   }

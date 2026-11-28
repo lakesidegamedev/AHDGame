@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import type { DefenseLineSource } from "@/lib/turn/defenseEnvelope";
 import { publishTender, raiseOpenDefenceTenderToLiveFloor } from "./commands";
 import * as bidderAlerts from "./opportunityNotifications";
@@ -32,7 +32,7 @@ const now = new Date("2026-10-14T12:00:00Z");
 let db: Db;
 beforeEach(async () => {
   world.preset = "1953-default";
-  db = createInMemoryDb() as unknown as Db;
+  db = createTransactionalMemoryDb().db;
   await db.collection("federalBudget").insertOne({
     countryId: "US",
     gdp: 387e9,
@@ -379,7 +379,6 @@ describe("raiseOpenDefenceTenderToLiveFloor", () => {
         },
       }
     );
-    const jpBudget = (await db.collection("federalBudget").findOne({ countryId: "JP" }))!;
     await db.collection("federalBudget").updateOne(
       { countryId: "JP" },
       {

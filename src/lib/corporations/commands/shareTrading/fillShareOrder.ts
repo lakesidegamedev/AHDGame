@@ -24,8 +24,8 @@ import { fillOrderSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatization/openVoteGuard";
-import type { Character, Corporation, IndexFund, ShareOrder, User } from "@/lib/db/types";
-import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
+import type { Character, Corporation } from "@/lib/db/types";
+
 import {
   emitSellerFundProceedsRow,
   checkTotalSharesAfterFill,
@@ -656,6 +656,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
             collection: "corporations",
             idHex: buyingCorp._id.toHexString(),
             field: "liquidCapital",
+            currencyCode: buyingCurrency,
             amount: costInBuyerCapital,
           },
           fillerCredit: null,
@@ -698,6 +699,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
                   collection: "corporations",
                   idHex: order.placerCorporationId.toHexString(),
                   field: "liquidCapital",
+                  currencyCode: pinnedSellerCurrency ?? undefined,
                   amount: pinnedSellerAmount,
                 }
               : {
@@ -830,6 +832,7 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
                   collection: "corporations",
                   idHex: order.placerCorporationId.toHexString(),
                   field: "liquidCapital",
+                  currencyCode: pinnedSellerCurrency ?? undefined,
                   amount: pinnedSellerAmount,
                 }
               : {

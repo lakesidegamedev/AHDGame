@@ -53,6 +53,8 @@ export interface Caucus {
    * Rates above 4% incur a small per-turn loyalty hit on members.
    */
   taxRate: number;
+  /** Latest atomically collected campaign-income tax turn. */
+  lastTaxTurn?: number;
 
   /**
    * Caucus chair elections ride the party-leadership cycle. The turn processor

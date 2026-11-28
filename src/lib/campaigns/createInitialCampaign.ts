@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { isDuplicateKeyError } from "@/lib/api/errors";
 /**
  * Shared helper: builds the initial Campaign doc for a freshly-entered
  * election candidate. Used from:
@@ -64,7 +66,12 @@ export async function createInitialCampaign({
   };
 
   const doc: Campaign = {
-    _id: new ObjectId(),
+    _id: new ObjectId(
+      createHash("sha256")
+        .update(`campaign:${electionId}:${candidateId}`)
+        .digest("hex")
+        .slice(0, 24)
+    ),
     electionId,
     candidateId,
     candidateIsNPP,
@@ -102,7 +109,20 @@ export async function createInitialCampaign({
     updatedAt: now,
   };
 
-  await campaignsCollection(db).insertOne(doc);
+  try {
+    await campaignsCollection(db).updateOne(
+      { _id: doc._id, electionId, candidateId },
+      { $setOnInsert: doc },
+      { upsert: true }
+    );
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) throw error;
+    const winner = await campaignsCollection(db).findOne(
+      { _id: doc._id, electionId, candidateId },
+      { projection: { _id: 1 } }
+    );
+    if (!winner) throw error;
+  }
   return doc._id;
 }
 

@@ -1,7 +1,8 @@
 /** Actual organization cash writes must reconcile both treasuries and pooled funds. */
 import { beforeEach, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { collectBalances } from "@/lib/ledger/balanceSnapshot";
 import { reconcileLedger } from "@/lib/ledger/reconcile";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -157,7 +158,9 @@ it("does not fund an organization receipt when Treasury cash is unavailable", as
   expect(
     (await db.collection("organizationFunds").findOne({ organizationId: "UN" }))?.balanceLocal
   ).toBe(1_000);
-  expect(await db.collection("bankMoneyMoves").countDocuments()).toBe(0);
+  expect(
+    await db.collection("bankMoneyMoves").countDocuments({ kind: { $ne: "turn-value-settlement" } })
+  ).toBe(0);
 });
 it("funds cross-currency aid from the organization balance and replays once", async () => {
   const { memory, db } = fixture(cases[1]);
@@ -240,7 +243,7 @@ it("keeps identical cash outcomes with shadow accounting disabled", async () => 
   expect(await db.collection("ledgerEntries").countDocuments()).toBe(0);
 });
 
-it("flushes a landed debit if the subsequent fund credit fails", async () => {
+it("rolls back the Treasury debit when the fund credit fails", async () => {
   const { db } = fixture(cases[0]);
   vi.spyOn(db.collection("organizationFunds"), "updateOne").mockRejectedValueOnce(
     new Error("credit failed")
@@ -249,9 +252,10 @@ it("flushes a landed debit if the subsequent fund credit fails", async () => {
     chargeOrganizationDues(db, "UN", [{ countryId: "US", gdpUsd: 48000000 }])
   ).rejects.toThrow("credit failed");
   const entries = await db.collection<LedgerEntry>("ledgerEntries").find({ turn: TURN }).toArray();
-  expect(entries).toHaveLength(1);
-  expect(entries[0].legs[0].account).toBe("government:US:USD");
-  expect(entries[0].legs[0].amount).toBe(-60);
+  expect(entries).toHaveLength(0);
+  expect((await db.collection("federalBudget").findOne({ countryId: "US" }))?.treasuryBalance).toBe(
+    1000
+  );
   expect(
     (await db.collection("organizationFunds").findOne({ organizationId: "UN" }))?.balanceLocal
   ).toBe(1000);

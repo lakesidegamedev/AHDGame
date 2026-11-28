@@ -1,3 +1,11 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Db, ObjectId } from "mongodb";
 import { computePartyPsGain } from "./partyActionGeneration";

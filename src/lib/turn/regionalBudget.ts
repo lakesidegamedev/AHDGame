@@ -1,3 +1,4 @@
+import { foreignRegionalRevenueFields } from "@/lib/budget/rules/regionalRevenueFields";
 /**
  * Regional budget constraint system for UK regions.
  *
@@ -537,7 +538,11 @@ export async function processRegionalBudgets(
     };
 
     regionalBudgetOps.push({
-      updateOne: { filter: { _id: region._id }, update: { $set: budgetDoc }, upsert: true },
+      updateOne: {
+        filter: { _id: region._id },
+        update: { $set: budgetDoc, $unset: foreignRegionalRevenueFields("UK") },
+        upsert: true,
+      },
     });
 
     regionsProcessed++;

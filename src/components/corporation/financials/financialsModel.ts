@@ -1,3 +1,4 @@
+import { corpIncomeBasis } from "@/lib/corporations/rules/incomeBasis";
 import type { Financials } from "../CorporationPageTypes";
 import { scaleMoney, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
 
@@ -30,7 +31,7 @@ export function netMarginPct(
     | "dividendDistribution"
     | "totalRevenue"
     | "bondCouponIncome"
-    | "imfFacilityReceiptsDaily"
+    | "imfFacilityInterestReceivedDaily"
   > &
     Partial<Pick<Financials, "realizedRevenueBase" | "dividendIncomeReceived">>
 ): number | null {
@@ -39,7 +40,7 @@ export function netMarginPct(
       ? f.realizedRevenueBase
       : f.totalRevenue +
         Math.max(0, f.bondCouponIncome) +
-        Math.max(0, f.imfFacilityReceiptsDaily) +
+        Math.max(0, f.imfFacilityInterestReceivedDaily) +
         Math.max(0, f.dividendIncomeReceived ?? 0);
   if (incomeBase == null || !Number.isFinite(incomeBase) || incomeBase <= 0) return null;
   return (corpIncomeBasis(f).netIncome / incomeBase) * 100;
@@ -67,26 +68,7 @@ export function cashAfterContracts(
   return corpIncomeBasis(f).retained + (f.supplyAgreementSettlementDaily ?? 0);
 }
 
-export function corpIncomeBasis(
-  f: Pick<Financials, "income" | "realizedIncome" | "realizedDividendPaid" | "dividendDistribution">
-): { netIncome: number; retained: number; dividendPaid: number; isRealized: boolean } {
-  if (typeof f.realizedIncome === "number") {
-    const dividendPaid = Math.max(0, f.realizedDividendPaid ?? 0);
-    return {
-      netIncome: f.realizedIncome + dividendPaid,
-      retained: f.realizedIncome,
-      dividendPaid,
-      isRealized: true,
-    };
-  }
-  const dividendPaid = Math.max(0, f.dividendDistribution);
-  return {
-    netIncome: f.income,
-    retained: f.income - dividendPaid,
-    dividendPaid,
-    isRealized: false,
-  };
-}
+export { corpIncomeBasis } from "@/lib/corporations/rules/incomeBasis";
 
 export type ValuationTone = "over" | "under" | "fair";
 
@@ -153,11 +135,11 @@ export function buildAllocation(
   // reconciliation below place it on the correct side.
   const netInterest =
     f.bondInterestCost +
-    f.imfFacilityPaymentDaily -
+    f.imfFacilityInterestPaidDaily -
     f.bondCouponIncome -
     f.dividendIncomeReceived -
     f.governmentBondSubsidy -
-    f.imfFacilityReceiptsDaily;
+    f.imfFacilityInterestReceivedDaily;
 
   // Every cost the backend charges into `income` (see corporationDetail.ts
   // `operatingCosts` / `income`) must appear here. `laborCosts` and

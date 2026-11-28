@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -91,8 +95,8 @@ describe("executeFundOnlyBuyout", () => {
       expect.anything()
     );
     // Finalize: single CEO shareholder, float retired, totalShares == CEO shares, private.
-    expect(updateOne).toHaveBeenCalledTimes(1);
-    const setDoc = updateOne.mock.calls[0][1].$set;
+    expect(updateOne).toHaveBeenCalledTimes(2);
+    const setDoc = updateOne.mock.calls[1][1].$set;
     expect(setDoc.isPrivate).toBe(true);
     expect(setDoc.publicFloat).toBe(0);
     expect(setDoc.totalShares).toBe(9_990_000);
@@ -100,7 +104,7 @@ describe("executeFundOnlyBuyout", () => {
     expect(setDoc.shareholders[0].characterId).toBe(CEO_ID);
     // Approved-but-unissued float is void once private; a surviving
     // flag would block future share proposals as "awaiting market placement".
-    expect(updateOne.mock.calls[0][1].$unset.pendingShareIssuance).toBe("");
+    expect(updateOne.mock.calls[1][1].$unset.pendingShareIssuance).toBe("");
   });
 
   it("blocks (and moves no money) when the treasury cannot cover the buyout", async () => {
@@ -115,7 +119,10 @@ describe("executeFundOnlyBuyout", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/treasury is too low/i);
     expect(vi.mocked(sellFundHoldingShares)).not.toHaveBeenCalled();
-    expect(updateOne).not.toHaveBeenCalled(); // never went private
+    expect(updateOne).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ $set: expect.objectContaining({ isPrivate: true }) })
+    ); // never went private
   });
 
   it("aborts without going private when a sellback cannot complete in full", async () => {
@@ -135,7 +142,10 @@ describe("executeFundOnlyBuyout", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/could not buy back all/i);
-    expect(updateOne).not.toHaveBeenCalled(); // corp stays public — safe
+    expect(updateOne).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ $set: expect.objectContaining({ isPrivate: true }) })
+    ); // corp stays public — safe
   });
 
   describe("executeFundOnlyBuyout — bank-NAV floor (issue #1750 residual)", () => {
@@ -251,11 +261,11 @@ describe("executeFundOnlyBuyout", () => {
       expect(fundUpdateOne).toHaveBeenCalledTimes(1);
       expect(fundUpdateOne.mock.calls[0][1]).toMatchObject({ $inc: { cashAnchor: BASE_TOP_UP } });
       // Corp debit (top-up) + finalize (go private): still privatizes.
-      expect(corpUpdateOne).toHaveBeenCalledTimes(2);
-      expect(corpUpdateOne.mock.calls[0][1]).toMatchObject({
+      expect(corpUpdateOne).toHaveBeenCalledTimes(3);
+      expect(corpUpdateOne.mock.calls[1][1]).toMatchObject({
         $inc: { liquidCapital: -BASE_TOP_UP },
       });
-      expect(corpUpdateOne.mock.calls[1][1].$set.isPrivate).toBe(true);
+      expect(corpUpdateOne.mock.calls[2][1].$set.isPrivate).toBe(true);
     });
 
     it("counts the marked bond/prop book in the floor", async () => {
@@ -381,8 +391,8 @@ describe("executeFundOnlyBuyout", () => {
       expect(result.ok).toBe(true);
       expect(vi.mocked(sellFundHoldingShares)).toHaveBeenCalledTimes(1);
       // No bank ⇒ no floor infra touched, no top-up debit: one updateOne, the finalize.
-      expect(updateOne).toHaveBeenCalledTimes(1);
-      expect(updateOne.mock.calls[0][1].$set.isPrivate).toBe(true);
+      expect(updateOne).toHaveBeenCalledTimes(2);
+      expect(updateOne.mock.calls[1][1].$set.isPrivate).toBe(true);
     });
 
     it("keeps the market price when the bank is underwater", async () => {
@@ -400,8 +410,8 @@ describe("executeFundOnlyBuyout", () => {
 
       expect(result.ok).toBe(true);
       expect(fundUpdateOne).not.toHaveBeenCalled(); // negative NAV never floors
-      expect(corpUpdateOne).toHaveBeenCalledTimes(1); // finalize only
-      expect(corpUpdateOne.mock.calls[0][1].$set.isPrivate).toBe(true);
+      expect(corpUpdateOne).toHaveBeenCalledTimes(2);
+      expect(corpUpdateOne.mock.calls[1][1].$set.isPrivate).toBe(true);
     });
   });
 
@@ -420,7 +430,10 @@ describe("executeFundOnlyBuyout", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.status).toBe(409);
     expect(sellFundHoldingShares).not.toHaveBeenCalled();
-    expect(updateOne).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ $set: expect.objectContaining({ isPrivate: true }) })
+    );
   });
 
   it("aborts if a non-CEO holder is still present after buyback (drift guard)", async () => {
@@ -450,7 +463,10 @@ describe("executeFundOnlyBuyout", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/non-CEO shareholders/i);
-    expect(updateOne).not.toHaveBeenCalled();
+    expect(updateOne).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ $set: expect.objectContaining({ isPrivate: true }) })
+    );
   });
 });
 

@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/executive/cabinet/[positionId]/energy/build
 // Auth: requireAuth — energy seat holder or admin. Costs 1 ministerial action.
 // Errors: 400, 401, 403, 404, 409
@@ -55,60 +59,71 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const db = await getDb();
-    const region = await statesCollection<{ _id: string; countryId: string }>(db)
-      .findOne({ _id: parsed.data.regionId, countryId }, { projection: { _id: 1 } });
-    if (!region) {
-      return errorResponse(400, "Invalid region for this country");
-    }
+    return await withRecordedEconomicCommand(
+      db,
+      "minister-energy-build",
+      String(auth.user.userId),
+      economicRequestId(request),
+      { countryId, positionId, ...parsed.data },
+      async (db) => {
+        const region = await statesCollection<{ _id: string; countryId: string }>(db).findOne(
+          { _id: parsed.data.regionId, countryId },
+          { projection: { _id: 1 } }
+        );
+        if (!region) {
+          return errorResponse(400, "Invalid region for this country");
+        }
 
-    const membersCol = getCabinetMembersCollection(db);
-    const member = await membersCol.findOne({ countryId, positionId });
-    const isHolder =
-      member &&
-      member.characterId &&
-      auth.user.character &&
-      member.characterId.toString() === auth.user.character._id.toString();
-    if (!isHolder && !auth.user.isAdmin) {
-      return errorResponse(403, "Only the energy holder or admin can build plants");
-    }
+        const membersCol = getCabinetMembersCollection(db);
+        const member = await membersCol.findOne({ countryId, positionId });
+        const isHolder =
+          member &&
+          member.characterId &&
+          auth.user.character &&
+          member.characterId.toString() === auth.user.character._id.toString();
+        if (!isHolder && !auth.user.isAdmin) {
+          return errorResponse(403, "Only the energy holder or admin can build plants");
+        }
 
-    // A plant commissioned now is a cost the confirmed successor inherits.
-    const actingDenied = requireConfirmedSecretary(member, "assets", !!auth.user.isAdmin);
-    if (actingDenied) return actingDenied;
+        // A plant commissioned now is a cost the confirmed successor inherits.
+        const actingDenied = requireConfirmedSecretary(member, "assets", !!auth.user.isAdmin);
+        if (actingDenied) return actingDenied;
 
-    // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
-    const actions = await resolveMinisterialRemaining(db, countryId, member!);
-    if (actions < 1) {
-      return errorResponse(400, "No ministerial actions remaining");
-    }
+        // Shared UK pool: both offices of a dual holder spend one balance (issue #2049).
+        const actions = await resolveMinisterialRemaining(db, countryId, member!);
+        if (actions < 1) {
+          return errorResponse(400, "No ministerial actions remaining");
+        }
 
-    const gameState = await getGameState();
-    const currentTurn = gameState?.currentTurn ?? 1;
+        const gameState = await getGameState(db);
+        const currentTurn = gameState?.currentTurn ?? 1;
 
-    const spend = await spendMinisterialAction(db, countryId, member!);
-    if (!spend.ok) {
-      return errorResponse(409, "No ministerial actions remaining");
-    }
+        const spend = await spendMinisterialAction(db, countryId, member!);
+        if (!spend.ok) {
+          return errorResponse(409, "No ministerial actions remaining");
+        }
 
-    try {
-      await getEnergyPlantsCollection(db).insertOne({
-        _id: new ObjectId(),
-        countryId,
-        positionId,
-        source: src.id,
-        name: parsed.data.name.trim(),
-        icon: src.icon,
-        capacityBase: src.baseCapacity,
-        tier: 0,
-        regionId: parsed.data.regionId,
-        createdTurn: currentTurn,
-      });
-    } catch (error) {
-      await refundMinisterialAction(db, countryId, member!);
-      throw error;
-    }
+        try {
+          await getEnergyPlantsCollection(db).insertOne({
+            _id: new ObjectId(),
+            countryId,
+            positionId,
+            source: src.id,
+            name: parsed.data.name.trim(),
+            icon: src.icon,
+            capacityBase: src.baseCapacity,
+            tier: 0,
+            regionId: parsed.data.regionId,
+            createdTurn: currentTurn,
+          });
+        } catch (error) {
+          await refundMinisterialAction(db, countryId, member!);
+          throw error;
+        }
 
-    return NextResponse.json({ success: true, actionsRemaining: spend.remaining });
+        return NextResponse.json({ success: true, actionsRemaining: spend.remaining });
+      }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

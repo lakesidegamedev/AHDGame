@@ -5,6 +5,15 @@ import {
   NHS_BASELINE_HEALTHCARE_SHARE,
 } from "@/lib/countries/uk/nhs/nhsQuality";
 
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: never,
+    _phase: string,
+    _turn: number,
+    work: (db: never) => unknown
+  ) => work(db),
+}));
+
 /** In-memory federalBudget + ukNhsState fake. */
 function fakeDb(opts: { federalBudget?: unknown; nhsQuality?: number } = {}) {
   const nhs: { quality?: number; lastHealthcareShare?: number } =
@@ -46,7 +55,7 @@ describe("tickNhsFromBudget", () => {
       nhsQuality: 60,
       federalBudget: { _id: "UK", spending: { byCategory: { health: 40 }, total: 100 } },
     });
-    const q = await tickNhsFromBudget(db, { fiscalYear: 1953, now: new Date() });
+    const q = await tickNhsFromBudget(db, { fiscalYear: 1953, currentTurn: 1, now: new Date() });
     expect(q).toBeGreaterThan(60); // 40% >> 18% baseline → target high → quality climbs
     expect(nhs.quality).toBe(q);
     expect(nhs.lastHealthcareShare).toBe(40);
@@ -57,13 +66,13 @@ describe("tickNhsFromBudget", () => {
       nhsQuality: 60,
       federalBudget: { _id: "UK", spending: { byCategory: { health: 4 }, total: 100 } },
     });
-    const q = await tickNhsFromBudget(db, { fiscalYear: 1953, now: new Date() });
+    const q = await tickNhsFromBudget(db, { fiscalYear: 1953, currentTurn: 1, now: new Date() });
     expect(q).toBeLessThan(60);
   });
 
   it("uses the neutral baseline when the fiscal ledger is unavailable", async () => {
     const { db, nhs } = fakeDb({ nhsQuality: 60 }); // no budget
-    await tickNhsFromBudget(db, { fiscalYear: 1953, now: new Date() });
+    await tickNhsFromBudget(db, { fiscalYear: 1953, currentTurn: 1, now: new Date() });
     expect(nhs.lastHealthcareShare).toBe(NHS_BASELINE_HEALTHCARE_SHARE);
   });
 });

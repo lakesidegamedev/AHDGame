@@ -1,3 +1,4 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 /**
  * A process death at any write boundary of the pension phase (contributions and
  * top-ups, benefits, fund investing), then a rerun of the same turn, lands the same
@@ -6,7 +7,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import { runPensionTurn } from "./pensionTurn";
 
@@ -26,7 +27,7 @@ const FUND = new ObjectId();
 const AGREEMENT = new ObjectId();
 
 function world(): InMemoryDb {
-  const db = createInMemoryDb();
+  const db = createTransactionalMemoryDb().memory;
   db.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
   db.seed("unions", [{ _id: UNION, name: "Test Workers", countryId: "US" }]);
   db.seed("corporations", [
@@ -112,7 +113,7 @@ function ledgerRows(db: InMemoryDb) {
 }
 
 /** Once the injected crash fires the process is dead: every later call fails, nothing is swallowed into a result. */
-function mortal(crash: ReturnType<typeof withInjectedCrash>) {
+function mortal(crash: ReturnType<typeof withInjectedCrash>, client: Db["client"]) {
   const state = { dead: false };
   const guard = (target: object): object =>
     new Proxy(target, {
@@ -132,7 +133,10 @@ function mortal(crash: ReturnType<typeof withInjectedCrash>) {
         };
       },
     });
-  const db = { collection: (name: string) => guard(crash.db.collection(name)) } as unknown as Db;
+  const db = {
+    client,
+    collection: (name: string) => guard(crash.db.collection(name)),
+  } as unknown as Db;
   return { db, state };
 }
 
@@ -169,7 +173,10 @@ describe("runPensionTurn rerun safety (stage 2)", () => {
     for (const afterWrite of [false, true]) {
       for (let onCall = 1; onCall <= 120; onCall++) {
         const db = world();
-        const mortalDb = mortal(withInjectedCrash(db, { onCall, afterWrite }));
+        const mortalDb = mortal(
+          withInjectedCrash(db, { onCall, afterWrite }),
+          (db as unknown as Db).client
+        );
         try {
           await runPensionTurn(mortalDb.db, TURN, true);
         } catch {
@@ -200,7 +207,7 @@ const PENSION_STAMPS = [
 describe("runPensionTurn below stage 2", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("writes no stamp fields and the same money as the stamped path", async () => {
+  it("uses mandatory recovery stamps and the same money at every resilience stage", async () => {
     const plain = world();
     vi.mocked((await import("@/lib/mongodb")).getDb).mockResolvedValue(plain as unknown as Db);
     const plainResult = await runPensionTurn(plain as unknown as Db, TURN);
@@ -208,7 +215,7 @@ describe("runPensionTurn below stage 2", () => {
     const stampedResult = await runPensionTurn(stamped as unknown as Db, TURN, true);
 
     const text = JSON.stringify(endState(plain));
-    for (const key of PENSION_STAMPS) expect(text.includes(key), `${key} written`).toBe(false);
+    expect(text.includes("agreementChargeTurns")).toBe(true);
     expect(JSON.stringify(endState(stamped)).includes("agreementChargeTurns")).toBe(true);
 
     const unstamped = (db: InMemoryDb) =>

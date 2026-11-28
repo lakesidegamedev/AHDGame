@@ -21,6 +21,22 @@ export interface RegionalRevenueShape {
 export function buildRegionalRevenueShape(regionalBudget: RegionalBudget): RegionalRevenueShape {
   const total = regionalBudget.totalBudget;
 
+  if (regionalBudget.countryId === "RU") {
+    const grantAmount = regionalBudget.unionGrant ?? 0;
+    return { revenue: { federalGrants: grantAmount, total }, grantAmount };
+  }
+  if (regionalBudget.countryId === "UK") {
+    return {
+      revenue: {
+        councilTax: regionalBudget.councilTaxRevenue,
+        businessRates: regionalBudget.businessRatesRevenue,
+        federalGrants: regionalBudget.westminsterGrant,
+        total,
+      },
+      grantAmount: regionalBudget.westminsterGrant,
+    };
+  }
+
   // JP prefectures: local taxation plus the Local Allocation Tax.
   if (regionalBudget.residentTaxRevenue != null) {
     const grantAmount = regionalBudget.nationalGrant ?? 0;

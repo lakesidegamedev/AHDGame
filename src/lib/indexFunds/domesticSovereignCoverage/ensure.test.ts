@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 vi.mock("@/lib/country/registeredCountries", () => ({
   getRegisteredCountryIds: vi.fn(),
 }));
@@ -16,8 +19,8 @@ function mockDb(fixture: {
   funds?: { slug: string; countryId?: string; anchorCurrencyCode: string; scope: string }[];
   existingSlugs?: string[];
 }) {
-  const insertOne = vi.fn().mockResolvedValue({ acknowledged: true });
-  const updateOne = vi.fn().mockResolvedValue({ acknowledged: true });
+  const insertMany = vi.fn().mockResolvedValue({ acknowledged: true });
+  const bulkWrite = vi.fn().mockResolvedValue({ acknowledged: true });
   const collections: Record<string, unknown> = {
     federalBudget: {
       find: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue(fixture.budgets ?? []) })),
@@ -35,14 +38,14 @@ function mockDb(fixture: {
               : (fixture.funds ?? [])
           ),
       })),
-      insertOne,
+      insertMany,
     },
-    indexFundPositions: { updateOne },
+    indexFundPositions: { bulkWrite },
   };
   const db = {
     collection: vi.fn((name: string) => collections[name]),
   } as unknown as Db;
-  return { db, insertOne, updateOne };
+  return { db, insertMany, bulkWrite };
 }
 
 beforeEach(() => {
@@ -60,7 +63,7 @@ describe("ensureDomesticSovereignBondFunds (#1001)", () => {
   });
 
   it("ensures the uncovered issuer with a domestic-only fund and leaves the covered one alone", async () => {
-    const { db, insertOne, updateOne } = mockDb({
+    const { db, insertMany, bulkWrite } = mockDb({
       budgets: [{ _id: "federal" }, { _id: "FR" }],
       liveIssuers: ["US", "FR"],
       funds: [
@@ -74,8 +77,8 @@ describe("ensureDomesticSovereignBondFunds (#1001)", () => {
     });
     const result = await ensureDomesticSovereignBondFunds(db, { enabled: true });
     expect(result).toEqual({ ensured: ["FR"] });
-    expect(insertOne).toHaveBeenCalledTimes(1);
-    const doc = insertOne.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertMany).toHaveBeenCalledTimes(1);
+    const doc = insertMany.mock.calls[0]?.[0]?.[0] as Record<string, unknown>;
     expect(doc).toMatchObject({
       slug: "fr_sovereign_bonds",
       scope: "country",
@@ -90,11 +93,11 @@ describe("ensureDomesticSovereignBondFunds (#1001)", () => {
     });
     // Fully backed at seed: 50M cash against 100 x 500k quoted liability.
     expect(doc.cashAnchor).toBe((doc.quotedNav as number) * (doc.unitSupply as number));
-    expect(updateOne).toHaveBeenCalledTimes(1);
+    expect(bulkWrite).toHaveBeenCalledTimes(1);
   });
 
   it("ensures nothing when no issuer is eligible (no domestic fund to extend to)", async () => {
-    const { db, insertOne } = mockDb({
+    const { db, insertMany } = mockDb({
       budgets: [{ _id: "federal" }],
       liveIssuers: ["US"],
       funds: [
@@ -108,11 +111,11 @@ describe("ensureDomesticSovereignBondFunds (#1001)", () => {
     });
     const result = await ensureDomesticSovereignBondFunds(db, { enabled: true });
     expect(result).toEqual({ ensured: [] });
-    expect(insertOne).not.toHaveBeenCalled();
+    expect(insertMany).not.toHaveBeenCalled();
   });
 
   it("never duplicates a fund the seed migration already created", async () => {
-    const { db, insertOne } = mockDb({
+    const { db, insertMany } = mockDb({
       budgets: [{ _id: "federal" }, { _id: "FR" }],
       liveIssuers: ["US", "FR"],
       funds: [
@@ -127,6 +130,6 @@ describe("ensureDomesticSovereignBondFunds (#1001)", () => {
     });
     const result = await ensureDomesticSovereignBondFunds(db, { enabled: true });
     expect(result).toEqual({ ensured: [] });
-    expect(insertOne).not.toHaveBeenCalled();
+    expect(insertMany).not.toHaveBeenCalled();
   });
 });

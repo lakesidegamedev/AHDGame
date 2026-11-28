@@ -16,7 +16,8 @@
  * unreproducible. This is how that number gets re-derived.
  */
 import type { Db } from "mongodb";
-import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 
 /**
  * The database the current probe is writing to.
@@ -58,8 +59,7 @@ export async function probeBootstrap(preset: string): Promise<BootstrapProbeResu
   const { bootstrapGameWorld, stampInitialGameClock } =
     await import("@/lib/admin/bootstrapGameWorld");
 
-  const memory = createInMemoryDb();
-  const db = memory as unknown as Db;
+  const { memory, db } = createTransactionalMemoryDb();
   probeDb = db;
   const log: string[] = [];
 

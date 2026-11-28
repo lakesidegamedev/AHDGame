@@ -4,7 +4,8 @@ import { runRequiredTransaction, RequiredTransactionCleanupError } from "./runRe
 interface Scope {
   originalDb: Db;
   session: ClientSession;
-  effects: Array<() => Promise<unknown>>;
+  effects: Array<() => unknown | Promise<unknown>>;
+  finish?: () => Promise<void>;
 }
 const scopes = new WeakMap<Db, Scope>();
 const optionIndex: Record<string, number> = {
@@ -51,6 +52,10 @@ function bindDb(db: Db, scope: Scope): Db {
     });
     return next;
   };
+  scope.finish = async () => {
+    await tail;
+    if (failed) throw failure;
+  };
   const bound = new Proxy(db, {
     get(target, key) {
       if (key !== "collection") {
@@ -92,7 +97,7 @@ function bindDb(db: Db, scope: Scope): Db {
 }
 
 /** External notifications and getDb-owned election spawners run only after commit. */
-export async function afterCommit(db: Db, effect: () => Promise<unknown>): Promise<void> {
+export async function afterCommit(db: Db, effect: () => unknown | Promise<unknown>): Promise<void> {
   const scope = scopes.get(db);
   if (scope) scope.effects.push(effect);
   else await effect();
@@ -112,7 +117,9 @@ export async function withSessionDb<T>(
       async (session) => {
         const scope: Scope = { session, effects: [], originalDb: db };
         effects = scope.effects;
-        return work(bindDb(db, scope));
+        const result = await work(bindDb(db, scope));
+        await scope.finish?.();
+        return result;
       },
       { client: db.client, timeoutMS: 60_000, maxCommitTimeMS: 10_000 }
     );

@@ -1,3 +1,11 @@
+// Formula fixtures isolate transaction transport; atomic suites exercise rollback and races.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => Promise<Response>) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -195,7 +203,7 @@ describe("POST /api/corporations/[id]/hostile-takeover", () => {
       { params: Promise.resolve({ id: targetId.toString() }) }
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status, await response.clone().text()).toBe(200);
 
     const bulkOps = db.collectionMocks.corporateSectors.bulkWrite.mock.calls[0]?.[0] as Array<{
       updateOne: { update: { $set: Record<string, unknown> } };

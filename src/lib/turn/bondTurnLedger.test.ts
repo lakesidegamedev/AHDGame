@@ -113,7 +113,7 @@ describe("loadPriorBondInterest", () => {
 });
 
 describe("snapshotBondHistory", () => {
-  it("writes every live bond snapshot in one unordered insert", async () => {
+  it("writes every live bond snapshot with a stable upsert", async () => {
     const memory = createInMemoryDb();
     const bond = {
       _id: new ObjectId(),
@@ -125,7 +125,7 @@ describe("snapshotBondHistory", () => {
       marketPrice: 98.5,
     } as unknown as Bond;
     memory.seed("bonds", [{ _id: bond._id, matured: false, marketPrice: bond.marketPrice }]);
-    const insertMany = vi.spyOn(memory.collection("bondHistory"), "insertMany");
+    const bulkWrite = vi.spyOn(memory.collection("bondHistory"), "bulkWrite");
 
     const written = await snapshotBondHistory({
       db: memory as unknown as Db,
@@ -136,14 +136,63 @@ describe("snapshotBondHistory", () => {
     });
 
     expect(written).toBe(1);
-    expect(insertMany).toHaveBeenCalledTimes(1);
-    const [docs, options] = insertMany.mock.calls[0] as unknown as [
-      Array<Record<string, unknown>>,
-      { ordered?: boolean },
-    ];
-    expect(options).toEqual({ ordered: false });
-    expect(docs).toEqual([
-      expect.objectContaining({ bondId: bond._id, turn: 7, marketPrice: 98.5 }),
+    expect(bulkWrite).toHaveBeenCalledTimes(1);
+    expect(bulkWrite.mock.calls[0]?.[0]).toEqual([
+      expect.objectContaining({
+        updateOne: expect.objectContaining({
+          filter: { bondId: bond._id, turn: 7 },
+          upsert: true,
+        }),
+      }),
     ]);
   });
+});
+
+it("does not compound the same turn or manufacture interest without a paid claim", async () => {
+  const memory = createInMemoryDb(),
+    id = new ObjectId();
+  memory.seed("bonds", [{ _id: id, matured: false, marketPrice: 1 }]);
+  memory.seed("bondHistory", [
+    { bondId: id, turn: 6, totalInterestPaid: 100, interestPaidSource: "settlement" },
+  ]);
+  const args = {
+    db: memory as unknown as Db,
+    activeBonds: [] as Bond[],
+    fxByCurrency: new Map(),
+    turn: 7,
+    now: new Date(),
+    paidInterestAnchorByBond: new Map([[String(id), 25]]),
+  };
+  await snapshotBondHistory(args);
+  await snapshotBondHistory(args);
+  expect(
+    await (memory as unknown as Db)
+      .collection("bondHistory")
+      .find({ bondId: id, turn: 7 })
+      .toArray()
+  ).toEqual([expect.objectContaining({ totalInterestPaid: 125 })]);
+  await snapshotBondHistory({ ...args, turn: 8, paidInterestAnchorByBond: new Map() });
+  expect(
+    (await (memory as unknown as Db).collection("bondHistory").findOne({ bondId: id, turn: 8 }))
+      ?.totalInterestPaid
+  ).toBe(125);
+});
+
+it("excludes unverified historical contractual estimates from recorded payments", async () => {
+  const memory = createInMemoryDb(),
+    id = new ObjectId();
+  memory.seed("bonds", [{ _id: id, matured: false, marketPrice: 1 }]);
+  memory.seed("bondHistory", [{ bondId: id, turn: 6, totalInterestPaid: 999999 }]);
+  await snapshotBondHistory({
+    db: memory as unknown as Db,
+    activeBonds: [],
+    fxByCurrency: new Map(),
+    turn: 7,
+    now: new Date(),
+    paidInterestAnchorByBond: new Map([[String(id), 25]]),
+  });
+  expect(
+    (await (memory as unknown as Db).collection("bondHistory").findOne({ bondId: id, turn: 7 }))
+      ?.totalInterestPaid
+  ).toBe(25);
 });

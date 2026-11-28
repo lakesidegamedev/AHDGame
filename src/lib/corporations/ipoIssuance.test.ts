@@ -26,7 +26,35 @@ describe("computeIpoIssuance", () => {
     expect(result.founderOwnershipPctAfter).toBeLessThan(52);
   });
 
-  it("at 10% float (min), founder retains 90%", () => {
+  it("at 1% float (min), founder retains 99%", () => {
+    const result = computeIpoIssuance({
+      existingShares: 10_000_000,
+      pricePerShare: 0.5,
+      floatPct: 1,
+    });
+    expect(result.newShares).toBe(101_010);
+    expect(result.founderOwnershipPctAfter).toBeCloseTo(99, 1);
+  });
+
+  it("dual-class allows up to 90% float, not more", () => {
+    const result = computeIpoIssuance({
+      existingShares: 1_000_000,
+      pricePerShare: 1,
+      floatPct: 90,
+      withSuperShares: true,
+    });
+    expect(result.newShares).toBe(9_000_000);
+    expect(() =>
+      computeIpoIssuance({
+        existingShares: 1_000_000,
+        pricePerShare: 1,
+        floatPct: 91,
+        withSuperShares: true,
+      })
+    ).toThrow();
+  });
+
+  it("at 10% float, founder retains 90%", () => {
     const result = computeIpoIssuance({
       existingShares: 10_000_000,
       pricePerShare: 0.5,
@@ -48,7 +76,7 @@ describe("computeIpoIssuance", () => {
 
   it("throws if floatPct is out of range", () => {
     expect(() =>
-      computeIpoIssuance({ existingShares: 10_000_000, pricePerShare: 0.5, floatPct: 9 })
+      computeIpoIssuance({ existingShares: 10_000_000, pricePerShare: 0.5, floatPct: 0 })
     ).toThrow();
     expect(() =>
       computeIpoIssuance({ existingShares: 10_000_000, pricePerShare: 0.5, floatPct: 50 })

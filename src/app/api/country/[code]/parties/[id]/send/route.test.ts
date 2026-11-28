@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -6,13 +24,7 @@ vi.mock("@/lib/mongodb", () => ({
   getDb: vi.fn(),
   getMongoClient: vi.fn(async () => ({
     startSession: () => ({
-      withTransaction: vi.fn(async () => {
-        const err = new Error("transactions not supported on standalone") as Error & {
-          code?: number;
-        };
-        err.code = 20;
-        throw err;
-      }),
+      withTransaction: vi.fn(async (work: (session: unknown) => Promise<unknown>) => work({})),
       endSession: vi.fn(async () => {}),
     }),
   })),
@@ -97,7 +109,7 @@ describe("POST /api/country/[code]/parties/[id]/send", () => {
     });
   });
 
-  it("refunds the treasury and returns 404 when the recipient disappears after debit", async () => {
+  it("rolls back the treasury debit and returns 404 when the recipient disappears after debit", async () => {
     db.collectionMocks["characters"]!.updateOne.mockResolvedValue({
       matchedCount: 0,
       modifiedCount: 0,
@@ -115,16 +127,13 @@ describe("POST /api/country/[code]/parties/[id]/send", () => {
     const body = await response.json();
     expect(body.error).toMatch(/character not found/i);
 
-    expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledTimes(2);
+    expect(db.collectionMocks["politicalParties"]!.updateOne).toHaveBeenCalledTimes(1);
     const debitCall = db.collectionMocks["politicalParties"]!.updateOne.mock.calls[0];
     expect((debitCall[1] as Record<string, Record<string, number>>)["$inc"]).toMatchObject({
       treasury: -5_000,
     });
 
-    const refundCall = db.collectionMocks["politicalParties"]!.updateOne.mock.calls[1];
-    expect((refundCall[1] as Record<string, Record<string, number>>)["$inc"]).toMatchObject({
-      treasury: 5_000,
-    });
+    // The owning transaction rolls back the debit; no compensating credit is issued.
     expect(db.collectionMocks["adminLogs"]!.insertOne).not.toHaveBeenCalled();
   });
 

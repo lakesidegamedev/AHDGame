@@ -1,6 +1,6 @@
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { processSavingsInterestTurn } from "@/lib/turn/savingsInterestTurn";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
@@ -10,7 +10,7 @@ vi.mock("@/lib/monetaryPolicy/presetMonetaryScope", () => ({
 
 describe("savings interest with an empty monetary scope", () => {
   it("does not call Mongo bulkWrite with an empty operation array", async () => {
-    const db = createInMemoryDb();
+    const { memory: db } = createTransactionalMemoryDb();
     db.seed("gameConfig", [{ _id: "default", forexEnabled: true }]);
     db.seed("gameState", [{ _id: "current", preset: "2019-default" }]);
     const { getDb } = await import("@/lib/mongodb");

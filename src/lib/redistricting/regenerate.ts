@@ -1,6 +1,7 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CongressionalDistrict } from "@/lib/db/types";
+
 import { buildDistrictDocsForStates } from "./buildStateDocs";
 import { congressionalDistrictsCollection } from "@/lib/db/repositories/congressionalDistricts";
 
@@ -16,26 +17,30 @@ export async function regenerateCongressionalDistricts(
 ): Promise<{ regenerated: number }> {
   if (opts.stateIds.length === 0) return { regenerated: 0 };
 
-  const coll = congressionalDistrictsCollection(db);
-  await coll.deleteMany({
-    countryId: opts.countryId,
-    stateId: { $in: opts.stateIds },
-  });
+  return withSessionDb(db, async (db) => {
+    const coll = congressionalDistrictsCollection(db);
+    await coll.deleteMany({
+      countryId: opts.countryId,
+      stateId: { $in: opts.stateIds },
+    });
 
-  const docs = await buildDistrictDocsForStates(
-    db,
-    opts.countryId,
-    opts.now,
-    opts.stateIds,
-    opts.preset
-  );
-  for (const doc of docs) {
-    // Upsert by the deterministic `_id` (`${countryId}_${stateId}_${index}`)
-    // rather than insert: if the delete missed a stale row, or a concurrent
-    // trigger recreated one, this overwrites it instead of throwing a duplicate
-    // -key error on the unique (countryId, stateId, index) index — which would
-    // otherwise surface as an opaque 500.
-    await coll.updateOne({ _id: doc._id }, { $set: doc }, { upsert: true });
-  }
-  return { regenerated: docs.length };
+    const docs = await buildDistrictDocsForStates(
+      db,
+      opts.countryId,
+      opts.now,
+      opts.stateIds,
+      opts.preset
+    );
+    if (docs.length > 0)
+      await coll.bulkWrite(
+        docs.map((doc) => ({
+          updateOne: {
+            filter: { _id: doc._id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        }))
+      );
+    return { regenerated: docs.length };
+  });
 }

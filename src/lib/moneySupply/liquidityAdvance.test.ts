@@ -29,6 +29,8 @@ function world() {
       liquidCapital: 17,
       bankCharter: {
         status: "active",
+        charteredTurn: 1,
+        type: "retail",
         currency: "USD",
         cashReserves: 100,
         cbMarginDebt: 0,
@@ -191,5 +193,21 @@ describe("durable liquidity advance commands", () => {
       netMoneyCreatedLifetime: 0,
     });
     expect(snapshot(memory).banks.map((bank) => bank.bankCharter.cashReserves)).toEqual([100, 100]);
+  });
+  it("does not deliver an interrupted recipient plan into a replacement charter epoch", async () => {
+    const memory = world();
+    const fault = withInjectedCrash(memory, {
+      collection: "bankLiquidityOperations",
+      op: "insertOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    await expect(executeLiquidityAdvance(fault.db, command, 6)).rejects.toThrow();
+    snapshot(memory).banks[0].bankCharter.charteredTurn = 2;
+    fault.disarm();
+    const result = await executeLiquidityAdvance(memory as unknown as Db, command, 6);
+    expect(result).toMatchObject({ amount: 100, banksCredited: 1 });
+    expect(snapshot(memory).banks.map((bank) => bank.bankCharter.cashReserves)).toEqual([100, 200]);
+    expect(snapshot(memory).banks[0].bankCharter.cbLiquidityAdvanceDebt ?? 0).toBe(0);
   });
 });

@@ -1,3 +1,5 @@
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * Shell for the frontier programme races: funding commands, the turn phase and
  * the public leaderboard read. The rules live in ./rules.
@@ -104,6 +106,9 @@ export async function quoteCountryCost(
  * Authorisation (who may act for the entrant) belongs to the caller.
  */
 export async function fundFrontierRace(db: Db, args: FundArgs): Promise<FundResult> {
+  return withAtomicResult(db, (db) => fundFrontierRaceInTransaction(db, args));
+}
+async function fundFrontierRaceInTransaction(db: Db, args: FundArgs): Promise<FundResult> {
   const def = frontierRaceDef(args.raceId);
   if (!def) return fail("unknown_race", "No such programme");
   const points = clampOrderPoints(args.points);
@@ -221,6 +226,7 @@ async function applyCountryApproval(
     });
   } catch (error) {
     logger.error(COMPONENT, "country approval effect failed", error, { countryId, delta });
+    throw error;
   }
 }
 
@@ -231,6 +237,12 @@ export interface FrontierRacePhaseResult {
 
 /** Turn phase: names winners of open races, then issues licences whose sunset has run. */
 export async function processFrontierRaces(db: Db, turn: number): Promise<FrontierRacePhaseResult> {
+  return withSessionDb(db, (db) => processFrontierRacesInTransaction(db, turn));
+}
+async function processFrontierRacesInTransaction(
+  db: Db,
+  turn: number
+): Promise<FrontierRacePhaseResult> {
   const era = await getEraContext(db);
   const races = getFrontierRacesCollection(db);
   const docs = await races.find({}).toArray();
@@ -284,7 +296,7 @@ export async function processFrontierRaces(db: Db, turn: number): Promise<Fronti
       claims: claims.length,
       modified: written.modifiedCount,
     });
-    return result;
+    throw new Error("Frontier race claims changed before award delivery");
   }
 
   for (const { def, doc, outcome } of wins) {
@@ -366,13 +378,16 @@ async function applyWinner(
         await applyCountryApproval(db, loser.id, LOSER_APPROVAL, turn);
       }
     }
-    await logWireEvent(
-      "frontier_race_won",
-      `FRONTIER: ${nameOf(winnerKey)} wins the ${def.label.toLowerCase()} and takes the ${def.method.toLowerCase()}`,
-      { href: "/frontier-races" }
+    await afterCommit(db, () =>
+      logWireEvent(
+        "frontier_race_won",
+        `FRONTIER: ${nameOf(winnerKey)} wins the ${def.label.toLowerCase()} and takes the ${def.method.toLowerCase()}`,
+        { href: "/frontier-races" }
+      )
     );
   } catch (error) {
     logger.error(COMPONENT, "winner effects failed", error, { race: def.id });
+    throw error;
   }
 }
 

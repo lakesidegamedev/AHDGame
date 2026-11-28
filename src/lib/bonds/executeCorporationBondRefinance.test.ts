@@ -1,3 +1,8 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+  afterCommit: async (_db: unknown, work: () => unknown) => work(),
+}));
 /**
  * Tests for executeCorporationBondRefinance — the shared refinance core used by
  * both the CEO-initiated HTTP route and the turn-tick auto-resolver.

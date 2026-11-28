@@ -41,19 +41,30 @@ function mockDbWithDecision(decisions: Array<Record<string, unknown>>) {
   return {
     sets,
     db: {
-      collection: vi.fn(() => ({
-        find: vi.fn().mockReturnValue({
-          sort: vi.fn().mockReturnValue({
-            limit: vi.fn().mockReturnValue({
-              toArray: vi.fn().mockResolvedValue(decisions),
-            }),
-          }),
-        }),
-        updateOne: vi.fn(async (_f, u: Record<string, unknown>) => {
-          sets.push(u as Record<string, unknown>);
-          return { acknowledged: true, modifiedCount: 1 };
-        }),
-      })),
+      collection: vi.fn((name: string) =>
+        name === "electedOfficials"
+          ? {
+              find: () => ({
+                toArray: async () => [
+                  { characterId: HOUSE_MEMBER._id, seatsHeld: 1 },
+                  { characterId: SENATE_MEMBER._id, seatsHeld: 1 },
+                ],
+              }),
+            }
+          : {
+              find: vi.fn().mockReturnValue({
+                sort: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    toArray: vi.fn().mockResolvedValue(decisions),
+                  }),
+                }),
+              }),
+              updateOne: vi.fn(async (_f, u: Record<string, unknown>) => {
+                sets.push(u as Record<string, unknown>);
+                return { acknowledged: true, modifiedCount: 1 };
+              }),
+            }
+      ),
     } as never,
   };
 }
@@ -292,16 +303,27 @@ describe("POST /api/country/[code]/sovereign-resolution/vote", () => {
       },
     ];
     const db = {
-      collection: vi.fn(() => ({
-        find: vi.fn().mockReturnValue({
-          sort: vi.fn().mockReturnValue({
-            limit: vi.fn().mockReturnValue({
-              toArray: vi.fn().mockResolvedValue(decisions),
-            }),
-          }),
-        }),
-        updateOne: vi.fn().mockResolvedValue({ acknowledged: true, modifiedCount: 0 }),
-      })),
+      collection: vi.fn((name: string) =>
+        name === "electedOfficials"
+          ? {
+              find: () => ({
+                toArray: async () => [
+                  { characterId: HOUSE_MEMBER._id, seatsHeld: 1 },
+                  { characterId: SENATE_MEMBER._id, seatsHeld: 1 },
+                ],
+              }),
+            }
+          : {
+              find: vi.fn().mockReturnValue({
+                sort: vi.fn().mockReturnValue({
+                  limit: vi.fn().mockReturnValue({
+                    toArray: vi.fn().mockResolvedValue(decisions),
+                  }),
+                }),
+              }),
+              updateOne: vi.fn().mockResolvedValue({ acknowledged: true, modifiedCount: 0 }),
+            }
+      ),
     } as never;
     vi.mocked(getDb).mockResolvedValue(db);
     const res = await POST(mockReq({ vote: "for" }), {

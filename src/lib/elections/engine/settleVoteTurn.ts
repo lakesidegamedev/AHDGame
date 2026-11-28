@@ -1,3 +1,5 @@
+import { cumulativeVoteShares } from "@/lib/elections/rules/cumulativeVoteShares";
+import { tallyPublicationFilter } from "@/lib/elections/tallyPublication";
 import { russianDumaVoteTotals } from "@/lib/countries/ru/rules/assemblyVoteIncrement";
 import { russianCouncilVoteTotals } from "@/lib/countries/ru/rules/councilVoteTotals";
 import { resolveRussianCouncilBallot } from "@/lib/countries/ru/rules/councilResult";
@@ -159,7 +161,7 @@ export async function settleVoteTurn(context: AccumulateVoteTurnStageContext): P
       ) ?? (await getCountryState(context.db, context.electionCountryId))
     ).governmentType === "onePartyState";
 
-  const { votesPerCandidate, sharesPct } = (0, context.distributeFn)(
+  const { votesPerCandidate } = (0, context.distributeFn)(
     context.effEnriched,
     context.effEffectiveTurnPool,
     context.effTotalPool,
@@ -520,15 +522,7 @@ export async function settleVoteTurn(context: AccumulateVoteTurnStageContext): P
     ...(context.slicePart ? { slicePart: context.slicePart } : {}),
     recordedAt: context.now,
     cumulativeVotes: { ...newTotals },
-    sharesPct:
-      nativeRussianTotal == null
-        ? sharesPct
-        : Object.fromEntries(
-            Object.entries(newTotals).map(([id, count]) => [
-              id,
-              nativeRussianTotal ? (count / nativeRussianTotal) * 100 : 0,
-            ])
-          ),
+    sharesPct: cumulativeVoteShares(newTotals, nativeRussianTotal ?? undefined),
     ...(seatsEstimate ? { seatsEstimate } : {}),
     ...(context.participationSummary ? { participation: context.participationSummary } : {}),
     ...(councilTotals
@@ -624,23 +618,13 @@ export async function settleVoteTurn(context: AccumulateVoteTurnStageContext): P
   // STV totals and original ballots must commit together, and a concurrent
   // replay must not overwrite another turn's ballot receipt. The rest of a
   // split turn lands only beside that turn's early half.
-  const tallyFilter = context.isPrStv
-    ? context.slicePart === "rest"
-      ? {
-          electionId: context.electionId,
-          finalized: false,
-          turnSnapshots: {
-            $size: context.tally.turnSnapshots.length,
-            $not: { $elemMatch: { turn: context.turnNumber, slicePart: { $ne: "early" } } },
-          },
-        }
-      : {
-          electionId: context.electionId,
-          finalized: false,
-          "turnSnapshots.turn": { $ne: context.turnNumber },
-          turnSnapshots: { $size: context.tally.turnSnapshots.length },
-        }
-    : { electionId: context.electionId };
+  const tallyFilter = tallyPublicationFilter({
+    electionId: context.electionId,
+    totalVotes: context.tally.totalVotes,
+    snapshots: context.tally.turnSnapshots,
+    turn: context.turnNumber,
+    slicePart: context.slicePart,
+  });
   if (context.options?.tallyWrites) {
     context.options.tallyWrites.push({ updateOne: { filter: tallyFilter, update: tallyUpdate } });
     return;

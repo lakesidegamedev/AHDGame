@@ -1,3 +1,4 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import type { AnyBulkWriteOperation, Db, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type {
@@ -6,7 +7,6 @@ import type {
   OrgRegLedgerSource,
   OrgRegMetric,
   StatePartyOrg,
-  StateApprovalHistory,
   StateRegistrationPool,
 } from "@/lib/db/types";
 import { POOL_SENTINEL_PARTY_ID } from "@/lib/db/types";
@@ -598,180 +598,179 @@ function makeLedgerRow(
 /**
  * Apply drift + decay across every state with a registration pool row.
  *
- * Idempotent only in the sense that running twice in the same turn would
- * apply the deltas twice — caller (the turn-phase registry) is responsible
- * for invoking once per turn.
+ * Registration rows, residual pools and their ledger share one turn receipt.
  */
 export async function processRegDriftDecay(
   currentTurn: number,
   now: Date = new Date(),
   injectedDb?: Db
 ): Promise<RegDriftDecayResult> {
-  const db = injectedDb ?? (await getDb());
+  const rootDb = injectedDb ?? (await getDb());
+  return withTurnValueSettlement(rootDb, "party-registration-drift", currentTurn, async (db) => {
+    const result: RegDriftDecayResult = {
+      statesScanned: 0,
+      statesProcessed: 0,
+      partyRowsUpdated: 0,
+      poolRowsUpdated: 0,
+      ledgerRowsWritten: 0,
+    };
 
-  const result: RegDriftDecayResult = {
-    statesScanned: 0,
-    statesProcessed: 0,
-    partyRowsUpdated: 0,
-    poolRowsUpdated: 0,
-    ledgerRowsWritten: 0,
-  };
+    const pools = await stateRegistrationPoolCollection(db).find({}).toArray();
+    result.statesScanned = pools.length;
+    if (pools.length === 0) return result;
 
-  const pools = await stateRegistrationPoolCollection(db).find({}).toArray();
-  result.statesScanned = pools.length;
-  if (pools.length === 0) return result;
+    // Turn length is constant across the turn — load once for tenure→band math
+    // rather than re-reading gameConfig for every state.
+    const turnLengthMinutes = await loadTurnLengthMinutes(db);
 
-  // Turn length is constant across the turn — load once for tenure→band math
-  // rather than re-reading gameConfig for every state.
-  const turnLengthMinutes = await loadTurnLengthMinutes(db);
+    // Enacted registration-access law is national and constant across the turn,
+    // so it joins the once-per-phase reads rather than being fetched per pool.
+    const gs = await gameStateCollection<{
+      _id: string;
+      registrationAccessBias?: number;
+      registrationAccessBiasByCountry?: Partial<Record<string, number>>;
+    }>(db).findOne(
+      { _id: "current" },
+      { projection: { registrationAccessBias: 1, registrationAccessBiasByCountry: 1 } }
+    );
+    /**
+     * Per country — electoral law is national law. The legacy global field is the
+     * fallback so a world written before the map existed still resolves, but a
+     * country with its own entry uses only that.
+     */
+    const accessBiasFor = (countryId: string): number =>
+      gs?.registrationAccessBiasByCountry?.[countryId.toUpperCase()] ??
+      gs?.registrationAccessBias ??
+      0;
 
-  // Enacted registration-access law is national and constant across the turn,
-  // so it joins the once-per-phase reads rather than being fetched per pool.
-  const gs = await gameStateCollection<{
-    _id: string;
-    registrationAccessBias?: number;
-    registrationAccessBiasByCountry?: Partial<Record<string, number>>;
-  }>(db).findOne(
-    { _id: "current" },
-    { projection: { registrationAccessBias: 1, registrationAccessBiasByCountry: 1 } }
-  );
-  /**
-   * Per country — electoral law is national law. The legacy global field is the
-   * fallback so a world written before the map existed still resolves, but a
-   * country with its own entry uses only that.
-   */
-  const accessBiasFor = (countryId: string): number =>
-    gs?.registrationAccessBiasByCountry?.[countryId.toUpperCase()] ??
-    gs?.registrationAccessBias ??
-    0;
+    // Batched: load all statePartyOrg + all regional executives once, plan every
+    // pool in memory, then commit three batched writes (party updates, pool
+    // updates, ledger inserts) instead of per-pool round-trips.
+    const countryIds = Array.from(new Set(pools.map((p) => p.countryId)));
 
-  // Batched: load all statePartyOrg + all regional executives once, plan every
-  // pool in memory, then commit three batched writes (party updates, pool
-  // updates, ledger inserts) instead of per-pool round-trips.
-  const countryIds = Array.from(new Set(pools.map((p) => p.countryId)));
-
-  const allParties = await statePartyOrgCollection(db)
-    .find({ countryId: { $in: countryIds } })
-    .toArray();
-  const partiesByStateKey = new Map<string, StatePartyOrg[]>();
-  for (const row of allParties) {
-    const k = `${row.countryId}:${row.stateId}`;
-    const list = partiesByStateKey.get(k);
-    if (list) list.push(row);
-    else partiesByStateKey.set(k, [row]);
-  }
-
-  // All regional-executive officials in one query (office types are only
-  // "governor" / "ministerPresident"), keyed by country:STATE:officeType with
-  // the most-recently-elected winning ties — mirrors getRegionalExecutive's
-  // `sort({ electedAt: -1 })` pick.
-  const execOfficials = await electedOfficialsCollection(db)
-    .find({
-      countryId: { $in: countryIds },
-      officeType: { $in: ["governor", "ministerPresident"] },
-    })
-    .toArray();
-  const officialByKey = new Map<string, ElectedOfficial>();
-  for (const o of execOfficials) {
-    const k = `${o.countryId}:${(o.state ?? "").toUpperCase()}:${o.officeType}`;
-    const prev = officialByKey.get(k);
-    if (
-      !prev ||
-      (o.electedAt &&
-        (!prev.electedAt || new Date(o.electedAt).getTime() > new Date(prev.electedAt).getTime()))
-    ) {
-      officialByKey.set(k, o);
+    const allParties = await statePartyOrgCollection(db)
+      .find({ countryId: { $in: countryIds } })
+      .toArray();
+    const partiesByStateKey = new Map<string, StatePartyOrg[]>();
+    for (const row of allParties) {
+      const k = `${row.countryId}:${row.stateId}`;
+      const list = partiesByStateKey.get(k);
+      if (list) list.push(row);
+      else partiesByStateKey.set(k, [row]);
     }
-  }
 
-  const approvalRows = await stateApprovalHistoryCollection(db)
-    .find(
-      { countryId: { $in: countryIds } },
-      { projection: { countryId: 1, stateId: 1, approvalRating: 1 } }
-    )
-    .toArray();
-  const approvalByRegion = new Map(
-    approvalRows.map((row) => [`${row.countryId}:${row.stateId ?? row._id}`, row.approvalRating])
-  );
+    // All regional-executive officials in one query (office types are only
+    // "governor" / "ministerPresident"), keyed by country:STATE:officeType with
+    // the most-recently-elected winning ties — mirrors getRegionalExecutive's
+    // `sort({ electedAt: -1 })` pick.
+    const execOfficials = await electedOfficialsCollection(db)
+      .find({
+        countryId: { $in: countryIds },
+        officeType: { $in: ["governor", "ministerPresident"] },
+      })
+      .toArray();
+    const officialByKey = new Map<string, ElectedOfficial>();
+    for (const o of execOfficials) {
+      const k = `${o.countryId}:${(o.state ?? "").toUpperCase()}:${o.officeType}`;
+      const prev = officialByKey.get(k);
+      if (
+        !prev ||
+        (o.electedAt &&
+          (!prev.electedAt || new Date(o.electedAt).getTime() > new Date(prev.electedAt).getTime()))
+      ) {
+        officialByKey.set(k, o);
+      }
+    }
 
-  const partyOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
-  const poolOps: AnyBulkWriteOperation<StateRegistrationPool>[] = [];
-  const ledgerRows: OrgRegLedger[] = [];
-
-  for (const pool of pools) {
-    const parties = partiesByStateKey.get(`${pool.countryId}:${pool.stateId}`) ?? [];
-
-    const office = resolveExecutiveOffice(pool.countryId as CountryId, pool.stateId);
-    const official = office
-      ? officialByKey.get(`${pool.countryId}:${pool.stateId.toUpperCase()}:${office.officeType}`)
-      : undefined;
-    const executive = regionalExecutiveFromOfficial(
-      pool.countryId as CountryId,
-      pool.stateId,
-      official,
-      now,
-      turnLengthMinutes
+    const approvalRows = await stateApprovalHistoryCollection(db)
+      .find(
+        { countryId: { $in: countryIds } },
+        { projection: { countryId: 1, stateId: 1, approvalRating: 1 } }
+      )
+      .toArray();
+    const approvalByRegion = new Map(
+      approvalRows.map((row) => [`${row.countryId}:${row.stateId ?? row._id}`, row.approvalRating])
     );
 
-    const planned = planStateRegDriftDecay({
-      countryId: pool.countryId,
-      stateId: pool.stateId,
-      parties,
-      pool,
-      turn: currentTurn,
-      now,
-      governor: executive
-        ? {
-            partyId: executive.partyId,
-            sign:
-              executive.sign *
-              earnedOfficeholdingBonus(approvalByRegion.get(`${pool.countryId}:${pool.stateId}`)),
-          }
-        : null,
-      registrationAccessBias: accessBiasFor(pool.countryId),
-    });
-    if (!planned) continue;
+    const partyOps: AnyBulkWriteOperation<StatePartyOrg>[] = [];
+    const poolOps: AnyBulkWriteOperation<StateRegistrationPool>[] = [];
+    const ledgerRows: OrgRegLedger[] = [];
 
-    result.statesProcessed += 1;
+    for (const pool of pools) {
+      const parties = partiesByStateKey.get(`${pool.countryId}:${pool.stateId}`) ?? [];
 
-    for (const u of planned.partyUpdates) {
-      partyOps.push({
-        updateOne: {
-          filter: { _id: u.rowId },
-          update: { $set: { registration: u.newReg, updatedAt: now } },
-        },
+      const office = resolveExecutiveOffice(pool.countryId as CountryId, pool.stateId);
+      const official = office
+        ? officialByKey.get(`${pool.countryId}:${pool.stateId.toUpperCase()}:${office.officeType}`)
+        : undefined;
+      const executive = regionalExecutiveFromOfficial(
+        pool.countryId as CountryId,
+        pool.stateId,
+        official,
+        now,
+        turnLengthMinutes
+      );
+
+      const planned = planStateRegDriftDecay({
+        countryId: pool.countryId,
+        stateId: pool.stateId,
+        parties,
+        pool,
+        turn: currentTurn,
+        now,
+        governor: executive
+          ? {
+              partyId: executive.partyId,
+              sign:
+                executive.sign *
+                earnedOfficeholdingBonus(approvalByRegion.get(`${pool.countryId}:${pool.stateId}`)),
+            }
+          : null,
+        registrationAccessBias: accessBiasFor(pool.countryId),
       });
-    }
-    result.partyRowsUpdated += planned.partyUpdates.length;
+      if (!planned) continue;
 
-    poolOps.push({
-      updateOne: {
-        filter: { _id: pool._id },
-        update: {
-          $set: {
-            independent: planned.poolUpdate.newIndependent,
-            unregistered: planned.poolUpdate.newUnregistered,
-            lastUpdatedTurn: currentTurn,
-            updatedAt: now,
+      result.statesProcessed += 1;
+
+      for (const u of planned.partyUpdates) {
+        partyOps.push({
+          updateOne: {
+            filter: { _id: u.rowId },
+            update: { $set: { registration: u.newReg, updatedAt: now } },
+          },
+        });
+      }
+      result.partyRowsUpdated += planned.partyUpdates.length;
+
+      poolOps.push({
+        updateOne: {
+          filter: { _id: pool._id },
+          update: {
+            $set: {
+              independent: planned.poolUpdate.newIndependent,
+              unregistered: planned.poolUpdate.newUnregistered,
+              lastUpdatedTurn: currentTurn,
+              updatedAt: now,
+            },
           },
         },
-      },
-    });
-    result.poolRowsUpdated += 1;
+      });
+      result.poolRowsUpdated += 1;
 
-    for (const r of planned.ledgerRows) ledgerRows.push({ ...r } as OrgRegLedger);
-  }
+      for (const r of planned.ledgerRows) ledgerRows.push({ ...r } as OrgRegLedger);
+    }
 
-  if (partyOps.length > 0) {
-    await statePartyOrgCollection(db).bulkWrite(partyOps);
-  }
-  if (poolOps.length > 0) {
-    await stateRegistrationPoolCollection(db).bulkWrite(poolOps);
-  }
-  if (ledgerRows.length > 0) {
-    await orgRegLedgerCollection(db).insertMany(ledgerRows);
-    result.ledgerRowsWritten += ledgerRows.length;
-  }
+    if (partyOps.length > 0) {
+      await statePartyOrgCollection(db).bulkWrite(partyOps);
+    }
+    if (poolOps.length > 0) {
+      await stateRegistrationPoolCollection(db).bulkWrite(poolOps);
+    }
+    if (ledgerRows.length > 0) {
+      await orgRegLedgerCollection(db).insertMany(ledgerRows);
+      result.ledgerRowsWritten += ledgerRows.length;
+    }
 
-  return result;
+    return result;
+  });
 }

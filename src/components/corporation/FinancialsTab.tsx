@@ -608,8 +608,8 @@ export default function FinancialsTab({
                     financials.governmentBondSubsidy > 0 ||
                     financials.bondCouponIncome > 0 ||
                     financials.dividendIncomeReceived > 0 ||
-                    financials.imfFacilityPaymentDaily > 0 ||
-                    financials.imfFacilityReceiptsDaily > 0 ||
+                    financials.imfFacilityInterestPaidDaily > 0 ||
+                    financials.imfFacilityInterestReceivedDaily > 0 ||
                     balanceSheet?.assets.bankEquity != null) && (
                     <>
                       <StatementGroup>Interest and investment income</StatementGroup>
@@ -663,18 +663,18 @@ export default function FinancialsTab({
                           note="half of it is taxed"
                         />
                       )}
-                      {financials.imfFacilityPaymentDaily > 0 && (
+                      {financials.imfFacilityInterestPaidDaily > 0 && (
                         <StatementLine
                           indent
-                          label="IMF facility payment"
-                          amount={cost(financials.imfFacilityPaymentDaily)}
+                          label="IMF facility interest"
+                          amount={cost(financials.imfFacilityInterestPaidDaily)}
                         />
                       )}
-                      {financials.imfFacilityReceiptsDaily > 0 && (
+                      {financials.imfFacilityInterestReceivedDaily > 0 && (
                         <StatementLine
                           indent
-                          label="IMF facility receipts"
-                          amount={fmt(scale(financials.imfFacilityReceiptsDaily))}
+                          label="IMF interest income"
+                          amount={fmt(scale(financials.imfFacilityInterestReceivedDaily))}
                           amountClass="text-success"
                         />
                       )}
@@ -753,7 +753,7 @@ export default function FinancialsTab({
                         <StatementLine
                           indent
                           label="Unpaid settlement, last turn"
-                          amount={money.fmt(unpaidSettlement)}
+                          amount={formatAnchor(unpaidSettlement)}
                           amountClass="text-warning"
                           note="retried next settlement"
                         />
@@ -797,8 +797,8 @@ export default function FinancialsTab({
 
             {financials.historicalIncomeUnavailable && (
               <p className="text-body text-muted">
-                Recorded income is unavailable because its historical currency conversion is
-                missing. The statement shows a forecast.
+                Recorded net income is unavailable because currency or settlement evidence is
+                incomplete. The statement shows a forecast.
               </p>
             )}
             {financials.historicalBondFeesUnavailable && (

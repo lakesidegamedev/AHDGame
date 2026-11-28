@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -10,7 +14,10 @@ vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
 vi.mock("@/lib/currency/characterFunds", () => ({
   getHomeCurrency: vi.fn().mockReturnValue("USD"),
 }));
-vi.mock("./fundOnlyBuyout", () => ({ executeFundOnlyBuyout: vi.fn() }));
+vi.mock("./fundOnlyBuyout", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./fundOnlyBuyout")>()),
+  executeFundOnlyBuyout: vi.fn(),
+}));
 vi.mock("@/lib/banking/policy", () => ({ loadBankingPolicy: vi.fn() }));
 
 function makeCorp(overrides: Record<string, unknown> = {}) {
@@ -47,7 +54,11 @@ function makeDb({
   const findOne = vi.fn().mockResolvedValue(voteFindReturns ?? null);
   return {
     db: {
-      collection: vi.fn().mockReturnValue({ insertOne, findOne }),
+      collection: vi.fn().mockReturnValue({
+        insertOne,
+        findOne,
+        updateOne: vi.fn().mockResolvedValue({ matchedCount: 1 }),
+      }),
     } as unknown as Db,
     insertOne,
   };
@@ -158,7 +169,7 @@ describe("openPrivatizationVote — atomic open", () => {
     if (!result.ok) expect(result.error).toMatch(/already open/i);
   });
 
-  it("on insert failure: refunds the reserved cash", async () => {
+  it("on insert failure: propagates the error to abort the reservation", async () => {
     const corp = makeCorp();
     const character = makeCharacter(corp.ceoId);
     const { db } = makeDb({ insertSucceeds: false });
@@ -178,10 +189,10 @@ describe("openPrivatizationVote — atomic open", () => {
       })
     ).rejects.toThrow();
 
-    expect(vi.mocked(cashMock.refundCharacterCash)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(cashMock.refundCharacterCash)).not.toHaveBeenCalled();
   });
 
-  it("on duplicate-key (E11000) from partial unique index: refunds and surfaces friendly error", async () => {
+  it("on duplicate-key (E11000) from partial unique index: aborts and surfaces friendly error", async () => {
     const corp = makeCorp();
     const character = makeCharacter(corp.ceoId);
     const dupErr = Object.assign(new Error("E11000 duplicate key"), { code: 11000 });
@@ -201,7 +212,7 @@ describe("openPrivatizationVote — atomic open", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/already open/i);
-    expect(vi.mocked(cashMock.refundCharacterCash)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(cashMock.refundCharacterCash)).not.toHaveBeenCalled();
   });
 
   it("#71: funds-only minority + no float → buys out & privatizes, no vote opened", async () => {
@@ -383,6 +394,7 @@ describe("openPrivatizationVote — bank-NAV floor (issue #1750)", () => {
           };
         }
         return {
+          updateOne: vi.fn().mockResolvedValue({ matchedCount: 1 }),
           findOne: vi.fn().mockResolvedValue(null),
           find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }),
         };
@@ -534,8 +546,8 @@ describe("openPrivatizationVote — bank-NAV floor (issue #1750)", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.immediate).toBe(true);
-    expect(updateOne).toHaveBeenCalledTimes(1);
-    expect(updateOne.mock.calls[0][1].$unset.pendingShareIssuance).toBe("");
+    expect(updateOne).toHaveBeenCalledTimes(2);
+    expect(updateOne.mock.calls[1][1].$unset.pendingShareIssuance).toBe("");
   });
 
   it("retires issued IPO shares that have no buyer when privatizing immediately", async () => {
@@ -571,8 +583,8 @@ describe("openPrivatizationVote — bank-NAV floor (issue #1750)", () => {
     });
 
     expect(result).toEqual({ ok: true, immediate: true });
-    expect(updateOne.mock.calls[0][1].$set.totalShares).toBe(10_000_000);
-    expect(updateOne.mock.calls[0][1].$unset.pendingShareIssuance).toBe("");
+    expect(updateOne.mock.calls[1][1].$set.totalShares).toBe(10_000_000);
+    expect(updateOne.mock.calls[1][1].$unset.pendingShareIssuance).toBe("");
   });
 });
 

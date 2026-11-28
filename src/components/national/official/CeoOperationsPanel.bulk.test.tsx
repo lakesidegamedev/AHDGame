@@ -131,13 +131,42 @@ describe("CeoOperationsPanel — bulk by type", () => {
     const fetchSpy = vi.mocked(global.fetch);
     const { SECTOR_STRATEGIES } = await import("@/lib/constants/sectorStrategies");
     const [first, second] = SECTOR_STRATEGIES.energy;
+    fetchSpy.mockImplementation(
+      async (input) =>
+        ({
+          ok: true,
+          json: async () =>
+            String(input).includes("/sectors/")
+              ? {
+                  strategy: {
+                    availableStrategies: [
+                      {
+                        id: second.id,
+                        retoolCost: 123,
+                        baseRetoolCost: 123,
+                        downsideCharge: 0,
+                        foreignSpread: 0,
+                        retoolCostMultiplier: 1,
+                        freeConversion: false,
+                        shortageDiscount: false,
+                        transitionTurns: 3,
+                      },
+                    ],
+                  },
+                }
+              : { commodities: [] },
+        }) as Response
+    );
+
     const strategyVm = JSON.parse(JSON.stringify(vm));
     strategyVm.holdingsByRegion[0].sectors[0].strategyId = first.id;
     render(<CeoOperationsPanel vm={strategyVm as never} corpId="c1" onRefresh={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Production method"), { target: { value: second.id } });
     expect(fetchSpy.mock.calls.filter((c) => String(c[0]).includes("/strategy"))).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Retool" }));
-    expect(screen.getByTestId("retool-confirm").textContent).toMatch(/Retooling cost/);
+    await waitFor(() =>
+      expect(screen.getByTestId("retool-confirm").textContent).toMatch(/Retooling cost/)
+    );
     expect(fetchSpy.mock.calls.filter((c) => String(c[0]).includes("/strategy"))).toHaveLength(0);
   });
 });

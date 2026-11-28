@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => Promise<unknown>) => work(db),
+}));
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -24,17 +28,26 @@ let db: MockDb;
 beforeEach(() => {
   vi.clearAllMocks();
   db = createMockDb();
+  db.collection("indexFunds").updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+  db.collection("corporations").updateOne.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
 });
 
 function fund() {
-  return { _id: new ObjectId(), name: "Top 50", anchorCurrencyCode: "USD" as const };
+  const f = {
+    _id: new ObjectId(),
+    name: "Top 50",
+    anchorCurrencyCode: "USD" as const,
+    holdings: [],
+  };
+  db.collection("indexFunds").findOneAndUpdate.mockResolvedValue(f);
+  return f;
 }
 function corp() {
   return { _id: new ObjectId(), liquidCurrencyCode: "USD" as const, countryId: "US" as const };
 }
 
 describe("placeFundShareBuyOrder", () => {
-  it("defers only a completed bid's escrow ledger row", async () => {
+  it("persists a completed bid receipt inside its transaction", async () => {
     const { placeFundShareBuyOrder } = await import("./fundShareOrders");
     const f = fund();
     const ledgerSink: TxInput[] = [];
@@ -52,10 +65,18 @@ describe("placeFundShareBuyOrder", () => {
       ledgerSink,
     });
 
-    expect(emitTx).not.toHaveBeenCalled();
-    expect(ledgerSink).toMatchObject([
-      { type: "stock_order_escrow", amount: -500, subjectId: f._id, turn: 44 },
-    ]);
+    expect(emitTx).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        type: "stock_order_escrow",
+        amount: -500,
+        subjectId: f._id,
+        turn: 44,
+      }),
+      undefined,
+      { turnLengthMinutes: undefined }
+    );
+    expect(ledgerSink).toEqual([]);
   });
 
   it("debits cashAnchor by the anchor escrow and inserts an open buy order with placerFundId", async () => {
@@ -129,11 +150,15 @@ describe("placeFundShareBuyOrder", () => {
 });
 
 describe("placeFundShareSellOrder", () => {
-  it("uses preloaded reservations without a per-quote order read", async () => {
+  it("checks current reservations instead of trusting a stale hint", async () => {
     const { placeFundShareSellOrder } = await import("./fundShareOrders");
     const c = corp();
     const f = { ...fund(), holdings: [{ corporationId: c._id, shares: 100 }] };
+    db.collection("indexFunds").findOneAndUpdate.mockResolvedValue(f);
 
+    db.collection("shareOrders").find.mockReturnValue({
+      toArray: async () => [{ sharesRemaining: 80 }],
+    });
     const result = await placeFundShareSellOrder(db as unknown as Db, {
       fund: f,
       corp: c,
@@ -143,7 +168,7 @@ describe("placeFundShareSellOrder", () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(db.collection("shareOrders").find).not.toHaveBeenCalled();
+    expect(db.collection("shareOrders").find).toHaveBeenCalled();
     expect(db.collection("shareOrders").insertOne).not.toHaveBeenCalled();
   });
 
@@ -154,6 +179,7 @@ describe("placeFundShareSellOrder", () => {
       ...fund(),
       holdings: [{ corporationId: c._id, shares: 100 }],
     };
+    db.collection("indexFunds").findOneAndUpdate.mockResolvedValue(f);
     (db.collection("shareOrders").find as ReturnType<typeof vi.fn>).mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ sharesRemaining: 20 }]),
     });
@@ -188,6 +214,7 @@ describe("placeFundShareSellOrder", () => {
       ...fund(),
       holdings: [{ corporationId: c._id, shares: 100 }],
     };
+    db.collection("indexFunds").findOneAndUpdate.mockResolvedValue(f);
     (db.collection("shareOrders").find as ReturnType<typeof vi.fn>).mockReturnValue({
       toArray: vi.fn().mockResolvedValue([{ sharesRemaining: 80 }]),
     });
@@ -205,7 +232,7 @@ describe("placeFundShareSellOrder", () => {
 });
 
 describe("cancelFundShareOrder", () => {
-  it("uses the supplied fund and defers the refund ledger row", async () => {
+  it("uses supplied fund metadata while persisting its refund receipt", async () => {
     const { cancelFundShareOrder } = await import("./fundShareOrders");
     const f = fund();
     const orderId = new ObjectId();
@@ -222,10 +249,18 @@ describe("cancelFundShareOrder", () => {
     await cancelFundShareOrder(db as unknown as Db, orderId, 44, { fund: f, ledgerSink });
 
     expect(db.collection("indexFunds").findOne).not.toHaveBeenCalled();
-    expect(emitTx).not.toHaveBeenCalled();
-    expect(ledgerSink).toMatchObject([
-      { type: "stock_order_refund", amount: 300, subjectId: f._id, turn: 44 },
-    ]);
+    expect(emitTx).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        type: "stock_order_refund",
+        amount: 300,
+        subjectId: f._id,
+        turn: 44,
+      }),
+      undefined,
+      { turnLengthMinutes: undefined }
+    );
+    expect(ledgerSink).toEqual([]);
   });
 
   it("refunds remaining escrowAnchor to cashAnchor and marks cancelled", async () => {

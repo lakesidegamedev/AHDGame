@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -39,39 +40,41 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rl.ok) return rateLimitResponse(rl.retryAfter);
 
     const db = await getDb();
-    const corpGuard = await requireCorporationActionsEnabled(db);
-    if (corpGuard) return corpGuard;
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const corpGuard = await requireCorporationActionsEnabled(db);
+      if (corpGuard) return corpGuard;
 
-    const parsed = await parseJsonBody(request, bodySchema);
-    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+      const parsed = await parseJsonBody(request, bodySchema);
+      if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    if (!isOperatingSectorType(parsed.data.sectorType)) {
-      return errorResponse(400, "Invalid sector type.");
-    }
+      if (!isOperatingSectorType(parsed.data.sectorType)) {
+        return errorResponse(400, "Invalid sector type.");
+      }
 
-    const { id } = await params;
-    const parentResolved = await resolveCorporation(db, id);
-    if (!parentResolved.ok) return parentResolved.response;
+      const { id } = await params;
+      const parentResolved = await resolveCorporation(db, id);
+      if (!parentResolved.ok) return parentResolved.response;
 
-    const turn = await getCurrentTurn(db).catch(() => 0);
-    const result = await spinOff(db, {
-      parent: parentResolved.corporation,
-      callerUserId: new ObjectId(auth.user.userId),
-      callerCharacterId: auth.user.activeCharacterId,
-      sectorType: parsed.data.sectorType,
-      name: parsed.data.name,
-      tickerSymbol: parsed.data.tickerSymbol,
-      appointedCeoType: parsed.data.appointedCeoType,
-      appointedCeoCharacterId: parsed.data.appointedCeoCharacterId
-        ? new ObjectId(parsed.data.appointedCeoCharacterId)
-        : undefined,
-      forcedNppId: parsed.data.forcedNppId,
-      turn,
-      now: new Date(),
+      const turn = await getCurrentTurn(db);
+      const result = await spinOff(db, {
+        parent: parentResolved.corporation,
+        callerUserId: new ObjectId(auth.user.userId),
+        callerCharacterId: auth.user.activeCharacterId,
+        sectorType: parsed.data.sectorType,
+        name: parsed.data.name,
+        tickerSymbol: parsed.data.tickerSymbol,
+        appointedCeoType: parsed.data.appointedCeoType,
+        appointedCeoCharacterId: parsed.data.appointedCeoCharacterId
+          ? new ObjectId(parsed.data.appointedCeoCharacterId)
+          : undefined,
+        forcedNppId: parsed.data.forcedNppId,
+        turn,
+        now: new Date(),
+      });
+      if (!result.ok) return errorResponse(result.status, result.error);
+
+      return NextResponse.json({ success: true, newCorporationId: result.newCorporationId });
     });
-    if (!result.ok) return errorResponse(result.status, result.error);
-
-    return NextResponse.json({ success: true, newCorporationId: result.newCorporationId });
   } catch (error) {
     return handleRouteError(error);
   }

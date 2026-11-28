@@ -132,7 +132,12 @@ export function corpDailyGrossRevenueLocalFromSectors(
 ): number {
   let totalAnchor = 0;
   for (const sector of sectors) {
-    const local = sectorEconomicScale(sector, options.plantsEnabled, options.eraUnitScale);
+    const local = sectorEconomicScale(
+      sector,
+      options.plantsEnabled,
+      options.eraUnitScale,
+      fxRateForSectorHostFromMap(sector, corp, options.fxByCurrency)
+    );
     if (!local) continue;
     totalAnchor += corpCapitalToAnchor(
       local,

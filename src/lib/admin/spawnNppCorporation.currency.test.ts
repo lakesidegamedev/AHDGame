@@ -87,6 +87,10 @@ describe("spawnNppCorporation — sector revenue denomination", () => {
       name: stateId,
       gdp: 1_000_000_000,
     });
+    db.collectionMocks.exchangeRates!.find.mockReturnValue({
+      toArray: async () =>
+        fxRate == null ? [] : [{ currencyCode: countryId === "JP" ? "JPY" : "USD", rate: fxRate }],
+    });
     db.collectionMocks.exchangeRates!.findOne.mockResolvedValue(
       fxRate == null ? null : { currencyCode: "X", rate: fxRate }
     );

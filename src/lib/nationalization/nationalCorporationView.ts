@@ -1,3 +1,4 @@
+import { assumedDebtSummary } from "./rules/assumedDebtSummary";
 import {
   fundedDailyToTurn,
   publicServiceShare,
@@ -247,6 +248,7 @@ export interface NationalCorporationViewModel {
   mandateMetrics: Array<{ label: string; sectorCount: number }>;
   /** How the held sectors were acquired, grouped by trigger (acquisition register summary). */
   acquisitions: Array<{ trigger: string; label: string; sectorCount: number }>;
+  assumedDebtSummary?: { principalLocal: number | null; couponPerTurnLocal: number | null };
   assumedBonds: Array<{
     id: string;
     principal: number;
@@ -785,6 +787,7 @@ export async function buildNationalCorporationView(
     mandateMetrics,
     acquisitions,
     assumedBonds,
+    assumedDebtSummary: assumedDebtSummary(assumedBonds, currency, fxByCurrency),
     // Per-sector public value / mapped metrics are computed once on viewSectors.
     mandates: viewSectors.map((s) => ({
       sectorId: s.sectorId,

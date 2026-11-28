@@ -14,7 +14,9 @@ import {
   buildTransferFromSavingsInc,
 } from "@/lib/currency/characterFunds";
 import { insertSavingsLedgerEntry } from "@/lib/savings/ledger";
-import { getGameState } from "@/lib/gameState";
+import { getCurrentTurn } from "@/lib/currentTurn";
+import { withRecordedEconomicCommand } from "@/lib/api/withRecordedEconomicCommand";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { normalizeSavingsMutationAmount } from "@/lib/api/savings/savingsAmount";
 import { ZOD_ACTIVE_CURRENCY_ENUM } from "@/lib/constants/currencies";
@@ -27,6 +29,7 @@ import { charactersCollection } from "@/lib/db/repositories/characters";
 const withdrawSchema = z.object({
   currency: z.enum(ZOD_ACTIVE_CURRENCY_ENUM),
   amount: z.number(),
+  requestId: z.string().min(1).max(100).optional(),
 });
 
 // POST /api/character/savings/withdraw — Move funds from savings back to liquid cash
@@ -56,110 +59,122 @@ export async function POST(request: Request) {
       return NextResponse.json(badRequest("Invalid amount").toJson(), { status: 400 });
     }
 
-    const db = await getDb();
-    const forexEnabled = await isForexEnabled();
+    const sourceDb = await getDb();
+    return await withRecordedEconomicCommand(
+      sourceDb,
+      "savings-withdraw",
+      auth.user.userId,
+      parsed.data.requestId,
+      { currency: c, amount: normalized },
+      async (db) => {
+        const forexEnabled = await isForexEnabled();
 
-    const character = await getCharacterByUserId(db, auth.user.userId);
-    if (!character) {
-      return NextResponse.json(badRequest("Character not found").toJson(), { status: 400 });
-    }
+        const character = await getCharacterByUserId(db, auth.user.userId);
+        if (!character) {
+          return NextResponse.json(badRequest("Character not found").toJson(), { status: 400 });
+        }
 
-    if (!forexEnabled && c !== getHomeCurrency(character)) {
-      return NextResponse.json(
-        badRequest("Foreign-currency savings require the forex system").toJson(),
-        { status: 400 }
-      );
-    }
+        if (!forexEnabled && c !== getHomeCurrency(character)) {
+          return NextResponse.json(
+            badRequest("Foreign-currency savings require the forex system").toJson(),
+            { status: 400 }
+          );
+        }
 
-    if (!isSavingsAccountOpened(character, c)) {
-      return NextResponse.json(badRequest("No savings account for this currency").toJson(), {
-        status: 400,
-      });
-    }
+        if (!isSavingsAccountOpened(character, c)) {
+          return NextResponse.json(badRequest("No savings account for this currency").toJson(), {
+            status: 400,
+          });
+        }
 
-    const now = new Date();
-    const inc = buildTransferFromSavingsInc(normalized, c, forexEnabled);
-    const policy = await loadBankingPolicy(db);
-    const accountsAuthoritative = policy.savingsAccounts === "authoritative" && forexEnabled;
+        const now = new Date();
+        const inc = buildTransferFromSavingsInc(normalized, c, forexEnabled);
+        const policy = await loadBankingPolicy(db);
+        const accountsAuthoritative = policy.savingsAccounts === "authoritative" && forexEnabled;
 
-    if (accountsAuthoritative) {
-      const withdrawn = await runSavingsCommand(db, character._id, c, {
-        type: "withdraw",
-        amount: normalized,
-      });
-      if (!withdrawn.ok) {
-        return NextResponse.json(badRequest(withdrawn.error).toJson(), { status: 400 });
-      }
-    } else if (forexEnabled) {
-      const res = await charactersCollection(db).updateOne(
+        if (accountsAuthoritative) {
+          const withdrawn = await runSavingsCommand(db, character._id, c, {
+            type: "withdraw",
+            amount: normalized,
+          });
+          if (!withdrawn.ok) {
+            return NextResponse.json(badRequest(withdrawn.error).toJson(), { status: 400 });
+          }
+        } else if (forexEnabled) {
+          const res = await charactersCollection(db).updateOne(
+            {
+              _id: character._id,
+              [`currencyBalances.savings.${c}`]: { $gte: normalized },
+            },
+            { $inc: inc, $set: { updatedAt: now } }
+          );
+          if (res.matchedCount === 0) {
+            return NextResponse.json(badRequest("Insufficient savings balance").toJson(), {
+              status: 400,
+            });
+          }
+        } else {
+          const res = await charactersCollection(db).updateOne(
+            {
+              _id: character._id,
+              savingsOnHand: { $gte: normalized },
+            },
+            { $inc: inc, $set: { updatedAt: now } }
+          );
+          if (res.matchedCount === 0) {
+            return NextResponse.json(badRequest("Insufficient savings balance").toJson(), {
+              status: 400,
+            });
+          }
+        }
+
+        const turn = await getCurrentTurn(db);
+        const after = await charactersCollection(db).findOne({ _id: character._id });
+        if (!after) throw new Error("Savings owner disappeared before the command receipt");
         {
-          _id: character._id,
-          [`currencyBalances.savings.${c}`]: { $gte: normalized },
-        },
-        { $inc: inc, $set: { updatedAt: now } }
-      );
-      if (res.matchedCount === 0) {
-        return NextResponse.json(badRequest("Insufficient savings balance").toJson(), {
-          status: 400,
-        });
-      }
-    } else {
-      const res = await charactersCollection(db).updateOne(
-        {
-          _id: character._id,
-          savingsOnHand: { $gte: normalized },
-        },
-        { $inc: inc, $set: { updatedAt: now } }
-      );
-      if (res.matchedCount === 0) {
-        return NextResponse.json(badRequest("Insufficient savings balance").toJson(), {
-          status: 400,
-        });
-      }
-    }
+          await insertSavingsLedgerEntry(db, {
+            characterId: character._id,
+            currencyCode: c,
+            type: "withdraw",
+            amount: normalized,
+            balanceAfter: getSavingsBalance(after, c, forexEnabled),
+            turn,
+          });
+        }
 
-    const gameState = await getGameState();
-    const turn = gameState?.currentTurn ?? 0;
-    const after = await charactersCollection(db).findOne({ _id: character._id });
-    if (after) {
-      await insertSavingsLedgerEntry(db, {
-        characterId: character._id,
-        currencyCode: c,
-        type: "withdraw",
-        amount: normalized,
-        balanceAfter: getSavingsBalance(after, c, forexEnabled),
-        turn,
-      });
-    }
+        await afterCommit(db, () =>
+          emitBankingAuditEvent(
+            {
+              kind: "account.withdrawn",
+              command: "savings.withdraw",
+              turn,
+              outcome: "ok",
+              currency: c,
+              subjectType: "character",
+              subjectId: character._id.toString(),
+              statusAfter:
+                (after?.currencyBalances?.savingsHolder?.[c] as string | undefined) ??
+                "centralBank",
+              amount: -normalized,
+            },
+            unboundDb(db)
+          )
+        );
 
-    emitBankingAuditEvent(
-      {
-        kind: "account.withdrawn",
-        command: "savings.withdraw",
-        turn,
-        outcome: "ok",
-        currency: c,
-        subjectType: "character",
-        subjectId: character._id.toString(),
-        statusAfter:
-          (after?.currencyBalances?.savingsHolder?.[c] as string | undefined) ?? "centralBank",
-        amount: -normalized,
-      },
-      db
+        await emitTx(db, {
+          type: "savings_withdrawal",
+          turn,
+          createdAt: now,
+          subjectType: "character",
+          subjectId: character._id,
+          subjectName: character.name,
+          amount: -normalized,
+          currencyCode: c,
+        });
+
+        return NextResponse.json({ success: true, currency: c, amount: normalized });
+      }
     );
-
-    void emitTx(db, {
-      type: "savings_withdrawal",
-      turn,
-      createdAt: now,
-      subjectType: "character",
-      subjectId: character._id,
-      subjectName: character.name,
-      amount: -normalized,
-      currencyCode: c,
-    });
-
-    return NextResponse.json({ success: true, currency: c, amount: normalized });
   } catch (error) {
     return handleRouteError(error);
   }

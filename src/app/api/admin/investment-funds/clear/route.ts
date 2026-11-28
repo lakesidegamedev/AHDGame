@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
@@ -90,41 +91,43 @@ export async function DELETE() {
     if (!auth.ok) return auth.response;
 
     const db = await getDb();
-    const [releasedShares, releasedBonds] = await Promise.all([
-      releaseFundHeldShares(db),
-      releaseFundHeldBonds(db),
-    ]);
+    return await withAtomicEconomicCommand(db, async (db) => {
+      const [releasedShares, releasedBonds] = await Promise.all([
+        releaseFundHeldShares(db),
+        releaseFundHeldBonds(db),
+      ]);
 
-    const [fundResult, posResult, txnResult, snapResult, redeemResult] = await Promise.all([
-      indexFundsCollection<Document>(db).deleteMany({}),
-      indexFundPositionsCollection<Document>(db).deleteMany({}),
-      indexFundTransactionsCollection<Document>(db).deleteMany({}),
-      indexFundSnapshotsCollection<Document>(db).deleteMany({}),
-      indexFundRedemptionQueueCollection<Document>(db).deleteMany({}),
-    ]);
+      const [fundResult, posResult, txnResult, snapResult, redeemResult] = await Promise.all([
+        indexFundsCollection<Document>(db).deleteMany({}),
+        indexFundPositionsCollection<Document>(db).deleteMany({}),
+        indexFundTransactionsCollection<Document>(db).deleteMany({}),
+        indexFundSnapshotsCollection<Document>(db).deleteMany({}),
+        indexFundRedemptionQueueCollection<Document>(db).deleteMany({}),
+      ]);
 
-    // Also remove the bootstrap migration markers so re-enabling re-seeds.
-    await migrationsRunCollection<{ _id: string }>(db).deleteMany({
-      _id: {
-        $in: [
-          "2026-06-01-index-fund-foundation",
-          "2026-06-01-index-fund-seed",
-          "2026-06-02-index-fund-real-bonds",
-        ],
-      },
-    });
+      // Also remove the bootstrap migration markers so re-enabling re-seeds.
+      await migrationsRunCollection<{ _id: string }>(db).deleteMany({
+        _id: {
+          $in: [
+            "2026-06-01-index-fund-foundation",
+            "2026-06-01-index-fund-seed",
+            "2026-06-02-index-fund-real-bonds",
+          ],
+        },
+      });
 
-    return NextResponse.json({
-      success: true,
-      deleted: {
-        funds: fundResult.deletedCount,
-        positions: posResult.deletedCount,
-        transactions: txnResult.deletedCount,
-        snapshots: snapResult.deletedCount,
-        redemptions: redeemResult.deletedCount,
-        fundHeldSharesReleased: releasedShares,
-        fundHeldBondsReleased: releasedBonds,
-      },
+      return NextResponse.json({
+        success: true,
+        deleted: {
+          funds: fundResult.deletedCount,
+          positions: posResult.deletedCount,
+          transactions: txnResult.deletedCount,
+          snapshots: snapResult.deletedCount,
+          redemptions: redeemResult.deletedCount,
+          fundHeldSharesReleased: releasedShares,
+          fundHeldBondsReleased: releasedBonds,
+        },
+      });
     });
   } catch (error) {
     return handleRouteError(error);

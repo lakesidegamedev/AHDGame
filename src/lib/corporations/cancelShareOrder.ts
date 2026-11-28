@@ -1,3 +1,4 @@
+import { withShareCancellationTransaction } from "./shareCancellationTransaction";
 import type { Db, ObjectId } from "mongodb";
 import type { Character, Corporation, ShareOrder } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
@@ -44,13 +45,6 @@ export function actorMayCancelShareOrder(
   return false;
 }
 
-async function restoreOrderToOpen(db: Db, orderId: ShareOrder["_id"]) {
-  await shareOrdersCollection(db).updateOne(
-    { _id: orderId, status: "cancelled" },
-    { $set: { status: "open", updatedAt: new Date() } }
-  );
-}
-
 /**
  * Cancel an open share order and refund the escrow / reserved shares.
  *
@@ -59,6 +53,12 @@ async function restoreOrderToOpen(db: Db, orderId: ShareOrder["_id"]) {
  * - POST /api/corporations/[id]/shares/consolidate        (auto-cancel before restructure)
  */
 export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Promise<CancelResult> {
+  return withShareCancellationTransaction(db, (transactionDb) =>
+    cancelInTransaction(transactionDb, order)
+  );
+}
+
+async function cancelInTransaction(db: Db, order: ShareOrder): Promise<CancelResult> {
   if (order.status !== "open") return { ok: false, error: "Order is not open" };
 
   const now = new Date();
@@ -85,17 +85,8 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
       const placerCorp = await corporationsCollection(db).findOne({
         _id: order.placerCorporationId,
       });
-      if (!placerCorp) {
-        // Mirror the orphan-buyer fallback below: if the placer corp has been
-        // dissolved/deleted, the escrow can't be refunded — but leaving the
-        // order open blocks restructures and market maintenance on the target.
-        // Cancel without refund and move on.
-        const claim = await shareOrdersCollection(db).updateOne(claimFilter, {
-          $set: { status: "cancelled", updatedAt: now },
-        });
-        if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
-        return { ok: true };
-      }
+      if (!placerCorp)
+        return { ok: false, error: "Buyer corporation is missing; escrow remains held" };
 
       const placerFxRate = await getCorpFxRate(db, placerCorp);
       const refundInPlacerCapital = anchorToCorpLiquidCapital(
@@ -118,7 +109,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
           throw new Error("Buyer corporation not found");
         }
 
-        void emitTx(db, {
+        await emitTx(db, {
           type: "stock_order_refund",
           turn: currentTurn,
           createdAt: now,
@@ -137,8 +128,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
           },
         });
       } catch (error) {
-        await restoreOrderToOpen(db, order._id);
-        return { ok: false, error: (error as Error).message || "Failed to refund corporation" };
+        throw error;
       }
 
       return { ok: true };
@@ -155,30 +145,21 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
     }
     const orderCharacterId = order.characterId;
 
-    let charDoc: Pick<Character, "countryId" | "name"> | null = await charactersCollection(
-      db
-    ).findOne({ _id: orderCharacterId }, { projection: { countryId: 1, name: 1 } });
-    let collectionName: "characters" | "imperialCharacters" = "characters";
-    if (!charDoc) {
-      const imperialDoc = await imperialCharactersCollection(db).findOne(
-        { _id: order.characterId },
+    let charDoc:
+      Pick<Character, "countryId" | "name"> | Pick<ImperialCharacter, "countryId" | "name"> | null =
+      await charactersCollection(db).findOne(
+        { _id: orderCharacterId },
         { projection: { countryId: 1, name: 1 } }
       );
-      if (imperialDoc) {
-        charDoc = imperialDoc;
-        collectionName = "imperialCharacters";
-      }
-    }
+    let collectionName: "characters" | "imperialCharacters" = "characters";
     if (!charDoc) {
-      // Preserve cleanup flows even when the buyer record has already been deleted.
-      // The escrow is no longer recoverable, but leaving the order open blocks
-      // restructures and market maintenance on an otherwise orphaned document.
-      const claim = await shareOrdersCollection(db).updateOne(claimFilter, {
-        $set: { status: "cancelled", updatedAt: now },
-      });
-      if (claim.matchedCount === 0) return { ok: false, error: "Order is not open" };
-      return { ok: true };
+      charDoc = await imperialCharactersCollection(db).findOne(
+        { _id: orderCharacterId },
+        { projection: { countryId: 1, name: 1 } }
+      );
+      collectionName = "imperialCharacters";
     }
+    if (!charDoc) return { ok: false, error: "Order owner is missing; escrow remains held" };
 
     const owner = charDoc;
     const forexEnabled = await isForexEnabled();
@@ -210,7 +191,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
         throw new Error("Order owner not found");
       }
 
-      void emitTx(db, {
+      await emitTx(db, {
         type: "stock_order_refund",
         turn: currentTurn,
         createdAt: now,
@@ -230,8 +211,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
         },
       });
     } catch (error) {
-      await restoreOrderToOpen(db, order._id);
-      return { ok: false, error: (error as Error).message || "Failed to refund order owner" };
+      throw error;
     }
 
     return { ok: true };
@@ -270,8 +250,7 @@ export async function cancelShareOrderAndRefund(db: Db, order: ShareOrder): Prom
       if (!restored) throw new Error("Reserved stock holding changed during cancellation");
     }
   } catch (error) {
-    await restoreOrderToOpen(db, order._id);
-    return { ok: false, error: (error as Error).message || "Failed to restore reserved shares" };
+    throw error;
   }
 
   return { ok: true };

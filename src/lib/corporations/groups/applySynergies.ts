@@ -16,6 +16,7 @@ import {
   loadStrengthUpkeepStage,
   strengthUpkeepActive,
 } from "@/lib/corporations/strengthUpkeep";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 
 export interface SynergyResult {
@@ -25,89 +26,89 @@ export interface SynergyResult {
 }
 
 export async function applyGroupSynergies(db: Db, currentTurn: number): Promise<SynergyResult> {
-  const result: SynergyResult = { groupsProcessed: 0, corpsLifted: 0, errors: [] };
+  return withTurnValueSettlement(db, "corporate-group-synergies", currentTurn, async (db) => {
+    const result: SynergyResult = { groupsProcessed: 0, corpsLifted: 0, errors: [] };
 
-  const membership = await resolveFormalizedGroups(db);
-  if (membership.membersByRootId.size === 0) return result;
-  const transfer = strengthUpkeepActive(
-    await loadStrengthUpkeepStage(db),
-    STRENGTH_UPKEEP_STAGE.SYNERGY_TRANSFER
-  );
+    const membership = await resolveFormalizedGroups(db);
+    if (membership.membersByRootId.size === 0) return result;
+    const transfer = strengthUpkeepActive(
+      await loadStrengthUpkeepStage(db),
+      STRENGTH_UPKEEP_STAGE.SYNERGY_TRANSFER
+    );
 
-  const allIds = new Set<string>();
-  for (const members of membership.membersByRootId.values()) {
-    for (const id of members) allIds.add(id);
-  }
-
-  const corps = await corporationsCollection(db)
-    .find({ _id: { $in: [...allIds].map((id) => new ObjectId(id)) } })
-    .project<
-      Pick<
-        Corporation,
-        | "_id"
-        | "marketingStrength"
-        | "logisticsStrength"
-        | "isSpinOff"
-        | "spunOffFromCorpId"
-        | "spunOffAtTurn"
-      >
-    >({
-      marketingStrength: 1,
-      logisticsStrength: 1,
-      isSpinOff: 1,
-      spunOffFromCorpId: 1,
-      spunOffAtTurn: 1,
-    })
-    .toArray();
-  const corpById = new Map(corps.map((c) => [c._id.toString(), c]));
-
-  const ops: AnyBulkWriteOperation<Corporation>[] = [];
-
-  for (const [, memberIds] of membership.membersByRootId) {
-    const members: SynergyMember[] = [];
-    for (const id of memberIds) {
-      const corp = corpById.get(id);
-      if (!corp) continue;
-      members.push({
-        corporationId: id,
-        marketingStrength: corp.marketingStrength ?? 0,
-        logisticsStrength: corp.logisticsStrength ?? 0,
-        ...(corp.isSpinOff ? { isSpinOff: true } : {}),
-        ...(corp.spunOffFromCorpId ? { spunOffFromCorpId: corp.spunOffFromCorpId.toString() } : {}),
-        ...(typeof corp.spunOffAtTurn === "number" ? { spunOffAtTurn: corp.spunOffAtTurn } : {}),
-      });
+    const allIds = new Set<string>();
+    for (const members of membership.membersByRootId.values()) {
+      for (const id of members) allIds.add(id);
     }
-    if (members.length < 2) continue;
-    result.groupsProcessed += 1;
 
-    for (const delta of computeGroupSynergies(members, currentTurn, { transfer })) {
-      ops.push({
-        updateOne: {
-          filter: { _id: new ObjectId(delta.corporationId) },
-          update: {
-            $inc: {
-              ...(delta.marketingStrength !== 0
-                ? { marketingStrength: delta.marketingStrength }
-                : {}),
-              ...(delta.logisticsStrength !== 0
-                ? { logisticsStrength: delta.logisticsStrength }
-                : {}),
+    const corps = await corporationsCollection(db)
+      .find({ _id: { $in: [...allIds].map((id) => new ObjectId(id)) } })
+      .project<
+        Pick<
+          Corporation,
+          | "_id"
+          | "marketingStrength"
+          | "logisticsStrength"
+          | "isSpinOff"
+          | "spunOffFromCorpId"
+          | "spunOffAtTurn"
+        >
+      >({
+        marketingStrength: 1,
+        logisticsStrength: 1,
+        isSpinOff: 1,
+        spunOffFromCorpId: 1,
+        spunOffAtTurn: 1,
+      })
+      .toArray();
+    const corpById = new Map(corps.map((c) => [c._id.toString(), c]));
+
+    const ops: AnyBulkWriteOperation<Corporation>[] = [];
+
+    for (const [, memberIds] of membership.membersByRootId) {
+      const members: SynergyMember[] = [];
+      for (const id of memberIds) {
+        const corp = corpById.get(id);
+        if (!corp) continue;
+        members.push({
+          corporationId: id,
+          marketingStrength: corp.marketingStrength ?? 0,
+          logisticsStrength: corp.logisticsStrength ?? 0,
+          ...(corp.isSpinOff ? { isSpinOff: true } : {}),
+          ...(corp.spunOffFromCorpId
+            ? { spunOffFromCorpId: corp.spunOffFromCorpId.toString() }
+            : {}),
+          ...(typeof corp.spunOffAtTurn === "number" ? { spunOffAtTurn: corp.spunOffAtTurn } : {}),
+        });
+      }
+      if (members.length < 2) continue;
+      result.groupsProcessed += 1;
+
+      for (const delta of computeGroupSynergies(members, currentTurn, { transfer })) {
+        ops.push({
+          updateOne: {
+            filter: { _id: new ObjectId(delta.corporationId) },
+            update: {
+              $inc: {
+                ...(delta.marketingStrength !== 0
+                  ? { marketingStrength: delta.marketingStrength }
+                  : {}),
+                ...(delta.logisticsStrength !== 0
+                  ? { logisticsStrength: delta.logisticsStrength }
+                  : {}),
+              },
+              $set: { updatedAt: new Date() },
             },
-            $set: { updatedAt: new Date() },
           },
-        },
-      });
-      result.corpsLifted += 1;
+        });
+        result.corpsLifted += 1;
+      }
     }
-  }
 
-  if (ops.length > 0) {
-    try {
+    if (ops.length > 0) {
       await corporationsCollection(db).bulkWrite(ops);
-    } catch (err) {
-      result.errors.push(err instanceof Error ? err.message : String(err));
     }
-  }
 
-  return result;
+    return result;
+  });
 }

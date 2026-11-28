@@ -1,3 +1,4 @@
+import { assertDissolutionClaimsSettled } from "@/lib/corporations/assertDissolutionClaimsSettled";
 /**
  * Quote for a voluntary dissolve while the company still owes bonds that have
  * not defaulted. The dissolve runs the bond settlement waterfall
@@ -50,6 +51,7 @@ export async function previewBondSettlementDissolve(
   /** What selling the company's held bonds is quoted to raise, in its own currency. */
   heldBondProceedsCorp: number
 ): Promise<BondSettlementDissolvePreview | null> {
+  corporation = await assertDissolutionClaimsSettled(db, corporation);
   const bonds = await bondsCollection(db)
     .find({ corporationId: corporation._id, matured: false })
     .toArray();

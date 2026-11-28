@@ -423,6 +423,7 @@ export async function snapshotEconomicVitalSigns(
       turn,
       {
         plantsEnabled: true,
+        eraUnitScale,
         preset: inputReliefWorld?.preset,
         hardwareInputReliefStartTurn: inputReliefWorld?.hardwareInputReliefStartTurn,
       }

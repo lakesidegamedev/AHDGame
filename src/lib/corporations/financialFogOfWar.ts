@@ -1,3 +1,4 @@
+import { historySettlementUnavailable } from "./rules/historyFinancials";
 /**
  * Financial fog-of-war for public corporations.
  *
@@ -121,8 +122,8 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
     bankLoanInterestCost: fog(financials.bankLoanInterestCost ?? 0, factor),
     bondCouponIncome: fog(financials.bondCouponIncome, factor),
     governmentBondSubsidy: fog(financials.governmentBondSubsidy, factor),
-    imfFacilityPaymentDaily: fog(financials.imfFacilityPaymentDaily, factor),
-    imfFacilityReceiptsDaily: fog(financials.imfFacilityReceiptsDaily, factor),
+    imfFacilityInterestPaidDaily: fog(financials.imfFacilityInterestPaidDaily, factor),
+    imfFacilityInterestReceivedDaily: fog(financials.imfFacilityInterestReceivedDaily, factor),
     supplyAgreementSettlementDaily: fog(financials.supplyAgreementSettlementDaily ?? 0, factor),
     supplyAgreementUnpaidAnchor: fog(financials.supplyAgreementUnpaidAnchor ?? 0, factor),
     totalCosts: fog(financials.totalCosts, factor),
@@ -245,8 +246,8 @@ export function buildQuarterlySnapshot(history: CorporationHistory | null): {
   }
   return {
     revenue: history.revenue,
-    income: historyNetIncomeBeforeDividends(history),
-    totalCosts: historyTotalCostsPerTurn(history),
+    income: historySettlementUnavailable(history) ? null : historyNetIncomeBeforeDividends(history),
+    totalCosts: historySettlementUnavailable(history) ? null : historyTotalCostsPerTurn(history),
     liquidCapital: history.liquidCapital,
     marketingStrength: history.marketingStrength,
     logisticsStrength: history.logisticsStrength ?? null,

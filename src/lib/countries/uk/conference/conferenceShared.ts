@@ -25,6 +25,7 @@ export function frozenRollOf(doc: UKPartyConference): EligibleRoll | null {
 export async function countPartyMembers(db: Db, party: PoliticalParty): Promise<number> {
   return charactersCollection(db).countDocuments({
     party: partySeqIdOf(party),
+    countryId: party.countryId,
     userId: { $exists: true },
   });
 }
@@ -32,7 +33,10 @@ export async function countPartyMembers(db: Db, party: PoliticalParty): Promise<
 /** Live electorate: player-member characters plus the committee voter set. */
 async function computeEligibleRoll(db: Db, party: PoliticalParty): Promise<EligibleRoll> {
   const rows = await charactersCollection(db)
-    .find({ party: partySeqIdOf(party), userId: { $exists: true } }, { projection: { _id: 1 } })
+    .find(
+      { party: partySeqIdOf(party), countryId: party.countryId, userId: { $exists: true } },
+      { projection: { _id: 1 } }
+    )
     .toArray();
   return {
     memberIds: rows.map((row) => row._id.toString()).sort(),

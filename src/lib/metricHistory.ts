@@ -1,3 +1,5 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { appendTurnHistory, uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type { StateMetrics, MetricCategoryId } from "@/lib/db/types";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
@@ -41,6 +43,12 @@ interface MetricHistoryDoc {
  * }
  */
 export async function snapshotMetricHistory(db: Db, turn: number): Promise<void> {
+  return withTurnValueSettlement(db, "macro-metric-history", turn, (db) =>
+    snapshotMetricHistoryWork(db, turn)
+  );
+}
+
+async function snapshotMetricHistoryWork(db: Db, turn: number): Promise<void> {
   // Only macroMetrics snapshots here now. The political half moved to the
   // board, whose trend history is written by the dynamics phase into
   // politicalMetricsHistory on its own cadence — a second snapshot of an empty
@@ -49,31 +57,32 @@ export async function snapshotMetricHistory(db: Db, turn: number): Promise<void>
 
   const snapshotStore = async (docs: StateMetrics[], historyCollection: string) => {
     const metricsMap = new Map(docs.map((m) => [String(m._id), m]));
-    const buildPushOps = (metrics: StateMetrics): Record<string, unknown> => {
-      const pushOps: Record<string, unknown> = {};
+    const buildHistorySet = (metrics: StateMetrics): Record<string, unknown> => {
+      const historySet: Record<string, unknown> = {};
       for (const cat of METRIC_CATEGORIES) {
         const catData = metrics[cat] as Record<string, { value: number }> | undefined;
         if (!catData) continue;
         for (const [key, metricVal] of Object.entries(catData)) {
-          if (typeof metricVal?.value === "number") {
-            pushOps[`${cat}.${key}`] = {
-              $each: [{ turn, value: metricVal.value }],
-              $slice: -METRIC_HISTORY_CAP,
-            };
+          if (typeof metricVal?.value === "number" && Number.isFinite(metricVal.value)) {
+            historySet[`${cat}.${key}`] = appendTurnHistory(
+              `${cat}.${key}`,
+              { turn, value: metricVal.value },
+              METRIC_HISTORY_CAP
+            );
           }
         }
       }
-      return pushOps;
+      return historySet;
     };
 
     const stateBulkOps: AnyBulkWriteOperation<MetricHistoryDoc>[] = [];
     for (const metrics of docs.filter((m) => !NATIONAL_SCOPE_IDS.has(String(m._id)))) {
-      const pushOps = buildPushOps(metrics);
-      if (Object.keys(pushOps).length === 0) continue;
+      const historySet = buildHistorySet(metrics);
+      if (Object.keys(historySet).length === 0) continue;
       stateBulkOps.push({
         updateOne: {
           filter: { _id: String(metrics._id) },
-          update: { $push: pushOps as never },
+          update: [{ $set: historySet }],
           upsert: true,
         },
       });
@@ -86,12 +95,12 @@ export async function snapshotMetricHistory(db: Db, turn: number): Promise<void>
     for (const nationalId of Object.keys(NATIONAL_SCOPE)) {
       const nationalMetrics = metricsMap.get(nationalId);
       if (!nationalMetrics) continue;
-      const pushOps = buildPushOps(nationalMetrics);
-      if (Object.keys(pushOps).length === 0) continue;
+      const historySet = buildHistorySet(nationalMetrics);
+      if (Object.keys(historySet).length === 0) continue;
       nationalBulkOps.push({
         updateOne: {
           filter: { _id: nationalId },
-          update: { $push: pushOps as never },
+          update: [{ $set: historySet }],
           upsert: true,
         },
       });
@@ -128,5 +137,9 @@ export async function getMetricHistory(
   if (!arr || typeof arr !== "object") return [];
   const history = (arr as Record<string, unknown>)[metricId];
   if (!Array.isArray(history)) return [];
-  return history as Array<{ turn: number; value: number }>;
+  return uniqueTurnHistory(
+    (history as Array<{ turn: number; value: number }>).filter(
+      (point) => typeof point?.value === "number" && Number.isFinite(point.value)
+    )
+  );
 }

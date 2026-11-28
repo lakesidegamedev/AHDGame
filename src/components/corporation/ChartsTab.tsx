@@ -1,5 +1,5 @@
 "use client";
-import { historyBondSettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
+import { historySettlementUnavailable } from "@/lib/corporations/rules/historyFinancials";
 import { realizedNetIncomePerTurn } from "@/lib/corporations/rules/historyFinancials";
 
 import { totalCostsPerTurnFromParts } from "@/lib/corporations/rules/historyFinancials";
@@ -208,7 +208,9 @@ export default function ChartsTab({
             toAnchor(totalCostsPerTurnFromParts(p), p.currencyCode, p.fxRateAtWrite)
           ),
           label: "Revenue / turn",
-          label2: "Costs / turn",
+          label2: history.some(historySettlementUnavailable)
+            ? "Known costs / turn (settlement incomplete)"
+            : "Costs / turn",
           format: fmtMoney,
           changeIn: "pct",
         };
@@ -462,26 +464,30 @@ export default function ChartsTab({
         if (drag !== 0) rows.push({ label: "Bond interest", value: fmtMoney(drag) });
         if (point.incomePreDividends != null) {
           rows.push({
-            label: historyBondSettlementUnavailable(point)
-              ? "Net income (bond settlement unavailable)"
+            label: historySettlementUnavailable(point)
+              ? "Net income estimate (settlement incomplete)"
               : "Net income",
-            value: fmtMoney(
-              toAnchor(
-                realizedNetIncomePerTurn(point) + Math.max(0, point.dividendPaidPerTurn ?? 0),
-                currencyCode,
-                fx
-              )
-            ),
+            value: historySettlementUnavailable(point)
+              ? "Unavailable"
+              : fmtMoney(
+                  toAnchor(
+                    realizedNetIncomePerTurn(point) + Math.max(0, point.dividendPaidPerTurn ?? 0),
+                    currencyCode,
+                    fx
+                  )
+                ),
           });
         }
         const dividends = toAnchor(point.dividendPaidPerTurn ?? 0, currencyCode, fx);
         if (dividends !== 0) {
           rows.push({ label: "Dividends", value: fmtMoney(dividends) });
           rows.push({
-            label: historyBondSettlementUnavailable(point)
-              ? "Retained (bond settlement unavailable)"
+            label: historySettlementUnavailable(point)
+              ? "Retained estimate (settlement incomplete)"
               : "Retained after dividends",
-            value: fmtMoney(toAnchor(realizedNetIncomePerTurn(point), currencyCode, fx)),
+            value: historySettlementUnavailable(point)
+              ? "Unavailable"
+              : fmtMoney(toAnchor(realizedNetIncomePerTurn(point), currencyCode, fx)),
           });
         }
         const md = point.marginDiagnostic;

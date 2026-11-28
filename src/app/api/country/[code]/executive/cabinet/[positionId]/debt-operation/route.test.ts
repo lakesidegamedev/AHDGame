@@ -1,3 +1,10 @@
+// Collection-only cabinet authority checks; action and outcome rollback use paidCreation.atomic.test.
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (
+    db: import("mongodb").Db,
+    work: (db: import("mongodb").Db) => Promise<Response>
+  ) => work(db),
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
 

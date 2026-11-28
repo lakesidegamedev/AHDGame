@@ -1,6 +1,4 @@
-vi.mock("@/lib/db/sessionDb", async () =>
-  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
-);
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 import { ObjectId } from "mongodb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCrisisInstance } from "@/lib/crises/v2/instance";
@@ -12,7 +10,7 @@ import {
 
 const leverCommand = vi.hoisted(() => ({
   commitLeverUse: vi.fn(),
-  loadLiveCrises: vi.fn(),
+  loadLiveCrisis: vi.fn(),
   checkLeverEligibility: vi.fn(),
 }));
 const propose = vi.hoisted(() => vi.fn());
@@ -48,38 +46,31 @@ function bill(status: string, recorded = false) {
 }
 
 function makeDb(bills: ReturnType<typeof bill>[]) {
-  const claimed = new Set<string>();
+  const { db, memory } = createTransactionalMemoryDb();
+  memory.seed("bills", bills);
+  memory.seed("crises", [{ ...liveCrisis(), status: "active" }]);
   const pushes: { filter: unknown; update: { $push: Record<string, { $each: unknown[] }> } }[] = [];
-  const db = {
-    collection(name: string) {
-      if (name === "bills") {
-        return {
-          find: () => ({
-            toArray: async () => bills.filter((b) => !claimed.has(b._id.toString())),
-          }),
-          findOne: async () => bills.find((b) => !b.crisisEmergency.recordedTurn) ?? null,
-          updateMany: async (
-            filter: { _id: { $in: ObjectId[] } },
-            update: { $unset?: unknown }
-          ) => {
-            for (const id of filter._id.$in) {
-              if (update.$unset) claimed.delete(id.toString());
-              else claimed.add(id.toString());
-            }
-          },
-        };
-      }
-      if (name === "crises") {
-        return {
-          bulkWrite: async (ops: { updateOne: { filter: unknown; update: never } }[]) => {
-            for (const op of ops) pushes.push(op.updateOne);
-          },
-        };
-      }
-      return { findOne: async () => ({ name: "Pat", party: "X" }) };
-    },
-  };
-  return { db: db as never, pushes };
+  const collection = db.collection.bind(db);
+  db.collection = ((name: string) => {
+    const c = collection(name);
+    if (name !== "crises") return c;
+    return new Proxy(c, {
+      get(target, method) {
+        if (method === "updateOne")
+          return async (filter: never, update: { $push?: unknown }, options: never) => {
+            if (update.$push) pushes.push({ filter, update } as never);
+            return target.updateOne(
+              filter,
+              update as Parameters<typeof target.updateOne>[1],
+              options
+            );
+          };
+        const value = Reflect.get(target, method);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+  }) as typeof db.collection;
+  return { db, pushes };
 }
 
 const liveCrisis = () => ({
@@ -94,7 +85,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetCrisisV2RegistryForTests();
   registerCrisisDefinition(makeDefinition());
-  leverCommand.loadLiveCrises.mockResolvedValue([liveCrisis()]);
+  leverCommand.loadLiveCrisis.mockResolvedValue(liveCrisis());
   leverCommand.commitLeverUse.mockResolvedValue({ ok: true });
 });
 
@@ -105,7 +96,7 @@ describe("processCrisisEmergencyBills", () => {
     const result = await processCrisisEmergencyBills(db, 12);
     expect(result).toEqual({ passed: 1, failed: 0 });
     expect(leverCommand.commitLeverUse).toHaveBeenCalledWith(
-      db,
+      expect.anything(),
       expect.objectContaining({
         holderId,
         billId: passed._id,
@@ -155,18 +146,13 @@ describe("processCrisisEmergencyBills", () => {
     expect(pushes).toHaveLength(1);
   });
 
-  it("claims all outcomes in one write", async () => {
-    const { db } = makeDb([bill("signed"), bill("failed")]);
-    const updateMany = vi.fn();
-    const original = (db as { collection: (n: string) => Record<string, unknown> }).collection;
-    (db as { collection: unknown }).collection = (name: string) => {
-      const c = original(name);
-      return name === "bills"
-        ? { ...c, updateMany: updateMany.mockImplementation(c.updateMany as never) }
-        : c;
-    };
-    await processCrisisEmergencyBills(db, 12);
-    expect(updateMany).toHaveBeenCalledTimes(1);
+  it("marks only resolved outcomes and leaves an active bill pending", async () => {
+    const active = bill("active");
+    const { db } = makeDb([bill("signed"), bill("failed"), active]);
+    expect(await processCrisisEmergencyBills(db, 12)).toEqual({ passed: 1, failed: 1 });
+    expect(
+      (await db.collection("bills").findOne({ _id: active._id }))?.crisisEmergency.recordedTurn
+    ).toBeUndefined();
   });
 
   it("records each outcome once", async () => {
@@ -178,7 +164,7 @@ describe("processCrisisEmergencyBills", () => {
   });
 
   it("records nothing once the crisis has ended", async () => {
-    leverCommand.loadLiveCrises.mockResolvedValue([]);
+    leverCommand.loadLiveCrisis.mockResolvedValue(null);
     const { db, pushes } = makeDb([bill("signed"), bill("failed")]);
     await processCrisisEmergencyBills(db, 12);
     expect(leverCommand.commitLeverUse).not.toHaveBeenCalled();
@@ -208,7 +194,7 @@ describe("proposeEmergencyBill", () => {
     const result = await proposeEmergencyBill(db, input);
     expect(result).toEqual({ ok: true, billId });
     expect(propose).toHaveBeenCalledWith(
-      db,
+      expect.anything(),
       expect.objectContaining({
         countryId: "US",
         crisisId,

@@ -22,6 +22,7 @@ export interface SovereignCouponClaimRecord {
    * freeze finds the grouped id already installed; no settlement reads it.
    */
   bondIds?: string[];
+  bondAmountsAnchor?: Array<{ bondId: string; amountAnchor: number }>;
   createdAt: Date;
   /** Set by the payout projection once the claim is paid. */
   settledTurn?: number;

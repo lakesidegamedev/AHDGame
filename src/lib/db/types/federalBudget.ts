@@ -596,6 +596,8 @@ export interface FederalBudget {
   sovereignCouponFrozenThrough?: Record<string, number>;
   /** The :30 half tick's stamp (turn/subhour/stepFraction.ts). */
   subhourStep?: SubhourStepStamp;
+  /** Full inflation step already included in the household price index. */
+  inflationAppliedTurn?: number;
   /** Start-of-hour values the :30 half tick overwrote (turn/subhour/stepBase.ts). */
   subhourBase?: { inflation?: SubhourInflationBase; growth?: SubhourGrowthMetricBase };
   _id: BudgetDocumentId;
@@ -894,6 +896,8 @@ export interface FederalBudget {
   // === IMF sovereign facility (phase 1+) ===
   imfSovereignBailoutActive?: boolean;
   imfSovereignFacilityPrincipalOutstanding?: number;
+  /** Latest atomically serviced sovereign IMF turn, including zero-cash accruals. */
+  imfSovereignFacilityLastPaymentTurn?: number;
   imfSovereignFacilityAnnualRate?: number;
   imfSovereignFacilityAmortizationTurnsRemaining?: number;
   imfSovereignFacilityIncomeCaptureFraction?: number;

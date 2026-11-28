@@ -88,3 +88,13 @@ describe("processStatePolicyEffects — drift-owned metric exclusion", () => {
     expect(keys).toEqual([]);
   });
 });
+
+// Metric-ownership fixture; recurrence tests exercise settlement recovery.
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));

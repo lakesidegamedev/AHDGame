@@ -11,7 +11,7 @@
 import { withBondPoolLedgerSnapshot } from "@/lib/bonds/marketPoolLedger";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
 import type { Db, ObjectId } from "mongodb";
-import type { NPP, GameConfig, Bond, ElectionCandidate } from "@/lib/db/types";
+import type { NPP, Bond } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   decideNppAction,
@@ -710,10 +710,7 @@ export async function investNppBondSurplus(
 
     // nppBuyBond debits nppInvestmentCashAnchor atomically (guarded); a failed
     // float race leaves the ₳ untouched — no plumbing move needed here anymore.
-    const result = await nppBuyBond(db, npp, bond._id, units, currentTurn, homeRate, bond, preset);
-    if (result.ok) {
-      bond.publicFloat -= units;
-    }
+    await nppBuyBond(db, npp, bond._id, units, currentTurn, homeRate, bond, preset);
   }
 }
 
@@ -830,9 +827,6 @@ export async function investNppStockSurplus(
 
     // nppBuyShares debits nppInvestmentCashAnchor atomically (guarded); a failed
     // float race leaves the ₳ untouched — no plumbing move needed here anymore.
-    const result = await nppBuyShares(db, npp, corp._id, shares, homeRate, corp, preset);
-    if (result.ok) {
-      corp.publicFloat = (corp.publicFloat ?? 0) - shares;
-    }
+    await nppBuyShares(db, npp, corp._id, shares, homeRate, corp, preset, undefined, currentTurn);
   }
 }

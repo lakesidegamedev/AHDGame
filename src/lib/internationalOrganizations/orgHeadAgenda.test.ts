@@ -6,6 +6,9 @@ import {
   ORG_HEAD_AGENDA_ACTIONS_PER_TURN,
 } from "@/lib/constants/internationalOrganizations";
 
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 vi.mock("@/lib/api/headOfGovernment", () => ({ getHeadOfGovernmentCharacterIds: vi.fn() }));
 vi.mock("@/lib/internationalOrganizations/service", () => ({ loadOrganizationDef: vi.fn() }));
 

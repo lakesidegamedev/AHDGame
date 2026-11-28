@@ -1,9 +1,10 @@
+import { uniqueTurnHistory } from "@/lib/turn/rules/turnHistory";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation, CentralBank } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getCountryIdForCurrency, FOREX_ACTIVE_CURRENCIES } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 import { getCurrentTurn } from "@/lib/currentTurn";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { loadBankingPolicy } from "@/lib/banking/policy";
@@ -30,11 +31,15 @@ async function loadCentralBankSavingsInputs(
   ];
   const banks = await centralBanksCollection(db)
     .find({ _id: { $in: bankIds } })
-    .project({ _id: 1, primeRate: 1, inflationHistory: 1 })
+    .project<Pick<CentralBank, "_id" | "primeRate" | "inflationHistory">>({
+      _id: 1,
+      primeRate: 1,
+      inflationHistory: 1,
+    })
     .toArray();
   const primeByBankId = new Map(banks.map((b) => [String(b._id), b.primeRate ?? DEFAULT_PRIME]));
   const inflationByBankId = new Map(
-    banks.map((b) => [String(b._id), b.inflationHistory?.at(-1)?.rate ?? 0])
+    banks.map((b) => [String(b._id), uniqueTurnHistory(b.inflationHistory ?? []).at(-1)?.rate ?? 0])
   );
   const centralBankPricing = await loadCentralBankPricingAdjustment(db, await getCurrentTurn(db));
   const out: Partial<Record<CurrencyCode, CentralBankSavingsInputs>> = {};

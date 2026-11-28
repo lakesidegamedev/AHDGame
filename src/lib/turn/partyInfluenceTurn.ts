@@ -1,9 +1,9 @@
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
 // src/lib/turn/partyInfluenceTurn.ts
-import type { ObjectId } from "mongodb";
+import type { Db, ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Character, GameConfig } from "@/lib/db/types";
-import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
-import type { Caucus } from "@/lib/db/types/caucus";
+
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
 import { appendActionGrantLog } from "./actionGrantLog";
@@ -189,17 +189,43 @@ export function computeBonusActions(
 export async function processPartyInfluenceTurn(
   characters: Character[],
   config: GameConfig | null,
-  now: Date
+  now: Date,
+  turnNumber?: number
 ): Promise<void> {
   const db = await getDb();
   const currentTurn =
-    (
-      await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
-        { _id: "current" },
-        { projection: { currentTurn: 1 } }
+    turnNumber ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ??
+    0;
+  await withTurnValueSettlement(db, "player-party-influence", currentTurn, async (db) => {
+    const fresh = await charactersCollection(db)
+      .find(
+        { _id: { $in: characters.map((c) => c._id) } },
+        {
+          projection: {
+            countryId: 1,
+            party: 1,
+            "policies.economic": 1,
+            "policies.social": 1,
+            partyInfluence: 1,
+            infamy: 1,
+            "stats.energy": 1,
+          },
+        }
       )
-    )?.currentTurn ?? 0;
+      .toArray();
+    await applyPartyInfluence(db, fresh, config, now, currentTurn);
+  });
+}
 
+async function applyPartyInfluence(
+  db: Db,
+  characters: Character[],
+  config: GameConfig | null,
+  now: Date,
+  currentTurn: number
+): Promise<void> {
   /*
    * Defaults model a "use it or lose it" mechanic:
    *   decayRate 4%/turn → ~85 turns (~21 game months) half-life without activity

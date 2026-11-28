@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * Employer bargaining moves union demands through counteroffers, industrial
  * action and settlement. persistBargainingCounter voids votes on replaced
@@ -9,9 +10,6 @@ import type {
   Character,
   CollectiveAgreement,
   CorporateSector,
-  GameConfig,
-  State,
-  StateMetrics,
   Union,
 } from "@/lib/db/types";
 import {
@@ -22,7 +20,7 @@ import { isDuplicateKeyError } from "@/lib/api/errors";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { corporationQueryFromParamId } from "@/lib/api/corporations/resolveQuery";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { runWithDbSession } from "@/lib/db/sessionDb";
 import {
   BARGAINING_REOPEN_COOLDOWN_TURNS,
   buildBargainingMandate,
@@ -54,7 +52,6 @@ import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { corporateSectorsCollection } from "@/lib/db/repositories/corporateSectors";
 import { unionsCollection } from "@/lib/db/repositories/unions";
-import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
 import { bargainingCampaignsCollection } from "@/lib/db/repositories/bargainingCampaigns";
 import { collectiveAgreementsCollection } from "@/lib/db/repositories/collectiveAgreements";
@@ -605,38 +602,11 @@ async function persistSettlementOutcome(
   // for exactly as long as the agreement is active.
 
   try {
-    await runWithOptionalTransaction(
-      async (session) => {
-        await claimCampaign(session);
-        await insertAgreement(session);
-        await restoreEscalationExpectations(db, campaign, session);
-      },
-      async () => {
-        await claimCampaign();
-        try {
-          await insertAgreement();
-        } catch (error) {
-          await collectiveAgreementsCollection(db).deleteOne({ _id: settled.agreement._id });
-          await bargainingCampaignsCollection(db).updateOne(
-            { _id: campaign._id, settledAgreementId: settled.agreement._id },
-            {
-              $set: {
-                status: campaign.status,
-                lastActionTurn: campaign.lastActionTurn,
-                updatedAt: campaign.updatedAt,
-                ...(campaign.mediation && { mediation: campaign.mediation }),
-              },
-              $unset: { settledAgreementId: "", endedAtTurn: "" },
-            }
-          );
-          throw error;
-        }
-        // The agreement row is durable at this point, so the settlement itself
-        // cannot be lost. Restoring expectations is idempotent and safe to run
-        // outside a transaction.
-        await restoreEscalationExpectations(db, campaign);
-      }
-    );
+    await runWithDbSession(db, async (session) => {
+      await claimCampaign(session);
+      await insertAgreement(session);
+      await restoreEscalationExpectations(db, campaign, session);
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "CAMPAIGN_CHANGED") {
       return { ok: false, status: 409, error: "Campaign state changed. Reload and try again." };
@@ -719,7 +689,7 @@ export async function persistBargainingMediationAction(
   };
 }
 
-export async function persistUnionBargainingEscalation(
+async function persistUnionBargainingEscalationInTransaction(
   db: Db,
   union: Union,
   campaign: BargainingCampaign,
@@ -857,97 +827,13 @@ export async function persistUnionBargainingEscalation(
     const result = await sectorCollection.bulkWrite(strikeOps, { session });
     if (result.matchedCount !== strikeOps.length) throw new Error("SECTOR_CHANGED");
   };
-  const restoreCampaign = () =>
-    campaignCollection.updateOne(
-      {
-        _id: campaign._id,
-        status: "dispute",
-        escalationLevel: next.escalationLevel,
-        lastActionTurn: currentTurn,
-      },
-      {
-        $set: {
-          escalationLevel: campaign.escalationLevel,
-          lastActionTurn: campaign.lastActionTurn,
-          mandate: campaign.mandate,
-          updatedAt: campaign.updatedAt,
-          ...(campaign.escalationStartedAtTurn != null && {
-            escalationStartedAtTurn: campaign.escalationStartedAtTurn,
-          }),
-          ...(campaign.mandateUpdatedAtTurn != null && {
-            mandateUpdatedAtTurn: campaign.mandateUpdatedAtTurn,
-          }),
-        },
-        ...(recordedExpectations.length > 0 && {
-          $pull: {
-            escalationExpectations: {
-              sectorId: { $in: recordedExpectations.map((entry) => entry.sectorId) },
-            },
-          },
-        }),
-        ...((campaign.escalationStartedAtTurn == null || campaign.mandateUpdatedAtTurn == null) && {
-          $unset: {
-            ...(campaign.escalationStartedAtTurn == null && { escalationStartedAtTurn: "" }),
-            ...(campaign.mandateUpdatedAtTurn == null && { mandateUpdatedAtTurn: "" }),
-          },
-        }),
-      }
-    );
-  let fallbackFunded = false;
-  const restoreFund = () =>
-    !fallbackFunded
-      ? Promise.resolve()
-      : unionCollection.updateOne(
-          { _id: union._id },
-          {
-            $inc: { treasury: cost },
-            $set: { lastCalledStrikeTurn: union.lastCalledStrikeTurn, updatedAt: union.updatedAt },
-          }
-        );
-  const restoreStrikes = async () => {
-    if (targets.length === 0) return;
-    await sectorCollection.bulkWrite(
-      targets.map((sector) => ({
-        updateOne: {
-          filter: { _id: sector._id, strikeStartedAtTurn: currentTurn },
-          update:
-            sector.workerExpectationIndex == null
-              ? {
-                  $set: { strikeStartedAtTurn: sector.strikeStartedAtTurn ?? null },
-                  $unset: { workerExpectationIndex: "" },
-                }
-              : {
-                  $set: {
-                    strikeStartedAtTurn: sector.strikeStartedAtTurn ?? null,
-                    workerExpectationIndex: sector.workerExpectationIndex,
-                  },
-                },
-        },
-      }))
-    );
-  };
 
   try {
-    await runWithOptionalTransaction(
-      async (session) => {
-        await claimCampaign(session);
-        await fundAction(session);
-        await startStrikes(session);
-      },
-      async () => {
-        await claimCampaign();
-        try {
-          await fundAction();
-          fallbackFunded = cost > 0;
-          await startStrikes();
-        } catch (error) {
-          await restoreStrikes();
-          await restoreFund();
-          await restoreCampaign();
-          throw error;
-        }
-      }
-    );
+    await runWithDbSession(db, async (session) => {
+      await claimCampaign(session);
+      await fundAction(session);
+      await startStrikes(session);
+    });
   } catch (error) {
     if (
       error instanceof Error &&
@@ -968,7 +854,7 @@ export async function persistUnionBargainingEscalation(
   };
 }
 
-export async function actOnBargainingCampaignAsUnion(
+async function actOnBargainingCampaignAsUnionInTransaction(
   db: Db,
   character: Character,
   unionRouteId: string,
@@ -1052,7 +938,7 @@ export async function actOnBargainingCampaignAsUnion(
   return { ok: true, status: 200, campaignStatus: "withdrawn" };
 }
 
-export async function actOnBargainingCampaignAsEmployer(
+async function actOnBargainingCampaignAsEmployerInTransaction(
   db: Db,
   userId: string,
   employerRouteId: string,
@@ -1097,4 +983,25 @@ export async function actOnBargainingCampaignAsEmployer(
     return persistBargainingMediationAction(db, campaign, "employer", action, currentTurn);
   }
   return persistBargainingDispute(db, campaign, currentTurn);
+}
+
+export async function persistUnionBargainingEscalation(
+  ...args: Parameters<typeof persistUnionBargainingEscalationInTransaction>
+): Promise<Awaited<ReturnType<typeof persistUnionBargainingEscalationInTransaction>>> {
+  const [db, ...rest] = args;
+  return withAtomicResult(db, (tx) => persistUnionBargainingEscalationInTransaction(tx, ...rest));
+}
+
+export async function actOnBargainingCampaignAsUnion(
+  ...args: Parameters<typeof actOnBargainingCampaignAsUnionInTransaction>
+): Promise<Awaited<ReturnType<typeof actOnBargainingCampaignAsUnionInTransaction>>> {
+  const [db, ...rest] = args;
+  return withAtomicResult(db, (tx) => actOnBargainingCampaignAsUnionInTransaction(tx, ...rest));
+}
+
+export async function actOnBargainingCampaignAsEmployer(
+  ...args: Parameters<typeof actOnBargainingCampaignAsEmployerInTransaction>
+): Promise<Awaited<ReturnType<typeof actOnBargainingCampaignAsEmployerInTransaction>>> {
+  const [db, ...rest] = args;
+  return withAtomicResult(db, (tx) => actOnBargainingCampaignAsEmployerInTransaction(tx, ...rest));
 }

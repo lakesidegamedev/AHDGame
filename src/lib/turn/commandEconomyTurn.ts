@@ -1,17 +1,17 @@
+import type { FederalBudget } from "@/lib/db/types";
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { afterCommit, unboundDb } from "@/lib/db/sessionDb";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
-import type { GameConfig } from "@/lib/db/types/gameConfig";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
+
 import type { Corporation, CorporateSector, SoeState } from "@/lib/db/types/corporation";
 import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
 import { economicReformPull } from "@/lib/economy/economicSystemReformRules";
 import {
-  isPlannedEconomy,
-  plannedShare,
+  isPlannedLevel,
+  plannedShareAtLevel,
   scheduledMarketizationLevel,
   DUAL_TRACK_CEILING,
   hydrateStoredMarketizationLevels,
-  setStoredMarketizationLevel,
-  marketizationLevel,
   marketizationDrift,
   driftMarketizationLevel,
   computePolicyStance,
@@ -77,7 +77,7 @@ import { commodityFlowsCollection } from "@/lib/db/repositories/commodityFlows";
  * Self-gates on `commandEconomyEnabled`; no-op when off. Runs after
  * `inflationRecalc` so gdp/wage growth are fresh.
  */
-export async function processCommandEconomyTurn(
+async function processCommandEconomyTurnInTransaction(
   db: Db,
   _turn: number,
   currentYear?: number | null
@@ -227,8 +227,11 @@ export async function processCommandEconomyTurn(
     if (level >= DUAL_TRACK_CEILING && persisted == null) continue;
     hydration.push([countryId, level]);
   }
-  hydrateStoredMarketizationLevels(hydration);
+  const settledLevels = new Map(hydration);
+  const levelFor = (countryId: string) =>
+    settledLevels.get(countryId) ?? scheduledMarketizationLevel(countryId, currentYear);
 
+  const budgetOps: AnyBulkWriteOperation<FederalBudget>[] = [];
   let countriesUpdated = 0;
   /** Countries the planned loop below moved this turn. */
   const processedCountries = new Set<string>();
@@ -237,9 +240,9 @@ export async function processCommandEconomyTurn(
     // Same registered gate as the hydration: an un-hydrated dissolved country
     // would otherwise fall back to its compiled schedule and read planned.
     if (!countryId || !registeredForPlanning.has(countryId)) continue;
-    if (!isPlannedEconomy(countryId, currentYear, enabled)) continue;
+    if (!isPlannedLevel(levelFor(countryId), enabled)) continue;
 
-    const share = plannedShare(countryId, currentYear, enabled);
+    const share = plannedShareAtLevel(levelFor(countryId), enabled);
     const factors = budget.economicFactors;
     const tolerance = toleranceByCountry.get(countryId) ?? globalTolerance;
 
@@ -408,7 +411,7 @@ export async function processCommandEconomyTurn(
     // legitimacy phase); climbs with repression × the still-present shortage.
     const repressionCost = repressionLegitimacyCost(internalRepression, shortageIndex);
     const policyStance = computePolicyStance(reformism, creditAggressiveness, budgetSoftness);
-    const currentLevel = marketizationLevel(countryId, currentYear);
+    const currentLevel = levelFor(countryId);
     // Free drivers + a weak, capped restoring pull toward the era schedule.
     // Gravity is exactly 0 while the level sits at its scheduled value and is
     // capped well below what the drivers can sustain, so it sets the DEFAULT
@@ -422,43 +425,45 @@ export async function processCommandEconomyTurn(
       marketizationGravity(currentLevel, scheduledMarketizationLevel(countryId, currentYear));
     const drift = marketizationDrift(pressure, soePerf, policyStance) + gravity;
     const nextLevel = driftMarketizationLevel(currentLevel, drift);
-    setStoredMarketizationLevel(countryId, nextLevel);
+    settledLevels.set(countryId, nextLevel);
     processedCountries.add(countryId);
     const reformReachedNow = reform != null && reform.reachedAtTurn == null && reformPull?.reached;
 
-    await federalBudgetCollection(db).updateOne(
-      { _id: budget._id },
-      {
-        $set: {
-          "economicFactors.monetaryOverhang": overhang,
-          "economicFactors.shortageIndex": shortageIndex,
-          ...(physicalGap != null
-            ? { "economicFactors.physicalDemandSupplyGapPct": physicalGap }
+    budgetOps.push({
+      updateOne: {
+        filter: { _id: budget._id },
+        update: {
+          $set: {
+            "economicFactors.monetaryOverhang": overhang,
+            "economicFactors.shortageIndex": shortageIndex,
+            ...(physicalGap != null
+              ? { "economicFactors.physicalDemandSupplyGapPct": physicalGap }
+              : {}),
+            "economicFactors.blackMarketPremium": blackMarketPremium,
+            "economicFactors.secondEconomyShare": secondEconomyShare,
+            "economicFactors.wageGrowth": constrainedWageGrowth,
+            "economicFactors.marketizationLevel": nextLevel,
+            ...(reformReachedNow ? { "economicFactors.economicReform.reachedAtTurn": _turn } : {}),
+            "economicFactors.budgetSoftness": budgetSoftness,
+            "economicFactors.governmentReformism": reformism,
+            "economicFactors.internalRepression": internalRepression,
+            "economicFactors.repressionLegitimacyCost": repressionCost,
+            "economicFactors.blackMarketPressureBase": pressureBase,
+            "economicFactors.blackMarketPressureEffective": pressure,
+            "economicFactors.directedCredit": directedCreditReadout,
+            "economicFactors.directedCreditIssuance": Math.round(monetizedIssuance),
+            // The slice of this turn's credit that only replaced worn-out
+            // capacity. Zero when the investment budget already covered every
+            // SOE's wear; positive whenever the floor had to top one up, which
+            // is the whole of the bill at a zero-aggressiveness posture.
+            "economicFactors.directedCreditUpkeep": Math.round(upkeepTotal),
+          },
+          ...(physicalGap == null
+            ? { $unset: { "economicFactors.physicalDemandSupplyGapPct": "" } }
             : {}),
-          "economicFactors.blackMarketPremium": blackMarketPremium,
-          "economicFactors.secondEconomyShare": secondEconomyShare,
-          "economicFactors.wageGrowth": constrainedWageGrowth,
-          "economicFactors.marketizationLevel": nextLevel,
-          ...(reformReachedNow ? { "economicFactors.economicReform.reachedAtTurn": _turn } : {}),
-          "economicFactors.budgetSoftness": budgetSoftness,
-          "economicFactors.governmentReformism": reformism,
-          "economicFactors.internalRepression": internalRepression,
-          "economicFactors.repressionLegitimacyCost": repressionCost,
-          "economicFactors.blackMarketPressureBase": pressureBase,
-          "economicFactors.blackMarketPressureEffective": pressure,
-          "economicFactors.directedCredit": directedCreditReadout,
-          "economicFactors.directedCreditIssuance": Math.round(monetizedIssuance),
-          // The slice of this turn's credit that only replaced worn-out
-          // capacity. Zero when the investment budget already covered every
-          // SOE's wear; positive whenever the floor had to top one up, which
-          // is the whole of the bill at a zero-aggressiveness posture.
-          "economicFactors.directedCreditUpkeep": Math.round(upkeepTotal),
         },
-        ...(physicalGap == null
-          ? { $unset: { "economicFactors.physicalDemandSupplyGapPct": "" } }
-          : {}),
-      }
-    );
+      },
+    });
     countriesUpdated += 1;
   }
 
@@ -475,21 +480,25 @@ export async function processCommandEconomyTurn(
     // Above the planned band there is no endogenous drift, so a reached law
     // has nothing to correct.
     if (reform.reachedAtTurn != null) continue;
-    const currentLevel = marketizationLevel(countryId, currentYear);
+    const currentLevel = levelFor(countryId);
     const { pull, reached } = economicReformPull(currentLevel, reform);
     const nextLevel = driftMarketizationLevel(currentLevel, pull);
-    setStoredMarketizationLevel(countryId, nextLevel);
-    await federalBudgetCollection(db).updateOne(
-      { _id: budget._id },
-      {
-        $set: {
-          "economicFactors.marketizationLevel": nextLevel,
-          ...(reached ? { "economicFactors.economicReform.reachedAtTurn": _turn } : {}),
+    settledLevels.set(countryId, nextLevel);
+    budgetOps.push({
+      updateOne: {
+        filter: { _id: budget._id },
+        update: {
+          $set: {
+            "economicFactors.marketizationLevel": nextLevel,
+            ...(reached ? { "economicFactors.economicReform.reachedAtTurn": _turn } : {}),
+          },
         },
-      }
-    );
+      },
+    });
     countriesUpdated += 1;
   }
+
+  if (budgetOps.length) await federalBudgetCollection(db).bulkWrite(budgetOps);
 
   // P3b: turn this turn's directed credit into real capacity on real sectors,
   // then fold what it bought into the overlay. Runs AFTER the country loop
@@ -713,7 +722,10 @@ async function buildCapacityFromDirectedCredit(
   const corpIds = [...creditByCorp.keys()].map((id) => new ObjectId(id));
   const [corps, sectors, fxByCurrency, wholePlants] = await Promise.all([
     (await getCorporationsCollection(db))
-      .find({ _id: { $in: corpIds } }, { projection: { _id: 1, liquidCurrencyCode: 1 } })
+      .find(
+        { _id: { $in: corpIds } },
+        { projection: { _id: 1, countryId: 1, liquidCurrencyCode: 1 } }
+      )
       .toArray(),
     (await getCorporateSectorsCollection(db))
       .find(
@@ -828,3 +840,33 @@ async function persistSoeStates(db: Db, finalStateByCorp: Map<string, SoeState>)
 
 const clampNum = (v: number, lo: number, hi: number): number =>
   !Number.isFinite(v) ? lo : Math.min(hi, Math.max(lo, v));
+
+/** Capacity purchases, issuance and their original turn result settle together. */
+export async function processCommandEconomyTurn(
+  db: Db,
+  turn: number,
+  currentYear?: number | null
+): Promise<{ countriesUpdated: number }> {
+  const result = await withTurnValueSettlement(db, "command-economy-credit", turn, (db) =>
+    processCommandEconomyTurnInTransaction(db, turn, currentYear)
+  );
+  await afterCommit(db, async () => {
+    const source = unboundDb(db);
+    const [registered, budgets] = await Promise.all([
+      getRegisteredCountryIds(source),
+      federalBudgetCollection(source)
+        .find({}, { projection: { countryId: 1, "economicFactors.marketizationLevel": 1 } })
+        .toArray(),
+    ]);
+    const live = new Set<string>(registered);
+    hydrateStoredMarketizationLevels(
+      budgets.flatMap((budget) => {
+        const value = budget.economicFactors?.marketizationLevel;
+        return live.has(budget.countryId) && typeof value === "number" && Number.isFinite(value)
+          ? [[budget.countryId, value] as [string, number]]
+          : [];
+      })
+    );
+  });
+  return result;
+}

@@ -122,7 +122,7 @@ export function getResourceAndFinanceStartPhases(): TurnPhaseAdapter[] {
           extractionAutoStrategyResult;
         const financeWork = [
           runtime.runPhase("actionRefresh", () =>
-            processActionRefresh(characters, config, gameNow)
+            processActionRefresh(characters, config, gameNow, newTurn)
           ),
           runtime.runPhase("fundGeneration", () =>
             processFundGeneration(characters, gameNow, stateMap, gameState.forexEnabled, newTurn)
@@ -196,7 +196,7 @@ export function getResourceAndFinanceStartPhases(): TurnPhaseAdapter[] {
         );
 
         await runtime.runPhase("partyInfluenceTurn", () =>
-          processPartyInfluenceTurn(characters, config, gameNow)
+          processPartyInfluenceTurn(characters, config, gameNow, newTurn)
         );
 
         // caucusTax and treasuryTurn touch disjoint state and run together.

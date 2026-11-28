@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { snapshotMoneySupply } from "./snapshot";
 import { MONEY_ACCOUNTING_VERSION } from "./calculate";
 import { executeMonetaryOperation } from "./operations";
@@ -95,7 +96,14 @@ describe("monetary stock boundaries", () => {
         _id: new ObjectId(),
         countryId: "US",
         liquidCapital: 0,
-        bankCharter: { status: "active", currency: "USD", npcDeposits: 100, totalDeposits: 100 },
+        bankCharter: {
+          status: "active",
+          type: "retail",
+          charteredTurn: 1,
+          currency: "USD",
+          npcDeposits: 100,
+          totalDeposits: 100,
+        },
       },
     ]);
     const after = await observe(db, 1);
@@ -126,6 +134,8 @@ describe("monetary stock boundaries", () => {
         liquidCapital: 100,
         bankCharter: {
           status: "active",
+          type: "retail",
+          charteredTurn: 1,
           currency: "USD",
           cashReserves: 100,
           totalDeposits: 1_000,

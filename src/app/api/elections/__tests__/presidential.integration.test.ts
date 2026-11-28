@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 /**
  * Integration tests for Presidential Election flow.
  * Tests the complete lifecycle: primary entry, voting, general election.
@@ -156,6 +174,7 @@ describe("Presidential Election Integration Tests", () => {
           }
           if (name === "campaigns") {
             return {
+              updateOne: vi.fn().mockResolvedValue({ upsertedCount: 1, matchedCount: 0 }),
               findOne: vi.fn().mockResolvedValue(null),
               insertOne: vi.fn().mockResolvedValue({
                 insertedId: new ObjectId(),

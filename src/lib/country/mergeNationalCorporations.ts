@@ -1,33 +1,12 @@
-/**
- * The absorbed country's National Corporation tree consolidates into the
- * survivor's.
- *
- * A country's state-enterprise layer is country-keyed (`countryOwnerId`), so the
- * region sweep in `transferRegion` never sees it. Left alone, the absorbed
- * primary would survive as a ghost with `isPrimaryNationalCorporation: true`,
- * holding sectors and still the `corporationId` on its sovereign bonds.
- *
- * The survivor's primary wins (one primary per country, spec §24.1). The absorbed
- * primary is demoted and dissolved; everything it owns folds in:
- *
- *  - SECTORS move to the survivor split-off of the same type (the same routing
- *    `resolveNationalCorporationForSector` applies), else to the primary.
- *  - SOVEREIGN BONDS re-stamp `corporationId` + `issuerName` onto the primary.
- *  - Corp-held stakes re-stamp to the primary.
- *
- * Idempotent by filters: a re-run finds no corporations still keyed to the
- * absorbed country. Runs after regions cross so corps are already at rest.
- *
- * Absorbed shells are DELETED, not stamped-retired: corporations have no
- * `dissolvedTurn` machinery, and a flagged primary left in place would keep
- * answering primary lookups. Old ids survive in `nationalizationLedger` and bond
- * `originalIssuerName`.
- */
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { hasRetainedFinancialEstate } from "@/lib/corporations/rules/retainedFinancialEstate";
+import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
+import { supplyAgreementsCollection } from "@/lib/db/repositories/supplyAgreements";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
-import type { CorporateSector } from "@/lib/db/types";
+
 import { ensurePrimaryNationalCorporation } from "@/lib/nationalization/nationalCorporation";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
 import { cleanupShareMarketActivityForCorporations } from "@/lib/corporations/cleanupShareMarketActivity";
@@ -54,7 +33,13 @@ export interface MergeNationalCorporationsResult {
   bondsRestamped: number;
 }
 
-export async function mergeNationalCorporations(
+async function mergeNationalCorporationsAtomic(
+  db: Db,
+  args: MergeNationalCorporationsArgs
+): Promise<MergeNationalCorporationsResult> {
+  return withSessionDb(db, (tx) => mergeNationalCorporations(tx, args));
+}
+async function mergeNationalCorporations(
   db: Db,
   args: MergeNationalCorporationsArgs
 ): Promise<MergeNationalCorporationsResult> {
@@ -68,7 +53,51 @@ export async function mergeNationalCorporations(
   // fold target even when the survivor had no NatCorp tree at all.
   const survivorPrimary = await ensurePrimaryNationalCorporation(db, toCountryId);
 
-  const absorbedCorps = await corps.find({ countryOwnerId: fromCountryId }).toArray();
+  const candidates = await corps.find({ countryOwnerId: fromCountryId }).toArray();
+  const candidateIds = candidates.map((corp) => corp._id);
+  const [loans, heldBonds, assessments] = await Promise.all([
+    bankLoansCollection(db)
+      .find(
+        {
+          borrowerType: "corporation",
+          borrowerId: { $in: candidateIds },
+          status: { $nin: ["repaid", "rejected"] },
+        },
+        { projection: { borrowerId: 1 } }
+      )
+      .toArray(),
+    bonds
+      .find(
+        { "holders.corporationId": { $in: candidateIds }, matured: false },
+        { projection: { holders: 1 } }
+      )
+      .toArray(),
+    supplyAgreementsCollection(db)
+      .find(
+        { "transferPricingPendingAssessment.liableCorpId": { $in: candidateIds.map(String) } },
+        { projection: { transferPricingPendingAssessment: 1 } }
+      )
+      .toArray(),
+  ]);
+  const retainedIds = new Set([
+    ...loans.map((loan) => String(loan.borrowerId)),
+    ...heldBonds.flatMap((bond) =>
+      (bond.holders ?? []).map((holder) => String(holder.corporationId))
+    ),
+    ...assessments.map((agreement) => agreement.transferPricingPendingAssessment!.liableCorpId),
+    ...candidates
+      .filter((corp) => hasRetainedFinancialEstate(corp, true))
+      .map((corp) => String(corp._id)),
+  ]);
+  const retained = candidates.filter((corp) => retainedIds.has(String(corp._id)));
+  if (retained.length)
+    await corps.updateMany(
+      { _id: { $in: retained.map((corp) => corp._id) } },
+      {
+        $set: { countryOwnerId: toCountryId, isPrimaryNationalCorporation: false, updatedAt: now },
+      }
+    );
+  const absorbedCorps = candidates.filter((corp) => !retainedIds.has(String(corp._id)));
   if (absorbedCorps.length === 0) {
     return { corpsDissolved: 0, sectorsMoved: 0, bondsRestamped: 0 };
   }
@@ -118,32 +147,28 @@ export async function mergeNationalCorporations(
     );
     if (corpSectors.length === 0) continue;
 
-    // Group by destination so each destination needs one update, not one per
-    // sector — an absorbed command economy can carry hundreds of sectors.
-    const byDest = new Map<string, ObjectId[]>();
-    for (const sector of corpSectors) {
-      const dest = claimedByType.get(sector.sectorType) ?? survivorPrimary._id;
-      byDest.set(dest.toString(), [...(byDest.get(dest.toString()) ?? []), sector._id]);
-    }
-    for (const [destId, sectorIds] of byDest) {
-      for (const sectorId of sectorIds) {
-        const sector = corpSectors.find((row) => row._id.equals(sectorId));
-        const key = sector && transitionKeyBySectorId.get(sector._id.toHexString());
-        if (!sector || !key) throw new Error("A secured sector reservation was lost");
-        const moved = await sectors.updateOne(
-          {
-            _id: sectorId,
+    const transferOps = corpSectors.map((sector) => {
+      const key = transitionKeyBySectorId.get(sector._id.toHexString());
+      if (!key) throw new Error("A secured sector reservation was lost");
+      return {
+        updateOne: {
+          filter: {
+            _id: sector._id,
             corporationId: corp._id,
             "constructionPropertyTransition.key": key,
           },
-          { $set: { corporationId: new ObjectId(destId), updatedAt: now } }
-        );
-        if (moved.matchedCount !== 1)
-          throw new Error("A sector changed during National Corporation consolidation");
-        movedSectorIds.add(sectorId.toHexString());
-        sectorsMoved += 1;
-      }
-    }
+          update: {
+            $set: {
+              corporationId: claimedByType.get(sector.sectorType) ?? survivorPrimary._id,
+              updatedAt: now,
+            },
+          },
+        },
+      };
+    });
+    await applySecuredSectorTransfers(sectors, transferOps);
+    for (const sector of corpSectors) movedSectorIds.add(String(sector._id));
+    sectorsMoved += transferOps.length;
   }
 
   // Sovereign bonds the absorbed state issued: the survivor primary assumes
@@ -229,4 +254,16 @@ export async function mergeNationalCorporations(
     sectorsMoved,
     bondsRestamped: absorbedBonds.length,
   };
+}
+
+export { mergeNationalCorporationsAtomic as mergeNationalCorporations };
+
+async function applySecuredSectorTransfers(
+  sectors: import("mongodb").Collection<import("@/lib/db/types").CorporateSector>,
+  operations: import("mongodb").AnyBulkWriteOperation<import("@/lib/db/types").CorporateSector>[]
+) {
+  if (!operations.length) return;
+  const moved = await sectors.bulkWrite(operations);
+  if (moved.matchedCount !== operations.length)
+    throw new Error("A sector changed during National Corporation consolidation");
 }

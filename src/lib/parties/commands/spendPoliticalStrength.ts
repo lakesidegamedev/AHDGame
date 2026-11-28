@@ -1,12 +1,9 @@
+import { boundSession } from "@/lib/db/sessionDb";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import type {
-  PartyPoliticalStrengthLedgerRow,
-  PartyStrengthPressure,
-  PoliticalParty,
-  StatePartyOrg,
-} from "@/lib/db/types";
+import type { PartyPoliticalStrengthLedgerRow } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import {
   PRESSURE_LADDER_INCREMENT,
@@ -41,11 +38,8 @@ import { partyPoliticalStrengthLedgerCollection } from "@/lib/db/repositories/pa
  *    Phase 3, but the slot exists for future. Pressure on a sentinel
  *    "all-national" geography.
  *
- * Atomicity: PS debit uses MongoDB's atomic `findOneAndUpdate` with a
- * conditional `$gte` predicate, so concurrent spend attempts that would
- * overdraw fail cleanly. Pressure is updated via separate upsert; a tight
- * race could double-credit pressure (acceptable — pressure overshooting
- * is bounded by the cost ladder cap).
+ * PS, geography pressure and its ledger settle together. The conditional
+ * balance debit rejects an overdraw; a retried transaction reloads pressure.
  *
  * Returns the spend outcome including the effective cost paid (after
  * pressure escalation) so callers can show players what they paid.
@@ -92,7 +86,14 @@ export async function spendPoliticalStrength(
   injectedDb?: Db
 ): Promise<SpendPoliticalStrengthResult> {
   const db = injectedDb ?? (await getDb());
+  if (boundSession(db)) return applyPoliticalStrengthSpend(db, input);
+  return withAtomicResult(db, (db) => applyPoliticalStrengthSpend(db, input));
+}
 
+async function applyPoliticalStrengthSpend(
+  db: Db,
+  input: SpendPoliticalStrengthInput
+): Promise<SpendPoliticalStrengthResult> {
   if ((input.scope === "state" || input.scope === "national-targeted") && !input.stateId) {
     return {
       ok: false,

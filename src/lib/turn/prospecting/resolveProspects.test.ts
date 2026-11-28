@@ -1,3 +1,14 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: Db,
+    _phase: string,
+    _turn: number,
+    work: (db: Db) => Promise<unknown>
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
@@ -106,7 +117,7 @@ describe("resolveProspects", () => {
     expect(notif[0].type).toBe("prospect_succeeded");
   });
 
-  it("closes the survey before growing capacity, so a later failure cannot re-grant", async () => {
+  it("propagates a capacity failure to the settlement transaction", async () => {
     const survey = makeSurvey();
     setFind(db, "prospectingSurveys", [survey]);
     setFind(db, "stateResourceCapacity", [

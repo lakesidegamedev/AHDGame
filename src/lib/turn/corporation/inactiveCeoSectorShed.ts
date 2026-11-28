@@ -10,7 +10,7 @@
 
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Corporation, User } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CorporationLookups } from "./types";
 import { shedSectorsForCorps, type SectorShedResult } from "./corporationSectorShed";
 import { VACANT_CEO_SECTOR_SHED_RATE } from "./vacantCeoSectorShed";
@@ -49,7 +49,8 @@ export async function shedInactiveCeoSectors(
   lookups: CorporationLookups,
   now: Date,
   /** `marketSystemMode >= "plants"` — sheds capacity units instead of revenue. */
-  plantsEnabled: boolean = false
+  plantsEnabled: boolean = false,
+  currentTurn?: number
 ): Promise<SectorShedResult> {
   const candidates = lookups.corporations.filter(isInactiveCeoPenaltyCandidate);
   if (candidates.length === 0) {
@@ -104,6 +105,7 @@ export async function shedInactiveCeoSectors(
     VACANT_CEO_SECTOR_SHED_RATE,
     now,
     "Inactive CEO",
-    plantsEnabled
+    plantsEnabled,
+    currentTurn
   );
 }

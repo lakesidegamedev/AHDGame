@@ -294,7 +294,9 @@ describe("BankingHubClient", () => {
         "/api/character/savings/deposit",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ currency: "USD", amount: 500, holder: "bank-1" }),
+          body: expect.stringMatching(
+            /^\{"currency":"USD","amount":500,"holder":"bank-1","requestId":"[^" ]+"\}$/
+          ),
         })
       )
     );
@@ -360,7 +362,7 @@ describe("BankingHubClient", () => {
         "/api/character/savings/withdraw",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ currency: "USD", amount: 250 }),
+          body: expect.stringMatching(/^\{"currency":"USD","amount":250,"requestId":"[^" ]+"\}$/),
         })
       )
     );

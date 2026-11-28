@@ -39,6 +39,10 @@ export type NPPGender = "male" | "female";
 export type NPPEthnicity = "white" | "black" | "hispanic" | "asian" | "other";
 
 export interface NPP {
+  /** Original turn whose stance drift is already reflected in the policy vector. */
+  lastStanceDriftTurn?: number;
+  /** Last turn charged for a business-interest-decided legislative ballot. */
+  businessInterestVotePenaltyTurn?: number;
   _id: ObjectId;
   countryId?: CountryId;
   name: string;

@@ -1,90 +1,31 @@
-// POST /api/admin/corporations/[id]/dividend
-// Forces an immediate dividend payout based on current dividendRate.
-// Distributes liquidCapital * dividendRate% proportionally to character shareholders.
-// Auth: requireAdmin
-// Errors: 403, 404
-
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import type { AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, notFound } from "@/lib/api/errors";
-import type { Character } from "@/lib/db/types";
-import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { buildPersonalBalanceBulkOp } from "@/lib/currency/characterFunds";
-import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
-import { dividendShareBasis, dividendShareFraction } from "@/lib/corporations/rules/dividendShares";
-import { corporationsCollection } from "@/lib/db/repositories/corporations";
-import { charactersCollection } from "@/lib/db/repositories/characters";
+import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { withRecordedEconomicCommand } from "@/lib/api/withRecordedEconomicCommand";
+import { getCurrentTurn } from "@/lib/currentTurn";
+import { settleForcedDividend } from "@/lib/corporations/commands/forcedDividend";
 
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
-
     const { id } = await params;
+    if (!ObjectId.isValid(id)) return errorResponse(400, "Invalid corporation ID");
     const db = await getDb();
-
-    const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(id) });
-    if (!corp) throw notFound("Corporation not found");
-
-    const dividendRate = corp.dividendRate ?? 0;
-    if (dividendRate <= 0) {
-      return NextResponse.json({ success: true, paid: 0, note: "Dividend rate is 0" });
-    }
-
-    const totalPayout = corp.liquidCapital * (dividendRate / 100);
-    if (totalPayout <= 0) {
-      return NextResponse.json({ success: true, paid: 0, note: "Nothing to distribute" });
-    }
-
-    // Build per-character payouts (only character shareholders, not corp-owned shares)
-    const charPayouts = new Map<string, number>();
-    const { denominator } = dividendShareBasis(
-      corp,
-      corp.shareholders.map((sh) => sh.shares)
+    const requestId =
+      request.headers.get("Idempotency-Key") ?? `legacy:${id}:${await getCurrentTurn(db)}`;
+    if (!/^[a-zA-Z0-9:_-]{1,200}$/.test(requestId))
+      return errorResponse(400, "Invalid request identity");
+    return await withRecordedEconomicCommand(
+      db,
+      "admin-forced-dividend",
+      id,
+      requestId,
+      { id },
+      async (db) => NextResponse.json(await settleForcedDividend(db, new ObjectId(id), requestId))
     );
-    for (const sh of corp.shareholders) {
-      if (!sh.characterId) continue;
-      const proportion = dividendShareFraction(sh.shares, denominator);
-      const amount = totalPayout * proportion;
-      if (amount > 0) {
-        const key = sh.characterId.toString();
-        charPayouts.set(key, (charPayouts.get(key) ?? 0) + amount);
-      }
-    }
-
-    if (charPayouts.size === 0) {
-      return NextResponse.json({ success: true, paid: 0, note: "No character shareholders" });
-    }
-
-    // Dividends are paid in the corporation's home currency. Resolve via the
-    // canonical helper so admin-relocated corps (where `liquidCurrencyCode`
-    // may diverge from `countryId`'s default currency) credit shareholders in
-    // the same unit the `-totalPayout` deduction leaves, preventing silent
-    // money creation/destruction at the FX ratio. (A28)
-    const forexEnabled = await isForexEnabled();
-    const corpCurrency = resolveCorpLiquidCurrencyCode(corp) ?? "USD";
-    const charOps: AnyBulkWriteOperation<Character>[] = [...charPayouts.entries()].map(
-      ([charId, amount]) =>
-        buildPersonalBalanceBulkOp(
-          new ObjectId(charId),
-          amount,
-          corpCurrency,
-          forexEnabled
-        ) as AnyBulkWriteOperation<Character>
-    );
-
-    await Promise.all([
-      charactersCollection(db).bulkWrite(charOps),
-      corporationsCollection(db).updateOne(
-        { _id: new ObjectId(id) },
-        { $inc: { liquidCapital: -totalPayout }, $set: { updatedAt: new Date() } }
-      ),
-    ]);
-
-    return NextResponse.json({ success: true, paid: totalPayout, recipients: charPayouts.size });
   } catch (error) {
     return handleRouteError(error);
   }

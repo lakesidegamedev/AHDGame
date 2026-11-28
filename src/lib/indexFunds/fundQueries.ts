@@ -1,3 +1,4 @@
+import { weightedPositionCredit } from "@/lib/corporations/rules/weightedPositionCredit";
 import { ObjectId, type ClientSession, type Db } from "mongodb";
 import type {
   IndexFund,
@@ -482,53 +483,21 @@ export async function upsertFundHoldingShares(
   pricePerShareAnchor: number,
   options?: FundQueryOptions
 ): Promise<void> {
-  if (!Number.isFinite(shares) || shares <= 0) return;
-  const safePrice = Number.isFinite(pricePerShareAnchor) ? Math.max(0, pricePerShareAnchor) : 0;
-
-  const fund = await indexFundsCollection<IndexFund>(db).findOne(
+  const credited = await indexFundsCollection<IndexFund>(db).updateOne(
     { _id: fundId },
-    { projection: { holdings: 1 }, ...mongoOptions(options) }
-  );
-  const existing = fund?.holdings?.find(
-    (h) => h.corporationId.toString() === corporationId.toString()
-  );
-
-  if (existing) {
-    const newShares = existing.shares + shares;
-    const newAvg =
-      existing.avgCostPerShareAnchor !== undefined
-        ? (existing.shares * existing.avgCostPerShareAnchor + shares * safePrice) / newShares
-        : safePrice;
-    await indexFundsCollection<IndexFund>(db).updateOne(
-      { _id: fundId, "holdings.corporationId": corporationId },
-      {
-        $inc: { "holdings.$.shares": shares },
-        $set: {
-          "holdings.$.avgCostPerShareAnchor": newAvg,
-          "holdings.$.lastValueAnchor": newShares * safePrice,
-          updatedAt: new Date(),
-        },
-      },
-      mongoOptions(options)
-    );
-    return;
-  }
-
-  await indexFundsCollection<IndexFund>(db).updateOne(
-    { _id: fundId },
-    {
-      $push: {
-        holdings: {
-          corporationId,
-          shares,
-          avgCostPerShareAnchor: safePrice,
-          lastValueAnchor: shares * safePrice,
-        } satisfies IndexFundHolding,
-      },
-      $set: { updatedAt: new Date() },
-    },
+    weightedPositionCredit({
+      array: "holdings",
+      identityField: "corporationId",
+      identity: corporationId,
+      shares,
+      price: pricePerShareAnchor,
+      costField: "avgCostPerShareAnchor",
+      valueField: "lastValueAnchor",
+      set: { updatedAt: new Date() },
+    }),
     mongoOptions(options)
   );
+  if (credited.matchedCount !== 1) throw new Error("Fund is unavailable for in-kind share credit");
 }
 
 /**
@@ -651,11 +620,18 @@ export async function debitFundPosition(
 
   // If position reached zero, remove the document.
   if (unitsAfter <= 0) {
-    await indexFundPositionsCollection<IndexFundPosition>(db).deleteOne(
-      { _id: before._id },
+    const removed = await indexFundPositionsCollection<IndexFundPosition>(db).deleteOne(
+      { _id: before._id, units: { $lte: 0 } },
       mongoOptions(options)
     );
-    return { ok: true, position: null, legacyUnitsRedeemed };
+    const position =
+      removed.deletedCount === 1
+        ? null
+        : await indexFundPositionsCollection<IndexFundPosition>(db).findOne(
+            { _id: before._id },
+            mongoOptions(options)
+          );
+    return { ok: true, position, legacyUnitsRedeemed };
   }
 
   // Reconstruct the post-debit document (the update already committed it).

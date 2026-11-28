@@ -1,3 +1,22 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", async (original) => {
+  const actual = await original<typeof import("@/lib/db/sessionDb")>();
+  return {
+    ...actual,
+    withSessionDb: (
+      db: import("mongodb").Db,
+      work: (db: import("mongodb").Db) => Promise<unknown>
+    ) => ("client" in db && db.client ? actual.withSessionDb(db, work) : work(db)),
+  };
+});
 /**
  * SP5 §7 — the metric engine's persist split: macro paths land on macroMetrics
  * and NEVER on stateMetrics (distinct mocks here, unlike the aliased engine

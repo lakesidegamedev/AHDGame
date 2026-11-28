@@ -6,7 +6,8 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import type { IndexFund } from "@/lib/db/types/indexFund";
 import type { MacroCountryState } from "./types";
 import { buildBackground2027MacroCountry } from "./background2027";

@@ -1,3 +1,16 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 
@@ -152,7 +165,8 @@ describe("foundNppCorporationsSurplus read budget", () => {
     // The command-economy blocked set loads once per sweep, not once per
     // founding attempt inside the core. The second gameState read is the
     // funded-market and era facts for the founding recipe, also once per sweep.
-    expect(gameStateFindOne).toHaveBeenCalledTimes(2);
+    // One additional fixed read loads the ledger threshold configuration.
+    expect(gameStateFindOne).toHaveBeenCalledTimes(3);
     expect(fedBudgetFind).toHaveBeenCalledTimes(1);
 
     // Every debited attempt spawns exactly once: same outcomes, fewer reads.

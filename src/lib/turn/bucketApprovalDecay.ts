@@ -1,3 +1,6 @@
+import type { Db } from "mongodb";
+import { withTurnValueSettlement } from "./withTurnValueSettlement";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 /**
  * Bucket Approval Decay
  *
@@ -17,12 +20,23 @@ import { getNppsCollection } from "@/lib/db/collections/npps";
  *
  * @returns Summary of characters and NPPs processed
  */
-export async function processBucketApprovalDecay(): Promise<{
+export async function processBucketApprovalDecay(currentTurn?: number): Promise<{
   charactersProcessed: number;
   nppsProcessed: number;
 }> {
   const db = await getDb();
 
+  const turn =
+    currentTurn ??
+    (await gameStateCollection(db).findOne({ _id: "current" }, { projection: { currentTurn: 1 } }))
+      ?.currentTurn ??
+    0;
+  return withTurnValueSettlement(db, "bucket-approval-decay", turn, decayBuckets);
+}
+
+async function decayBuckets(
+  db: Db
+): Promise<{ charactersProcessed: number; nppsProcessed: number }> {
   // Process characters with bucket approvals
   const characters = await (
     await getCharactersCollection(db)

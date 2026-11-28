@@ -1,3 +1,4 @@
+import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { DemographicConfigOverride } from "@/lib/db/types/demographicConfigOverride";
 import type { EraId } from "./presetSelector";
@@ -12,9 +13,10 @@ export interface Layer1ModelOverride {
 /** Returns the full admin-authored model override for a country+era, or null if none. */
 export async function loadFullOverride(
   countryId: string,
-  era: EraId
+  era: EraId,
+  providedDb?: Db
 ): Promise<Layer1ModelOverride | null> {
-  const db = await getDb();
+  const db = providedDb ?? (await getDb());
   const id = `${countryId}:${era}`;
   const doc = await demographicConfigOverridesCollection(db).findOne({ _id: id });
   if (!doc) return null;
@@ -40,6 +42,9 @@ export async function loadEraPositionOverride(
 }
 
 /** Loads the full US override bundle for a given era. */
-export async function loadEraFullOverride(era: EraId): Promise<Layer1ModelOverride | null> {
-  return loadFullOverride("US", era);
+export async function loadEraFullOverride(
+  era: EraId,
+  db?: Db
+): Promise<Layer1ModelOverride | null> {
+  return loadFullOverride("US", era, db);
 }

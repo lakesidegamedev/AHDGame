@@ -1,7 +1,8 @@
+import { recordedHistoryWindow } from "@/lib/corporations/rules/historyCurrency";
+import { loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { ObjectId, type Db } from "mongodb";
-import type { User } from "@/lib/db/types/user";
-import type { CorporationHistory } from "@/lib/db/types/corporationHistory";
-import type { CommodityPrice, CommodityPriceHistory } from "@/lib/db/types";
+
+import type { CommodityPrice } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
@@ -88,7 +89,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
       ? corporationHistoryCollection(db)
           .find(
             { corporationId: { $in: corps.map((corp) => corp._id) }, turn: previousTurn },
-            { projection: { corporationId: 1, sharePrice: 1 } }
+            { projection: { corporationId: 1, sharePrice: 1, currencyCode: 1, fxRateAtWrite: 1 } }
           )
           .toArray()
       : [],
@@ -102,8 +103,21 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
       : [],
   ]);
 
+  const targetById = new Map(
+    corps.map((corp) => [
+      corp._id.toString(),
+      corp.liquidCurrencyCode ??
+        (corp.countryId ? COUNTRY_CURRENCY_MAP[corp.countryId] : undefined),
+    ])
+  );
+  const rates = corpHistory.some((row) => {
+    const target = targetById.get(row.corporationId.toString());
+    return target && target !== "USD" && row.currencyCode && target !== row.currencyCode;
+  })
+    ? await loadFxRatesRecord(db)
+    : { USD: 1 };
   const corpBySeq = new Map(corps.map((corp) => [String(corp.sequentialId), corp]));
-  const corpBefore = new Map(corpHistory.map((r) => [r.corporationId.toString(), r.sharePrice]));
+  const corpBefore = new Map(corpHistory.map((r) => [r.corporationId.toString(), r]));
   const priceByCommodity = new Map<string, CommodityPrice>(prices.map((p) => [p.commodity, p]));
   const priceBefore = new Map<string, number>(
     priceHistory.map((r) => [r.commodity, r.globalPrice])
@@ -116,6 +130,15 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
         return { ...item, name: null, ticker: null, value: null, currencyCode: null, change: null };
       const listed = corp.isPrivate !== true;
       const sharePrice = corp.sharePrice ?? 0;
+      const code =
+        corp.liquidCurrencyCode ??
+        (corp.countryId ? COUNTRY_CURRENCY_MAP[corp.countryId] : undefined);
+      const before = corpBefore.get(corp._id.toString());
+      const previous = before
+        ? recordedHistoryWindow([before], code, code ? (rates[code] ?? Number.NaN) : Number.NaN, [
+            "sharePrice",
+          ])[0]
+        : undefined;
       return {
         ...item,
         name: corp.name,
@@ -124,7 +147,7 @@ export async function loadWatchlist(db: Db, userId: string): Promise<WatchlistWi
         currencyCode:
           corp.liquidCurrencyCode ??
           (corp.countryId ? (COUNTRY_CURRENCY_MAP[corp.countryId] ?? null) : null),
-        change: listed ? percentChange(sharePrice, corpBefore.get(corp._id.toString())) : null,
+        change: listed ? percentChange(sharePrice, previous?.sharePrice) : null,
       };
     }
     const price = priceByCommodity.get(item.id);

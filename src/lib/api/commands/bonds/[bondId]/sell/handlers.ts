@@ -19,7 +19,7 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import { withRecordedEconomicCommand } from "@/lib/api/withRecordedEconomicCommand";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import * as Sentry from "@sentry/nextjs";
@@ -238,9 +238,29 @@ async function resumePendingBondSale(
     args.seller.holderId
   );
   for (const old of pending) {
+    const poolProof =
+      old.poolDebited ||
+      (await documentHasStamp(
+        db,
+        BOND_MARKET_POOLS_COLLECTION,
+        { _id: old.poolCurrency },
+        bondSaleLegStamp(old._id, "pool")
+      ));
+    const payoutProof =
+      old.payoutApplied ||
+      (await documentHasStamp(
+        db,
+        old.sellerCollection,
+        { _id: old.holderId },
+        bondSaleLegStamp(old._id, "payout")
+      ));
+    if (!poolProof || !payoutProof)
+      throw badRequest(
+        "This interrupted bond sale needs its original payment reconciled before another payout."
+      );
     const outcome = await advanceBondSaleIntent(db, old, buildBondSaleFallbackOps(db, old));
     if (outcome === "applied") {
-      await cleanupEmptyHolderBestEffort(db, args.bond._id, old.holderKey, old.holderId, args.now);
+      await cleanupEmptyHolder(db, args.bond._id, old.holderKey, old.holderId, args.now);
       return old;
     }
   }
@@ -253,14 +273,8 @@ interface RunBondSaleFallbackArgs extends ResumePendingBondSaleArgs {
   throwSellerMissing: () => never;
 }
 
-/**
- * Standalone-Mongo settlement for one sale. The intent row is inserted BEFORE
- * the holder claim, so a crash at any later point leaves a pending intent the
- * next attempt resumes (see {@link resumePendingBondSale}); the claim, pool
- * debit, and payout each carry the intent's stamp, so resume verifies landed
- * legs instead of repeating them.
- */
-async function runBondSaleFallbackSettlement(
+/** Settle the original sale intent inside the request's required transaction. */
+async function settleBondSaleIntent(
   db: Db,
   args: RunBondSaleFallbackArgs
 ): Promise<BondSaleIntent> {
@@ -348,31 +362,21 @@ async function runBondSaleFallbackSettlement(
     if (settled?.poolDebited) throw args.throwSellerMissing();
     throw await args.throwPoolDepthRefusal();
   }
-  await cleanupEmptyHolderBestEffort(db, bond._id, seller.holderKey, seller.holderId, now);
+  await cleanupEmptyHolder(db, bond._id, seller.holderKey, seller.holderId, now);
   return intent;
 }
 
-async function cleanupEmptyHolderBestEffort(
+async function cleanupEmptyHolder(
   db: Awaited<ReturnType<typeof getDb>>,
   bondId: ObjectId,
   holderKey: "corporationId" | "imperialCharacterId" | "characterId",
   holderId: ObjectId,
   now: Date
 ) {
-  try {
-    await bondsCollection(db).updateOne(
-      { _id: bondId },
-      buildHolderCleanupUpdate(holderKey, holderId, now)
-    );
-  } catch (error) {
-    // The sale is already financially complete. A zero-unit holder row is
-    // harmless and can be removed later; rolling the sale back here would
-    // restore the asset and pool cash without reversing the seller payout.
-    Sentry.captureException(error, {
-      tags: { operation: "bond-sell-holder-cleanup" },
-      extra: { bondId: bondId.toString(), holderKey, holderId: holderId.toString() },
-    });
-  }
+  await bondsCollection(db).updateOne(
+    { _id: bondId },
+    buildHolderCleanupUpdate(holderKey, holderId, now)
+  );
 }
 
 /**
@@ -397,453 +401,312 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const { units } = parsed.data;
-    const db = await getDb();
+    const sourceDb = await getDb();
+    return await withRecordedEconomicCommand(
+      sourceDb,
+      "bond-sale",
+      user.userId,
+      parsed.data.requestId,
+      { bondId, units, corporationId: new URL(request.url).searchParams.get("corporationId") },
+      async (db) => {
+        // Bond trading is a corporate-market action: blocked for both corporations
+        // and individual players while an admin has paused corporation actions.
+        const pausedGuard = await requireCorporationActionsEnabled(db);
+        if (pausedGuard) return pausedGuard;
+        const turnGuard = await rejectDuringTurn(db);
+        if (turnGuard) return turnGuard;
 
-    // Bond trading is a corporate-market action: blocked for both corporations
-    // and individual players while an admin has paused corporation actions.
-    const pausedGuard = await requireCorporationActionsEnabled(db);
-    if (pausedGuard) return pausedGuard;
-    const turnGuard = await rejectDuringTurn(db);
-    if (turnGuard) return turnGuard;
-
-    const forexEnabled = await isForexEnabled();
-    if (!ObjectId.isValid(bondId)) {
-      return errorResponse(400, "Invalid bond ID");
-    }
-
-    const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
-    if (!bond) {
-      return errorResponse(404, "Bond not found");
-    }
-
-    if (bond.defaulted) {
-      return errorResponse(400, "Cannot sell a defaulted bond");
-    }
-
-    // Bond denomination — canonical key is `bond.currencyCode` (Task-18B); we
-    // intentionally do not derive from the issuer corp's current country so that
-    // admin-initiated cross-country HQ moves don't silently re-denominate
-    // outstanding bonds (see docs/design/corporations.md §HQ Relocation).
-    const bondCurrency: CurrencyCode = (bond.currencyCode ??
-      (bond.countryId && bond.countryId in COUNTRY_CURRENCY_MAP
-        ? COUNTRY_CURRENCY_MAP[bond.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
-        : "USD")) as CurrencyCode;
-
-    const url = new URL(request.url);
-    const sellAsCorp = url.searchParams.get("corporationId");
-    const now = new Date();
-    // The pool buys at its bid: the rate-derived mid less the dealer half
-    // spread, shifted down when the pool is short of cash or has little
-    // appetite for the issuer.
-    const quote = await loadBondQuote(db, bond);
-    const proceedsLocal = units * quote.bidPerUnit;
-    const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(db).findOne(
-      { _id: "current" },
-      { projection: { currentTurn: 1 } }
-    );
-    const currentTurn = turnDoc?.currentTurn ?? 0;
-
-    // Depth check before any holder-side write. The gated debit inside each
-    // settlement path is the real guard; this read just turns a race-free
-    // refusal into a message that says how much the market can take.
-    const pricePerUnitLocal = quote.bidPerUnit;
-    const fillableUnits = bondPoolFillableUnits(quote.poolCashLocal, pricePerUnitLocal, units);
-    const pendingSale = await bondSaleIntentsCollection<BondSaleIntent>(db).findOne(
-      { bondId: bond._id, status: "claimed" },
-      { projection: { _id: 1 } }
-    );
-    // A pending sale may itself account for the apparent pool shortfall. Let
-    // its seller-specific branch resume the stamped debit instead of rejecting
-    // the retry from a newly observed pool balance.
-    if (fillableUnits < units && !pendingSale) {
-      return errorResponse(409, bondPoolDepthMessage(fillableUnits, bondCurrency), {
-        extra: { marketDepthUnits: fillableUnits },
-      });
-    }
-    const poolDepthRefusal = async () => {
-      const cash = await readBondPoolCash(db, bondCurrency);
-      return badRequest(
-        bondPoolDepthMessage(bondPoolFillableUnits(cash, pricePerUnitLocal, units), bondCurrency)
-      );
-    };
-
-    if (sellAsCorp) {
-      if (!ObjectId.isValid(sellAsCorp)) {
-        return errorResponse(400, "Invalid corporation ID");
-      }
-      const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(sellAsCorp) });
-      if (!corp) {
-        return errorResponse(404, "Corporation not found");
-      }
-      if (!isCeoActor(corp, user)) {
-        return errorResponse(403, "Only the CEO can sell bonds for a corporation");
-      }
-
-      const bondRateDoc = await exchangeRatesCollection(db).findOne({ currencyCode: bondCurrency });
-      const bondFxRate = bondRateDoc?.rate && bondRateDoc.rate > 0 ? bondRateDoc.rate : 1;
-      const proceedsAnchor = corpCapitalToAnchor(proceedsLocal, bondCurrency, bondFxRate);
-      const corpFxRate = await getCorpFxRate(db, corp);
-      const proceedsInCorpCapital = anchorToCorpLiquidCapital(proceedsAnchor, corp, corpFxRate);
-      const claimFilter = {
-        _id: bond._id,
-        defaulted: false,
-        holders: {
-          $elemMatch: {
-            corporationId: corp._id,
-            units: { $gte: units },
-          },
-        },
-      };
-      const claimUpdate = {
-        $inc: { "holders.$.units": -units, publicFloat: units },
-        $set: { updatedAt: now },
-      };
-      await runWithOptionalTransaction(
-        async (session) => {
-          const currentUnits = readHolderUnits(bond, "corporationId", corp._id);
-          if (currentUnits < units) {
-            throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
-          }
-          const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
-            session,
-          });
-          if (claimResult.modifiedCount === 0) {
-            throw badRequest("Insufficient bond holdings");
-          }
-          const poolDebit = await debitBondPoolGated(
-            db,
-            bondCurrency,
-            proceedsLocal,
-            "salesOut",
-            now,
-            { session }
-          );
-          if (!poolDebit.ok) throw await poolDepthRefusal();
-
-          const payoutResult = await corporationsCollection(db).updateOne(
-            { _id: corp._id },
-            { $inc: { liquidCapital: proceedsInCorpCapital }, $set: { updatedAt: now } },
-            { session }
-          );
-          if (payoutResult.matchedCount === 0) {
-            throw notFound("Corporation not found");
-          }
-
-          await bondsCollection(db).updateOne(
-            { _id: bond._id },
-            buildHolderCleanupUpdate("corporationId", corp._id, now),
-            { session }
-          );
-        },
-        async () => {
-          const seller: BondSaleSeller = {
-            holderKey: "corporationId",
-            holderId: corp._id,
-            sellerCollection: "corporations",
-            payoutInc: { liquidCapital: proceedsInCorpCapital },
-          };
-          const resumed = await resumePendingBondSale(db, {
-            bond,
-            units,
-            proceedsLocal,
-            seller,
-            now,
-          });
-          if (!resumed) {
-            await runBondSaleFallbackSettlement(db, {
-              bond,
-              units,
-              proceedsLocal,
-              seller,
-              now,
-              bondCurrency,
-              throwPoolDepthRefusal: poolDepthRefusal,
-              throwSellerMissing: () => {
-                throw notFound("Corporation not found");
-              },
-            });
-          }
+        const forexEnabled = await isForexEnabled();
+        if (!ObjectId.isValid(bondId)) {
+          return errorResponse(400, "Invalid bond ID");
         }
-      );
 
-      void emitTx(db, {
-        type: "bond_sell",
-        turn: currentTurn,
-        createdAt: now,
-        subjectType: "corporation",
-        subjectId: corp._id,
-        subjectName: corp.name,
-        amount: proceedsInCorpCapital,
-        currencyCode: resolveCorpLiquidCurrencyCode(corp) ?? "USD",
-        counterpartyType: "system",
-        counterpartyName: bond.issuerName ?? "Bond market",
-        meta: {
-          bondId: bond._id.toString(),
-          units,
-          pricePerUnit: quote.bid,
-          bondCurrency,
-          bondAmount: Math.round(proceedsLocal * 100) / 100,
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        unitsSold: units,
-        proceeds: Math.round(proceedsLocal * 100) / 100,
-        proceedsCurrency: bondCurrency,
-        pricePerUnit: quote.bidPerUnit,
-        seller: "corporation",
-      });
-    }
-
-    const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
-    const isImperialMode =
-      userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
-
-    if (isImperialMode) {
-      const imperial = await imperialCharactersCollection(db).findOne({
-        _id: userDoc.activeImperialCharacterId!,
-        userId: new ObjectId(user.userId),
-      });
-      if (!imperial) {
-        return errorResponse(404, "Imperial character not found");
-      }
-
-      const claimFilter = {
-        _id: bond._id,
-        defaulted: false,
-        holders: {
-          $elemMatch: {
-            imperialCharacterId: imperial._id,
-            units: { $gte: units },
-          },
-        },
-      };
-      const claimUpdate = {
-        $inc: { "holders.$.units": -units, publicFloat: units },
-        $set: { updatedAt: now },
-      };
-      const payoutUpdate = {
-        $inc: { ...buildPersonalBalanceInc(proceedsLocal, bondCurrency, forexEnabled) },
-        $set: { updatedAt: now },
-      };
-      await runWithOptionalTransaction(
-        async (session) => {
-          const currentUnits = readHolderUnits(bond, "imperialCharacterId", imperial._id);
-          if (currentUnits < units) {
-            throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
-          }
-          const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
-            session,
-          });
-          if (claimResult.modifiedCount === 0) {
-            throw badRequest("Insufficient bond holdings");
-          }
-          const poolDebit = await debitBondPoolGated(
-            db,
-            bondCurrency,
-            proceedsLocal,
-            "salesOut",
-            now,
-            { session }
-          );
-          if (!poolDebit.ok) throw await poolDepthRefusal();
-
-          const payoutResult = await imperialCharactersCollection(db).updateOne(
-            { _id: imperial._id },
-            payoutUpdate,
-            { session }
-          );
-          if (payoutResult.matchedCount === 0) {
-            throw notFound("Imperial character not found");
-          }
-
-          await bondsCollection(db).updateOne(
-            { _id: bond._id },
-            buildHolderCleanupUpdate("imperialCharacterId", imperial._id, now),
-            { session }
-          );
-        },
-        async () => {
-          const seller: BondSaleSeller = {
-            holderKey: "imperialCharacterId",
-            holderId: imperial._id,
-            sellerCollection: "imperialCharacters",
-            payoutInc: buildPersonalBalanceInc(proceedsLocal, bondCurrency, forexEnabled),
-          };
-          const resumed = await resumePendingBondSale(db, {
-            bond,
-            units,
-            proceedsLocal,
-            seller,
-            now,
-          });
-          if (!resumed) {
-            await runBondSaleFallbackSettlement(db, {
-              bond,
-              units,
-              proceedsLocal,
-              seller,
-              now,
-              bondCurrency,
-              throwPoolDepthRefusal: poolDepthRefusal,
-              throwSellerMissing: () => {
-                throw notFound("Imperial character not found");
-              },
-            });
-          }
+        const bond = await bondsCollection(db).findOne({ _id: new ObjectId(bondId) });
+        if (!bond) {
+          return errorResponse(404, "Bond not found");
         }
-      );
 
-      void emitTx(db, {
-        type: "bond_sell",
-        turn: currentTurn,
-        createdAt: now,
-        subjectType: "character",
-        subjectId: imperial._id,
-        subjectName: imperial.name,
-        amount: proceedsLocal,
-        currencyCode: bondCurrency,
-        counterpartyType: "system",
-        counterpartyName: bond.issuerName ?? "Bond market",
-        meta: {
-          bondId: bond._id.toString(),
-          units,
-          pricePerUnit: quote.bid,
-          imperial: true,
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        unitsSold: units,
-        proceeds: Math.round(proceedsLocal * 100) / 100,
-        proceedsCurrency: bondCurrency,
-        pricePerUnit: quote.bidPerUnit,
-        seller: "character",
-      });
-    }
-
-    const characterQuery = userDoc?.activeCharacterId
-      ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
-      : { userId: new ObjectId(user.userId) };
-    const character = await charactersCollection(db).findOne(characterQuery);
-    if (!character) {
-      return errorResponse(404, "Character not found");
-    }
-
-    const claimFilter = {
-      _id: bond._id,
-      defaulted: false,
-      holders: {
-        $elemMatch: {
-          characterId: character._id,
-          units: { $gte: units },
-        },
-      },
-    };
-    const claimUpdate = {
-      $inc: { "holders.$.units": -units, publicFloat: units },
-      $set: { updatedAt: now },
-    };
-    const payoutUpdate = {
-      $inc: { ...buildPersonalBalanceInc(proceedsLocal, bondCurrency, forexEnabled) },
-      $set: { updatedAt: now },
-    };
-    await runWithOptionalTransaction(
-      async (session) => {
-        const currentUnits = readHolderUnits(bond, "characterId", character._id);
-        if (currentUnits < units) {
-          throw badRequest(`Insufficient bond holdings. You hold ${currentUnits} units`);
+        if (bond.defaulted) {
+          return errorResponse(400, "Cannot sell a defaulted bond");
         }
-        const claimResult = await bondsCollection(db).updateOne(claimFilter, claimUpdate, {
-          session,
-        });
-        if (claimResult.modifiedCount === 0) {
-          throw badRequest("Insufficient bond holdings");
-        }
-        const poolDebit = await debitBondPoolGated(
-          db,
-          bondCurrency,
-          proceedsLocal,
-          "salesOut",
-          now,
-          { session }
+
+        // Bond denomination — canonical key is `bond.currencyCode` (Task-18B); we
+        // intentionally do not derive from the issuer corp's current country so that
+        // admin-initiated cross-country HQ moves don't silently re-denominate
+        // outstanding bonds (see docs/design/corporations.md §HQ Relocation).
+        const bondCurrency: CurrencyCode = (bond.currencyCode ??
+          (bond.countryId && bond.countryId in COUNTRY_CURRENCY_MAP
+            ? COUNTRY_CURRENCY_MAP[bond.countryId as keyof typeof COUNTRY_CURRENCY_MAP]
+            : "USD")) as CurrencyCode;
+
+        const url = new URL(request.url);
+        const sellAsCorp = url.searchParams.get("corporationId");
+        const now = new Date();
+        let acceptedSale: BondSaleIntent | null = null;
+        // The pool buys at its bid: the rate-derived mid less the dealer half
+        // spread, shifted down when the pool is short of cash or has little
+        // appetite for the issuer.
+        const quote = await loadBondQuote(db, bond);
+        const proceedsLocal = units * quote.bidPerUnit;
+        const turnDoc = await gameStateCollection<{ _id: string; currentTurn?: number }>(
+          db
+        ).findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+        const currentTurn = turnDoc?.currentTurn ?? 0;
+
+        // Depth check before any holder-side write. The gated debit inside each
+        // settlement path is the real guard; this read just turns a race-free
+        // refusal into a message that says how much the market can take.
+        const pricePerUnitLocal = quote.bidPerUnit;
+        const fillableUnits = bondPoolFillableUnits(quote.poolCashLocal, pricePerUnitLocal, units);
+        const pendingSale = await bondSaleIntentsCollection<BondSaleIntent>(db).findOne(
+          { bondId: bond._id, status: "claimed" },
+          { projection: { _id: 1 } }
         );
-        if (!poolDebit.ok) throw await poolDepthRefusal();
-
-        const payoutResult = await charactersCollection(db).updateOne(
-          { _id: character._id },
-          payoutUpdate,
-          { session }
-        );
-        if (payoutResult.matchedCount === 0) {
-          throw notFound("Character not found");
+        // A pending sale may itself account for the apparent pool shortfall. Let
+        // its seller-specific branch resume the stamped debit instead of rejecting
+        // the retry from a newly observed pool balance.
+        if (fillableUnits < units && !pendingSale) {
+          return errorResponse(409, bondPoolDepthMessage(fillableUnits, bondCurrency), {
+            extra: { marketDepthUnits: fillableUnits },
+          });
         }
-
-        await bondsCollection(db).updateOne(
-          { _id: bond._id },
-          buildHolderCleanupUpdate("characterId", character._id, now),
-          { session }
-        );
-      },
-      async () => {
-        const seller: BondSaleSeller = {
-          holderKey: "characterId",
-          holderId: character._id,
-          sellerCollection: "characters",
-          payoutInc: buildPersonalBalanceInc(proceedsLocal, bondCurrency, forexEnabled),
+        const poolDepthRefusal = async () => {
+          const cash = await readBondPoolCash(db, bondCurrency);
+          return badRequest(
+            bondPoolDepthMessage(
+              bondPoolFillableUnits(cash, pricePerUnitLocal, units),
+              bondCurrency
+            )
+          );
         };
-        const resumed = await resumePendingBondSale(db, {
-          bond,
-          units,
-          proceedsLocal,
-          seller,
-          now,
-        });
-        if (!resumed) {
-          await runBondSaleFallbackSettlement(db, {
-            bond,
-            units,
-            proceedsLocal,
-            seller,
-            now,
-            bondCurrency,
-            throwPoolDepthRefusal: poolDepthRefusal,
-            throwSellerMissing: () => {
-              throw notFound("Character not found");
+
+        if (sellAsCorp) {
+          if (!ObjectId.isValid(sellAsCorp)) {
+            return errorResponse(400, "Invalid corporation ID");
+          }
+          const corp = await corporationsCollection(db).findOne({ _id: new ObjectId(sellAsCorp) });
+          if (!corp) {
+            return errorResponse(404, "Corporation not found");
+          }
+          if (!isCeoActor(corp, user)) {
+            return errorResponse(403, "Only the CEO can sell bonds for a corporation");
+          }
+
+          const bondRateDoc = await exchangeRatesCollection(db).findOne({
+            currencyCode: bondCurrency,
+          });
+          const bondFxRate = bondRateDoc?.rate && bondRateDoc.rate > 0 ? bondRateDoc.rate : 1;
+          const proceedsAnchor = corpCapitalToAnchor(proceedsLocal, bondCurrency, bondFxRate);
+          const corpFxRate = await getCorpFxRate(db, corp);
+          const proceedsInCorpCapital = anchorToCorpLiquidCapital(proceedsAnchor, corp, corpFxRate);
+
+          await (async () => {
+            const seller: BondSaleSeller = {
+              holderKey: "corporationId",
+              holderId: corp._id,
+              sellerCollection: "corporations",
+              payoutInc: { liquidCapital: proceedsInCorpCapital },
+            };
+            const resumed = (acceptedSale = await resumePendingBondSale(db, {
+              bond,
+              units,
+              proceedsLocal,
+              seller,
+              now,
+            }));
+            if (!resumed) {
+              acceptedSale = await settleBondSaleIntent(db, {
+                bond,
+                units,
+                proceedsLocal,
+                seller,
+                now,
+                bondCurrency,
+                throwPoolDepthRefusal: poolDepthRefusal,
+                throwSellerMissing: () => {
+                  throw notFound("Corporation not found");
+                },
+              });
+            }
+          })();
+
+          if (!acceptedSale) throw new Error("Bond sale has no accepted terms");
+          const settledUnits = (acceptedSale as BondSaleIntent).units;
+          const settledProceedsLocal = (acceptedSale as BondSaleIntent).proceedsLocal;
+          await emitTx(db, {
+            type: "bond_sell",
+            turn: currentTurn,
+            createdAt: now,
+            subjectType: "corporation",
+            subjectId: corp._id,
+            subjectName: corp.name,
+            amount: (acceptedSale as BondSaleIntent).payoutInc.liquidCapital,
+            currencyCode: resolveCorpLiquidCurrencyCode(corp) ?? "USD",
+            counterpartyType: "system",
+            counterpartyName: bond.issuerName ?? "Bond market",
+            meta: {
+              bondId: bond._id.toString(),
+              units: settledUnits,
+              pricePerUnit: settledProceedsLocal / settledUnits,
+              bondCurrency,
+              bondAmount: Math.round(settledProceedsLocal * 100) / 100,
             },
           });
+
+          return NextResponse.json({
+            success: true,
+            unitsSold: settledUnits,
+            proceeds: Math.round(settledProceedsLocal * 100) / 100,
+            proceedsCurrency: bondCurrency,
+            pricePerUnit: settledProceedsLocal / settledUnits,
+            seller: "corporation",
+          });
         }
+
+        const userDoc = await usersCollection(db).findOne({ _id: new ObjectId(user.userId) });
+        const isImperialMode =
+          userDoc?.activeCharacterType === "imperial" && !!userDoc?.activeImperialCharacterId;
+
+        if (isImperialMode) {
+          const imperial = await imperialCharactersCollection(db).findOne({
+            _id: userDoc.activeImperialCharacterId!,
+            userId: new ObjectId(user.userId),
+          });
+          if (!imperial) {
+            return errorResponse(404, "Imperial character not found");
+          }
+
+          await (async () => {
+            const seller: BondSaleSeller = {
+              holderKey: "imperialCharacterId",
+              holderId: imperial._id,
+              sellerCollection: "imperialCharacters",
+              payoutInc: buildPersonalBalanceInc(proceedsLocal, bondCurrency, forexEnabled),
+            };
+            const resumed = (acceptedSale = await resumePendingBondSale(db, {
+              bond,
+              units,
+              proceedsLocal,
+              seller,
+              now,
+            }));
+            if (!resumed) {
+              acceptedSale = await settleBondSaleIntent(db, {
+                bond,
+                units,
+                proceedsLocal,
+                seller,
+                now,
+                bondCurrency,
+                throwPoolDepthRefusal: poolDepthRefusal,
+                throwSellerMissing: () => {
+                  throw notFound("Imperial character not found");
+                },
+              });
+            }
+          })();
+
+          if (!acceptedSale) throw new Error("Bond sale has no accepted terms");
+          const settledUnits = (acceptedSale as BondSaleIntent).units;
+          const settledProceedsLocal = (acceptedSale as BondSaleIntent).proceedsLocal;
+          await emitTx(db, {
+            type: "bond_sell",
+            turn: currentTurn,
+            createdAt: now,
+            subjectType: "character",
+            subjectId: imperial._id,
+            subjectName: imperial.name,
+            amount: settledProceedsLocal,
+            currencyCode: bondCurrency,
+            counterpartyType: "system",
+            counterpartyName: bond.issuerName ?? "Bond market",
+            meta: {
+              bondId: bond._id.toString(),
+              units: settledUnits,
+              pricePerUnit: settledProceedsLocal / settledUnits,
+              imperial: true,
+            },
+          });
+
+          return NextResponse.json({
+            success: true,
+            unitsSold: settledUnits,
+            proceeds: Math.round(settledProceedsLocal * 100) / 100,
+            proceedsCurrency: bondCurrency,
+            pricePerUnit: settledProceedsLocal / settledUnits,
+            seller: "character",
+          });
+        }
+
+        const characterQuery = userDoc?.activeCharacterId
+          ? { _id: userDoc.activeCharacterId, userId: new ObjectId(user.userId) }
+          : { userId: new ObjectId(user.userId) };
+        const character = await charactersCollection(db).findOne(characterQuery);
+        if (!character) {
+          return errorResponse(404, "Character not found");
+        }
+
+        await (async () => {
+          const seller: BondSaleSeller = {
+            holderKey: "characterId",
+            holderId: character._id,
+            sellerCollection: "characters",
+            payoutInc: buildPersonalBalanceInc(proceedsLocal, bondCurrency, forexEnabled),
+          };
+          const resumed = (acceptedSale = await resumePendingBondSale(db, {
+            bond,
+            units,
+            proceedsLocal,
+            seller,
+            now,
+          }));
+          if (!resumed) {
+            acceptedSale = await settleBondSaleIntent(db, {
+              bond,
+              units,
+              proceedsLocal,
+              seller,
+              now,
+              bondCurrency,
+              throwPoolDepthRefusal: poolDepthRefusal,
+              throwSellerMissing: () => {
+                throw notFound("Character not found");
+              },
+            });
+          }
+        })();
+
+        if (!acceptedSale) throw new Error("Bond sale has no accepted terms");
+        const settledUnits = (acceptedSale as BondSaleIntent).units;
+        const settledProceedsLocal = (acceptedSale as BondSaleIntent).proceedsLocal;
+        await emitTx(db, {
+          type: "bond_sell",
+          turn: currentTurn,
+          createdAt: now,
+          subjectType: "character",
+          subjectId: character._id,
+          subjectName: character.name,
+          amount: settledProceedsLocal,
+          currencyCode: bondCurrency,
+          counterpartyType: "system",
+          counterpartyName: bond.issuerName ?? "Bond market",
+          meta: {
+            bondId: bond._id.toString(),
+            units: settledUnits,
+            pricePerUnit: settledProceedsLocal / settledUnits,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          unitsSold: settledUnits,
+          proceeds: Math.round(settledProceedsLocal * 100) / 100,
+          proceedsCurrency: bondCurrency,
+          pricePerUnit: settledProceedsLocal / settledUnits,
+          seller: "character",
+        });
       }
     );
-
-    void emitTx(db, {
-      type: "bond_sell",
-      turn: currentTurn,
-      createdAt: now,
-      subjectType: "character",
-      subjectId: character._id,
-      subjectName: character.name,
-      amount: proceedsLocal,
-      currencyCode: bondCurrency,
-      counterpartyType: "system",
-      counterpartyName: bond.issuerName ?? "Bond market",
-      meta: {
-        bondId: bond._id.toString(),
-        units,
-        pricePerUnit: quote.bid,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      unitsSold: units,
-      proceeds: Math.round(proceedsLocal * 100) / 100,
-      proceedsCurrency: bondCurrency,
-      pricePerUnit: quote.bidPerUnit,
-      seller: "character",
-    });
   } catch (error) {
     return handleRouteError(error);
   }

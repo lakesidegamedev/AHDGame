@@ -1,4 +1,6 @@
-import type { Db } from "mongodb";
+import { assertDissolutionClaimsSettled } from "@/lib/corporations/assertDissolutionClaimsSettled";
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
+import type { Db, AnyBulkWriteOperation } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { retireDissolvedCorporationCash } from "./dissolutionCash";
 import { ObjectId } from "mongodb";
@@ -93,6 +95,22 @@ export async function executeCorporationBondDefaultDissolution(
     turn?: number;
   }
 ): Promise<CorporationDissolutionResult> {
+  return withSessionDb(db, (transactionDb) =>
+    settleInTransaction(transactionDb, corporation, options)
+  );
+}
+
+async function settleInTransaction(
+  db: Db,
+  corporation: Corporation,
+  options: {
+    requireDefaultedBonds: boolean;
+    exitReason?: CorporationExitReason;
+    cooldownExempt?: boolean;
+    turn?: number;
+  }
+): Promise<CorporationDissolutionResult> {
+  corporation = await assertDissolutionClaimsSettled(db, corporation);
   if (corporation.countryOwnerId) {
     throw badRequest("National corporations cannot be dissolved here");
   }
@@ -136,6 +154,7 @@ export async function executeCorporationBondDefaultDissolution(
   // Sell non-matured bonds held as a creditor to the market pool at the
   // current price, for whatever the pool can pay. Pre-pool this credited face
   // value from nowhere.
+  const heldBondOps: AnyBulkWriteOperation<import("@/lib/db/types/bond").Bond>[] = [];
   if (heldCreditorBonds.length > 0) {
     for (const bond of heldCreditorBonds) {
       const h = bond.holders.find(
@@ -158,15 +177,27 @@ export async function executeCorporationBondDefaultDissolution(
       // issuer's debt stays consistent (publicFloat + holderUnits ==
       // totalIssued/face). Pre-fix the $pull dropped the holder without
       // restoring float, orphaning the units on the surviving issuer.
-      await bondsCollection(db).updateOne(
-        { _id: bond._id, sovereignMaturityClaim: { $exists: false } },
-        {
-          $pull: { holders: { corporationId: corporation._id } },
-          $inc: { publicFloat: h.units },
-          $set: { updatedAt: now },
-        }
-      );
+      heldBondOps.push({
+        updateOne: {
+          filter: {
+            _id: bond._id,
+            sovereignMaturityClaim: { $exists: false },
+            holders: bond.holders,
+          },
+          update: {
+            $pull: { holders: { corporationId: corporation._id } },
+            $inc: { publicFloat: h.units },
+            $set: { updatedAt: now },
+          },
+        },
+      });
     }
+  }
+
+  if (heldBondOps.length) {
+    const released = await bondsCollection(db).bulkWrite(heldBondOps);
+    if (released.matchedCount !== heldBondOps.length)
+      throw new Error("Bond custody changed during dissolution");
   }
 
   // Cross-corp equity holdings are distributed IN-KIND, pro-rata, to the
@@ -785,9 +816,11 @@ export async function executeCorporationBondDefaultDissolution(
     0
   );
 
-  logWireEvent(
-    "corporation_dissolved",
-    wireHeadlineCorpDissolved(refreshedCorporation.name, Math.round(totalPayoutToPeople))
+  await afterCommit(db, () =>
+    logWireEvent(
+      "corporation_dissolved",
+      wireHeadlineCorpDissolved(refreshedCorporation.name, Math.round(totalPayoutToPeople))
+    )
   );
 
   return {

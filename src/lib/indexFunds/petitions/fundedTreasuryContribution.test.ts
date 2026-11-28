@@ -6,6 +6,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
 
 const settleTransition = vi.fn();
 const loadTreasuryCashContext = vi.fn();
@@ -33,26 +34,18 @@ vi.mock("@/lib/corporations/mergerReview/authority", () => ({
 
 const { fileListingPetition } = await import("./service");
 
+const filer = new ObjectId();
 function fakeDb() {
-  const petitions: Record<string, unknown>[] = [];
-  const collection = () => ({
-    findOne: async () => null,
-    insertOne: async (doc: Record<string, unknown>) => {
-      petitions.push(doc);
-      return { insertedId: doc._id };
-    },
-    deleteOne: async (filter: { _id: ObjectId }) => {
-      const i = petitions.findIndex((p) => p._id === filter._id);
-      if (i >= 0) petitions.splice(i, 1);
-      return { deletedCount: i >= 0 ? 1 : 0 };
-    },
-  });
-  return { db: { collection } as never, petitions };
+  const { db, memory } = createTransactionalMemoryDb();
+  memory.seed("gameState", [{ _id: "current", currentTurn: 150 }]);
+  memory.seed("corporations", [corporation]);
+  return { db, petitions: memory.collection("indexListingPetitions").docs };
 }
 
 const corporation = {
   _id: new ObjectId(),
   name: "Acme",
+  ceoId: filer,
   countryId: "US",
   liquidCurrencyCode: "USD",
   liquidCapital: 5_000,
@@ -80,7 +73,7 @@ describe("listing petition contribution to a vacant seat", () => {
     const result = await fileListingPetition({
       db,
       corporation,
-      filedByCharacterId: new ObjectId(),
+      filedByCharacterId: filer,
       contributionAnchor: 1_000,
       currentTurn: 150,
       currentYear: null,
@@ -109,7 +102,7 @@ describe("listing petition contribution to a vacant seat", () => {
     const result = await fileListingPetition({
       db,
       corporation,
-      filedByCharacterId: new ObjectId(),
+      filedByCharacterId: filer,
       contributionAnchor: 9_000,
       currentTurn: 150,
       currentYear: null,
@@ -129,7 +122,7 @@ describe("listing petition contribution to a vacant seat", () => {
     const result = await fileListingPetition({
       db,
       corporation,
-      filedByCharacterId: new ObjectId(),
+      filedByCharacterId: filer,
       contributionAnchor: 1_000,
       currentTurn: 150,
       currentYear: null,

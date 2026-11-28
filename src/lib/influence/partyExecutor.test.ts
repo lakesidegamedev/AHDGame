@@ -11,6 +11,10 @@ import {
 } from "./partyExecutor";
 import { calculatePartyInfluenceChance } from "./partyExecutorCalculations";
 
+vi.mock("@/lib/db/withAtomicResult", () => ({
+  withAtomicResult: async (db: Db, work: (db: Db) => Promise<unknown>) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({ fenceEconomicTurn: async () => null }));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 describe("getNationalPartyInfluenceOptions", () => {

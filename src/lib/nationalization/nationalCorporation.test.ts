@@ -38,6 +38,11 @@ describe("ensurePrimaryNationalCorporation", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("corporations");
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      preset: "1991-default",
+    });
+    db.collection("gameState").updateOne.mockResolvedValue({ matchedCount: 1 });
   });
 
   it("returns the flagged primary when one exists, without creating another", async () => {
@@ -134,6 +139,11 @@ describe("resolveNationalCorporationForSector", () => {
     vi.clearAllMocks();
     db = createMockDb();
     db.collection("corporations");
+    db.collection("gameState").findOne.mockResolvedValue({
+      _id: "current",
+      preset: "1991-default",
+    });
+    db.collection("gameState").updateOne.mockResolvedValue({ matchedCount: 1 });
   });
 
   it("returns the split-off whose assignedSectorTypes includes the type", async () => {
@@ -173,3 +183,8 @@ describe("resolveNationalCorporationForSector", () => {
     expect(corp._id.toString()).toBe(primaryId.toString());
   });
 });
+
+// Transport tests cover doc shape; atomic tests cover the creation barrier.
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);

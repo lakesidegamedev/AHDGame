@@ -5,7 +5,7 @@ import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { charterFund } from "./charterFund";
 import { chargeSponsorExpenseFees } from "./expenseFees";
 import { completeWindUp } from "./windUp";
-import { emitTx } from "@/lib/financialTxLog/emit";
+import { emitTxBulk } from "@/lib/financialTxLog/emit";
 import { expenseFeeForTurn } from "./constants";
 
 vi.mock("@/lib/mongodb", () => ({ getMongoClient: vi.fn() }));
@@ -13,6 +13,12 @@ vi.mock("@/lib/audit/recordAudit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/financialTxLog/emit", () => ({
   emitTx: vi.fn(async (db: Db, entry: Record<string, unknown>) => {
     await db.collection("financialTxLog").insertOne({ _id: new ObjectId(), ...entry });
+    return "applied";
+  }),
+  emitTxBulk: vi.fn(async (db: Db, entries: Record<string, unknown>[]) => {
+    await db
+      .collection("financialTxLog")
+      .insertMany(entries.map((entry) => ({ _id: new ObjectId(), ...entry })));
     return "applied";
   }),
   // The fee path now loads the thresholds once for the whole pass.
@@ -272,7 +278,8 @@ describe("fund expense fee settlement", () => {
         vi.spyOn(f.memory.collection("indexFundTransactions"), "insertMany").mockRejectedValueOnce(
           new Error("failed receipt")
         );
-      if (failure === "witness") vi.mocked(emitTx).mockResolvedValueOnce("failed");
+      if (failure === "witness")
+        vi.mocked(emitTxBulk).mockRejectedValueOnce(new Error("failed witness"));
       await expect(chargeSponsorExpenseFees(f.db, [f.fund], 11)).rejects.toThrow(/failed/i);
       expect(f.book().cashAnchor).toBe(25_000);
       expect(f.book().lastExpenseFeeTurn).toBeUndefined();

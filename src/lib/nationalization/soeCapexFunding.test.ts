@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { createTransactionalMemoryDb } from "@/lib/test-utils/transactionalMemoryDb";
+const createInMemoryDb = () => createTransactionalMemoryDb().memory;
 import { processSoeOperations } from "./soeOperations";
 import { loadTreasuryCashContext } from "./treasuryLedger";
 import { runSoeBackingSweep } from "@/lib/turn/corporation/soeBackingSweep";

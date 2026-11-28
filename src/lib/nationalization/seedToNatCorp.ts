@@ -1,3 +1,11 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { transferFundedSite } from "./fundedSiteTransfer";
+import { moveProducerLiabilities } from "./producerLiabilities";
+import {
+  prepareConstructionBorrowerTransfers,
+  securedSiteMergeRefusal,
+  settleConstructionBorrowerTransfers,
+} from "@/lib/banking/constructionBorrowerTransfer";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
@@ -6,7 +14,7 @@ import type { CorporationType } from "@/lib/constants/corporations";
 import { resolveNationalCorporationForSector } from "./nationalCorporation";
 import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
-import type { ExchangeRate } from "@/lib/db/types";
+
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
@@ -183,97 +191,94 @@ export async function absorbOwnedSectorIntoNatCorp(
   sector: OwnedSectorMergeInput,
   opts?: { dryRun?: boolean }
 ): Promise<number> {
-  const revenue = Math.round(sector.revenue ?? 0);
-  const sectors = corporateSectorsCollection(db);
-  const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-
-  // PLANT STATE decides whether this row is empty — not `revenue`.
-  //
-  // Under plants `revenue` is DERIVED from `capitalStock`, and a MOTHBALLED
-  // sector reports 0 while holding its whole capital stock and any outstanding
-  // CIP / queued build orders. The old `revenue <= 0` branch below deleted such
-  // a row outright, so an admin heal quietly incinerated real, paid-for plant
-  // and the National Corporation received nothing. The `Pick` this function
-  // takes does not carry the plant fields, so they are read from the live doc
-  // rather than trusted from the caller's projection.
-  //
-  // Below plants the lookup is skipped entirely and every path here is
-  // byte-identical to the previous behaviour.
-  const donorPlant = plantsEnabled
-    ? await sectors.findOne(
-        { _id: sector._id },
-        {
-          projection: {
-            capitalStock: 1,
-            buildQueue: 1,
-            mothballed: 1,
-            activeCapacityPercent: 1,
-            plantsStartTurn: 1,
-            legacyRevenueShadow: 1,
-          },
-        }
-      )
-    : null;
-  const donorHasPlant =
-    donorPlant != null &&
-    (() => {
-      const p = readSectorPlantFields(donorPlant);
-      return (
-        (typeof p.capitalStock === "number" && p.capitalStock > 0) ||
-        (Array.isArray(p.buildQueue) && p.buildQueue.length > 0)
+  if (opts?.dryRun) {
+    const source = await corporateSectorsCollection(db).findOne({ _id: sector._id });
+    return Math.max(0, Math.round(source?.revenue ?? 0));
+  }
+  return withSessionDb(db, async (db) => {
+    const sectors = corporateSectorsCollection(db);
+    const source = await sectors.findOne({ _id: sector._id, corporationId: sector.corporationId });
+    if (!source) return 0;
+    const corp = await resolveNationalCorporationForSector(
+      db,
+      source.countryId,
+      source.sectorType as CorporationType
+    );
+    if (source.corporationId.equals(corp._id)) return 0;
+    const existing = await sectors.findOne({
+      corporationId: corp._id,
+      stateId: source.stateId,
+      sectorType: source.sectorType,
+    });
+    if (!source.producerInventory) {
+      const refusal = await securedSiteMergeRefusal(db, [source], corp._id);
+      if (refusal) throw new Error(refusal);
+    }
+    const now = new Date(),
+      key = `captured-heal:${source._id.toHexString()}:${corp._id.toHexString()}`;
+    const prepared = await prepareConstructionBorrowerTransfers(db, {
+      sectors: [source],
+      toId: corp._id,
+      toCurrency: resolveCorpLiquidCurrencyCode(corp),
+      operationKey: key,
+    });
+    if (!prepared.ok) throw new Error(prepared.error);
+    let resultingId = source._id;
+    if (source.producerInventory) {
+      resultingId = await transferFundedSite(db, {
+        source,
+        toId: corp._id,
+        fraction: 1,
+        key,
+        acquired: { ...prepared.plan.setFor(source._id), updatedAt: now },
+      });
+    } else if (existing && !existing._id.equals(source._id)) {
+      const merged = mergeSectorPlantFields(
+        readSectorPlantFields(existing),
+        readSectorPlantFields(source)
       );
-    })();
-
-  if (revenue <= 0 && !donorHasPlant && !opts?.dryRun) {
-    await sectors.deleteOne({ _id: sector._id });
-    return 0;
-  }
-  if (opts?.dryRun) return Math.max(0, revenue);
-
-  const now = new Date();
-  const corp = await resolveNationalCorporationForSector(
-    db,
-    sector.countryId,
-    sector.sectorType as CorporationType
-  );
-  const existing = await sectors.findOne({
-    corporationId: corp._id,
-    stateId: sector.stateId,
-    sectorType: sector.sectorType,
+      const written = await sectors.updateOne(
+        { _id: existing._id, corporationId: corp._id },
+        {
+          $inc: {
+            revenue: source.revenue ?? 0,
+            workers: source.workers ?? 0,
+            currentGrowthCost: source.currentGrowthCost ?? 0,
+          },
+          $set: { ...merged, updatedAt: now },
+        }
+      );
+      if (written.matchedCount !== 1) throw new Error("Captured-market receiver changed");
+      const deleted = await sectors.deleteOne({
+        _id: source._id,
+        corporationId: source.corporationId,
+      });
+      if (deleted.deletedCount !== 1) throw new Error("Captured-market donor changed");
+      resultingId = existing._id;
+      await moveProducerLiabilities(db, {
+        fromId: source.corporationId,
+        toId: corp._id,
+        sites: new Map([
+          [source._id.toHexString(), { producerId: resultingId.toHexString(), fraction: 1 }],
+        ]),
+      });
+    } else {
+      const moved = await sectors.updateOne(
+        { _id: source._id, corporationId: source.corporationId },
+        {
+          $set: { corporationId: corp._id, ...prepared.plan.setFor(source._id), updatedAt: now },
+        }
+      );
+      if (moved.matchedCount !== 1) throw new Error("Captured-market site changed");
+      await moveProducerLiabilities(db, {
+        fromId: source.corporationId,
+        toId: corp._id,
+        sites: new Map([
+          [source._id.toHexString(), { producerId: resultingId.toHexString(), fraction: 1 }],
+        ]),
+      });
+    }
+    await settleConstructionBorrowerTransfers(db, prepared.plan);
+    return Math.max(0, Math.round(source.revenue ?? 0));
   });
-
-  if (existing && !existing._id.equals(sector._id)) {
-    // MERGE — the donor row is DELETED immediately below, so anything not
-    // folded into the survivor here is destroyed. The revenue/worker/growth
-    // legs were folded; the PLANT state was not, so under plants every merged
-    // heal silently burned the donor's capacity and queued build costs.
-    // `mergeSectorPlantFields` sums capacity, concatenates the queues in landing
-    // order, ANDs `mothballed` and keeps the EARLIER ramp anchor.
-    // the same fold `ownershipTransition` and `repairDuplicateSectors` use.
-    const merged =
-      plantsEnabled && donorPlant
-        ? mergeSectorPlantFields(readSectorPlantFields(existing), readSectorPlantFields(donorPlant))
-        : null;
-    await sectors.updateOne(
-      { _id: existing._id },
-      {
-        $inc: {
-          revenue,
-          workers: sector.workers ?? 0,
-          currentGrowthCost: sector.currentGrowthCost ?? 0,
-        },
-        $set: {
-          ...(merged ? { ...merged } : {}),
-          updatedAt: now,
-        },
-      }
-    );
-    await sectors.deleteOne({ _id: sector._id });
-  } else {
-    await sectors.updateOne(
-      { _id: sector._id },
-      { $set: { corporationId: corp._id, updatedAt: now } }
-    );
-  }
-  return revenue;
 }

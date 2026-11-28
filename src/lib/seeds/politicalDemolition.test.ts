@@ -1,3 +1,9 @@
+import { vi } from "vitest";
+// Collection-spy fixtures isolate transport; native and atomic suites test transaction recovery.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 /**
  * SP4 §4/§6 — demolished-doc handling + policy-effects gate.
  *

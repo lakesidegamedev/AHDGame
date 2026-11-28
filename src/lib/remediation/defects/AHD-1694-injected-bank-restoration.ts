@@ -1,4 +1,10 @@
-import { ObjectId, type Db } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
+import {
+  loadValuationFxRates,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
+import { restitutionQuote } from "@/lib/currency/rules/restitutionQuote";
+import { ObjectId, type Db, type AnyBulkWriteOperation } from "mongodb";
 import type { BankCharterType, Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
@@ -143,7 +149,10 @@ interface Marker {
   reopen: "pending" | "done" | "not-planned" | `refused: ${string}`;
 }
 
-type CorpDoc = Pick<Corporation, "_id" | "name" | "bankCharter" | "liquidCapital"> & {
+type CorpDoc = Pick<
+  Corporation,
+  "_id" | "name" | "bankCharter" | "liquidCapital" | "countryId" | "liquidCurrencyCode"
+> & {
   remediation?: Record<string, Marker | undefined>;
 };
 
@@ -151,7 +160,16 @@ async function load(db: Db): Promise<Map<string, CorpDoc>> {
   const docs = await corporationsCollection<CorpDoc>(db)
     .find(
       { _id: { $in: ROWS.map((row) => new ObjectId(row.corporationId)) } },
-      { projection: { name: 1, bankCharter: 1, liquidCapital: 1, remediation: 1 } }
+      {
+        projection: {
+          name: 1,
+          bankCharter: 1,
+          liquidCapital: 1,
+          countryId: 1,
+          liquidCurrencyCode: 1,
+          remediation: 1,
+        },
+      }
     )
     .toArray();
   return new Map(docs.map((doc) => [doc._id.toString(), doc]));
@@ -248,30 +266,52 @@ async function plan(db: Db): Promise<HealPlan> {
 }
 
 async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
+  return withSessionDb(db, (db) => applyRestitution(db, healPlan, ctx));
+}
+
+async function applyRestitution(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
   const payload = healPlan.payload as { refunds: Row[]; reopens: Row[] } | undefined;
   const refunds = payload?.refunds ?? [];
   const reopens = payload?.reopens ?? [];
-  const credited: Row[] = [];
+  const credited: (Row & { quote: ReturnType<typeof restitutionQuote> })[] = [];
   const notes: string[] = [];
+  const refundOps: AnyBulkWriteOperation<CorpDoc>[] = [];
 
+  const [docs, rates] = await Promise.all([load(db), loadValuationFxRates(db)]);
   for (const row of refunds) {
+    const doc = docs.get(row.corporationId);
+    if (!doc || markerOf(doc)) continue;
+    const quote = restitutionQuote(
+      row.refund,
+      CURRENCY,
+      resolveCorpLiquidCurrencyCode(doc) ?? "USD",
+      rates
+    );
     const marker: Marker = {
       ticket: TICKET,
       refund: row.refund,
       reopen: row.reopenAs ? "pending" : "not-planned",
     };
-    const res = await corporationsCollection<CorpDoc>(db).updateOne(
-      { _id: new ObjectId(row.corporationId), [MARKER_PATH]: { $exists: false } },
-      {
-        $inc: { liquidCapital: row.refund },
-        $set: {
-          [MARKER_PATH]: { ...marker, creditedAt: ctx.now, runId: ctx.runId ?? null },
-          updatedAt: ctx.now,
+    refundOps.push({
+      updateOne: {
+        filter: { _id: new ObjectId(row.corporationId), [MARKER_PATH]: { $exists: false } },
+        update: {
+          $inc: { liquidCapital: quote.amountLocal },
+          $set: {
+            [MARKER_PATH]: { ...marker, quote, creditedAt: ctx.now, runId: ctx.runId ?? null },
+            updatedAt: ctx.now,
+          },
         },
-      }
-    );
-    if (res.modifiedCount === 1) credited.push(row);
+      },
+    });
+    credited.push({ ...row, quote });
   }
+  if (
+    refundOps.length &&
+    (await corporationsCollection<CorpDoc>(db).bulkWrite(refundOps)).modifiedCount !==
+      refundOps.length
+  )
+    throw new Error("Restitution recipient changed before credit");
 
   if (credited.length > 0) {
     const turn =
@@ -289,9 +329,9 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         subjectType: "corporation" as const,
         subjectId: new ObjectId(row.corporationId),
         subjectName: row.name,
-        amount: row.refund,
-        currencyCode: CURRENCY,
-        anchorAmount: row.refund,
+        amount: row.quote.amountLocal,
+        currencyCode: row.quote.currencyCode,
+        anchorAmount: row.quote.anchorAmount,
         meta: {
           ticket: TICKET,
           defectId: DEFECT_ID,
@@ -305,26 +345,25 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
   }
 
   let reopened = 0;
+  const currentDocs = reopens.length ? await load(db) : new Map<string, CorpDoc>();
+  const reopenOps: AnyBulkWriteOperation<CorpDoc>[] = [];
   for (const row of reopens) {
     const id = new ObjectId(row.corporationId);
-    const doc = await corporationsCollection<CorpDoc>(db).findOne(
-      { _id: id },
-      { projection: { bankCharter: 1, remediation: 1 } }
-    );
+    const doc = currentDocs.get(row.corporationId);
     if (!doc || doc.bankCharter?.status === "active" || markerOf(doc)?.reopen !== "pending")
       continue;
     const result = await issueCharter(db, id, row.reopenAs!, CURRENCY);
     const outcome: Marker["reopen"] = result.ok
       ? "done"
       : `refused: ${(result.reasons[0] ?? "ineligible").slice(0, 120)}`;
-    await corporationsCollection<CorpDoc>(db).updateOne(
-      { _id: id },
-      { $set: { [`${MARKER_PATH}.reopen`]: outcome } }
-    );
+    reopenOps.push({
+      updateOne: { filter: { _id: id }, update: { $set: { [`${MARKER_PATH}.reopen`]: outcome } } },
+    });
     if (result.ok) reopened += 1;
     notes.push(`${row.name}: reopen as ${row.reopenAs} ${outcome}`);
   }
 
+  if (reopenOps.length) await corporationsCollection<CorpDoc>(db).bulkWrite(reopenOps);
   const insertedTxIds = ctx.runId
     ? await financialTxLogCollection(db)
         .find({ type: "restitution_credit", "meta.runId": ctx.runId }, { projection: { _id: 1 } })

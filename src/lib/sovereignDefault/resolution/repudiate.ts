@@ -1,3 +1,4 @@
+import { afterCommit, unboundDb, withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Repudiate resolution path — Phase 6.
  *
@@ -58,6 +59,13 @@ export interface RepudiateResolutionResult {
 }
 
 export async function applyRepudiateResolution(
+  db: Db,
+  input: RepudiateResolutionInput
+): Promise<RepudiateResolutionResult> {
+  return withSessionDb(db, (db) => applyRepudiateResolutionInTransaction(db, input));
+}
+
+async function applyRepudiateResolutionInTransaction(
   db: Db,
   input: RepudiateResolutionInput
 ): Promise<RepudiateResolutionResult> {
@@ -162,9 +170,11 @@ export async function applyRepudiateResolution(
     );
   }
 
-  await emitRepudiatedNews(countryCode, currentTurn, bondsAffected);
-  await emitCascadeSummaryNews(countryCode, cascadeResult);
-  await emitMassCascadeAlert(db, countryCode, cascadeResult.totalCorpsInsolvent, currentTurn);
+  await afterCommit(db, () => emitRepudiatedNews(countryCode, currentTurn, bondsAffected));
+  await afterCommit(db, () => emitCascadeSummaryNews(countryCode, cascadeResult));
+  await afterCommit(db, () =>
+    emitMassCascadeAlert(unboundDb(db), countryCode, cascadeResult.totalCorpsInsolvent, currentTurn)
+  );
 
   // Phase 11b: executive personal political impact (Repudiate is the harshest).
   const decision = await sovereignCrisisDecisionsCollection(db).findOne({ _id: decisionId });
@@ -173,18 +183,10 @@ export async function applyRepudiateResolution(
   // Phase 11b: parliamentary countries auto-trigger a no-confidence vote
   // against the sitting PM. Best-effort — failure shouldn't block the
   // recovery transition.
-  try {
-    await triggerSystemNoConfidence(db, countryCode, "Sovereign-debt repudiation", currentTurn);
-  } catch (err) {
-    console.error("triggerSystemNoConfidence (repudiate) failed", err);
-  }
+  await triggerSystemNoConfidence(db, countryCode, "Sovereign-debt repudiation", currentTurn);
 
   // Phase 11b: civil-unrest events (3 for repudiate — most severe).
-  try {
-    await emitCivilUnrestEvents(db, countryCode, "repudiate");
-  } catch (err) {
-    console.error("emitCivilUnrestEvents (repudiate) failed", err);
-  }
+  await emitCivilUnrestEvents(db, countryCode, "repudiate");
 
   return { ok: true, bondsAffected };
 }

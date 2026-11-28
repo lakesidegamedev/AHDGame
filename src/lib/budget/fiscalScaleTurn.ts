@@ -8,6 +8,8 @@
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
+import { bankMoneyMovesCollection } from "@/lib/db/repositories/bankMoneyMoves";
+import type { MoneyMove, MoneyMoveRecordLeg, MoneyMoveStatus } from "@/lib/banking/moneyMove";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
 import {
   fiscalTaxMove,
@@ -197,6 +199,28 @@ export async function collectFiscalTaxes(
     list.push(w);
     walletsByCountry.set(w.countryId, list);
   }
+  const priorMoves = await bankMoneyMovesCollection<{
+    _id: string;
+    kind: string;
+    turn: number;
+    status: MoneyMoveStatus;
+    legs: MoneyMoveRecordLeg[];
+  }>(db)
+    .find(
+      {
+        _id: {
+          $in: input.budgets.map(
+            (b) =>
+              `fiscal-scale-tax:${input.worldEpoch}:${input.turn}:${String(b.countryId ?? b._id)}`
+          ),
+        },
+        kind: "fiscal_scale_tax",
+        turn: input.turn,
+      },
+      { projection: { kind: 1, turn: 1, status: 1, legs: 1 } }
+    )
+    .toArray();
+  const priorById = new Map(priorMoves.map((move) => [move._id, move]));
   const entries: LedgerEntry[] = [];
   const summary: string[] = [];
   for (const budget of input.budgets) {
@@ -204,7 +228,9 @@ export async function collectFiscalTaxes(
     const countryId = String(budget.countryId ?? budget._id);
     const currency = resolveCountryCurrencyCode(budget) ?? "USD";
     const rate = input.rateByCurrency.get(currency);
-    if (!(typeof rate === "number" && Number.isFinite(rate) && rate > 0)) continue;
+    const key = `fiscal-scale-tax:${input.worldEpoch}:${input.turn}:${countryId}`;
+    const prior = priorById.get(key);
+    if (!prior && !(typeof rate === "number" && Number.isFinite(rate) && rate > 0)) continue;
     const tax = fiscalTaxCollection({
       bookRevenuePerTurn: bookNonCorporateRevenuePerTurn(budget.revenue),
       scale: input.scaleByBudget.get(budgetId),
@@ -212,25 +238,38 @@ export async function collectFiscalTaxes(
         .filter((w) => w.currency === currency)
         .map((w) => ({ id: w._id, cash: w.cash })),
     });
-    const move = fiscalTaxMove({
-      worldEpoch: input.worldEpoch,
-      turn: input.turn,
-      countryId,
-      budgetId,
-      currencyCode: currency,
-      localPerAnchor: rate,
-      byPayer: tax.byPayer,
-    });
+    const move: MoneyMove | null = prior
+      ? { key, kind: prior.kind, turn: prior.turn, legs: prior.legs }
+      : fiscalTaxMove({
+          worldEpoch: input.worldEpoch,
+          turn: input.turn,
+          countryId,
+          budgetId,
+          currencyCode: currency,
+          localPerAnchor: rate!,
+          byPayer: tax.byPayer,
+        });
     if (!move) continue;
-    let result = await applyMoneyMove(db, move);
-    if (result.status === "replayed") result = await resumeMoneyMove(db, move.key);
+    let result = prior ? await resumeMoneyMove(db, key) : await applyMoneyMove(db, move);
+    if (!prior && result.status === "replayed") result = await resumeMoneyMove(db, move.key);
     if (result.status !== "applied" && result.status !== "replayed") {
       console.warn(`[fiscalScale] tax ${move.key} ${result.status}: ${result.error ?? ""}`);
       continue;
     }
-    collected.set(budgetId, tax.collectedLocal);
+    const settledLocal = move.legs
+      .filter(
+        (leg) =>
+          leg.kind === "credit" &&
+          leg.collection === "federalBudget" &&
+          String(leg.filter?._id) === budgetId &&
+          leg.path === "treasuryCashLocal"
+      )
+      .reduce((sum, leg) => sum + leg.amount, 0);
+    if (!Number.isFinite(settledLocal) || settledLocal < 0)
+      throw new Error("Invalid fiscal tax receipt amount");
+    collected.set(budgetId, settledLocal);
     summary.push(
-      `${countryId}=${tax.collectedLocal.toExponential(2)}/${tax.dueLocal.toExponential(2)}`
+      `${countryId}=${settledLocal.toExponential(2)}${prior ? " (recorded)" : `/${tax.dueLocal.toExponential(2)}`}`
     );
     const legs = producerMoveLedgerLegs(move);
     if (legs)
@@ -247,13 +286,16 @@ export async function collectFiscalTaxes(
       });
   }
   if (entries.length > 0)
-    await ledgerEntriesCollection(db)
-      .insertMany(entries, { ordered: false })
-      .catch((error: unknown) => {
-        // Duplicate ids are replays already witnessed; anything else is real.
-        const writeErrors = (error as { writeErrors?: { code?: number }[] }).writeErrors;
-        if (!writeErrors || writeErrors.some((e) => e.code !== 11000)) throw error;
-      });
+    await ledgerEntriesCollection(db).bulkWrite(
+      entries.map((entry) => ({
+        updateOne: {
+          filter: { _id: entry._id },
+          update: { $setOnInsert: entry },
+          upsert: true,
+        },
+      })),
+      { ordered: false }
+    );
   console.info(`[fiscalScale] t${input.turn} taxes collected/due ${summary.sort().join(" ")}`);
   return collected;
 }

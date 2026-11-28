@@ -31,7 +31,7 @@ import {
 function makeDb(crises: Record<string, unknown>[], bulkFails = false) {
   const bulkWrite = vi.fn(async () => {
     if (bulkFails) throw new Error("write failed");
-    return {};
+    return { matchedCount: 1 };
   });
   const cursor = (rows: unknown[]) => ({ toArray: async () => rows });
   const db = {
@@ -53,6 +53,10 @@ function makeDb(crises: Record<string, unknown>[], bulkFails = false) {
         insertMany: vi.fn(),
         updateMany: vi.fn(),
         updateOne: vi.fn(async () => ({ matchedCount: 1 })),
+        findOneAndUpdate: vi.fn(
+          async (filter: { _id: ObjectId }) =>
+            crises.find((row) => String(row._id) === String(filter._id)) ?? null
+        ),
         findOne: vi.fn(async () => null),
       };
     },

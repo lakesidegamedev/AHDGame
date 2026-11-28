@@ -1,3 +1,4 @@
+import { observedSupplyOffer } from "@/lib/corporations/supplyExchange/observedOffer";
 import type {
   NppAgreementParty,
   ExistingNppAgreement,
@@ -518,8 +519,9 @@ async function writeSupplierReplies(
     turn: number;
     now: Date;
   }
-): Promise<void> {
+): Promise<Set<string>> {
   const ops: AnyBulkWriteOperation<SupplyAgreement>[] = [];
+  const replyKey = new ObjectId().toHexString();
   for (const d of args.counters) {
     const raw = args.rawById.get(d.agreementId);
     if (!raw) continue;
@@ -549,7 +551,12 @@ async function writeSupplierReplies(
     };
     ops.push({
       updateOne: {
-        filter: { _id: raw._id!, status: "pending", proposedByCorpId: raw.buyerCorpId },
+        filter: {
+          _id: raw._id!,
+          status: "pending",
+          proposedByCorpId: raw.buyerCorpId,
+          ...observedSupplyOffer(raw),
+        },
         update: {
           $set: {
             volumeCap: d.volumeCap,
@@ -557,6 +564,7 @@ async function writeSupplierReplies(
             ...(setPrice ? { fixedUnitPrice: d.fixedUnitPrice } : {}),
             proposedByCorpId: raw.supplierCorpId,
             currentOffer: offer,
+            lastAiSupplyReplyKey: replyKey,
             updatedAt: args.now,
           },
           $push: { offers: offer },
@@ -569,12 +577,46 @@ async function writeSupplierReplies(
     if (!raw) continue;
     ops.push({
       updateOne: {
-        filter: { _id: raw._id!, status: "pending", proposedByCorpId: raw.buyerCorpId },
-        update: { $set: { status: "cancelled", updatedAt: args.now } },
+        filter: {
+          _id: raw._id!,
+          status: "pending",
+          proposedByCorpId: raw.buyerCorpId,
+          ...observedSupplyOffer(raw),
+        },
+        update: {
+          $set: { status: "cancelled", lastAiSupplyReplyKey: replyKey, updatedAt: args.now },
+        },
       },
     });
   }
-  if (ops.length > 0) await collection.bulkWrite(ops, { ordered: false });
+  if (!ops.length) return new Set();
+  await collection.bulkWrite(ops, { ordered: false });
+  const ids = [...args.counters, ...args.declines].map(
+    (decision) => new ObjectId(decision.agreementId)
+  );
+  const applied = await collection
+    .find(
+      { _id: { $in: ids }, lastAiSupplyReplyKey: replyKey },
+      { projection: { status: 1, currentOffer: 1 } }
+    )
+    .toArray();
+  const counterRevision = new Map(
+    args.counters.map((decision) => [
+      decision.agreementId,
+      (args.rawById.get(decision.agreementId)?.currentOffer?.revision ?? 1) + 1,
+    ])
+  );
+  const declinedIds = new Set(args.declines.map((decision) => decision.agreementId));
+  return new Set(
+    applied
+      .filter((row) => {
+        const id = row._id!.toString();
+        return declinedIds.has(id)
+          ? row.status === "cancelled"
+          : row.status === "pending" && row.currentOffer?.revision === counterRevision.get(id);
+      })
+      .map((row) => row._id!.toString())
+  );
 }
 
 /** Tell each proposing player how the AI supplier answered. */
@@ -838,7 +880,7 @@ export async function processNppSupplyAgreements(
   // term never expire, and every live contract is settled and rewritten each
   // turn. Give each a staggered expiry; after the first pass this finds none.
   const openEnded = openEndedAiContracts(rawAgreements, nppIds);
-  const [, activationResult, cancellationResult] = await Promise.all([
+  const [replyIds, , activationResult, cancellationResult] = await Promise.all([
     writeSupplierReplies(agreementsCollection, { counters, declines, rawById, turn, now }),
     openEnded.length > 0
       ? agreementsCollection.bulkWrite(
@@ -859,23 +901,29 @@ export async function processNppSupplyAgreements(
       : null,
     activations.length > 0
       ? agreementsCollection.bulkWrite(
-          activations.map((decision) => {
-            const durationTurns = durationById.get(decision.agreementId);
-            return {
-              updateOne: {
-                filter: { _id: new ObjectId(decision.agreementId), status: "pending" },
-                // Same lifecycle stamps as the player accept path.
-                update: {
-                  $set: {
-                    status: "active" as const,
-                    startsAtTurn: turn,
-                    ...(durationTurns != null ? { expiresAtTurn: turn + durationTurns } : {}),
-                    updatedAt: now,
+          activations
+            .filter((decision) => rawById.has(decision.agreementId))
+            .map((decision) => {
+              const durationTurns = durationById.get(decision.agreementId);
+              return {
+                updateOne: {
+                  filter: {
+                    _id: new ObjectId(decision.agreementId),
+                    status: "pending",
+                    ...observedSupplyOffer(rawById.get(decision.agreementId)!),
+                  },
+                  // Same lifecycle stamps as the player accept path.
+                  update: {
+                    $set: {
+                      status: "active" as const,
+                      startsAtTurn: turn,
+                      ...(durationTurns != null ? { expiresAtTurn: turn + durationTurns } : {}),
+                      updatedAt: now,
+                    },
                   },
                 },
-              },
-            };
-          })
+              };
+            })
         )
       : null,
     cancellations.length > 0
@@ -906,8 +954,8 @@ export async function processNppSupplyAgreements(
   }
 
   await notifySupplierReplies({
-    counters,
-    declines,
+    counters: counters.filter((decision) => replyIds.has(decision.agreementId)),
+    declines: declines.filter((decision) => replyIds.has(decision.agreementId)),
     rawById,
     nameById,
     userById: externalBuyerUsers,

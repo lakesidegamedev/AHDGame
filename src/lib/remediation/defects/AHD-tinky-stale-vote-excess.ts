@@ -1,4 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Corporation } from "@/lib/db/types";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -362,12 +363,22 @@ function marker(payload: IncidentPlanPayload, ctx: HealContext, detail: Record<s
 }
 
 async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<HealResult> {
+  return withSessionDb(db, (tx) => applyInTransaction(tx, healPlan, ctx));
+}
+
+async function applyInTransaction(
+  db: Db,
+  healPlan: HealPlan,
+  ctx: HealContext
+): Promise<HealResult> {
   const payload = healPlan.payload as IncidentPlanPayload | undefined;
   if (!payload || healPlan.affected === 0) {
     return { documentsScanned: 0, documentsUpdated: 0, notes: ["nothing to heal"] };
   }
 
   let updated = 0;
+  const creditedCharacters = new Set<string>();
+  const creditedCountries = new Set<string>();
   for (const credit of payload.characterCredits) {
     const path = `currencyBalances.personal.${credit.currencyCode}`;
     const result = await charactersCollection(db).updateOne(
@@ -386,14 +397,30 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         },
       }
     );
-    if (result.modifiedCount !== 1)
-      throw new Error(`recipient ${credit.claimId} moved during apply`);
-    updated += 1;
+    if (result.modifiedCount !== 1) {
+      const previous = await charactersCollection(db).findOne(
+        {
+          _id: new ObjectId(credit.characterId),
+          [`${MARKER_PATH}.claimId`]: credit.claimId,
+          [`${MARKER_PATH}.creditAnchor`]: credit.anchorAmount,
+        },
+        { projection: { _id: 1 } }
+      );
+      if (!previous) throw new Error(`recipient ${credit.claimId} moved during apply`);
+    } else {
+      updated += 1;
+      creditedCharacters.add(credit.characterId);
+    }
   }
 
   for (const credit of payload.treasuryCredits) {
     const result = await federalBudgetCollection(db).updateOne(
-      { _id: credit.budgetId, [MARKER_PATH]: { $exists: false } },
+      {
+        _id: credit.budgetId,
+        countryId: credit.countryId,
+        [MARKER_PATH]: { $exists: false },
+        $or: [{ currencyCode: credit.currencyCode }, { currencyCode: { $exists: false } }],
+      },
       {
         $inc: { treasuryBalance: credit.localAmount },
         $set: {
@@ -408,15 +435,25 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
         },
       }
     );
-    if (result.modifiedCount !== 1)
-      throw new Error(`${credit.countryId} treasury moved during apply`);
-    updated += 1;
+    if (result.modifiedCount !== 1) {
+      const previous = await federalBudgetCollection(db).findOne(
+        { _id: credit.budgetId, [`${MARKER_PATH}.creditAnchor`]: credit.anchorAmount },
+        { projection: { _id: 1 } }
+      );
+      if (!previous) throw new Error(`${credit.countryId} treasury moved during apply`);
+    } else {
+      updated += 1;
+      creditedCountries.add(credit.countryId);
+    }
   }
 
   const corporation = await corporationsCollection(db).updateOne(
     {
       _id: new ObjectId(payload.corporationId),
       [MARKER_PATH]: { $exists: false },
+      ...(payload.corporationCurrencyCode === "USD"
+        ? { $or: [{ liquidCurrencyCode: "USD" }, { liquidCurrencyCode: { $exists: false } }] }
+        : { liquidCurrencyCode: payload.corporationCurrencyCode }),
       liquidCapital: { $gte: payload.debitLocal },
       shareIssuanceProceeds: { $gte: payload.debitLocal },
     },
@@ -435,65 +472,85 @@ async function apply(db: Db, healPlan: HealPlan, ctx: HealContext): Promise<Heal
       },
     }
   );
-  if (corporation.modifiedCount !== 1) throw new Error("issuer balance moved or is insufficient");
-  updated += 1;
+  if (corporation.modifiedCount !== 1) {
+    const previous = await corporationsCollection(db).findOne(
+      {
+        _id: new ObjectId(payload.corporationId),
+        [`${MARKER_PATH}.debitAnchor`]: payload.debitAnchor,
+      },
+      { projection: { _id: 1 } }
+    );
+    if (!previous) throw new Error("issuer balance moved or is insufficient");
+  } else updated += 1;
+
+  if (updated === 0) {
+    return { documentsScanned: CLAIMS.length, documentsUpdated: 0, notes: ["already applied"] };
+  }
 
   const thresholds = await loadTxThresholds(db);
   await emitTxBulk(
     db,
     [
-      {
-        type: "admin_transfer" as const,
-        turn: 262,
-        createdAt: ctx.now,
-        subjectType: "corporation" as const,
-        subjectId: new ObjectId(payload.corporationId),
-        subjectName: payload.corporationName,
-        amount: -payload.debitLocal,
-        currencyCode: payload.corporationCurrencyCode,
-        anchorAmount: -payload.debitAnchor,
-        counterpartyType: "system" as const,
-        counterpartyName: "Stale-vote incident remediation",
-        meta: { defectId: DEFECT_ID, runId: ctx.runId ?? null, side: "issuer_debit" },
-      },
-      ...payload.characterCredits.map((credit) => ({
-        type: "admin_transfer" as const,
-        turn: 262,
-        createdAt: ctx.now,
-        subjectType: "character" as const,
-        subjectId: new ObjectId(credit.characterId),
-        subjectName: credit.characterName,
-        amount: credit.localAmount,
-        currencyCode: credit.currencyCode,
-        anchorAmount: credit.anchorAmount,
-        counterpartyType: "system" as const,
-        counterpartyName: "Stale-vote incident remediation",
-        meta: {
-          defectId: DEFECT_ID,
-          runId: ctx.runId ?? null,
-          claimId: credit.claimId,
-          side: "direct_loss_credit",
-        },
-      })),
-      ...payload.treasuryCredits.map((credit) => ({
-        type: "admin_transfer" as const,
-        turn: 262,
-        createdAt: ctx.now,
-        subjectType: "government" as const,
-        countryId: credit.countryId,
-        subjectName: `${credit.countryId} Treasury`,
-        amount: credit.localAmount,
-        currencyCode: credit.currencyCode,
-        anchorAmount: credit.anchorAmount,
-        counterpartyType: "system" as const,
-        counterpartyName: "Stale-vote incident remediation",
-        meta: {
-          defectId: DEFECT_ID,
-          runId: ctx.runId ?? null,
-          claimIds: credit.claimIds,
-          side: "treasury_credit",
-        },
-      })),
+      ...(corporation.modifiedCount === 1
+        ? [
+            {
+              type: "admin_transfer" as const,
+              turn: 262,
+              createdAt: ctx.now,
+              subjectType: "corporation" as const,
+              subjectId: new ObjectId(payload.corporationId),
+              subjectName: payload.corporationName,
+              amount: -payload.debitLocal,
+              currencyCode: payload.corporationCurrencyCode,
+              anchorAmount: -payload.debitAnchor,
+              counterpartyType: "system" as const,
+              counterpartyName: "Stale-vote incident remediation",
+              meta: { defectId: DEFECT_ID, runId: ctx.runId ?? null, side: "issuer_debit" },
+            },
+          ]
+        : []),
+      ...payload.characterCredits
+        .filter((credit) => creditedCharacters.has(credit.characterId))
+        .map((credit) => ({
+          type: "admin_transfer" as const,
+          turn: 262,
+          createdAt: ctx.now,
+          subjectType: "character" as const,
+          subjectId: new ObjectId(credit.characterId),
+          subjectName: credit.characterName,
+          amount: credit.localAmount,
+          currencyCode: credit.currencyCode,
+          anchorAmount: credit.anchorAmount,
+          counterpartyType: "system" as const,
+          counterpartyName: "Stale-vote incident remediation",
+          meta: {
+            defectId: DEFECT_ID,
+            runId: ctx.runId ?? null,
+            claimId: credit.claimId,
+            side: "direct_loss_credit",
+          },
+        })),
+      ...payload.treasuryCredits
+        .filter((credit) => creditedCountries.has(credit.countryId))
+        .map((credit) => ({
+          type: "admin_transfer" as const,
+          turn: 262,
+          createdAt: ctx.now,
+          subjectType: "government" as const,
+          countryId: credit.countryId,
+          subjectName: `${credit.countryId} Treasury`,
+          amount: credit.localAmount,
+          currencyCode: credit.currencyCode,
+          anchorAmount: credit.anchorAmount,
+          counterpartyType: "system" as const,
+          counterpartyName: "Stale-vote incident remediation",
+          meta: {
+            defectId: DEFECT_ID,
+            runId: ctx.runId ?? null,
+            claimIds: credit.claimIds,
+            side: "treasury_credit",
+          },
+        })),
     ],
     thresholds
   );

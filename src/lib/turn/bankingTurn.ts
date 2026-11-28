@@ -1,3 +1,5 @@
+import { publishBankLoanInterestHistory } from "@/lib/banking/publishLoanInterest";
+import * as Sentry from "@sentry/nextjs";
 import type { DepositTaker, BankPassCaches } from "@/lib/banking/processBank";
 import { processOneBank } from "@/lib/banking/processBank";
 import { BANK_CHARTER_ONLY, BROAD_MONEY_ONLY } from "@/lib/banking/npcBulkLoanService";
@@ -50,7 +52,7 @@ import { settleTransition } from "@/lib/banking/settlementJournal";
 
 import { effectiveBankRatesFromPrime } from "@/lib/banking/rates";
 
-import { savingsApyPercent } from "@/lib/currency/savingsInterest";
+import { savingsApyPercent } from "@/lib/currency/rules/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { loadTxThresholds } from "@/lib/financialTxLog/emit";
 
@@ -108,7 +110,18 @@ export async function processBankingTurn(
   // Unbatched, that was about 150 concurrent increments on one document per
   // turn; batched, one write when the pass ends. Counts are unchanged.
   return withSettlementReadSnapshot(() =>
-    withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn, options))
+    withBankingTelemetryBatch(db, turn, async () => {
+      const summary = await runBankingTurn(db, turn, options);
+      try {
+        await publishBankLoanInterestHistory(db, turn);
+      } catch (error) {
+        Sentry.captureException(error, {
+          tags: { operation: "publish-bank-loan-interest" },
+          extra: { turn },
+        });
+      }
+      return summary;
+    })
   );
 }
 

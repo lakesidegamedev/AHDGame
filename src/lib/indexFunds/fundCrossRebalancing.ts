@@ -6,9 +6,9 @@
  * Cash moves between funds; no issuer treasury or public float is touched.
  */
 
-import type { ClientSession, Db, ObjectId, UpdateFilter } from "mongodb";
+import type { Db, ObjectId } from "mongodb";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { Corporation, IndexFund, IndexFundHolding, Shareholder } from "@/lib/db/types";
+import type { Corporation, IndexFund, IndexFundHolding } from "@/lib/db/types";
 import { creditSharesToFund, debitSharesFromFund } from "@/lib/corporations/shareholderOps";
 import { resolveShareExecutionPrice } from "@/lib/corporations/marketExecution";
 import { convertLocalPriceToAnchor } from "@/lib/indexFunds/fundHoldingsValuation";
@@ -20,13 +20,16 @@ import {
   updateFundHoldings,
 } from "@/lib/indexFunds/fundQueries";
 import { recordShareTrade } from "@/lib/corporations/shareTradeHistory";
-import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
-import { runWithOptionalTransaction } from "@/lib/db/runWithOptionalTransaction";
+import {
+  loadFxRatesByCurrency,
+  requireCurrencyRate,
+  resolveCorpLiquidCurrencyCode,
+} from "@/lib/currency/corporationCapital";
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { indexFundsCollection } from "@/lib/db/repositories/indexFunds";
-import { indexFundTransactionsCollection } from "@/lib/db/repositories/indexFundTransactions";
-import type { Document } from "mongodb";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -278,18 +281,13 @@ export async function executeFundCrossRebalancing(
 
   if (plans.length === 0) return result;
 
-  // Fetch current fund/corp state once and update in memory so consecutive
-  // transfers for the same fund see their own cumulative effect.
-  const fundState = new Map<string, IndexFund>();
-  const corpState = new Map<string, Corporation>();
-
   for (const plan of plans) {
     try {
-      const executed = await executeSingleTransfer(db, plan, fundState, corpState, currentTurn);
+      const executed = await executeSingleTransfer(db, plan, currentTurn);
       if (executed) {
         result.transfers++;
-        result.sharesTransferred += plan.shares;
-        result.valueTransferred += plan.valueAnchor;
+        result.sharesTransferred += executed.shares;
+        result.valueTransferred += executed.valueAnchor;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -305,499 +303,157 @@ export async function executeFundCrossRebalancing(
 async function executeSingleTransfer(
   db: Db,
   plan: PlannedCrossTransfer,
-  fundState: Map<string, IndexFund>,
-  corpState: Map<string, Corporation>,
   currentTurn: number
-): Promise<boolean> {
-  const sellerFund = await loadFundState(db, plan.sellerFundId, fundState);
-  const buyerFund = await loadFundState(db, plan.buyerFundId, fundState);
-  if (
-    !sellerFund ||
-    !buyerFund ||
-    sellerFund.mandate?.mode === "picked_stocks" ||
-    buyerFund.mandate?.mode === "picked_stocks"
-  )
-    return false;
-
-  const corpKey = plan.corporationId.toString();
-  let corp = corpState.get(corpKey);
-  if (!corp) {
-    const loaded = await corporationsCollection(db).findOne({ _id: plan.corporationId });
-    if (!loaded) return false;
-    corp = loaded;
-    corpState.set(corpKey, corp);
-  }
-
-  const executionPrice = resolveShareExecutionPrice(corp);
-  if (!Number.isFinite(executionPrice) || executionPrice <= 0) return false;
-
-  const sellerHolding = sellerFund.holdings.find((h) => h.corporationId.toString() === corpKey);
-  if (!sellerHolding || sellerHolding.shares < plan.shares) return false;
-
-  if (buyerFund.cashAnchor < plan.valueAnchor) return false;
-
-  const sellerShareholder = cloneFundShareholder(corp.shareholders, plan.sellerFundId);
-  const buyerShareholder = cloneFundShareholder(corp.shareholders, plan.buyerFundId);
-
-  const applyTransfer = async (session?: ClientSession): Promise<boolean> => {
-    const sessionOpts = session ? { session } : undefined;
-    const compensateOnFailure = !session;
-    const completed = {
-      sellerSharesDebited: false,
-      buyerSharesCredited: false,
-      buyerCashDebited: false,
-      sellerCashCredited: false,
-      sellerHoldingsUpdated: false,
-      buyerHoldingsUpdated: false,
-      sellerAppliedHoldings: undefined as IndexFund["holdings"] | undefined,
-      buyerAppliedHoldings: undefined as IndexFund["holdings"] | undefined,
-      sellerTransactionId: undefined as ObjectId | undefined,
-      buyerTransactionId: undefined as ObjectId | undefined,
-    };
-
-    const compensate = async (originalError: unknown): Promise<never> => {
-      const failures: Error[] = [];
-      const attempt = async (label: string, action: () => Promise<boolean | void>) => {
-        try {
-          const succeeded = await action();
-          if (succeeded === false) failures.push(new Error(`${label} returned no match`));
-        } catch (error) {
-          failures.push(
-            new Error(`${label}: ${error instanceof Error ? error.message : String(error)}`)
-          );
-        }
-      };
-
-      if (completed.buyerTransactionId) {
-        await attempt("delete buyer transaction", async () => {
-          const deleted = await indexFundTransactionsCollection<Document>(db).deleteOne({
-            _id: completed.buyerTransactionId,
-          });
-          return deleted.deletedCount === 1;
-        });
-      }
-      if (completed.sellerTransactionId) {
-        await attempt("delete seller transaction", async () => {
-          const deleted = await indexFundTransactionsCollection<Document>(db).deleteOne({
-            _id: completed.sellerTransactionId,
-          });
-          return deleted.deletedCount === 1;
-        });
-      }
-      if (completed.buyerHoldingsUpdated) {
-        await attempt("restore buyer holdings", async () => {
-          const result = await indexFundsCollection(db).updateOne(
-            { _id: plan.buyerFundId, holdings: completed.buyerAppliedHoldings },
-            { $set: { holdings: buyerFund.holdings, updatedAt: new Date() } }
-          );
-          return result.matchedCount === 1;
-        });
-      }
-      if (completed.sellerHoldingsUpdated) {
-        await attempt("restore seller holdings", async () => {
-          const result = await indexFundsCollection(db).updateOne(
-            { _id: plan.sellerFundId, holdings: completed.sellerAppliedHoldings },
-            { $set: { holdings: sellerFund.holdings, updatedAt: new Date() } }
-          );
-          return result.matchedCount === 1;
-        });
-      }
-      if (completed.sellerCashCredited) {
-        await attempt("debit seller compensation cash", async () => {
-          const result = await indexFundsCollection(db).updateOne(
-            { _id: plan.sellerFundId, cashAnchor: { $gte: plan.valueAnchor } },
-            { $inc: { cashAnchor: -plan.valueAnchor }, $set: { updatedAt: new Date() } }
-          );
-          return result.matchedCount === 1;
-        });
-      }
-      if (completed.buyerCashDebited) {
-        await attempt("credit buyer compensation cash", async () => {
-          const result = await indexFundsCollection(db).updateOne(
-            { _id: plan.buyerFundId },
-            { $inc: { cashAnchor: plan.valueAnchor }, $set: { updatedAt: new Date() } }
-          );
-          return result.matchedCount === 1;
-        });
-      }
-      if (completed.buyerSharesCredited) {
-        await attempt("restore buyer shareholder", () =>
-          restoreFundShareholder(
+): Promise<{ shares: number; valueAnchor: number } | null> {
+  const outcome = await withAtomicResult(db, (db) =>
+    withTurnValueSettlement(
+      db,
+      "fund-cross-rebalance",
+      currentTurn,
+      async (db) => {
+        const refused = { ok: false as const };
+        if (
+          plan.sellerFundId.equals(plan.buyerFundId) ||
+          !Number.isSafeInteger(plan.shares) ||
+          plan.shares <= 0 ||
+          !Number.isFinite(plan.pricePerShareAnchor) ||
+          plan.pricePerShareAnchor <= 0 ||
+          !Number.isFinite(plan.valueAnchor) ||
+          plan.valueAnchor <= 0 ||
+          Math.abs(plan.shares * plan.pricePerShareAnchor - plan.valueAnchor) > 0.000001
+        )
+          return refused;
+        const [seller, buyer, corp] = await Promise.all([
+          getFundById(db, plan.sellerFundId),
+          getFundById(db, plan.buyerFundId),
+          corporationsCollection(db).findOne({ _id: plan.corporationId }),
+        ]);
+        if (
+          !seller ||
+          !buyer ||
+          !corp ||
+          seller.status !== "active" ||
+          buyer.status !== "active" ||
+          seller.anchorCurrencyCode !== buyer.anchorCurrencyCode ||
+          seller.mandate?.mode === "picked_stocks" ||
+          buyer.mandate?.mode === "picked_stocks" ||
+          !seller.holdings.some(
+            (holding) =>
+              holding.corporationId.equals(plan.corporationId) && holding.shares >= plan.shares
+          ) ||
+          buyer.cashAnchor < plan.valueAnchor
+        )
+          return refused;
+        const currency = resolveCorpLiquidCurrencyCode(corp);
+        if (!currency) return refused;
+        const rate = requireCurrencyRate(currency, (await loadFxRatesByCurrency(db)).get(currency));
+        const executionPrice = plan.pricePerShareAnchor * rate;
+        if (!Number.isFinite(executionPrice) || executionPrice <= 0) return refused;
+        const now = new Date();
+        const remaining = await debitSharesFromFund(
+          db,
+          plan.corporationId,
+          plan.sellerFundId,
+          plan.shares,
+          { $set: { updatedAt: now } },
+          { requireSufficient: true }
+        );
+        if (remaining < 0) return refused;
+        if (
+          !(await creditSharesToFund(
             db,
             plan.corporationId,
             plan.buyerFundId,
-            buyerShareholder,
-            (buyerShareholder?.shares ?? 0) + plan.shares,
-            computePostCreditAverage(buyerShareholder, plan.shares, executionPrice)
-          )
+            plan.shares,
+            executionPrice,
+            { $set: { updatedAt: now } }
+          ))
+        )
+          return refused;
+        const debit = await indexFundsCollection(db).updateOne(
+          { _id: buyer._id, cashAnchor: { $gte: plan.valueAnchor } },
+          { $inc: { cashAnchor: -plan.valueAnchor }, $set: { updatedAt: now } }
         );
-      }
-      if (completed.sellerSharesDebited) {
-        await attempt("restore seller shareholder", () =>
-          restoreFundShareholder(
-            db,
+        if (debit.matchedCount !== 1) return refused;
+        const credit = await indexFundsCollection(db).updateOne(
+          { _id: seller._id },
+          { $inc: { cashAnchor: plan.valueAnchor }, $set: { updatedAt: now } }
+        );
+        if (credit.matchedCount !== 1) throw new Error("Cross-fund recipient disappeared");
+        await updateFundHoldings(
+          db,
+          seller._id,
+          updateHoldingAfterSale(
+            seller.holdings,
             plan.corporationId,
-            plan.sellerFundId,
-            sellerShareholder,
-            sellerShareholder ? sellerShareholder.shares - plan.shares : 0,
-            sellerShareholder?.avgCostPerShare
+            plan.shares,
+            plan.pricePerShareAnchor
           )
         );
-      }
-
-      if (failures.length > 0) {
-        const original =
-          originalError instanceof Error ? originalError : new Error(String(originalError));
-        throw new AggregateError(
-          [original, ...failures],
-          `${original.message}; compensation failed: ${failures.map((error) => error.message).join("; ")}`
-        );
-      }
-      throw originalError;
-    };
-
-    try {
-      // 1. Debit shares from seller on corporation cap table.
-      const sellerRemaining = await debitSharesFromFund(
-        db,
-        plan.corporationId,
-        plan.sellerFundId,
-        plan.shares,
-        { $set: { updatedAt: new Date() } },
-        { requireSufficient: true, ...sessionOpts }
-      );
-      if (sellerRemaining < 0) return false;
-      completed.sellerSharesDebited = true;
-
-      // 2. Credit shares to buyer on corporation cap table.
-      const buyerCredited = await creditSharesToFund(
-        db,
-        plan.corporationId,
-        plan.buyerFundId,
-        plan.shares,
-        executionPrice,
-        { $set: { updatedAt: new Date() } },
-        { ...sessionOpts, knownShareholders: corp.shareholders }
-      );
-      if (!buyerCredited) {
-        if (compensateOnFailure) throw new Error("Failed to credit buyer shares");
-        await creditSharesToFund(
+        await updateFundHoldings(
           db,
-          plan.corporationId,
-          plan.sellerFundId,
-          plan.shares,
-          executionPrice,
-          { $set: { updatedAt: new Date() } },
-          sessionOpts
+          buyer._id,
+          updateHoldingAfterPurchase(
+            buyer.holdings,
+            plan.corporationId,
+            plan.shares,
+            plan.pricePerShareAnchor
+          )
         );
-        return false;
-      }
-      completed.buyerSharesCredited = true;
-
-      // 3. Move cash: buyer → seller.
-      const cashMoved = await atomicallyMoveFundCash(
-        db,
-        plan.buyerFundId,
-        plan.sellerFundId,
-        plan.valueAnchor,
-        sessionOpts,
-        completed
-      );
-      if (!cashMoved) {
-        if (compensateOnFailure) throw new Error("Failed to move fund cash");
-        // Rollback share movements.
-        await creditSharesToFund(
-          db,
-          plan.corporationId,
-          plan.sellerFundId,
-          plan.shares,
-          executionPrice,
-          { $set: { updatedAt: new Date() } },
-          sessionOpts
-        );
-        await debitSharesFromFund(
-          db,
-          plan.corporationId,
-          plan.buyerFundId,
-          plan.shares,
-          { $set: { updatedAt: new Date() } },
-          { requireSufficient: true, ...sessionOpts }
-        );
-        return false;
-      }
-
-      // 4. Update in-memory fund holdings.
-      const updatedSellerHoldings = updateHoldingAfterSale(
-        sellerFund.holdings,
-        plan.corporationId,
-        plan.shares,
-        plan.pricePerShareAnchor
-      );
-      const updatedBuyerHoldings = updateHoldingAfterPurchase(
-        buyerFund.holdings,
-        plan.corporationId,
-        plan.shares,
-        plan.pricePerShareAnchor
-      );
-
-      // 5. Persist holdings arrays.
-      await updateFundHoldings(db, plan.sellerFundId, updatedSellerHoldings, sessionOpts);
-      completed.sellerHoldingsUpdated = true;
-      completed.sellerAppliedHoldings = updatedSellerHoldings;
-      await updateFundHoldings(db, plan.buyerFundId, updatedBuyerHoldings, sessionOpts);
-      completed.buyerHoldingsUpdated = true;
-      completed.buyerAppliedHoldings = updatedBuyerHoldings;
-
-      // 6. Log transactions.
-      completed.sellerTransactionId = await insertFundTransaction(
-        db,
-        {
-          fundId: plan.sellerFundId,
-          kind: "cross_fund_sell",
+        for (const [fund, kind, note] of [
+          [seller, "cross_fund_sell", `Sold ${plan.shares} shares to ${buyer.name}`],
+          [buyer, "cross_fund_buy", `Bought ${plan.shares} shares from ${seller.name}`],
+        ] as const) {
+          await insertFundTransaction(db, {
+            fundId: fund._id,
+            kind,
+            corporationId: plan.corporationId,
+            shares: plan.shares,
+            navAnchor: plan.pricePerShareAnchor,
+            amountAnchor: plan.valueAnchor,
+            note,
+            createdAt: now,
+          });
+        }
+        await emitTx(db, {
+          type: "fund_transfer",
+          turn: currentTurn,
+          createdAt: now,
+          subjectType: "fund",
+          subjectId: buyer._id,
+          subjectName: buyer.name,
+          amount: -plan.valueAnchor,
+          anchorAmount: -plan.valueAnchor,
+          currencyCode: buyer.anchorCurrencyCode,
+          counterpartyType: "fund",
+          counterpartyId: seller._id,
+          counterpartyName: seller.name,
+          meta: {
+            fundId: seller._id.toString(),
+            fundCurrency: buyer.anchorCurrencyCode,
+            corporationId: plan.corporationId.toString(),
+            shares: plan.shares,
+            pricePerShareAnchor: plan.pricePerShareAnchor,
+            source: "cross-fund-rebalancing",
+          },
+        });
+        await recordShareTrade(db, {
           corporationId: plan.corporationId,
-          shares: plan.shares,
-          navAnchor: plan.pricePerShareAnchor,
-          amountAnchor: plan.valueAnchor,
-          note: `Sold ${plan.shares} shares to ${buyerFund.name}`,
-          createdAt: new Date(),
-        },
-        sessionOpts
-      );
-      completed.buyerTransactionId = await insertFundTransaction(
-        db,
-        {
-          fundId: plan.buyerFundId,
-          kind: "cross_fund_buy",
-          corporationId: plan.corporationId,
-          shares: plan.shares,
-          navAnchor: plan.pricePerShareAnchor,
-          amountAnchor: plan.valueAnchor,
-          note: `Bought ${plan.shares} shares from ${sellerFund.name}`,
-          createdAt: new Date(),
-        },
-        sessionOpts
-      );
-
-      // Emit one cash-transfer row after both fund balances and holdings have
-      // moved. The ledger derives the seller mirror from metadata, so a second
-      // row would double-count the transfer.
-      await emitTx(db, {
-        type: "fund_transfer",
-        turn: currentTurn,
-        createdAt: new Date(),
-        subjectType: "fund",
-        subjectId: plan.buyerFundId,
-        subjectName: buyerFund.name,
-        amount: -plan.valueAnchor,
-        anchorAmount: -plan.valueAnchor,
-        currencyCode: buyerFund.anchorCurrencyCode,
-        counterpartyType: "fund",
-        counterpartyId: plan.sellerFundId,
-        counterpartyName: sellerFund.name,
-        meta: {
-          fundId: plan.sellerFundId.toString(),
-          fundCurrency: buyerFund.anchorCurrencyCode,
-          corporationId: plan.corporationId.toString(),
+          kind: "market_buy",
+          turn: currentTurn,
           shares: plan.shares,
           pricePerShareAnchor: plan.pricePerShareAnchor,
-          source: "cross-fund-rebalancing",
-        },
-      });
-
-      // 7. Record public trade history (the cross-fund market is still a trade).
-      void recordShareTrade(db, {
-        corporationId: plan.corporationId,
-        kind: "market_buy",
-        turn: currentTurn,
-        shares: plan.shares,
-        pricePerShareAnchor: plan.pricePerShareAnchor,
-        from: { name: `${sellerFund.name} (index fund)` },
-        to: { name: `${buyerFund.name} (index fund)` },
-        corpCurrencyCode: resolveCorpLiquidCurrencyCode(corp) ?? undefined,
-        note: "Cross-fund rebalancing transfer",
-      });
-
-      // 8. Refresh in-memory state for subsequent transfers in this batch.
-      sellerFund.holdings = updatedSellerHoldings;
-      sellerFund.cashAnchor += plan.valueAnchor;
-      buyerFund.holdings = updatedBuyerHoldings;
-      buyerFund.cashAnchor -= plan.valueAnchor;
-      corp.shareholders = applyFundShareholderTransfer(
-        corp.shareholders,
-        sellerShareholder,
-        buyerShareholder,
-        plan,
-        executionPrice
-      );
-
-      return true;
-    } catch (error) {
-      if (compensateOnFailure) await compensate(error);
-      throw error;
-    }
-  };
-
-  return runWithOptionalTransaction(
-    (session) => applyTransfer(session),
-    () => applyTransfer()
-  );
-}
-
-function cloneFundShareholder(
-  shareholders: Corporation["shareholders"],
-  fundId: ObjectId
-): Shareholder | undefined {
-  const shareholder = shareholders?.find((entry) => entry.fundId?.equals(fundId));
-  return shareholder ? { ...shareholder } : undefined;
-}
-
-async function restoreFundShareholder(
-  db: Db,
-  corporationId: ObjectId,
-  fundId: ObjectId,
-  snapshot: Shareholder | undefined,
-  expectedCurrentShares: number,
-  expectedCurrentAverage: number | undefined
-): Promise<boolean> {
-  const collection = corporationsCollection(db);
-  const expectedEntry = {
-    fundId,
-    shares: expectedCurrentShares,
-    ...(expectedCurrentAverage === undefined
-      ? { avgCostPerShare: { $exists: false } }
-      : { avgCostPerShare: expectedCurrentAverage }),
-  };
-  if (!snapshot) {
-    const result = await collection.updateOne(
-      {
-        _id: corporationId,
-        shareholders: { $elemMatch: expectedEntry },
+          from: { name: `${seller.name} (index fund)` },
+          to: { name: `${buyer.name} (index fund)` },
+          corpCurrencyCode: resolveCorpLiquidCurrencyCode(corp) ?? undefined,
+          note: "Cross-fund rebalancing transfer",
+        });
+        return { ok: true as const, shares: plan.shares, valueAnchor: plan.valueAnchor };
       },
-      {
-        $pull: {
-          shareholders: expectedEntry,
-        } as unknown as UpdateFilter<Corporation>["$pull"],
-        $set: { updatedAt: new Date() },
-      }
-    );
-    return result.matchedCount === 1;
-  }
-
-  if (expectedCurrentShares === 0) {
-    const result = await collection.updateOne(
-      {
-        _id: corporationId,
-        shareholders: { $not: { $elemMatch: { fundId } } },
-      },
-      {
-        $push: { shareholders: snapshot } as unknown as UpdateFilter<Corporation>["$push"],
-        $set: { updatedAt: new Date() },
-      }
-    );
-    return result.matchedCount === 1;
-  }
-
-  const result = await collection.updateOne(
-    {
-      _id: corporationId,
-      shareholders: { $elemMatch: expectedEntry },
-    },
-    {
-      $set: {
-        "shareholders.$.shares": snapshot.shares,
-        ...(snapshot.avgCostPerShare === undefined
-          ? {}
-          : { "shareholders.$.avgCostPerShare": snapshot.avgCostPerShare }),
-        updatedAt: new Date(),
-      },
-      ...(snapshot.avgCostPerShare === undefined
-        ? { $unset: { "shareholders.$.avgCostPerShare": "" as const } }
-        : {}),
-    }
+      { sourceKey: `${currentTurn}:${plan.corporationId}:${plan.sellerFundId}:${plan.buyerFundId}` }
+    )
   );
-  return result.matchedCount === 1;
-}
-
-function computePostCreditAverage(
-  shareholder: Shareholder | undefined,
-  shares: number,
-  executionPrice: number
-): number {
-  if (!shareholder) return executionPrice;
-  return (
-    ((shareholder.avgCostPerShare ?? executionPrice) * shareholder.shares +
-      executionPrice * shares) /
-    (shareholder.shares + shares)
-  );
-}
-
-function applyFundShareholderTransfer(
-  shareholders: Corporation["shareholders"],
-  seller: Shareholder | undefined,
-  buyer: Shareholder | undefined,
-  plan: PlannedCrossTransfer,
-  executionPrice: number
-): Corporation["shareholders"] {
-  const withoutParticipants = (shareholders ?? []).filter(
-    (entry) => !entry.fundId?.equals(plan.sellerFundId) && !entry.fundId?.equals(plan.buyerFundId)
-  );
-  const sellerShares = (seller?.shares ?? 0) - plan.shares;
-  if (seller && sellerShares > 0) withoutParticipants.push({ ...seller, shares: sellerShares });
-  const buyerShares = (buyer?.shares ?? 0) + plan.shares;
-  const buyerAverage = computePostCreditAverage(buyer, plan.shares, executionPrice);
-  withoutParticipants.push({
-    ...buyer,
-    fundId: plan.buyerFundId,
-    shares: buyerShares,
-    avgCostPerShare: buyerAverage,
-  });
-  return withoutParticipants;
-}
-
-async function loadFundState(
-  db: Db,
-  fundId: ObjectId,
-  fundState: Map<string, IndexFund>
-): Promise<IndexFund | null> {
-  const key = fundId.toString();
-  let fund: IndexFund | null = fundState.get(key) ?? null;
-  if (!fund) {
-    fund = await getFundById(db, fundId);
-    if (fund) fundState.set(key, fund);
-  }
-  return fund;
-}
-
-async function atomicallyMoveFundCash(
-  db: Db,
-  buyerFundId: ObjectId,
-  sellerFundId: ObjectId,
-  amountAnchor: number,
-  options?: { session?: ClientSession },
-  progress?: { buyerCashDebited: boolean; sellerCashCredited: boolean }
-): Promise<boolean> {
-  if (!Number.isFinite(amountAnchor) || amountAnchor <= 0) return false;
-
-  const now = new Date();
-  const sessionOpts = options?.session ? { session: options.session } : undefined;
-
-  const buyerDebit = await indexFundsCollection(db).updateOne(
-    { _id: buyerFundId, cashAnchor: { $gte: amountAnchor } },
-    { $inc: { cashAnchor: -amountAnchor }, $set: { updatedAt: now } },
-    sessionOpts
-  );
-  if (buyerDebit.matchedCount === 0) return false;
-  if (progress) progress.buyerCashDebited = true;
-
-  const sellerCredit = await indexFundsCollection(db).updateOne(
-    { _id: sellerFundId },
-    { $inc: { cashAnchor: amountAnchor }, $set: { updatedAt: now } },
-    sessionOpts
-  );
-  if (sellerCredit.matchedCount === 0) return false;
-  if (progress) progress.sellerCashCredited = true;
-
-  return true;
+  return outcome.ok ? outcome : null;
 }
 
 // ── Holding updates ───────────────────────────────────────────────────────

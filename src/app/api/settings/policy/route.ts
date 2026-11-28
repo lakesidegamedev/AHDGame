@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         {
           $set: {
             ...paymentUpdates,
-            [policyField]: { $add: [`$${policyField}`, direction] },
+            [policyField]: { $min: [5, { $max: [-5, { $add: [`$${policyField}`, direction] }] }] },
             updatedAt: new Date(),
           },
         },

@@ -1,5 +1,8 @@
 import type { Db } from "mongodb";
-import { processAutoDisasterSpawn } from "@/lib/crises/autoDisasterSpawn";
+import {
+  processAutoDisasterSpawn,
+  settlePendingDisasterFiscalLosses,
+} from "@/lib/crises/autoDisasterSpawn";
 import { processClimateFeedbackTurn } from "@/lib/crises/climateTurn";
 import { getSimulatedCountryIds } from "@/lib/countryAccess";
 import { createSpawnDirector } from "@/lib/crises/spawnDirector";
@@ -13,6 +16,7 @@ export async function processAutoDisasterTurn(
     startingYear?: number;
   }
 ): Promise<void> {
+  await settlePendingDisasterFiscalLosses(db);
   const climatePressure = await processClimateFeedbackTurn(db, turn, {
     startingYear: preloadedGameState?.startingYear,
   });

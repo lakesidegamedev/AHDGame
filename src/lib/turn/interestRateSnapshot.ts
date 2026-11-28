@@ -1,6 +1,8 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { appendTurnHistory } from "./rules/turnHistory";
 import type { Db } from "mongodb";
 import type { TurnSnapshot } from "@/lib/db/types";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
+
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
@@ -21,6 +23,12 @@ const HISTORY_CAP = FOREX_AND_MACRO_CHART_HISTORY_TURNS;
  * All three histories are capped at HISTORY_CAP entries (5 in-game years).
  */
 export async function snapshotInterestRateHistory(db: Db, turn: number): Promise<void> {
+  return withTurnValueSettlement(db, "central-bank-history", turn, (db) =>
+    snapshotInterestRateHistoryWork(db, turn)
+  );
+}
+
+async function snapshotInterestRateHistoryWork(db: Db, turn: number): Promise<void> {
   const banks = await centralBanksCollection(db).find({}).toArray();
   if (banks.length === 0) return;
 
@@ -131,14 +139,20 @@ export async function snapshotInterestRateHistory(db: Db, turn: number): Promise
     return {
       updateOne: {
         filter: { _id: bank._id },
-        update: {
-          $push: {
-            interestRateHistory: { $each: [ratePoint], $slice: -HISTORY_CAP },
-            inflationHistory: { $each: [inflationPoint], $slice: -HISTORY_CAP },
-            gdpGrowthHistory: { $each: [gdpPoint], $slice: -HISTORY_CAP },
-            savingsFlowHistory: { $each: [savingsPoint], $slice: -HISTORY_CAP },
+        update: [
+          {
+            $set: {
+              interestRateHistory: appendTurnHistory("interestRateHistory", ratePoint, HISTORY_CAP),
+              inflationHistory: appendTurnHistory("inflationHistory", inflationPoint, HISTORY_CAP),
+              gdpGrowthHistory: appendTurnHistory("gdpGrowthHistory", gdpPoint, HISTORY_CAP),
+              savingsFlowHistory: appendTurnHistory(
+                "savingsFlowHistory",
+                savingsPoint,
+                HISTORY_CAP
+              ),
+            },
           },
-        },
+        ],
       },
     };
   });

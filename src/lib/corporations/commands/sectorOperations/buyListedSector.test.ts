@@ -1,3 +1,6 @@
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: Db, work: (db: Db) => Promise<Response>) => work(db),
+}));
 import { buyListedSector } from "./buyListedSector";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";

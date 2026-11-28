@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/sessionDb")>()),
+  runWithDbSession: async (_db: unknown, run: (session: object) => Promise<unknown>) => run({}),
+}));
 /**
  * Growth-frontier gate on state-level NPP recruitment.
  *

@@ -71,9 +71,16 @@ type SupplierSector = Pick<CorporateSector, "strategyId" | "revenue">;
  * State ownership is not a factor: a National Corporation banks in its own country's
  * currency like any other.
  */
-export function canSupply(corp: SupplierCorp, countryId: string): boolean {
+export function canSupply(
+  corp: SupplierCorp,
+  countryId: string,
+  paymentCurrency?: string | null
+): boolean {
   if (corp.countryId !== countryId) return false;
-  return resolveCorpLiquidCurrencyCode(corp) === COUNTRY_CURRENCY_MAP[countryId as CountryId];
+  return (
+    resolveCorpLiquidCurrencyCode(corp) ===
+    (paymentCurrency === undefined ? COUNTRY_CURRENCY_MAP[countryId as CountryId] : paymentCurrency)
+  );
 }
 
 /**
@@ -89,6 +96,7 @@ export function resolveFillEligibility(input: {
   corp: SupplierCorp;
   sector: SupplierSector;
   countryId: string;
+  paymentCurrency?: string | null;
   currentYear: number;
   component?: UnitDomain;
   assignedFactories?: number;
@@ -102,7 +110,7 @@ export function resolveFillEligibility(input: {
   if (corp.countryId !== countryId) {
     return { ...base, eligible: false, reason: "foreign_supplier" };
   }
-  if (!canSupply(corp, countryId)) {
+  if (!canSupply(corp, countryId, input.paymentCurrency)) {
     return { ...base, eligible: false, reason: "currency_mismatch" };
   }
   if (components.length === 0) {

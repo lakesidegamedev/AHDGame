@@ -21,6 +21,7 @@ export const issueBondSchema = z.object({
 });
 
 export const buyBondSchema = z.object({
+  requestId: z.string().min(1).max(100).optional(),
   /** Number of bond units to buy (each unit = $1,000 face value) */
   units: z.number().int().positive("Must buy at least 1 unit"),
   /** Optional: which currency to deduct from (defaults to bond's required currency) */
@@ -28,6 +29,7 @@ export const buyBondSchema = z.object({
 });
 
 export const sellBondSchema = z.object({
+  requestId: z.string().min(1).max(100).optional(),
   /** Number of bond units to sell */
   units: z.number().int().positive("Must sell at least 1 unit"),
 });

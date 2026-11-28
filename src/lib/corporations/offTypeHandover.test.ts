@@ -38,15 +38,9 @@ describe("offTypeHandover helpers", () => {
     expect(pickHandoverSector([])).toBeNull();
   });
 
-  it("does nothing below stage 5 and never touches the database", async () => {
-    const db = new Proxy(
-      {},
-      {
-        get: () => {
-          throw new Error("db touched");
-        },
-      }
-    ) as never;
+  it("checks unfinished receipts even when new handovers are disabled", async () => {
+    const { createTransactionalMemoryDb } = await import("@/lib/test-utils/transactionalMemoryDb");
+    const { db } = createTransactionalMemoryDb();
     for (const stage of [0, 1, 4, null, undefined]) {
       await expect(
         runOffTypeHandover(db, { turn: 1, year: 1991, eraUnitScale: 1, stage })

@@ -1,3 +1,4 @@
+import { hasRetainedFinancialEstate } from "@/lib/corporations/rules/retainedFinancialEstate";
 import { bankLoansCollection } from "@/lib/db/repositories/bankLoans";
 /**
  * Absorb one country into another.
@@ -534,7 +535,21 @@ async function mergeNationalCorporations(
       { projection: { borrowerId: 1 } }
     )
     .toArray();
-  const debtIds = new Set(indebted.map((loan) => String(loan.borrowerId)));
+  const heldBonds = await bondsCollection(db)
+    .find(
+      { "holders.corporationId": { $in: absorbedIds }, matured: false },
+      { projection: { holders: 1 } }
+    )
+    .toArray();
+  const debtIds = new Set([
+    ...indebted.map((loan) => String(loan.borrowerId)),
+    ...heldBonds.flatMap((bond) =>
+      (bond.holders ?? []).map((holder) => String(holder.corporationId))
+    ),
+    ...absorbed
+      .filter((shell) => hasRetainedFinancialEstate(shell))
+      .map((shell) => String(shell._id)),
+  ]);
   const foldIds = absorbedIds.filter((id) => !debtIds.has(String(id)));
   const deferredIds = absorbedIds.filter(
     (id) => debtIds.has(String(id)) && String(id) !== String(survivor._id)

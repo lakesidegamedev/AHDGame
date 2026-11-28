@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({ fenceEconomicTurn: async () => null }));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { ObjectId } from "mongodb";

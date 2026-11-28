@@ -1,12 +1,7 @@
+import { withAtomicStatusResult } from "@/lib/api/withAtomicStatusResult";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
-import type {
-  GovernorQueuedBill,
-  NPP,
-  ElectedOfficial,
-  StateBill,
-  StateBillProvision,
-} from "@/lib/db/types";
+import type { GovernorQueuedBill, StateBillProvision } from "@/lib/db/types";
 import { getSubNationalLegislatureKey, type CountryId } from "@/lib/constants/countries";
 import { STATE_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { BILL_PROPOSE_ACTION_COST, getProvisionCostTotal } from "@shared/constants/legislation";
@@ -48,6 +43,13 @@ export interface QueueBillInput {
  * - Governor has sufficient action points + NPI.
  */
 export async function queueBill(
+  db: Db,
+  input: QueueBillInput
+): Promise<{ status: number; body: { queueId?: string; error?: string } }> {
+  return withAtomicStatusResult(db, (db) => queueBillInTransaction(db, input));
+}
+
+async function queueBillInTransaction(
   db: Db,
   input: QueueBillInput
 ): Promise<{ status: number; body: { queueId?: string; error?: string } }> {

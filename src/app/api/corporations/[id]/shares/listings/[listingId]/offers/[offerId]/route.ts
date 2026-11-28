@@ -1,3 +1,4 @@
+import { withAtomicEconomicCommand } from "@/lib/api/withAtomicEconomicCommand";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -19,7 +20,6 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
-import type { ShareOffer } from "@/lib/db/types";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
 import { charactersCollection } from "@/lib/db/repositories/characters";
 import { shareOffersCollection } from "@/lib/db/repositories/shareOffers";
@@ -54,161 +54,164 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { offerId } = await params;
-    const db = await getDb();
-    const forexEnabled = await isForexEnabled();
+    return await withAtomicEconomicCommand(await getDb(), async (db) => {
+      const forexEnabled = await isForexEnabled();
 
-    if (!ObjectId.isValid(offerId)) {
-      return errorResponse(400, "Invalid offer ID");
-    }
-
-    const offer = await shareOffersCollection(db).findOne({ _id: new ObjectId(offerId) });
-
-    if (!offer) return errorResponse(404, "Offer not found");
-    if (offer.status !== "pending") return errorResponse(400, "Offer is not pending");
-
-    const character = await getCharacterByUserId(db, auth.user.userId);
-    if (!character) return errorResponse(404, "Character not found");
-
-    if (offer.buyerCharacterId.toString() !== character._id.toString()) {
-      return errorResponse(403, "Not your offer");
-    }
-
-    const now = new Date();
-
-    // Refund escrow. offer.escrowAmount is in the LISTING corp's liquidCurrencyCode
-    // (Option B); normalize to ₳ via the listing corp's FX, then hop to whatever
-    // party the refund lands in.
-    const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
-    const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
-    const refundAnchor = corpLiquidCapitalToAnchor(
-      offer.escrowAmount,
-      listingCorp ?? {},
-      listingCorpFxRate
-    );
-    const currentTurn = await getCurrentTurn(db);
-
-    if (offer.buyerCorporationId) {
-      const buyerCorp = await corporationsCollection(db).findOne({ _id: offer.buyerCorporationId });
-      const buyerFxRate = await getCorpFxRate(db, buyerCorp ?? {});
-      const refundInBuyerCapital = anchorToCorpLiquidCapital(
-        refundAnchor,
-        buyerCorp ?? {},
-        buyerFxRate
-      );
-      const claim = await shareOffersCollection(db).updateOne(
-        { _id: offer._id, status: "pending" },
-        { $set: { status: "cancelled", updatedAt: now } }
-      );
-      if (claim.matchedCount === 0) {
-        return errorResponse(400, "Offer is not pending");
+      if (!ObjectId.isValid(offerId)) {
+        return errorResponse(400, "Invalid offer ID");
       }
-      let refundCredited = false;
-      try {
-        const refundResult = await corporationsCollection(db).updateOne(
-          { _id: offer.buyerCorporationId },
-          { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
-        );
-        if (refundResult.matchedCount === 0) {
-          throw new Error("Buyer corporation not found");
-        }
-        refundCredited = true;
-        await emitTx(db, {
-          type: "share_listing_refund",
-          turn: currentTurn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: offer.buyerCorporationId,
-          subjectName: buyerCorp?.name ?? "(unknown)",
-          amount: Math.round(refundInBuyerCapital * 100) / 100,
-          currencyCode: resolveCorpLiquidCurrencyCode(buyerCorp) ?? "USD",
-          counterpartyType: "system",
-          counterpartyName: "Private listing escrow",
-          meta: {
-            listingId: offer.listingId.toString(),
-            offerId: offer._id.toString(),
-            corporationId: offer.corporationId.toString(),
-            shares: offer.shares,
-            pricePerShare: offer.pricePerShare,
-            reason: "offer_withdrawn",
-          },
+
+      const offer = await shareOffersCollection(db).findOne({ _id: new ObjectId(offerId) });
+
+      if (!offer) return errorResponse(404, "Offer not found");
+      if (offer.status !== "pending") return errorResponse(400, "Offer is not pending");
+
+      const character = await getCharacterByUserId(db, auth.user.userId);
+      if (!character) return errorResponse(404, "Character not found");
+
+      if (offer.buyerCharacterId.toString() !== character._id.toString()) {
+        return errorResponse(403, "Not your offer");
+      }
+
+      const now = new Date();
+
+      // Refund escrow. offer.escrowAmount is in the LISTING corp's liquidCurrencyCode
+      // (Option B); normalize to ₳ via the listing corp's FX, then hop to whatever
+      // party the refund lands in.
+      const listingCorp = await corporationsCollection(db).findOne({ _id: offer.corporationId });
+      const listingCorpFxRate = await getCorpFxRate(db, listingCorp ?? {});
+      const refundAnchor = corpLiquidCapitalToAnchor(
+        offer.escrowAmount,
+        listingCorp ?? {},
+        listingCorpFxRate
+      );
+      const currentTurn = await getCurrentTurn(db);
+
+      if (offer.buyerCorporationId) {
+        const buyerCorp = await corporationsCollection(db).findOne({
+          _id: offer.buyerCorporationId,
         });
-      } catch (error) {
-        if (refundCredited) {
-          await corporationsCollection(db).updateOne(
+        const buyerFxRate = await getCorpFxRate(db, buyerCorp ?? {});
+        const refundInBuyerCapital = anchorToCorpLiquidCapital(
+          refundAnchor,
+          buyerCorp ?? {},
+          buyerFxRate
+        );
+        const claim = await shareOffersCollection(db).updateOne(
+          { _id: offer._id, status: "pending" },
+          { $set: { status: "cancelled", updatedAt: now } }
+        );
+        if (claim.matchedCount === 0) {
+          return errorResponse(400, "Offer is not pending");
+        }
+        let refundCredited = false;
+        try {
+          const refundResult = await corporationsCollection(db).updateOne(
             { _id: offer.buyerCorporationId },
-            { $inc: { liquidCapital: -refundInBuyerCapital }, $set: { updatedAt: new Date() } }
+            { $inc: { liquidCapital: refundInBuyerCapital }, $set: { updatedAt: now } }
           );
-        }
-        await restoreOfferToPending(db, offer._id);
-        throw error;
-      }
-    } else {
-      const homeCurrency = getHomeCurrency(character);
-      let charFxRate = 1.0;
-      if (forexEnabled) {
-        const fxResult = await loadCharacterFxRate(db, homeCurrency);
-        if (!fxResult.ok) {
-          return errorResponse(503, "Exchange rate unavailable, try again shortly");
-        }
-        charFxRate = fxResult.rate;
-      }
-      const refundInHome = refundAnchor * charFxRate;
-      const claim = await shareOffersCollection(db).updateOne(
-        { _id: offer._id, status: "pending" },
-        { $set: { status: "cancelled", updatedAt: now } }
-      );
-      if (claim.matchedCount === 0) {
-        return errorResponse(400, "Offer is not pending");
-      }
-      let refundCredited = false;
-      try {
-        const refundResult = await charactersCollection(db).updateOne(
-          { _id: character._id },
-          {
-            $inc: buildPersonalBalanceInc(refundInHome, homeCurrency, forexEnabled),
-            $set: { updatedAt: now },
+          if (refundResult.matchedCount === 0) {
+            throw new Error("Buyer corporation not found");
           }
-        );
-        if (refundResult.matchedCount === 0) {
-          throw new Error("Buyer character not found");
+          refundCredited = true;
+          await emitTx(db, {
+            type: "share_listing_refund",
+            turn: currentTurn,
+            createdAt: now,
+            subjectType: "corporation",
+            subjectId: offer.buyerCorporationId,
+            subjectName: buyerCorp?.name ?? "(unknown)",
+            amount: Math.round(refundInBuyerCapital * 100) / 100,
+            currencyCode: resolveCorpLiquidCurrencyCode(buyerCorp) ?? "USD",
+            counterpartyType: "system",
+            counterpartyName: "Private listing escrow",
+            meta: {
+              listingId: offer.listingId.toString(),
+              offerId: offer._id.toString(),
+              corporationId: offer.corporationId.toString(),
+              shares: offer.shares,
+              pricePerShare: offer.pricePerShare,
+              reason: "offer_withdrawn",
+            },
+          });
+        } catch (error) {
+          if (refundCredited) {
+            await corporationsCollection(db).updateOne(
+              { _id: offer.buyerCorporationId },
+              { $inc: { liquidCapital: -refundInBuyerCapital }, $set: { updatedAt: new Date() } }
+            );
+          }
+          await restoreOfferToPending(db, offer._id);
+          throw error;
         }
-        refundCredited = true;
-        await emitTx(db, {
-          type: "share_listing_refund",
-          turn: currentTurn,
-          createdAt: now,
-          subjectType: "character",
-          subjectId: character._id,
-          subjectName: character.name,
-          amount: Math.round(refundInHome * 100) / 100,
-          currencyCode: homeCurrency,
-          counterpartyType: "system",
-          counterpartyName: "Private listing escrow",
-          meta: {
-            listingId: offer.listingId.toString(),
-            offerId: offer._id.toString(),
-            corporationId: offer.corporationId.toString(),
-            shares: offer.shares,
-            pricePerShare: offer.pricePerShare,
-            reason: "offer_withdrawn",
-          },
-        });
-      } catch (error) {
-        if (refundCredited) {
-          await charactersCollection(db).updateOne(
+      } else {
+        const homeCurrency = getHomeCurrency(character);
+        let charFxRate = 1.0;
+        if (forexEnabled) {
+          const fxResult = await loadCharacterFxRate(db, homeCurrency);
+          if (!fxResult.ok) {
+            return errorResponse(503, "Exchange rate unavailable, try again shortly");
+          }
+          charFxRate = fxResult.rate;
+        }
+        const refundInHome = refundAnchor * charFxRate;
+        const claim = await shareOffersCollection(db).updateOne(
+          { _id: offer._id, status: "pending" },
+          { $set: { status: "cancelled", updatedAt: now } }
+        );
+        if (claim.matchedCount === 0) {
+          return errorResponse(400, "Offer is not pending");
+        }
+        let refundCredited = false;
+        try {
+          const refundResult = await charactersCollection(db).updateOne(
             { _id: character._id },
             {
-              $inc: buildPersonalBalanceInc(-refundInHome, homeCurrency, forexEnabled),
-              $set: { updatedAt: new Date() },
+              $inc: buildPersonalBalanceInc(refundInHome, homeCurrency, forexEnabled),
+              $set: { updatedAt: now },
             }
           );
+          if (refundResult.matchedCount === 0) {
+            throw new Error("Buyer character not found");
+          }
+          refundCredited = true;
+          await emitTx(db, {
+            type: "share_listing_refund",
+            turn: currentTurn,
+            createdAt: now,
+            subjectType: "character",
+            subjectId: character._id,
+            subjectName: character.name,
+            amount: Math.round(refundInHome * 100) / 100,
+            currencyCode: homeCurrency,
+            counterpartyType: "system",
+            counterpartyName: "Private listing escrow",
+            meta: {
+              listingId: offer.listingId.toString(),
+              offerId: offer._id.toString(),
+              corporationId: offer.corporationId.toString(),
+              shares: offer.shares,
+              pricePerShare: offer.pricePerShare,
+              reason: "offer_withdrawn",
+            },
+          });
+        } catch (error) {
+          if (refundCredited) {
+            await charactersCollection(db).updateOne(
+              { _id: character._id },
+              {
+                $inc: buildPersonalBalanceInc(-refundInHome, homeCurrency, forexEnabled),
+                $set: { updatedAt: new Date() },
+              }
+            );
+          }
+          await restoreOfferToPending(db, offer._id);
+          throw error;
         }
-        await restoreOfferToPending(db, offer._id);
-        throw error;
       }
-    }
 
-    return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true });
+    });
   } catch (error) {
     return handleRouteError(error);
   }

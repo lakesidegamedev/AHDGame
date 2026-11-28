@@ -1,3 +1,8 @@
+import type { AnyBulkWriteOperation } from "mongodb";
+import type { FederalBudget } from "@/lib/db/types";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { createHash } from "node:crypto";
 import {
   organizationCashContext,
   organizationLocalPerAnchor,
@@ -73,6 +78,19 @@ export async function chargeOrganizationTribute(
   access?: AccessTable,
   options?: OrganizationCashOptions
 ): Promise<TributeResult> {
+  if (!(organizationId in ORG_TRIBUTE_RATES_ANNUAL)) return { ...EMPTY };
+  const turn = options?.turn ?? options?.context?.turn ?? (await getCurrentTurn(db));
+  const phase = `organization-tribute-${createHash("sha256").update(organizationId).digest("hex")}`;
+  return withTurnValueSettlement(db, phase, turn, (db) =>
+    chargeOrganizationTributeWork(db, organizationId, access, options)
+  );
+}
+async function chargeOrganizationTributeWork(
+  db: Db,
+  organizationId: string,
+  access?: AccessTable,
+  options?: OrganizationCashOptions
+): Promise<TributeResult> {
   // Cheapest gate first: only the two armed blocs levy tribute at all, so every
   // other organisation costs one lookup rather than a database read.
   if (!(organizationId in ORG_TRIBUTE_RATES_ANNUAL)) return { ...EMPTY };
@@ -137,6 +155,7 @@ export async function chargeOrganizationTribute(
       );
     }
 
+    const legacyDebitOps: AnyBulkWriteOperation<FederalBudget>[] = [];
     for (const payer of payers) {
       // Absent from the map means "no economic data", which is not the same as a
       // GDP of zero — an entity we cannot price is skipped, not charged nothing.
@@ -146,7 +165,7 @@ export async function chargeOrganizationTribute(
       const owedUsd = (gdpUsdMillions * GDP_MILLIONS_TO_USD * rateAnnual) / ORG_DUES_TURNS_PER_YEAR;
       if (!(owedUsd > 0)) continue;
 
-      const fundCredit = Math.round(owedUsd / fundRate);
+      let fundCredit = Math.round(owedUsd / fundRate);
       if (fundCredit <= 0) continue;
 
       // A row at all, not a solvent one: its absence is what marks an entity the
@@ -190,6 +209,8 @@ export async function chargeOrganizationTribute(
       } else if (treasury) {
         const payerRate = getGdpAnchorRate(payer as CountryId, preset);
         const owedLocal = Math.round(owedUsd / payerRate);
+        if (owedLocal <= 0) continue;
+        fundCredit = (owedLocal * payerRate) / fundRate;
         // Charged whatever the treasury's sign, exactly as dues are.
         //
         // This used to be floored at solvency — "never push a treasury negative"
@@ -200,11 +221,13 @@ export async function chargeOrganizationTribute(
         // collected nothing at all. A state meets its obligations by borrowing;
         // the consequences of that debt are modelled by debt-to-GDP, the credit
         // rating and sovereign default, not by an alliance declining to invoice.
-        const debit = await budget.updateOne(
-          { countryId: payer as CountryId },
-          { $inc: { treasuryBalance: -owedLocal }, $set: { updatedAt: now } }
-        );
-        if (debit.modifiedCount > 0) {
+        legacyDebitOps.push({
+          updateOne: {
+            filter: { countryId: payer as CountryId },
+            update: { $inc: { treasuryBalance: -owedLocal }, $set: { updatedAt: now } },
+          },
+        });
+        {
           await witnessOrganizationCash(db, batch, {
             kind: "government",
             ref: payer,
@@ -222,6 +245,11 @@ export async function chargeOrganizationTribute(
       paid++;
     }
 
+    if (legacyDebitOps.length) {
+      const debits = await budget.bulkWrite(legacyDebitOps);
+      if (debits.matchedCount !== legacyDebitOps.length)
+        throw new Error("Organization treasury changed during collection");
+    }
     if (!fundedCash && collectedLocal > 0) {
       const col = await getOrganizationFundsCollection(db);
       const credit = await col.updateOne(

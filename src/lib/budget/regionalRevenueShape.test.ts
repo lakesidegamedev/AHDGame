@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
-import { buildRegionalRevenueShape } from "./regionalRevenueShape";
+import { buildRegionalRevenueShape } from "@/lib/countries/rules/regionalRevenueShape";
 
 /**
  * The region budget route discriminated its revenue breakdown by which optional
@@ -113,5 +113,28 @@ describe("buildRegionalRevenueShape", () => {
     ]) {
       expect(buildRegionalRevenueShape(d).revenue.total).toBe(900);
     }
+  });
+});
+
+it("uses the owning country despite stale foreign revenue fields", () => {
+  const stale = { residentTaxRevenue: 900, incomeTaxShare: 800, eitShare: 700 };
+  expect(
+    buildRegionalRevenueShape(doc({ countryId: "RU", ...stale, unionGrant: 25, totalBudget: 25 }))
+  ).toEqual({ revenue: { federalGrants: 25, total: 25 }, grantAmount: 25 });
+  expect(
+    buildRegionalRevenueShape(
+      doc({
+        countryId: "UK",
+        ...stale,
+        unionGrant: 50,
+        councilTaxRevenue: 10,
+        businessRatesRevenue: 20,
+        westminsterGrant: 30,
+        totalBudget: 60,
+      })
+    )
+  ).toEqual({
+    revenue: { councilTax: 10, businessRates: 20, federalGrants: 30, total: 60 },
+    grantAmount: 30,
   });
 });

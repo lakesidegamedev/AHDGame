@@ -22,15 +22,17 @@ export interface StockListing {
   sharePrice: number;
   totalShares: number;
   marketCap: number;
-  totalRevenue: number;
-  income: number;
+  totalRevenue: number | null;
+  income: number | null;
+  incomeBasis?: "settled" | "estimate" | "unavailable";
+  incomeTurn?: number;
   /** Currency code for sharePrice/marketCap/totalRevenue/income (v0.2.6). */
   liquidCurrencyCode?: string | null;
   /** ₳-normalized mirrors used for cross-currency sorting. */
   sharePriceAnchor?: number;
   marketCapAnchor?: number;
-  totalRevenueAnchor?: number;
-  incomeAnchor?: number;
+  totalRevenueAnchor?: number | null;
+  incomeAnchor?: number | null;
   priceChange1h: number;
   priceChange24h: number;
   priceChange48h: number;

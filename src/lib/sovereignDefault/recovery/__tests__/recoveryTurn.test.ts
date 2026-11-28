@@ -35,6 +35,19 @@ function makeDb(rows: FakeBudget[]) {
             active.filter((r) => r.sovereignCrisisState === "recovering")
           ),
       }),
+      bulkWrite: vi.fn(
+        async (
+          ops: {
+            updateOne: { filter: { _id: string }; update: { $set: Record<string, unknown> } };
+          }[]
+        ) => {
+          for (const { updateOne: op } of ops) {
+            sets.push({ id: op.filter._id, $set: op.update.$set });
+            active = active.map((r) => (r._id === op.filter._id ? { ...r, ...op.update.$set } : r));
+          }
+          return { matchedCount: ops.length, modifiedCount: ops.length };
+        }
+      ),
       updateOne: vi.fn(async (filter: { _id: string }, u: Record<string, unknown>) => {
         sets.push({ id: filter._id, $set: u.$set as Record<string, unknown> });
         active = active.map((r) => (r._id === filter._id ? { ...r, ...(u.$set as object) } : r));
@@ -131,3 +144,16 @@ describe("processSovereignRecoveryTurn", () => {
     expect(r.countriesExited).toEqual([]);
   });
 });
+
+// Formula/transport fixture; atomic monetary tests exercise the real settlement.
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+vi.mock("@/lib/db/sessionDb", () => ({
+  afterCommit: async (_db: unknown, work: () => unknown) => work(),
+}));

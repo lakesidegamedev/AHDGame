@@ -1,3 +1,7 @@
+import {
+  withRecordedEconomicCommand,
+  economicRequestId,
+} from "@/lib/api/withRecordedEconomicCommand";
 // POST /api/country/[code]/executive/vice-president/action
 // Auth: requireAuth — must be the seated vice-president (#67)
 // Errors: 400, 401, 403, 404, 409
@@ -7,7 +11,6 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import type { ElectedOfficial } from "@/lib/db/types";
 import {
   initialVpActionFields,
   VP_RALLY_INFLUENCE_GAIN,
@@ -46,94 +49,102 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { actionId } = parsed.data;
 
     const db = await getDb();
-    const officialsCol = electedOfficialsCollection(db);
-    const vpOfficial = await officialsCol.findOne({ countryId, officeType: "vicePresident" });
+    return await withRecordedEconomicCommand(
+      db,
+      "vp-office-action",
+      `${auth.user.userId}:${auth.user.character?._id ?? "none"}`,
+      economicRequestId(request),
+      { countryId, ...parsed.data },
+      async (db) => {
+        const officialsCol = electedOfficialsCollection(db);
+        const vpOfficial = await officialsCol.findOne({ countryId, officeType: "vicePresident" });
 
-    // Gate: the actor must BE the seated, character-backed vice-president.
-    const isSeatedVp =
-      !!vpOfficial?.characterId &&
-      !!auth.user.character &&
-      vpOfficial.characterId.toString() === auth.user.character._id.toString();
-    if (!isSeatedVp) {
-      return errorResponse(403, "Only the sitting vice-president can take this action");
-    }
+        // Gate: the actor must BE the seated, character-backed vice-president.
+        const isSeatedVp =
+          !!vpOfficial?.characterId &&
+          !!auth.user.character &&
+          vpOfficial.characterId.toString() === auth.user.character._id.toString();
+        if (!isSeatedVp) {
+          return errorResponse(403, "Only the sitting vice-president can take this action");
+        }
 
-    // Backfill missing action fields on legacy VP docs. Pre-#67 seatings lack
-    // vpActionsRemaining / lastVpActionResetDay, which makes the atomic `$gte: 1`
-    // spend below silently fail (Mongo doesn't match $gte against missing fields).
-    if (vpOfficial!.vpActionsRemaining == null || vpOfficial!.lastVpActionResetDay == null) {
-      const backfill = {
-        ...initialVpActionFields(),
-        ...(vpOfficial!.vpActionsRemaining != null
-          ? { vpActionsRemaining: vpOfficial!.vpActionsRemaining }
-          : {}),
-      };
-      await officialsCol.updateOne({ _id: vpOfficial!._id }, { $set: backfill });
-      vpOfficial!.vpActionsRemaining = backfill.vpActionsRemaining;
-      vpOfficial!.lastVpActionResetDay = backfill.lastVpActionResetDay;
-    }
+        // Backfill missing action fields on legacy VP docs. Pre-#67 seatings lack
+        // vpActionsRemaining / lastVpActionResetDay, which makes the atomic `$gte: 1`
+        // spend below silently fail (Mongo doesn't match $gte against missing fields).
+        if (vpOfficial!.vpActionsRemaining == null || vpOfficial!.lastVpActionResetDay == null) {
+          const backfill = {
+            ...initialVpActionFields(),
+            ...(vpOfficial!.vpActionsRemaining != null
+              ? { vpActionsRemaining: vpOfficial!.vpActionsRemaining }
+              : {}),
+          };
+          await officialsCol.updateOne({ _id: vpOfficial!._id }, { $set: backfill });
+          vpOfficial!.vpActionsRemaining = backfill.vpActionsRemaining;
+          vpOfficial!.lastVpActionResetDay = backfill.lastVpActionResetDay;
+        }
 
-    const actionsRemaining = vpOfficial!.vpActionsRemaining ?? 0;
-    if (actionsRemaining < 1) {
-      return errorResponse(400, "No vice-president actions remaining");
-    }
+        const actionsRemaining = vpOfficial!.vpActionsRemaining ?? 0;
+        if (actionsRemaining < 1) {
+          return errorResponse(400, "No vice-president actions remaining");
+        }
 
-    const charactersCol = charactersCollection(db);
+        const charactersCol = charactersCollection(db);
 
-    // Resolve the effect target BEFORE spending so a doomed action wastes no
-    // action (mirrors the order route rejecting a region-less regional order).
-    let targetCharId = auth.user.character!._id; // rally_base targets the VP.
-    if (actionId === "surrogate_address") {
-      const presidentOfficial = await officialsCol.findOne({ countryId, officeType: "president" });
-      if (!presidentOfficial?.characterId) {
-        return errorResponse(400, "There is no sitting president to campaign for");
-      }
-      targetCharId = presidentOfficial.characterId;
-    }
+        // Resolve the effect target BEFORE spending so a doomed action wastes no
+        // action (mirrors the order route rejecting a region-less regional order).
+        let targetCharId = auth.user.character!._id; // rally_base targets the VP.
+        if (actionId === "surrogate_address") {
+          const presidentOfficial = await officialsCol.findOne({
+            countryId,
+            officeType: "president",
+          });
+          if (!presidentOfficial?.characterId) {
+            return errorResponse(400, "There is no sitting president to campaign for");
+          }
+          targetCharId = presidentOfficial.characterId;
+        }
 
-    const targetChar = await charactersCol.findOne({ _id: targetCharId });
-    if (!targetChar) {
-      return errorResponse(404, "Target office holder not found");
-    }
+        const targetChar = await charactersCol.findOne({ _id: targetCharId });
+        if (!targetChar) {
+          return errorResponse(404, "Target office holder not found");
+        }
 
-    // Spend one action atomically (guards against a double-submit race).
-    const spend = await officialsCol.updateOne(
-      { _id: vpOfficial!._id, vpActionsRemaining: { $gte: 1 } },
-      { $inc: { vpActionsRemaining: -1 } }
-    );
-    if (spend.modifiedCount === 0) {
-      return errorResponse(409, "No vice-president actions remaining");
-    }
-
-    try {
-      if (actionId === "surrogate_address") {
-        const next = clamp100((targetChar.favorability ?? 0) + VP_SURROGATE_FAVORABILITY_GAIN);
-        await charactersCol.updateOne(
-          { _id: targetChar._id },
-          { $set: { favorability: next, updatedAt: new Date() } }
+        // Spend one action atomically (guards against a double-submit race).
+        const spend = await officialsCol.updateOne(
+          { _id: vpOfficial!._id, vpActionsRemaining: { $gte: 1 } },
+          { $inc: { vpActionsRemaining: -1 } }
         );
-        return NextResponse.json({
-          success: true,
-          actionsRemaining: actionsRemaining - 1,
-          message: `You campaigned for the president. Their favorability is now ${next}.`,
-        });
+        if (spend.modifiedCount === 0) {
+          return errorResponse(409, "No vice-president actions remaining");
+        }
+
+        {
+          if (actionId === "surrogate_address") {
+            const next = clamp100((targetChar.favorability ?? 0) + VP_SURROGATE_FAVORABILITY_GAIN);
+            await charactersCol.updateOne(
+              { _id: targetChar._id },
+              { $set: { favorability: next, updatedAt: new Date() } }
+            );
+            return NextResponse.json({
+              success: true,
+              actionsRemaining: actionsRemaining - 1,
+              message: `You campaigned for the president. Their favorability is now ${next}.`,
+            });
+          }
+          // rally_base
+          const next = clamp100((targetChar.politicalInfluence ?? 0) + VP_RALLY_INFLUENCE_GAIN);
+          await charactersCol.updateOne(
+            { _id: targetChar._id },
+            { $set: { politicalInfluence: next, updatedAt: new Date() } }
+          );
+          return NextResponse.json({
+            success: true,
+            actionsRemaining: actionsRemaining - 1,
+            message: `You rallied the base. Your political influence is now ${next}.`,
+          });
+        }
       }
-      // rally_base
-      const next = clamp100((targetChar.politicalInfluence ?? 0) + VP_RALLY_INFLUENCE_GAIN);
-      await charactersCol.updateOne(
-        { _id: targetChar._id },
-        { $set: { politicalInfluence: next, updatedAt: new Date() } }
-      );
-      return NextResponse.json({
-        success: true,
-        actionsRemaining: actionsRemaining - 1,
-        message: `You rallied the base. Your political influence is now ${next}.`,
-      });
-    } catch (error) {
-      // Refund the action if the effect write failed (mirrors the order route).
-      await officialsCol.updateOne({ _id: vpOfficial!._id }, { $inc: { vpActionsRemaining: 1 } });
-      throw error;
-    }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

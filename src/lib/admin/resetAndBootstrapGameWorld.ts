@@ -27,6 +27,7 @@ import {
   type StartingPartiesMode,
 } from "./startingParties";
 import type { Db } from "mongodb";
+import { withWorldResetAdmission } from "./resetAdmission";
 import { resetGameWorld, type ResetGameWorldResult } from "@/lib/admin/resetGameWorld";
 import { bootstrapGameWorld, type BootstrapMode } from "@/lib/admin/bootstrapGameWorld";
 import { finalizeResetGameWorld } from "@/lib/admin/finalizeResetGameWorld";
@@ -40,7 +41,7 @@ import {
 } from "@/lib/admin/resetRunRecord";
 import type { SeedDiagnosticCheck } from "@/lib/admin/seedDiagnostic/types";
 import { presetDefaultsToFoundingPhase } from "@/lib/seeds/presetSelector";
-import type { GameIteration, GameState } from "@/lib/db/types/gameState";
+import type { GameIteration } from "@/lib/db/types/gameState";
 import { isPresetAnchorDate, type ResetStartDate } from "@/lib/admin/resetStartDate";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import {
@@ -255,574 +256,581 @@ export async function resetAndBootstrapGameWorld(
   if (!versionPreflight.allowed) throw new Error(versionPreflight.reason);
   const selectedVersions = resetSystemSelectionsFrom(selectedState);
 
-  // 0) Seal the world BEFORE anything is destroyed.
-  //
-  //    Both maintenance mode and `isActive: false` must land before the runtime
-  //    wipe and the first country-seed pass; otherwise they run against a world
-  //    the turn cron still considers active (`cron.ts` gates on `isActive`
-  //    alone) and that players can still load pages on.
-  //
-  //    ⚠️ Maintenance mode gates PAGE routes only — `src/proxy.ts` returns early
-  //    for `/api/*`, so this stops players reaching the UI, not the API. The
-  //    `isActive` clear is what actually stops the turn engine.
-  //
-  //    The seal survives the seeders only because `runSeed`'s reset branch no
-  //    longer drops `gameConfig`; see RESET_DROP_COLLECTIONS in runCoreSeed.ts.
-  await enableMaintenanceMode(db, {
-    reason:
-      "Game reset — fresh world being prepared. Site will reopen when admin verifies the new state.",
-    enabledBy: adminUsername ?? "system",
-  });
-  //    ⚠️ Deliberately NOT an upsert. On an empty database this must match
-  //    nothing: upserting would create a `gameState` doc holding only
-  //    `isActive` and `updatedAt`, and `initializeGameState` returns any
-  //    existing doc untouched — so the world would run forever on a gameState
-  //    with no currentTurn, preset, or startingYear. A database with no
-  //    gameState has no turn cron to stop anyway.
-  await gameStateCollection(db).updateOne(
-    { _id: "current" },
-    { $set: { isActive: false, updatedAt: new Date() } }
-  );
-  collect("World sealed for reset — maintenance mode on, turn processing stopped");
-
-  // 0b) Open the run's audit row NOW, before anything is destroyed.
-  //
-  //     Written up front so a run that dies in teardown or build still leaves
-  //     a record; the live SSE log dies with the browser tab. `adminLogs` is
-  //     manifest category `preserved`, so the row survives the teardown it is
-  //     recording.
-  const run = createResetRunRecord(collect);
-  let phaseReached = "seal";
-  let aborted = false;
-  const readiness: ResetSeedReadiness = {
-    status: "not-checked",
-    criticalChecks: [],
-    baselineCaptured: false,
-    residueViolations: [],
-  };
-  // Every document a reset keeps must predate this; every one it writes cannot.
-  const resetStartedAt = new Date();
-  let finalized: Awaited<ReturnType<typeof finalizeResetGameWorld>> | null = null;
-  const recordRunLog = options.recordRunLog !== false;
-  if (recordRunLog) await openResetRunLog(db, run, { preset, mode, adminUsername });
-
-  try {
-    // 1) TEARDOWN. Wipes runtime state, retires or deletes characters, stamps the
-    //    new clock. Does NOT seed; step 2 seeds.
+  return withWorldResetAdmission(db, async (admission) => {
+    // 0) Seal the world BEFORE anything is destroyed.
     //
-    //    Never seed historical officials here: the bootstrap seeders re-create
-    //    default parties, so officials must follow for party sequentialIds to
-    //    line up.
+    //    Both maintenance mode and `isActive: false` must land before the runtime
+    //    wipe and the first country-seed pass; otherwise they run against a world
+    //    the turn cron still considers active (`cron.ts` gates on `isActive`
+    //    alone) and that players can still load pages on.
     //
-    //    `log` matters: its lines arrive tagged `[reset]` for the SSE stream.
-    phaseReached = "teardown";
-    const reset = await resetGameWorld(db, {
-      deleteProfiles,
-      preset,
-      seedHistorical: false,
-      adminUsername,
-      iteration,
-      startDate: options.startDate,
-      versionSelectionSnapshot: selectedState,
-      preIteration,
-      startingParties,
-      log: collect,
-    });
-    collect(reset.message);
-
-    // Political metrics are reference rows, but several fields on each row are
-    // mutable momentum from the outgoing world. Clear those fields only here,
-    // after teardown has succeeded and before bootstrap re-seeds every country.
-    const politicalRuntimeFieldsCleared = await resetPoliticalMetricsRuntimeState(db);
-    collect(
-      `Cleared embedded political runtime fields from ${politicalRuntimeFieldsCleared} region(s)`
-    );
-    const stateRuntimeFieldsCleared = await resetStateRuntimeFields(db);
-    collect(`Cleared embedded state runtime fields from ${stateRuntimeFieldsCleared} region(s)`);
-    const macroRuntimeReset = await resetMacroMetricsRuntimeState(db);
-    collect(
-      `Cleared embedded macro runtime fields from ${macroRuntimeReset.documentsModified} row(s); ` +
-        `removed ${macroRuntimeReset.nationalRollupsDeleted} derived national rollup(s)`
-    );
-
-    // 2) BUILD. `seedOnly` short-circuits before election + officials spawn.
-    phaseReached = "build";
-    // A reference rebuild must start from what an empty database starts from.
-    // The reference collections below are upsert-seeded from the NEW roster,
-    // so the outgoing world's rows for regions, countries and categories the
-    // new preset does not write would otherwise survive the reset (see
-    // REFERENCE_REBUILD_CLEARED_COLLECTIONS). Cleared after teardown and
-    // immediately before bootstrap, which rebuilds every one of them.
-    if (resetReference) {
-      const cleared = await clearReferenceForRebuild(db);
-      collect(
-        `Cleared reference data for rebuild: ${Object.entries(cleared)
-          .map(([name, count]) => `${name} ${count}`)
-          .join(", ")}`
-      );
-      await dropRetiredCollections(db);
-    }
-    const bootstrap = await bootstrapGameWorld({
-      db,
-      mode,
-      preset,
-      skipRegionalCouncil,
-      resetReference,
-      seedOnly,
-      preIteration,
-      startingParties,
-      log: collect,
-      run,
-    });
-
-    // 2b) FINALIZE. Steps that need a fully-seeded world: default-party top-up,
-    // party/charter/statePartyOrg cleanup, demographics reset, orphan region purge,
-    // IMF placeholder, adminLog row. Counts merge into reset.details for an
-    // unchanged response shape.
-    // CONTAINED: a finalize failure leaves a seeded world, so the run degrades to
-    // `partial` rather than discarding a successful build.
-    phaseReached = "finalize";
-    finalized = await run.step("finalize", "finalizeResetGameWorld", () =>
-      finalizeResetGameWorld(db, {
-        preset,
-        startingParties,
-        teardown: reset.details,
-        deleteProfiles,
-        log: collect,
-      })
-    );
-    if (finalized) {
-      reset.details.demographicsReset = finalized.demographicsReset;
-      reset.details.customPartiesDeleted = finalized.customPartiesDeleted;
-      reset.details.partyOrgRecordsDeleted = finalized.partyOrgRecordsDeleted;
-      reset.details.budgetSeedLog = finalized.finalizeLog;
-    }
-
-    // New v2 opening verification can fail after core bootstrap has written
-    // the world. Seal it before those fail-closed checks, not only after them.
-    if (selectedVersions.metrics === "v2") {
-      await enableMaintenanceMode(db, {
-        reason:
-          "Game reset: fresh world being prepared. Site will reopen when admin verifies the new state.",
-        enabledBy: adminUsername ?? "system",
-      });
-    }
-
-    // Complete the reset-only officials pass before certifying any v2 opening.
-    // Its contained failures otherwise leave valid-looking v2 receipts on an
-    // incomplete world.
-    let postSeedOfficials: ResetAndBootstrapResult["postSeedOfficials"];
-    if (seedOnly && preset !== "2019-no-parties") {
-      phaseReached = "officials";
-      const result = await run.step("officials", "seedHistoricalOfficials", () =>
-        seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners", collect)
-      );
-      if (result) {
-        postSeedOfficials = result;
-        collect(
-          `Seeded historical officials: ${result.officialsCreated} officials, ${result.nppsCreated} NPPs`
-        );
-      }
-    }
-
-    if (startingParties !== "default")
-      await clearStartingPolitics(db, preset, startingParties === "no-npps");
-
-    // The v2 board is separate from all v1 working metric collections. A
-    // receipt is written only after the whole board has been persisted and
-    // read back. A contained finalize failure cannot certify a v2 opening.
-    if (selectedVersions.metrics === "v2") {
-      phaseReached = "v2 metrics opening";
-      if (run.status(false) !== "succeeded") {
-        throw new Error("Cannot certify metrics v2 after a partial reset");
-      }
-      const freshState = await gameStateCollection(db).findOne(
-        { _id: "current" },
-        {
-          projection: {
-            preset: 1,
-            resetWorldId: 1,
-            currentTurn: 1,
-            metricsSystemVersion: 1,
-          },
-        }
-      );
-      if (
-        freshState?.metricsSystemVersion !== "v2" ||
-        typeof freshState.resetWorldId !== "string" ||
-        !Number.isSafeInteger(freshState.currentTurn) ||
-        freshState.currentTurn < 1
-      ) {
-        throw new Error("Fresh reset state is missing the metrics v2 world identity");
-      }
-      const { seedOpeningMetrics1991 } = await import("@/lib/resetMetrics/seedOpening1991");
-      const receipt =
-        preset === "1991-default" && atPresetAnchor
-          ? await seedOpeningMetrics1991(db, freshState.resetWorldId, freshState.currentTurn)
-          : await (
-              await import("@/lib/resetVersions/seedModeledOpening")
-            ).seedModeledOpening(
-              db,
-              preset,
-              freshState.resetWorldId,
-              freshState.currentTurn,
-              "metrics",
-              options.startDate
-            );
-      const stamped = await gameStateCollection(db).updateOne(
-        {
-          _id: "current",
-          resetWorldId: freshState.resetWorldId,
-          currentTurn: freshState.currentTurn,
-          metricsSystemVersion: "v2",
-        },
-        { $set: { "resetVersionSeeds.metrics": receipt } }
-      );
-      if (stamped.matchedCount !== 1) {
-        throw new Error("Metrics v2 world changed before its seed receipt could be stamped");
-      }
-      collect(`Verified ${preset} v2 metric opening`);
-    }
-    if (selectedVersions.legislation === "v2") {
-      phaseReached = "v2 current-law opening";
-      if (run.status(false) !== "succeeded") {
-        throw new Error("Cannot certify legislation v2 after a partial reset");
-      }
-      const freshState = await gameStateCollection(db).findOne(
-        { _id: "current" },
-        {
-          projection: {
-            preset: 1,
-            resetWorldId: 1,
-            resetVersionSeeds: 1,
-            currentTurn: 1,
-            metricsSystemVersion: 1,
-            legislationSystemVersion: 1,
-          },
-        }
-      );
-      if (
-        freshState?.legislationSystemVersion !== "v2" ||
-        freshState.metricsSystemVersion !== "v2" ||
-        !resetSeedComplete(freshState, "metrics") ||
-        typeof freshState.resetWorldId !== "string" ||
-        !Number.isSafeInteger(freshState.currentTurn) ||
-        freshState.currentTurn < 1
-      ) {
-        throw new Error("Fresh reset state lacks the prerequisite metrics v2 opening");
-      }
-      const { seedOpeningLawBoards1991 } = await import("@/lib/resetLegislation/seedOpening1991");
-      const receipt =
-        preset === "1991-default" && atPresetAnchor
-          ? await seedOpeningLawBoards1991(db, freshState.resetWorldId, freshState.currentTurn)
-          : await (
-              await import("@/lib/resetVersions/seedModeledOpening")
-            ).seedModeledOpening(
-              db,
-              preset,
-              freshState.resetWorldId,
-              freshState.currentTurn,
-              "legislation",
-              options.startDate
-            );
-      const stamped = await gameStateCollection(db).updateOne(
-        {
-          _id: "current",
-          resetWorldId: freshState.resetWorldId,
-          currentTurn: freshState.currentTurn,
-          legislationSystemVersion: "v2",
-        },
-        { $set: { "resetVersionSeeds.legislation": receipt } }
-      );
-      if (stamped.matchedCount !== 1) {
-        throw new Error("Legislation v2 world changed before its seed receipt could be stamped");
-      }
-      collect(`Verified ${preset} v2 current-law opening`);
-    }
-    if (selectedVersions.cabinet === "v2") {
-      phaseReached = "v2 department opening";
-      if (run.status(false) !== "succeeded") {
-        throw new Error("Cannot certify Cabinet v2 after a partial reset");
-      }
-      const freshState = await gameStateCollection(db).findOne(
-        { _id: "current" },
-        {
-          projection: {
-            preset: 1,
-            resetWorldId: 1,
-            resetVersionSeeds: 1,
-            currentTurn: 1,
-            metricsSystemVersion: 1,
-            cabinetSystemVersion: 1,
-          },
-        }
-      );
-      if (
-        freshState?.cabinetSystemVersion !== "v2" ||
-        freshState.metricsSystemVersion !== "v2" ||
-        !resetSeedComplete(freshState, "metrics") ||
-        typeof freshState.resetWorldId !== "string" ||
-        !Number.isSafeInteger(freshState.currentTurn) ||
-        freshState.currentTurn < 1
-      ) {
-        throw new Error("Fresh reset state lacks the prerequisite metrics v2 opening");
-      }
-      const { seedOpeningDepartmentBoards1991 } =
-        await import("@/lib/resetFinance/seedOpeningDepartments1991");
-      const receipt =
-        preset === "1991-default" && atPresetAnchor
-          ? await seedOpeningDepartmentBoards1991(
-              db,
-              freshState.resetWorldId,
-              freshState.currentTurn
-            )
-          : await (
-              await import("@/lib/resetVersions/seedModeledOpening")
-            ).seedModeledOpening(
-              db,
-              preset,
-              freshState.resetWorldId,
-              freshState.currentTurn,
-              "cabinet",
-              options.startDate
-            );
-      const stamped = await gameStateCollection(db).updateOne(
-        {
-          _id: "current",
-          resetWorldId: freshState.resetWorldId,
-          currentTurn: freshState.currentTurn,
-          cabinetSystemVersion: "v2",
-        },
-        { $set: { "resetVersionSeeds.cabinet": receipt } }
-      );
-      if (stamped.matchedCount !== 1) {
-        throw new Error("Cabinet v2 world changed before its seed receipt could be stamped");
-      }
-      collect(`Verified ${preset} v2 Cabinet opening claims`);
-    }
-    if (selectedVersions.demographics === "v2") {
-      phaseReached = "v2 demographics opening";
-      if (run.status(false) !== "succeeded") {
-        throw new Error("Cannot certify demographics v2 after a partial reset");
-      }
-      const freshState = await gameStateCollection(db).findOne(
-        { _id: "current" },
-        {
-          projection: {
-            preset: 1,
-            resetWorldId: 1,
-            currentTurn: 1,
-            demographicsSystemVersion: 1,
-          },
-        }
-      );
-      if (
-        freshState?.demographicsSystemVersion !== "v2" ||
-        typeof freshState.resetWorldId !== "string" ||
-        !Number.isSafeInteger(freshState.currentTurn) ||
-        freshState.currentTurn < 1
-      ) {
-        throw new Error("Fresh reset state is missing the demographics v2 world identity");
-      }
-      const { verifyDemographicsV2Opening } = await import("@/lib/demographics/v2/verifyOpening");
-      const receipt = await verifyDemographicsV2Opening(
-        db,
-        freshState.resetWorldId,
-        freshState.currentTurn,
-        demographicsV2OpeningCountries(preset)
-      );
-      const stamped = await gameStateCollection(db).updateOne(
-        {
-          _id: "current",
-          resetWorldId: freshState.resetWorldId,
-          currentTurn: freshState.currentTurn,
-          demographicsSystemVersion: "v2",
-        },
-        { $set: { "resetVersionSeeds.demographics": receipt } }
-      );
-      if (stamped.matchedCount !== 1) {
-        throw new Error("Demographics v2 world changed before its receipt could be stamped");
-      }
-      collect(`Verified ${preset} v2 demographics opening for ${receipt.countries?.join(", ")}`);
-    }
-
-    if (preIteration && startingParties === "none") {
-      const { seedPartylessFoundingCandidates } =
-        await import("@/lib/npp/seedPartylessFoundingCandidates");
-      const candidates = await run.step("finalize", "seedPartylessFoundingCandidates", () =>
-        seedPartylessFoundingCandidates(db, preset, collect)
-      );
-      if (candidates) {
-        collect(
-          `Partyless founding candidate pool: ${candidates.nppsCreated} independent NPPs across ` +
-            `${Object.keys(candidates.byCountry).length} player countries`
-        );
-      }
-    }
-
-    // Residue scan, before the world can run a turn and before any baseline is
-    // captured. A violation keeps the run partial and the turn system refuses to
-    // start until a clean reset replaces gameConfig.lastReset.
-    // An idle turn fence left by a failed turn in the replaced world targets a turn
-    // the fresh world never reaches. A held lock (`isProcessing`) is left alone.
-    await gameStateCollection<Document>(db).updateOne(
-      { _id: "current" as never, isProcessing: { $ne: true }, processingTargetTurn: { $ne: null } },
-      { $set: STALE_TURN_FENCE_RESET }
-    );
-    phaseReached = "residue scan";
-    try {
-      const violations = await runResidueScan(db, {
-        resetStartedAt,
-        expectedTurn: reset.world?.currentTurn ?? 1,
-        resetWorldId: reset.world?.resetWorldId ?? null,
-        referenceReplaced: resetReference,
-      });
-      for (const violation of violations) {
-        const line = formatResidueViolation(violation);
-        readiness.residueViolations.push(line);
-        run.recordFailure("residue", violation.check, line);
-      }
-      collect(
-        violations.length === 0
-          ? "Residue scan: nothing from the previous world remains"
-          : `Residue scan: ${violations.length} violation(s); the world stays paused`
-      );
-    } catch (err) {
-      const line = `residue scan failed: ${err instanceof Error ? err.message : String(err)}`;
-      readiness.residueViolations.push(line);
-      run.recordFailure("residue", "residueScan", line);
-    }
-
-    // 3c) Funded opening. Runs after the residue scan, which would otherwise read
-    //     the funded switch's gameConfig fields as old-world leftovers.
-    if (options.fundedOpening ?? (!seedOnly && !options.skipDiagnostic)) {
-      phaseReached = "funded opening";
-      try {
-        const { openResetWorldFunded } = await import("@/lib/admin/resetFundedOpening");
-        const opened = await openResetWorldFunded(db, {
-          approvalReference: `world-reset:${adminUsername ?? "system"}`,
-        });
-        collect(
-          `Funded market open: first funded turn ${opened.producerMarketLiveFromTurn}, ` +
-            `${opened.openingSectors} sectors, filled capacity on ${opened.capacityFilled} and ` +
-            `${opened.statePricesFilled} state prices`
-        );
-      } catch (err) {
-        const line = `funded opening failed: ${err instanceof Error ? err.message : String(err)}`;
-        // Counted with the residue so the turn system refuses to start: a world
-        // left on the legacy market must not run by accident.
-        readiness.residueViolations.push(line);
-        run.recordFailure("economy", "fundedOpening", line);
-        collect(line);
-      }
-    }
-
-    // 4) Seal the freshly-reset world behind maintenance mode, then run the
-    //    seed conformance diagnostic while sealed. Diagnostic failure must NEVER
-    //    abort the reset — wrap in try/catch and surface diagnostic_error.
+    //    ⚠️ Maintenance mode gates PAGE routes only — `src/proxy.ts` returns early
+    //    for `/api/*`, so this stops players reaching the UI, not the API. The
+    //    `isActive` clear is what actually stops the turn engine.
+    //
+    //    The seal survives the seeders only because `runSeed`'s reset branch no
+    //    longer drops `gameConfig`; see RESET_DROP_COLLECTIONS in runCoreSeed.ts.
     await enableMaintenanceMode(db, {
       reason:
         "Game reset — fresh world being prepared. Site will reopen when admin verifies the new state.",
       enabledBy: adminUsername ?? "system",
     });
-    collect("Maintenance mode enabled — site sealed until admin toggles it off");
+    //    ⚠️ Deliberately NOT an upsert. On an empty database this must match
+    //    nothing: upserting would create a `gameState` doc holding only
+    //    `isActive` and `updatedAt`, and `initializeGameState` returns any
+    //    existing doc untouched — so the world would run forever on a gameState
+    //    with no currentTurn, preset, or startingYear. A database with no
+    //    gameState has no turn cron to stop anyway.
+    await gameStateCollection(db).updateOne(
+      { _id: "current" },
+      { $set: { isActive: false, updatedAt: new Date() } }
+    );
+    collect("World sealed for reset — maintenance mode on, turn processing stopped");
 
-    if (!options.skipDiagnostic) {
-      try {
-        const { runSeedDiagnostic, formatDiagnosticSummary, captureSeedBaseline } =
-          await import("@/lib/admin/seedDiagnostic");
-        const report = await runSeedDiagnostic(db, {
-          mode: "conformance",
-          trigger: "post-reset",
-          preset,
-        });
-        collect(formatDiagnosticSummary(report));
-        readiness.criticalChecks = (report.checks ?? []).filter(
-          (check) => check.severity === "critical"
+    // 0b) Open the run's audit row NOW, before anything is destroyed.
+    //
+    //     Written up front so a run that dies in teardown or build still leaves
+    //     a record; the live SSE log dies with the browser tab. `adminLogs` is
+    //     manifest category `preserved`, so the row survives the teardown it is
+    //     recording.
+    const run = createResetRunRecord(collect);
+    let phaseReached = "seal";
+    let aborted = false;
+    const readiness: ResetSeedReadiness = {
+      status: "not-checked",
+      criticalChecks: [],
+      baselineCaptured: false,
+      residueViolations: [],
+    };
+    // Every document a reset keeps must predate this; every one it writes cannot.
+    const resetStartedAt = new Date();
+    let finalized: Awaited<ReturnType<typeof finalizeResetGameWorld>> | null = null;
+    const recordRunLog = options.recordRunLog !== false;
+    if (recordRunLog) await openResetRunLog(db, run, { preset, mode, adminUsername });
+
+    try {
+      // 1) TEARDOWN. Wipes runtime state, retires or deletes characters, stamps the
+      //    new clock. Does NOT seed; step 2 seeds.
+      //
+      //    Never seed historical officials here: the bootstrap seeders re-create
+      //    default parties, so officials must follow for party sequentialIds to
+      //    line up.
+      //
+      //    `log` matters: its lines arrive tagged `[reset]` for the SSE stream.
+      phaseReached = "teardown";
+      const reset = await resetGameWorld(db, {
+        admission,
+        deleteProfiles,
+        preset,
+        seedHistorical: false,
+        adminUsername,
+        iteration,
+        startDate: options.startDate,
+        versionSelectionSnapshot: selectedState,
+        preIteration,
+        startingParties,
+        log: collect,
+      });
+      collect(reset.message);
+
+      // Political metrics are reference rows, but several fields on each row are
+      // mutable momentum from the outgoing world. Clear those fields only here,
+      // after teardown has succeeded and before bootstrap re-seeds every country.
+      const politicalRuntimeFieldsCleared = await resetPoliticalMetricsRuntimeState(db);
+      collect(
+        `Cleared embedded political runtime fields from ${politicalRuntimeFieldsCleared} region(s)`
+      );
+      const stateRuntimeFieldsCleared = await resetStateRuntimeFields(db);
+      collect(`Cleared embedded state runtime fields from ${stateRuntimeFieldsCleared} region(s)`);
+      const macroRuntimeReset = await resetMacroMetricsRuntimeState(db);
+      collect(
+        `Cleared embedded macro runtime fields from ${macroRuntimeReset.documentsModified} row(s); ` +
+          `removed ${macroRuntimeReset.nationalRollupsDeleted} derived national rollup(s)`
+      );
+
+      // 2) BUILD. `seedOnly` short-circuits before election + officials spawn.
+      phaseReached = "build";
+      // A reference rebuild must start from what an empty database starts from.
+      // The reference collections below are upsert-seeded from the NEW roster,
+      // so the outgoing world's rows for regions, countries and categories the
+      // new preset does not write would otherwise survive the reset (see
+      // REFERENCE_REBUILD_CLEARED_COLLECTIONS). Cleared after teardown and
+      // immediately before bootstrap, which rebuilds every one of them.
+      if (resetReference) {
+        const cleared = await clearReferenceForRebuild(db);
+        collect(
+          `Cleared reference data for rebuild: ${Object.entries(cleared)
+            .map(([name, count]) => `${name} ${count}`)
+            .join(", ")}`
         );
-        for (const check of readiness.criticalChecks) {
-          run.recordFailure(
-            "audit",
-            check.id,
-            `${check.scope}: ${check.metric}; expected ${check.expected}, actual ${check.actual}${check.note ? `; ${check.note}` : ""}`
-          );
-        }
-        if (report.summary.critical > 0 && readiness.criticalChecks.length === 0) {
-          run.recordFailure(
-            "audit",
-            "seedConformance",
-            `${report.summary.critical} critical seed checks`
-          );
-        }
-        if (run.status(false) !== "succeeded") readiness.status = "blocked";
-        // A `partial` run means at least one seeder was contained, so the world is
-        // knowingly incomplete. Capturing a baseline from it would make every
-        // future drift check compare against a broken reference — the same reason a
-        // critical finding skips capture.
-        if (report.summary.critical === 0 && run.status(false) === "succeeded") {
-          await captureSeedBaseline(db);
-          readiness.status = "healthy";
-          readiness.baselineCaptured = true;
-          collect("Seed diagnostic baseline captured");
-        } else if (run.status(false) !== "succeeded") {
+        await dropRetiredCollections(db);
+      }
+      const bootstrap = await bootstrapGameWorld({
+        db,
+        mode,
+        preset,
+        skipRegionalCouncil,
+        resetReference,
+        seedOnly,
+        preIteration,
+        startingParties,
+        log: collect,
+        run,
+      });
+
+      // 2b) FINALIZE. Steps that need a fully-seeded world: default-party top-up,
+      // party/charter/statePartyOrg cleanup, demographics reset, orphan region purge,
+      // IMF placeholder, adminLog row. Counts merge into reset.details for an
+      // unchanged response shape.
+      // CONTAINED: a finalize failure leaves a seeded world, so the run degrades to
+      // `partial` rather than discarding a successful build.
+      phaseReached = "finalize";
+      finalized = await run.step("finalize", "finalizeResetGameWorld", () =>
+        finalizeResetGameWorld(db, {
+          preset,
+          startingParties,
+          teardown: reset.details,
+          deleteProfiles,
+          log: collect,
+        })
+      );
+      if (finalized) {
+        reset.details.demographicsReset = finalized.demographicsReset;
+        reset.details.customPartiesDeleted = finalized.customPartiesDeleted;
+        reset.details.partyOrgRecordsDeleted = finalized.partyOrgRecordsDeleted;
+        reset.details.budgetSeedLog = finalized.finalizeLog;
+      }
+
+      // New v2 opening verification can fail after core bootstrap has written
+      // the world. Seal it before those fail-closed checks, not only after them.
+      if (selectedVersions.metrics === "v2") {
+        await enableMaintenanceMode(db, {
+          reason:
+            "Game reset: fresh world being prepared. Site will reopen when admin verifies the new state.",
+          enabledBy: adminUsername ?? "system",
+        });
+      }
+
+      // Complete the reset-only officials pass before certifying any v2 opening.
+      // Its contained failures otherwise leave valid-looking v2 receipts on an
+      // incomplete world.
+      let postSeedOfficials: ResetAndBootstrapResult["postSeedOfficials"];
+      if (seedOnly && preset !== "2019-no-parties") {
+        phaseReached = "officials";
+        const result = await run.step("officials", "seedHistoricalOfficials", () =>
+          seedHistoricalOfficials(db, preset, preIteration ? "priors" : "winners", collect)
+        );
+        if (result) {
+          postSeedOfficials = result;
           collect(
-            `Seed diagnostic: skipped baseline capture (${run.failures.length} contained failure(s))`
+            `Seeded historical officials: ${result.officialsCreated} officials, ${result.nppsCreated} NPPs`
           );
-        } else {
-          collect(
-            `Seed diagnostic: skipped baseline capture (${report.summary.critical} critical check(s))`
-          );
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        readiness.status = "blocked";
-        readiness.error = message;
-        run.recordFailure("audit", "seedDiagnostic", err);
-        collect(`Seed diagnostic failed: ${message}`);
-        try {
-          const { diagnosticErrorReport } = await import("@/lib/admin/seedDiagnostic");
-          const errorReport = diagnosticErrorReport(message, {
-            preset,
-            trigger: "post-reset",
-          });
-          await seedDiagnosticsCollection<Document>(db).insertOne(errorReport as never);
-        } catch {
-          // Persistence of the error report is best-effort.
         }
       }
-    } else {
-      collect("Skipped operator seed audit for isolated singleplayer world");
-    }
 
-    phaseReached = "complete";
-    if (run.status(false) !== "succeeded") readiness.status = "blocked";
-    return { reset, bootstrap, postSeedOfficials, logs, status: run.status(false), readiness };
-  } catch (error) {
-    aborted = true;
-    collect(
-      `Reset ABORTED in ${phaseReached}: ${error instanceof Error ? error.message : String(error)}`
-    );
-    throw error;
-  } finally {
-    const status = run.status(aborted);
-    if (status === "partial") {
-      collect(
-        `Reset completed PARTIAL — ${run.failures.length} step(s) contained: ` +
-          run.failures.map((f) => `${f.phase}/${f.name}`).join(", ") +
-          ". The world is knowingly incomplete; no seed baseline was captured."
+      if (startingParties !== "default")
+        await clearStartingPolitics(db, preset, startingParties === "no-npps");
+
+      // The v2 board is separate from all v1 working metric collections. A
+      // receipt is written only after the whole board has been persisted and
+      // read back. A contained finalize failure cannot certify a v2 opening.
+      if (selectedVersions.metrics === "v2") {
+        phaseReached = "v2 metrics opening";
+        if (run.status(false) !== "succeeded") {
+          throw new Error("Cannot certify metrics v2 after a partial reset");
+        }
+        const freshState = await gameStateCollection(db).findOne(
+          { _id: "current" },
+          {
+            projection: {
+              preset: 1,
+              resetWorldId: 1,
+              currentTurn: 1,
+              metricsSystemVersion: 1,
+            },
+          }
+        );
+        if (
+          freshState?.metricsSystemVersion !== "v2" ||
+          typeof freshState.resetWorldId !== "string" ||
+          !Number.isSafeInteger(freshState.currentTurn) ||
+          freshState.currentTurn < 1
+        ) {
+          throw new Error("Fresh reset state is missing the metrics v2 world identity");
+        }
+        const { seedOpeningMetrics1991 } = await import("@/lib/resetMetrics/seedOpening1991");
+        const receipt =
+          preset === "1991-default" && atPresetAnchor
+            ? await seedOpeningMetrics1991(db, freshState.resetWorldId, freshState.currentTurn)
+            : await (
+                await import("@/lib/resetVersions/seedModeledOpening")
+              ).seedModeledOpening(
+                db,
+                preset,
+                freshState.resetWorldId,
+                freshState.currentTurn,
+                "metrics",
+                options.startDate
+              );
+        const stamped = await gameStateCollection(db).updateOne(
+          {
+            _id: "current",
+            resetWorldId: freshState.resetWorldId,
+            currentTurn: freshState.currentTurn,
+            metricsSystemVersion: "v2",
+          },
+          { $set: { "resetVersionSeeds.metrics": receipt } }
+        );
+        if (stamped.matchedCount !== 1) {
+          throw new Error("Metrics v2 world changed before its seed receipt could be stamped");
+        }
+        collect(`Verified ${preset} v2 metric opening`);
+      }
+      if (selectedVersions.legislation === "v2") {
+        phaseReached = "v2 current-law opening";
+        if (run.status(false) !== "succeeded") {
+          throw new Error("Cannot certify legislation v2 after a partial reset");
+        }
+        const freshState = await gameStateCollection(db).findOne(
+          { _id: "current" },
+          {
+            projection: {
+              preset: 1,
+              resetWorldId: 1,
+              resetVersionSeeds: 1,
+              currentTurn: 1,
+              metricsSystemVersion: 1,
+              legislationSystemVersion: 1,
+            },
+          }
+        );
+        if (
+          freshState?.legislationSystemVersion !== "v2" ||
+          freshState.metricsSystemVersion !== "v2" ||
+          !resetSeedComplete(freshState, "metrics") ||
+          typeof freshState.resetWorldId !== "string" ||
+          !Number.isSafeInteger(freshState.currentTurn) ||
+          freshState.currentTurn < 1
+        ) {
+          throw new Error("Fresh reset state lacks the prerequisite metrics v2 opening");
+        }
+        const { seedOpeningLawBoards1991 } = await import("@/lib/resetLegislation/seedOpening1991");
+        const receipt =
+          preset === "1991-default" && atPresetAnchor
+            ? await seedOpeningLawBoards1991(db, freshState.resetWorldId, freshState.currentTurn)
+            : await (
+                await import("@/lib/resetVersions/seedModeledOpening")
+              ).seedModeledOpening(
+                db,
+                preset,
+                freshState.resetWorldId,
+                freshState.currentTurn,
+                "legislation",
+                options.startDate
+              );
+        const stamped = await gameStateCollection(db).updateOne(
+          {
+            _id: "current",
+            resetWorldId: freshState.resetWorldId,
+            currentTurn: freshState.currentTurn,
+            legislationSystemVersion: "v2",
+          },
+          { $set: { "resetVersionSeeds.legislation": receipt } }
+        );
+        if (stamped.matchedCount !== 1) {
+          throw new Error("Legislation v2 world changed before its seed receipt could be stamped");
+        }
+        collect(`Verified ${preset} v2 current-law opening`);
+      }
+      if (selectedVersions.cabinet === "v2") {
+        phaseReached = "v2 department opening";
+        if (run.status(false) !== "succeeded") {
+          throw new Error("Cannot certify Cabinet v2 after a partial reset");
+        }
+        const freshState = await gameStateCollection(db).findOne(
+          { _id: "current" },
+          {
+            projection: {
+              preset: 1,
+              resetWorldId: 1,
+              resetVersionSeeds: 1,
+              currentTurn: 1,
+              metricsSystemVersion: 1,
+              cabinetSystemVersion: 1,
+            },
+          }
+        );
+        if (
+          freshState?.cabinetSystemVersion !== "v2" ||
+          freshState.metricsSystemVersion !== "v2" ||
+          !resetSeedComplete(freshState, "metrics") ||
+          typeof freshState.resetWorldId !== "string" ||
+          !Number.isSafeInteger(freshState.currentTurn) ||
+          freshState.currentTurn < 1
+        ) {
+          throw new Error("Fresh reset state lacks the prerequisite metrics v2 opening");
+        }
+        const { seedOpeningDepartmentBoards1991 } =
+          await import("@/lib/resetFinance/seedOpeningDepartments1991");
+        const receipt =
+          preset === "1991-default" && atPresetAnchor
+            ? await seedOpeningDepartmentBoards1991(
+                db,
+                freshState.resetWorldId,
+                freshState.currentTurn
+              )
+            : await (
+                await import("@/lib/resetVersions/seedModeledOpening")
+              ).seedModeledOpening(
+                db,
+                preset,
+                freshState.resetWorldId,
+                freshState.currentTurn,
+                "cabinet",
+                options.startDate
+              );
+        const stamped = await gameStateCollection(db).updateOne(
+          {
+            _id: "current",
+            resetWorldId: freshState.resetWorldId,
+            currentTurn: freshState.currentTurn,
+            cabinetSystemVersion: "v2",
+          },
+          { $set: { "resetVersionSeeds.cabinet": receipt } }
+        );
+        if (stamped.matchedCount !== 1) {
+          throw new Error("Cabinet v2 world changed before its seed receipt could be stamped");
+        }
+        collect(`Verified ${preset} v2 Cabinet opening claims`);
+      }
+      if (selectedVersions.demographics === "v2") {
+        phaseReached = "v2 demographics opening";
+        if (run.status(false) !== "succeeded") {
+          throw new Error("Cannot certify demographics v2 after a partial reset");
+        }
+        const freshState = await gameStateCollection(db).findOne(
+          { _id: "current" },
+          {
+            projection: {
+              preset: 1,
+              resetWorldId: 1,
+              currentTurn: 1,
+              demographicsSystemVersion: 1,
+            },
+          }
+        );
+        if (
+          freshState?.demographicsSystemVersion !== "v2" ||
+          typeof freshState.resetWorldId !== "string" ||
+          !Number.isSafeInteger(freshState.currentTurn) ||
+          freshState.currentTurn < 1
+        ) {
+          throw new Error("Fresh reset state is missing the demographics v2 world identity");
+        }
+        const { verifyDemographicsV2Opening } = await import("@/lib/demographics/v2/verifyOpening");
+        const receipt = await verifyDemographicsV2Opening(
+          db,
+          freshState.resetWorldId,
+          freshState.currentTurn,
+          demographicsV2OpeningCountries(preset)
+        );
+        const stamped = await gameStateCollection(db).updateOne(
+          {
+            _id: "current",
+            resetWorldId: freshState.resetWorldId,
+            currentTurn: freshState.currentTurn,
+            demographicsSystemVersion: "v2",
+          },
+          { $set: { "resetVersionSeeds.demographics": receipt } }
+        );
+        if (stamped.matchedCount !== 1) {
+          throw new Error("Demographics v2 world changed before its receipt could be stamped");
+        }
+        collect(`Verified ${preset} v2 demographics opening for ${receipt.countries?.join(", ")}`);
+      }
+
+      if (preIteration && startingParties === "none") {
+        const { seedPartylessFoundingCandidates } =
+          await import("@/lib/npp/seedPartylessFoundingCandidates");
+        const candidates = await run.step("finalize", "seedPartylessFoundingCandidates", () =>
+          seedPartylessFoundingCandidates(db, preset, collect)
+        );
+        if (candidates) {
+          collect(
+            `Partyless founding candidate pool: ${candidates.nppsCreated} independent NPPs across ` +
+              `${Object.keys(candidates.byCountry).length} player countries`
+          );
+        }
+      }
+
+      // Residue scan, before the world can run a turn and before any baseline is
+      // captured. A violation keeps the run partial and the turn system refuses to
+      // start until a clean reset replaces gameConfig.lastReset.
+      // An idle turn fence left by a failed turn in the replaced world targets a turn
+      // the fresh world never reaches. A held lock (`isProcessing`) is left alone.
+      await gameStateCollection<Document>(db).updateOne(
+        {
+          _id: "current" as never,
+          isProcessing: { $ne: true },
+          processingTargetTurn: { $ne: null },
+        },
+        { $set: STALE_TURN_FENCE_RESET }
       );
-    }
-    // Always closed, on every path. `closeResetRunLog` is best-effort inside,
-    // so a bookkeeping failure can never replace the reset's real error.
-    if (recordRunLog)
-      await closeResetRunLog(db, run, {
-        status: run.status(aborted),
-        phaseReached,
-        details: finalized?.adminDetails ?? `Reset ${run.status(aborted)} in ${phaseReached}`,
-        logs,
-        deleteProfiles,
-        adminUsername,
-        residueViolations: readiness.residueViolations.length,
+      phaseReached = "residue scan";
+      try {
+        const violations = await runResidueScan(db, {
+          resetStartedAt,
+          expectedTurn: reset.world?.currentTurn ?? 1,
+          resetWorldId: reset.world?.resetWorldId ?? null,
+          referenceReplaced: resetReference,
+        });
+        for (const violation of violations) {
+          const line = formatResidueViolation(violation);
+          readiness.residueViolations.push(line);
+          run.recordFailure("residue", violation.check, line);
+        }
+        collect(
+          violations.length === 0
+            ? "Residue scan: nothing from the previous world remains"
+            : `Residue scan: ${violations.length} violation(s); the world stays paused`
+        );
+      } catch (err) {
+        const line = `residue scan failed: ${err instanceof Error ? err.message : String(err)}`;
+        readiness.residueViolations.push(line);
+        run.recordFailure("residue", "residueScan", line);
+      }
+
+      // 3c) Funded opening. Runs after the residue scan, which would otherwise read
+      //     the funded switch's gameConfig fields as old-world leftovers.
+      if (options.fundedOpening ?? (!seedOnly && !options.skipDiagnostic)) {
+        phaseReached = "funded opening";
+        try {
+          const { openResetWorldFunded } = await import("@/lib/admin/resetFundedOpening");
+          const opened = await openResetWorldFunded(db, {
+            approvalReference: `world-reset:${adminUsername ?? "system"}`,
+          });
+          collect(
+            `Funded market open: first funded turn ${opened.producerMarketLiveFromTurn}, ` +
+              `${opened.openingSectors} sectors, filled capacity on ${opened.capacityFilled} and ` +
+              `${opened.statePricesFilled} state prices`
+          );
+        } catch (err) {
+          const line = `funded opening failed: ${err instanceof Error ? err.message : String(err)}`;
+          // Counted with the residue so the turn system refuses to start: a world
+          // left on the legacy market must not run by accident.
+          readiness.residueViolations.push(line);
+          run.recordFailure("economy", "fundedOpening", line);
+          collect(line);
+        }
+      }
+
+      // 4) Seal the freshly-reset world behind maintenance mode, then run the
+      //    seed conformance diagnostic while sealed. Diagnostic failure must NEVER
+      //    abort the reset — wrap in try/catch and surface diagnostic_error.
+      await enableMaintenanceMode(db, {
+        reason:
+          "Game reset — fresh world being prepared. Site will reopen when admin verifies the new state.",
+        enabledBy: adminUsername ?? "system",
       });
-  }
+      collect("Maintenance mode enabled — site sealed until admin toggles it off");
+
+      if (!options.skipDiagnostic) {
+        try {
+          const { runSeedDiagnostic, formatDiagnosticSummary, captureSeedBaseline } =
+            await import("@/lib/admin/seedDiagnostic");
+          const report = await runSeedDiagnostic(db, {
+            mode: "conformance",
+            trigger: "post-reset",
+            preset,
+          });
+          collect(formatDiagnosticSummary(report));
+          readiness.criticalChecks = (report.checks ?? []).filter(
+            (check) => check.severity === "critical"
+          );
+          for (const check of readiness.criticalChecks) {
+            run.recordFailure(
+              "audit",
+              check.id,
+              `${check.scope}: ${check.metric}; expected ${check.expected}, actual ${check.actual}${check.note ? `; ${check.note}` : ""}`
+            );
+          }
+          if (report.summary.critical > 0 && readiness.criticalChecks.length === 0) {
+            run.recordFailure(
+              "audit",
+              "seedConformance",
+              `${report.summary.critical} critical seed checks`
+            );
+          }
+          if (run.status(false) !== "succeeded") readiness.status = "blocked";
+          // A `partial` run means at least one seeder was contained, so the world is
+          // knowingly incomplete. Capturing a baseline from it would make every
+          // future drift check compare against a broken reference — the same reason a
+          // critical finding skips capture.
+          if (report.summary.critical === 0 && run.status(false) === "succeeded") {
+            await captureSeedBaseline(db);
+            readiness.status = "healthy";
+            readiness.baselineCaptured = true;
+            collect("Seed diagnostic baseline captured");
+          } else if (run.status(false) !== "succeeded") {
+            collect(
+              `Seed diagnostic: skipped baseline capture (${run.failures.length} contained failure(s))`
+            );
+          } else {
+            collect(
+              `Seed diagnostic: skipped baseline capture (${report.summary.critical} critical check(s))`
+            );
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          readiness.status = "blocked";
+          readiness.error = message;
+          run.recordFailure("audit", "seedDiagnostic", err);
+          collect(`Seed diagnostic failed: ${message}`);
+          try {
+            const { diagnosticErrorReport } = await import("@/lib/admin/seedDiagnostic");
+            const errorReport = diagnosticErrorReport(message, {
+              preset,
+              trigger: "post-reset",
+            });
+            await seedDiagnosticsCollection<Document>(db).insertOne(errorReport as never);
+          } catch {
+            // Persistence of the error report is best-effort.
+          }
+        }
+      } else {
+        collect("Skipped operator seed audit for isolated singleplayer world");
+      }
+
+      phaseReached = "complete";
+      if (run.status(false) !== "succeeded") readiness.status = "blocked";
+      return { reset, bootstrap, postSeedOfficials, logs, status: run.status(false), readiness };
+    } catch (error) {
+      aborted = true;
+      collect(
+        `Reset ABORTED in ${phaseReached}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    } finally {
+      const status = run.status(aborted);
+      if (status === "partial") {
+        collect(
+          `Reset completed PARTIAL — ${run.failures.length} step(s) contained: ` +
+            run.failures.map((f) => `${f.phase}/${f.name}`).join(", ") +
+            ". The world is knowingly incomplete; no seed baseline was captured."
+        );
+      }
+      // Always closed, on every path. `closeResetRunLog` is best-effort inside,
+      // so a bookkeeping failure can never replace the reset's real error.
+      if (recordRunLog)
+        await closeResetRunLog(db, run, {
+          status: run.status(aborted),
+          phaseReached,
+          details: finalized?.adminDetails ?? `Reset ${run.status(aborted)} in ${phaseReached}`,
+          logs,
+          deleteProfiles,
+          adminUsername,
+          residueViolations: readiness.residueViolations.length,
+        });
+    }
+  });
 }

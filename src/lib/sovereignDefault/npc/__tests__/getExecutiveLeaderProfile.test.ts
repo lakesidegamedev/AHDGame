@@ -11,22 +11,22 @@ describe("deriveIdeology", () => {
     expect(deriveIdeology(undefined)).toBe("centrist");
   });
   it("far-left economic + moderate social → socialist", () => {
-    expect(deriveIdeology({ economic: -60, social: 0 })).toBe("socialist");
+    expect(deriveIdeology({ economic: -3, social: 0 })).toBe("socialist");
   });
   it("free-market + traditional → conservative", () => {
-    expect(deriveIdeology({ economic: 60, social: 50 })).toBe("conservative");
+    expect(deriveIdeology({ economic: 3, social: 2.5 })).toBe("conservative");
   });
   it("free-market + socially-open → technocrat", () => {
-    expect(deriveIdeology({ economic: 50, social: -20 })).toBe("technocrat");
+    expect(deriveIdeology({ economic: 2.5, social: -1 })).toBe("technocrat");
   });
   it("strongly traditional regardless of economic → nationalist", () => {
-    expect(deriveIdeology({ economic: 0, social: 70 })).toBe("nationalist");
+    expect(deriveIdeology({ economic: 0, social: 3.5 })).toBe("nationalist");
   });
   it("extreme economic without fitting other buckets → populist", () => {
-    expect(deriveIdeology({ economic: -65, social: 30 })).toBe("populist");
+    expect(deriveIdeology({ economic: -3.25, social: 1.5 })).toBe("populist");
   });
   it("moderate values → centrist", () => {
-    expect(deriveIdeology({ economic: 10, social: -5 })).toBe("centrist");
+    expect(deriveIdeology({ economic: 0.5, social: -0.25 })).toBe("centrist");
   });
 });
 
@@ -59,7 +59,7 @@ describe("getExecutiveLeaderProfile", () => {
     const db = mockDb({
       character: {
         _id: charId,
-        policies: { economic: 60, social: 50 },
+        policies: { economic: 3, social: 2.5 },
       },
     });
     const profile = await getExecutiveLeaderProfile(db, "US");
@@ -75,7 +75,7 @@ describe("getExecutiveLeaderProfile", () => {
       character: null,
       npp: {
         _id: nppId,
-        policies: { economic: -60, social: 0 },
+        policies: { economic: -3, social: 0 },
       },
     });
     const profile = await getExecutiveLeaderProfile(db, "US");

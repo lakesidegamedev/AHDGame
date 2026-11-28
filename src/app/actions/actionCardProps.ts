@@ -1,4 +1,3 @@
-import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import type { ActionCard, ActionCardProps, ActionsViewMode } from "./actionsTypes";
 import type { ActionsController } from "./useActionsController";
 
@@ -42,7 +41,7 @@ export function actionCardProps(
     buildDonorBaseActionCost: costs.buildDonorBaseActionCost,
     buildDonorBaseFundCost: costs.buildDonorBaseFundCost,
     fundraiseYield: costs.fundraiseAmount,
-    campaignCurrency: getHomeCurrency(character),
+    campaignCurrency: c.homeCurrency,
     displayCampaignFunds: c.displayCampaignFunds,
     quotedFundCost:
       card.type === "poll" || card.type === "pollLarge" || card.type === "canvass"

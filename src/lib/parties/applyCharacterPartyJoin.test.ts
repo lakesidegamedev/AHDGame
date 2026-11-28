@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", async () =>
+  (await import("@/lib/test-utils/atomicDomainMock")).atomicDomainMock()
+);
 /**
  * Tests for the first-joiner auto-chair rule in applyCharacterPartyJoin —
  * specifically that a vacant chair seat is NOT handed to a joiner while a
@@ -38,7 +41,7 @@ vi.mock("@/lib/turn/partyOrg/presence", () => ({
 }));
 
 vi.mock("@/lib/parties/membershipEvents", () => ({
-  emitPartyMembershipEvent: vi.fn().mockResolvedValue(undefined),
+  emitPartyMembershipEvent: vi.fn().mockResolvedValue({}),
   buildPartyEventSnapshots: vi.fn().mockReturnValue({}),
 }));
 
@@ -90,6 +93,10 @@ function makeArgs(db: Db) {
   } as unknown as PoliticalParty;
   const characters = mockCollections.characters ?? setMockCollection("characters");
   characters.findOne.mockResolvedValue(character);
+  setMockCollection("politicalParties", { findOne: vi.fn().mockResolvedValue(party) });
+  setMockCollection("gameState", {
+    findOne: vi.fn().mockResolvedValue({ _id: "current", currentTurn: 120, isProcessing: false }),
+  });
   return {
     db,
     character,
@@ -250,7 +257,11 @@ describe("applyCharacterPartyJoin — first-joiner auto-chair", () => {
 
     await applyCharacterPartyJoin(args);
 
-    expect(withdrawFromMismatchedPrimaries).toHaveBeenCalledWith(args.character._id, "3");
+    expect(withdrawFromMismatchedPrimaries).toHaveBeenCalledWith(
+      args.character._id,
+      "3",
+      expect.anything()
+    );
     expect(transferIndependentCandidaciesToParty).not.toHaveBeenCalled();
   });
 });

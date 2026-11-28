@@ -11,10 +11,22 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 const TURN_MS = 60 * 60 * 1000;
 
+// Formula fixtures bypass only the transaction transport; atomic tests use sessions.
+vi.mock("../withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
+let storedSectors: CorporateSector[] = [];
+
 function makeMinimalLookups(
   corporations: Corporation[],
   sectors: CorporateSector[]
 ): CorporationLookups {
+  storedSectors = sectors;
   const sectorsByCorp = new Map<string, CorporateSector[]>();
   const corpById = new Map<string, Corporation>();
   for (const c of corporations) corpById.set(c._id.toString(), c);
@@ -128,7 +140,10 @@ describe("shedInactiveCeoSectors", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     db = createMockDb();
-    db.collection("corporateSectors");
+    storedSectors = [];
+    db.collection("corporateSectors").find.mockImplementation(() => ({
+      toArray: async () => storedSectors,
+    }));
     db.collection("users");
     const { getDb } = await import("@/lib/mongodb");
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);

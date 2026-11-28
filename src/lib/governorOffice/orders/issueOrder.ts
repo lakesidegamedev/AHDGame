@@ -1,12 +1,10 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { afterCommit } from "@/lib/db/sessionDb";
 import { clamp } from "@/lib/numeric/rules";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
-import type {
-  GovernorExecutiveOrder,
-  GovernorOfficeState,
-  LegislationType,
-  StatePolicy,
-} from "@/lib/db/types";
+import type { GovernorExecutiveOrder, StatePolicy } from "@/lib/db/types";
 import { type CountryId, getExecutiveOrderName } from "@/lib/constants/countries";
 import {
   EXEC_ORDER_DURATION_TURNS,
@@ -60,7 +58,7 @@ export interface IssueOrderResult {
  * the underlying StatePolicy by ±1 for EXEC_ORDER_DURATION_TURNS turns or
  * until rescinded / superseded.
  */
-export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueOrderResult> {
+async function issueOrderInTransaction(db: Db, input: IssueOrderInput): Promise<IssueOrderResult> {
   const now = new Date();
   const currentTurn = await getCurrentTurn(db);
   const { countryId, stateId, characterId, characterName, legislationTypeId, effectDirection } =
@@ -194,33 +192,40 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
   );
 
   if (!adminOverride) {
-    await governorOfficeStateCollection(db).updateOne(
-      { countryId, stateId },
+    const spent = await governorOfficeStateCollection(db).updateOne(
+      { countryId, stateId, gubernatorialActions: { $gte: apCost } },
       { $inc: { gubernatorialActions: -apCost }, $set: { updatedAt: now } }
     );
+    if (spent.matchedCount !== 1)
+      return {
+        status: 409,
+        body: { error: "Office action points changed. Refresh and try again." },
+      };
   }
 
-  // Post to the news wire. Best-effort — never abort the issuance over a news
-  // failure. The Discord bot's pull-based news endpoint surfaces these in the
-  // "executive" category alongside addresses.
-  try {
-    const isNational = scope === "national";
-    // Order name follows the country's government type at BOTH scopes —
-    // a UK FM issues an "Order in Council" not an "Executive Order".
-    await generateOrderNews({
-      scope: isNational ? "national" : "state",
-      orderName: getExecutiveOrderName(countryId),
-      legislationTypeName: legType?.name ?? legislationTypeId,
-      policyOptionNameBefore: legType?.policyOptions?.[before]?.name ?? null,
-      policyOptionNameAfter: legType?.policyOptions?.[after]?.name ?? null,
-      issuedByName: characterName,
-      countryId,
-      ...(isNational ? {} : { state: stateId }),
-    });
-  } catch {
-    // Swallow — news is non-critical for the issuance flow.
-  }
-
+  // Publish only after the paid policy is durable.
+  await afterCommit(db, async () => {
+    // Post to the news wire. Best-effort — never abort the issuance over a news
+    // failure. The Discord bot's pull-based news endpoint surfaces these in the
+    // "executive" category alongside addresses.
+    try {
+      const isNational = scope === "national";
+      // Order name follows the country's government type at BOTH scopes —
+      // a UK FM issues an "Order in Council" not an "Executive Order".
+      await generateOrderNews({
+        scope: isNational ? "national" : "state",
+        orderName: getExecutiveOrderName(countryId),
+        legislationTypeName: legType?.name ?? legislationTypeId,
+        policyOptionNameBefore: legType?.policyOptions?.[before]?.name ?? null,
+        policyOptionNameAfter: legType?.policyOptions?.[after]?.name ?? null,
+        issuedByName: characterName,
+        countryId,
+        ...(isNational ? {} : { state: stateId }),
+      });
+    } catch {
+      // Swallow — news is non-critical for the issuance flow.
+    }
+  });
   return {
     status: 200,
     body: {
@@ -229,4 +234,15 @@ export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueO
       expiresAtTurn: order.expiresAtTurn,
     },
   };
+}
+
+export async function issueOrder(db: Db, input: IssueOrderInput): Promise<IssueOrderResult> {
+  const settled = await withAtomicResult(db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal)
+      return { ok: false, result: { status: refusal.status, body: { error: refusal.error } } };
+    const result = await issueOrderInTransaction(db, input);
+    return { ok: result.status < 400, result };
+  });
+  return settled.result;
 }

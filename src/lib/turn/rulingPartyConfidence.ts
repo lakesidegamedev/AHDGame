@@ -1,3 +1,4 @@
+import { adjustLeaderScalar } from "./adjustLeaderScalar";
 import {
   leaderStateId,
   leaderStateIdentity,
@@ -275,29 +276,21 @@ export async function adjustLeaderConfidence(
   reason: string,
   currentTurn: number
 ): Promise<CountryLeaderState | null> {
-  const coll = getCountryLeaderStatesCollection(db);
-  const _id = leaderStateId(countryId, leaderCharacterId);
-
   // Self-heal missing leader-state row (admin-formed governments, fresh
   // games before the per-turn driver has run for this country).
   const existing = await ensureLeaderStateExists(db, countryId, leaderCharacterId, currentTurn);
   if (!existing) return null;
 
-  const newConfidence = clampConfidence(existing.partyConfidence + delta);
-  const entry = makeHistoryEntry(currentTurn, existing.partyConfidence, newConfidence, reason);
-  const newHistory = trimHistory([entry, ...existing.confidenceHistory]);
-
-  const result = await coll.findOneAndUpdate(
-    { _id },
-    {
-      $set: {
-        partyConfidence: newConfidence,
-        confidenceHistory: newHistory,
-        updatedAt: new Date(),
-      },
-    },
-    { returnDocument: "after" }
+  return adjustLeaderScalar(
+    db,
+    existing,
+    "partyConfidence",
+    "confidenceHistory",
+    INITIAL_CONFIDENCE,
+    delta,
+    clampConfidence,
+    reason,
+    currentTurn,
+    MAX_HISTORY_ENTRIES
   );
-
-  return result;
 }

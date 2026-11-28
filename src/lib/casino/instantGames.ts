@@ -6,37 +6,39 @@ import { spinSlots } from "./games/slots";
 import type { Rng } from "./rng";
 
 /** One-request games: the stake goes in, the server draws, the house settles. */
-export const instantPlaySchema = z.discriminatedUnion("game", [
-  z.object({
-    game: z.literal("slots"),
-    discordId: z.string().min(1),
-    stake: z.number().int().positive(),
-  }),
-  z
-    .object({
-      game: z.literal("roulette"),
-      discordId: z.string().min(1),
+export const instantPlaySchema = z
+  .discriminatedUnion("game", [
+    z.object({
+      game: z.literal("slots"),
+      discordId: z.string().min(1).max(100),
       stake: z.number().int().positive(),
-      bet: z.enum(ROULETTE_BETS),
-      number: z.number().int().min(0).max(36).optional(),
-    })
-    .refine((b) => b.bet !== "straight" || b.number !== undefined, {
-      message: "A straight bet needs a number from 0 to 36",
-      path: ["number"],
     }),
-  z.object({
-    game: z.literal("crash"),
-    discordId: z.string().min(1),
-    stake: z.number().int().positive(),
-    target: z.number().min(CRASH_MIN_TARGET).max(CRASH_MAX_TARGET),
-  }),
-  z.object({
-    game: z.literal("craps"),
-    discordId: z.string().min(1),
-    stake: z.number().int().positive(),
-    bet: z.enum(["pass", "dontpass"]),
-  }),
-]);
+    z
+      .object({
+        game: z.literal("roulette"),
+        discordId: z.string().min(1).max(100),
+        stake: z.number().int().positive(),
+        bet: z.enum(ROULETTE_BETS),
+        number: z.number().int().min(0).max(36).optional(),
+      })
+      .refine((b) => b.bet !== "straight" || b.number !== undefined, {
+        message: "A straight bet needs a number from 0 to 36",
+        path: ["number"],
+      }),
+    z.object({
+      game: z.literal("crash"),
+      discordId: z.string().min(1).max(100),
+      stake: z.number().int().positive(),
+      target: z.number().min(CRASH_MIN_TARGET).max(CRASH_MAX_TARGET),
+    }),
+    z.object({
+      game: z.literal("craps"),
+      discordId: z.string().min(1).max(100),
+      stake: z.number().int().positive(),
+      bet: z.enum(["pass", "dontpass"]),
+    }),
+  ])
+  .and(z.object({ requestId: z.string().min(1).max(100).optional() }));
 export type InstantPlay = z.infer<typeof instantPlaySchema>;
 
 export function drawInstantGame(

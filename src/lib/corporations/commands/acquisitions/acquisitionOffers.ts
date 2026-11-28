@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import { controllerTransferBarrierError } from "./controllerTransferBarrier";
 import { referenceValuation, type ReferenceValuation } from "./referenceValuation";
 export {
@@ -320,8 +321,10 @@ export async function acceptAcquisitionOffer(
 
   if (offer.status !== "pending")
     return { ok: false, error: "This offer is no longer open", status: 409 };
-  if (currentTurn > offer.expiresAtTurn)
+  if (currentTurn > offer.expiresAtTurn) {
+    await resolveAcquisitionOfferStatus(db, offer, "expired", currentTurn);
     return { ok: false, error: "This offer has expired", status: 400 };
+  }
 
   // The target's cash can grow while the offer waits (a float, an injection),
   // so the price floor is checked again against the company as it is now.
@@ -476,10 +479,27 @@ export async function resumeStrandedAcceptedOffers(
 export async function resolveAcquisitionOfferStatus(
   db: Db,
   offer: AcquisitionOffer,
-  status: Extract<AcquisitionOfferStatus, "rejected" | "withdrawn">,
+  status: Extract<AcquisitionOfferStatus, "rejected" | "withdrawn" | "expired">,
+  currentTurn: number
+): Promise<Result> {
+  return withAtomicResult(db, (db) =>
+    resolveAcquisitionOfferStatusInTransaction(db, offer, status, currentTurn)
+  );
+}
+
+async function resolveAcquisitionOfferStatusInTransaction(
+  db: Db,
+  offer: AcquisitionOffer,
+  status: Extract<AcquisitionOfferStatus, "rejected" | "withdrawn" | "expired">,
   currentTurn: number
 ): Promise<Result> {
   if (offer.status !== "pending")
+    return { ok: false, error: "This offer is no longer open", status: 409 };
+  const claim = await acquisitionOffersCollection<AcquisitionOffer>(db).updateOne(
+    { _id: offer._id, status: "pending" },
+    { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
+  );
+  if (claim.matchedCount === 0)
     return { ok: false, error: "This offer is no longer open", status: 409 };
   // A settlement may hold acquirer money while the offer sits pending (a
   // failed attempt reset the claim for a resumable retry). Withdrawing or
@@ -499,12 +519,6 @@ export async function resolveAcquisitionOfferStatus(
       { $unset: { acquisitionSettlementId: "" }, $set: { updatedAt: new Date() } }
     );
   }
-  const claim = await acquisitionOffersCollection<AcquisitionOffer>(db).updateOne(
-    { _id: offer._id, status: "pending" },
-    { $set: { status, resolvedAtTurn: currentTurn, updatedAt: new Date() } }
-  );
-  if (claim.matchedCount === 0)
-    return { ok: false, error: "This offer is no longer open", status: 409 };
   return { ok: true };
 }
 
@@ -543,10 +557,9 @@ export async function listDealsForCorp(
   const currentTurn = gameState?.currentTurn ?? 0;
   const staleIds = offers.filter((o) => o.expiresAtTurn < currentTurn).map((o) => o._id);
   if (staleIds.length > 0) {
-    await acquisitionOffersCollection<AcquisitionOffer>(db).updateMany(
-      { _id: { $in: staleIds }, status: "pending" },
-      { $set: { status: "expired", updatedAt: new Date() } }
-    );
+    for (const offer of offers.filter((candidate) => candidate.expiresAtTurn < currentTurn)) {
+      await resolveAcquisitionOfferStatus(db, offer, "expired", currentTurn);
+    }
     const live = offers.filter((o) => !staleIds.includes(o._id));
     if (live.length === 0) return { incoming: [], outgoing: [] };
     return listDealsFromOffers(live, db, corpId);

@@ -1,3 +1,4 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 /**
  * Union dues v1, found a rival union.
  *
@@ -57,6 +58,14 @@ export interface FoundUnionInput {
  * concurrent foundings cannot both pass on a stale balance.
  */
 export async function foundUnion(
+  db: Db,
+  character: Character,
+  input: FoundUnionInput
+): Promise<UnionActionResult> {
+  return withAtomicResult(db, (db) => foundUnionInTransaction(db, character, input));
+}
+
+async function foundUnionInTransaction(
   db: Db,
   character: Character,
   input: FoundUnionInput

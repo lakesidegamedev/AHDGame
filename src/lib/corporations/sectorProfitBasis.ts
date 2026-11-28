@@ -12,10 +12,7 @@
  * replaced.
  */
 import { calculateDailyGrowthCost, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
-import {
-  capacityPricePerUnit,
-  revenuePerCapacityUnitForStrategy,
-} from "@/lib/constants/capacityEconomy";
+import { capacityPricePerUnit } from "@/lib/constants/capacityEconomy";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { SectorBuildOrder } from "@/lib/db/types";
@@ -161,58 +158,7 @@ export function sectorDailyProfitAnchor(
 
 // ─── Economic scale (cost/fee bases) ────────────────────────────────────────
 
-/**
- * A sector's ECONOMIC SCALE in its own stored units — "how big is this thing",
- * for pricing a fee against.
- *
- * Under plants `revenue` is what the market actually cleared, scaled by the ramp
- * and driven to exactly 0 by mothballing. Any COST computed as a fraction of it
- * therefore collapses to 0 for a plant that is temporarily cold — and several
- * were: unlocking a tech node and busting a union both became FREE for a corp
- * that mothballed its capacity first, then unmothballed it afterwards. The
- * capacity never left the balance sheet; only the number the fee was priced
- * against did.
- *
- * The scale is therefore `max(revenue, capacity nameplate)` under plants: the
- * nameplate is `capitalStock` priced through the sector's own strategy mix,
- * which is the figure `sectorTurn` restates `revenue` from before fill and ramp.
- * A running sector is unaffected (its revenue is at or near nameplate); a cold
- * one is priced on the plant it still owns.
- *
- * UNITS, and the reason this takes no FX rate: `revenue` is stored in the
- * sector's host-state currency, while the nameplate is computed from ₳-native
- * constants. Mixing them is only sound because callers use this for a scale-free
- * FRACTION (fee = scale × rate) in the same currency the revenue was in. Do not
- * use it as an ₳ quantity — for that, take the anchor of the result at the call
- * site exactly as you would have taken the anchor of `revenue`.
- *
- * Returns `revenue` unchanged below plants, so every caller is byte-identical
- * there.
- */
-export function sectorEconomicScale(
-  sector: {
-    sectorType: CorporationType;
-    revenue?: number | null;
-    capitalStock?: number | null;
-    strategyId?: string | null;
-  },
-  plantsEnabled: boolean,
-  unitScale: number
-): number {
-  const revenue =
-    typeof sector.revenue === "number" && Number.isFinite(sector.revenue)
-      ? Math.max(0, sector.revenue)
-      : 0;
-  if (!plantsEnabled) return revenue;
-  const stock =
-    typeof sector.capitalStock === "number" && Number.isFinite(sector.capitalStock)
-      ? Math.max(0, sector.capitalStock)
-      : 0;
-  if (!(stock > 0)) return revenue;
-  const nameplate =
-    stock * revenuePerCapacityUnitForStrategy(sector.sectorType, sector.strategyId, unitScale);
-  return Number.isFinite(nameplate) ? Math.max(revenue, nameplate) : revenue;
-}
+export { sectorEconomicScale } from "./rules/sectorEconomicScale";
 
 // ─── Construction in progress (CIP) ─────────────────────────────────────────
 

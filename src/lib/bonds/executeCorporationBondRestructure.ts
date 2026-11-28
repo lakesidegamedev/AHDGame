@@ -1,5 +1,6 @@
+import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { ObjectId, type Db } from "mongodb";
-import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { ImperialCharacter } from "@/lib/db/types/imperialCharacter";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -62,15 +63,23 @@ export interface CorporationRestructureResult {
  * Unlike dissolution this pays 100% of face (it only runs when the value is
  * there) and keeps the corp alive. Shared by the CEO-initiated route and the
  * turn-tick auto-restructure that closes the "default then close the tab"
- * loophole. The caller MUST hold the corporation settlement lock; writes are
- * sequential (deleteDisposedSectors is not transaction-safe), mirroring
- * {@link import("./executeCorporationBondDefaultDissolution")}.
+ * loophole. The settlement joins its caller's required transaction.
  *
  * Throws {@link badRequest} when there are no defaulted bonds or when even
  * liquidating every sector cannot cover the defaulted principal (caller should
  * fall back to dissolution).
  */
 export async function executeCorporationBondRestructure(
+  db: Db,
+  corporation: Corporation,
+  options: { now: Date; cureTurn: number }
+): Promise<CorporationRestructureResult> {
+  return withSessionDb(db, (transactionDb) =>
+    settleInTransaction(transactionDb, corporation, options)
+  );
+}
+
+async function settleInTransaction(
   db: Db,
   corporation: Corporation,
   options: { now: Date; cureTurn: number }
@@ -379,7 +388,7 @@ export async function executeCorporationBondRestructure(
 
   // 5. Ledger: one bond_maturity row per (holder, bond), tagged as a restructure payoff.
   if (fundTxEntries.length > 0) {
-    void emitTxBulk(db, fundTxEntries, await loadTxThresholds(db));
+    await emitTxBulk(db, fundTxEntries, await loadTxThresholds(db));
   }
   if (pendingMaturityTxs.length > 0) {
     const txEntries = pendingMaturityTxs.map((t) => {
@@ -434,15 +443,17 @@ export async function executeCorporationBondRestructure(
       };
     });
     const thresholds = await loadTxThresholds(db);
-    void emitTxBulk(db, txEntries, thresholds);
+    await emitTxBulk(db, txEntries, thresholds);
   }
 
-  void logWireEvent(
-    "corporation_restructured",
-    wireHeadlineCorpRestructured(
-      refreshed.name,
-      defaultedPrincipalAnchor,
-      sectorsToLiquidate.length
+  await afterCommit(db, () =>
+    logWireEvent(
+      "corporation_restructured",
+      wireHeadlineCorpRestructured(
+        refreshed.name,
+        defaultedPrincipalAnchor,
+        sectorsToLiquidate.length
+      )
     )
   );
 

@@ -105,6 +105,7 @@ export async function processRegionalDebt(db: Db, turn: number) {
           _id: budget._id,
           countryId: budget.countryId,
           "financing.lastSettledTurn": budget.financing?.lastSettledTurn ?? { $exists: false },
+          financing: budget.financing ?? { $exists: false },
           enactedBillCosts: budget.enactedBillCosts,
           totalBudget: budget.totalBudget,
           programSettlements: budget.programSettlements ?? { $exists: false },

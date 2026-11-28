@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import type { CurrencyCode } from "@/lib/constants/currencyCodes";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
@@ -27,7 +27,15 @@ export function MoneyHistoryPanel() {
   const [error, setError] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
+  const generation = useRef(0);
+  useEffect(
+    () => () => {
+      generation.current++;
+    },
+    []
+  );
   const load = useCallback(async (next: Filter, after: string | null) => {
+    const requestGeneration = ++generation.current;
     setLoading(true);
     setError(false);
     try {
@@ -37,13 +45,14 @@ export function MoneyHistoryPanel() {
       const res = await fetch(`/api/character/money-history?${params}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const page = (await res.json()) as HistoryPage;
+      if (requestGeneration !== generation.current) return;
       setRows((prev) => (after ? [...prev, ...page.rows] : page.rows));
       setCursor(page.nextCursor);
       setLoaded(true);
     } catch {
-      setError(true);
+      if (requestGeneration === generation.current) setError(true);
     } finally {
-      setLoading(false);
+      if (requestGeneration === generation.current) setLoading(false);
     }
   }, []);
 

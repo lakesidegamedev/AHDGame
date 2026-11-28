@@ -1,3 +1,6 @@
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: async (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/resetCabinet/loadDiscipline", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/resetCabinet/loadDiscipline")>()),
@@ -56,6 +59,20 @@ function makeOfficial(nppId: ObjectId, overrides: Partial<ElectedOfficial> = {})
 }
 
 function createCollectionMap() {
+  const nominations = {
+    find: vi.fn(),
+    updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    bulkWrite: vi.fn(
+      async (
+        ops: { updateOne: { filter: unknown; update: { $inc?: Record<string, number> } } }[]
+      ) => {
+        for (const op of ops)
+          if (!op.updateOne.update.$inc?.leadershipBallotRevision)
+            await nominations.updateOne(op.updateOne.filter, op.updateOne.update);
+        return { modifiedCount: ops.length };
+      }
+    ),
+  };
   return {
     bills: {
       updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
@@ -66,10 +83,9 @@ function createCollectionMap() {
     nppVotePredictions: {
       bulkWrite: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
     },
-    speakerNominations: {
-      find: vi.fn(),
-      updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
-    },
+    speakerNominations: nominations,
+    houseLeadershipNominations: nominations,
+    senateLeadershipNominations: nominations,
     noConfidenceVotes: {
       findOne: vi.fn(),
       updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
@@ -164,7 +180,7 @@ describe("applyWhipVotes fallback handling", () => {
 
     expect(result).toEqual({ fellInLine: 0, ignored: 1 });
     expect(collections.speakerNominations.updateOne).toHaveBeenCalledWith(
-      { _id: fallbackNomination._id },
+      expect.objectContaining({ _id: fallbackNomination._id }),
       expect.objectContaining({
         $set: expect.objectContaining({
           [`votes.npp_${npp._id.toString()}`]: "for",
@@ -328,7 +344,7 @@ describe("applyWhipVotes fallback handling", () => {
 
     expect(result).toEqual({ fellInLine: 1, ignored: 0 });
     expect(collections.speakerNominations.updateOne).toHaveBeenCalledWith(
-      { _id: majorityWhipId },
+      expect.objectContaining({ _id: majorityWhipId }),
       expect.objectContaining({
         $set: expect.objectContaining({
           [`votes.${nppKey}`]: "for",
@@ -393,7 +409,7 @@ describe("applyWhipVotes fallback handling", () => {
 
     expect(result).toEqual({ fellInLine: 1, ignored: 0 });
     expect(collections.speakerNominations.updateOne).toHaveBeenCalledWith(
-      { _id: targetNomination._id },
+      expect.objectContaining({ _id: targetNomination._id }),
       expect.objectContaining({
         $set: expect.objectContaining({
           [`votes.npp_${npp._id.toString()}`]: "for",

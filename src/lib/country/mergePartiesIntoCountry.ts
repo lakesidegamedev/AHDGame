@@ -1,3 +1,5 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
 /**
  * Move every political party from one country to another, renumbering them and
  * rewriting every reference.
@@ -54,7 +56,21 @@ type PartyDoc = Pick<PoliticalParty, "_id" | "sequentialId"> & {
   mergedFrom?: { countryId: string; sequentialId: number; turn?: number };
 };
 
-export async function mergePartiesIntoCountry(
+async function mergePartiesIntoCountryAtomic(
+  db: Db,
+  args: MergePartiesArgs
+): Promise<MergePartiesResult> {
+  return withAtomicResult(db, (tx) =>
+    withTurnValueSettlement(
+      tx,
+      "country-party-merge",
+      args.currentTurn,
+      (inner) => mergePartiesIntoCountry(inner, args),
+      { sourceKey: `${args.fromCountryId}:${args.toCountryId}` }
+    )
+  );
+}
+async function mergePartiesIntoCountry(
   db: Db,
   args: MergePartiesArgs
 ): Promise<MergePartiesResult> {
@@ -74,62 +90,53 @@ export async function mergePartiesIntoCountry(
     .find<PartyDoc>({ countryId: fromCountryId })
     .toArray();
 
-  // ALREADY MIGRATED. A re-run after a partial failure finds nothing left in the
-  // source, and must still hand its caller the map -- `adoptChallengerSettlement`
-  // translates the absorbed country's ruling party through it, and an empty map
-  // there installs the WRONG party rather than failing loudly. Rebuilt from the
-  // `mergedFrom` stamp, which is the whole reason the stamp is written.
-  if (parties.length === 0) {
-    const alreadyMoved = await politicalPartiesCollection(db)
-      .find<PartyDoc>({ countryId: toCountryId, "mergedFrom.countryId": fromCountryId })
-      .toArray();
-    if (alreadyMoved.length === 0) return empty;
-    // A re-run after a partial failure may have moved the docs but died before
-    // the money converted — the stamp filter inside makes this a no-op when it
-    // already did.
-    await convertMovedPartyTreasuries(db, fromCountryId, toCountryId);
-    return {
-      ok: true,
-      partyIdMap: buildPartyIdMap(
-        alreadyMoved.map((p) => ({
-          oldSequentialId: p.mergedFrom?.sequentialId ?? p.sequentialId,
-          newSequentialId: p.sequentialId,
-        }))
-      ),
-      partiesMoved: 0,
-      documentsRemapped: 0,
-    };
-  }
-
-  const newIds = await reserveSequentialIds(db, "party", parties.length, toCountryId);
-  const moved = parties.map((p, i) => ({
-    doc: p,
-    oldSequentialId: p.sequentialId,
-    newSequentialId: newIds[i],
-  }));
+  const alreadyMoved = await politicalPartiesCollection(db)
+    .find<PartyDoc>({ countryId: toCountryId, "mergedFrom.countryId": fromCountryId })
+    .toArray();
+  if (!parties.length && !alreadyMoved.length) return empty;
+  const newIds = parties.length
+    ? await reserveSequentialIds(db, "party", parties.length, toCountryId)
+    : [];
+  const moved = [
+    ...alreadyMoved
+      .filter((p) => p.mergedFrom?.countryId === fromCountryId)
+      .map((p) => ({
+        doc: p,
+        oldSequentialId: p.mergedFrom!.sequentialId,
+        newSequentialId: p.sequentialId,
+      })),
+    ...parties.map((p, i) => ({
+      doc: p,
+      oldSequentialId: p.sequentialId,
+      newSequentialId: newIds[i],
+    })),
+  ];
   const partyIdMap = buildPartyIdMap(moved);
   const now = new Date();
 
   // The party documents first. `mergedFrom` is the idempotency stamp: a re-run
   // reads it back off the target country and rebuilds the same map without
   // reserving a second block of ids.
-  for (const m of moved) {
-    await politicalPartiesCollection(db).updateOne(
-      { _id: m.doc._id },
-      {
-        $set: {
-          countryId: toCountryId,
-          sequentialId: m.newSequentialId,
-          mergedFrom: {
-            countryId: fromCountryId,
-            sequentialId: m.oldSequentialId,
-            turn: currentTurn,
+  const partyWrites = moved
+    .filter((m) => parties.some((p) => p._id.equals(m.doc._id)))
+    .map((m) => ({
+      updateOne: {
+        filter: { _id: m.doc._id },
+        update: {
+          $set: {
+            countryId: toCountryId,
+            sequentialId: m.newSequentialId,
+            mergedFrom: {
+              countryId: fromCountryId,
+              sequentialId: m.oldSequentialId,
+              turn: currentTurn,
+            },
+            updatedAt: now,
           },
-          updatedAt: now,
         },
-      }
-    );
-  }
+      },
+    }));
+  if (partyWrites.length) await politicalPartiesCollection(db).bulkWrite(partyWrites);
 
   let documentsRemapped = 0;
 
@@ -145,16 +152,26 @@ export async function mergePartiesIntoCountry(
     // one-doc-per-country row is keyed by the country id itself, and filtering
     // such a collection on `countryId` matches nothing and reports no error.
     const countryKey = ref.countryKey ?? "countryId";
-    for (const [oldId, newId] of Object.entries(partyIdMap)) {
-      if (NON_PARTY_SENTINELS.has(oldId)) continue;
-      const res = await db
-        .collection(ref.collection)
-        .updateMany(
-          { [countryKey]: fromCountryId, [ref.field]: oldId },
-          { $set: { [ref.field]: newId, updatedAt: now } }
-        );
-      documentsRemapped += res?.modifiedCount ?? 0;
-    }
+    const entries = Object.entries(partyIdMap).filter(([oldId]) => !NON_PARTY_SENTINELS.has(oldId));
+    if (!entries.length) continue;
+    const res = await updatePartyReferenceRows(
+      db.collection(ref.collection),
+      { [countryKey]: fromCountryId, [ref.field]: { $in: entries.map(([oldId]) => oldId) } },
+      [
+        {
+          $set: {
+            [ref.field]: entries.reduceRight<unknown>(
+              (otherwise, [oldId, newId]) => ({
+                $cond: [{ $eq: [`$${ref.field}`, oldId] }, newId, otherwise],
+              }),
+              `$${ref.field}`
+            ),
+            updatedAt: now,
+          },
+        },
+      ]
+    );
+    documentsRemapped += res.modifiedCount;
   }
 
   // Maps whose KEYS are party ids. `$set` on a path rewrites a value and cannot
@@ -166,6 +183,7 @@ export async function mergePartiesIntoCountry(
       .collection(ref.collection)
       .find({ [countryKey]: fromCountryId } as Record<string, unknown>)
       .toArray();
+    const keyMapWrites: import("mongodb").AnyBulkWriteOperation<PartyReferenceDocument>[] = [];
     for (const doc of docs) {
       const current = (doc as Record<string, unknown>)[ref.field] as
         Record<string, number> | undefined;
@@ -178,11 +196,18 @@ export async function mergePartiesIntoCountry(
         rebuilt[mapped] = (rebuilt[mapped] ?? 0) + value;
       }
       if (!changed) continue;
-      await db.collection(ref.collection).updateOne({ _id: doc._id } as Record<string, unknown>, {
-        $set: { [ref.field]: rebuilt, updatedAt: now },
+      keyMapWrites.push({
+        updateOne: {
+          filter: { _id: doc._id } as Record<string, unknown>,
+          update: { $set: { [ref.field]: rebuilt, updatedAt: now } },
+        },
       });
       documentsRemapped += 1;
     }
+    await applyPartyReferenceWrites(
+      db.collection<PartyReferenceDocument>(ref.collection),
+      keyMapWrites
+    );
   }
 
   // Collections whose DOCUMENT `_id` embeds the sequentialId. The field updates
@@ -199,7 +224,7 @@ export async function mergePartiesIntoCountry(
   // alone rather than overwritten: losing one party's organisation silently is
   // worse than a key that still disagrees, which `verify` can find later.
   for (const ref of PARTY_KEYED_DOCUMENT_ID_COLLECTIONS) {
-    const coll = db.collection(ref.collection);
+    const coll = db.collection<PartyReferenceDocument>(ref.collection);
     const rows = (await coll
       .find({ countryId: toCountryId } as Record<string, unknown>)
       .toArray()) as Array<Record<string, unknown>>;
@@ -221,28 +246,22 @@ export async function mergePartiesIntoCountry(
       return true;
     });
 
-    const parked: Array<{ tempId: string; finalId: string; doc: Record<string, unknown> }> = [];
-    for (const row of movable) {
-      const { _id, ...rest } = row;
-      const tempId = `__rekey__${String(_id)}`;
-      await coll.insertOne({ _id: tempId, ...rest } as Record<string, unknown>);
-      await coll.deleteOne({ _id } as Record<string, unknown>);
-      parked.push({ tempId, finalId: keyFor(row), doc: rest });
-    }
-    for (const entry of parked) {
-      await coll.insertOne({ _id: entry.finalId, ...entry.doc } as Record<string, unknown>);
-      await coll.deleteOne({ _id: entry.tempId } as Record<string, unknown>);
-      documentsRemapped += 1;
-    }
+    const parked = movable.map((row) => {
+      const { _id, ...doc } = row;
+      return { oldId: _id, tempId: `__rekey__${String(_id)}`, finalId: keyFor(row), doc };
+    });
+    await replacePartyDocumentKeys(coll, parked);
+    documentsRemapped += parked.length;
   }
 
   // The one collection keyed by ObjectId rather than sequentialId. Its rows only
   // need re-scoping, because the party's `_id` does not change when it moves.
   for (const ref of PARTY_OBJECTID_COLLECTIONS) {
-    const res = await db.collection(ref.collection).updateMany(
+    const res = await updatePartyReferenceRows(
+      db.collection(ref.collection),
       {
         countryId: fromCountryId,
-        [ref.field]: { $in: parties.map((p) => p._id as ObjectId) },
+        [ref.field]: { $in: moved.map((p) => p.doc._id as ObjectId) },
       },
       { $set: { countryId: toCountryId, updatedAt: now } }
     );
@@ -262,7 +281,7 @@ export async function mergePartiesIntoCountry(
   return {
     ok: true,
     partyIdMap,
-    partiesMoved: moved.length,
+    partiesMoved: parties.length,
     documentsRemapped,
   };
 }
@@ -289,11 +308,49 @@ async function convertMovedPartyTreasuries(
   };
   const stamp = { "mergedFrom.treasuryConverted": true, updatedAt: new Date() };
   if (scale === 1) {
-    await politicalPartiesCollection<Document>(db).updateMany(filter, { $set: stamp });
+    await updatePartyReferenceRows(politicalPartiesCollection<Document>(db), filter, {
+      $set: stamp,
+    });
     return;
   }
-  await politicalPartiesCollection<Document>(db).updateMany(filter, {
+  await updatePartyReferenceRows(politicalPartiesCollection<Document>(db), filter, {
     $mul: { treasury: scale },
     $set: stamp,
   });
+}
+
+export { mergePartiesIntoCountryAtomic as mergePartiesIntoCountry };
+
+type PartyReferenceDocument = Record<string, unknown> & { _id: string | ObjectId };
+async function applyPartyReferenceWrites(
+  collection: import("mongodb").Collection<PartyReferenceDocument>,
+  operations: import("mongodb").AnyBulkWriteOperation<PartyReferenceDocument>[]
+) {
+  if (operations.length) await collection.bulkWrite(operations);
+}
+async function replacePartyDocumentKeys(
+  collection: import("mongodb").Collection<PartyReferenceDocument>,
+  rows: Array<{ oldId: unknown; tempId: string; finalId: string; doc: Record<string, unknown> }>
+) {
+  if (!rows.length) return;
+  await collection.bulkWrite(
+    rows.flatMap((row) => [
+      { insertOne: { document: { ...row.doc, _id: row.tempId } } },
+      { deleteOne: { filter: { _id: row.oldId as string | ObjectId } } },
+    ])
+  );
+  await collection.bulkWrite(
+    rows.flatMap((row) => [
+      { insertOne: { document: { ...row.doc, _id: row.finalId } } },
+      { deleteOne: { filter: { _id: row.tempId } } },
+    ])
+  );
+}
+
+async function updatePartyReferenceRows<T extends import("mongodb").Document>(
+  collection: import("mongodb").Collection<T>,
+  filter: Parameters<typeof collection.updateMany>[0],
+  update: Parameters<typeof collection.updateMany>[1]
+) {
+  return collection.updateMany(filter, update);
 }

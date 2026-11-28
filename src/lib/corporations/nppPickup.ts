@@ -1,6 +1,7 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
-import type { DefenceContract } from "@/lib/db/types/defenceContract";
+
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, getSeedCurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
@@ -161,50 +162,52 @@ export async function creditNppPickup(
   const workers = Math.round((sector.workers ?? 0) * share);
   const capacityShare = builtStock(sector) > 0 ? carved.capitalStock / builtStock(sector) : 0;
 
-  if (pickup.merge) {
-    const receiver = await sectors.findOne({ _id: pickup.receiverSectorId });
-    if (!receiver) throw new Error("NPP pickup receiver sector disappeared");
-    if (receiver.nppPickupReceipts?.includes(pickup.key)) return 0;
-    // Capacity units are strategy-specific; restate the donor's in the
-    // receiver's basis before folding them in (same rule as a sector move).
-    const ratio = capacityRescaleRatio(
-      sector.sectorType as CorporationType,
-      sector.strategyId,
-      receiver.strategyId
-    );
-    const incomingStock = carved.capitalStock * ratio;
-    const merged = mergeSectorPlantFields(readSectorPlantFields(receiver), {
-      ...readSectorPlantFields(sector),
-      ...carved,
-      capitalStock: incomingStock,
-      ...(carved.operatingCapacityUnits != null
-        ? { operatingCapacityUnits: carved.operatingCapacityUnits * ratio }
-        : {}),
-      buildQueue: [],
+  if (pickup.merge)
+    return withSessionDb(db, async (db) => {
+      const sectors = corporateSectorsCollection(db);
+      const receiver = await sectors.findOne({ _id: pickup.receiverSectorId });
+      if (!receiver) throw new Error("NPP pickup receiver sector disappeared");
+      if (receiver.nppPickupReceipts?.includes(pickup.key)) return 0;
+      // Capacity units are strategy-specific; restate the donor's in the
+      // receiver's basis before folding them in (same rule as a sector move).
+      const ratio = capacityRescaleRatio(
+        sector.sectorType as CorporationType,
+        sector.strategyId,
+        receiver.strategyId
+      );
+      const incomingStock = carved.capitalStock * ratio;
+      const merged = mergeSectorPlantFields(readSectorPlantFields(receiver), {
+        ...readSectorPlantFields(sector),
+        ...carved,
+        capitalStock: incomingStock,
+        ...(carved.operatingCapacityUnits != null
+          ? { operatingCapacityUnits: carved.operatingCapacityUnits * ratio }
+          : {}),
+        buildQueue: [],
+      });
+      const history = pickupProductionHistory({
+        receiver,
+        donor: sector,
+        capacityShare,
+        unitRatio: (ratio * pickupMeasurementBasis(receiver)) / pickupMeasurementBasis(sector),
+      });
+      const result = await sectors.updateOne(
+        { _id: receiver._id, nppPickupReceipts: { $ne: pickup.key } },
+        {
+          $set: {
+            ...merged,
+            ...history,
+            ...(receiver.productOutputCapacityUnits != null
+              ? { productOutputCapacityUnits: merged.operatingCapacityUnits ?? merged.capitalStock }
+              : {}),
+            updatedAt: now,
+          },
+          $inc: { workers },
+          $push: { nppPickupReceipts: { $each: [pickup.key], $slice: -RECEIPT_CAP } },
+        }
+      );
+      return result.modifiedCount === 1 ? incomingStock : 0;
     });
-    const history = pickupProductionHistory({
-      receiver,
-      donor: sector,
-      capacityShare,
-      unitRatio: (ratio * pickupMeasurementBasis(receiver)) / pickupMeasurementBasis(sector),
-    });
-    const result = await sectors.updateOne(
-      { _id: receiver._id, nppPickupReceipts: { $ne: pickup.key } },
-      {
-        $set: {
-          ...merged,
-          ...history,
-          ...(receiver.productOutputCapacityUnits != null
-            ? { productOutputCapacityUnits: merged.operatingCapacityUnits ?? merged.capitalStock }
-            : {}),
-          updatedAt: now,
-        },
-        $inc: { workers },
-        $push: { nppPickupReceipts: { $each: [pickup.key], $slice: -RECEIPT_CAP } },
-      }
-    );
-    return result.modifiedCount === 1 ? incomingStock : 0;
-  }
 
   try {
     await sectors.insertOne({

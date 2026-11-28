@@ -1,3 +1,4 @@
+import { gameConfigCollection } from "@/lib/db/repositories/gameConfig";
 import type { ClientSession, Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { MacroCountryState } from "@/lib/world/macro/types";
@@ -77,11 +78,21 @@ export async function materializeFederationFiscalAccounts(input: {
     .toArray();
   if (budgets.length !== 1) throw new Error("Federation fiscal source needs one budget");
   const budget = budgets[0];
+  const config = await gameConfigCollection(db).findOne(
+    { _id: "default" },
+    { session, projection: { treasuryCashLedgerEnabled: 1 } }
+  );
+  const funded = config?.treasuryCashLedgerEnabled === true;
+  if (funded !== (accounting.cashSource === "funded"))
+    throw new Error("Treasury cash mode changed; refresh the federation settlement approval");
+  const actualCash = funded ? budget.treasuryCashLocal : budget.treasuryBalance;
   const rate = budget.currencyCode ? accounting.ratesLocalPerAnchor[budget.currencyCode] : 1;
   if (
     !Number.isFinite(rate) ||
     rate <= 0 ||
-    Math.round((budget.treasuryBalance / rate) * 100) !== accounting.signedCashMinor
+    !Number.isFinite(actualCash) ||
+    Math.round((actualCash! / rate) * 100) !== accounting.signedCashMinor ||
+    (funded && Math.round((budget.treasuryBalance / rate) * 100) !== accounting.fiscalPositionMinor)
   )
     throw new Error("Federation fiscal source cash changed before settlement");
   const accounts: FederationFiscalAccount[] = shares.map((share) => ({
@@ -120,8 +131,19 @@ export async function materializeFederationFiscalAccounts(input: {
   if (!Number.isFinite(sourceCashLocal))
     throw new Error("Federation source treasury exceeds local-currency precision");
   const sourceUpdate = await federalBudgetCollection(db).updateOne(
-    { _id: budget._id, treasuryBalance: budget.treasuryBalance },
-    { $set: { treasuryBalance: sourceCashLocal } },
+    {
+      _id: budget._id,
+      treasuryBalance: budget.treasuryBalance,
+      ...(funded ? { treasuryCashLocal: budget.treasuryCashLocal } : {}),
+    },
+    {
+      $set: funded
+        ? {
+            treasuryCashLocal: sourceCashLocal,
+            treasuryBalance: budget.treasuryBalance + sourceCashLocal - actualCash!,
+          }
+        : { treasuryBalance: sourceCashLocal },
+    },
     { session }
   );
   if (sourceUpdate.matchedCount !== 1)

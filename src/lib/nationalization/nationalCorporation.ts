@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
@@ -94,17 +95,37 @@ export async function ensurePrimaryNationalCorporation(
   const legacy = await corps.find({ countryOwnerId: countryId }).sort({ _id: 1 }).limit(1).next();
   if (legacy) return legacy;
 
-  // Preset-aware home currency: a 2027 euro member created here (fresh
-  // bootstrap race, merge, heal) stamps EUR like the seeded sovereign
-  // issuers. The preset load runs only on the create path — the
-  // primary-exists early return above adds no read. Every other preset
-  // resolves through the era-blind map, byte-identical to before. The
-  // preset is read inline (not via loadWorldPreset) to keep this
-  // widely-imported module off the heavy readiness-contract import chain.
-  const gameState = await gameStateCollection<{ _id: string; preset?: string | null }>(db).findOne(
-    { _id: "current" },
-    { projection: { preset: 1 } }
-  );
+  return withSessionDb(db, async (db) => {
+    const state = await gameStateCollection(db).findOne(
+      { _id: "current" },
+      { projection: { preset: 1, worldEpochId: 1 } }
+    );
+    if (!state) throw new Error("National Corporation creation requires an initialized world");
+    // The world row is the shared creation barrier, including when no issuer exists.
+    const barrier = await gameStateCollection(db).updateOne(
+      { _id: "current", worldEpochId: state.worldEpochId ?? { $exists: false } },
+      { $inc: { economicCommandRevision: 1 } }
+    );
+    if (barrier.matchedCount !== 1)
+      throw new Error("World changed during national issuer creation");
+    const existing = await corporationsCollection(db)
+      .find({ countryOwnerId: countryId })
+      .sort({ isPrimaryNationalCorporation: -1, _id: 1 })
+      .limit(1)
+      .next();
+    if (existing) return existing;
+    return createPrimaryNationalCorporation(db, countryId, state.preset);
+  });
+}
+
+async function createPrimaryNationalCorporation(
+  db: Db,
+  countryId: CountryId,
+  worldPreset?: string | null
+): Promise<Corporation> {
+  const corps = corporationsCollection(db);
+  const gameState = { preset: worldPreset };
+
   const preset =
     gameState?.preset && gameState.preset.trim().length > 0
       ? gameState.preset

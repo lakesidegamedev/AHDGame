@@ -1,3 +1,7 @@
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import {
@@ -123,6 +127,7 @@ function matchesFilter(doc: Doc, filter: Doc): boolean {
       // Keyset bounds the rotation scan emits (`$gt` tail, `$lte` wrap head).
       const ops = cond as Doc;
       const actual = String(doc._id);
+      if ("$in" in ops) return (ops.$in as unknown[]).some((value) => valueEquals(doc._id, value));
       if ("$gt" in ops && !(actual > String(ops.$gt))) return false;
       if ("$gte" in ops && !(actual >= String(ops.$gte))) return false;
       if ("$lt" in ops && !(actual < String(ops.$lt))) return false;
@@ -164,6 +169,7 @@ function matchesFilter(doc: Doc, filter: Doc): boolean {
     const actual = doc[key];
     if (cond && typeof cond === "object" && !(cond instanceof ObjectId) && !Array.isArray(cond)) {
       const ops = cond as Doc;
+      if ("$in" in ops) return (ops.$in as unknown[]).some((value) => valueEquals(actual, value));
       if ("$gte" in ops) return (actual as number) >= (ops.$gte as number);
       if ("$ne" in ops) return !valueEquals(actual, ops.$ne);
       if ("$exists" in ops) {
@@ -241,7 +247,7 @@ function applyUpdate(doc: Doc, update: Doc, filter: Doc): void {
         const slice = (spec as Doc).$slice as number | undefined;
         doc.appliedMoneyFlowKeys = slice !== undefined ? keys.slice(slice) : keys;
       } else if (path === "shareholders" || path === "holdings") {
-        (doc[path] as Doc[] | undefined) ?? (doc[path] = [] as unknown as Doc[]);
+        doc[path] ??= [];
         (doc[path] as Doc[]).push(clone(spec as Doc));
       }
     }
@@ -270,6 +276,17 @@ function fakeCollection(db: FakeDb, name: string): Record<string, (...args: neve
       }
       coll().set(key, clone(doc));
       return { insertedId: doc._id };
+    },
+    bulkWrite: async (operations: Array<{ updateOne: { filter: Doc; update: Doc } }>) => {
+      let matchedCount = 0;
+      for (const operation of operations) {
+        const saved = (await fakeCollection(db, name).updateOne!(
+          operation.updateOne.filter as never,
+          operation.updateOne.update as never
+        )) as { matchedCount: number };
+        matchedCount += saved.matchedCount;
+      }
+      return { matchedCount };
     },
     findOne: async (filter: Doc) => {
       for (const doc of coll().values()) {

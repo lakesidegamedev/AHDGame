@@ -1,9 +1,10 @@
+import { withAtomicResult } from "@/lib/db/withAtomicResult";
 import type { Db, ObjectId } from "mongodb";
 import { isCeoActor } from "@/lib/corporations/ceoActor";
 import { assertSubsidiaryWithinCap } from "@/lib/mechanicalLaws/guards";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ObjectId as Oid } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 
 import {
   CEO_INITIAL_SHARES,
@@ -31,10 +32,7 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
-import {
-  atomicallyDebitCorpLiquidCapital,
-  refundCorpLiquidCapital,
-} from "@/lib/financialTxLog/atomicCashGuard";
+import { atomicallyDebitCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { creditTreasuryProceedsPaired } from "@/lib/nationalization/treasury";
 import {
@@ -83,6 +81,13 @@ export interface SpinOffInput {
  * existing IPO flow). The new corp is immediately a formalized subsidiary.
  */
 export async function spinOff(
+  db: Db,
+  input: SpinOffInput
+): Promise<SubsidiaryCommandResult<{ newCorporationId: string }>> {
+  return withAtomicResult(db, (db) => spinOffInTransaction(db, input));
+}
+
+async function spinOffInTransaction(
   db: Db,
   input: SpinOffInput
 ): Promise<SubsidiaryCommandResult<{ newCorporationId: string }>> {
@@ -236,229 +241,182 @@ export async function spinOff(
   }
 
   const transferredSectorIds: ObjectId[] = [];
-  try {
-    const subsidiaryShares = getEraFounderShares(
-      CEO_INITIAL_SHARES,
-      await getGameStatePresetOrDefault(db)
-    );
-    // Baseline tech for the passed decade, matching a newly founded corp. Without it moved sectors lose tech margin, build discount and bonuses on transfer.
-    const gameState = await getGameState(db);
-    const baselineTechNodeIds = autoGrantedNodeIds(
-      sectorType,
-      resolveGameYear(gameState ?? {}) ?? STARTING_YEAR
-    );
-    // Create the wholly parent-owned private corp. Parent holds 100% of shares.
-    const corpDoc: Omit<Corporation, "_id"> & { _id: ObjectId } = {
-      _id: newCorpId,
-      name: nameTrimmed,
-      tickerSymbol: tickerSymbol?.trim() || (await generateTickerSymbol(db, nameTrimmed)),
-      type: sectorType,
-      ceoId,
-      ceoType: ceoTypeResolved,
-      ceoVacant: false,
-      userId: ceoUserId,
-      countryId: parent.countryId,
-      headquartersState: parent.headquartersState,
-      liquidCapital: 0,
-      liquidCurrencyCode: currencyCode,
-      marketingBudget: 0,
-      marketingStrength: 0,
-      logisticsBudget: 0,
-      logisticsStrength: 0,
-      rdBudget: 0,
-      rdScore: 0,
-      ceoSalary: 0,
-      sequentialId: await getNextSequentialId(db, "corporation"),
-      // Era share base: a fixed 10M shares at the flat DEFAULT_SHARE_PRICE
-      // would open a 1953 subsidiary at a modern-sized market cap (~70x its
-      // era). Deflating the base keeps the opening cap era-correct.
-      totalShares: subsidiaryShares,
-      sharePrice: DEFAULT_SHARE_PRICE,
-      shareholders: [{ corporationId: parent._id, shares: subsidiaryShares }],
-      publicFloat: 0,
-      // Its own colour, not the parent's. A spin-off is a separate company and
-      // its cap table should not look like the one it came out of.
-      brandColor: randomBrandColor(),
-      dividendRate: 0,
-      suspended: false,
-      hiddenFromExchange: false,
-      isPrivate: true,
-      legalStructure: getDefaultLegalStructureId(parent.countryId, { isPrivate: true }),
-      isSpinOff: true,
-      spunOffFromCorpId: parent._id,
-      spunOffAtTurn: turn,
-      subsidiaryFormalizedAtTurn: turn,
-      foundedAtTurn: turn,
-      ...(baselineTechNodeIds.length > 0 ? { unlockedTechNodeIds: baselineTechNodeIds } : {}),
-      createdAt: now,
-      updatedAt: now,
-    };
-    await insertCorporationWithTickerRetry(db, corpDoc as Corporation);
-    await openCeoTenure(db, newCorpId, { holderId: ceoId, ceoType: ceoTypeResolved, turn });
+  const subsidiaryShares = getEraFounderShares(
+    CEO_INITIAL_SHARES,
+    await getGameStatePresetOrDefault(db)
+  );
+  // Baseline tech for the passed decade, matching a newly founded corp. Without it moved sectors lose tech margin, build discount and bonuses on transfer.
+  const gameState = await getGameState(db);
+  const baselineTechNodeIds = autoGrantedNodeIds(
+    sectorType,
+    resolveGameYear(gameState ?? {}) ?? STARTING_YEAR
+  );
+  // Create the wholly parent-owned private corp. Parent holds 100% of shares.
+  const corpDoc: Omit<Corporation, "_id"> & { _id: ObjectId } = {
+    _id: newCorpId,
+    name: nameTrimmed,
+    tickerSymbol: tickerSymbol?.trim() || (await generateTickerSymbol(db, nameTrimmed)),
+    type: sectorType,
+    ceoId,
+    ceoType: ceoTypeResolved,
+    ceoVacant: false,
+    userId: ceoUserId,
+    countryId: parent.countryId,
+    headquartersState: parent.headquartersState,
+    liquidCapital: 0,
+    liquidCurrencyCode: currencyCode,
+    marketingBudget: 0,
+    marketingStrength: 0,
+    logisticsBudget: 0,
+    logisticsStrength: 0,
+    rdBudget: 0,
+    rdScore: 0,
+    ceoSalary: 0,
+    sequentialId: await getNextSequentialId(db, "corporation"),
+    // Era share base: a fixed 10M shares at the flat DEFAULT_SHARE_PRICE
+    // would open a 1953 subsidiary at a modern-sized market cap (~70x its
+    // era). Deflating the base keeps the opening cap era-correct.
+    totalShares: subsidiaryShares,
+    sharePrice: DEFAULT_SHARE_PRICE,
+    shareholders: [{ corporationId: parent._id, shares: subsidiaryShares }],
+    publicFloat: 0,
+    // Its own colour, not the parent's. A spin-off is a separate company and
+    // its cap table should not look like the one it came out of.
+    brandColor: randomBrandColor(),
+    dividendRate: 0,
+    suspended: false,
+    hiddenFromExchange: false,
+    isPrivate: true,
+    legalStructure: getDefaultLegalStructureId(parent.countryId, { isPrivate: true }),
+    isSpinOff: true,
+    spunOffFromCorpId: parent._id,
+    spunOffAtTurn: turn,
+    subsidiaryFormalizedAtTurn: turn,
+    foundedAtTurn: turn,
+    ...(baselineTechNodeIds.length > 0 ? { unlockedTechNodeIds: baselineTechNodeIds } : {}),
+    createdAt: now,
+    updatedAt: now,
+  };
+  await insertCorporationWithTickerRetry(db, corpDoc as Corporation);
+  await openCeoTenure(db, newCorpId, { holderId: ceoId, ceoType: ceoTypeResolved, turn });
 
-    // Reassign sector docs to the new corp: only corporationId changes, so
-    // capitalStock, buildQueue, mothballed and plantsStartTurn ride along.
-    // The A-anchored capex fields (CIP, each order's costPaidAnchor) are already
-    // A by contract and must NOT go through the readCorpEconomicAnchor/
-    // writeCorpEconomicLocal round-trip applied to revenue below. Re-denominating
-    // them on a cross-currency spin-out would restate the money by the FX rate
-    // and let the subsidiary cancel inherited orders for an inflated refund.
-    const newFx = parentFx; // same country/currency as parent
-    for (const [index, sector] of sectors.entries()) {
-      const revenueAnchor = readCorpEconomicAnchor(sector.revenue, parentCurrency, parentFx);
-      const growthAnchor = readCorpEconomicAnchor(
-        sector.currentGrowthCost ?? 0,
-        parentCurrency,
-        parentFx
-      );
-      const newRevenueLocal = Math.round(
-        writeCorpEconomicLocal(revenueAnchor, currencyCode, newFx)
-      );
-      const newGrowthLocal = Math.round(writeCorpEconomicLocal(growthAnchor, currencyCode, newFx));
-      const moved = await corporateSectorsCollection(db).updateOne(
-        {
-          _id: sector._id,
-          corporationId: parent._id,
-          "constructionPropertyTransition.key": transitionKeys[index],
-          ...constructionTransfers.claimFilterFor(sector),
+  // Reassign sector docs to the new corp: only corporationId changes, so
+  // capitalStock, buildQueue, mothballed and plantsStartTurn ride along.
+  // The A-anchored capex fields (CIP, each order's costPaidAnchor) are already
+  // A by contract and must NOT go through the readCorpEconomicAnchor/
+  // writeCorpEconomicLocal round-trip applied to revenue below. Re-denominating
+  // them on a cross-currency spin-out would restate the money by the FX rate
+  // and let the subsidiary cancel inherited orders for an inflated refund.
+  const newFx = parentFx; // same country/currency as parent
+  for (const [index, sector] of sectors.entries()) {
+    const revenueAnchor = readCorpEconomicAnchor(sector.revenue, parentCurrency, parentFx);
+    const growthAnchor = readCorpEconomicAnchor(
+      sector.currentGrowthCost ?? 0,
+      parentCurrency,
+      parentFx
+    );
+    const newRevenueLocal = Math.round(writeCorpEconomicLocal(revenueAnchor, currencyCode, newFx));
+    const newGrowthLocal = Math.round(writeCorpEconomicLocal(growthAnchor, currencyCode, newFx));
+    const moved = await corporateSectorsCollection(db).updateOne(
+      {
+        _id: sector._id,
+        corporationId: parent._id,
+        "constructionPropertyTransition.key": transitionKeys[index],
+        ...constructionTransfers.claimFilterFor(sector),
+      },
+      {
+        $set: {
+          corporationId: newCorpId,
+          ...constructionTransfers.setFor(sector._id),
+          revenue: newRevenueLocal,
+          currentGrowthCost: newGrowthLocal,
+          updatedAt: now,
         },
-        {
-          $set: {
-            corporationId: newCorpId,
-            ...constructionTransfers.setFor(sector._id),
-            revenue: newRevenueLocal,
-            currentGrowthCost: newGrowthLocal,
-            updatedAt: now,
-          },
-        }
-      );
-      if (moved.matchedCount !== 1)
-        throw new Error("A sector changed during the subsidiary spin-off");
-      transferredSectorIds.push(sector._id);
-    }
-
-    // Anchor the parent's spin-off cooldown.
-    await corporationsCollection(db).updateOne(
-      { _id: parent._id },
-      { $set: { lastSpinOffTurn: turn, updatedAt: now } }
-    );
-
-    // The incorporation fee is government revenue, not destroyed money: it goes
-    // to the parent's country treasury, and both legs are ledgered for
-    // money-conservation checks.
-    const feeCurrency = (parentCurrency ?? "USD") as CurrencyCode;
-    const feeToTreasury = await creditTreasuryProceedsPaired(db, {
-      countryId: parent.countryId,
-      amountLocal: costLocal,
-      now,
-      flow: "incorporation_fee",
-      key: `spin-off-fee:${newCorpId.toHexString()}`,
-      site: "spinOff.incorporationFee",
-    });
-    await Promise.all([
-      emitTx(db, {
-        type: "corp_capital_seed",
-        turn,
-        createdAt: now,
-        subjectType: "corporation",
-        subjectId: parent._id,
-        subjectName: parent.name,
-        amount: -costLocal,
-        balanceAfter: debit.newBalance,
-        currencyCode: feeCurrency,
-        counterpartyType: "government",
-        counterpartyName: `${parent.countryId} treasury`,
-        meta: {
-          kind: "spin_off",
-          side: "incorporation_fee",
-          sectorType,
-          newCorporationId: newCorpId.toString(),
-          transferredSectors: transferredSectorIds.length,
-        },
-      }),
-      feeToTreasury > 0
-        ? emitTx(db, {
-            type: "gov_tax_revenue",
-            turn,
-            createdAt: now,
-            subjectType: "government",
-            countryId: parent.countryId,
-            subjectName: `${parent.countryId} treasury`,
-            amount: feeToTreasury,
-            currencyCode: feeCurrency,
-            counterpartyType: "corporation",
-            counterpartyId: parent._id,
-            counterpartyName: parent.name,
-            meta: { kind: "spin_off", side: "incorporation_fee" },
-          })
-        : Promise.resolve(),
-    ]);
-
-    // A standing divestiture order (C3 merger remedy) is re-measured after the
-    // spin-off. It does NOT discharge just because the business moved: the new
-    // corp is wholly parent-owned, so the group's market share is unchanged.
-    // This call is here so that the LATER sell-down settles the order promptly
-    // via the same path, and so the parent sees an accurate state immediately.
-    if (parent.pendingDivestiture) {
-      try {
-        const { settleDivestitureIfSatisfied } =
-          await import("@/lib/corporations/mergerReview/divestiture");
-        await settleDivestitureIfSatisfied(db, parent);
-      } catch {
-        // Best-effort: the turn sweep re-measures anyway.
       }
-    }
-
-    await settleConstructionBorrowerTransfers(db, constructionTransfers);
-    await Promise.all(
-      sectors.map((sector, index) =>
-        releaseConstructionPropertyTransition(db, sector._id, transitionKeys[index])
-      )
     );
-
-    return { ok: true, newCorporationId: newCorpId.toString() };
-  } catch (err) {
-    // Roll back: move any transferred sectors back, delete the new corp, refund.
-    if (transferredSectorIds.length > 0) {
-      // A financed site goes back with its claim naming the parent again, so
-      // the settle below leaves its loan with the parent.
-      const rollback = await corporateSectorsCollection(db).bulkWrite(
-        transferredSectorIds.map((sectorId) => {
-          const index = sectors.findIndex((sector) => sector._id.equals(sectorId));
-          return {
-            updateOne: {
-              filter: {
-                _id: sectorId,
-                "constructionPropertyTransition.key": transitionKeys[index],
-              },
-              update: {
-                $set: {
-                  corporationId: parent._id,
-                  ...(constructionTransfers.hasTransfer(sectorId)
-                    ? { "constructionFinancing.borrowerId": parent._id.toHexString() }
-                    : {}),
-                  updatedAt: new Date(),
-                },
-              },
-            },
-          };
-        })
-      );
-      await settleConstructionBorrowerTransfers(db, constructionTransfers);
-      if ((rollback.matchedCount ?? 0) !== transferredSectorIds.length) {
-        throw new Error("The spin-off could not safely restore every reserved sector", {
-          cause: err,
-        });
-      }
-    }
-    await settleConstructionBorrowerTransfers(db, constructionTransfers);
-    await corporationsCollection(db).deleteOne({ _id: newCorpId });
-    await refundCorpLiquidCapital(db, parent._id, costLocal);
-    await Promise.all(
-      sectors.map((sector, index) =>
-        releaseConstructionPropertyTransition(db, sector._id, transitionKeys[index])
-      )
-    );
-    throw err;
+    if (moved.matchedCount !== 1)
+      throw new Error("A sector changed during the subsidiary spin-off");
+    transferredSectorIds.push(sector._id);
   }
+
+  // Anchor the parent's spin-off cooldown.
+  await corporationsCollection(db).updateOne(
+    { _id: parent._id },
+    { $set: { lastSpinOffTurn: turn, updatedAt: now } }
+  );
+
+  // The incorporation fee is government revenue, not destroyed money: it goes
+  // to the parent's country treasury, and both legs are ledgered for
+  // money-conservation checks.
+  const feeCurrency = (parentCurrency ?? "USD") as CurrencyCode;
+  const feeToTreasury = await creditTreasuryProceedsPaired(db, {
+    countryId: parent.countryId,
+    amountLocal: costLocal,
+    now,
+    flow: "incorporation_fee",
+    key: `spin-off-fee:${newCorpId.toHexString()}`,
+    site: "spinOff.incorporationFee",
+  });
+  await Promise.all([
+    emitTx(db, {
+      type: "corp_capital_seed",
+      turn,
+      createdAt: now,
+      subjectType: "corporation",
+      subjectId: parent._id,
+      subjectName: parent.name,
+      amount: -costLocal,
+      balanceAfter: debit.newBalance,
+      currencyCode: feeCurrency,
+      counterpartyType: "government",
+      counterpartyName: `${parent.countryId} treasury`,
+      meta: {
+        kind: "spin_off",
+        side: "incorporation_fee",
+        sectorType,
+        newCorporationId: newCorpId.toString(),
+        transferredSectors: transferredSectorIds.length,
+      },
+    }),
+    feeToTreasury > 0
+      ? emitTx(db, {
+          type: "gov_tax_revenue",
+          turn,
+          createdAt: now,
+          subjectType: "government",
+          countryId: parent.countryId,
+          subjectName: `${parent.countryId} treasury`,
+          amount: feeToTreasury,
+          currencyCode: feeCurrency,
+          counterpartyType: "corporation",
+          counterpartyId: parent._id,
+          counterpartyName: parent.name,
+          meta: { kind: "spin_off", side: "incorporation_fee" },
+        })
+      : Promise.resolve(),
+  ]);
+
+  // A standing divestiture order (C3 merger remedy) is re-measured after the
+  // spin-off. It does NOT discharge just because the business moved: the new
+  // corp is wholly parent-owned, so the group's market share is unchanged.
+  // This call is here so that the LATER sell-down settles the order promptly
+  // via the same path, and so the parent sees an accurate state immediately.
+  if (parent.pendingDivestiture) {
+    try {
+      const { settleDivestitureIfSatisfied } =
+        await import("@/lib/corporations/mergerReview/divestiture");
+      await settleDivestitureIfSatisfied(db, parent);
+    } catch {
+      // Best-effort: the turn sweep re-measures anyway.
+    }
+  }
+
+  await settleConstructionBorrowerTransfers(db, constructionTransfers);
+  await Promise.all(
+    sectors.map((sector, index) =>
+      releaseConstructionPropertyTransition(db, sector._id, transitionKeys[index])
+    )
+  );
+
+  return { ok: true, newCorporationId: newCorpId.toString() };
 }

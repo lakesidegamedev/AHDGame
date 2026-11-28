@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+vi.mock("@/lib/db/sessionDb", () => ({
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import {
@@ -26,6 +29,23 @@ function worldDb(turn = 200) {
       { _id: "YU_CRO", name: "Croatia", countryId: "YU", gdp: 1000, capitalStock: 4000 },
       { _id: "YU_BIH", name: "Bosnia", countryId: "YU", gdp: 500 },
     ]);
+  db.collection("conflictCapacityObligations").bulkWrite.mockImplementation(
+    async (
+      operations: {
+        updateOne: { update: { $setOnInsert: Record<string, unknown> }; filter: { _id: string } };
+      }[]
+    ) => {
+      db.collection("conflictCapacityObligations")
+        .find()
+        .toArray.mockResolvedValue(
+          operations.map(({ updateOne }) => ({
+            _id: updateOne.filter._id,
+            ...updateOne.update.$setOnInsert,
+          }))
+        );
+      return { matchedCount: 0, upsertedCount: operations.length };
+    }
+  );
   return db;
 }
 
@@ -39,7 +59,7 @@ describe("applyConflictCapacityDestruction", () => {
       "res-1"
     );
     expect(result).toBeUndefined();
-    expect(db.collectionMocks.conflictCapacityObligations).toBeUndefined();
+    expect(db.collectionMocks.conflictCapacityObligations.bulkWrite).not.toHaveBeenCalled();
   });
 
   it("writes one deterministic, insert-only obligation per damaged region", async () => {

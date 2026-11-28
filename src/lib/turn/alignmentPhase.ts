@@ -1,3 +1,4 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
 /**
  * Alignment turn phase — the only per-turn write path for country alignment.
  *
@@ -298,29 +299,34 @@ async function processEnabledAlignmentTurn(
   const resolvePlay = async (
     playDoc: AlignmentPlay,
     appliedPoints: number,
-    effectivePoints = 0
-  ) => {
-    const refunded = appliedPoints === 0 && refundable(playDoc) && playDoc.amountLocal > 0;
-    const effectivePoleId = channelFor(playDoc.organizationId)?.poleId;
-    await playsCol.updateOne(
-      { _id: playDoc._id },
-      {
-        $set: {
-          resolvedTurn: currentTurn,
-          appliedPoints,
-          effectivePoints,
-          refunded,
-          ...(effectivePoleId ? { effectivePoleId } : {}),
-        },
+    effectivePoints = 0,
+    transactionDb: Db = db
+  ) =>
+    withSessionDb(transactionDb, async (tx) => {
+      const refunded = appliedPoints === 0 && refundable(playDoc) && playDoc.amountLocal > 0;
+      const effectivePoleId = channelFor(playDoc.organizationId)?.poleId;
+      const resolved = await (
+        await getAlignmentPlaysCollection(tx)
+      ).updateOne(
+        { _id: playDoc._id, resolvedTurn: null },
+        {
+          $set: {
+            resolvedTurn: currentTurn,
+            appliedPoints,
+            effectivePoints,
+            refunded,
+            ...(effectivePoleId ? { effectivePoleId } : {}),
+          },
+        }
+      );
+      if (resolved.matchedCount !== 1) return { applied: false, refunded: false };
+      if (refunded) {
+        await creditOrganizationFund(tx, playDoc.organizationId, playDoc.amountLocal, {
+          context: cashContext,
+        });
       }
-    );
-    if (refunded) {
-      await creditOrganizationFund(db, playDoc.organizationId, playDoc.amountLocal, {
-        context: cashContext,
-      });
-      playsRefunded++;
-    }
-  };
+      return { applied: true, refunded };
+    });
 
   // Close finished crises first, then read which targets are still in one: a
   // nation with an open crisis moves under a raised ceiling this turn.
@@ -393,7 +399,7 @@ async function processEnabledAlignmentTurn(
       shares: shares.shares,
       nonAligned: shares.nonAligned,
       previous: null,
-      turn: currentTurn,
+      turn: currentTurn - 1,
       updatedAt: now,
     };
     await col.insertOne(healed);
@@ -402,186 +408,224 @@ async function processEnabledAlignmentTurn(
     rowsHealed++;
   }
 
-  for (const doc of docs) {
-    const before = { shares: doc.shares, nonAligned: doc.nonAligned };
-    const crossing = applyEraCrossing({
-      shares: before,
-      storedEraKey: doc.eraKey,
-      year,
-      poles,
-    });
-    if (crossing.crossed) erasCrossed++;
+  for (const snapshot of docs) {
+    const outcome = await withSessionDb(db, async (db) => {
+      const col = await getCountryAlignmentsCollection(db);
+      const doc = await col.findOne({ entityId: snapshot.entityId });
+      if (!doc) return null;
+      let countriesDrifted = 0,
+        erasCrossed = 0,
+        playsResolved = 0,
+        playsRefunded = 0,
+        spheresSynced = 0;
+      if ((doc.turn ?? -1) >= currentTurn)
+        return {
+          countriesDrifted,
+          erasCrossed,
+          playsResolved,
+          playsRefunded,
+          spheresSynced,
+          drifted: { shares: doc.shares, nonAligned: doc.nonAligned },
+          nextJoinReady: doc.joinReadySince ?? {},
+        };
 
-    // Belonging to a bloc's channel org pulls a nation toward that bloc. A
-    // de-aligning channel is deliberately NOT special-cased here, unlike in
-    // pullForPlay: joining the Non-Aligned Movement is a nation's own posture,
-    // so it builds the NAM share directly. A NAM *play* is pressure applied to
-    // someone else, which prises them off whichever bloc holds them instead.
-    const orgIds = orgsByCountry.get(doc.entityId as CountryId);
-    const pull: Partial<Record<AlignmentPoleId, number>> = {};
-    if (orgIds) {
-      for (const channel of topology.channels) {
-        if (!orgIds.has(channel.organizationId)) continue;
-        // Read against the POST-crossing shares, which is what computeDrift is
-        // handed — a nation whose era just changed is measured in the pole it
-        // now has, not the one it used to.
-        pull[channel.poleId] =
-          (pull[channel.poleId] ?? 0) +
-          membershipPullForTurn({
-            weight: channel.weight,
-            currentShare: crossing.shares.shares[channel.poleId] ?? 0,
-          });
-      }
-    }
-
-    // Sanctioning a nation erodes the sanctioning bloc's OWN standing there.
-    // Expressed as negative pull rather than a push toward some rival, because
-    // where the resentment goes is not ours to decide — computeDrift lets the
-    // uncommitted remainder absorb it, and a rival only gains by acting.
-    const sanctioningOrgs = sanctionsByTarget.get(doc.entityId);
-    if (sanctioningOrgs) {
-      for (const channel of topology.channels) {
-        if (!sanctioningOrgs.has(channel.organizationId)) continue;
-        pull[channel.poleId] =
-          (pull[channel.poleId] ?? 0) - SANCTIONS_ALIGNMENT_EROSION * channel.weight;
-      }
-    }
-
-    // A background country's government leans it (#5702). The pull is small,
-    // on the scale of a membership's, and joins the same capped vector.
-    const stancePull = stancePulls.get(doc.entityId);
-    if (stancePull) {
-      for (const [poleId, value] of Object.entries(stancePull) as [AlignmentPoleId, number][]) {
-        pull[poleId] = (pull[poleId] ?? 0) + value;
-      }
-    }
-
-    // Plays and their answers join the same vector as the membership pull, so
-    // computeDrift's cap, non-aligned resistance and locked gate bound the
-    // nation's whole turn rather than drift alone.
-    const inCrisis = crisisTargets.has(doc.entityId);
-    const targetPlays = playsByTarget.get(doc.entityId) ?? [];
-    const targetGdpUsd = (targetGdpMillions.get(doc.entityId) ?? 0) * GDP_MILLIONS_TO_USD;
-    const settled: Array<{ doc: AlignmentPlay; points: number }> = [];
-    const background = { ...pull };
-    const contributions: PlayContribution[] = [];
-    for (const playDoc of targetPlays) {
-      const channel = channelFor(playDoc.organizationId);
-      if (!channel) {
-        // The org lost its channel between commit and resolution (an era
-        // crossing). Resolve at zero rather than leaving it pending forever.
-        settled.push({ doc: playDoc, points: 0 });
-        continue;
-      }
-      const playPull = pullForPlay({
-        channel,
-        amountUsd: playDoc.amountUsd,
-        targetGdpUsd,
-        shares: crossing.shares,
-        poles,
-      });
-      // An overextended bloc pushes less hard everywhere. Applied to the pull
-      // AND to the recorded points, so the audit trail shows what the play
-      // actually bought rather than what it would have bought from a settled
-      // alliance.
-      const effectiveness = blocPlayEffectiveness(
-        stressByOrg.get(playDoc.organizationId)?.stress ?? 0
-      );
-      for (const [poleId, value] of Object.entries(playPull) as [AlignmentPoleId, number][]) {
-        pull[poleId] = (pull[poleId] ?? 0) + value * effectiveness;
-      }
-
-      const points =
-        pointsForSpend(playDoc.amountUsd, targetGdpUsd) * channel.weight * effectiveness;
-      settled.push({ doc: playDoc, points });
-      contributions.push({ id: String(playDoc._id), poleId: channel.poleId, points });
-    }
-
-    // A flashpoint lifts the brake on its target — it grants nothing by itself,
-    // so a crisis nobody acts on changes nothing.
-    const drifted = computeDrift({
-      shares: crossing.shares,
-      poles,
-      pull,
-      cap: inCrisis ? CRISIS_TURN_CAP : undefined,
-    });
-    countriesDrifted++;
-
-    // A nation can lock between a play being committed and resolved. The
-    // command refuses a locked target up front, but drift no-ops this one, so
-    // the play bought nothing and must not be stamped as though it had.
-    const moved = leadFor(crossing.shares) < ALIGNMENT_GATES.locked;
-    const effective = effectivePlayPoints({
-      before: crossing.shares,
-      after: drifted,
-      background,
-      plays: contributions,
-    });
-
-    for (const { doc: playDoc, points } of settled) {
-      // The points this play contributed BEFORE the per-nation cap scaled the
-      // combined vector — what it bought, not what survived the crowd.
-      await resolvePlay(
-        playDoc,
-        moved ? Math.round(points * 100) / 100 : 0,
-        effective.get(String(playDoc._id)) ?? 0
-      );
-      playsResolved++;
-    }
-    playsByTarget.delete(doc.entityId);
-
-    // Per-pole accession clock, computed before the write below consumes it.
-    const priorJoinReady = doc.joinReadySince ?? {};
-    const nextJoinReady: Partial<Record<AlignmentPoleId, number>> = {};
-    for (const pole of poles) {
-      if ((drifted.shares[pole] ?? 0) >= JOIN_SHARE) {
-        nextJoinReady[pole] = priorJoinReady[pole] ?? currentTurn;
-      }
-    }
-
-    await col.updateOne(
-      { entityId: doc.entityId },
-      {
-        $set: {
-          eraKey: crossing.eraKey,
-          shares: drifted.shares,
-          nonAligned: drifted.nonAligned,
-          // A crossing changes the vocabulary the shares are expressed in, so a
-          // trend measured across it would compare two different things. Clear
-          // it and let the next turn establish a new baseline.
-          previous: crossing.crossed ? null : before,
-          // Per-pole accession clock. Set the first turn a share reaches the
-          // join threshold and cleared the moment it slips, so an accession
-          // needs a sustained run rather than one lucky turn.
-          joinReadySince: nextJoinReady,
-          turn: currentTurn,
-          updatedAt: now,
-        },
-      }
-    );
-
-    sharedAfterDrift.set(doc.entityId, drifted);
-    joinReadyByEntity.set(doc.entityId, nextJoinReady);
-
-    // The seam: alignment is the cause, the sphere is the effect. A nation whose
-    // shares crossed the join gate migrates to that patron here.
-    const sphere = sphereByEntity.get(doc.entityId);
-    if (sphere) {
-      const next = applyAlignmentToMembership({
-        membership: {
-          entityId: sphere.entityId,
-          presetId: sphere.presetId,
-          primarySphereId: sphere.primarySphereId,
-          relationships: sphere.relationships,
-        },
-        shares: drifted,
+      const before = { shares: doc.shares, nonAligned: doc.nonAligned };
+      const crossing = applyEraCrossing({
+        shares: before,
+        storedEraKey: doc.eraKey,
         year,
         poles,
-        poleDefinitions: topology.poleDefinitions,
       });
-      await saveSphereMembership(db, next, currentTurn);
-      spheresSynced++;
-    }
+      if (crossing.crossed) erasCrossed++;
+
+      // Belonging to a bloc's channel org pulls a nation toward that bloc. A
+      // de-aligning channel is deliberately NOT special-cased here, unlike in
+      // pullForPlay: joining the Non-Aligned Movement is a nation's own posture,
+      // so it builds the NAM share directly. A NAM *play* is pressure applied to
+      // someone else, which prises them off whichever bloc holds them instead.
+      const orgIds = orgsByCountry.get(doc.entityId as CountryId);
+      const pull: Partial<Record<AlignmentPoleId, number>> = {};
+      if (orgIds) {
+        for (const channel of topology.channels) {
+          if (!orgIds.has(channel.organizationId)) continue;
+          // Read against the POST-crossing shares, which is what computeDrift is
+          // handed — a nation whose era just changed is measured in the pole it
+          // now has, not the one it used to.
+          pull[channel.poleId] =
+            (pull[channel.poleId] ?? 0) +
+            membershipPullForTurn({
+              weight: channel.weight,
+              currentShare: crossing.shares.shares[channel.poleId] ?? 0,
+            });
+        }
+      }
+
+      // Sanctioning a nation erodes the sanctioning bloc's OWN standing there.
+      // Expressed as negative pull rather than a push toward some rival, because
+      // where the resentment goes is not ours to decide — computeDrift lets the
+      // uncommitted remainder absorb it, and a rival only gains by acting.
+      const sanctioningOrgs = sanctionsByTarget.get(doc.entityId);
+      if (sanctioningOrgs) {
+        for (const channel of topology.channels) {
+          if (!sanctioningOrgs.has(channel.organizationId)) continue;
+          pull[channel.poleId] =
+            (pull[channel.poleId] ?? 0) - SANCTIONS_ALIGNMENT_EROSION * channel.weight;
+        }
+      }
+
+      // A background country's government leans it (#5702). The pull is small,
+      // on the scale of a membership's, and joins the same capped vector.
+      const stancePull = stancePulls.get(doc.entityId);
+      if (stancePull) {
+        for (const [poleId, value] of Object.entries(stancePull) as [AlignmentPoleId, number][]) {
+          pull[poleId] = (pull[poleId] ?? 0) + value;
+        }
+      }
+
+      // Plays and their answers join the same vector as the membership pull, so
+      // computeDrift's cap, non-aligned resistance and locked gate bound the
+      // nation's whole turn rather than drift alone.
+      const inCrisis = crisisTargets.has(doc.entityId);
+      const targetPlays = playsByTarget.get(doc.entityId) ?? [];
+      const targetGdpUsd = (targetGdpMillions.get(doc.entityId) ?? 0) * GDP_MILLIONS_TO_USD;
+      const settled: Array<{ doc: AlignmentPlay; points: number }> = [];
+      const background = { ...pull };
+      const contributions: PlayContribution[] = [];
+      for (const playDoc of targetPlays) {
+        const channel = channelFor(playDoc.organizationId);
+        if (!channel) {
+          // The org lost its channel between commit and resolution (an era
+          // crossing). Resolve at zero rather than leaving it pending forever.
+          settled.push({ doc: playDoc, points: 0 });
+          continue;
+        }
+        const playPull = pullForPlay({
+          channel,
+          amountUsd: playDoc.amountUsd,
+          targetGdpUsd,
+          shares: crossing.shares,
+          poles,
+        });
+        // An overextended bloc pushes less hard everywhere. Applied to the pull
+        // AND to the recorded points, so the audit trail shows what the play
+        // actually bought rather than what it would have bought from a settled
+        // alliance.
+        const effectiveness = blocPlayEffectiveness(
+          stressByOrg.get(playDoc.organizationId)?.stress ?? 0
+        );
+        for (const [poleId, value] of Object.entries(playPull) as [AlignmentPoleId, number][]) {
+          pull[poleId] = (pull[poleId] ?? 0) + value * effectiveness;
+        }
+
+        const points =
+          pointsForSpend(playDoc.amountUsd, targetGdpUsd) * channel.weight * effectiveness;
+        settled.push({ doc: playDoc, points });
+        contributions.push({ id: String(playDoc._id), poleId: channel.poleId, points });
+      }
+
+      // A flashpoint lifts the brake on its target — it grants nothing by itself,
+      // so a crisis nobody acts on changes nothing.
+      const drifted = computeDrift({
+        shares: crossing.shares,
+        poles,
+        pull,
+        cap: inCrisis ? CRISIS_TURN_CAP : undefined,
+      });
+      countriesDrifted++;
+
+      // A nation can lock between a play being committed and resolved. The
+      // command refuses a locked target up front, but drift no-ops this one, so
+      // the play bought nothing and must not be stamped as though it had.
+      const moved = leadFor(crossing.shares) < ALIGNMENT_GATES.locked;
+      const effective = effectivePlayPoints({
+        before: crossing.shares,
+        after: drifted,
+        background,
+        plays: contributions,
+      });
+
+      for (const { doc: playDoc, points } of settled) {
+        // The points this play contributed BEFORE the per-nation cap scaled the
+        // combined vector — what it bought, not what survived the crowd.
+        const resolution = await resolvePlay(
+          playDoc,
+          moved ? Math.round(points * 100) / 100 : 0,
+          effective.get(String(playDoc._id)) ?? 0,
+          db
+        );
+        if (resolution.refunded) playsRefunded++;
+        if (resolution.applied) playsResolved++;
+      }
+
+      // Per-pole accession clock, computed before the write below consumes it.
+      const priorJoinReady = doc.joinReadySince ?? {};
+      const nextJoinReady: Partial<Record<AlignmentPoleId, number>> = {};
+      for (const pole of poles) {
+        if ((drifted.shares[pole] ?? 0) >= JOIN_SHARE) {
+          nextJoinReady[pole] = priorJoinReady[pole] ?? currentTurn;
+        }
+      }
+
+      await col.updateOne(
+        { entityId: doc.entityId },
+        {
+          $set: {
+            eraKey: crossing.eraKey,
+            shares: drifted.shares,
+            nonAligned: drifted.nonAligned,
+            // A crossing changes the vocabulary the shares are expressed in, so a
+            // trend measured across it would compare two different things. Clear
+            // it and let the next turn establish a new baseline.
+            previous: crossing.crossed ? null : before,
+            // Per-pole accession clock. Set the first turn a share reaches the
+            // join threshold and cleared the moment it slips, so an accession
+            // needs a sustained run rather than one lucky turn.
+            joinReadySince: nextJoinReady,
+            turn: currentTurn,
+            updatedAt: now,
+          },
+        }
+      );
+
+      // The seam: alignment is the cause, the sphere is the effect. A nation whose
+      // shares crossed the join gate migrates to that patron here.
+      const sphere = sphereByEntity.get(doc.entityId);
+      if (sphere) {
+        const next = applyAlignmentToMembership({
+          membership: {
+            entityId: sphere.entityId,
+            presetId: sphere.presetId,
+            primarySphereId: sphere.primarySphereId,
+            relationships: sphere.relationships,
+          },
+          shares: drifted,
+          year,
+          poles,
+          poleDefinitions: topology.poleDefinitions,
+        });
+        await saveSphereMembership(db, next, currentTurn);
+        spheresSynced++;
+      }
+
+      return {
+        countriesDrifted,
+        erasCrossed,
+        playsResolved,
+        playsRefunded,
+        spheresSynced,
+        drifted,
+        nextJoinReady,
+      };
+    });
+    if (!outcome) continue;
+    countriesDrifted += outcome.countriesDrifted;
+    erasCrossed += outcome.erasCrossed;
+    playsResolved += outcome.playsResolved;
+    playsRefunded += outcome.playsRefunded;
+    spheresSynced += outcome.spheresSynced;
+    sharedAfterDrift.set(snapshot.entityId, outcome.drifted);
+    joinReadyByEntity.set(snapshot.entityId, outcome.nextJoinReady);
+    playsByTarget.delete(snapshot.entityId);
   }
 
   // Open new flashpoints on this turn's settled state, so a crisis reflects
@@ -736,8 +780,9 @@ async function processEnabledAlignmentTurn(
   // forever and accumulate as a queue leak.
   for (const orphans of playsByTarget.values()) {
     for (const playDoc of orphans) {
-      await resolvePlay(playDoc, 0);
-      playsResolved++;
+      const resolution = await resolvePlay(playDoc, 0);
+      if (resolution.refunded) playsRefunded++;
+      if (resolution.applied) playsResolved++;
     }
   }
 

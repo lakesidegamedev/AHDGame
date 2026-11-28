@@ -1,5 +1,5 @@
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 
 export const LOAN_ORIGINATION_FEE_FRACTION = 0.01;
 

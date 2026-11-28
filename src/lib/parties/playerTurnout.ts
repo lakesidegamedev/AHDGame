@@ -1,10 +1,12 @@
+import { getDb } from "@/lib/mongodb";
+import { gameStateCollection } from "@/lib/db/repositories/gameState";
 import { getStateDemographicTurnoutCollection } from "@/lib/db/collections";
 import type { StateDemographicTurnout } from "@/lib/db/types";
 
 import { decayTurnout, canvassingBoost } from "@/lib/campaignTargeting/rules";
 import { applyDecay } from "@/lib/utils/turnoutDecay";
 
-import { ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { applyBoost, calculateCanvassingBoost } from "@/lib/turn/demographicTurnoutCalculations";
 import { resolvePartyTurnoutTargetLean } from "@/lib/demographics/partyTurnoutTargetResolver";
 
@@ -18,19 +20,32 @@ import { logger } from "@/lib/observability/logger";
  * @returns Array of states with decayed modifiers and updated timestamps
  */
 export async function applyDecayToAllStates(
-  states?: StateDemographicTurnout[]
+  states?: StateDemographicTurnout[],
+  currentTurn?: number,
+  providedDb?: Db
 ): Promise<StateDemographicTurnout[]> {
   // For testing, accept states array; otherwise fetch from DB
   let turnoutData: StateDemographicTurnout[];
   let collection;
+  let turn = currentTurn ?? 0;
 
   if (states) {
     // Deep copy for testing to avoid mutation (JSON method preserves types correctly)
     turnoutData = JSON.parse(JSON.stringify(states)) as StateDemographicTurnout[];
   } else {
     try {
-      collection = await getStateDemographicTurnoutCollection();
-      turnoutData = await collection.find({}).toArray();
+      const db = providedDb ?? (await getDb());
+      turn =
+        currentTurn ??
+        (
+          await gameStateCollection(db).findOne(
+            { _id: "current" },
+            { projection: { currentTurn: 1 } }
+          )
+        )?.currentTurn ??
+        0;
+      collection = await getStateDemographicTurnoutCollection(db);
+      turnoutData = await collection.find({ decayAppliedTurn: { $not: { $gte: turn } } }).toArray();
 
       if (turnoutData.length === 0) {
         logger.warn("Demographic Turnout Turn", "No state demographic data found");
@@ -42,6 +57,20 @@ export async function applyDecayToAllStates(
     }
   }
 
+  const observed = new Map(
+    turnoutData.map((row) => [
+      row._id,
+      {
+        modifiers: structuredClone(row.modifiers),
+        campaignModifiers: row.campaignModifiers
+          ? structuredClone(row.campaignModifiers)
+          : undefined,
+        campaignContactModifiers: row.campaignContactModifiers
+          ? structuredClone(row.campaignContactModifiers)
+          : undefined,
+      },
+    ])
+  );
   const results: StateDemographicTurnout[] = [];
 
   for (const state of turnoutData) {
@@ -74,9 +103,18 @@ export async function applyDecayToAllStates(
     try {
       const ops = results.map((state) => ({
         updateOne: {
-          filter: { _id: state._id },
+          filter: {
+            _id: state._id,
+            decayAppliedTurn: { $not: { $gte: turn } },
+            modifiers: observed.get(state._id)!.modifiers,
+            campaignModifiers: observed.get(state._id)!.campaignModifiers ?? { $exists: false },
+            campaignContactModifiers: observed.get(state._id)!.campaignContactModifiers ?? {
+              $exists: false,
+            },
+          },
           update: {
             $set: {
+              decayAppliedTurn: turn,
               modifiers: state.modifiers,
               ...(state.campaignModifiers ? { campaignModifiers: state.campaignModifiers } : {}),
               ...(state.campaignContactModifiers
@@ -89,6 +127,9 @@ export async function applyDecayToAllStates(
         },
       }));
       await collection.bulkWrite(ops);
+      return collection
+        .find({ _id: { $in: results.map((row) => row._id) }, decayAppliedTurn: turn })
+        .toArray();
     } catch (error) {
       logger.error("Demographic Turnout Turn", "Error updating state data", error);
       throw error;

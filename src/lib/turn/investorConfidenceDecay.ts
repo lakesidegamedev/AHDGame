@@ -18,7 +18,10 @@ export async function processInvestorConfidenceDecay(
     await getFederalBudgetCollection(db)
   )
     .find(
-      { investorConfidence: { $lt: INVESTOR_CONFIDENCE_BASELINE } },
+      {
+        investorConfidence: { $lt: INVESTOR_CONFIDENCE_BASELINE },
+        investorConfidenceUpdatedAtTurn: { $ne: turn },
+      },
       { projection: { countryId: 1, investorConfidence: 1 } }
     )
     .toArray();
@@ -30,7 +33,11 @@ export async function processInvestorConfidenceDecay(
     const next = Math.min(INVESTOR_CONFIDENCE_BASELINE, computeConfidenceRecovery(current));
     ops.push({
       updateOne: {
-        filter: { countryId: b.countryId },
+        filter: {
+          countryId: b.countryId,
+          investorConfidence: current,
+          investorConfidenceUpdatedAtTurn: { $ne: turn },
+        },
         update: {
           $set: { investorConfidence: next, investorConfidenceUpdatedAtTurn: turn },
         },
@@ -38,7 +45,8 @@ export async function processInvestorConfidenceDecay(
     });
   }
   if (ops.length > 0) {
-    await (await getFederalBudgetCollection(db)).bulkWrite(ops);
+    const written = await (await getFederalBudgetCollection(db)).bulkWrite(ops);
+    return { countriesHealed: written.modifiedCount };
   }
-  return { countriesHealed: ops.length };
+  return { countriesHealed: 0 };
 }

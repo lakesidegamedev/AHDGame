@@ -1,3 +1,6 @@
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { createHash } from "node:crypto";
 import {
   organizationCashContext,
   organizationLocalPerAnchor,
@@ -11,13 +14,8 @@ import type { Db } from "mongodb";
 import { type CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { InternationalOrganizationId } from "@/lib/constants/internationalOrganizations";
-import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
-import {
-  convertLocal,
-  disburseFromOrganizationFund,
-  localToUsd,
-  resolveOrgFundCurrencyCountry,
-} from "./organizationFund";
+import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
+import { getOrganizationFund, disburseFromOrganizationFund, localToUsd } from "./organizationFund";
 import { federalBudgetCollection } from "@/lib/db/repositories/federalBudget";
 import { statesCollection } from "@/lib/db/repositories/states";
 import { macroMetricsCollection } from "@/lib/db/repositories/macroMetrics";
@@ -82,6 +80,24 @@ export async function payOrganizationAid(
   amountFund: number,
   options?: OrganizationCashOptions
 ): Promise<boolean> {
+  if (!Number.isFinite(amountFund) || amountFund <= 0) return false;
+  const turn = options?.turn ?? options?.context?.turn ?? (await getCurrentTurn(db));
+  const phase = `organization-aid-${createHash("sha256").update(`${organizationId}:${recipient}`).digest("hex")}`;
+  return withTurnValueSettlement(
+    db,
+    phase,
+    turn,
+    (db) => payOrganizationAidWork(db, organizationId, recipient, Math.round(amountFund), options),
+    options?.settlementKey ? { sourceKey: options.settlementKey } : undefined
+  );
+}
+async function payOrganizationAidWork(
+  db: Db,
+  organizationId: InternationalOrganizationId,
+  recipient: CountryId,
+  amountFund: number,
+  options?: OrganizationCashOptions
+): Promise<boolean> {
   if (!(amountFund > 0)) return false;
   const context = await organizationCashContext(db, options);
   return withOrganizationCashBatch(db, context, async (batch) => {
@@ -89,15 +105,27 @@ export async function payOrganizationAid(
     // fiscal roster. No recipient treasury means no payment, and no FX quote
     // should be requested for that nonexistent destination.
     if (batch?.treasuryCashLedgerEnabled && !batch.budgetCurrencies.has(recipient)) return false;
-    const fundCountry = await resolveOrgFundCurrencyCountry(db, organizationId);
+    const fund = await getOrganizationFund(db, organizationId);
+    if (
+      fund.balanceLocal < amountFund ||
+      !(await federalBudgetCollection(db).findOne(
+        { countryId: recipient },
+        { projection: { _id: 1 } }
+      ))
+    )
+      return false;
+    const fundCountry = fund.currencyCountryId;
     const preset = batch?.preset ?? (await loadWorldPreset(db));
-    const recipientLocal = convertLocal(fundCountry, recipient, amountFund, preset);
+    const recipientLocal =
+      (amountFund * getGdpAnchorRate(fundCountry, preset)) / getGdpAnchorRate(recipient, preset);
     if (batch?.treasuryCashLedgerEnabled) {
       const fundRate = organizationLocalPerAnchor(batch, fundCountry);
       const treasuryRate = organizationTreasuryLocalPerAnchor(batch, recipient);
       const fundedRecipientLocal = (amountFund / fundRate) * treasuryRate;
       const result = await settleOrganizationFundedCashMove(db, batch, {
-        key: `organization-aid:${batch.turn}:${organizationId}:${recipient}`,
+        key: options?.settlementKey
+          ? `organization-aid:${options.settlementKey}`
+          : `organization-aid:${batch.turn}:${organizationId}:${recipient}`,
         kind: "organization_aid",
         source: {
           collection: "organizationFunds",
@@ -119,7 +147,8 @@ export async function payOrganizationAid(
         destinationTreasuryCountry: recipient,
         command: "organization.aid.pay",
       });
-      if (result.status !== "applied" && result.status !== "replayed") return false;
+      if (result.status !== "applied" && result.status !== "replayed")
+        throw new Error("Organization aid settlement did not complete");
       if (result.status === "applied") {
         await applyOrganizationAidBoost(db, recipient, localToUsd(fundCountry, amountFund, preset));
       }
@@ -128,7 +157,7 @@ export async function payOrganizationAid(
     const paid = await disburseFromOrganizationFund(db, organizationId, amountFund, {
       context: batch,
     });
-    if (!paid) return false;
+    if (!paid) throw new Error("Organization aid fund changed before debit");
     // Aid credits cash, not income: revenue/spending/surplus are untouched, and
     // `debt.principal` belongs to the bond ledger (see bonds/sovereignPrincipal.ts),
     // so a cash-only $inc correctly leaves it alone (#1975).
@@ -139,6 +168,8 @@ export async function payOrganizationAid(
         $set: { updatedAt: new Date() },
       }
     );
+    if (credit.matchedCount !== 1)
+      throw new Error("Organization aid recipient changed before credit");
     if (credit.modifiedCount > 0) {
       await witnessOrganizationCash(db, batch, {
         kind: "government",

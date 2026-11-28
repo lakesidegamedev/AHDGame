@@ -10,7 +10,6 @@ import {
 } from "@/lib/corporations/votes/voteNotifications";
 import { resolveCorporationVoteIfReady } from "@/lib/corporations/votes/voteService";
 import { totalVotingPower } from "@/lib/corporations/superShares";
-import { applyPassedVoteEffects } from "@/lib/corporations/votes/voteEffects";
 import { resolvePrivatizationVote } from "@/lib/corporations/commands/privatization/resolvePrivatizationVote";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { corporationsCollection } from "@/lib/db/repositories/corporations";
@@ -169,15 +168,13 @@ export async function processVoteAutoResolve(
           db,
           vote,
           totalEligibleShares: totalVotingPower(corp),
+          allowDuringTurn: true,
           nationId: corp.countryId,
           currentTurn,
         });
         if (!claimed || outcome === "open") return;
         const notificationType =
           outcome === "passed" ? "corp_vote_passed" : ("corp_vote_failed" as const);
-        if (outcome === "passed") {
-          await applyPassedVoteEffects({ db, vote, corporation: corp, currentTurn });
-        }
         await notifyVoteEvent({ db, vote, corpName: corp.name, notificationType });
       } catch (error) {
         console.error(`[voteAutoResolve] vote ${vote._id} resolution failed:`, error);

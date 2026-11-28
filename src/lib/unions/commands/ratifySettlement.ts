@@ -4,6 +4,7 @@
  * a majority or deadline result only while the same ballot remains open.
  */
 import { ObjectId, type Db } from "mongodb";
+import { afterCommit, withSessionDb } from "@/lib/db/sessionDb";
 import type {
   BargainingCampaign,
   BargainingRatification,
@@ -132,20 +133,22 @@ async function notifyOrganizers(
       { projection: { userId: 1 } }
     )
     .toArray();
-  await createNotifications(
-    characters
-      .filter((character) => character.userId)
-      .map((character) => ({
-        userId: character.userId,
-        type: "bargaining_ratification_open" as const,
-        title: "Settlement put to the members",
-        message: `${union.name} has a settlement on the table at ${ratification.offerRevision > 1 ? "revision " + ratification.offerRevision : "the opening offer"}: ${campaign.currentOffer.wageLevel.toFixed(2)}x wage floor over ${campaign.currentOffer.agreementDurationTurns} turns, with ${campaign.currentOffer.noStrikeTurns} turns of labour peace. Vote to ratify or reject before turn ${ratification.closesAtTurn}.`,
-        metadata: {
-          campaignId: campaign._id,
-          unionId: union._id,
-          closesAtTurn: ratification.closesAtTurn,
-        },
-      }))
+  await afterCommit(db, () =>
+    createNotifications(
+      characters
+        .filter((character) => character.userId)
+        .map((character) => ({
+          userId: character.userId,
+          type: "bargaining_ratification_open" as const,
+          title: "Settlement put to the members",
+          message: `${union.name} has a settlement on the table at ${ratification.offerRevision > 1 ? "revision " + ratification.offerRevision : "the opening offer"}: ${campaign.currentOffer.wageLevel.toFixed(2)}x wage floor over ${campaign.currentOffer.agreementDurationTurns} turns, with ${campaign.currentOffer.noStrikeTurns} turns of labour peace. Vote to ratify or reject before turn ${ratification.closesAtTurn}.`,
+          metadata: {
+            campaignId: campaign._id,
+            unionId: union._id,
+            closesAtTurn: ratification.closesAtTurn,
+          },
+        }))
+    )
   );
 }
 
@@ -169,6 +172,19 @@ export type CastRatificationResult =
  * none until the next vote.
  */
 export async function castRatificationBallot(
+  db: Db,
+  character: Character,
+  unionRouteId: string,
+  campaignId: string,
+  vote: "ratify" | "reject",
+  currentTurn: number
+): Promise<CastRatificationResult> {
+  return withSessionDb(db, (tx) =>
+    castRatificationBallotInTransaction(tx, character, unionRouteId, campaignId, vote, currentTurn)
+  );
+}
+
+async function castRatificationBallotInTransaction(
   db: Db,
   character: Character,
   unionRouteId: string,
@@ -234,6 +250,19 @@ export async function castRatificationBallot(
   }
 
   const now = new Date();
+  const admitted = await bargainingCampaignsCollection(db).updateOne(
+    {
+      _id: campaign._id,
+      status: campaign.status,
+      "currentOffer.revision": ratification.offerRevision,
+      "ratification.status": "open",
+      "ratification.openedAtTurn": ratification.openedAtTurn,
+    },
+    { $set: { updatedAt: now } }
+  );
+  if (admitted.matchedCount !== 1) {
+    return { ok: false, status: 409, error: "Campaign state changed. Reload and try again." };
+  }
   await bargainingRatificationBallotsCollection<BargainingRatificationBallot>(db).updateOne(
     {
       campaignId: campaign._id,
@@ -286,8 +315,21 @@ export async function closeRatificationVote(
   currentTurn: number,
   options?: { ballots?: BargainingRatificationBallot[] }
 ): Promise<CloseRatificationResult> {
+  return withSessionDb(db, async (tx) => {
+    const current = await bargainingCampaignsCollection(tx).findOne({ _id: campaign._id });
+    if (!current) return { outcome: null, campaignStatus: campaign.status };
+    return closeRatificationVoteInTransaction(tx, current, currentTurn, options);
+  });
+}
+
+async function closeRatificationVoteInTransaction(
+  db: Db,
+  campaign: BargainingCampaign,
+  currentTurn: number,
+  options?: { ballots?: BargainingRatificationBallot[] }
+): Promise<CloseRatificationResult> {
   const ratification = campaign.ratification;
-  if (!ratification || ratification.status !== "open") {
+  if (!ratification || !["open", "ratified"].includes(ratification.status)) {
     return { outcome: null, campaignStatus: campaign.status };
   }
 
@@ -295,7 +337,7 @@ export async function closeRatificationVote(
   const now = new Date();
   const ballotFilter = {
     _id: campaign._id,
-    "ratification.status": "open",
+    "ratification.status": ratification.status,
     "ratification.offerRevision": ratification.offerRevision,
     "ratification.openedAtTurn": ratification.openedAtTurn,
   };
@@ -348,7 +390,10 @@ export async function closeRatificationVote(
 
   const ballots = options?.ballots ?? (await loadBallots(db, campaign._id));
   const tally = tallyRatificationBallots(ratification, ballots);
-  const outcome = resolveRatification(ratification, tally, currentTurn);
+  const outcome =
+    ratification.status === "ratified"
+      ? "ratified"
+      : resolveRatification(ratification, tally, currentTurn);
   if (!outcome) return { outcome: null, campaignStatus: campaign.status };
 
   const claimed = await campaigns.updateOne(
@@ -425,28 +470,30 @@ async function notifyRatificationClosed(
     { projection: { userId: 1 } }
   );
   if (!leader?.userId) return;
-  await createNotification({
-    userId: leader.userId,
-    type: "bargaining_ratification_closed",
-    title:
-      outcome === "ratified"
-        ? "Members ratified the settlement"
-        : outcome === "rejected"
-          ? "Members rejected the settlement"
-          : "Ratification vote void",
-    message:
-      outcome === "ratified"
-        ? `Organizers of ${union.name} ratified the settlement on turn ${currentTurn}. The collective agreement is in force.`
-        : outcome === "rejected"
-          ? `Organizers of ${union.name} rejected the settlement on turn ${currentTurn}. The offer is still on the table and the campaign clocks are still running: move the package or the campaign runs its course.`
-          : `The ratification vote at ${union.name} ended without a decision on turn ${currentTurn} because the campaign could no longer be settled.`,
-    metadata: {
-      campaignId: campaign._id,
-      unionId: campaign.unionId,
-      employerCorporationId: campaign.employerCorporationId,
-      turn: currentTurn,
-    },
-  });
+  await afterCommit(db, () =>
+    createNotification({
+      userId: leader.userId,
+      type: "bargaining_ratification_closed",
+      title:
+        outcome === "ratified"
+          ? "Members ratified the settlement"
+          : outcome === "rejected"
+            ? "Members rejected the settlement"
+            : "Ratification vote void",
+      message:
+        outcome === "ratified"
+          ? `Organizers of ${union.name} ratified the settlement on turn ${currentTurn}. The collective agreement is in force.`
+          : outcome === "rejected"
+            ? `Organizers of ${union.name} rejected the settlement on turn ${currentTurn}. The offer is still on the table and the campaign clocks are still running: move the package or the campaign runs its course.`
+            : `The ratification vote at ${union.name} ended without a decision on turn ${currentTurn} because the campaign could no longer be settled.`,
+      metadata: {
+        campaignId: campaign._id,
+        unionId: campaign.unionId,
+        employerCorporationId: campaign.employerCorporationId,
+        turn: currentTurn,
+      },
+    })
+  );
 }
 
 /**
@@ -460,7 +507,11 @@ export async function closeDueRatificationVotes(
 ): Promise<{ ratified: number; rejected: number; voided: number }> {
   const counts = { ratified: 0, rejected: 0, voided: 0 };
   const due = await bargainingCampaignsCollection(db)
-    .find({ "ratification.status": "open", "ratification.closesAtTurn": { $lte: currentTurn } })
+    .find({
+      status: { $in: ["negotiating", "dispute"] },
+      "ratification.status": { $in: ["open", "ratified"] },
+      "ratification.closesAtTurn": { $lte: currentTurn },
+    })
     .toArray();
   for (const campaign of due) {
     const closed = await closeRatificationVote(db, campaign, currentTurn);

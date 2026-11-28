@@ -16,8 +16,8 @@ vi.mock("@/lib/bonds/executeCorporationBondDefaultDissolution", () => ({
   executeCorporationBondDefaultDissolution: executeDissolution,
 }));
 vi.mock("@/lib/corporations/settlementLock", () => ({
-  withCorporationSettlementLock: vi.fn((_db, _id, _field, _now, run: () => Promise<unknown>) =>
-    run()
+  withCorporationSettlementLock: vi.fn(
+    (_db, _id, _field, _now, run: (db: unknown) => Promise<unknown>) => run(_db)
   ),
 }));
 

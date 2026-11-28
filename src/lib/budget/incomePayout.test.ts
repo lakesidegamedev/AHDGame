@@ -13,7 +13,8 @@ function clone<T>(value: T): T {
   return value;
 }
 const transaction = vi.hoisted(() => ({ begin: () => () => {} }));
-vi.mock("@/lib/db/runRequiredTransaction", () => ({
+vi.mock("@/lib/db/runRequiredTransaction", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/db/runRequiredTransaction")>()),
   runRequiredTransaction: async (body: (session: object) => unknown) => {
     const rollback = transaction.begin();
     try {

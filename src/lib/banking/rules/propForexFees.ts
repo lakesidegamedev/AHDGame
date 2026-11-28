@@ -11,7 +11,7 @@ import {
   clampForexSpreadStrength,
 } from "@/lib/constants/currencies";
 import { playerTradeFeeRate } from "@/lib/currency/tradeFees";
-import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
+import { roundSavingsAmount } from "@/lib/currency/rules/savingsInterest";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 export interface PropForexVolume {

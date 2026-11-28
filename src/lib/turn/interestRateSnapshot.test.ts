@@ -1,3 +1,12 @@
+vi.mock("@/lib/turn/withTurnValueSettlement", () => ({
+  withTurnValueSettlement: async (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => Promise<unknown>
+  ) => work(db),
+}));
+import { historyAppendInfo } from "@/lib/test-utils/historyAppendInfo";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Db } from "mongodb";
 import { snapshotInterestRateHistory } from "./interestRateSnapshot";
@@ -62,11 +71,11 @@ const ruBank = {
 
 function pushedGdpRate(bulkWrite: ReturnType<typeof vi.fn>): number {
   const ops = bulkWrite.mock.calls[0][0] as Array<{
-    updateOne: {
-      update: { $push: { gdpGrowthHistory: { $each: Array<{ rate: number }> } } };
-    };
+    updateOne: { update: Array<{ $set: { gdpGrowthHistory: unknown } }> };
   }>;
-  return ops[0].updateOne.update.$push.gdpGrowthHistory.$each[0].rate;
+  return historyAppendInfo<{ turn: number; rate: number }>(
+    ops[0].updateOne.update[0].$set.gdpGrowthHistory
+  ).point.rate;
 }
 
 describe("snapshotInterestRateHistory era-aware growth fallback", () => {

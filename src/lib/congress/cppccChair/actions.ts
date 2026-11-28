@@ -1,3 +1,6 @@
+import { withSessionDb } from "@/lib/db/sessionDb";
+import { fenceEconomicTurn } from "@/lib/api/withAtomicEconomicCommand";
+import { castLeadershipVoteBatch } from "@/lib/turn/npp/leadershipVoting";
 /**
  * Chairman of the CPPCC election action handlers — CN parallel of the NPCSC
  * Chair handlers (src/lib/congress/npcscChair/actions.ts). Same shape (declare
@@ -12,12 +15,7 @@ import { getNpcComposition } from "@/lib/congress/npcComposition";
 import { getGameTime } from "@/lib/time/gameTime";
 import { isLeadershipElectionClosed } from "@/lib/congress/leadershipElections";
 import { resolveCppccChairElection } from "./resolveElection";
-import type {
-  CppccChairElection,
-  CppccChairNomination,
-  ElectedOfficial,
-  PoliticalParty,
-} from "@/lib/db/types";
+import type { PoliticalParty } from "@/lib/db/types";
 import {
   buildChamberLeadershipContext,
   describeEligibility,
@@ -45,6 +43,15 @@ export interface ActionContext {
 }
 
 export async function handleCppccChairAction(ctx: ActionContext): Promise<ActionResult> {
+  if (ctx.action !== "vote") return settleLeadershipAction(ctx);
+  return withSessionDb(ctx.db, async (db) => {
+    const refusal = await fenceEconomicTurn(db);
+    if (refusal) return { success: false, error: refusal.error, status: refusal.status };
+    return settleLeadershipAction({ ...ctx, db });
+  });
+}
+
+async function settleLeadershipAction(ctx: ActionContext): Promise<ActionResult> {
   const { action } = ctx;
 
   if (action === "start_election") return handleStartElection(ctx);
@@ -163,21 +170,11 @@ export async function handleCppccChairAction(ctx: ActionContext): Promise<Action
       return { success: false, error: "You already voted for this nomination.", status: 409 };
     }
     const now = new Date();
-    // Move this voter's vote off any prior nomination (one vote per voter).
-    await cppccChairNominationsCollection(db).updateMany(
-      { [`votes.${charKey}`]: { $exists: true } },
-      {
-        $inc: { votesFor: -1 },
-        $unset: { [`votes.${charKey}`]: "" },
-        $set: { updatedAt: now },
-      }
-    );
-    await cppccChairNominationsCollection(db).updateOne(
-      { _id: oid },
-      {
-        $inc: { votesFor: 1 },
-        $set: { [`votes.${charKey}`]: "for", status: "voting", updatedAt: now },
-      }
+    await castLeadershipVoteBatch(
+      db,
+      "cppccChairNominations",
+      [{ voterKey: charKey, nominationId: oid, seatWeight: 1 }],
+      now
     );
     return { success: true, message: "Vote recorded." };
   }

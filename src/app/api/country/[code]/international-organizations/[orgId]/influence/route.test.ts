@@ -1,3 +1,21 @@
+// Collection-spy route fixtures isolate admission and session transport.
+vi.mock("@/lib/db/sessionDb", async (original) => ({
+  ...(await original<typeof import("@/lib/db/sessionDb")>()),
+  withSessionDb: (db: unknown, work: (db: unknown) => unknown) => work(db),
+}));
+vi.mock("@/lib/api/withAtomicEconomicCommand", () => ({
+  withAtomicEconomicCommand: (db: unknown, work: (db: unknown) => unknown) => work(db),
+  fenceEconomicTurn: async () => null,
+}));
+vi.mock("@/lib/turn/withTurnValueSettlement", async (original) => ({
+  ...(await original<typeof import("@/lib/turn/withTurnValueSettlement")>()),
+  withTurnValueSettlement: (
+    db: unknown,
+    _phase: string,
+    _turn: number,
+    work: (db: unknown) => unknown
+  ) => work(db),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 
@@ -106,7 +124,10 @@ describe("POST .../[orgId]/influence", () => {
     setup();
     vi.mocked(requireForeignMinister).mockResolvedValue({
       ok: false,
-      response: new Response(null, { status: 403 }),
+      response: Response.json(
+        { error: "Foreign minister required", code: "FORBIDDEN" },
+        { status: 403 }
+      ),
     } as never);
     const res = await post({ targetEntityId: "YU", amountLocal: 1e8 });
     expect(res.status).toBe(403);

@@ -1,10 +1,13 @@
+import * as Sentry from "@sentry/nextjs";
+import { withTurnValueSettlement } from "@/lib/turn/withTurnValueSettlement";
+import { afterCommit } from "@/lib/db/sessionDb";
 /**
  * Contest cash prize: each paid place is paid its share of the round's prize
  * (placePrizeAnchor) as personal cash in their home currency (payContestPrize), logged as an
  * attributed `contest_prize` mint and announced by notification.
  */
 import type { Db } from "mongodb";
-import type { Character, ExchangeRate } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import type { ContestKind } from "@/lib/db/types/contestRound";
 import { getCountryIdForCurrency, type CurrencyCode } from "@/lib/constants/currencies";
 import { buildPersonalBalanceInc, getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -57,6 +60,16 @@ export async function payContestPrize(
   db: Db,
   input: ContestPrizeInput
 ): Promise<ContestPrizeResult> {
+  return withTurnValueSettlement(
+    db,
+    "contest-prize",
+    input.turn,
+    (db) => payContestPrizeWork(db, input),
+    { sourceKey: `${input.round._id}:${input.place}:${input.character._id}` }
+  );
+}
+
+async function payContestPrizeWork(db: Db, input: ContestPrizeInput): Promise<ContestPrizeResult> {
   const { character, round, turn, preset, now } = input;
   const forexEnabled = await isForexEnabled();
   const anchorAmount = placePrizeAnchor(round.kind, input.place, preset);
@@ -97,15 +110,21 @@ export async function payContestPrize(
     meta: { roundId: round._id, kind: round.kind, place: input.place },
   });
 
-  await createNotification({
-    userId: character.userId,
-    type: "system",
-    title: input.place === 1 ? "You won a weekly contest" : "You placed in a weekly contest",
-    message:
-      input.place === 1
-        ? `${input.subjectName} topped the ${CONTEST_KIND_TITLES[round.kind]} contest. Your prize has been added to your personal cash.`
-        : `${input.subjectName} finished ${PLACE_LABELS[input.place] ?? `#${input.place}`} in the ${CONTEST_KIND_TITLES[round.kind]} contest. Your prize has been added to your personal cash.`,
-    metadata: { roundId: round._id, href: "/contests" },
+  await afterCommit(db, async () => {
+    try {
+      await createNotification({
+        userId: character.userId,
+        type: "system",
+        title: input.place === 1 ? "You won a weekly contest" : "You placed in a weekly contest",
+        message:
+          input.place === 1
+            ? `${input.subjectName} topped the ${CONTEST_KIND_TITLES[round.kind]} contest. Your prize has been added to your personal cash.`
+            : `${input.subjectName} finished ${PLACE_LABELS[input.place] ?? `#${input.place}`} in the ${CONTEST_KIND_TITLES[round.kind]} contest. Your prize has been added to your personal cash.`,
+        metadata: { roundId: round._id, href: "/contests" },
+      });
+    } catch (error) {
+      Sentry.captureException(error, { tags: { area: "benefit-notification" } });
+    }
   });
 
   return { credited: true, anchorAmount, localAmount, currencyCode };

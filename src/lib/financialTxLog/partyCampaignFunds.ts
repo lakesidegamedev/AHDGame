@@ -1,3 +1,4 @@
+import { boundSession } from "@/lib/db/sessionDb";
 import type { Db, ObjectId } from "mongodb";
 import * as Sentry from "@sentry/nextjs";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -48,6 +49,7 @@ export async function emitPartyCampaignFunds(
       },
     });
   } catch (err) {
+    if (boundSession(db)) throw err;
     Sentry.captureException(err, { tags: { operation: "emit_party_campaign_funds" } });
   }
 }
