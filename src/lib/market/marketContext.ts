@@ -105,6 +105,11 @@ export interface MarketContext {
   advertisingSellerDeliveredValueAnchorByCorpId?: ReadonlyMap<string, number>;
   /** Exact native-currency amounts reserved for funded political ad sellers. */
   politicalAdSellerPayoutLocalByCorpId?: ReadonlyMap<string, number>;
+  /** The same political seller amounts per selling sector. */
+  politicalAdSellerPayoutLocalBySectorId?: ReadonlyMap<
+    string,
+    { corporationId: string; local: number }
+  >;
   /** Delivered media outlets per audience state, normalized by local delivered units. */
   editorialOutletsByState?: ReadonlyMap<
     string,
