@@ -60,6 +60,7 @@ export interface MetricDetailData {
   value: number;
   trend?: number;
   nationalAverage?: number;
+  realizedMigrationRate?: number;
   globalAverage?: number;
   tickRate?: number;
   history: Array<{ turn: number; value: number }>;

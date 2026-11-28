@@ -110,6 +110,48 @@ describe("GET /api/country/[code]/region/[id]/metrics/[category]/[metricId]", ()
     expect(body.globalAverage).toBe(4);
   });
 
+  it.each([-0.62, 0, undefined])(
+    "keeps the regional baseline separate from recorded net migration (%s)",
+    async (realizedMigrationRate) => {
+      const state = { _id: "IL", countryId: "US", name: "Illinois" };
+      const metrics = {
+        _id: state._id,
+        population: {
+          migrationRate: { value: -0.5 },
+          realizedMigrationRate: { value: realizedMigrationRate },
+        },
+      };
+      db.collection("states");
+      db.collectionMocks.states!.findOne.mockResolvedValue(state);
+      db.collectionMocks.states!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([state]),
+      });
+      db.collectionMocks.macroMetrics!.findOne.mockResolvedValue(metrics);
+      db.collectionMocks.macroMetrics!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([metrics]),
+      });
+
+      const { GET } = await import("./route");
+      const response = await GET(
+        new Request("http://localhost/api/country/us/region/IL/metrics/population/migrationRate"),
+        {
+          params: Promise.resolve({
+            code: "us",
+            id: "IL",
+            category: "population",
+            metricId: "migrationRate",
+          }),
+        }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.value).toBe(-0.5);
+      expect(body.nationalAverage).toBe(-0.5);
+      expect(body.realizedMigrationRate).toBe(realizedMigrationRate);
+    }
+  );
+
   it("resolves national-scope jp_national (regression: duplicate NATIONAL_COUNTRY map was missing JP)", async () => {
     const { GET } =
       await import("@/app/api/country/[code]/region/[id]/metrics/[category]/[metricId]/route");
