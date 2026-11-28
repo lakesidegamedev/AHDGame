@@ -41,7 +41,7 @@ export const SUPERSHARE_MAX_MULTIPLIER = 10;
  * single-class). Supershares keep founder voting control, so the >50%
  * economic-dilution guard no longer needs to bind.
  */
-export const SUPERSHARE_IPO_MAX_FLOAT_PCT = 75;
+export const SUPERSHARE_IPO_MAX_FLOAT_PCT = 90;
 
 export function isValidSuperShareMultiplier(value: unknown): value is number {
   return (
