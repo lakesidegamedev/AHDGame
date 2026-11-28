@@ -245,10 +245,21 @@ function settlementMove(
   const kept = cut >= 0 ? intents.slice(0, cut) : intents;
   const credits = kept.map((intent) => intent.leg);
   const sellerLegIndex = sellerIntent.map((index) => (kept[index] ? index + 1 : -1));
-  const debitAmount = credits.reduce(
+  const creditAnchor = credits.reduce(
     (sum, leg) => sum + leg.amount / (leg.valuation?.localPerAnchor ?? 1),
     0
   );
+  // Converting each credit back to anchor can overshoot the funded escrow by
+  // floating point noise (2e-12 on a 12,000 order). The escrow debit is guarded
+  // by a sufficiency filter, so that noise refused the settlement for good.
+  // Spend at most the escrow; the difference is far inside the money move's
+  // net tolerance.
+  const debitAmount =
+    creditAnchor > identity.requestedAnchor &&
+    creditAnchor - identity.requestedAnchor <=
+      SETTLEMENT_DUST_ANCHOR * Math.max(1, identity.requestedAnchor)
+      ? identity.requestedAnchor
+      : creditAnchor;
 
   const quoteIdentity = {
     orderId,

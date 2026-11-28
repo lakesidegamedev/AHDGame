@@ -981,6 +981,9 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             stateId: order.identity.targetStateId,
             createdTurn: order.identity.createdTurn,
             budgetAnchor: order.identity.requestedAnchor,
+            // A presidential campaign's media budget buys national airtime;
+            // player targeted ads stay regional.
+            countryWide: order.identity.source === "campaign_maintenance",
           })),
         fallbackTreasuryByCountry,
         persistedPlans: politicalMediaOrders
@@ -997,6 +1000,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       });
       market.clearingBySectorId = political.clearingBySectorId;
       market.politicalAdSellerPayoutLocalByCorpId = political.sellerPayoutLocalByCorpId;
+      market.politicalAdSellerPayoutLocalBySectorId = political.sellerPayoutLocalBySectorId;
       politicalMediaSettlementPlans = political.settlementPlans;
     }
 

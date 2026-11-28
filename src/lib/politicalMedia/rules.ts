@@ -10,6 +10,12 @@ export interface PoliticalAdOrderDemand {
   stateId: string;
   createdTurn: number;
   budgetAnchor: number;
+  /**
+   * A nationwide order (a presidential campaign's media budget) may buy unsold
+   * airtime anywhere in its country once its target state has none left. Other
+   * orders, such as regional targeted ads, stay inside their target state.
+   */
+  countryWide?: boolean;
 }
 
 export interface PoliticalAdSellerOffer {
@@ -54,6 +60,15 @@ const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** Spend one quarter of a funded order for a weaker local effect when no outlet exists. */
 const POLITICAL_MEDIA_NO_OUTLET_FALLBACK_SHARE = 0.25;
 
+/**
+ * Smallest allocation worth a seller receipt, one hundredth of an anchor.
+ * Residual arithmetic leaves floating point dust (around 1e-14 units). A
+ * receipt that small does not change a seller's cash balance, so the money
+ * move refuses the whole settlement and the order's escrow is stranded.
+ * Anything below this is treated as no airtime at all.
+ */
+export const POLITICAL_MEDIA_MIN_ALLOCATION_ANCHOR = 0.01;
+
 export function politicalMediaStateKey(countryId: string, stateId: string): string {
   return `${countryId}:${stateId}`;
 }
@@ -71,10 +86,13 @@ export function politicalMediaFillRatio(deliveredAnchor: number, requestedAnchor
 }
 
 /**
- * Allocate funded political ad orders after commercial buyers. Matching stays
- * inside the exact country and state, then prefers the lowest ordinary offer
- * price with stable ids as tie breakers. The caller supplies residual units,
- * so no output already sold commercially can be offered again.
+ * Allocate funded political ad orders after commercial buyers. Every order
+ * first buys in its exact country and state, cheapest ordinary offer first with
+ * stable ids as tie breakers. Country-wide orders then buy whatever unsold
+ * airtime remains elsewhere in their country, so a national campaign is not
+ * left with nothing because one state's stations are sold out. The caller
+ * supplies residual units, so no output already sold commercially can be
+ * offered again.
  */
 export function allocatePoliticalAdOrders(
   orders: readonly PoliticalAdOrderDemand[],
@@ -91,43 +109,50 @@ export function allocatePoliticalAdOrders(
   const orderedOrders = [...orders].sort(
     (a, b) => a.createdTurn - b.createdTurn || compareText(a.orderId, b.orderId)
   );
+  const usableSellers = sellers
+    .filter(
+      (seller) =>
+        Number.isFinite(seller.unitPriceAnchor) &&
+        seller.unitPriceAnchor > 0 &&
+        Number.isFinite(seller.sellerLocalPerAnchor) &&
+        seller.sellerLocalPerAnchor > 0
+    )
+    .sort(
+      (a, b) =>
+        a.unitPriceAnchor - b.unitPriceAnchor ||
+        compareText(a.corporationId, b.corporationId) ||
+        compareText(a.sectorId, b.sectorId)
+    );
 
-  return orderedOrders.map((order) => {
-    let remainingAnchor =
-      Number.isFinite(order.budgetAnchor) && order.budgetAnchor > 0 ? order.budgetAnchor : 0;
-    let deliveredAnchor = 0;
-    let fallbackAnchor = 0;
-    let deliveredUnits = 0;
-    const allocations: PoliticalAdSellerAllocation[] = [];
-    const matchingSellers = sellers
-      .filter(
-        (seller) =>
-          seller.countryId === order.countryId &&
-          seller.stateId === order.stateId &&
-          (remainingBySector.get(seller.sectorId) ?? 0) > 0 &&
-          Number.isFinite(seller.unitPriceAnchor) &&
-          seller.unitPriceAnchor > 0 &&
-          Number.isFinite(seller.sellerLocalPerAnchor) &&
-          seller.sellerLocalPerAnchor > 0
-      )
-      .sort(
-        (a, b) =>
-          a.unitPriceAnchor - b.unitPriceAnchor ||
-          compareText(a.corporationId, b.corporationId) ||
-          compareText(a.sectorId, b.sectorId)
-      );
+  const states = orderedOrders.map((order) => ({
+    order,
+    remainingAnchor:
+      Number.isFinite(order.budgetAnchor) && order.budgetAnchor > 0 ? order.budgetAnchor : 0,
+    deliveredAnchor: 0,
+    deliveredUnits: 0,
+    matchedSellers: 0,
+    allocations: [] as PoliticalAdSellerAllocation[],
+  }));
 
-    for (const seller of matchingSellers) {
-      if (!(remainingAnchor > 0)) break;
+  const buy = (
+    entry: (typeof states)[number],
+    matches: (seller: PoliticalAdSellerOffer) => boolean
+  ) => {
+    for (const seller of usableSellers) {
+      if (!(entry.remainingAnchor >= POLITICAL_MEDIA_MIN_ALLOCATION_ANCHOR)) break;
+      if (!matches(seller)) continue;
       const availableUnits = remainingBySector.get(seller.sectorId) ?? 0;
-      const units = Math.min(availableUnits, remainingAnchor / seller.unitPriceAnchor);
-      if (!(units > 0)) continue;
+      if (!(availableUnits * seller.unitPriceAnchor >= POLITICAL_MEDIA_MIN_ALLOCATION_ANCHOR))
+        continue;
+      entry.matchedSellers += 1;
+      const units = Math.min(availableUnits, entry.remainingAnchor / seller.unitPriceAnchor);
       const amountAnchor = units * seller.unitPriceAnchor;
+      if (!(units > 0) || !(amountAnchor >= POLITICAL_MEDIA_MIN_ALLOCATION_ANCHOR)) continue;
       remainingBySector.set(seller.sectorId, availableUnits - units);
       const offeredUnits =
         Number.isFinite(seller.offeredUnits) && seller.offeredUnits > 0 ? seller.offeredUnits : 0;
-      allocations.push({
-        orderId: order.orderId,
+      entry.allocations.push({
+        orderId: entry.order.orderId,
         sectorId: seller.sectorId,
         corporationId: seller.corporationId,
         units,
@@ -139,33 +164,55 @@ export function allocatePoliticalAdOrders(
             ? Math.min(1, (offeredUnits - availableUnits + units) / offeredUnits)
             : 0,
       });
-      deliveredAnchor += amountAnchor;
-      deliveredUnits += units;
-      remainingAnchor = Math.max(0, remainingAnchor - amountAnchor);
+      entry.deliveredAnchor += amountAnchor;
+      entry.deliveredUnits += units;
+      entry.remainingAnchor = Math.max(0, entry.remainingAnchor - amountAnchor);
     }
+  };
 
+  // Target-state airtime goes to that state's own orders before any national
+  // order may spill into it.
+  for (const entry of states) {
+    buy(
+      entry,
+      (seller) =>
+        seller.countryId === entry.order.countryId && seller.stateId === entry.order.stateId
+    );
+  }
+  for (const entry of states) {
+    if (!entry.order.countryWide) continue;
+    buy(
+      entry,
+      (seller) =>
+        seller.countryId === entry.order.countryId && seller.stateId !== entry.order.stateId
+    );
+  }
+
+  return states.map((entry) => {
+    const { order } = entry;
+    let fallbackAnchor = 0;
     if (
-      matchingSellers.length === 0 &&
+      entry.matchedSellers === 0 &&
       !statesWithOutlets.has(politicalMediaStateKey(order.countryId, order.stateId)) &&
       fallbackEligibleStates.has(politicalMediaStateKey(order.countryId, order.stateId))
     ) {
       fallbackAnchor =
         Math.min(
           Number.isFinite(order.budgetAnchor) ? Math.max(0, order.budgetAnchor) : 0,
-          remainingAnchor
+          entry.remainingAnchor
         ) * POLITICAL_MEDIA_NO_OUTLET_FALLBACK_SHARE;
-      deliveredAnchor += fallbackAnchor;
-      remainingAnchor = Math.max(0, remainingAnchor - fallbackAnchor);
+      entry.deliveredAnchor += fallbackAnchor;
+      entry.remainingAnchor = Math.max(0, entry.remainingAnchor - fallbackAnchor);
     }
 
     return {
       orderId: order.orderId,
       requestedAnchor: Math.max(0, Number.isFinite(order.budgetAnchor) ? order.budgetAnchor : 0),
-      deliveredAnchor,
+      deliveredAnchor: entry.deliveredAnchor,
       fallbackAnchor,
-      unfilledAnchor: remainingAnchor,
-      deliveredUnits,
-      sellers: allocations,
+      unfilledAnchor: entry.remainingAnchor,
+      deliveredUnits: entry.deliveredUnits,
+      sellers: entry.allocations,
     };
   });
 }

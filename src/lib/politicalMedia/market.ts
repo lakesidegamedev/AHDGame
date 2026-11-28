@@ -46,11 +46,18 @@ export interface PoliticalAdMarketSettlement {
   clearingBySectorId: Map<string, SectorClearingResult>;
   /** Exact seller-local values to remove from the later sector cash P&L. */
   sellerPayoutLocalByCorpId: Map<string, number>;
+  /**
+   * The same seller-local values per selling sector. A sector settled by the
+   * funded producer market never books political sales as revenue, so the
+   * corporation settlement must not remove them from its cash.
+   */
+  sellerPayoutLocalBySectorId: Map<string, { corporationId: string; local: number }>;
 }
 
 /**
  * Fill funded political orders from unsold advertising output in their target
- * state. Commercial filling is already complete, so only its residual units
+ * state, and for country-wide orders anywhere else in their country once the
+ * target state is sold out. Commercial filling is already complete, so only its residual units
  * enter this allocator. The result updates the production revenue factor while
  * keeping commercial buyer receipts separate from these political receipts.
  */
@@ -67,12 +74,21 @@ export function settlePoliticalAdMarket(args: {
 }): PoliticalAdMarketSettlement {
   const clearingBySectorId = new Map(args.clearingBySectorId);
   const sellerPayoutLocalByCorpId = new Map<string, number>();
+  const sellerPayoutLocalBySectorId = new Map<string, { corporationId: string; local: number }>();
+  const addSectorPayout = (sectorId: string, corporationId: string, local: number) => {
+    const prior = sellerPayoutLocalBySectorId.get(sectorId);
+    sellerPayoutLocalBySectorId.set(sectorId, {
+      corporationId,
+      local: (prior?.local ?? 0) + local,
+    });
+  };
   if (!args.clearingEnabled || (args.orders.length === 0 && !args.persistedPlans?.length)) {
     return {
       allocations: [],
       settlementPlans: [],
       clearingBySectorId,
       sellerPayoutLocalByCorpId,
+      sellerPayoutLocalBySectorId,
     };
   }
 
@@ -95,6 +111,7 @@ export function settlePoliticalAdMarket(args: {
         seller.corporationId,
         (sellerPayoutLocalByCorpId.get(seller.corporationId) ?? 0) + seller.sellerLocalAmount
       );
+      addSectorPayout(seller.sectorId, seller.corporationId, seller.sellerLocalAmount);
       persistedAllocationRows.push({
         sectorId: seller.sectorId,
         corporationId: seller.corporationId,
@@ -298,6 +315,7 @@ export function settlePoliticalAdMarket(args: {
         seller.corporationId,
         (sellerPayoutLocalByCorpId.get(seller.corporationId) ?? 0) + seller.sellerLocalAmount
       );
+      addSectorPayout(seller.sectorId, seller.corporationId, seller.sellerLocalAmount);
     }
   }
   for (const seller of persistedAllocationRows) {
@@ -355,7 +373,13 @@ export function settlePoliticalAdMarket(args: {
     });
   }
 
-  return { allocations, settlementPlans, clearingBySectorId, sellerPayoutLocalByCorpId };
+  return {
+    allocations,
+    settlementPlans,
+    clearingBySectorId,
+    sellerPayoutLocalByCorpId,
+    sellerPayoutLocalBySectorId,
+  };
 }
 
 /** Raw revenue/production offer before the clearing engine's supply normalization. */
