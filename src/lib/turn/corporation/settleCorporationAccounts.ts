@@ -65,7 +65,11 @@ export function settleCorporationAccounts(
   // already capped above, so unfilled budget remains in treasury. Pair legs
   // stay unrounded until every corporation's transfers have been aggregated,
   // preventing small buyers from losing every sub-unit seller allocation.
-  const politicalSellerPayouts = context.market.politicalAdSellerPayoutLocalByCorpId ?? new Map();
+  const politicalSellerPayouts = politicalSellerCashNetting(
+    context.market.politicalAdSellerPayoutLocalByCorpId,
+    context.market.politicalAdSellerPayoutLocalBySectorId,
+    context.fundedResults
+  );
   if (
     (context.marketingSpendAnchorByBuyerId.size > 0 &&
       context.totalAdvertisingDeliveredValueAnchor > 0) ||
@@ -405,4 +409,27 @@ export function settleCorporationAccounts(
     settledMarketingSpendAnchorByBuyerId: new Map(context.marketingSpendAnchorByBuyerId),
     advertisingDeliveredAnchorBySellerId: new Map(context.advertisingSellerDeliveredValues),
   };
+}
+
+/**
+ * Political ad receipts to remove from each seller's cash leg.
+ *
+ * A legacy sector books its political fill as ordinary revenue (the clearing
+ * factor carries it), and the settlement move also pays the receipt, so the
+ * receipt is netted out of cash once. A sector the funded producer market
+ * settled earns only its producer-market sales as revenue; netting there
+ * cancelled the seller's only political payment and sank the campaign's money.
+ */
+export function politicalSellerCashNetting(
+  byCorpId: ReadonlyMap<string, number> | undefined,
+  bySectorId: ReadonlyMap<string, { corporationId: string; local: number }> | undefined,
+  fundedSectorIds: { has(sectorId: string): boolean }
+): Map<string, number> {
+  if (!bySectorId) return new Map(byCorpId ?? []);
+  const netting = new Map<string, number>();
+  for (const [sectorId, payout] of bySectorId) {
+    if (fundedSectorIds.has(sectorId)) continue;
+    netting.set(payout.corporationId, (netting.get(payout.corporationId) ?? 0) + payout.local);
+  }
+  return netting;
 }
