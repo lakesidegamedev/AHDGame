@@ -24,6 +24,7 @@ export function MetricChart({
   isHigherBetter,
   formatSuffix,
   decimals,
+  minimum = 0,
 }: {
   history: Array<{ turn: number; value: number }>;
   currentValue: number;
@@ -31,6 +32,7 @@ export function MetricChart({
   isHigherBetter: boolean;
   formatSuffix: string;
   decimals: number;
+  minimum?: number;
 }) {
   const rawId = useId();
   const hasHistory = history.length > 0;
@@ -51,7 +53,7 @@ export function MetricChart({
   // Projection from current value
   let v = currentValue;
   for (let t = 1; t <= FORWARD_TURNS; t++) {
-    v = Math.max(0, v + tickRate);
+    v = Math.max(minimum, v + tickRate);
     allPoints.push({ x: lastTurn + t, y: v, turn: lastTurn + t, value: v, isProjection: true });
   }
 
